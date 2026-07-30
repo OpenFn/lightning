@@ -326,6 +326,35 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert_receive {:destination_host, received_host}
       assert received_host == "localhost:#{bypass.port}"
     end
+
+    test "strips the caller's session cookie before proxying to the destination",
+         %{bypass: bypass, channel: channel} do
+      test_pid = self()
+
+      Bypass.expect_once(bypass, "GET", "/cookie-check", fn conn ->
+        send(
+          test_pid,
+          {:destination_cookie, Plug.Conn.get_req_header(conn, "cookie")}
+        )
+
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      base_conn = conn(:get, "/channels/#{channel.id}/cookie-check")
+
+      resp =
+        %{
+          base_conn
+          | req_headers: [
+              {"cookie", "_lightning_key=victim-session-token"}
+              | base_conn.req_headers
+            ]
+        }
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+      assert_receive {:destination_cookie, []}
+    end
   end
 
   describe "error cases" do
@@ -365,6 +394,62 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       resp = get(conn, "/channels/#{channel.id}/test")
 
       assert resp.status in [502, 504]
+    end
+  end
+
+  describe "SSRF egress guard" do
+    test "refuses to proxy to the cloud metadata IP (AWS IMDS / GCP metadata)",
+         %{conn: conn} do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          destination_url: "http://169.254.169.254/latest/meta-data/",
+          enabled: true
+        )
+
+      resp = get(conn, "/channels/#{channel.id}/latest/meta-data/")
+
+      assert resp.status == 403
+      refute resp.resp_body =~ "169.254.169.254"
+    end
+
+    test "refuses to proxy to an RFC1918 private-network address", %{conn: conn} do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          destination_url: "http://10.0.0.1",
+          enabled: true
+        )
+
+      resp = get(conn, "/channels/#{channel.id}/admin")
+
+      assert resp.status == 403
+      refute resp.resp_body =~ "10.0.0.1"
+    end
+
+    test "refuses to proxy to a private-range address not on the allow-list", %{
+      conn: conn
+    } do
+      # A second RFC1918 address to lock in the general private-range case:
+      # with blocking on (default) and no allow-list entry, the block applies
+      # before any socket is opened.
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          destination_url: "http://10.0.0.10",
+          enabled: true
+        )
+
+      resp = get(conn, "/channels/#{channel.id}/admin")
+
+      assert resp.status == 403
+      refute resp.resp_body =~ "10.0.0.10"
     end
   end
 

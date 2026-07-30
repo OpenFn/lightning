@@ -135,6 +135,21 @@ export type ConnectionState =
   | 'error';
 
 /**
+ * Tracks a workflow YAML that was applied to the canvas early, during
+ * streaming, so the auto-apply of the final new_message can be skipped
+ * when it carries the same YAML (re-importing identical content dirties
+ * the Y.Doc and shows a false "unsaved changes" indicator).
+ *
+ * Only set after a successful import, so failed applies never need to
+ * reset it. `saveFailed` records that the post-import auto-save of a new
+ * workflow is still owed.
+ */
+export interface StreamingApplyState {
+  yaml: string;
+  saveFailed: boolean;
+}
+
+/**
  * AI Assistant state managed by the store
  */
 export interface AIAssistantState {
@@ -152,6 +167,7 @@ export interface AIAssistantState {
   streamingContent: string | null;
   streamingStatus: string | null;
   streamingChanges: Record<string, unknown> | null;
+  streamingApply: StreamingApplyState | null;
 
   sessionList: SessionSummary[];
   sessionListLoading: boolean;
@@ -163,8 +179,6 @@ export interface AIAssistantState {
 
   jobCodeContext: JobCodeContext | null;
   workflowTemplateContext: WorkflowTemplateContext | null;
-
-  hasReadDisclaimer: boolean;
 }
 
 /**
@@ -195,8 +209,6 @@ export interface AIAssistantStore {
     append?: boolean;
   }) => Promise<void>;
 
-  markDisclaimerRead: () => void;
-
   _setConnectionState: (state: ConnectionState, error?: string) => void;
   _setSession: (session: Session) => void;
   _clearSession: () => void;
@@ -215,6 +227,9 @@ export interface AIAssistantStore {
   setStreamingStatus: (text: string | null) => void;
   _setStreamingChanges: (changes: Record<string, unknown>) => void;
   _clearStreaming: () => void;
+  _setStreamingApply: (yaml: string) => void;
+  _setStreamingApplySaveFailed: (saveFailed: boolean) => void;
+  _clearStreamingApply: () => void;
   _connectChannel: (channelProvider: unknown) => () => void;
 }
 

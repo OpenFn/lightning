@@ -14,6 +14,7 @@ defmodule LightningWeb.RunLive.Show do
   alias Phoenix.LiveView.AsyncResult
 
   on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount {LightningWeb.Hooks, :ensure_run_belongs_to_project}
   on_mount {LightningWeb.Hooks, :check_limits}
 
   attr :run, :map, required: true
@@ -344,7 +345,7 @@ defmodule LightningWeb.RunLive.Show do
      )
      |> assign(can_run_workflow: can_run_workflow)
      |> assign(admin_contacts: Projects.list_project_admin_emails(project.id))
-     |> get_run_async(id)}
+     |> get_run_async(id, project.id)}
   end
 
   def handle_steps_change(socket) do

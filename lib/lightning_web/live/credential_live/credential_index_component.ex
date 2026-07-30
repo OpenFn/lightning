@@ -343,12 +343,19 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{"id" => credential_id},
         socket
       ) do
-    Credentials.cancel_scheduled_deletion(credential_id)
+    %{current_user: current_user, credentials: credentials} = socket.assigns
+    credential = Enum.find(credentials, &(&1.id == credential_id))
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "Credential deletion canceled")
-     |> push_navigate(to: socket.assigns.return_to)}
+    if credential && can_delete_credential(current_user, credential) do
+      Credentials.cancel_scheduled_deletion(credential.id)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, "Credential deletion canceled")
+       |> push_navigate(to: socket.assigns.return_to)}
+    else
+      not_authorized(socket)
+    end
   end
 
   defp can_delete_credential(

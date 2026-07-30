@@ -31,7 +31,11 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
 
   @impl true
   def update(%{projects: projects} = assigns, socket) do
-    changeset = OauthClients.change_client(assigns.oauth_client)
+    changeset =
+      OauthClients.change_client(assigns.oauth_client, %{},
+        allow_global: Map.get(assigns, :allow_global, false)
+      )
+
     initial_assigns = Map.filter(assigns, fn {k, _} -> k in @valid_assigns end)
 
     selected_projects =
@@ -51,6 +55,9 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     {:ok,
      socket
      |> assign(initial_assigns)
+     # Guarantee the flag is set (default: not allowed) so the validate/save
+     # handlers can rely on it; this is the single source of the security default.
+     |> assign(:allow_global, Map.get(assigns, :allow_global, false))
      |> assign_scopes(assigns.oauth_client, :mandatory_scopes)
      |> assign_scopes(assigns.oauth_client, :optional_scopes)
      |> assign(:changeset, changeset)
@@ -105,7 +112,8 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
     changeset =
       OauthClients.change_client(
         socket.assigns.oauth_client,
-        oauth_client_params
+        oauth_client_params,
+        allow_global: socket.assigns.allow_global
       )
       |> Map.put(:action, :validate)
 
@@ -294,7 +302,9 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   end
 
   defp update_oauth_client(socket, params) do
-    OauthClients.update_client(socket.assigns.oauth_client, params)
+    OauthClients.update_client(socket.assigns.oauth_client, params,
+      allow_global: socket.assigns.allow_global
+    )
     |> handle_oauth_client_response(
       socket,
       {:info, "Oauth client updated successfully"}
@@ -302,7 +312,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
   end
 
   defp create_oauth_client(socket, params) do
-    OauthClients.create_client(params)
+    OauthClients.create_client(params, allow_global: socket.assigns.allow_global)
     |> handle_oauth_client_response(
       socket,
       {:info, "Oauth client created successfully"}

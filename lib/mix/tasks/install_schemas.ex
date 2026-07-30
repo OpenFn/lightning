@@ -24,7 +24,19 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
   # hackney error reasons that we treat as transient and worth retrying.
   # Anything else (e.g. :nxdomain, :econnrefused) is logged with its reason
   # and skipped immediately rather than retried.
-  @retriable_reasons [:timeout, :closed, :connect_timeout, :checkout_timeout]
+  #
+  # `:invalid_state` is a stale-pooled-connection race, not a real failure.
+  # hackney keeps a closing pooled connection alive briefly so requests that
+  # raced the checkout get answered rather than crashing the caller; it means to
+  # answer `{:closed, _}` (see the comment in `hackney_conn.erl`) but the
+  # catch-all it falls through to replies `:invalid_state`, so retry on both.
+  @retriable_reasons [
+    :timeout,
+    :closed,
+    :connect_timeout,
+    :checkout_timeout,
+    :invalid_state
+  ]
 
   # Outer Task.async_stream timeout. Must comfortably exceed the sum of
   # @recv_timeouts (50s) plus connect/DNS/body overhead.

@@ -70,16 +70,19 @@ platform_check_dependencies() {
   if echo '#include <cstddef>' | clang++ -x c++ -c - -o /dev/null &>/dev/null; then
     echo "  C++ standard library headers found"
   else
-    echo ""
-    echo "  C++ headers not accessible - this often requires reinstalling Command Line Tools"
-    echo ""
-    echo "   Try these solutions in order:"
-    echo "   1. Reset Xcode path: sudo xcode-select --reset"
-    echo "   2. If that doesn't work, completely reinstall CLT:"
-    echo "      sudo rm -rf /Library/Developer/CommandLineTools"
-    echo "      xcode-select --install"
-    echo ""
-    echo "   Note: The reinstall can take 10-15 minutes to download and install."
+    {
+      echo ""
+      warn "C++ headers not accessible - this often requires reinstalling Command Line Tools"
+      printf '%s\n' \
+        "" \
+        "   Try these solutions in order:" \
+        "   1. Reset Xcode path: sudo xcode-select --reset" \
+        "   2. If that doesn't work, completely reinstall CLT:" \
+        "      sudo rm -rf /Library/Developer/CommandLineTools" \
+        "      xcode-select --install" \
+        "" \
+        "   Note: The reinstall can take 10-15 minutes to download and install."
+    } >&2
   fi
 }
 
@@ -89,35 +92,34 @@ platform_check_status() {
   if [[ ${#MISSING_BREW_PACKAGES[@]} -gt 0 ]]; then
     if [[ "$HAS_HOMEBREW" == true ]]; then
       echo "Missing Homebrew packages (will install):"
-      for package in "${MISSING_BREW_PACKAGES[@]}"; do
-        echo "   - $package"
-      done
+      printf '   - %s\n' "${MISSING_BREW_PACKAGES[@]}"
       has_installable_missing=true
     else
-      echo "Homebrew not available, cannot install:"
-      for package in "${MISSING_BREW_PACKAGES[@]}"; do
-        echo "   - $package"
-      done
-      echo ""
-      echo "Please install Homebrew from https://brew.sh and re-run this script."
+      {
+        err "Homebrew not available, cannot install:"
+        printf '   - %s\n' "${MISSING_BREW_PACKAGES[@]}"
+        printf '%s\n' \
+          "" \
+          "Please install Homebrew from https://brew.sh and re-run this script."
+      } >&2
       exit 1
     fi
   fi
 
   if [[ "$has_installable_missing" == false ]]; then
-    echo "All dependencies are satisfied"
+    ok "All dependencies are satisfied"
   fi
 }
 
 platform_install_dependencies() {
   if [[ ${#MISSING_BREW_PACKAGES[@]} -gt 0 ]] && [[ "$HAS_HOMEBREW" == true ]]; then
-    echo "Installing missing Homebrew packages: ${MISSING_BREW_PACKAGES[*]}"
+    step "Installing missing Homebrew packages: ${MISSING_BREW_PACKAGES[*]}"
     if brew install "${MISSING_BREW_PACKAGES[@]}"; then
-      echo "All missing packages have been installed"
+      ok "All missing packages have been installed"
       # Refresh the installed packages list
       HOMEBREW_PACKAGES_INSTALLED="$(brew list -1 2>/dev/null || true)"
     else
-      echo "Failed to install some packages"
+      err "Failed to install some packages"
       exit 1
     fi
     echo ""
@@ -125,6 +127,10 @@ platform_install_dependencies() {
 }
 
 platform_setup_environment() {
+  if [[ -z "$HOMEBREW_PREFIX" ]] && command -v brew &>/dev/null; then
+    HOMEBREW_PREFIX="$(brew --prefix)"
+  fi
+
   # Explicitly set C/C++ compilers to avoid CMake detection issues
   if command -v clang &>/dev/null; then
     CC="$(command -v clang)"
@@ -149,7 +155,7 @@ platform_setup_environment() {
     sdk_path=$(xcrun --show-sdk-path 2>/dev/null || echo "")
     if [[ -n "$sdk_path" ]]; then
       export SDKROOT="$sdk_path"
-      export CPATH="$CPATH:$SDKROOT/usr/include"
+      export CPATH="${CPATH:+$CPATH:}$SDKROOT/usr/include"
       echo "Set SDKROOT to $SDKROOT"
     fi
   fi
@@ -166,6 +172,6 @@ platform_post_compile_hooks() {
   #
   # You can try renaming `deps/rambo/priv/rambo-mac` to `deps/rambo/priv/rambo`.
 
-  echo "Compiling platform-specific dependencies..."
+  step "Compiling platform-specific dependencies"
   mix compile.rambo
 }

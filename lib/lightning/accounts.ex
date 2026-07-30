@@ -14,7 +14,6 @@ defmodule Lightning.Accounts do
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
-  alias Lightning.Accounts.UserIdentity
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Accounts.UserToken
   alias Lightning.Accounts.UserTOTP
@@ -159,6 +158,31 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  Returns whether a user is barred from logging in.
+
+  Shared by every login path (password and SSO) so the account-state gate stays
+  consistent. Use `login_blocked_reason/1` for the specific reason.
+  """
+  @spec login_blocked?(User.t()) :: boolean()
+  def login_blocked?(%User{disabled: true}), do: true
+
+  def login_blocked?(%User{scheduled_deletion: scheduled}),
+    do: not is_nil(scheduled)
+
+  @doc """
+  Returns why a user is barred from logging in: `:disabled` for a disabled
+  account, `:scheduled_deletion` for one scheduled for deletion.
+
+  Only meaningful for a blocked user; gate the call with `login_blocked?/1`.
+  """
+  @spec login_blocked_reason(User.t()) :: :disabled | :scheduled_deletion
+  def login_blocked_reason(%User{disabled: true}), do: :disabled
+
+  def login_blocked_reason(%User{scheduled_deletion: scheduled})
+      when not is_nil(scheduled),
+      do: :scheduled_deletion
+
+  @doc """
   Gets a user by email and password.
 
   ## Examples
@@ -173,167 +197,7 @@ defmodule Lightning.Accounts do
   def get_user_by_email_and_password(email, password)
       when is_binary(email) and is_binary(password) do
     user = Repo.get_by(User, email: email)
-
-    cond do
-      is_nil(user) ->
-        User.valid_password?(user, password)
-        nil
-
-      is_nil(user.hashed_password) ->
-        User.valid_password?(user, password)
-        {:error, :sso_account}
-
-      User.valid_password?(user, password) ->
-        user
-
-      true ->
-        nil
-    end
-  end
-
-  @doc """
-  Looks up a user by their SSO provider identity.
-
-  Returns the `%User{}` if found, otherwise `nil`.
-  """
-  def get_user_by_identity(provider, uid) do
-    from(u in User,
-      join: i in UserIdentity,
-      on: i.user_id == u.id,
-      where: i.provider == ^provider and i.uid == ^uid
-    )
-    |> Repo.one()
-  end
-
-  @doc """
-  Links an SSO provider identity to a user.
-
-  Idempotent if already linked to the same user. Returns
-  `{:error, :identity_already_linked}` if the identity is claimed by another
-  user, and `{:error, :provider_already_linked}` if the user already has a
-  different identity for this provider (at most one identity per provider).
-  """
-  def link_user_identity(%User{id: user_id} = user, provider, uid) do
-    case get_identity(provider, uid) do
-      %UserIdentity{user_id: ^user_id} = identity ->
-        {:ok, identity}
-
-      %UserIdentity{} ->
-        {:error, :identity_already_linked}
-
-      nil ->
-        if provider_linked?(user, provider) do
-          {:error, :provider_already_linked}
-        else
-          %UserIdentity{}
-          |> UserIdentity.changeset(%{
-            user_id: user_id,
-            provider: provider,
-            uid: uid
-          })
-          |> Repo.insert()
-        end
-    end
-  end
-
-  defp get_identity(provider, uid) do
-    Repo.get_by(UserIdentity, provider: provider, uid: uid)
-  end
-
-  defp provider_linked?(%User{id: user_id}, provider) do
-    Repo.exists?(
-      from(i in UserIdentity,
-        where: i.user_id == ^user_id and i.provider == ^provider
-      )
-    )
-  end
-
-  @doc """
-  Returns the SSO identities linked to a user, ordered by provider name.
-  """
-  def list_user_identities(%User{id: user_id}) do
-    from(i in UserIdentity,
-      where: i.user_id == ^user_id,
-      order_by: [asc: i.provider]
-    )
-    |> Repo.all()
-  end
-
-  @doc """
-  Removes a linked SSO identity, addressed by its id and scoped to `user`.
-
-  Refuses to remove the last identity for an SSO-only user (no password set),
-  since that would lock them out. Such users can set a password by going
-  through the password reset flow first.
-
-  Returns:
-    * `{:ok, identity}` when the identity is removed
-    * `{:error, :not_linked}` when no such identity belongs to the user
-    * `{:error, :would_lock_out}` when removing would leave an SSO-only user
-      with no way to log in
-    * `{:error, :delete_failed}` when the identity exists but its deletion
-      failed at the database level
-  """
-  def unlink_user_identity(%User{} = user, identity_id) do
-    case Ecto.UUID.cast(identity_id) do
-      {:ok, identity_id} -> do_unlink_user_identity(user, identity_id)
-      :error -> {:error, :not_linked}
-    end
-  end
-
-  defp do_unlink_user_identity(%User{} = user, identity_id) do
-    Repo.transaction(fn ->
-      locked_user =
-        from(u in User, where: u.id == ^user.id, lock: "FOR UPDATE")
-        |> Repo.one()
-
-      identity = Repo.get_by(UserIdentity, id: identity_id, user_id: user.id)
-
-      cond do
-        is_nil(locked_user) or is_nil(identity) ->
-          Repo.rollback(:not_linked)
-
-        not can_remove_identity?(locked_user, identity) ->
-          Repo.rollback(:would_lock_out)
-
-        true ->
-          case Repo.delete(identity) do
-            {:ok, deleted} -> deleted
-            {:error, _changeset} -> Repo.rollback(:delete_failed)
-          end
-      end
-    end)
-  end
-
-  defp can_remove_identity?(%User{hashed_password: hp}, _identity)
-       when is_binary(hp),
-       do: true
-
-  defp can_remove_identity?(%User{} = user, %UserIdentity{id: identity_id}) do
-    Repo.exists?(
-      from(i in UserIdentity,
-        where: i.user_id == ^user.id and i.id != ^identity_id
-      )
-    )
-  end
-
-  @doc """
-  Registers a brand-new user via SSO.
-
-  The user is created without a password and confirmed immediately.
-  A `user_registered` event is broadcast on success.
-  """
-  def register_user_from_sso(attrs, provider, uid) do
-    attrs = Map.put(attrs, :sso_identity, %{provider: provider, uid: uid})
-
-    Repo.transact(fn ->
-      AccountHook.handle_register_user(attrs)
-    end)
-    |> tap(fn result ->
-      with {:ok, user} <- result do
-        Events.user_registered(user)
-      end
-    end)
+    if User.valid_password?(user, password), do: user
   end
 
   @doc """
@@ -576,8 +440,45 @@ defmodule Lightning.Accounts do
   end
 
   def update_user_details(%User{} = user, attrs \\ %{}) do
-    User.details_changeset(user, attrs)
-    |> Repo.update()
+    changeset = User.details_changeset(user, attrs)
+
+    # A superuser can disable an account or schedule it for deletion from this
+    # form. Scheduling deletion purges every token (the account is leaving); a
+    # plain disable revokes only the sessions (it is reversible, so the user's
+    # personal access tokens stay and are gated at request time instead). Either
+    # way we tear down live sockets; the request-time gate in
+    # get_user_by_session_token covers whatever is still open until it reconnects.
+    revoke_contexts =
+      cond do
+        not is_nil(Changeset.get_change(changeset, :scheduled_deletion)) -> :all
+        Changeset.get_change(changeset, :disabled) == true -> ["session"]
+        true -> nil
+      end
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, changeset)
+    |> maybe_revoke_tokens(user, revoke_contexts)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} ->
+        if revoke_contexts,
+          do: LightningWeb.UserAuth.disconnect_user_sockets(user)
+
+        {:ok, user}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
+  defp maybe_revoke_tokens(multi, _user, nil), do: multi
+
+  defp maybe_revoke_tokens(multi, user, contexts) do
+    Ecto.Multi.delete_all(
+      multi,
+      :tokens,
+      UserToken.user_and_contexts_query(user, contexts)
+    )
   end
 
   def change_user_info(%User{} = user, attrs \\ %{}) do
@@ -773,8 +674,7 @@ defmodule Lightning.Accounts do
   defp validate_current_password(changeset, user) do
     Changeset.validate_change(changeset, :current_password, fn :current_password,
                                                                password ->
-      if is_binary(user.hashed_password) and
-           Bcrypt.verify_pass(password, user.hashed_password) do
+      if Bcrypt.verify_pass(password, user.hashed_password) do
         []
       else
         [current_password: "does not match password"]
@@ -847,37 +747,12 @@ defmodule Lightning.Accounts do
     )
     |> Repo.transaction()
     |> case do
-      {:ok, %{user: user}} -> {:ok, user}
-      {:error, :user, changeset, _} -> {:error, changeset}
-    end
-  end
+      {:ok, %{user: user}} ->
+        LightningWeb.UserAuth.disconnect_user_sockets(user)
+        {:ok, user}
 
-  @doc """
-  Sets the password for an SSO user that has no local password yet.
-
-  Unlike `update_user_password/3`, this does not require a current password,
-  since the user never had one. It is guarded so it can only be used on accounts
-  without an existing password.
-
-  ## Examples
-
-      iex> set_user_password(sso_user, %{password: ...})
-      {:ok, %User{}}
-
-  """
-  def set_user_password(%User{hashed_password: nil} = user, attrs) do
-    changeset = User.password_changeset(user, attrs)
-
-    Ecto.Multi.new()
-    |> Ecto.Multi.update(:user, changeset)
-    |> Ecto.Multi.delete_all(
-      :tokens,
-      UserToken.user_and_contexts_query(user, :all)
-    )
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{user: user}} -> {:ok, user}
-      {:error, :user, changeset, _} -> {:error, changeset}
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
     end
   end
 
@@ -894,19 +769,27 @@ defmodule Lightning.Accounts do
         integer -> DateTime.utc_now() |> Timex.shift(days: integer)
       end
 
-    user
-    |> User.scheduled_deletion_changeset(%{
-      "scheduled_deletion" => date,
-      "disabled" => true,
-      "scheduled_deletion_email" => email
-    })
-    |> Repo.update()
+    changeset =
+      User.scheduled_deletion_changeset(user, %{
+        "scheduled_deletion" => date,
+        "disabled" => true,
+        "scheduled_deletion_email" => email
+      })
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, changeset)
+    |> Ecto.Multi.delete_all(
+      :tokens,
+      UserToken.user_and_contexts_query(user, :all)
+    )
+    |> Repo.transaction()
     |> case do
-      {:ok, user} ->
+      {:ok, %{user: user}} ->
+        LightningWeb.UserAuth.disconnect_user_sockets(user)
         UserNotifier.send_deletion_notification_email(user)
         {:ok, user}
 
-      {:error, changeset} ->
+      {:error, :user, changeset, _} ->
         {:error, changeset}
     end
   end
@@ -928,6 +811,17 @@ defmodule Lightning.Accounts do
   def get_user_by_session_token(token) do
     UserToken.verify_token_query(token, "session")
     |> Repo.one()
+    |> reject_blocked_user()
+  end
+
+  # A disabled or scheduled-for-deletion user must not keep authenticating
+  # through a session or API bearer token minted before the block. The user
+  # socket resolves through get_user_by_session_token/1, so this also refuses
+  # socket (re)connects.
+  defp reject_blocked_user(nil), do: nil
+
+  defp reject_blocked_user(%User{} = user) do
+    if login_blocked?(user), do: nil, else: user
   end
 
   @doc """
@@ -1025,19 +919,10 @@ defmodule Lightning.Accounts do
   @doc """
   Gets the user with the given signed token.
   """
-  def get_user_by_api_token(claims) when is_map(claims) do
-    case claims do
-      %{sub: "user:" <> id} ->
-        Repo.get(User, id)
-
-      _ ->
-        nil
-    end
-  end
-
   def get_user_by_api_token(token) do
     UserToken.verify_token_query(token, "api")
     |> Repo.one()
+    |> reject_blocked_user()
   end
 
   @doc """
@@ -1239,8 +1124,12 @@ defmodule Lightning.Accounts do
     )
     |> Repo.transaction()
     |> case do
-      {:ok, %{user: user}} -> {:ok, user}
-      {:error, :user, changeset, _} -> {:error, changeset}
+      {:ok, %{user: user}} ->
+        LightningWeb.UserAuth.disconnect_user_sockets(user)
+        {:ok, user}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
     end
   end
 
