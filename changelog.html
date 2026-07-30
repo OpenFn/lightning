@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-2001EE11.js"></script>
+    <script defer src="dist/sidebar_items-1B921C59.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -115,14 +115,22 @@ user count. Reported at both instance and project level, and bumps the usage
 report schema to version 3.
 <a href="https://github.com/OpenFn/lightning/issues/4826">#4826</a></li><li>Single Sign-On (SSO) sign-in with GitHub and Google. Users can sign in with an
 external identity provider and link or unlink providers from their profile
-settings. <a href="https://github.com/OpenFn/lightning/issues/4621">#4621</a></li><li>Support a comma-separated list of paths in <code class="inline">OPENFN_ADAPTORS_REPO</code>, merging
+settings. <a href="https://github.com/OpenFn/lightning/issues/4621">#4621</a></li><li>Creating a workflow now starts from a screen offering four ways in: describe
+it to the AI assistant, build from scratch, pick a template, or import YAML.
+<a href="https://github.com/OpenFn/lightning/issues/4848">#4848</a></li><li>Support a comma-separated list of paths in <code class="inline">OPENFN_ADAPTORS_REPO</code>, merging
 multiple local adaptor repos in precedence order (earlier paths win on name
 collisions, and shadowed entries are logged). Lets a private repo override or
 extend the canonical adaptors in local mode.
 <a href="https://github.com/OpenFn/lightning/pull/4714">#4714</a></li></ul><h3 id="changed" class="section-heading"><a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Migrated off the retired <code class="inline">earmark</code> markdown dependency in favour of <code class="inline">mdex</code>.
 <a href="https://github.com/OpenFn/lightning/issues/4878">#4878</a></li><li>Removed the unused dev-only <code class="inline">phoenix_storybook</code> dependency, clearing its
 advisories from the <a href="https://hexdocs.pm/mix_audit/2.1.5/Mix.Tasks.Deps.Audit.html"><code class="inline">mix deps.audit</code></a> ignore list.
-<a href="https://github.com/OpenFn/lightning/issues/4846">#4846</a></li><li>Bump worker to 1.27.0</li><li>The credential revoke-access dialog now sorts the affected workflows
+<a href="https://github.com/OpenFn/lightning/issues/4846">#4846</a></li><li>New workflows are now written to the database as soon as you choose how to
+start, rather than being previewed on the canvas until you pressed Create. The
+Create button and the preview state it belonged to are gone, and the editor
+header appears once the workflow exists.
+<a href="https://github.com/OpenFn/lightning/issues/4848">#4848</a></li><li>Replaced the full-screen AI disclaimer gate in the AI assistant with a
+persistent disclaimer footer shown in the chat input and landing screen.
+<a href="https://github.com/OpenFn/lightning/issues/4911">#4911</a></li><li>Bump worker to 1.27.0</li><li>The credential revoke-access dialog now sorts the affected workflows
 alphabetically. The order was previously left to the database and not
 guaranteed. <a href="https://github.com/OpenFn/lightning/issues/4954">#4954</a></li><li>Updated Phoenix to 1.7.24 to address vulnerabilities in 1.7.23. This
 implicitly introduces a limit of 100 concurrent channels per Websocket
@@ -141,7 +149,15 @@ CVE-2026-59248. <a href="https://github.com/OpenFn/lightning/issues/4905">#4905<
 <code class="inline">Lightning.Finch</code> pool and the default Tesla adapter, but its version was
 previously dictated by <code class="inline">prom_ex</code> and <code class="inline">goth</code>.
 <a href="https://github.com/OpenFn/lightning/issues/4905">#4905</a></li><li><code class="inline">bin/worktree</code> takes a trailing <code class="inline">-- &lt;command&gt;</code> that runs inside the worktree
-once it is ready, and also runs when the branch already has a worktree.</li></ul><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Reserve space for the scrollbar on the main content area so page content no
+once it is ready, and also runs when the branch already has a worktree.</li></ul><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>The workflow version dropdown stayed empty after creating and saving a new
+workflow, until the page was refreshed.
+<a href="https://github.com/OpenFn/lightning/issues/4973">#4973</a></li><li>Users without permission to create workflows are now redirected away from the
+new-workflow page. They were previously shown creation options that silently
+did nothing. <a href="https://github.com/OpenFn/lightning/issues/4848">#4848</a></li><li>Creating a workflow from a template, YAML import, or AI could leave nodes on
+the canvas with no saved workflow behind them when the save failed. Save
+failures during creation now surface a persistent Retry prompt, and creation
+is blocked with immediate feedback when the editor is offline.
+<a href="https://github.com/OpenFn/lightning/issues/4939">#4939</a></li><li>Reserve space for the scrollbar on the main content area so page content no
 longer shifts horizontally when switching between tall and short tabs (e.g. on
 the Project Settings page).</li><li>Sandbox merge no longer deletes a workflow that was added to the project after
 the sandbox was branched. Such workflows were never part of the sandbox, so
@@ -1424,20 +1440,20 @@ existing snapshots could be incorrect (e.g. missing steps, missing edges).
 In order to fix this, you will need to manually create new snapshots for
 each of your workflows. This can be done either by modifying the workflow in
 the UI and saving it. Or running a command on the running instance:</p><pre><code class="makeup elixir" translate="no"><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Repo</span><span class="w">
-</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="6750446134-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="6750446134-1">}</span><span class="w">
+</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="5367311418-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="5367311418-1">}</span><span class="w">
 
-</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="6750446134-2">(</span><span class="k" data-group-id="6750446134-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="5367311418-2">(</span><span class="k" data-group-id="5367311418-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
   </span><span class="n">snapshots</span><span class="w"> </span><span class="o">=</span><span class="w">
-    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="6750446134-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="6750446134-4">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="6750446134-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="6750446134-5">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="6750446134-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="6750446134-6">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="6750446134-7">(</span><span class="k" data-group-id="6750446134-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-      </span><span class="p" data-group-id="6750446134-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="6750446134-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="6750446134-10">(</span><span class="n">workflow</span><span class="p" data-group-id="6750446134-10">)</span><span class="w">
+    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="5367311418-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="5367311418-4">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="5367311418-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="5367311418-5">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="5367311418-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="5367311418-6">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="5367311418-7">(</span><span class="k" data-group-id="5367311418-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+      </span><span class="p" data-group-id="5367311418-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="5367311418-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="5367311418-10">(</span><span class="n">workflow</span><span class="p" data-group-id="5367311418-10">)</span><span class="w">
       </span><span class="n">snapshot</span><span class="w">
-    </span><span class="k" data-group-id="6750446134-8">end</span><span class="p" data-group-id="6750446134-7">)</span><span class="w">
+    </span><span class="k" data-group-id="5367311418-8">end</span><span class="p" data-group-id="5367311418-7">)</span><span class="w">
 
- </span><span class="p" data-group-id="6750446134-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="6750446134-11">}</span><span class="w">
-</span><span class="k" data-group-id="6750446134-3">end</span><span class="p" data-group-id="6750446134-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-78" class="section-heading"><a href="#added-78" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
+ </span><span class="p" data-group-id="5367311418-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="5367311418-11">}</span><span class="w">
+</span><span class="k" data-group-id="5367311418-3">end</span><span class="p" data-group-id="5367311418-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-78" class="section-heading"><a href="#added-78" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
 <a href="https://github.com/OpenFn/lightning/pull/2438">#2438</a></li><li>Persist AI Assistant conversations and enable it for all users
 <a href="https://github.com/OpenFn/lightning/issues/2296">#2296</a></li></ul><h3 id="changed-89" class="section-heading"><a href="#changed-89" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Rename <code class="inline">new_table</code> component to <code class="inline">table</code>.
 <a href="https://github.com/OpenFn/lightning/pull/2448">#2448</a></li></ul><h3 id="fixed-119" class="section-heading"><a href="#fixed-119" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix <code class="inline">workflow_id</code> presence in state.json during Github sync
@@ -1886,7 +1902,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="8212550533-1">(</span><span class="p" data-group-id="8212550533-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="4235355797-1">(</span><span class="p" data-group-id="4235355797-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-116" class="section-heading"><a href="#added-116" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Fix flaky job name input behavior on error
