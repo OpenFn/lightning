@@ -192,11 +192,29 @@ is the only place the distinguishing detail exists.
 
 ```
 key      = hash(blame, exit_reason, error_type, job_id, normalised_message)
-rendered = workflow:fail:RuntimeError @ Map-to-FHIR [salesforce@3.5.2]
-           "cannot read property 'id' of undefined"    (line 42)
+rendered = <blame>:<exit_reason>:<error_type> @ <job> [<adaptor>] "<message>" (<where>)
 ```
 
-Each choice is forced by something in section 3 or 4:
+### Five worked examples
+
+One per blame class, on a workflow called "Patient sync". Together they cover every
+structural case the format has to survive.
+
+| What happened | Signature | What is absent, and why |
+| --- | --- | --- |
+| A patient record arrived without the object the job expected, so the job read a field of nothing. | `workflow:fail:RuntimeError @ Map-to-FHIR [salesforce@3.5.2] "cannot read property 'id' of undefined" (line 42)` | Nothing. This is the best case, and the commonest one. |
+| Salesforce rejected the upsert because a field does not exist in that org. | `remote:fail:AdaptorError @ Upsert-to-Salesforce [salesforce@3.5.2] "INVALID_FIELD: no such column 'Patient_Id__c'" (upsert)` | No line number. Adaptor failures name the **operation** instead, which is more useful here anyway. |
+| Someone shipped a typo: the job refers to a variable that does not exist, so the run aborts. | `workflow:crash:ReferenceError @ Map-to-FHIR [salesforce@3.5.2] "patient is not defined"` | No position at all: crashes do not carry one today. Note the label is the step's `ReferenceError`, not the run's `RuntimeCrash`. |
+| A large batch pushed the run past its memory allowance and it was stopped. | `limit:kill:OOMError @ Fetch-Patients [http@6.4.1] "run exceeded maximum memory usage"` | No position, and the job named is whichever was **running when the ceiling was hit**, which is a strong hint but not proof of which job caused it. |
+| The run stopped reporting and passed its deadline, so we swept it. | `platform:lost:LostAfterStart @ Upsert-to-Salesforce [salesforce@3.5.2]` | No message and no position. The step carries no error type either, so this label has to come from the **run**: the one case where step-anchoring needs a documented fallback. |
+
+Two classes cannot be rendered this way at all, and need a workflow-level variant with no
+job: validation and compile failures, which happen before any step exists, and `rejected`
+work orders, which have no error fields whatsoever.
+
+### Why each choice
+
+Each is forced by something in section 3 or 4:
 
 - **Anchored on the step, not the run.** The two levels can hold different error types,
   and run-level grouping loses mid-workflow fails entirely.
