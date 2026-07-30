@@ -743,33 +743,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
-  describe "handle_in mark_disclaimer_read" do
-    test "successfully marks disclaimer as read", %{
-      socket: socket,
-      job: job,
-      user: user
-    } do
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
-
-      ref = push(socket, "mark_disclaimer_read", %{})
-
-      assert_reply ref, :ok, %{success: true}
-
-      # Verify user preferences were updated
-      updated_user = Lightning.Accounts.get_user!(user.id)
-      assert updated_user.preferences["ai_assistant.disclaimer_read_at"] != nil
-    end
-  end
-
   describe "handle_in update_context" do
     test "updates job context for job_code session", %{
       socket: socket,

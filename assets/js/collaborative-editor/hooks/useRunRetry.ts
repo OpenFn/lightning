@@ -19,6 +19,7 @@ import type { Workflow } from '../types/workflow';
 import { findFirstJobFromTrigger } from '../utils/workflowGraph';
 
 import { useActiveRun } from './useHistory';
+import type { SaveWorkflowOptions } from './useWorkflow';
 
 const logger = _logger.ns('useRunRetry').seal();
 
@@ -69,9 +70,9 @@ export interface UseRunRetryOptions {
   customBody: string;
   canRunWorkflow: boolean;
   workflowRunTooltipMessage: string;
-  saveWorkflow: (options?: {
-    silent?: boolean;
-  }) => Promise<{ saved_at?: string; lock_version?: number } | null>;
+  saveWorkflow: (
+    options?: SaveWorkflowOptions
+  ) => Promise<{ saved_at?: string; lock_version?: number }>;
   onRunSubmitted: ((runId: string, dataclip?: Dataclip) => void) | undefined;
   edgeId: string | null;
   workflowEdges?: Workflow.Edge[];
@@ -251,8 +252,9 @@ export function useRunRetry({
 
     setIsSubmitting(true);
     try {
-      // Save workflow first (silently - user action is "run", not "save")
-      await saveWorkflow({ silent: true });
+      // Save workflow first; user action is run, not save; run outcome
+      // toast covers it
+      await saveWorkflow({ notify: 'none' });
 
       const params: dataclipApi.ManualRunParams = {
         workflowId,
@@ -350,8 +352,9 @@ export function useRunRetry({
 
     setIsSubmitting(true);
     try {
-      // Save workflow first (silently to avoid double notifications)
-      await saveWorkflow({ silent: true });
+      // Save workflow first; user action is run, not save; run outcome
+      // toast covers it
+      await saveWorkflow({ notify: 'none' });
 
       // Call retry endpoint
       const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;

@@ -51,11 +51,6 @@ vi.mock('../../../js/collaborative-editor/components/inspector', () => ({
   ),
 }));
 
-// Mock LeftPanel
-vi.mock('../../../js/collaborative-editor/components/left-panel', () => ({
-  LeftPanel: () => <div data-testid="left-panel">Left Panel</div>,
-}));
-
 // Mock FullScreenIDE
 vi.mock(
   '../../../js/collaborative-editor/components/ide/FullScreenIDE',
@@ -128,8 +123,10 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 }));
 
 // Mock session context hooks
+const mockIsNewWorkflow = vi.fn(() => false);
+
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
-  useIsNewWorkflow: () => false,
+  useIsNewWorkflow: () => mockIsNewWorkflow(),
   useProjectRepoConnection: () => undefined,
   useProject: () => ({
     id: 'project-1',
@@ -186,6 +183,8 @@ const mockIsRunPanelOpen = vi.fn(() => false);
 const mockRunPanelContext = vi.fn(() => null);
 const mockOpenRunPanel = vi.fn();
 const mockCloseRunPanel = vi.fn();
+const mockIsAIAssistantPanelOpen = vi.fn(() => false);
+const mockShowLandingScreen = vi.fn(() => false);
 
 vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useIsRunPanelOpen: () => mockIsRunPanelOpen(),
@@ -193,23 +192,12 @@ vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
   useUICommands: () => ({
     openRunPanel: mockOpenRunPanel,
     closeRunPanel: mockCloseRunPanel,
-    toggleCreateWorkflowPanel: vi.fn(),
     openAIAssistantPanel: vi.fn(),
     closeAIAssistantPanel: vi.fn(),
-    collapseCreateWorkflowPanel: vi.fn(),
-    expandCreateWorkflowPanel: vi.fn(),
-    selectTemplate: vi.fn(),
-    setTemplateSearchQuery: vi.fn(),
+    openYAMLImportModal: vi.fn(),
   }),
-  useTemplatePanel: () => ({
-    templates: [],
-    loading: false,
-    error: null,
-    searchQuery: '',
-    selectedTemplate: null,
-  }),
-  useIsCreateWorkflowPanelCollapsed: () => true,
-  useIsAIAssistantPanelOpen: () => false,
+  useIsAIAssistantPanelOpen: () => mockIsAIAssistantPanelOpen(),
+  useShowLandingScreen: () => mockShowLandingScreen(),
 }));
 
 // Mock workflow hooks with controllable node selection
@@ -230,6 +218,7 @@ const mockSelectNode = vi.fn((node: any) => {
 // Mock canRun state
 let mockCanRun = true;
 let mockTooltipMessage = '';
+let mockWorkflowStateOverride: Partial<typeof mockWorkflow> | null = null;
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useNodeSelection: () => ({
@@ -244,11 +233,14 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     saveWorkflow: vi.fn(),
   }),
   useWorkflowState: (selector: any) => {
+    const workflow = mockWorkflowStateOverride
+      ? { ...mockWorkflow, ...mockWorkflowStateOverride }
+      : mockWorkflow;
     const state = {
-      workflow: mockWorkflow,
-      jobs: mockWorkflow.jobs,
-      triggers: mockWorkflow.triggers,
-      edges: mockWorkflow.edges,
+      workflow,
+      jobs: workflow.jobs,
+      triggers: workflow.triggers,
+      edges: workflow.edges,
       positions: {},
     };
     return typeof selector === 'function' ? selector(state) : state;
@@ -276,6 +268,10 @@ describe('WorkflowEditor', () => {
     // Reset state
     mockIsRunPanelOpen.mockReturnValue(false);
     mockRunPanelContext.mockReturnValue(null);
+    mockIsNewWorkflow.mockReturnValue(false);
+    mockIsAIAssistantPanelOpen.mockReturnValue(false);
+    mockShowLandingScreen.mockReturnValue(false);
+    mockWorkflowStateOverride = null;
     currentNode = { type: null, node: null };
     mockRunHandler.mockClear();
     mockCanRun = true;

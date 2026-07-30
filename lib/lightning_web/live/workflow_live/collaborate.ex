@@ -32,11 +32,40 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         _session,
         %{assigns: %{project: project, access_root: access_root}} = socket
       ) do
+    if creating_new_workflow?(socket) and
+         not Permissions.can?(
+           :project_users,
+           :create_workflow,
+           socket.assigns.current_user,
+           project
+         ) do
+      unauthorized_to_create(socket, project)
+    else
+      mount_editor(params, project, access_root, socket)
+    end
+  end
+
+  # The dashboard already disables the create button for users without
+  # :create_workflow, so landing here means a typed URL, a stale bookmark or a
+  # shared link. Bounce rather than render: the collaboration channel refuses
+  # the join for these users, but that rejection never reaches the browser (the
+  # provider only registers an "ok" receiver), so every card on the landing
+  # screen would look clickable and do nothing.
+  defp unauthorized_to_create(socket, project) do
+    {:ok,
+     socket
+     |> put_flash(:error, "You are not authorized to perform this action.")
+     |> redirect(to: ~p"/projects/#{project.id}/w")}
+  end
+
+  defp creating_new_workflow?(socket), do: socket.assigns.live_action == :new
+
+  defp mount_editor(params, project, access_root, socket) do
     is_sandbox? = Project.sandbox?(project)
 
     {:ok,
      socket
-     |> assign(workflow_assigns(params, project))
+     |> assign(workflow_assigns(socket.assigns.live_action, params, project))
      |> assign(
        active_menu_item: :overview,
        project: project,
@@ -388,34 +417,32 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     |> noreply()
   end
 
-  defp workflow_assigns(params, project) do
-    case params do
-      %{"id" => workflow_id} ->
-        workflow = Workflows.get_workflow!(workflow_id)
+  defp workflow_assigns(:edit, %{"id" => workflow_id}, _project) do
+    workflow = Workflows.get_workflow!(workflow_id)
 
-        %{
-          workflow: workflow,
-          workflow_id: workflow_id,
-          is_new_workflow: false,
-          page_title: "Collaborate on #{workflow.name}"
-        }
+    %{
+      workflow: workflow,
+      workflow_id: workflow_id,
+      is_new_workflow: false,
+      page_title: "Collaborate on #{workflow.name}"
+    }
+  end
 
-      _other ->
-        workflow_id = Ecto.UUID.generate()
+  defp workflow_assigns(:new, _params, project) do
+    workflow_id = Ecto.UUID.generate()
 
-        workflow = %Workflow{
-          id: workflow_id,
-          name: "Untitled Workflow",
-          project_id: project.id
-        }
+    workflow = %Workflow{
+      id: workflow_id,
+      name: "Untitled Workflow",
+      project_id: project.id
+    }
 
-        %{
-          workflow: workflow,
-          workflow_id: workflow_id,
-          is_new_workflow: true,
-          page_title: "New Workflow"
-        }
-    end
+    %{
+      workflow: workflow,
+      workflow_id: workflow_id,
+      is_new_workflow: true,
+      page_title: "New Workflow"
+    }
   end
 
   defp build_credential_payload(credential) do
