@@ -1484,7 +1484,7 @@ export const createWorkflowStore = (
     saved_at?: string;
     lock_version?: number;
     workflow?: BaseWorkflow;
-  } | null> => {
+  }> => {
     const { ydoc, provider } = ensureConnected();
 
     const workflow = ydoc.getMap('workflow').toJSON();

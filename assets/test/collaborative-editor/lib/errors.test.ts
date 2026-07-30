@@ -6,8 +6,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
+
+import type { ChannelError } from '../../../js/collaborative-editor/hooks/useChannel';
 import { formatChannelErrorMessage } from '../../../js/collaborative-editor/lib/errors';
-import type { ChannelError } from '../../../js/collaborative-editor/types/errors';
 
 describe('formatChannelErrorMessage', () => {
   it('should format base errors', () => {
@@ -177,5 +178,34 @@ describe('formatChannelErrorMessage', () => {
 
     const result = formatChannelErrorMessage(error);
     expect(result).toBe('Name: Name must start with UPPERCASE');
+  });
+
+  describe('replies that carry no error map', () => {
+    // Several handlers reply `{reason: "..."}` with no `errors` key at all —
+    // update_trigger_auth_methods does it on unauthorized, trigger-not-found and
+    // internal-error. Formatting runs inside ChannelRequestError's constructor,
+    // so dereferencing the absent map here does not just produce a bad message,
+    // it stops the request promise settling (see useChannel.test.ts).
+
+    it('uses reason as the message when there is no errors map', () => {
+      const result = formatChannelErrorMessage({ reason: 'trigger not found' });
+
+      expect(result).toBe('trigger not found');
+    });
+
+    it('falls back to the default message when there is neither', () => {
+      const result = formatChannelErrorMessage({ type: 'internal_error' });
+
+      expect(result).toBe('An error occurred');
+    });
+
+    it('prefers a base error over reason when both are present', () => {
+      const result = formatChannelErrorMessage({
+        errors: { base: ['You do not have permission to do that'] },
+        reason: 'unauthorized',
+      });
+
+      expect(result).toBe('You do not have permission to do that');
+    });
   });
 });

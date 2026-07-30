@@ -22,6 +22,9 @@ and this project adheres to
   user count. Reported at both instance and project level, and bumps the usage
   report schema to version 3.
   [#4826](https://github.com/OpenFn/lightning/issues/4826)
+- Creating a workflow now starts from a screen offering four ways in: describe
+  it to the AI assistant, build from scratch, pick a template, or import YAML.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
 - Support a comma-separated list of paths in `OPENFN_ADAPTORS_REPO`, merging
   multiple local adaptor repos in precedence order (earlier paths win on name
   collisions, and shadowed entries are logged). Lets a private repo override or
@@ -35,6 +38,14 @@ and this project adheres to
 - Removed the unused dev-only `phoenix_storybook` dependency, clearing its
   advisories from the `mix deps.audit` ignore list.
   [#4846](https://github.com/OpenFn/lightning/issues/4846)
+- New workflows are now written to the database as soon as you choose how to
+  start, rather than being previewed on the canvas until you pressed Create. The
+  Create button and the preview state it belonged to are gone, and the editor
+  header appears once the workflow exists.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
+- Replaced the full-screen AI disclaimer gate in the AI assistant with a
+  persistent disclaimer footer shown in the chat input and landing screen.
+  [#4911](https://github.com/OpenFn/lightning/issues/4911)
 - Bump worker to 1.27.0
 - The credential revoke-access dialog now sorts the affected workflows
   alphabetically. The order was previously left to the database and not
@@ -69,6 +80,17 @@ and this project adheres to
 
 ### Fixed
 
+- The workflow version dropdown stayed empty after creating and saving a new
+  workflow, until the page was refreshed.
+  [#4973](https://github.com/OpenFn/lightning/issues/4973)
+- Users without permission to create workflows are now redirected away from the
+  new-workflow page. They were previously shown creation options that silently
+  did nothing. [#4848](https://github.com/OpenFn/lightning/issues/4848)
+- Creating a workflow from a template, YAML import, or AI could leave nodes on
+  the canvas with no saved workflow behind them when the save failed. Save
+  failures during creation now surface a persistent Retry prompt, and creation
+  is blocked with immediate feedback when the editor is offline.
+  [#4939](https://github.com/OpenFn/lightning/issues/4939)
 - Reserve space for the scrollbar on the main content area so page content no
   longer shifts horizontally when switching between tall and short tabs (e.g. on
   the Project Settings page).

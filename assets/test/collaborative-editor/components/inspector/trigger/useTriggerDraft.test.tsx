@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 
 import { useTriggerDraft } from '../../../../../js/collaborative-editor/components/inspector/trigger/useTriggerDraft';
+import { LiveViewActionsProvider } from '../../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import type { StoreContextValue } from '../../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../../js/collaborative-editor/contexts/StoreProvider';
 import { createSessionContextStore } from '../../../../../js/collaborative-editor/stores/createSessionContextStore';
@@ -58,8 +59,19 @@ function createWrapper(
     uiStore: createUIStore(),
   } as unknown as StoreContextValue;
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
   return ({ children }: { children: React.ReactNode }) => (
-    <StoreContext.Provider value={storeValue}>{children}</StoreContext.Provider>
+    <LiveViewActionsProvider actions={mockLiveViewActions}>
+      <StoreContext.Provider value={storeValue}>
+        {children}
+      </StoreContext.Provider>
+    </LiveViewActionsProvider>
   );
 }
 
