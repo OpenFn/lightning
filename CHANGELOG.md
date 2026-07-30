@@ -117,6 +117,12 @@ and this project adheres to
 - Git hooks now auto-install when compiling from inside a git worktree, where
   `.git` is a file rather than a directory.
 
+## [2.17.1] - 2026-07-30
+
+### Fixed
+
+- Check ownership before acting on credential deletion cancellation event
+
 ## [2.17.0] - 2026-07-21
 
 This is a security release, and we strongly recommend upgrading promptly. It is
