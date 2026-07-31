@@ -13,6 +13,7 @@
  */
 
 import {
+  Background,
   type EdgeTypes,
   type NodeTypes,
   ReactFlow,
@@ -193,7 +194,11 @@ function TemplatePreviewFlow({ template }: TemplatePreviewProps) {
         fitViewOptions={{ padding: FIT_PADDING }}
         maxZoom={1}
         minZoom={0.2}
-      />
+      >
+        {/* Propless, matching the real canvas, so the preview reads as the
+            same surface rather than a differently-styled one. */}
+        <Background />
+      </ReactFlow>
     </div>
   );
 }
