@@ -24,7 +24,7 @@ export function YAMLImportModal() {
     <Dialog
       open={isOpen}
       onClose={closeYAMLImportModal}
-      className="relative z-20"
+      className="relative z-110"
       aria-label="Import a workflow"
     >
       <DialogBackdrop
