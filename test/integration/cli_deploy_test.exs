@@ -113,7 +113,7 @@ defmodule Lightning.CliDeployTest do
       assert actual_yaml == expected_yaml
     end
 
-    test "deploy a new project to a Lightning server", %{
+    test "deploy a new project to a Lightning server (v1 spec)", %{
       user: user,
       config: config,
       config_path: config_path
@@ -124,6 +124,118 @@ defmodule Lightning.CliDeployTest do
       # Lets use the canonical spec
       specPath =
         Path.expand("test/fixtures/portability/v1/canonical_project.yaml")
+
+      config = %{config | specPath: specPath}
+      File.write(config_path, Jason.encode!(config))
+
+      # only a superuser can deploy a new project
+      # lets update the user's role to a normal user
+      user |> Ecto.Changeset.change(%{role: :user}) |> Lightning.Repo.update!()
+
+      {logs, _} =
+        System.cmd(
+          @cli_path,
+          ["deploy", "-c", config_path, "--no-confirm"],
+          env: @required_env
+        )
+
+      assert logs =~ "Failed to authorize request with endpoint"
+      assert logs =~ "403 Forbidden"
+      # no project has been created
+      assert [] == Lightning.Repo.all(Lightning.Projects.Project)
+
+      # lets update the user's role to a superuser and use the canonical email
+      user
+      |> Lightning.Repo.reload()
+      |> Ecto.Changeset.change(%{
+        role: :superuser,
+        email: "cannonical-user@lightning.com"
+      })
+      |> Lightning.Repo.update!()
+
+      credential_fixture(user_id: user.id, name: "new credential")
+
+      System.cmd(
+        @cli_path,
+        ["deploy", "-c", config_path, "--no-confirm"],
+        env: @required_env
+      )
+
+      assert [project] =
+               Lightning.Repo.all(Lightning.Projects.Project)
+               |> Lightning.Repo.preload(workflows: [:jobs, :triggers, :edges])
+
+      assert project.name == "a-test-project"
+      assert project.description == "This is only a test\n"
+
+      assert Enum.count(project.workflows) == 2
+
+      # workflow 1
+      workflow_1 = Enum.find(project.workflows, &(&1.name == "workflow 1"))
+      [trigger] = workflow_1.triggers
+
+      assert match?(
+               %{type: :webhook, cron_expression: nil, enabled: true},
+               trigger
+             )
+
+      assert Enum.count(workflow_1.jobs) == 3
+      # webhook job
+      edge_1 =
+        Enum.find(workflow_1.edges, fn edge ->
+          edge.source_trigger_id == trigger.id
+        end)
+
+      job_1 = Enum.find(workflow_1.jobs, &(&1.id == edge_1.target_job_id))
+
+      assert match?(
+               %{
+                 name: "webhook job",
+                 adaptor: "@openfn/language-common@latest",
+                 body: "console.log('webhook job')\nfn(state => state)\n"
+               },
+               job_1
+             )
+
+      # workflow 2
+      workflow_2 = Enum.find(project.workflows, &(&1.name == "workflow 2"))
+      [trigger] = workflow_2.triggers
+
+      assert match?(
+               %{type: :cron, cron_expression: "0 23 * * *", enabled: true},
+               trigger
+             )
+
+      assert Enum.count(workflow_2.jobs) == 2
+      # cron job
+      edge =
+        Enum.find(workflow_2.edges, fn edge ->
+          edge.source_trigger_id == trigger.id
+        end)
+
+      job = Enum.find(workflow_2.jobs, &(&1.id == edge.target_job_id))
+
+      assert match?(
+               %{
+                 name: "some cronjob",
+                 adaptor: "@openfn/language-common@latest",
+                 body: "console.log('hello!');\n"
+               },
+               job
+             )
+    end
+
+    test "deploy a new project to a Lightning server (v2 spec)", %{
+      user: user,
+      config: config,
+      config_path: config_path
+    } do
+      # there's no project
+      assert [] == Lightning.Repo.all(Lightning.Projects.Project)
+
+      # Lets use the canonical v2 spec
+      specPath =
+        Path.expand("test/fixtures/portability/v2/canonical_project.yaml")
 
       config = %{config | specPath: specPath}
       File.write(config_path, Jason.encode!(config))
@@ -243,7 +355,6 @@ defmodule Lightning.CliDeployTest do
         env: @required_env
       )
 
-      # Lets use the updated spec
       specPath =
         Path.expand("test/fixtures/portability/v1/canonical_update_project.yaml")
 
