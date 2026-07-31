@@ -128,6 +128,10 @@ Any string value anywhere in the file may reference `${SOME_ENV_VAR}`; the
 variable is resolved when the scenario runs and it is an error for it to be
 unset. Use this to keep secrets out of committed scenario files.
 
+Only `SCREAMING_SNAKE_CASE` names are treated as env references, so JS template
+literals in job bodies (`${count}`, `${state.data}`) pass through untouched.
+Avoid uppercase `${...}` literals in job bodies — they will be interpolated.
+
 ## Safety
 
 Bootstrapping creates users (including superusers) and is disabled outside
