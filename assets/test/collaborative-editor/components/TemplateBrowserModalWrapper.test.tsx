@@ -120,13 +120,24 @@ function renderWrapper() {
   return render(<TemplateBrowserModalWrapper />);
 }
 
-async function clickFirstTemplate() {
+/**
+ * Creating from a template is a two-step interaction: clicking a card only
+ * previews it, so the workflow is created from the explicit button. Returns the
+ * create button, which is the control that disables while the save is in
+ * flight.
+ */
+async function createFromFirstTemplate() {
   const user = userEvent.setup();
   const card = await screen.findByRole('button', {
     name: /Event-based workflow/i,
   });
   await user.click(card);
-  return card;
+
+  const createButton = await screen.findByRole('button', {
+    name: 'Create',
+  });
+  await user.click(createButton);
+  return createButton;
 }
 
 describe('TemplateBrowserModalWrapper', () => {
@@ -140,7 +151,7 @@ describe('TemplateBrowserModalWrapper', () => {
   test('success: imports, saves with notify: error-only, closes the modal, and dismisses the landing screen', async () => {
     renderWrapper();
 
-    await clickFirstTemplate();
+    await createFromFirstTemplate();
 
     await waitFor(() => {
       expect(mockImportWorkflow).toHaveBeenCalledOnce();
@@ -154,11 +165,11 @@ describe('TemplateBrowserModalWrapper', () => {
     expect(importOrder).toBeLessThan(saveOrder);
   });
 
-  test('save rejection: modal stays open, no bespoke alert, and the card is re-enabled', async () => {
+  test('save rejection: modal stays open, no bespoke alert, and the create button is re-enabled', async () => {
     mockSaveWorkflow.mockRejectedValue(new Error('boom'));
     renderWrapper();
 
-    const card = await clickFirstTemplate();
+    const createButton = await createFromFirstTemplate();
 
     await waitFor(() => {
       expect(mockSaveWorkflow).toHaveBeenCalledWith({ notify: 'error-only' });
@@ -171,7 +182,7 @@ describe('TemplateBrowserModalWrapper', () => {
     expect(mockAlert).not.toHaveBeenCalled();
 
     await waitFor(() => {
-      expect(card).not.toBeDisabled();
+      expect(createButton).not.toBeDisabled();
     });
   });
 
@@ -179,7 +190,7 @@ describe('TemplateBrowserModalWrapper', () => {
     mockIsConnected = false;
     renderWrapper();
 
-    await clickFirstTemplate();
+    await createFromFirstTemplate();
 
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith({

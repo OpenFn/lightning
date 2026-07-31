@@ -30,6 +30,11 @@ and this project adheres to
   collisions, and shadowed entries are logged). Lets a private repo override or
   extend the canonical adaptors in local mode.
   [#4714](https://github.com/OpenFn/lightning/pull/4714)
+- The template browser now previews the selected template as a read-only diagram
+  before you commit to it. Picking a template from the list only previews it;
+  creating the workflow is a separate Create button. Templates whose definition
+  can't be read say so in the preview and can't be created.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
 
 ### Changed
 
@@ -48,6 +53,10 @@ and this project adheres to
 - Replaced the full-screen AI disclaimer gate in the AI assistant with a
   persistent disclaimer footer shown in the chat input and landing screen.
   [#4911](https://github.com/OpenFn/lightning/issues/4911)
+- The template browser and YAML import modals now cover the left side menu
+  instead of sitting behind it, and the YAML file-type hints use the primary
+  colour rather than teal.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
 - The credential revoke-access dialog now sorts the affected workflows
   alphabetically. The order was previously left to the database and not
   guaranteed. [#4954](https://github.com/OpenFn/lightning/issues/4954)

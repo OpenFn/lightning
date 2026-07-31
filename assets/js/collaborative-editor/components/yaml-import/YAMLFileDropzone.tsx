@@ -128,9 +128,9 @@ export function YAMLFileDropzone({ onUpload }: YAMLFileDropzoneProps) {
             Upload or drop a YAML file.
           </p>
           <p className="text-xs text-gray-500">
-            <span className="text-teal-500 font-medium">YML</span>
+            <span className="text-primary-500 font-medium">YML</span>
             {' or '}
-            <span className="text-teal-500 font-medium">YAML</span>
+            <span className="text-primary-500 font-medium">YAML</span>
             {', up to 8MB'}
           </p>
         </label>
