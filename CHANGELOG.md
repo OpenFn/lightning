@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.18.0-pre] - 2026-07-31
+
+### Added
+
 - Report monthly active users (MAU) — distinct users active in the trailing 30
   days — in the usage tracker submission, alongside the existing 90-day active
   user count. Reported at both instance and project level, and bumps the usage
