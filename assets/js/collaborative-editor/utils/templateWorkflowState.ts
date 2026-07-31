@@ -6,7 +6,7 @@ import type { Template } from '../types/template';
  * The single definition of what a template's YAML means.
  *
  * Both the read-only preview and the create path go through here, so what the
- * preview draws is by construction what "Use this template" builds. Two
+ * preview draws is by construction what Create builds. Two
  * separate call sites could drift apart in how they parse or normalise, and a
  * preview that lies about the resulting workflow is worse than no preview.
  *

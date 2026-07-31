@@ -10,6 +10,7 @@ import {
 } from '../types/template';
 import { filterTemplates, matchesQuery } from '../utils/filterTemplates';
 
+import { ActionButton } from './ds/ActionButton';
 import { TemplatePreview } from './TemplatePreview';
 
 export interface TemplateBrowserModalProps {
@@ -177,7 +178,7 @@ export function TemplateBrowserModal({
               </div>
 
               {previewed && (
-                <div className="flex items-end justify-between gap-4 border-t border-gray-200 bg-white/60 px-4 py-3">
+                <div className="flex items-center justify-between gap-4 border-t border-gray-200 bg-white/60 px-4 py-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-gray-900">
                       {previewed.name}
@@ -188,17 +189,14 @@ export function TemplateBrowserModal({
                       </p>
                     )}
                   </div>
-                  <button
-                    type="button"
+                  <ActionButton
                     onClick={() => onSelect(previewed)}
                     disabled={isSaving}
-                    className="shrink-0 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white
-                      hover:bg-primary-500 transition-colors
-                      disabled:opacity-50 disabled:cursor-not-allowed
-                      focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+                    loading={isSaving}
+                    className="shrink-0"
                   >
-                    {isSaving ? 'Creating...' : 'Use this template'}
-                  </button>
+                    {isSaving ? 'Creating...' : 'Create'}
+                  </ActionButton>
                 </div>
               )}
             </div>

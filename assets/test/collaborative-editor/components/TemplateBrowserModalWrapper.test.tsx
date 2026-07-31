@@ -134,7 +134,7 @@ async function createFromFirstTemplate() {
   await user.click(card);
 
   const createButton = await screen.findByRole('button', {
-    name: 'Use this template',
+    name: 'Create',
   });
   await user.click(createButton);
   return createButton;

@@ -206,7 +206,7 @@ describe('TemplateBrowserModal', () => {
       expect(onSelect).not.toHaveBeenCalled();
     });
 
-    test('"Use this template" creates from the previewed template', async () => {
+    test('"Create" creates from the previewed template', async () => {
       const user = userEvent.setup();
       const onSelect = vi.fn();
       const templates = [
@@ -216,9 +216,7 @@ describe('TemplateBrowserModal', () => {
       await renderModal({ templates, onSelect });
 
       await user.click(screen.getByRole('button', { name: 'Beta' }));
-      await user.click(
-        screen.getByRole('button', { name: 'Use this template' })
-      );
+      await user.click(screen.getByRole('button', { name: 'Create' }));
 
       expect(onSelect).toHaveBeenCalledExactlyOnceWith(templates[1]);
     });
@@ -244,9 +242,7 @@ describe('TemplateBrowserModal', () => {
       );
 
       // The real hazard: creating from a template the list no longer shows.
-      await user.click(
-        screen.getByRole('button', { name: 'Use this template' })
-      );
+      await user.click(screen.getByRole('button', { name: 'Create' }));
       expect(onSelect).toHaveBeenCalledExactlyOnceWith(templates[0]);
     });
   });
