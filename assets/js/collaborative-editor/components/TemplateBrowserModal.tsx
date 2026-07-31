@@ -129,7 +129,7 @@ export function TemplateBrowserModal({
                 />
               </div>
 
-              <div className="mt-4 flex-1 min-h-0 overflow-y-auto pr-2">
+              <div className="mt-4 flex-1 min-h-0 overflow-y-auto thin-scrollbar pr-2">
                 {loading ? (
                   <p className="py-8 text-center text-sm text-gray-500">
                     Loading templates...
