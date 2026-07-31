@@ -85,6 +85,11 @@ defmodule Lightning.Bootstrap do
   the provisioner's own validation.
 
   Keys are strings, as produced by the YAML/JSON parsers.
+
+  Env interpolation only matches `SCREAMING_SNAKE_CASE` names, so JS template
+  literals in job bodies (`${count}`, `${state.data}`) pass through untouched;
+  uppercase `${...}` literals in job bodies will be interpolated, so avoid
+  them there.
   """
 
   import Ecto.Query
@@ -143,16 +148,23 @@ defmodule Lightning.Bootstrap do
     {:ok, result} =
       Repo.transaction(
         fn ->
-          users = ensure_users(fetch_list(scenario, "users"))
+          users =
+            scenario
+            |> fetch_list("users")
+            |> ensure_unique!("email", "users")
+            |> ensure_users()
 
           credentials =
-            ensure_credentials(fetch_list(scenario, "credentials"), users)
+            scenario
+            |> fetch_list("credentials")
+            |> ensure_unique!("name", "credentials")
+            |> ensure_credentials(users)
 
           projects =
-            Enum.map(
-              fetch_list(scenario, "projects"),
-              &ensure_project(&1, users, credentials)
-            )
+            scenario
+            |> fetch_list("projects")
+            |> ensure_unique!("name", "projects")
+            |> Enum.map(&ensure_project(&1, users, credentials))
 
           %{users: users, credentials: credentials, projects: projects}
         end,
@@ -296,7 +308,7 @@ defmodule Lightning.Bootstrap do
   end
 
   defp interpolate_env(value) when is_binary(value) do
-    Regex.replace(~r/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/, value, fn _, var ->
+    Regex.replace(~r/\$\{([A-Z][A-Z0-9_]*)\}/, value, fn _, var ->
       System.get_env(var) ||
         raise "Scenario references ${#{var}}, but that environment variable is not set"
     end)
@@ -425,6 +437,7 @@ defmodule Lightning.Bootstrap do
     workflow_infos =
       spec
       |> fetch_list("workflows")
+      |> ensure_unique!("name", "workflows in project #{name}")
       |> Enum.map(&build_workflow_info(&1, scope, pc_ids))
 
     document = %{
@@ -547,11 +560,22 @@ defmodule Lightning.Bootstrap do
 
   defp build_workflow_info(spec, project_scope, pc_ids) do
     name = fetch!(spec, "name")
+
+    if Map.has_key?(spec, "triggers") do
+      raise "Workflow #{inspect(name)} has a \"triggers\" key, which would be " <>
+              "overwritten — use the singular \"trigger\" key instead"
+    end
+
     scope = "#{project_scope}/workflow:#{name}"
     id = spec["id"] || stable_id(scope)
 
     trigger = build_trigger(Map.get(spec, "trigger", %{}), scope)
-    jobs = Enum.map(fetch_list(spec, "jobs"), &build_job(&1, scope, pc_ids))
+
+    jobs =
+      spec
+      |> fetch_list("jobs")
+      |> ensure_unique!("name", "jobs in workflow #{inspect(name)}")
+      |> Enum.map(&build_job(&1, scope, pc_ids))
 
     edges =
       spec
@@ -690,6 +714,23 @@ defmodule Lightning.Bootstrap do
 
   defp fetch!(other, key) do
     raise "Expected a map with key #{inspect(key)}, got: #{inspect(other)}"
+  end
+
+  # Duplicate names would derive the same deterministic id and surface as
+  # opaque provisioner errors (or silently last-win) — fail upfront instead.
+  defp ensure_unique!(specs, key, what) do
+    specs
+    |> Enum.map(&(&1 |> fetch!(key) |> to_string() |> String.downcase()))
+    |> Enum.frequencies()
+    |> Enum.filter(fn {_value, count} -> count > 1 end)
+    |> case do
+      [] ->
+        specs
+
+      duplicates ->
+        values = Enum.map_join(duplicates, ", ", &elem(&1, 0))
+        raise "Duplicate #{key} among #{what}: #{values}"
+    end
   end
 
   defp fetch_list(map, key) do

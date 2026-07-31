@@ -249,6 +249,85 @@ defmodule Lightning.BootstrapTest do
       end
     end
 
+    test "leaves JS template literals in job bodies untouched" do
+      body = "fn(s => ({...s, msg: `count is ${count}, id ${state.data.id}`}))"
+
+      scenario =
+        put_in(
+          scenario(),
+          [
+            "projects",
+            Access.at(0),
+            "workflows",
+            Access.at(0),
+            "jobs",
+            Access.at(1),
+            "body"
+          ],
+          body
+        )
+
+      [%{workflows: [%{jobs: jobs}]}] = Bootstrap.run(scenario).projects
+      job_b = Enum.find(jobs, &(&1.name == "job-b"))
+
+      assert Repo.get!(Job, job_b.id).body == body
+    end
+
+    test "supports trigger-less workflows via trigger: none" do
+      scenario =
+        update_in(
+          scenario(),
+          ["projects", Access.at(0), "workflows", Access.at(0)],
+          fn workflow ->
+            workflow
+            |> Map.put("trigger", "none")
+            |> Map.put("edges", [
+              %{"from" => "job-a", "to" => "job-b"}
+            ])
+          end
+        )
+
+      [%{workflows: [workflow_info]}] = Bootstrap.run(scenario).projects
+
+      assert workflow_info.trigger == nil
+      assert Repo.aggregate(Trigger, :count) == 0
+    end
+
+    test "rejects duplicate names and raw triggers keys upfront" do
+      duplicate_jobs =
+        update_in(
+          scenario(),
+          ["projects", Access.at(0), "workflows", Access.at(0), "jobs"],
+          &[%{"name" => "job-a"} | &1]
+        )
+
+      assert_raise RuntimeError, ~r/Duplicate name.*job-a/, fn ->
+        Bootstrap.run(duplicate_jobs)
+      end
+
+      duplicate_users =
+        update_in(
+          scenario(),
+          ["users"],
+          &[%{"email" => "OWNER@openfn.org"} | &1]
+        )
+
+      assert_raise RuntimeError, ~r/Duplicate email/, fn ->
+        Bootstrap.run(duplicate_users)
+      end
+
+      raw_triggers =
+        update_in(
+          scenario(),
+          ["projects", Access.at(0), "workflows", Access.at(0)],
+          &(&1 |> Map.delete("trigger") |> Map.put("triggers", []))
+        )
+
+      assert_raise RuntimeError, ~r/use the singular "trigger" key/, fn ->
+        Bootstrap.run(raw_triggers)
+      end
+    end
+
     test "raises clear errors for invalid scenarios, rolling back" do
       # member email not declared under users
       undeclared =
@@ -351,6 +430,13 @@ defmodule Lightning.BootstrapTest do
       # cron triggers have no webhook path
       assert [%{"workflows" => [%{"trigger" => %{"webhook_path" => nil}}]}] =
                manifest["projects"]
+    end
+
+    test "the checked-in example scenario stays runnable" do
+      result = Bootstrap.run_file("bin/e2e.d/scenarios/example.yaml")
+
+      assert [%{project: %{name: "example-project"}}] = result.projects
+      assert result.users |> Map.keys() |> length() == 3
     end
 
     test "rejects unsupported file extensions" do

@@ -127,6 +127,8 @@ end)
 # call repeatedly and a no-op when no scenario is set.
 resolve_scenario() {
   [[ -z "$SCENARIO" ]] && return 0
+  # Already resolved (e.g. cmd_start delegating to cmd_server) - don't redo.
+  [[ -n "${SCENARIO_FILE:-}" ]] && return 0
 
   if [[ -f "$SCENARIO" ]]; then
     SCENARIO_FILE="$SCENARIO"

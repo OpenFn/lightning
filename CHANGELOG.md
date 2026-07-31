@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Added
 
+- Declarative, idempotent instance bootstrapping from a YAML/JSON scenario file
+  (users, API tokens, credentials, projects, workflows) via
+  `mix lightning.bootstrap`, `Lightning.Setup.bootstrap/2` for releases (gated
+  behind `ALLOW_BOOTSTRAP=true`), and `bin/e2e --scenario`.
+  [#4974](https://github.com/OpenFn/lightning/issues/4974)
+
 ### Changed
 
 - The global chat now starts streaming Apollo's response earlier, so users wait
