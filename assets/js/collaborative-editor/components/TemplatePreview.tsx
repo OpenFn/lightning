@@ -31,7 +31,7 @@ import fromWorkflow from '#/workflow-diagram/util/from-workflow';
 
 import type { Template } from '../types/template';
 import { createEmptyRunInfo } from '../utils/runStepsTransformer';
-import { templateToWorkflowState } from '../utils/templateWorkflowState';
+import { tryTemplateToWorkflowState } from '../utils/templateWorkflowState';
 
 import { ErrorBoundary } from './common/ErrorBoundary';
 
@@ -93,23 +93,12 @@ function TemplatePreviewFlow({ template }: TemplatePreviewProps) {
   const [model, setModel] = useState<Flow.Model>(EMPTY_MODEL);
 
   // A user-published template can contain YAML we can't parse. That must not
-  // take the modal down with it.
-  const parsed = useMemo(() => {
-    try {
-      return {
-        state: templateToWorkflowState(template),
-        error: null as string | null,
-      };
-    } catch (error) {
-      return {
-        state: null,
-        error:
-          error instanceof Error
-            ? error.message
-            : "This template's definition could not be read.",
-      };
-    }
-  }, [template]);
+  // take the modal down with it. The modal parses the same template to decide
+  // whether Create is offered at all, so both land on the same verdict.
+  const parsed = useMemo(
+    () => tryTemplateToWorkflowState(template),
+    [template]
+  );
 
   useEffect(() => {
     if (!parsed.state) {

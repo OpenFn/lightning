@@ -1,6 +1,7 @@
 import { Dialog, DialogBackdrop, DialogPanel } from '@headlessui/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
+import { Tooltip } from '#/components/Tooltip';
 import { cn } from '#/utils/cn';
 
 import {
@@ -9,6 +10,7 @@ import {
   type WorkflowTemplate,
 } from '../types/template';
 import { filterTemplates, matchesQuery } from '../utils/filterTemplates';
+import { tryTemplateToWorkflowState } from '../utils/templateWorkflowState';
 
 import { ActionButton } from './ds/ActionButton';
 import { TemplatePreview } from './TemplatePreview';
@@ -60,7 +62,7 @@ export function TemplateBrowserModal({
 
   // The modal stays mounted, so reset on close rather than on unmount.
   useEffect(() => {
-    if (!isOpen) setPreviewedId(null);
+    if (isOpen) setPreviewedId(null);
   }, [isOpen]);
 
   // Never show an empty preview pane if there is something to show. Covers both
@@ -71,6 +73,15 @@ export function TemplateBrowserModal({
     if (!isOpen || hasPreview || firstVisibleId === null) return;
     setPreviewedId(firstVisibleId);
   }, [isOpen, hasPreview, firstVisibleId]);
+
+  // Don't offer Create for a template we already know we can't read: the
+  // preview is showing the user why, and clicking through would only reach the
+  // same parse failure and a vaguer toast. The preview parses this template
+  // too — same helper, so the two can't disagree about what's broken.
+  const previewError = useMemo(
+    () => (previewed ? tryTemplateToWorkflowState(previewed).error : null),
+    [previewed]
+  );
 
   return (
     <Dialog
@@ -110,7 +121,7 @@ export function TemplateBrowserModal({
           {/* Two panes: list on the left, preview on the right */}
           <div className="flex flex-1 min-h-0 gap-5 px-6 pb-6">
             {/* List pane */}
-            <div className="flex w-72 shrink-0 flex-col min-h-0">
+            <div className="w-72 shrink-0 flex flex-col min-h-0">
               <div className="relative">
                 <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
                   <span className="hero-magnifying-glass h-4 w-4 text-gray-400" />
@@ -189,14 +200,24 @@ export function TemplateBrowserModal({
                       </p>
                     )}
                   </div>
-                  <ActionButton
-                    onClick={() => onSelect(previewed)}
-                    disabled={isSaving}
-                    loading={isSaving}
-                    className="shrink-0"
+                  {/* Wrapped in a span because a disabled button emits no
+                      pointer events for the tooltip to hang off. */}
+                  <Tooltip
+                    content={
+                      previewError ? 'This template can’t be read.' : null
+                    }
+                    side="top"
                   >
-                    {isSaving ? 'Creating...' : 'Create'}
-                  </ActionButton>
+                    <span className="shrink-0">
+                      <ActionButton
+                        onClick={() => onSelect(previewed)}
+                        disabled={isSaving || previewError !== null}
+                        loading={isSaving}
+                      >
+                        {isSaving ? 'Creating...' : 'Create'}
+                      </ActionButton>
+                    </span>
+                  </Tooltip>
                 </div>
               )}
             </div>

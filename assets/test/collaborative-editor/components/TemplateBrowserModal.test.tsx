@@ -29,12 +29,37 @@ function nextId(prefix: string) {
   return `${prefix}-${idCounter}`;
 }
 
+/**
+ * Templates default to YAML that actually parses, because the modal now reads
+ * it: Create is disabled for anything the preview can't render. Empty `code`
+ * would silently put every fixture in the broken state and the create-path
+ * tests would be asserting against a button that is disabled for the wrong
+ * reason.
+ */
+const PARSEABLE_YAML = `name: "Fixture"
+jobs:
+  Step:
+    name: Step
+    adaptor: "@openfn/language-common@latest"
+    body: |
+      fn(state => state);
+triggers:
+  webhook:
+    type: webhook
+    enabled: true
+edges:
+  webhook->Step:
+    source_trigger: webhook
+    target_job: Step
+    condition_type: always
+    enabled: true`;
+
 function makeBaseTemplate(overrides: Partial<BaseTemplate> = {}): BaseTemplate {
   return {
     id: nextId('base'),
     name: 'Base Template',
     description: '',
-    code: '',
+    code: PARSEABLE_YAML,
     tags: [],
     isBase: true,
     ...overrides,
@@ -48,7 +73,7 @@ function makeUserTemplate(
     id: nextId('user'),
     name: 'User Template',
     description: null,
-    code: '',
+    code: PARSEABLE_YAML,
     positions: null,
     tags: [],
     workflow_id: null,
@@ -266,6 +291,38 @@ describe('TemplateBrowserModal', () => {
       expect(
         screen.getByRole('button', { name: 'Creating...' })
       ).toBeDisabled();
+    });
+  });
+
+  describe('unreadable template', () => {
+    test('disables create rather than letting it fail on the same YAML', async () => {
+      const user = userEvent.setup();
+      const onSelect = vi.fn();
+      const templates = [
+        makeBaseTemplate({ name: 'Broken', code: 'not: [valid workflow' }),
+      ];
+      await renderModal({ templates, onSelect });
+
+      const createButton = screen.getByRole('button', { name: 'Create' });
+      expect(createButton).toBeDisabled();
+
+      await user.click(createButton);
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    test('leaves create usable once a readable template is previewed', async () => {
+      const user = userEvent.setup();
+      const templates = [
+        makeBaseTemplate({ name: 'Broken', code: 'not: [valid workflow' }),
+        makeBaseTemplate({ name: 'Fine' }),
+      ];
+      await renderModal({ templates });
+
+      expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+
+      await user.click(screen.getByRole('button', { name: 'Fine' }));
+
+      expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled();
     });
   });
 
