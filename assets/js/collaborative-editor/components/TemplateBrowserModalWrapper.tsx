@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 
-import { parseWorkflowYAML, convertWorkflowSpecToState } from '../../yaml/util';
 import { fetchTemplates } from '../api/templates';
 import { BASE_TEMPLATES } from '../constants/baseTemplates';
 import { useActionLock } from '../hooks/useActionLock';
@@ -14,6 +13,7 @@ import { useCreateWorkflowFlow } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { notifications } from '../lib/notifications';
 import type { Template } from '../types/template';
+import { templateToWorkflowState } from '../utils/templateWorkflowState';
 
 import { TemplateBrowserModal } from './TemplateBrowserModal';
 
@@ -86,7 +86,7 @@ export function TemplateBrowserModalWrapper() {
   const { run: handleSelect, isPending: isSaving } = useActionLock(
     async (template: Template) => {
       const created = await createWorkflowFrom(() =>
-        convertWorkflowSpecToState(parseWorkflowYAML(template.code))
+        templateToWorkflowState(template)
       );
       if (created) {
         closeTemplateBrowserModal();
