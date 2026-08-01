@@ -196,11 +196,29 @@ describe('MessageList', () => {
   });
 
   describe('Message Status', () => {
-    it('should show error state for failed messages', () => {
+    it('should show error content in styled box for assistant error with content', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
-          content: 'Failed message',
+          content: 'YAML parse failed: unexpected token',
+          status: 'error',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      // Non-empty content renders inline in a red validation error box
+      expect(screen.getByTestId('ai-validation-error')).toBeInTheDocument();
+      expect(
+        screen.getByText('YAML parse failed: unexpected token')
+      ).toBeInTheDocument();
+    });
+
+    it('should show "Failed to send message" banner for assistant error with no content', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '',
           status: 'error',
         }),
       ];
@@ -820,6 +838,115 @@ describe('MessageList', () => {
 
       // Use semantic query via data-testid
       expect(screen.getByTestId('message-list')).toBeInTheDocument();
+    });
+  });
+
+  describe('Global Messages (from_global)', () => {
+    it('renders global message as Generated Workflow with Apply and no Preview on canvas', async () => {
+      const onApplyWorkflow = vi.fn();
+      const onApplyJobCode = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          code: 'name: Test\njobs: {}',
+          from_global: true,
+        }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          onApplyWorkflow={onApplyWorkflow}
+          onApplyJobCode={onApplyJobCode}
+          showApplyButton
+        />
+      );
+
+      // No job_id -> existing "Generated Workflow" branch, workflow apply
+      expect(screen.getByText('Generated Workflow')).toBeInTheDocument();
+      expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByText('Apply'));
+      expect(onApplyWorkflow).toHaveBeenCalledWith(
+        'name: Test\njobs: {}',
+        'msg-global'
+      );
+      expect(onApplyJobCode).not.toHaveBeenCalled();
+    });
+
+    it('shows Preview routed to onPreviewGlobalStep when a step is open', async () => {
+      const onPreviewGlobalStep = vi.fn();
+      const onPreviewJobCode = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          code: 'name: Test\njobs: {}',
+          from_global: true,
+        }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          onPreviewGlobalStep={onPreviewGlobalStep}
+          onPreviewJobCode={onPreviewJobCode}
+          canPreviewGlobalStep
+        />
+      );
+
+      // Label stays "Generated Workflow" — it is one
+      expect(screen.getByText('Generated Workflow')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByText('Preview'));
+      expect(onPreviewGlobalStep).toHaveBeenCalledWith(
+        'name: Test\njobs: {}',
+        'msg-global'
+      );
+      expect(onPreviewJobCode).not.toHaveBeenCalled();
+    });
+
+    it('keeps job-code messages unchanged: Preview routes to onPreviewJobCode', async () => {
+      const onPreviewGlobalStep = vi.fn();
+      const onPreviewJobCode = vi.fn();
+      const onApplyWorkflow = vi.fn();
+      const onApplyJobCode = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-job',
+          role: 'assistant',
+          code: 'fn(state => state)',
+          job_id: 'job-1',
+        }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          onPreviewGlobalStep={onPreviewGlobalStep}
+          onPreviewJobCode={onPreviewJobCode}
+          onApplyWorkflow={onApplyWorkflow}
+          onApplyJobCode={onApplyJobCode}
+          showApplyButton
+        />
+      );
+
+      expect(screen.getByText('Generated Job Code')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByText('Preview'));
+      expect(onPreviewJobCode).toHaveBeenCalledWith(
+        'fn(state => state)',
+        'msg-job'
+      );
+      expect(onPreviewGlobalStep).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByText('Apply'));
+      expect(onApplyJobCode).toHaveBeenCalledWith(
+        'fn(state => state)',
+        'msg-job'
+      );
+      expect(onApplyWorkflow).not.toHaveBeenCalled();
     });
   });
 

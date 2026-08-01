@@ -144,6 +144,39 @@ defmodule Lightning.UsageTracking.ReportDataTest do
              } = ReportData.generate(report_config, enabled, date)
     end
 
+    test "includes the number of monthly active users (trailing 30 days)", %{
+      cleartext_enabled: enabled,
+      config: report_config,
+      date: date
+    } do
+      {:ok, within_30_days, _offset} =
+        DateTime.from_iso8601("#{Date.add(date, -29)}T10:00:00Z")
+
+      {:ok, within_90_but_not_30_days, _offset} =
+        DateTime.from_iso8601("#{Date.add(date, -45)}T10:00:00Z")
+
+      monthly_active_user = insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
+
+      insert(:user_token,
+        context: "session",
+        inserted_at: within_30_days,
+        user: monthly_active_user
+      )
+
+      quarterly_only_user = insert(:user, inserted_at: ~U[2024-02-04 01:00:00Z])
+
+      insert(:user_token,
+        context: "session",
+        inserted_at: within_90_but_not_30_days,
+        user: quarterly_only_user
+      )
+
+      # The 90-day window counts both; only one is active within 30 days.
+      assert %{
+               instance: %{no_of_active_users: 2, no_of_monthly_active_users: 1}
+             } = ReportData.generate(report_config, enabled, date)
+    end
+
     test "includes the operating system details", %{
       cleartext_enabled: enabled,
       config: report_config,
@@ -196,7 +229,7 @@ defmodule Lightning.UsageTracking.ReportDataTest do
       config: report_config,
       date: date
     } do
-      assert %{version: "2"} = ReportData.generate(report_config, enabled, date)
+      assert %{version: "3"} = ReportData.generate(report_config, enabled, date)
     end
 
     test "indicates the applicable report date", %{
@@ -399,7 +432,7 @@ defmodule Lightning.UsageTracking.ReportDataTest do
       config: report_config,
       date: date
     } do
-      assert %{version: "2"} = ReportData.generate(report_config, enabled, date)
+      assert %{version: "3"} = ReportData.generate(report_config, enabled, date)
     end
 
     test "indicates the applicable report date", %{

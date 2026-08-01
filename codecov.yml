@@ -17,7 +17,6 @@ ignore:
   - "lib/lightning/release.ex"
   - "lib/lightning/sentry_event_filter.ex"
   - "test/support/**"
-  - "storybook/**"
 
   # Phoenix declarative scaffolding — boot-only or pure DSL
   - "lib/lightning_web.ex"

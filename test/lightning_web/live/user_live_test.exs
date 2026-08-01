@@ -372,10 +372,11 @@ defmodule LightningWeb.UserLiveTest do
     end
 
     test "retains a cancel deletion button for superusers pending deletion", %{
-      conn: conn,
-      user: user
+      conn: conn
     } do
-      user
+      superuser = superuser_fixture()
+
+      superuser
       |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2024-12-28 01:02:03Z]})
       |> Repo.update!()
 
@@ -383,7 +384,7 @@ defmodule LightningWeb.UserLiveTest do
 
       assert index_live
              |> has_element?(
-               "a#cancel-deletion-#{user.id}",
+               "a#cancel-deletion-#{superuser.id}",
                "Cancel deletion"
              )
     end
@@ -468,10 +469,11 @@ defmodule LightningWeb.UserLiveTest do
     end
 
     test "does not enable the `Delete now` button for a superuser", %{
-      conn: conn,
-      user: user
+      conn: conn
     } do
-      user
+      superuser = superuser_fixture()
+
+      superuser
       |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2024-12-28 01:02:03Z]})
       |> Repo.update!()
 
@@ -480,7 +482,7 @@ defmodule LightningWeb.UserLiveTest do
       assert(
         index_live
         |> has_element?(
-          "span#delete-now-#{user.id}.cursor-not-allowed",
+          "span#delete-now-#{superuser.id}.cursor-not-allowed",
           "Delete now"
         )
       )
@@ -488,7 +490,7 @@ defmodule LightningWeb.UserLiveTest do
       refute(
         index_live
         |> has_element?(
-          "a#delete-now-#{user.id}",
+          "a#delete-now-#{superuser.id}",
           "Delete now"
         )
       )
@@ -689,22 +691,22 @@ defmodule LightningWeb.UserLiveTest do
       conn: conn,
       user: _user
     } do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, Routes.user_index_path(conn, :index))
         |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
 
     test "a regular user cannot access a user edit page", %{
       conn: conn,
       user: user
     } do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, Routes.user_edit_path(conn, :edit, user.id))
         |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
   end
 

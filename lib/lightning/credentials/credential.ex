@@ -39,12 +39,36 @@ defmodule Lightning.Credentials.Credential do
     |> cast(attrs, [
       :name,
       :external_id,
-      :user_id,
+      :oauth_client_id,
+      :schema,
+      :scheduled_deletion
+    ])
+    |> shared_validations()
+  end
+
+  @doc "Changeset for creating a credential; owner (:user_id) is settable only at creation."
+  def create_changeset(credential, attrs) do
+    credential
+    |> cast(attrs, [
+      :name,
+      :external_id,
       :oauth_client_id,
       :schema,
       :scheduled_deletion,
-      :transfer_status
+      :user_id
     ])
+    |> shared_validations()
+  end
+
+  @doc "Changeset for the guarded credential-transfer flow. Wraps the generic changeset so it keeps all validations/constraints, and additionally allows :user_id and :transfer_status."
+  def transfer_changeset(credential, attrs) do
+    credential
+    |> changeset(attrs)
+    |> cast(attrs, [:user_id, :transfer_status])
+  end
+
+  defp shared_validations(changeset) do
+    changeset
     |> normalize_external_id()
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :user_id])

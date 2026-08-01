@@ -209,6 +209,102 @@ describe('useAutoPreview', () => {
     });
   });
 
+  describe('Global messages', () => {
+    const olderUserMessage: Message = {
+      id: 'user-msg-1',
+      role: 'user',
+      content: 'Earlier question',
+      status: 'success',
+      inserted_at: new Date(Date.now() - 3000).toISOString(),
+      user_id: mockCurrentUserId,
+    };
+    const triggeringUserMessage: Message = {
+      id: 'user-msg-2',
+      role: 'user',
+      content: 'Update my workflow',
+      status: 'success',
+      inserted_at: new Date(Date.now() - 1000).toISOString(),
+      user_id: mockCurrentUserId,
+    };
+    const globalYaml = 'name: My Workflow\njobs:\n  job-1:\n    name: Step 1';
+    const createGlobalMessage = (): Message =>
+      createMockMessage({
+        id: 'global-msg',
+        code: globalYaml,
+        job_id: undefined, // global messages never carry a job_id
+        from_global: true,
+        inserted_at: new Date().toISOString(),
+      });
+
+    it('auto-previews a new global full-YAML message when a job is open', () => {
+      const firstAssistant = createMockMessage({
+        id: 'first-msg',
+        inserted_at: new Date(Date.now() - 2000).toISOString(),
+      });
+      const initialSession = createMockSession([
+        olderUserMessage,
+        firstAssistant,
+      ]);
+
+      const { rerender } = renderHook(
+        ({ session }) =>
+          useAutoPreview({
+            aiMode: createMockJobCodeMode(),
+            session,
+            currentUserId: mockCurrentUserId,
+            onPreview: mockOnPreview,
+          }),
+        { initialProps: { session: initialSession } }
+      );
+
+      // Initial load - no preview
+      expect(mockOnPreview).not.toHaveBeenCalled();
+
+      // New global message arrives - preview receives the full YAML
+      rerender({
+        session: createMockSession([
+          olderUserMessage,
+          firstAssistant,
+          triggeringUserMessage,
+          createGlobalMessage(),
+        ]),
+      });
+
+      expect(mockOnPreview).toHaveBeenCalledWith(globalYaml, 'global-msg');
+    });
+
+    it('does not auto-preview a global message when no job is open', () => {
+      const workflowMode: AIModeResult = {
+        mode: 'workflow_template',
+        page: 'workflow_template',
+        context: { project_id: 'proj-1', workflow_id: 'wf-1' },
+        storageKey: 'ai-workflow-wf-1',
+      };
+      const initialSession = createMockSession([olderUserMessage]);
+
+      const { rerender } = renderHook(
+        ({ session }) =>
+          useAutoPreview({
+            aiMode: workflowMode,
+            session,
+            currentUserId: mockCurrentUserId,
+            onPreview: mockOnPreview,
+          }),
+        { initialProps: { session: initialSession } }
+      );
+
+      rerender({
+        session: createMockSession([
+          olderUserMessage,
+          triggeringUserMessage,
+          createGlobalMessage(),
+        ]),
+      });
+
+      expect(mockOnPreview).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Session mount behavior', () => {
     it('should not auto-preview on initial session load', () => {
       const session = createMockSession([createMockMessage()]);

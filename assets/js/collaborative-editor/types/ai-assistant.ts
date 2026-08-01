@@ -54,6 +54,11 @@ export interface Message {
   user_id?: string;
   user?: MessageUser | null;
   job_id?: string;
+  /**
+   * True when this message came from the global AI assistant. Global
+   * messages carry a full workflow YAML in `code` and never a `job_id`.
+   */
+  from_global?: boolean;
 }
 
 /**
@@ -72,6 +77,10 @@ export interface JobCodeContext {
   job_body?: string;
   job_adaptor?: string;
   workflow_id?: string;
+
+  // Full serialized workflow YAML attached by global chat (sent as the message
+  // `code`). Present even with a step open, so it lives on the job context too.
+  code?: string;
 }
 
 /**
@@ -101,6 +110,10 @@ export type WorkflowTemplateContext =
 
       workflow_id?: string;
       project_id: string;
+
+      // Full serialized workflow YAML attached by global chat (sent as the
+      // message `code`), present even when a step is open.
+      code?: string;
     };
 
 /**
@@ -122,6 +135,21 @@ export type ConnectionState =
   | 'error';
 
 /**
+ * Tracks a workflow YAML that was applied to the canvas early, during
+ * streaming, so the auto-apply of the final new_message can be skipped
+ * when it carries the same YAML (re-importing identical content dirties
+ * the Y.Doc and shows a false "unsaved changes" indicator).
+ *
+ * Only set after a successful import, so failed applies never need to
+ * reset it. `saveFailed` records that the post-import auto-save of a new
+ * workflow is still owed.
+ */
+export interface StreamingApplyState {
+  yaml: string;
+  saveFailed: boolean;
+}
+
+/**
  * AI Assistant state managed by the store
  */
 export interface AIAssistantState {
@@ -139,6 +167,7 @@ export interface AIAssistantState {
   streamingContent: string | null;
   streamingStatus: string | null;
   streamingChanges: Record<string, unknown> | null;
+  streamingApply: StreamingApplyState | null;
 
   sessionList: SessionSummary[];
   sessionListLoading: boolean;
@@ -150,8 +179,6 @@ export interface AIAssistantState {
 
   jobCodeContext: JobCodeContext | null;
   workflowTemplateContext: WorkflowTemplateContext | null;
-
-  hasReadDisclaimer: boolean;
 }
 
 /**
@@ -182,8 +209,6 @@ export interface AIAssistantStore {
     append?: boolean;
   }) => Promise<void>;
 
-  markDisclaimerRead: () => void;
-
   _setConnectionState: (state: ConnectionState, error?: string) => void;
   _setSession: (session: Session) => void;
   _clearSession: () => void;
@@ -202,6 +227,9 @@ export interface AIAssistantStore {
   setStreamingStatus: (text: string | null) => void;
   _setStreamingChanges: (changes: Record<string, unknown>) => void;
   _clearStreaming: () => void;
+  _setStreamingApply: (yaml: string) => void;
+  _setStreamingApplySaveFailed: (saveFailed: boolean) => void;
+  _clearStreamingApply: () => void;
   _connectChannel: (channelProvider: unknown) => () => void;
 }
 

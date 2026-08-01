@@ -3579,16 +3579,22 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert MapSet.member?(assigns.merge_selected_workflow_ids, changed_data.id)
     end
 
-    test "target-only workflows appear in list with is_deleted flag and badge",
+    test "target-only workflows appear in list unchecked by default",
          %{
            conn: conn,
            parent: parent,
            sandbox: sandbox
          } do
-      # Parent has "Alpha" and "Gamma" — sandbox only has "Alpha"
-      # so "Gamma" was deleted in the sandbox
+      # Gamma existed before the fork, so it is in the project but not the sandbox.
       _parent_alpha = insert(:workflow, project: parent, name: "Alpha")
-      _parent_gamma = insert(:workflow, project: parent, name: "Gamma")
+
+      _parent_gamma =
+        insert(:workflow,
+          project: parent,
+          name: "Gamma",
+          inserted_at: DateTime.add(sandbox.inserted_at, -3600, :second)
+        )
+
       _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
 
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
@@ -3603,16 +3609,140 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       gamma_data =
         Enum.find(assigns.merge_source_workflows, &(&1.name == "Gamma"))
 
-      assert gamma_data
-      assert gamma_data.is_deleted
-      refute gamma_data.is_new
-      refute gamma_data.is_diverged
+      assert %{
+               is_deleted: true,
+               is_new: false,
+               is_diverged: false,
+               is_changed: false
+             } = gamma_data
 
-      # The gamma workflow's ID in the list is the target (parent) workflow ID
-      assert MapSet.member?(assigns.merge_selected_workflow_ids, gamma_data.id)
+      refute MapSet.member?(assigns.merge_selected_workflow_ids, gamma_data.id)
 
-      # Badge shown in HTML
       assert html =~ "Deleted in sandbox"
+    end
+
+    test "target-only workflow added after the fork is hidden from the merge list",
+         %{conn: conn, parent: parent, sandbox: sandbox} do
+      _parent_alpha = insert(:workflow, project: parent, name: "Alpha")
+
+      _parent_added =
+        insert(:workflow,
+          project: parent,
+          name: "Added Later",
+          inserted_at: DateTime.add(sandbox.inserted_at, 3600, :second)
+        )
+
+      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      html =
+        view
+        |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+        |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      # A workflow added to the project after the fork is not part of this
+      # sandbox's merge, so it does not appear in the list at all.
+      refute Enum.any?(
+               assigns.merge_source_workflows,
+               &(&1.name == "Added Later")
+             )
+
+      refute html =~ "Added Later"
+    end
+
+    test "explicitly checking a target-only workflow deletes it on merge",
+         %{conn: conn, parent: parent, sandbox: sandbox} do
+      parent_alpha = insert(:workflow, project: parent, name: "Alpha")
+
+      parent_gamma =
+        insert(:workflow,
+          project: parent,
+          name: "Gamma",
+          inserted_at: DateTime.add(sandbox.inserted_at, -3600, :second)
+        )
+
+      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      render_click(view, "toggle-workflow", %{"id" => parent_gamma.id})
+
+      render_click(view, "confirm-merge", %{
+        "merge" => %{"target_id" => parent.id}
+      })
+
+      assert Lightning.Repo.reload(parent_gamma).deleted_at
+      refute Lightning.Repo.reload(parent_alpha).deleted_at
+    end
+
+    test "target-only workflow is kept when left unchecked on merge",
+         %{conn: conn, parent: parent, sandbox: sandbox} do
+      parent_alpha = insert(:workflow, project: parent, name: "Alpha")
+
+      parent_added =
+        insert(:workflow,
+          project: parent,
+          name: "Added Later",
+          inserted_at: DateTime.add(sandbox.inserted_at, 3600, :second)
+        )
+
+      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      render_click(view, "confirm-merge", %{
+        "merge" => %{"target_id" => parent.id}
+      })
+
+      refute Lightning.Repo.reload(parent_added).deleted_at
+      refute Lightning.Repo.reload(parent_alpha).deleted_at
+    end
+
+    test "target-only workflow added after the fork cannot be deleted even if toggled",
+         %{conn: conn, parent: parent, sandbox: sandbox} do
+      parent_alpha = insert(:workflow, project: parent, name: "Alpha")
+
+      parent_added =
+        insert(:workflow,
+          project: parent,
+          name: "Added Later",
+          inserted_at: DateTime.add(sandbox.inserted_at, 3600, :second)
+        )
+
+      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # The workflow is not in the merge list, so a forced toggle event for it
+      # is ignored and it can never be selected for deletion.
+      render_click(view, "toggle-workflow", %{"id" => parent_added.id})
+
+      refute MapSet.member?(
+               :sys.get_state(view.pid).socket.assigns.merge_selected_workflow_ids,
+               parent_added.id
+             )
+
+      render_click(view, "confirm-merge", %{
+        "merge" => %{"target_id" => parent.id}
+      })
+
+      refute Lightning.Repo.reload(parent_added).deleted_at
+      refute Lightning.Repo.reload(parent_alpha).deleted_at
     end
 
     test "workflow selection UI shows per-row status badges", %{
@@ -4142,7 +4272,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
             apiSecretName: api_secret_name(parent),
             branch: repo_connection.branch,
             pathToConfig: path_to_config(repo_connection),
-            commitMessage: "Merged sandbox #{sandbox.name}"
+            commitMessage: "Merged sandbox #{sandbox.name}",
+            snapshots: "#{snapshot.id}"
           }
         }
       )
@@ -4209,7 +4340,8 @@ defmodule LightningWeb.SandboxLive.IndexTest do
             apiSecretName: api_secret_name(parent),
             branch: repo_connection.branch,
             pathToConfig: path_to_config(repo_connection),
-            commitMessage: "Merged sandbox #{sandbox.name}"
+            commitMessage: "Merged sandbox #{sandbox.name}",
+            snapshots: "#{snapshot.id}"
           }
         }
       )

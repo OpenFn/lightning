@@ -15,7 +15,6 @@ defmodule Lightning.AiAssistant do
 
   alias Ecto.Changeset
   alias Ecto.Multi
-  alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
@@ -36,12 +35,6 @@ defmodule Lightning.AiAssistant do
   @type opts :: keyword()
 
   @doc """
-  Returns the maximum allowed length for chat session titles.
-  """
-  @spec title_max_length() :: non_neg_integer()
-  def title_max_length, do: @title_max_length
-
-  @doc """
   Checks if the AI assistant feature is enabled via application configuration.
 
   Verifies that both the Apollo endpoint URL and API key are properly configured,
@@ -56,79 +49,6 @@ defmodule Lightning.AiAssistant do
     endpoint = Lightning.Config.apollo(:endpoint)
     api_key = Lightning.Config.apollo(:ai_assistant_api_key)
     is_binary(endpoint) && is_binary(api_key)
-  end
-
-  @doc """
-  Checks if the Apollo AI service endpoint is reachable and responding.
-
-  Performs a connectivity test to ensure the external AI service is available
-  before attempting to make actual queries.
-
-  ## Returns
-
-  `true` if the Apollo endpoint responds successfully, `false` otherwise.
-  """
-  @spec endpoint_available?() :: boolean()
-  def endpoint_available? do
-    ApolloClient.test() == :ok
-  end
-
-  @doc """
-  Checks if a user has acknowledged the AI assistant disclaimer recently.
-
-  Verifies that the user has read and accepted the AI assistant terms and conditions
-  within the last 24 hours. This ensures users are aware of AI limitations and usage terms.
-
-  ## Parameters
-
-  - `user` - The `%User{}` struct to check
-
-  ## Returns
-
-  `true` if disclaimer was read within 24 hours, `false` otherwise.
-  """
-  @spec user_has_read_disclaimer?(User.t()) :: boolean()
-  def user_has_read_disclaimer?(user) do
-    read_at =
-      user
-      |> Accounts.get_preference("ai_assistant.disclaimer_read_at")
-      |> case do
-        timestamp when is_binary(timestamp) -> String.to_integer(timestamp)
-        other -> other
-      end
-
-    case read_at && DateTime.from_unix(read_at) do
-      {:ok, datetime} ->
-        DateTime.diff(DateTime.utc_now(), datetime, :hour) < 24
-
-      _error ->
-        false
-    end
-  end
-
-  @doc """
-  Records that a user has read and accepted the AI assistant disclaimer.
-
-  Updates the user's preferences with a timestamp indicating when they
-  acknowledged the AI assistant terms and conditions.
-
-  ## Parameters
-
-  - `user` - The `%User{}` who read the disclaimer
-
-  ## Returns
-
-  `{:ok, user}` - Successfully recorded disclaimer acceptance.
-  """
-  @spec mark_disclaimer_read(User.t()) :: {:ok, User.t()}
-  def mark_disclaimer_read(user) do
-    timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-    Accounts.update_user_preference(
-      user,
-      "ai_assistant.disclaimer_read_at",
-      timestamp
-    )
   end
 
   @doc """
@@ -161,6 +81,7 @@ defmodule Lightning.AiAssistant do
 
     session_attrs = %{
       job_id: job.id,
+      project_id: project_id_for_job(job),
       user_id: user.id,
       title: create_title(content),
       session_type: "job_code",
@@ -180,6 +101,15 @@ defmodule Lightning.AiAssistant do
     end)
     |> Repo.transaction()
     |> handle_transaction_result()
+  end
+
+  defp project_id_for_job(%Job{workflow_id: nil}), do: nil
+
+  defp project_id_for_job(%Job{workflow_id: workflow_id}) do
+    Workflow
+    |> where([w], w.id == ^workflow_id)
+    |> select([w], w.project_id)
+    |> Repo.one()
   end
 
   @doc """
@@ -569,29 +499,6 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
-  Checks if additional sessions are available beyond the current count.
-
-  This is a convenience function to determine if there are more sessions
-  to load without fetching the actual data. Useful for "Load More" UI patterns.
-
-  ## Parameters
-
-  - `resource` - A `%Project{}` or `%Job{}` struct
-  - `current_count` - Number of sessions already loaded
-
-  ## Returns
-
-  `true` if more sessions exist, `false` otherwise.
-  """
-  @spec has_more_sessions?(Project.t() | Job.t(), integer()) :: boolean()
-  def has_more_sessions?(resource, current_count) do
-    %{pagination: pagination} =
-      list_sessions(resource, :desc, offset: current_count, limit: 1)
-
-    pagination.has_next_page
-  end
-
-  @doc """
   Adds job-specific context to a chat session for enhanced AI assistance.
 
   Enriches a session with the job's expression code and adaptor information,
@@ -701,30 +608,6 @@ defmodule Lightning.AiAssistant do
   defp maybe_add_run_logs(session, _job_id), do: session
 
   @doc """
-  Associates a workflow with a chat session.
-
-  Links a generated workflow to the session that created it, enabling tracking
-  and future modifications through the same conversation context.
-
-  ## Parameters
-
-  - `session` - The `%ChatSession{}` that generated the workflow
-  - `workflow` - The `%Workflow{}` struct to associate
-
-  ## Returns
-
-  - `{:ok, session}` - Successfully linked workflow to session
-  - `{:error, changeset}` - Association failed with validation errors
-  """
-  @spec associate_workflow(ChatSession.t(), Workflow.t()) ::
-          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def associate_workflow(session, workflow) do
-    session
-    |> ChatSession.changeset(%{workflow_id: workflow.id})
-    |> Repo.update()
-  end
-
-  @doc """
   Saves a message to an existing chat session.
 
   Adds a new message to the session's message history and updates the session.
@@ -780,13 +663,25 @@ defmodule Lightning.AiAssistant do
   end
 
   defp prepare_message_attrs(message_attrs, session, code) do
-    message_attrs
-    |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
-    |> Map.put("chat_session_id", session.id)
-    |> Map.put("code", code)
-    |> maybe_put_job_id_from_session(session)
-    |> maybe_put_unsaved_job_meta(session)
+    attrs =
+      message_attrs
+      |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
+      |> Map.put("chat_session_id", session.id)
+      |> Map.put("code", code)
+
+    # Global messages carry a full workflow YAML, never a job —
+    # even when the session was started from a job step.
+    if global_message?(attrs) do
+      attrs
+    else
+      attrs
+      |> maybe_put_job_id_from_session(session)
+      |> maybe_put_unsaved_job_meta(session)
+    end
   end
+
+  defp global_message?(%{"meta" => %{"from_global" => true}}), do: true
+  defp global_message?(_), do: false
 
   defp maybe_put_unsaved_job_meta(attrs, session) do
     is_assistant = to_string(Map.get(attrs, "role")) == "assistant"
@@ -866,26 +761,6 @@ defmodule Lightning.AiAssistant do
       {:error, changeset} ->
         {:error, changeset}
     end
-  end
-
-  @doc """
-  Finds all pending user messages in a chat session.
-
-  Retrieves messages that have been sent by users but are still waiting
-  for processing or AI responses. Useful for identifying stuck or failed requests.
-
-  ## Parameters
-
-  - `session` - The `%ChatSession{}` to search
-
-  ## Returns
-
-  List of `%ChatMessage{}` structs with `:role` of `:user` and `:status` of `:pending`.
-  """
-  @spec find_pending_user_messages(ChatSession.t()) :: [ChatMessage.t()]
-  def find_pending_user_messages(session) do
-    messages = session.messages || []
-    Enum.filter(messages, &(&1.role == :user && &1.status == :pending))
   end
 
   @doc """
@@ -1104,11 +979,7 @@ defmodule Lightning.AiAssistant do
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
-        process_stream(
-          session,
-          body,
-          &build_global_message(&1, session)
-        )
+        process_stream(session, body, &build_global_message/1)
 
       error ->
         handle_error_response(error, session)
@@ -1479,93 +1350,29 @@ defmodule Lightning.AiAssistant do
     {message_attrs, opts}
   end
 
-  defp build_global_message(body, session) do
-    {code, job, job_key} =
-      extract_global_code_and_job(body["attachments"], session)
+  defp build_global_message(body) do
+    code = extract_global_workflow_yaml(body["attachments"])
 
     message_attrs = %{
       role: :assistant,
-      content: body["response"]
+      content: body["response"],
+      meta: %{"from_global" => true}
     }
 
-    # Set job on message for "Generated Job Code" rendering.
-    # For saved jobs, set the job association directly.
-    # For unsaved jobs, set from_unsaved_job in meta so
-    # format_message can use it as a fallback job_id.
-    message_attrs =
-      cond do
-        job ->
-          Map.put(message_attrs, :job, job)
-
-        job_key ->
-          Map.put(message_attrs, :meta, %{"from_global_job_code" => job_key})
-
-        true ->
-          message_attrs
-      end
-
-    opts = [
-      usage: body["usage"] || %{},
-      meta: body["meta"],
-      code: code
-    ]
-
+    opts = [usage: body["usage"] || %{}, meta: body["meta"], code: code]
     {message_attrs, opts}
   end
 
-  # Extracts the appropriate code artifact and optional job from global chat
-  # attachments. On a job step, prefers job_code (renders as code diff).
-  # On the workflow overview, prefers workflow_yaml (renders as YAML card).
-  defp extract_global_code_and_job(attachments, session)
-       when is_list(attachments) do
-    page = get_in(session.meta || %{}, ["message_options", "page"])
-    on_job_step = page && length(String.split(page, "/")) >= 3
-
-    job_code_attachment =
-      Enum.find(attachments, &match?(%{"type" => "job_code"}, &1))
-
-    if on_job_step && job_code_attachment do
-      job_key = job_code_attachment["job_key"]
-
-      job =
-        resolve_job_from_key(session.workflow_id, job_key)
-
-      {job_code_attachment["content"], job, job_key}
-    else
-      workflow_yaml =
-        Enum.find_value(attachments, fn
-          %{"type" => "workflow_yaml", "content" => content} -> content
-          _ -> nil
-        end)
-
-      {workflow_yaml, nil, nil}
-    end
-  end
-
-  defp extract_global_code_and_job(_, _), do: {nil, nil, nil}
-
-  defp resolve_job_from_key(nil, _), do: nil
-  defp resolve_job_from_key(_, nil), do: nil
-
-  defp resolve_job_from_key(workflow_id, job_key) do
-    import Ecto.Query
-
-    Lightning.Workflows.Job
-    |> where([j], j.workflow_id == ^workflow_id)
-    |> Repo.all()
-    |> Enum.find(fn job ->
-      normalize_job_name(job.name) == normalize_job_name(job_key)
+  # Global chat always returns a full workflow YAML (job bodies embedded).
+  # The frontend handles per-step diffing and full-workflow apply.
+  defp extract_global_workflow_yaml(attachments) when is_list(attachments) do
+    Enum.find_value(attachments, fn
+      %{"type" => "workflow_yaml", "content" => content} -> content
+      _ -> nil
     end)
   end
 
-  defp normalize_job_name(name) when is_binary(name) do
-    name
-    |> String.downcase()
-    |> String.replace(~r/[^a-z0-9]+/, "-")
-    |> String.trim("-")
-  end
-
-  defp normalize_job_name(_), do: ""
+  defp extract_global_workflow_yaml(_), do: nil
 
   defp build_history(session) do
     messages = session.messages || []
