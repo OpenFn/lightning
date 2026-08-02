@@ -1,0 +1,10 @@
+# Advisories intentionally ignored by `mix deps.audit`.
+# One advisory ID per line; `#` lines and blank lines are ignored.
+#
+# Currently empty: every advisory `mix deps.audit` knows about is fixed in the
+# locked dependencies. The four hackney advisories that used to live here
+# (GHSA-gp9c-pm5m-5cxr, GHSA-pj7v-xfvx-wmjq, GHSA-j9wq-vxxc-94wf and
+# GHSA-mp55-p8c9-rfw2) are all fixed in hackney 4.0.1, and we now run 4.x.
+#
+# Keep this file even while it is empty: CI passes it via `--ignore-file` and
+# mix_audit reads it with `File.read!/1`, which raises if it is missing.

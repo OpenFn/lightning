@@ -32,8 +32,8 @@ defmodule Lightning.OauthClients do
       iex> change_client(%OauthClient{}, %{name: "New Client"})
       %Ecto.Changeset{...}
   """
-  def change_client(%OauthClient{} = client, attrs \\ %{}) do
-    OauthClient.changeset(client, attrs)
+  def change_client(%OauthClient{} = client, attrs \\ %{}, opts \\ []) do
+    OauthClient.changeset(client, attrs, opts)
   end
 
   @doc """
@@ -131,8 +131,8 @@ defmodule Lightning.OauthClients do
     iex> create_client(%{name: nil})
     {:error, %Ecto.Changeset{}}
   """
-  def create_client(attrs \\ %{}) do
-    changeset = OauthClient.changeset(%OauthClient{}, attrs)
+  def create_client(attrs \\ %{}, opts \\ []) do
+    changeset = OauthClient.changeset(%OauthClient{}, attrs, opts)
 
     Multi.new()
     |> Multi.insert(:client, changeset)
@@ -159,8 +159,8 @@ defmodule Lightning.OauthClients do
       iex> update_client(client, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
   """
-  def update_client(%OauthClient{} = client, attrs) do
-    changeset = OauthClient.changeset(client, attrs)
+  def update_client(%OauthClient{} = client, attrs, opts \\ []) do
+    changeset = OauthClient.changeset(client, attrs, opts)
 
     Multi.new()
     |> Multi.update(:client, changeset)

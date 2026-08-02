@@ -1,13 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { getTestData } from '../../test-data';
+
 import { enableExperimentalFeatures } from '../../e2e-helper';
-import {
-  LoginPage,
-  ProjectsPage,
-  WorkflowsPage,
-  WorkflowEditPage,
-  WorkflowCollaborativePage,
-} from '../../pages';
+import { LoginPage, WorkflowCollaborativePage } from '../../pages';
+import { getTestData } from '../../test-data';
 
 /**
  * E2E Test Suite: Run/Retry Keyboard Shortcuts
@@ -45,22 +40,12 @@ test.describe('Run/Retry Keyboard Shortcuts @collaborative @critical', () => {
       testData.users.editor.password
     );
 
-    // Navigate to collaborative editor
-    const projectsPage = new ProjectsPage(page);
-    await projectsPage.navigateToProject(testData.projects.openhie.name);
-
-    const workflowsPage = new WorkflowsPage(page);
-    await workflowsPage.navigateToWorkflow(testData.workflows.openhie.name);
-
-    // Wait for workflow edit page to load
-    const workflowEditPage = new WorkflowEditPage(page);
-    await workflowEditPage.waitForConnected();
-
-    // Switch to collaborative editor via beaker icon
-    await workflowEditPage.clickCollaborativeEditorToggle();
-
+    // Navigate directly to the collaborative editor (the only editor)
     const collabPage = new WorkflowCollaborativePage(page);
-    await collabPage.waitForReactComponentLoaded();
+    await collabPage.open({
+      projectId: testData.projects.openhie.id,
+      workflowId: testData.workflows.openhie.id,
+    });
 
     // Wait for workflow canvas to be interactive (job nodes visible)
     // We don't strictly need full "Synced" state for keyboard shortcut tests

@@ -642,7 +642,21 @@ export function MessageList({
                 }
               >
                 <div className="space-y-3">
-                  {timelineSegments(message) ? (
+                  {message.status === 'error' &&
+                  !isStreaming(message) &&
+                  message.content.trim() ? (
+                    <div
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2"
+                      data-testid="ai-validation-error"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-700 leading-relaxed">
+                          {message.content}
+                        </p>
+                      </div>
+                    </div>
+                  ) : timelineSegments(message) ? (
                     <SegmentTimeline
                       segments={timelineSegments(message)!}
                       streaming={isStreaming(message)}
@@ -763,33 +777,35 @@ export function MessageList({
                     </div>
                   )}
 
-                  {!isStreaming(message) && message.status === 'error' && (
-                    <div
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200"
-                      data-testid="ai-error-message"
-                    >
-                      <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0" />
-                      <span className="text-sm text-red-700 flex-1">
-                        Failed to send message. Please try again.
-                      </span>
-                      {onRetryMessage && (
-                        <button
-                          type="button"
-                          onClick={() => onRetryMessage(message.id)}
-                          className={cn(
-                            'inline-flex items-center gap-1.5 px-3 py-1.5',
-                            'text-xs font-medium rounded-md',
-                            'bg-red-100 text-red-700 hover:bg-red-200',
-                            'transition-colors duration-150',
-                            'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
-                          )}
-                        >
-                          <span className="hero-arrow-path h-3.5 w-3.5" />
-                          Retry
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  {!isStreaming(message) &&
+                    message.status === 'error' &&
+                    !message.content.trim() && (
+                      <div
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200"
+                        data-testid="ai-error-message"
+                      >
+                        <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0" />
+                        <span className="text-sm text-red-700 flex-1">
+                          Failed to send message. Please try again.
+                        </span>
+                        {onRetryMessage && (
+                          <button
+                            type="button"
+                            onClick={() => onRetryMessage(message.id)}
+                            className={cn(
+                              'inline-flex items-center gap-1.5 px-3 py-1.5',
+                              'text-xs font-medium rounded-md',
+                              'bg-red-100 text-red-700 hover:bg-red-200',
+                              'transition-colors duration-150',
+                              'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
+                            )}
+                          >
+                            <span className="hero-arrow-path h-3.5 w-3.5" />
+                            Retry
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                   {!isStreaming(message) && message.status === 'processing' && (
                     <div className="flex items-center gap-2 text-gray-600">

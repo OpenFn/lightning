@@ -2727,6 +2727,87 @@ defmodule Lightning.WorkOrdersTest do
       assert Enum.all?(results, &(&1.workflow_id == workflow.id))
     end
 
+    test "does not surface another workflow's work order for a foreign run_id",
+         %{workflow: workflow, trigger: trigger, snapshot: snapshot} do
+      # An own work order, so this workflow's history is non-empty.
+      own_dataclip = insert(:dataclip)
+
+      own_workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: own_dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:run,
+        work_order: own_workorder,
+        dataclip: own_dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot
+      )
+
+      # A run belonging to a DIFFERENT workflow (and project).
+      other_workflow = insert(:simple_workflow)
+      other_trigger = hd(other_workflow.triggers)
+      {:ok, other_snapshot} = Lightning.Workflows.Snapshot.create(other_workflow)
+      other_dataclip = insert(:dataclip)
+
+      foreign_workorder =
+        insert(:workorder,
+          workflow: other_workflow,
+          trigger: other_trigger,
+          dataclip: other_dataclip,
+          snapshot: other_snapshot
+        )
+
+      foreign_run =
+        insert(:run,
+          work_order: foreign_workorder,
+          dataclip: other_dataclip,
+          starting_trigger: other_trigger,
+          snapshot: other_snapshot
+        )
+
+      results = WorkOrders.get_workorders_with_runs(workflow.id, foreign_run.id)
+      wo_ids = Enum.map(results, & &1.id)
+
+      # The foreign run's work order is never returned; the caller falls back to
+      # its own workflow's history.
+      refute foreign_workorder.id in wo_ids
+      assert own_workorder.id in wo_ids
+      assert Enum.all?(results, &(&1.workflow_id == workflow.id))
+    end
+
+    test "falls back to the workflow's history for a malformed run_id", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot: snapshot
+    } do
+      dataclip = insert(:dataclip)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          runs: [
+            %{
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              state: :available
+            }
+          ]
+        )
+
+      # A non-UUID run_id must not crash; it's treated as no pin.
+      results = WorkOrders.get_workorders_with_runs(workflow.id, "not-a-uuid")
+
+      assert Enum.map(results, & &1.id) == [workorder.id]
+    end
+
     test "respects the limit of 20 workorders", %{
       workflow: workflow,
       trigger: trigger,

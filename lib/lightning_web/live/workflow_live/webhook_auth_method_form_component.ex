@@ -4,7 +4,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Accounts
-  alias Lightning.Accounts.User
   alias Lightning.Projects.Project
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
@@ -13,7 +12,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   def update(
         %{
           webhook_auth_method: webhook_auth_method,
-          current_user: current_user,
+          current_user: _user,
           on_close: _on_close,
           return_to: _return_to
         } =
@@ -32,7 +31,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
      |> assign(assigns)
      |> assign(sudo_mode?: false)
      |> assign(show_2fa_options: false)
-     |> assign(has_password: User.has_password?(current_user))
      |> assign_new(:on_save, fn _ -> nil end)}
   end
 
@@ -208,12 +206,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   end
 
   defp valid_user_input?(current_user, %{"password" => password, "code" => code}) do
-    User.valid_password?(current_user, password) ||
+    Accounts.User.valid_password?(current_user, password) ||
       Accounts.valid_user_totp?(current_user, code)
-  end
-
-  defp valid_user_input?(current_user, %{"code" => code}) do
-    Accounts.valid_user_totp?(current_user, code)
   end
 
   @impl true
@@ -269,37 +263,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   defp authenticate_user_form(assigns) do
     ~H"""
-    <div :if={!@has_password and !@current_user.mfa_enabled} class="mt-2">
-      <div class="space-y-4">
-        <p class="text-sm">
-          To view the webhook
-          <%= if @webhook_auth_method.auth_type == :basic do %>
-            Password
-          <% else %>
-            API Key
-          <% end %>
-          you need to confirm your identity. Because you sign in via single
-          sign-on, please
-          <.link navigate={~p"/profile"} class="link font-medium">
-            set a password or enable two-factor authentication
-          </.link>
-          first.
-        </p>
-      </div>
-      <.modal_footer class="sm:flex sm:flex-row-reverse gap-3">
-        <.button
-          type="button"
-          phx-click="toggle-2fa"
-          phx-target={@myself}
-          theme="secondary"
-        >
-          Back
-        </.button>
-      </.modal_footer>
-    </div>
     <.form
       :let={f}
-      :if={@has_password or @current_user.mfa_enabled}
       for={%{}}
       action="#"
       phx-submit="reauthenticate-user"
@@ -324,13 +289,12 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         <% end %>
 
         <.input
-          :if={@has_password}
           type="password"
           field={f[:password]}
           label="Password"
           autocomplete="new-password"
         />
-        <div :if={@has_password} class="relative">
+        <div class="relative">
           <div class="absolute inset-0 flex items-center" aria-hidden="true">
             <div class="w-full border-t border-gray-300"></div>
           </div>

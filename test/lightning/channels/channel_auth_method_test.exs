@@ -2,6 +2,7 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Channels.ChannelAuthMethod
+  alias Lightning.Credentials.Scoping
 
   import Lightning.Factories
 
@@ -151,6 +152,21 @@ defmodule Lightning.Channels.ChannelAuthMethodTest do
                |> Lightning.Repo.insert()
 
       assert errors_on(changeset) != %{}
+    end
+
+    test "destination auth with a nonexistent project credential renders the shared wording" do
+      channel = insert(:channel)
+
+      assert {:error, changeset} =
+               %ChannelAuthMethod{channel_id: channel.id}
+               |> ChannelAuthMethod.changeset(%{
+                 role: :destination,
+                 project_credential_id: Ecto.UUID.generate()
+               })
+               |> Lightning.Repo.insert()
+
+      assert %{project_credential_id: [msg]} = errors_on(changeset)
+      assert msg == Scoping.violation_message(:project_credential_id)
     end
   end
 end

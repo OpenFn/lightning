@@ -9,20 +9,33 @@ import { ChannelRequestError } from '../lib/errors';
  * - Business logic errors (unauthorized, deleted, etc.) use `errors.base`
  * - Validation errors from Ecto changesets use field-specific keys (e.g., `errors.name`)
  */
+/**
+ * One field's errors as Ecto renders them.
+ *
+ * Top-level fields carry flat messages. Embedded associations (`jobs`, `edges`,
+ * `triggers`) carry an entry per entity, each a map of that entity's own field
+ * errors, wrapped in two levels of array — which is why
+ * `formatChannelErrorMessage` flattens twice to reach them.
+ */
+export type ChannelFieldErrors = string[] | Record<string, string[]>[][];
+
 export interface ChannelError {
   /**
    * Error messages organized by field or "base" for general errors.
-   * Each field contains an array of error messages.
    *
    * Examples:
    * - Business error: `{ base: ["This workflow has been deleted"] }`
    * - Validation error: `{ name: ["can't be blank"] }`
-   * - Multiple fields: `{ name: ["can't be blank"], concurrency: ["must be greater than 0"] }`
+   * - Embedded association: `{ jobs: [[{ name: ["can't be blank"] }]] }`
+   *
+   * Optional: handlers that reply `{reason: "..."}` send no error map at all.
    */
-  errors: {
-    /** Business logic errors (unauthorized, deleted, system failures) */
-    base?: string[];
-  } & Record<string, string[]>;
+  errors?:
+    | ({
+        /** Business logic errors (unauthorized, deleted, system failures) */
+        base?: string[];
+      } & Record<string, ChannelFieldErrors>)
+    | undefined;
 
   /**
    * Error type indicating the category of error.
@@ -33,15 +46,24 @@ export interface ChannelError {
    * - validation_error: Ecto changeset validation failed
    * - optimistic_lock_error: Concurrent modification conflict (stale lock_version)
    * - limit_error: Usage limit exceeded (AI assistant, runs, etc.)
+   *
+   * Optional for the same reason as `errors`.
    */
-  type:
+  type?:
     | 'unauthorized'
     | 'workflow_deleted'
     | 'deserialization_error'
     | 'internal_error'
     | 'validation_error'
     | 'optimistic_lock_error'
-    | 'limit_error';
+    | 'limit_error'
+    | undefined;
+
+  /**
+   * Plain-text message used by handlers that reply `{reason: "..."}` instead of
+   * an `errors` map — `update_trigger_auth_methods` is the current example.
+   */
+  reason?: string | undefined;
 }
 
 export async function channelRequest<T = unknown>(
@@ -56,7 +78,13 @@ export async function channelRequest<T = unknown>(
         resolve(response);
       })
       .receive('error', (channelError: ChannelError) => {
-        reject(new ChannelRequestError(channelError.type, channelError.errors));
+        reject(
+          new ChannelRequestError(
+            channelError.type,
+            channelError.errors,
+            channelError.reason
+          )
+        );
       })
       .receive('timeout', () => {
         reject(new Error('Request timed out'));
