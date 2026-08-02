@@ -27,6 +27,8 @@ defmodule Lightning.UsageTracking.ProjectMetricsService do
 
     %{
       no_of_active_users: UserService.no_of_active_users(date, users),
+      no_of_monthly_active_users:
+        UserService.no_of_monthly_active_users(date, users),
       no_of_users: UserService.no_of_users(date, users),
       workflows: instrument_workflows(project, cleartext_enabled, date)
     }

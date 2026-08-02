@@ -7,6 +7,7 @@ defmodule Lightning.ChannelsTest do
   alias Lightning.Channels
   alias Lightning.Channels.Channel
   alias Lightning.Channels.ChannelSnapshot
+  alias Lightning.Credentials.Scoping
 
   describe "list_channels_for_project/1" do
     test "returns channels ordered by name, excluding other projects" do
@@ -213,6 +214,107 @@ defmodule Lightning.ChannelsTest do
 
       assert %{name: ["A channel with this name already exists in this project"]} =
                errors_on(cs3)
+    end
+  end
+
+  describe "destination credential scoping" do
+    setup do
+      %{user: insert(:user)}
+    end
+
+    test "create_channel rejects a destination credential owned by another project",
+         %{user: user} do
+      project = insert(:project)
+      other_project = insert(:project)
+      victim_credential = insert(:project_credential, project: other_project)
+
+      assert {:error, changeset} =
+               Channels.create_channel(
+                 %{
+                   name: "exfil",
+                   destination_url: "https://attacker.example.com",
+                   project_id: project.id,
+                   destination_auth_method: %{
+                     project_credential_id: victim_credential.id
+                   }
+                 },
+                 actor: user
+               )
+
+      refute changeset.valid?
+
+      assert %{
+               destination_auth_method: %{
+                 project_credential_id: [msg]
+               }
+             } = errors_on(changeset)
+
+      assert msg == Scoping.violation_message(:project_credential_id)
+
+      # Nothing was persisted.
+      assert Channels.list_channels_for_project(project.id) == []
+    end
+
+    test "create_channel allows a destination credential owned by the same project",
+         %{user: user} do
+      project = insert(:project)
+      own_credential = insert(:project_credential, project: project)
+
+      assert {:ok, %Channel{} = channel} =
+               Channels.create_channel(
+                 %{
+                   name: "legit",
+                   destination_url: "https://example.com/destination",
+                   project_id: project.id,
+                   destination_auth_method: %{
+                     project_credential_id: own_credential.id
+                   }
+                 },
+                 actor: user
+               )
+
+      channel =
+        Channels.get_channel!(channel.id, include: [:destination_auth_method])
+
+      assert channel.destination_auth_method.project_credential_id ==
+               own_credential.id
+    end
+
+    test "update_channel rejects swapping in a destination credential from another project",
+         %{user: user} do
+      project = insert(:project)
+      other_project = insert(:project)
+      victim_credential = insert(:project_credential, project: other_project)
+
+      channel =
+        insert(:channel, project: project)
+        |> Lightning.Repo.preload(:destination_auth_method)
+
+      assert {:error, changeset} =
+               Channels.update_channel(
+                 channel,
+                 %{
+                   destination_auth_method: %{
+                     project_credential_id: victim_credential.id
+                   }
+                 },
+                 actor: user
+               )
+
+      refute changeset.valid?
+
+      assert %{
+               destination_auth_method: %{
+                 project_credential_id: [msg]
+               }
+             } = errors_on(changeset)
+
+      assert msg == Scoping.violation_message(:project_credential_id)
+
+      reloaded =
+        Channels.get_channel!(channel.id, include: [:destination_auth_method])
+
+      assert reloaded.destination_auth_method == nil
     end
   end
 

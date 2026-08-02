@@ -140,65 +140,89 @@ defmodule Lightning.Collaboration.WorkflowResolver do
   point-in-time view that is never saved through this path; the `:version` kind
   lets callers distinguish it from a genuinely-new workflow.
 
-  Sets `project_id` from the supplied project and performs **no** ownership
-  check, unlike the `:edit` latest path. Performs **no** authorization (auth
+  Sets `project_id` from the supplied project. Enforces the same
+  project-ownership invariant as the `:edit` latest path: when a `:project` opt
+  is supplied the snapshot's workflow must belong to it, otherwise
+  `{:error, :wrong_project}` — so a snapshot version cannot be read across
+  projects. With no `:project` opt (the internal point-in-time use) ownership is
+  not checked, matching `check_ownership/2`. Performs **no** authorization (auth
   stays at the channel).
 
   Returns `{:error, :snapshot_not_found}` when no snapshot exists for the
-  version.
+  version, and `{:error, :workflow_not_found}` when the workflow row is gone.
   """
   @spec resolve_version(
           workflow_id :: Ecto.UUID.t(),
           version :: non_neg_integer(),
           opts :: resolve_opts()
-        ) :: {:ok, Workflow.t(), kind()} | {:error, :snapshot_not_found}
+        ) ::
+          {:ok, Workflow.t(), kind()}
+          | {:error, :snapshot_not_found | :wrong_project | :workflow_not_found}
   def resolve_version(workflow_id, version, opts \\ []) do
     project = Keyword.get(opts, :project)
 
-    case Snapshot.get_by_version(workflow_id, version) do
-      nil ->
-        {:error, :snapshot_not_found}
-
-      snapshot ->
-        trigger_ids = Enum.map(snapshot.triggers, &Ecto.UUID.dump!(&1.id))
-
-        # Snapshot triggers reference auth methods through the join table
-        # directly, so derive has_auth_method from a raw query grouped by
-        # trigger_id rather than from the schema preload.
-        trigger_auth_methods =
-          from(twam in "trigger_webhook_auth_methods",
-            where: twam.trigger_id in ^trigger_ids,
-            join: wam in WebhookAuthMethod,
-            on: twam.webhook_auth_method_id == wam.id,
-            where: is_nil(wam.scheduled_deletion),
-            select: %{trigger_id: twam.trigger_id, auth_method: wam}
-          )
-          |> Repo.all()
-          |> Enum.group_by(
-            &Ecto.UUID.cast!(&1.trigger_id),
-            & &1.auth_method
-          )
-
-        workflow = %Workflow{
-          id: workflow_id,
-          project_id: project && project.id,
-          name: snapshot.name,
-          lock_version: snapshot.lock_version,
-          deleted_at: nil,
-          jobs: Enum.map(snapshot.jobs, &Map.from_struct/1),
-          edges: Enum.map(snapshot.edges, &Map.from_struct/1),
-          triggers:
-            Enum.map(snapshot.triggers, fn trigger ->
-              auth_methods = Map.get(trigger_auth_methods, trigger.id, [])
-
-              trigger
-              |> Map.from_struct()
-              |> Map.put(:has_auth_method, length(auth_methods) > 0)
-            end)
-        }
-
-        {:ok, workflow, :version}
+    with :ok <- check_version_ownership(workflow_id, project),
+         %Snapshot{} = snapshot <- Snapshot.get_by_version(workflow_id, version) do
+      {:ok, build_version_workflow(snapshot, workflow_id, project), :version}
+    else
+      nil -> {:error, :snapshot_not_found}
+      {:error, _reason} = error -> error
     end
+  end
+
+  # A `nil` project (internal point-in-time use) is intentionally unchecked, as
+  # in `check_ownership/2`; a supplied project must own the workflow.
+  defp check_version_ownership(_workflow_id, nil), do: :ok
+
+  defp check_version_ownership(workflow_id, %Project{} = project) do
+    case Workflows.get_workflow(workflow_id) do
+      nil ->
+        {:error, :workflow_not_found}
+
+      workflow ->
+        with {:ok, _workflow} <- check_ownership(workflow, project), do: :ok
+    end
+  end
+
+  defp build_version_workflow(snapshot, workflow_id, project) do
+    auth_methods_by_trigger = snapshot_trigger_auth_methods(snapshot)
+
+    %Workflow{
+      id: workflow_id,
+      project_id: project && project.id,
+      name: snapshot.name,
+      lock_version: snapshot.lock_version,
+      deleted_at: nil,
+      jobs: Enum.map(snapshot.jobs, &Map.from_struct/1),
+      edges: Enum.map(snapshot.edges, &Map.from_struct/1),
+      triggers:
+        Enum.map(snapshot.triggers, fn trigger ->
+          auth_methods = Map.get(auth_methods_by_trigger, trigger.id, [])
+
+          trigger
+          |> Map.from_struct()
+          |> Map.put(:has_auth_method, length(auth_methods) > 0)
+        end)
+    }
+  end
+
+  # Snapshot triggers reference auth methods through the join table directly, so
+  # derive presence from a raw query rather than a schema preload.
+  defp snapshot_trigger_auth_methods(snapshot) do
+    trigger_ids = Enum.map(snapshot.triggers, &Ecto.UUID.dump!(&1.id))
+
+    from(twam in "trigger_webhook_auth_methods",
+      where: twam.trigger_id in ^trigger_ids,
+      join: wam in WebhookAuthMethod,
+      on: twam.webhook_auth_method_id == wam.id,
+      where: is_nil(wam.scheduled_deletion),
+      select: %{trigger_id: twam.trigger_id, auth_method: wam}
+    )
+    |> Repo.all()
+    |> Enum.group_by(
+      &Ecto.UUID.cast!(&1.trigger_id),
+      & &1.auth_method
+    )
   end
 
   # Loads the latest workflow with jobs/edges/triggers, setting has_auth_method

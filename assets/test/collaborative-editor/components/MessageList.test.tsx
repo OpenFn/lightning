@@ -196,11 +196,29 @@ describe('MessageList', () => {
   });
 
   describe('Message Status', () => {
-    it('should show error state for failed messages', () => {
+    it('should show error content in styled box for assistant error with content', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
-          content: 'Failed message',
+          content: 'YAML parse failed: unexpected token',
+          status: 'error',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      // Non-empty content renders inline in a red validation error box
+      expect(screen.getByTestId('ai-validation-error')).toBeInTheDocument();
+      expect(
+        screen.getByText('YAML parse failed: unexpected token')
+      ).toBeInTheDocument();
+    });
+
+    it('should show "Failed to send message" banner for assistant error with no content', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '',
           status: 'error',
         }),
       ];

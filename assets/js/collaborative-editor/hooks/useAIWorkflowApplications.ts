@@ -17,10 +17,13 @@ import type {
   JobCodeContext,
   Message,
   SessionType,
+  StreamingApplyState,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
 
 import type { AIModeResult } from './useAIMode';
+import { NOT_CONNECTED_ALERT, STILL_CONNECTING_ALERT } from './useWorkflow';
+import type { SaveWorkflowOptions } from './useWorkflow';
 
 /**
  * Helper function to validate workflow IDs before applying
@@ -94,6 +97,8 @@ function validateIds(spec: Record<string, unknown>): void {
  * - Prevents duplicate applies in collaborative sessions
  * - Tracks applied messages to avoid re-applying on session load
  * - Only applies the latest message with code (skips intermediates)
+ * - Skips the final message's re-import when streaming already applied
+ *   the same YAML (streamingApply record in AIAssistantStore)
  *
  * Accepts raw dependencies (not callbacks) and creates callbacks internally
  * for cleaner usage and better memoization control.
@@ -104,6 +109,10 @@ export function useAIWorkflowApplications({
   currentSession,
   currentUserId,
   aiMode,
+  isNewWorkflow,
+  isSessionConnected,
+  isSessionConnecting,
+  onValidationError,
   workflowActions,
   monacoRef,
   jobs,
@@ -113,6 +122,8 @@ export function useAIWorkflowApplications({
   previewingMessageId,
   setApplyingMessageId,
   appliedMessageIdsRef,
+  streamingApply,
+  streamingApplyActions,
 }: {
   sessionId: string | null;
   page: SessionType | null;
@@ -122,6 +133,19 @@ export function useAIWorkflowApplications({
   } | null;
   currentUserId: string | undefined;
   aiMode: AIModeResult | null;
+  isNewWorkflow: boolean;
+  /**
+   * Workflow-session socket connectivity (distinct from `connectionState`,
+   * which tracks the separate assistant-conversation channel).
+   */
+  isSessionConnected: boolean;
+  /**
+   * True only during the initial workflow-session channel-join window —
+   * distinct from a genuine disconnect. Lets the offline gate tell the user
+   * "still connecting" instead of a misleading "not connected".
+   */
+  isSessionConnecting: boolean;
+  onValidationError?: (message: string) => void;
   workflowActions: {
     importWorkflow: (state: YAMLWorkflowState) => Promise<void>;
     startApplyingWorkflow: (messageId: string) => Promise<boolean>;
@@ -129,6 +153,7 @@ export function useAIWorkflowApplications({
     startApplyingJobCode: (messageId: string) => Promise<boolean>;
     doneApplyingJobCode: (messageId: string) => Promise<void>;
     updateJob: (jobId: string, updates: { body: string }) => void;
+    saveWorkflow: (options?: SaveWorkflowOptions) => Promise<unknown>;
   };
   monacoRef: RefObject<MonacoHandle> | null;
   jobs: Job[];
@@ -138,6 +163,18 @@ export function useAIWorkflowApplications({
   previewingMessageId: string | null;
   setApplyingMessageId: (id: string | null) => void;
   appliedMessageIdsRef: React.MutableRefObject<Set<string>>;
+  /**
+   * Pending streaming apply record from AIAssistantStore: the YAML already
+   * imported to the canvas during streaming (see StreamingApplyState).
+   * The auto-apply effect compares the final message's code against it to
+   * skip the duplicate import that would dirty the Y.Doc.
+   */
+  streamingApply: StreamingApplyState | null;
+  streamingApplyActions: {
+    set: (yaml: string) => void;
+    setSaveFailed: (saveFailed: boolean) => void;
+    clear: () => void;
+  };
 }) {
   const {
     importWorkflow,
@@ -146,6 +183,7 @@ export function useAIWorkflowApplications({
     startApplyingJobCode,
     doneApplyingJobCode,
     updateJob,
+    saveWorkflow,
   } = workflowActions;
 
   /**
@@ -156,10 +194,57 @@ export function useAIWorkflowApplications({
    */
   const hasLoadedSessionRef = useRef(false);
 
-  // Reset hasLoadedSessionRef when session changes
+  /**
+   * Message ids whose auto-apply is currently running. Added SYNCHRONOUSLY
+   * before the async apply starts and removed when it settles. This is the
+   * re-entrancy guard: the auto-apply effect below re-runs on nearly every
+   * render (handleApplyWorkflow's identity changes each render because
+   * saveWorkflow from useWorkflowActions is rebuilt every render), so without
+   * a synchronous marker a re-run during an in-flight apply would launch a
+   * second concurrent apply of the same message.
+   */
+  const inFlightApplyRef = useRef<Set<string>>(new Set());
+
+  /**
+   * A single message that was blocked while offline (handleApplyWorkflow
+   * returned 'gated') and should be retried once the session reconnects.
+   * The auto-apply effect deliberately ignores this message on its normal
+   * re-runs; only the reconnect effect below replays it. That keeps a blocked
+   * apply from re-alerting on every render while still offline, yet still
+   * recovers automatically on reconnect.
+   */
+  const pendingReconnectApplyRef = useRef<{ id: string; code: string } | null>(
+    null
+  );
+
+  // Reset per-session bookkeeping when the session changes
   useEffect(() => {
     hasLoadedSessionRef.current = false;
+    inFlightApplyRef.current.clear();
+    pendingReconnectApplyRef.current = null;
   }, [sessionId]);
+
+  /**
+   * Save a new workflow after an AI apply. Failure feedback (persistent
+   * Retry toast) is owned by the shared save handler in useWorkflow.tsx.
+   * Records the outcome on the pending streaming apply so the final
+   * new_message knows whether a save is still owed (no-op in the store
+   * when the apply didn't come from streaming).
+   */
+  const saveNewWorkflow = useCallback(async (): Promise<boolean> => {
+    try {
+      await saveWorkflow({ notify: 'error-only' });
+      streamingApplyActions.setSaveFailed(false);
+      return true;
+    } catch (saveError) {
+      // Shared save handler (useWorkflow.tsx) has already shown a persistent
+      // Retry toast — its Retry button calls the shared wrappedSaveWorkflow
+      // directly, not this function, so no local retry plumbing is needed.
+      streamingApplyActions.setSaveFailed(true);
+      console.error('[AI Assistant] Failed to save workflow:', saveError);
+      return false;
+    }
+  }, [saveWorkflow, streamingApplyActions]);
 
   /**
    * Apply workflow YAML to the canvas
@@ -169,8 +254,11 @@ export function useAIWorkflowApplications({
    * to show "APPLYING..." state.
    */
   const handleApplyWorkflow = useCallback(
-    async (yaml: string, messageId: string) => {
-      if (!aiMode) return;
+    async (
+      yaml: string,
+      messageId: string
+    ): Promise<'applied' | 'gated' | 'failed'> => {
+      if (!aiMode) return 'failed';
       // Global messages carry a full workflow YAML and may be applied even
       // while a job is open (job_code mode). Non-global workflow chat keeps
       // the workflow_template-only guard so its Apply stays a no-op when a
@@ -184,7 +272,20 @@ export function useAIWorkflowApplications({
             aiMode,
           }
         );
-        return;
+        return 'failed';
+      }
+
+      // Creation flow: an import that can't be followed by a save would
+      // orphan the canvas. Fail fast instead of waiting out a 10s push
+      // timeout. (Existing workflows are fine: offline imports are normal
+      // unsaved collaborative edits that sync on reconnect.) Callers that
+      // track "have we handled this message" (the auto-apply effect below)
+      // should treat 'gated' as not-yet-resolved and retry once connected.
+      if (isNewWorkflow && !isSessionConnected) {
+        notifications.alert(
+          isSessionConnecting ? STILL_CONNECTING_ALERT : NOT_CONNECTED_ALERT
+        );
+        return 'gated';
       }
 
       // A global message applied while a step is open leaves an active diff in
@@ -197,13 +298,22 @@ export function useAIWorkflowApplications({
 
       setApplyingMessageId(messageId);
 
+      // Any non-streaming apply supersedes a pending streaming apply — the
+      // canvas will no longer hold the streamed YAML after this import.
+      if (messageId !== '__streaming__') {
+        streamingApplyActions.clear();
+      }
+
       // Signal to all collaborators that we're starting to apply
       // Returns false if coordination failed (other users won't be notified)
       const coordinated = await startApplyingWorkflow(messageId);
 
+      // Track outcomes independently: applySucceeded covers parse/validate/import;
+      // saveSucceeded covers the subsequent save for new workflows.
+      let applySucceeded = false;
+      let saveSucceeded = true;
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
-
         validateIds(workflowSpec);
 
         // IDs are already in the YAML from AI (sent with IDs, like legacy editor)
@@ -215,23 +325,54 @@ export function useAIWorkflowApplications({
         );
 
         await importWorkflow(workflowStateWithCreds);
+        applySucceeded = true;
+
+        if (messageId === '__streaming__') {
+          // Record the applied YAML so the auto-apply effect can skip the
+          // duplicate import when the final new_message carries the same YAML.
+          // Set only after a successful import, so failed applies never
+          // leave a stale record behind.
+          streamingApplyActions.set(yaml);
+        }
+
+        if (isNewWorkflow) {
+          saveSucceeded = await saveNewWorkflow();
+        }
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
-        notifications.alert({
-          title: 'Failed to apply workflow',
-          description:
-            error instanceof Error ? error.message : 'Invalid workflow YAML',
-        });
+        const errorMessage =
+          error instanceof Error ? error.message : 'Invalid workflow YAML';
+
+        if (isNewWorkflow && onValidationError) {
+          onValidationError(errorMessage);
+        } else {
+          notifications.alert({
+            title: 'Failed to apply workflow',
+            description: errorMessage,
+          });
+        }
       } finally {
         setApplyingMessageId(null);
-        // Only signal completion if we successfully coordinated
-        // (otherwise other users weren't notified of the start)
+        // Always signal completion when coordinated so collaborators aren't
+        // left stuck in "APPLYING..." state, even if apply itself failed.
         if (coordinated) {
           await doneApplyingWorkflow(messageId);
-          flowEvents.dispatch('fit-view');
+          // Only fit-view when the canvas was actually updated and persisted.
+          // Skip when importWorkflow failed (applySucceeded false) or when
+          // save failed so we don't zoom in on an unpersisted workflow. Also
+          // skip for new workflows: the shared save handler
+          // (useWorkflow.tsx's handleSaveSuccess) already dispatches
+          // fit-view when a brand-new workflow's first save succeeds, so
+          // dispatching again here would just re-trigger the same
+          // in-progress animation.
+          if (applySucceeded && saveSucceeded && !isNewWorkflow) {
+            flowEvents.dispatch('fit-view');
+          }
         }
       }
+
+      return applySucceeded && saveSucceeded ? 'applied' : 'failed';
     },
     [
       aiMode,
@@ -241,10 +382,60 @@ export function useAIWorkflowApplications({
       doneApplyingWorkflow,
       jobs,
       setApplyingMessageId,
+      isNewWorkflow,
+      isSessionConnected,
+      isSessionConnecting,
+      onValidationError,
+      saveNewWorkflow,
+      streamingApplyActions,
       monacoRef,
       previewingMessageId,
       setPreviewingMessageId,
     ]
+  );
+
+  /**
+   * Launch an apply for a message with a synchronous re-entrancy guard.
+   *
+   * This is the single entry point for BOTH the auto-apply effect and the
+   * manual "Apply" button (via the returned `launchApply`). Routing the manual
+   * path through here — instead of calling `handleApplyWorkflow` raw — means a
+   * manual apply also marks the message, so the auto-apply effect won't later
+   * re-fire a duplicate import/save for a message the user already applied by
+   * hand (e.g. applied manually while the assistant channel was briefly
+   * disconnected, then reconnects).
+   *
+   * The guard (inFlightApplyRef) is set before the first `await`, so a re-run
+   * of the auto-apply effect while this apply is still in flight is a no-op
+   * instead of a second concurrent apply. On settle:
+   * - 'gated' (blocked offline): park the message for a reconnect retry.
+   * - otherwise ('applied' or 'failed'): record it as terminally handled. A
+   *   'failed' import is intentionally not retried automatically (avoids a
+   *   re-apply loop); the user can re-apply via the still-enabled manual button
+   *   and save failures recover via the shared Retry toast.
+   *
+   * The '__streaming__' pseudo-message is deliberately NOT routed through here
+   * (it calls handleApplyWorkflow directly) so it never lands in
+   * appliedMessageIdsRef and can be superseded by the final new_message.
+   */
+  const launchApply = useCallback(
+    (messageId: string, code: string) => {
+      if (inFlightApplyRef.current.has(messageId)) return;
+      inFlightApplyRef.current.add(messageId);
+      void (async () => {
+        try {
+          const outcome = await handleApplyWorkflow(code, messageId);
+          if (outcome === 'gated') {
+            pendingReconnectApplyRef.current = { id: messageId, code };
+          } else {
+            appliedMessageIdsRef.current.add(messageId);
+          }
+        } finally {
+          inFlightApplyRef.current.delete(messageId);
+        }
+      })();
+    },
+    [handleApplyWorkflow, appliedMessageIdsRef]
   );
 
   /**
@@ -503,6 +694,10 @@ export function useAIWorkflowApplications({
       messagesWithCode.forEach(msg => {
         appliedMessageIdsRef.current.add(msg.id);
       });
+      // Streaming may have applied before the session finished loading; the
+      // final message was seeded above, so the record will never be consumed.
+      // Drop it.
+      streamingApplyActions.clear();
       return;
     }
 
@@ -510,8 +705,24 @@ export function useAIWorkflowApplications({
 
     if (
       latestMessage?.code &&
-      !appliedMessageIdsRef.current.has(latestMessage.id)
+      !appliedMessageIdsRef.current.has(latestMessage.id) &&
+      !inFlightApplyRef.current.has(latestMessage.id) &&
+      pendingReconnectApplyRef.current?.id !== latestMessage.id
     ) {
+      // Streaming already imported this exact YAML to the canvas — skip the
+      // re-import, which would only dirty the Y.Doc (unsaved red dot). If
+      // the streaming apply's save is still owed, settle it now. When the
+      // YAML differs (streaming apply failed, or the final response changed),
+      // fall through and apply normally.
+      if (streamingApply && streamingApply.yaml === latestMessage.code) {
+        appliedMessageIdsRef.current.add(latestMessage.id);
+        streamingApplyActions.clear();
+        if (streamingApply.saveFailed) {
+          void saveNewWorkflow();
+        }
+        return;
+      }
+
       // Find the user message that triggered this AI response
       // Look for the most recent user message before this assistant message
       const latestMessageIndex = messages.findIndex(
@@ -530,10 +741,14 @@ export function useAIWorkflowApplications({
         // Fallback: if no user_id on message (legacy), allow apply
         !precedingUserMessage?.user_id;
 
-      appliedMessageIdsRef.current.add(latestMessage.id);
-
       if (isCurrentUserAuthor) {
-        void handleApplyWorkflow(latestMessage.code, latestMessage.id);
+        // Guarded launch: the synchronous inFlightApplyRef marker prevents a
+        // re-run of this effect from starting a second concurrent apply. A
+        // 'gated' (offline) result parks the message for the reconnect effect
+        // rather than dropping it.
+        launchApply(latestMessage.id, latestMessage.code);
+      } else {
+        appliedMessageIdsRef.current.add(latestMessage.id);
       }
     }
   }, [
@@ -541,14 +756,39 @@ export function useAIWorkflowApplications({
     page,
     sessionId,
     connectionState,
-    handleApplyWorkflow,
+    launchApply,
     canApplyChanges,
     currentUserId,
     appliedMessageIdsRef,
+    streamingApply,
+    streamingApplyActions,
+    saveNewWorkflow,
   ]);
+
+  // Retry a message that was blocked offline, once the session reconnects.
+  // This is the ONLY retry path for a gated apply — the auto-apply effect
+  // ignores the parked message so it doesn't re-attempt (and re-alert) on
+  // every render while still offline.
+  useEffect(() => {
+    if (!isSessionConnected) return;
+    const pending = pendingReconnectApplyRef.current;
+    if (!pending) return;
+    // Clear before launching so a concurrent effect run can't replay it twice.
+    pendingReconnectApplyRef.current = null;
+    launchApply(pending.id, pending.code);
+  }, [isSessionConnected, launchApply]);
 
   return {
     handleApplyWorkflow,
+    /**
+     * Guarded workflow-apply launcher for the manual "Apply" button. Prefer
+     * this over `handleApplyWorkflow` for user-message applies: it marks the
+     * message (in-flight + applied/parked) so the auto-apply effect can't later
+     * re-fire a duplicate apply for a manually-applied message. Signature is
+     * (messageId, yaml) — note the argument order differs from
+     * handleApplyWorkflow's (yaml, messageId).
+     */
+    launchApply,
     handlePreviewJobCode,
     handlePreviewGlobalStep,
     handleApplyJobCode,

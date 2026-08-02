@@ -44,6 +44,14 @@ import { createMockSocket } from './sessionStoreHelpers';
 export interface TriggerTestHarnessOptions {
   /** Whether the session-context emits can_edit_workflow=true (default: true). */
   canEdit?: boolean;
+  /**
+   * Whether the session-context emits can_write_webhook_auth_method=true.
+   * Defaults to `canEdit` so existing callers (which only vary editor-level
+   * access) keep getting the same permission for both fields. Pass this
+   * explicitly to test the owner/admin-only auth-method gating separately
+   * from general workflow-edit access.
+   */
+  canWriteWebhookAuthMethod?: boolean;
   /** Whether the session-context emits kafka_triggers_enabled=true (default: false). */
   kafkaEnabled?: boolean;
   /**
@@ -59,7 +67,8 @@ export interface TriggerTestHarnessOptions {
   workflowStore?: WorkflowStoreInstance;
   /**
    * LiveView actions to expose through LiveViewActionsProvider.
-   * When omitted the provider is NOT added — only TriggerEditWizard tests need it.
+   * When omitted, a default set of `vi.fn()` mocks is used — the provider is
+   * always present since useWorkflowActions() requires it unconditionally.
    */
   liveViewActions?: {
     pushEvent: ReturnType<typeof vi.fn>;
@@ -105,6 +114,7 @@ export async function createTriggerTestHarness(
 ): Promise<TriggerTestHarness> {
   const {
     canEdit = true,
+    canWriteWebhookAuthMethod = canEdit,
     kafkaEnabled = false,
     webhookAuthMethods = [],
     workflowStore,
@@ -158,13 +168,12 @@ export async function createTriggerTestHarness(
       permissions: {
         can_edit_workflow: canEdit,
         can_run_workflow: canEdit,
-        can_write_webhook_auth_method: canEdit,
+        can_write_webhook_auth_method: canWriteWebhookAuthMethod,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: webhookAuthMethods,
       workflow_template: null,
-      has_read_ai_disclaimer: false,
     });
   });
 
@@ -176,25 +185,22 @@ export async function createTriggerTestHarness(
   } as unknown as StoreContextValue;
 
   // 7. Wrapper component.
-  const wrapper = ({ children }: { children: React.ReactNode }) => {
-    const inner = (
-      <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
+  const resolvedLiveViewActions = liveViewActions ?? {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
+      <LiveViewActionsProvider actions={resolvedLiveViewActions}>
         <StoreContext.Provider value={storeValue}>
           {children}
         </StoreContext.Provider>
-      </SessionContext.Provider>
-    );
-
-    if (liveViewActions) {
-      return (
-        <LiveViewActionsProvider actions={liveViewActions}>
-          {inner}
-        </LiveViewActionsProvider>
-      );
-    }
-
-    return inner;
-  };
+      </LiveViewActionsProvider>
+    </SessionContext.Provider>
+  );
 
   return { wrapper, sessionStore, sessionContextStore, sessionChannel };
 }

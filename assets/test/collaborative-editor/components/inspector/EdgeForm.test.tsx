@@ -10,9 +10,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { act } from 'react';
-import { beforeEach, describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { EdgeForm } from '../../../../js/collaborative-editor/components/inspector/EdgeForm';
+import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '../../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
@@ -82,11 +83,20 @@ function createWrapper(
     isNewWorkflow: false,
   };
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
   return ({ children }: { children: React.ReactNode }) => (
     <SessionContext.Provider value={mockSessionValue}>
-      <StoreContext.Provider value={mockStoreValue}>
-        {children}
-      </StoreContext.Provider>
+      <LiveViewActionsProvider actions={mockLiveViewActions}>
+        <StoreContext.Provider value={mockStoreValue}>
+          {children}
+        </StoreContext.Provider>
+      </LiveViewActionsProvider>
     </SessionContext.Provider>
   );
 }

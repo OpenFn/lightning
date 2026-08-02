@@ -42,6 +42,40 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
     end
   end
 
+  describe "from_map/1" do
+    test "rebuilds an identical struct from a JSON round-trip" do
+      params =
+        SearchParams.new(%{
+          "body" => "true",
+          "log" => "true",
+          "failed" => "true",
+          "success" => "true",
+          "search_term" => "hello",
+          "date_after" => "2023-05-16T12:54"
+        })
+
+      round_tripped =
+        params
+        |> JSON.encode!()
+        |> JSON.decode!()
+        |> SearchParams.from_map()
+
+      assert {:ok, ^params} = round_tripped
+    end
+
+    test "returns an error for stale or malformed args instead of raising" do
+      # The export worker relies on this: a bad arg fails the export cleanly
+      # rather than crashing the worker or silently broadening the results.
+      assert {:error, %Ecto.Changeset{}} =
+               SearchParams.from_map(%{"status" => ["gone_status"]})
+
+      assert {:error, %Ecto.Changeset{}} =
+               SearchParams.from_map(%{"date_after" => "not-a-date"})
+
+      assert {:error, :invalid_search_params} = SearchParams.from_map(nil)
+    end
+  end
+
   describe "to_uri_params/1" do
     test "sets search params values that are not given to default values" do
       assert SearchParams.to_uri_params(%{
