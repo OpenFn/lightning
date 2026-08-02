@@ -114,4 +114,27 @@ describe('AIChannelRegistry streaming', () => {
       { type: 'status', content: 'Reviewed workflow' },
     ]);
   });
+
+  it('does not leak pending status markers from an errored stream into the next one', () => {
+    // A status is pinned behind text that will never finish draining.
+    channel._test.emit('streaming_chunk', { content: 'Long answer text' });
+    channel._test.emit('streaming_segment', {
+      segment: { type: 'status', content: 'Stale status from dead stream' },
+    });
+
+    // The stream errors before the drain reaches the status marker.
+    vi.advanceTimersByTime(2 * 15);
+    channel._test.emit('streaming_error', { error: 'boom' });
+    expect(store.getSnapshot().streamingSegments).toEqual([]);
+
+    // A fresh stream starts and fully drains.
+    channel._test.emit('streaming_chunk', { content: 'New' });
+    vi.advanceTimersByTime(500);
+
+    // Only the new stream's text is in the timeline — the dead stream's
+    // status marker must not resurface.
+    expect(store.getSnapshot().streamingSegments).toEqual([
+      { type: 'text', content: 'New' },
+    ]);
+  });
 });

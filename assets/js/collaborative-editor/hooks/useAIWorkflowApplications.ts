@@ -104,6 +104,7 @@ export function useAIWorkflowApplications({
   currentSession,
   currentUserId,
   aiMode,
+  isGlobalSession,
   workflowActions,
   monacoRef,
   jobs,
@@ -122,6 +123,12 @@ export function useAIWorkflowApplications({
   } | null;
   currentUserId: string | undefined;
   aiMode: AIModeResult | null;
+  /**
+   * Whether the active session is a global assistant session. Mid-stream
+   * applies ('__streaming__') have no session message to look up, so this
+   * flag decides whether they get the global page-independent treatment.
+   */
+  isGlobalSession: boolean;
   workflowActions: {
     importWorkflow: (state: YAMLWorkflowState) => Promise<void>;
     startApplyingWorkflow: (messageId: string) => Promise<boolean>;
@@ -173,13 +180,13 @@ export function useAIWorkflowApplications({
       if (!aiMode) return;
       // Global messages carry a full workflow YAML and may be applied even
       // while a job is open (job_code mode). Mid-stream applies
-      // ('__streaming__') have no session message to look up, but a workflow
-      // YAML streamed while a job is open can only come from the global
-      // assistant, so they are trusted the same way. Non-global workflow
-      // chat keeps the workflow_template-only guard so its Apply stays a
-      // no-op when a job is open.
+      // ('__streaming__') have no session message to look up, so the caller
+      // tells us via isGlobalSession whether the active session is global.
+      // A non-global workflow chat stream (e.g. the user navigated to a job
+      // mid-stream) keeps the workflow_template-only guard so its Apply
+      // stays a no-op when a job is open.
       const isGlobal =
-        messageId === '__streaming__' ||
+        (messageId === '__streaming__' && isGlobalSession) ||
         !!currentSession?.messages.find(m => m.id === messageId)?.from_global;
 
       if (aiMode.page !== 'workflow_template' && !isGlobal) {
@@ -241,6 +248,7 @@ export function useAIWorkflowApplications({
     [
       aiMode,
       currentSession,
+      isGlobalSession,
       importWorkflow,
       startApplyingWorkflow,
       doneApplyingWorkflow,

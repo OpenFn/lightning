@@ -579,6 +579,7 @@ export function AIAssistantPanelWrapper({
         : null,
     currentUserId: user?.id,
     aiMode,
+    isGlobalSession: isGlobalAssistantActive,
     workflowActions: {
       importWorkflow,
       startApplyingWorkflow,
@@ -639,12 +640,16 @@ export function AIAssistantPanelWrapper({
     // stays eligible if the page switches mid-stream.
     if (appliedStreamingChangesRef.current === streamingChanges) return;
 
-    // Workflow YAML applies to the shared Y.Doc, so it is page-independent:
-    // global chat streams it from the job code view too, and the diagram
-    // must be up to date whenever the user navigates there.
+    // Workflow YAML applies to the shared Y.Doc, so global streams are
+    // page-independent: global chat streams it from the job code view too,
+    // and the diagram must be up to date whenever the user navigates there.
+    // Non-global workflow chat keeps its workflow_template-only gate (a
+    // stream can outlive a mid-stream switch to a job page).
     if ('yaml' in streamingChanges) {
       const yaml = streamingChanges['yaml'] as string;
-      if (yaml) {
+      const yamlCanApply =
+        isGlobalAssistantActive || aiMode?.page === 'workflow_template';
+      if (yaml && yamlCanApply) {
         appliedStreamingChangesRef.current = streamingChanges;
         appliedViaStreamingRef.current = true;
         void handleApplyWorkflow(yaml, '__streaming__');
@@ -662,6 +667,7 @@ export function AIAssistantPanelWrapper({
     streamingChanges,
     aiMode?.page,
     canApplyChanges,
+    isGlobalAssistantActive,
     handleApplyWorkflow,
     handlePreviewJobCode,
   ]);

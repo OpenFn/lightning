@@ -1351,7 +1351,12 @@ defmodule Lightning.AiAssistant do
     case Jason.decode(data) do
       {:ok, %{"type" => "status", "content" => content} = segment}
       when is_binary(content) ->
-        broadcast_streaming_segment(session_id, segment)
+        # Take only the contract fields so stray keys from Apollo never
+        # reach the client.
+        broadcast_streaming_segment(
+          session_id,
+          Map.take(segment, ["type", "content"])
+        )
 
       _ ->
         :ok
@@ -1539,18 +1544,25 @@ defmodule Lightning.AiAssistant do
   # segments in stream order); `response` stays the flat answer that history
   # is rebuilt from. Absent or invalid segments mean a flat legacy message.
   defp normalize_response_segments(segments) when is_list(segments) do
-    segments
-    |> Enum.filter(fn
-      %{"type" => type, "content" => content}
-      when type in ["text", "status"] and is_binary(content) ->
-        true
+    {valid, dropped} =
+      Enum.split_with(segments, fn
+        %{"type" => type, "content" => content}
+        when type in ["text", "status"] and is_binary(content) ->
+          true
 
-      _ ->
-        false
-    end)
-    |> case do
+        _ ->
+          false
+      end)
+
+    unless dropped == [] do
+      Logger.warning(
+        "Dropping #{length(dropped)} invalid response segment(s) from Apollo payload"
+      )
+    end
+
+    case valid do
       [] -> nil
-      normalized -> normalized
+      valid -> Enum.map(valid, &Map.take(&1, ["type", "content"]))
     end
   end
 
