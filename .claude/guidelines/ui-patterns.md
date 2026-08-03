@@ -63,7 +63,8 @@ className="
 
 Use these as examples when creating new buttons:
 
-1. **Button.tsx** - Shared component with correct patterns for all variants (`primary`, `danger`, `secondary`, `nakedClose`)
+1. **Button.tsx** - Shared component with correct patterns for all five variants (`primary`,
+   `danger`, `secondary`, `ghost`, `nakedClose`)
 2. **RunRetryButton.tsx** - Gold standard for complex split button states
 3. **Header.tsx SaveButton** - Demonstrates standalone and split button patterns
 
