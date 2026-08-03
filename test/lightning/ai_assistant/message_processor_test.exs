@@ -758,6 +758,166 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
     end
   end
 
+  # Expects one global_chat request and relays its decoded JSON payload back
+  # to the test process as {:apollo_payload, payload}.
+  defp expect_global_chat_payload(test_pid) do
+    Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: url, body: body}, _opts ->
+      assert url =~ "/services/global_chat/stream"
+      send(test_pid, {:apollo_payload, Jason.decode!(body)})
+
+      {:ok,
+       %Tesla.Env{
+         status: 200,
+         headers: [{"content-type", "text/event-stream"}],
+         body:
+           "event: complete\ndata: #{Jason.encode!(%{"response" => "ok", "usage" => %{}})}\n\n"
+       }}
+    end)
+  end
+
+  describe "global chat workflow YAML fallback" do
+    setup %{user: user, project: project} do
+      global_meta = %{
+        "message_options" => %{
+          "use_global_assistant" => true,
+          "page" => "/projects/p1/workflows/w1"
+        }
+      }
+
+      [user: user, project: project, global_meta: global_meta]
+    end
+
+    test "builds workflow YAML server-side from the saved workflow when the client sends none",
+         %{user: user, project: project, global_meta: global_meta} do
+      workflow =
+        insert(:simple_workflow, name: "My Fallback Workflow", project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      # The client sent no code with the message (e.g. the workflow store had
+      # not hydrated when the first message was fired).
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "help with my workflow", user: user},
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+      assert is_nil(user_message.code)
+
+      expect_global_chat_payload(self())
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      assert_receive {:apollo_payload, payload}
+      assert %{"workflow_yaml" => workflow_yaml} = payload
+
+      # The fallback YAML mirrors the client spec shape: workflow name and
+      # id at the top level, jobs keyed by hyphenated name with their body.
+      assert workflow_yaml =~ "name: My Fallback Workflow"
+      assert workflow_yaml =~ workflow.id
+      [job] = workflow.jobs
+      assert workflow_yaml =~ job.name
+      assert workflow_yaml =~ "triggers:"
+      assert workflow_yaml =~ "edges:"
+
+      assert log =~ "built it server-side from the last saved workflow state"
+    end
+
+    test "prefers client-provided YAML over the server-side fallback",
+         %{user: user, project: project, global_meta: global_meta} do
+      workflow =
+        insert(:simple_workflow, name: "Saved Server Name", project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      client_yaml = "name: Client Sent Name\njobs: {}"
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "help", user: user},
+          meta: global_meta,
+          code: client_yaml
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      expect_global_chat_payload(self())
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      assert_receive {:apollo_payload, payload}
+      assert payload["workflow_yaml"] == client_yaml
+    end
+
+    test "keeps the warning when neither client nor server can produce YAML",
+         %{user: user, project: project, global_meta: global_meta} do
+      # Session without any workflow: nothing to fall back to
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: nil,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "help", user: user},
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      expect_global_chat_payload(self())
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      assert_receive {:apollo_payload, payload}
+      # Nil options are dropped from the Apollo payload entirely
+      refute Map.has_key?(payload, "workflow_yaml")
+      assert log =~ "has no workflow YAML"
+
+      # And the message still completes without crashing
+      reloaded = AiAssistant.get_session!(session.id)
+      assert Enum.find(reloaded.messages, &(&1.role == :assistant))
+    end
+  end
+
   describe "fetch_and_scrub_io_data/1 via process_job_message/2" do
     test "attaching your OWN step egresses its scrubbed input/output to Apollo",
          %{user: user, project: project} do

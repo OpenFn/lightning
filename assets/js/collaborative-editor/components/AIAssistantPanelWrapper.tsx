@@ -392,11 +392,15 @@ export function AIAssistantPanelWrapper({
             edges,
             positions
           );
-          if (workflowData) {
-            const workflowYAML = serializeWorkflowToYAML(workflowData);
-            if (workflowYAML) {
-              finalContext = { ...finalContext, code: workflowYAML };
-            }
+          const workflowYAML = workflowData
+            ? serializeWorkflowToYAML(workflowData)
+            : undefined;
+          if (workflowYAML) {
+            finalContext = { ...finalContext, code: workflowYAML };
+          } else {
+            console.warn(
+              `AI Assistant: first message sent without workflow YAML (${workflowData ? 'YAML serialization failed' : 'workflow store not hydrated'})`
+            );
           }
 
           // Derive page for global assistant routing
@@ -461,6 +465,10 @@ export function AIAssistantPanelWrapper({
 
         if (workflowYAML) {
           options = { ...options, code: workflowYAML };
+        } else {
+          console.warn(
+            `AI Assistant: message sent without workflow YAML (${workflowData ? 'YAML serialization failed' : 'workflow store not hydrated'})`
+          );
         }
 
         // Derive page for global assistant routing

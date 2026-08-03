@@ -13,9 +13,12 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
+  alias Lightning.AiAssistant.WorkflowYAML
+  alias Lightning.Collaboration.WorkflowSerializer
   alias Lightning.Invocation
   alias Lightning.Repo
   alias Lightning.Scrubber
+  alias Lightning.Workflows.Workflow
 
   require Logger
 
@@ -153,19 +156,111 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           {:ok, AiAssistant.ChatSession.t()}
           | {:error, String.t() | Ecto.Changeset.t()}
   defp process_global_message(session, message) do
-    workflow_yaml = message.code
     page = get_in(session.meta, ["message_options", "page"])
 
-    if workflow_yaml in [nil, ""] do
-      Logger.warning(
-        "[AI Assistant] Global chat message #{message.id} has no workflow YAML; " <>
-          "Apollo will receive no workflow context (session #{session.id}, page #{inspect(page)})"
-      )
-    end
+    {source, workflow_yaml} = resolve_global_workflow_yaml(session, message)
+
+    log_global_yaml_source(source, session, message, page)
 
     AiAssistant.query_global_stream(session, message.content,
       workflow_yaml: workflow_yaml,
       page: page
+    )
+  end
+
+  # Resolves the workflow YAML for a global chat message.
+  #
+  # The client-provided YAML is preferred when present: it serializes exactly
+  # what the user saw at send time. When the client sent nothing (e.g. the
+  # workflow store had not hydrated yet), the server rebuilds it — first from
+  # the live collaboration doc (which includes unsaved edits), then from the
+  # last saved workflow state.
+  @spec resolve_global_workflow_yaml(
+          AiAssistant.ChatSession.t(),
+          ChatMessage.t()
+        ) ::
+          {:client | :live_doc | :saved_workflow | :none, String.t() | nil}
+  defp resolve_global_workflow_yaml(session, message) do
+    cond do
+      message.code not in [nil, ""] ->
+        {:client, message.code}
+
+      yaml = live_doc_workflow_yaml(session) ->
+        {:live_doc, yaml}
+
+      yaml = saved_workflow_yaml(session) ->
+        {:saved_workflow, yaml}
+
+      true ->
+        {:none, nil}
+    end
+  end
+
+  # Builds workflow YAML from the live collaboration Y.Doc, when one is
+  # running on this node for the session's workflow. Any failure degrades to
+  # nil so the caller can fall back to the saved workflow state.
+  @spec live_doc_workflow_yaml(AiAssistant.ChatSession.t()) :: String.t() | nil
+  defp live_doc_workflow_yaml(%ChatSession{workflow_id: nil}), do: nil
+
+  defp live_doc_workflow_yaml(%ChatSession{workflow_id: workflow_id}) do
+    case Lightning.Collaboration.Session.lookup_shared_doc(
+           "workflow:#{workflow_id}"
+         ) do
+      pid when is_pid(pid) and node(pid) == node() ->
+        pid
+        |> Yex.Sync.SharedDoc.get_doc()
+        |> WorkflowSerializer.deserialize_from_ydoc(workflow_id)
+        |> WorkflowYAML.serialize()
+
+      _ ->
+        # No live doc on this node; a Y.Doc on another node cannot be read
+        # here (NIF resource), so fall back to the saved workflow state.
+        nil
+    end
+  catch
+    kind, reason ->
+      Logger.error(
+        "[AI Assistant] Failed to build workflow YAML from the live doc for " <>
+          "workflow #{workflow_id}: #{Exception.format(kind, reason)}"
+      )
+
+      nil
+  end
+
+  # Builds workflow YAML from the last saved state of the session's workflow.
+  @spec saved_workflow_yaml(AiAssistant.ChatSession.t()) :: String.t() | nil
+  defp saved_workflow_yaml(%ChatSession{workflow_id: nil}), do: nil
+
+  defp saved_workflow_yaml(session) do
+    session
+    |> Repo.preload(workflow: [:jobs, :triggers, :edges])
+    |> case do
+      %{workflow: %Workflow{} = workflow} -> WorkflowYAML.serialize(workflow)
+      _ -> nil
+    end
+  end
+
+  defp log_global_yaml_source(:client, _session, _message, _page), do: :ok
+
+  defp log_global_yaml_source(:live_doc, session, message, _page) do
+    Logger.warning(
+      "[AI Assistant] Global chat message #{message.id} arrived without workflow YAML; " <>
+        "built it server-side from the live collaboration doc (session #{session.id})"
+    )
+  end
+
+  defp log_global_yaml_source(:saved_workflow, session, message, _page) do
+    Logger.warning(
+      "[AI Assistant] Global chat message #{message.id} arrived without workflow YAML; " <>
+        "built it server-side from the last saved workflow state, which may lag " <>
+        "behind unsaved edits (session #{session.id})"
+    )
+  end
+
+  defp log_global_yaml_source(:none, session, message, page) do
+    Logger.warning(
+      "[AI Assistant] Global chat message #{message.id} has no workflow YAML; " <>
+        "Apollo will receive no workflow context (session #{session.id}, page #{inspect(page)})"
     )
   end
 

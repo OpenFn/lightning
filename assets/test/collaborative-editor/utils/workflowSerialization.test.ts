@@ -89,7 +89,7 @@ describe('workflowSerialization', () => {
       expect(result).toBeNull();
     });
 
-    it('returns null when jobs array is empty', () => {
+    it('returns a serializable workflow when jobs array is empty', () => {
       const result = prepareWorkflowForSerialization(
         { id: 'wf-1', name: 'Test' },
         [],
@@ -97,7 +97,18 @@ describe('workflowSerialization', () => {
         [],
         {}
       );
-      expect(result).toBeNull();
+
+      // Empty workflows still serialize (name/id are useful AI context);
+      // only a missing workflow (store not hydrated) returns null.
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe('wf-1');
+      expect(result?.name).toBe('Test');
+      expect(result?.jobs).toEqual([]);
+
+      const yaml = serializeWorkflowToYAML(result!);
+      expect(yaml).toBeDefined();
+      expect(yaml).toContain('name: Test');
+      expect(yaml).toContain('jobs:');
     });
 
     it('transforms store state to serializable format', () => {

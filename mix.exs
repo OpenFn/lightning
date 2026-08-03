@@ -163,6 +163,8 @@ defmodule Lightning.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:tesla, "~> 1.18.2"},
       {:tidewave, "~> 0.8.0", only: :dev},
+      # YAML encoding (workflow YAML fallback for the AI assistant)
+      {:ymlr, "~> 5.1"},
       {:timex, "~> 3.7"},
       # Pinned to the merge of `hackney ~> 1.17 or ~> 4.0` (lau/tzdata#170),
       # which lets tzdata keep its autoupdater on hackney 4. Not on Hex yet --

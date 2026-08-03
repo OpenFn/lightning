@@ -17,7 +17,7 @@ vi.mock('../../../js/collaborative-editor/utils/workflowSerialization', () => ({
   serializeWorkflowToYAML: vi.fn(() => 'name: Test Workflow\njobs: []'),
   prepareWorkflowForSerialization: vi.fn(
     (workflow, jobs, _triggers, _edges, _positions) => {
-      if (!workflow || jobs.length === 0) {
+      if (!workflow) {
         return null;
       }
       return {

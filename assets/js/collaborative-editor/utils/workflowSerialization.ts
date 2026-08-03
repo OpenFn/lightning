@@ -43,7 +43,10 @@ export interface SerializableWorkflow {
  * @param triggers - Array of trigger objects from workflow store
  * @param edges - Array of edge objects from workflow store
  * @param positions - Position data for workflow nodes
- * @returns SerializableWorkflow or null if workflow has no jobs
+ * @returns SerializableWorkflow, or null if the workflow metadata is missing
+ *   (e.g. the workflow store has not hydrated yet). Empty workflows (zero
+ *   jobs) are still serializable — the AI assistant needs the workflow name
+ *   and id as context even before the first job exists.
  */
 export function prepareWorkflowForSerialization(
   workflow: WorkflowMetadata | null,
@@ -52,7 +55,7 @@ export function prepareWorkflowForSerialization(
   edges: unknown[],
   positions: unknown
 ): SerializableWorkflow | null {
-  if (!workflow || jobs.length === 0) {
+  if (!workflow) {
     return null;
   }
 

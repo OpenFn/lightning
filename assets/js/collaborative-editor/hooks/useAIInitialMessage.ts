@@ -111,14 +111,18 @@ export function useAIInitialMessage({
           edges,
           positions
         );
-        if (serializedWorkflow) {
-          const workflowYAML = serializeWorkflowToYAML(serializedWorkflow);
-          if (workflowYAML) {
-            finalContext = {
-              ...(finalContext as WorkflowTemplateContext),
-              code: workflowYAML,
-            };
-          }
+        const workflowYAML = serializedWorkflow
+          ? serializeWorkflowToYAML(serializedWorkflow)
+          : undefined;
+        if (workflowYAML) {
+          finalContext = {
+            ...(finalContext as WorkflowTemplateContext),
+            code: workflowYAML,
+          };
+        } else {
+          console.warn(
+            `AI Assistant: initial message sent without workflow YAML (${serializedWorkflow ? 'YAML serialization failed' : 'workflow store not hydrated'})`
+          );
         }
       }
 

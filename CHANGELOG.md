@@ -26,6 +26,13 @@ and this project adheres to
 
 ### Fixed
 
+- The global AI chat no longer silently reaches Apollo without workflow context.
+  When the client sends no workflow YAML (e.g. the workflow store hadn't
+  hydrated yet), the server now rebuilds it from the live collaboration doc,
+  falling back to the last saved workflow state; empty (zero-job) workflows now
+  serialize instead of being dropped, and any remaining drop is logged on both
+  client and server. [#5001](https://github.com/OpenFn/lightning/issues/5001)
+
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
