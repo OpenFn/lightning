@@ -83,7 +83,7 @@ test('observes changes to Yjs document', () => {
   jobs.push([{ id: 'job1', name: 'Test' }]);
 
   expect(updates).toHaveLength(1);
-  expect(updates[0].added).toHaveLength(1);
+  expect(updates[0].added.size).toBe(1);
 });
 ```
 
