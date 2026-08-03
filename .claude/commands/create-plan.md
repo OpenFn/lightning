@@ -357,7 +357,7 @@ When spawning research sub-tasks:
 ## Example Interaction Flow
 
 ```
-User: /create_plan
+User: /create-plan
 Assistant: I'll help you create a detailed implementation plan...
 
 User: We need to add workflow save functionality. See .context/shared/issues/issue-3635.md
