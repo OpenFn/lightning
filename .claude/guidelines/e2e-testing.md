@@ -225,7 +225,12 @@ test.beforeEach(async ({ page }) => {
 });
 ```
 
-For tests requiring multiple users, see `.claude/guidelines/e2e/collaborative-testing.md`.
+`loginIfNeeded` only fills the form when it is visible (`login.page.ts:59-63`), so it is safe to
+call from a `beforeEach` that may already be authenticated.
+
+**No spec runs more than one browser context yet** — `browser.newContext()` is 0 hits across
+`assets/test/e2e/specs/`. For the shape a multi-user test should take, and the per-user feature
+flag it needs, see `.claude/guidelines/e2e/collaborative-testing.md §Multi-user test template`.
 
 ## Configuration
 
