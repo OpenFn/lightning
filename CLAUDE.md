@@ -137,8 +137,8 @@ in development.
 - **Backend**: ExUnit with ExMachina factories
 - **Frontend**: Vitest (see `.claude/guidelines/testing-essentials.md`)
 - **E2E**: Playwright (see `.claude/guidelines/e2e-testing.md`)
-- Group related assertions; avoid micro-tests (one assertion per test)
-- Target test file sizes: < 400 lines (see `.claude/guidelines/testing-essentials.md §Test file length`)
+- Assertion grouping and test file length: see
+  `.claude/guidelines/testing-essentials.md`
 
 ## Worker System
 
