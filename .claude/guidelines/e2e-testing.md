@@ -192,20 +192,8 @@ Break complex tests into logical steps with `test.step()` so failures point to t
 
 ### Waiting for Phoenix LiveView
 
-```typescript
-import { WorkflowEditPage } from '../pages';
-
-test('workflow loads', async ({ page }) => {
-  const workflowPage = new WorkflowEditPage(page);
-  await page.goto('/w/123');
-  await workflowPage.waitForConnected();
-  await workflowPage.waitForSocketSettled();
-  await page.getByRole('button', { name: 'Add Job' }).click();
-});
-```
-
-See `.claude/guidelines/e2e/phoenix-liveview.md` for comprehensive LiveView
-testing patterns.
+See `.claude/guidelines/e2e/phoenix-liveview.md §LiveView waits` for the wait primitives and
+worked examples.
 
 ### Using Page Object Models
 
