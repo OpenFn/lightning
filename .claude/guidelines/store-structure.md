@@ -242,6 +242,7 @@ The YAML import modal holds its own draft in local state; there is no `importPan
 | Who am I, what project, what permissions? | **SessionContextStore** |
 | Adaptor catalog for job config? | **AdaptorStore** |
 | Credential catalog for job config? | **CredentialStore** |
+| Per-job adaptor metadata for editor autocomplete? | **MetadataStore** |
 | Execution history, run inspection? | **HistoryStore** |
 | AI assistant chat sessions? | **AIAssistantStore** |
 | Panel/modal visibility, template browsing? | **UIStore** |
