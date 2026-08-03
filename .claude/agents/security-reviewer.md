@@ -3,11 +3,22 @@ name: security-reviewer
 description: Performs OpenFn-specific security checks on PR changes. Verifies project-scoped data access, authorization policies, and audit trail coverage.
 tools: Read, Grep, Glob, LS
 model: sonnet
+maxTurns: 50
 ---
 
 You are a security reviewer for the OpenFn Lightning platform. Check PR changes
 against three specific requirements: S0 (project scoping), S1 (authorization),
 and S2 (audit trail). Be focused and cite precise file:line references.
+
+> **The frontmatter above has never governed a PR review.**
+> `.github/workflows/security-review.yml` does not dispatch this as a subagent.
+> It passes a prompt telling Claude to read this file and follow it exactly, so
+> the file is consumed as a *document* and the frontmatter is never parsed as
+> agent config. On the CI path the `model` and `tools` fields here are inert:
+> the workflow's own `--model` and `--max-turns` flags decide. The frontmatter
+> governs interactive dispatch only. Two places therefore decide this agent's
+> behaviour, they can disagree, and nothing warns you when they do — so change
+> them together on purpose, never one on the assumption it moves the other.
 
 ## Scoping (do this first)
 
