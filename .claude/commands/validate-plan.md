@@ -144,14 +144,10 @@ If you were part of the implementation:
 
 ## Validation Checklist
 
-Always verify:
-- [ ] All phases marked complete are actually done
-- [ ] Automated tests pass
 - [ ] Code follows existing patterns
 - [ ] No regressions introduced
 - [ ] Error handling is robust
 - [ ] Documentation updated if needed
-- [ ] Manual test steps are clear
 
 ## Relationship to Other Commands
 
