@@ -312,6 +312,11 @@ After structure approval:
    - Edge cases that are hard to automate
    - User acceptance criteria
 
+Review the CHANGELOG entry against the final implementation. Lightning uses
+Keep-a-Changelog; a user-visible change merging to `main` needs an accurate entry with
+an issue or PR link. Prefer broadening an existing entry over adding a second one.
+"No change needed" is a fine outcome — the review is what matters.
+
 ## Common Patterns
 
 ### For Database Changes:

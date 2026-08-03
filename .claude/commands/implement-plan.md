@@ -99,6 +99,10 @@ As coordinator, you should:
 - Verify the agent completed their automated checks
 - Coordinate any manual verification with the user
 - Ensure quality before moving to the next phase
+- Review the CHANGELOG entry against the final implementation. Lightning uses
+  Keep-a-Changelog; a user-visible change merging to `main` needs an accurate entry with
+  an issue or PR link. Prefer broadening an existing entry over adding a second one.
+  "No change needed" is a fine outcome — the review is what matters.
 
 ## If an Agent Gets Stuck
 
