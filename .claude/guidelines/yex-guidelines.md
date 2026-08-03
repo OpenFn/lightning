@@ -6,9 +6,9 @@ This document provides comprehensive guidelines for working with Yex, the Elixir
 - [Transaction Deadlock Rules](#transaction-deadlock-rules)
 - [The Correct Pattern](#the-correct-pattern)
 - [Core Concepts](#core-concepts)
+- [API Reference](#api-reference)
 - [Prelim Types](#prelim-types)
 - [Reading data: handle vs snapshot discipline](#reading-data-handle-vs-snapshot-discipline)
-- [API Reference](#api-reference)
 - [Common Gotchas](#common-gotchas)
 - [Testing Patterns](#testing-patterns)
 
