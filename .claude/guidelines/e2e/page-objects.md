@@ -368,24 +368,6 @@ export class JobFormPage extends LiveViewPage {
 }
 ```
 
-**Usage:**
-```typescript
-test('configure job', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-
-  await page.goto('/w/123');
-  await workflowEdit.waitForConnected();
-
-  // Access specific job form by index
-  const job1 = workflowEdit.jobForm(0);
-  await job1.nameInput.fill('Fetch Data');
-  await job1.adaptorSelect.selectOption('@openfn/language-http');
-
-  const job2 = workflowEdit.jobForm(1);
-  await job2.nameInput.fill('Transform Data');
-});
-```
-
 ## Composition Patterns
 
 ### Component Composition
