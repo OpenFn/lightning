@@ -129,7 +129,7 @@ If the plan has existing checkmarks:
 You (coordinator): Reading plan... I see 3 phases:
   - Phase 1: Database Schema (phoenix-elixir-expert) ✅ Done
   - Phase 2: API Endpoints (phoenix-elixir-expert) ⬜ Next
-  - Phase 3: React Components (react-collaborative-architect) ⬜ Pending
+  - Phase 3: React Components (react-collab-editor) ⬜ Pending
 
 I'll spawn a fresh phoenix-elixir-expert agent for Phase 2...
 
@@ -140,5 +140,5 @@ Manual verification needed: Test the API endpoints with curl.
 
 [Wait for user to verify or proceed]
 
-Now spawning a fresh react-collaborative-architect agent for Phase 3...
+Now spawning a fresh react-collab-editor agent for Phase 3...
 ```
