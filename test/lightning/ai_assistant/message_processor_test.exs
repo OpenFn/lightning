@@ -533,6 +533,67 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert log =~ "over the #{max}-segment cap"
     end
 
+    test "persists a flat message when every segment is invalid",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      global_meta = %{
+        "message_options" => %{
+          "use_global_assistant" => true,
+          "page" => "/projects/p1/workflows/w1"
+        }
+      }
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "add a step", user: user},
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Done!",
+          "response_segments" => [
+            %{"type" => "thinking", "content" => "unknown type"},
+            %{"content" => "no type"}
+          ],
+          "usage" => %{}
+        })
+      )
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      # All-invalid segments degrade to a flat message (the key is omitted,
+      # so the column stays NULL and loads as []), never a save failure.
+      assert assistant_msg.content == "Done!"
+      assert assistant_msg.response_segments == []
+      assert log =~ "2 invalid"
+    end
+
     test "broadcasts valid status events as streaming segments and drops malformed ones",
          %{user: user, project: project} do
       workflow = insert(:workflow, project: project)
