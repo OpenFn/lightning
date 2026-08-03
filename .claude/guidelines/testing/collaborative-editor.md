@@ -400,51 +400,6 @@ test('filters credentials by project', () => {
 
 ## Channel Mocks
 
-Canonical `createMockPhoenixChannel` helper for Lightning collaborative-editor tests. Other test guidelines cross-reference this implementation.
+`createMockPhoenixChannel` and `createMockPhoenixChannelProvider` live in `assets/test/collaborative-editor/mocks/phoenixChannel.ts`. Read that file; it is richer than any paste of it here. Beyond the Phoenix `Channel` interface the mock channel exposes a `_test` handle — `emit`, `triggerClose`, `triggerError`, `getHandlers`, `setState` — and the module also exports `waitForAsync` and `waitForCondition`.
 
-```typescript
-// __helpers__/phoenixMocks.ts
-export function createMockPhoenixChannel(topic = 'workflow:test') {
-  const eventHandlers = new Map<string, Set<Function>>();
-  const mockChannel = {
-    topic,
-    on(event: string, handler: Function) {
-      if (!eventHandlers.has(event)) {
-        eventHandlers.set(event, new Set());
-      }
-      eventHandlers.get(event)!.add(handler);
-      return mockChannel;
-    },
-    off(event: string, handler: Function) {
-      eventHandlers.get(event)?.delete(handler);
-      return mockChannel;
-    },
-    push(event: string, payload: any) {
-      return {
-        receive(status: string, callback: Function) {
-          if (status === 'ok') {
-            setTimeout(() => callback({ status: 'ok' }), 0);
-          }
-          return this;
-        },
-      };
-    },
-    leave() {
-      return this;
-    },
-    // Test utilities
-    _test: {
-      emit(event: string, payload: any) {
-        const handlers = eventHandlers.get(event);
-        if (handlers) {
-          handlers.forEach(handler => handler(payload));
-        }
-      },
-      getHandlers(event: string) {
-        return Array.from(eventHandlers.get(event) || []);
-      },
-    },
-  };
-  return mockChannel;
-}
-```
+Push responses come from `assets/test/collaborative-editor/__helpers__/channelMocks.ts` (`createMockChannelPushOk`, `createMockChannelPushError`, `createMockChannelPushTimeout`, `createMockChannelPushByEvent`, `createMockChannelPushWithHandler`), and the per-store wiring from `__helpers__/storeHelpers.ts`.
