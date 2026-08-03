@@ -148,6 +148,29 @@ UIStore and EditorPreferencesStore have no network dependencies and are ready im
 
 ---
 
+### MetadataStore
+**File:** `stores/createMetadataStore.ts`
+
+**Intent:** Cache per-job adaptor metadata (the credential/adaptor schema the job editor uses
+for autocomplete) so the same job's metadata is fetched once, not on every panel open.
+
+**Key State:** `jobs` — a `Map<jobId, JobMetadataState>` holding `metadata`, `isLoading`,
+`error` and the cache key per job
+
+**Key behavior:**
+- Per-job cache keyed by job ID; a cache-key comparison suppresses redundant fetches
+- Channel responses are Zod-validated before entering Immer state
+- The channel comes from the provider handed to `_connectChannel`, wired alongside the other
+  channel-backed stores in `StoreProvider.tsx`
+
+**Commands:** `requestMetadata`, `clearMetadata`, `clearAllMetadata`
+**Queries:** `getMetadataForJob`, `isLoadingForJob`, `getErrorForJob`
+
+**Don't use for:** The adaptor catalogue itself (AdaptorStore) or credential lists
+(CredentialStore).
+
+---
+
 ### HistoryStore
 **File:** `stores/createHistoryStore.ts`
 
