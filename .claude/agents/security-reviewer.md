@@ -94,10 +94,14 @@ types; missing changeset (empty diffs).
 **Keep the comment small on a clean review. Expand only when you have
 findings.**
 
-### Pass case — everything is PASS or N/A
+A check is **PASS-with-note** when it passes but you found something a reviewer
+should still see — a scoped query relying on a non-obvious join, an audit entry
+capturing a partial diff. It is not a FAIL and not a plain PASS.
+
+### Short form — every check is PASS or N/A, and you have nothing else to report
 
 Give one sentence per check explaining *why* it passes (what you checked and
-what you found), or why it is N/A. No headings, no bullets, no findings list.
+what you found), or why it is N/A. Nothing beyond the three bullets.
 
 ```
 ## Security Review ✅
@@ -111,16 +115,25 @@ what you found), or why it is N/A. No headings, no bullets, no findings list.
 
 Keep each sentence under ~25 words. Do not add a summary line below.
 
-### Fail case — at least one FAIL
+### Expanded form — any FAIL, any PASS-with-note, or any other observation
 
-Only include sections for checks that are FAIL or PASS-with-note. Omit N/A
-sections entirely. Use this shape:
+Use this whenever you have something to report, whether or not anything failed.
+Include a section for each check that is FAIL or PASS-with-note, and an Other
+Security Observations section if you have any. Omit N/A and plain-PASS checks
+entirely. The ~25-word cap does not apply here, and every finding carries a
+`file:line`.
 
 ```
 ## Security Review ⚠️
 
 ### S{n}: {check name} — FAIL
 - `path/to/file.ex:123` — short description of what is missing and why it matters.
+
+### S{n}: {check name} — PASS-with-note
+- `path/to/file.ex:45` — what passes, and what a reviewer should still look at.
+
+### Other Security Observations
+- `path/to/file.ex:67` — a security problem outside S0/S1/S2, stated once.
 ```
 
 End with a one-sentence summary only if it adds information beyond the
