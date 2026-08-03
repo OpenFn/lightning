@@ -149,16 +149,6 @@ External Node.js workers (@openfn/ws-worker) execute JavaScript jobs:
 - Required ENVs: `WORKER_RUNS_PRIVATE_KEY`, `WORKER_SECRET`,
   `WORKER_LIGHTNING_PUBLIC_KEY`
 
-## Custom Mix Tasks
-
-```bash
-mix lightning.gen_worker_keys      # Generate worker authentication keys
-mix lightning.gen_encryption_key   # Generate credential encryption key
-mix lightning.install_runtime      # Install JavaScript runtime dependencies
-mix lightning.install_schemas      # Install JSON schemas for validation
-mix lightning.install_adaptor_icons # Install adaptor icons
-```
-
 ## Available Agents
 
 Claude Code injects every agent's name and description each session, so the
