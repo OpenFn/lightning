@@ -44,16 +44,17 @@ to best categorize the findings for the user.
 ```
 .context/
 ├── shared/              # Team-shared documents
+│   ├── analysis/        # Written-up analysis
 │   ├── architecture/    # Architectural docs and design decisions
-│   ├── research/        # Research documents
-│   ├── plans/           # Implementation plans
+│   ├── guidelines/      # Team guidelines
 │   ├── issues/          # GitHub issue documentation
-│   └── notes/           # General team notes
-├── stuart/              # Stuart's personal notes
-│   └── notes/
-├── frank/               # Frank's personal notes
-│   └── notes/
-├── NOTES.md             # Root-level documents (quick notes, WIP)
+│   ├── notes/           # General team notes
+│   ├── plans/           # Implementation plans
+│   └── research/        # Research documents
+├── brandon/ elias/ frank/ lucy/ lucymacartney/ stuart/ taylor/
+│                        # Personal notes; the layout inside varies per person
+├── adaptors/ archive/ channels/ fast-lanes/ inspector/ investigations/
+├── saving/ security/    # Topic directories, at the root not under shared/
 └── *.md                 # Various root-level documentation files
 ```
 
