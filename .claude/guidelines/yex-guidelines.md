@@ -396,7 +396,8 @@ end
 
 ### 3. Converting Atoms to Strings for Yjs Compatibility
 
-**Problem:** Yjs only supports boolean, string, number, and null. Elixir atoms must be converted.
+**Problem:** Yjs values are JSON-shaped — booleans, numbers, strings, null, plus nested
+lists and maps. Elixir atoms have no representation, so they must be converted.
 
 **Solution:** Convert atoms (except booleans) to strings.
 
