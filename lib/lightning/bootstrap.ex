@@ -55,13 +55,16 @@ defmodule Lightning.Bootstrap do
           owner: amy@openfn.org          # required, a user declared above
           schema: dhis2
           body:
-            password: ${DHIS2_PASSWORD}  # ${VAR} is env-interpolated
+            password: ${env:DHIS2_PASSWORD}  # explicit env interpolation
 
       projects:
         - name: my-project               # required, url-safe
-          members:                       # required, at least one owner
+          description: An example project # optional
+          members:                       # required, exactly one owner
             - { email: amy@openfn.org, role: owner }
           credentials: [dhis2-prod]      # optional, exposed to this project
+          collections:                   # optional
+            - name: my-collection
           workflows:
             - name: my-workflow
               trigger:
@@ -81,15 +84,20 @@ defmodule Lightning.Bootstrap do
   Workflow, trigger, job and edge maps are passed through to the provisioning
   document after the conveniences above are resolved, so any field the
   provisioner accepts (e.g. `webhook_reply`, `custom_path`, `enabled`,
-  `condition_expression`) can be used directly. Unknown fields are rejected by
-  the provisioner's own validation.
+  `condition_expression`) can be used directly. Unknown fields there are
+  rejected by the provisioner's own validation.
+
+  Every other key — the scenario itself, and each user, credential, member and
+  project — is checked against an explicit allow-list, so a typo (`usres:`) or
+  an unsupported field (e.g. `channels`, not yet handled here) raises instead
+  of being silently ignored.
 
   Keys are strings, as produced by the YAML/JSON parsers.
 
-  Env interpolation only matches `SCREAMING_SNAKE_CASE` names, so JS template
-  literals in job bodies (`${count}`, `${state.data}`) pass through untouched;
-  uppercase `${...}` literals in job bodies will be interpolated, so avoid
-  them there.
+  Env interpolation is explicit: only `${env:VAR}` references are replaced
+  (and it is an error for `VAR` to be unset). Plain `${...}` is left alone,
+  so JS template literals in job bodies (`${id}`, `${HOME}`, `${state.data}`)
+  can never collide with interpolation.
   """
 
   import Ecto.Query
@@ -99,6 +107,7 @@ defmodule Lightning.Bootstrap do
   alias Lightning.Accounts.UserToken
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
+  alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
@@ -120,6 +129,17 @@ defmodule Lightning.Bootstrap do
     "viewer" => :viewer
   }
   @role_rank %{owner: 3, admin: 2, editor: 1, viewer: 0}
+
+  # Allowed keys at each level of the scenario. Anything else — a typo, or a
+  # provisioner field we don't (yet) support — raises instead of silently
+  # doing nothing. Workflow/trigger/job/edge maps aren't listed here: those
+  # pass straight through to the provisioner, which runs its own check.
+  @scenario_keys ~w(users credentials projects)
+  @user_keys ~w(email first_name last_name password superuser api_token)
+  @credential_keys ~w(name owner schema body credential_bodies)
+  @project_keys ~w(id name description members credentials collections workflows)
+  @member_keys ~w(email role)
+  @collection_keys ~w(id name)
 
   @typedoc "Per-user result: the persisted user and any generated API token."
   @type user_result :: %{user: User.t(), api_token: String.t() | nil}
@@ -144,6 +164,7 @@ defmodule Lightning.Bootstrap do
     ensure_enabled!()
 
     scenario = interpolate_env(scenario)
+    allowed_keys!(scenario, @scenario_keys, "scenario")
 
     {:ok, result} =
       Repo.transaction(
@@ -307,10 +328,14 @@ defmodule Lightning.Bootstrap do
     end
   end
 
+  # Interpolation is explicit and namespaced — only `${env:VAR}` is replaced —
+  # so JS template literals in job bodies (`${id}`, or even `${HOME}`) can
+  # never collide with it.
   defp interpolate_env(value) when is_binary(value) do
-    Regex.replace(~r/\$\{([A-Z][A-Z0-9_]*)\}/, value, fn _, var ->
+    Regex.replace(~r/\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/, value, fn _, var ->
       System.get_env(var) ||
-        raise "Scenario references ${#{var}}, but that environment variable is not set"
+        raise "Scenario references ${env:#{var}}, but that environment " <>
+                "variable is not set"
     end)
   end
 
@@ -336,6 +361,7 @@ defmodule Lightning.Bootstrap do
 
   defp ensure_users(specs) do
     Map.new(specs, fn spec ->
+      allowed_keys!(spec, @user_keys, "user #{spec["email"]}")
       email = spec |> fetch!("email") |> String.downcase()
 
       user =
@@ -389,6 +415,7 @@ defmodule Lightning.Bootstrap do
   defp ensure_credentials(specs, users) do
     Map.new(specs, fn spec ->
       name = fetch!(spec, "name")
+      allowed_keys!(spec, @credential_keys, "credential #{name}")
       owner = lookup_user!(users, fetch!(spec, "owner"), "credential #{name}")
 
       credential =
@@ -421,6 +448,7 @@ defmodule Lightning.Bootstrap do
 
   defp ensure_project(spec, users, credentials) do
     name = fetch!(spec, "name")
+    allowed_keys!(spec, @project_keys, "project #{name}")
     scope = "project:#{name}"
     id = spec["id"] || stable_id(scope)
 
@@ -440,11 +468,20 @@ defmodule Lightning.Bootstrap do
       |> ensure_unique!("name", "workflows in project #{name}")
       |> Enum.map(&build_workflow_info(&1, scope, pc_ids))
 
-    document = %{
-      "id" => id,
-      "name" => name,
-      "workflows" => Enum.map(workflow_infos, & &1.document)
-    }
+    collections =
+      spec
+      |> fetch_list("collections")
+      |> ensure_unique!("name", "collections in project #{name}")
+      |> Enum.map(&build_collection(&1, scope))
+
+    document =
+      %{
+        "id" => id,
+        "name" => name,
+        "workflows" => Enum.map(workflow_infos, & &1.document),
+        "collections" => collections
+      }
+      |> maybe_put("description", spec["description"])
 
     project = Repo.get!(Project, id)
 
@@ -479,6 +516,13 @@ defmodule Lightning.Bootstrap do
       |> fetch_list("members")
       |> Enum.map(fn member ->
         email = fetch!(member, "email")
+
+        allowed_keys!(
+          member,
+          @member_keys,
+          "member #{email} of project #{project_name}"
+        )
+
         user = lookup_user!(users, email, "project #{project_name}")
 
         role =
@@ -489,8 +533,16 @@ defmodule Lightning.Bootstrap do
         %{user: user, role: role}
       end)
 
-    unless Enum.any?(members, &(&1.role == :owner)) do
-      raise "Project #{project_name} needs at least one member with role: owner"
+    case Enum.count(members, &(&1.role == :owner)) do
+      1 ->
+        :ok
+
+      0 ->
+        raise "Project #{project_name} needs exactly one member with role: owner"
+
+      _ ->
+        raise "Project #{project_name} declares more than one member with " <>
+                "role: owner — a project can only have one"
     end
 
     members
@@ -502,25 +554,39 @@ defmodule Lightning.Bootstrap do
   end
 
   # Adds missing members and corrects drifted roles; never removes members.
+  # `members` is validated to have exactly one declared owner, but an
+  # existing owner not mentioned in this scenario may still hold the role —
+  # non-owner changes are applied first so a same-run ownership handover
+  # (demote old owner, promote new owner) doesn't trip the one-owner-per-
+  # project constraint. A conflict with an *undeclared* existing owner still
+  # surfaces, as a friendly changeset error rather than a raw one.
   defp reconcile_members(project, members) do
-    Enum.each(members, fn %{user: user, role: role} ->
-      case Repo.get_by(ProjectUser, project_id: project.id, user_id: user.id) do
-        nil ->
-          Repo.insert!(%ProjectUser{
-            project_id: project.id,
-            user_id: user.id,
-            role: role
-          })
+    members
+    |> Enum.sort_by(&if(&1.role == :owner, do: 1, else: 0))
+    |> Enum.each(&reconcile_member(project, &1))
+  end
 
-        %ProjectUser{role: ^role} ->
-          :ok
+  defp reconcile_member(project, %{user: user, role: role}) do
+    case Repo.get_by(ProjectUser, project_id: project.id, user_id: user.id) do
+      nil ->
+        project
+        |> Projects.add_project_users([%{user_id: user.id, role: role}], false)
+        |> handle_member_result(user)
 
-        project_user ->
-          project_user
-          |> Ecto.Changeset.change(role: role)
-          |> Repo.update!()
-      end
-    end)
+      %ProjectUser{role: ^role} ->
+        :ok
+
+      project_user ->
+        project_user
+        |> Projects.update_project_user(%{role: role})
+        |> handle_member_result(user)
+    end
+  end
+
+  defp handle_member_result({:ok, _}, _user), do: :ok
+
+  defp handle_member_result({:error, changeset}, user) do
+    raise_invalid("project member #{user.email}", changeset)
   end
 
   # Exposes credentials to the project (ProjectCredential), returning a
@@ -731,6 +797,28 @@ defmodule Lightning.Bootstrap do
         values = Enum.map_join(duplicates, ", ", &elem(&1, 0))
         raise "Duplicate #{key} among #{what}: #{values}"
     end
+  end
+
+  # A typo or an unsupported provisioner field (e.g. "channels", not yet
+  # handled by the bootstrapper) would otherwise be silently ignored — fail
+  # loudly and name the bad key(s) instead.
+  defp allowed_keys!(map, allowed, context) when is_map(map) do
+    unknown = Map.keys(map) -- allowed
+
+    unless unknown == [] do
+      raise "Unknown key(s) for #{context}: #{Enum.join(unknown, ", ")} " <>
+              "(allowed: #{Enum.join(allowed, ", ")})"
+    end
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp build_collection(spec, project_scope) do
+    name = fetch!(spec, "name")
+    allowed_keys!(spec, @collection_keys, "collection #{name}")
+    id = spec["id"] || stable_id("#{project_scope}/collection:#{name}")
+    %{"id" => id, "name" => name}
   end
 
   defp fetch_list(map, key) do

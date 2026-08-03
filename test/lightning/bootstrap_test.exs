@@ -205,6 +205,76 @@ defmodule Lightning.BootstrapTest do
                )
     end
 
+    test "same-run ownership handover demotes the old owner before promoting the new one" do
+      Bootstrap.run(scenario())
+
+      handover =
+        update_in(
+          scenario(),
+          ["projects", Access.at(0), "members"],
+          fn [owner_member, editor_member] ->
+            [
+              Map.put(owner_member, "role", "editor"),
+              Map.put(editor_member, "role", "owner")
+            ]
+          end
+        )
+
+      [%{project: project}] = Bootstrap.run(handover).projects
+
+      owner = Accounts.get_user_by_email("owner@openfn.org")
+      editor = Accounts.get_user_by_email("editor@openfn.org")
+
+      assert %{role: :editor} =
+               Repo.get_by(ProjectUser,
+                 project_id: project.id,
+                 user_id: owner.id
+               )
+
+      assert %{role: :owner} =
+               Repo.get_by(ProjectUser,
+                 project_id: project.id,
+                 user_id: editor.id
+               )
+    end
+
+    test "rejects more than one declared owner, with a friendly message" do
+      two_owners =
+        update_in(
+          scenario(),
+          ["projects", Access.at(0), "members"],
+          fn [owner_member, editor_member] ->
+            [owner_member, Map.put(editor_member, "role", "owner")]
+          end
+        )
+
+      assert_raise RuntimeError,
+                   ~r/more than one member with\n?\s*role: owner/,
+                   fn ->
+                     Bootstrap.run(two_owners)
+                   end
+    end
+
+    test "promoting a new owner while an undeclared owner remains raises a friendly error, not a raw constraint crash" do
+      Bootstrap.run(scenario())
+
+      # editor@ is promoted to owner, but owner@ is omitted from this run's
+      # members (so, per the never-remove-members contract, they keep their
+      # existing owner role) — this must conflict, but cleanly.
+      promote_only =
+        update_in(
+          scenario(),
+          ["projects", Access.at(0), "members"],
+          fn [_owner_member, editor_member] ->
+            [Map.put(editor_member, "role", "owner")]
+          end
+        )
+
+      assert_raise RuntimeError, ~r/only have one owner|only one owner/, fn ->
+        Bootstrap.run(promote_only)
+      end
+    end
+
     test "explicit ids win over derived ones" do
       workflow_id = Ecto.UUID.generate()
 
@@ -219,7 +289,7 @@ defmodule Lightning.BootstrapTest do
       assert workflow_info.id == workflow_id
     end
 
-    test "interpolates ${VAR} from the environment and fails when unset" do
+    test "interpolates ${env:VAR} from the environment and fails when unset" do
       System.put_env("BOOTSTRAP_TEST_SECRET", "from-env")
       on_exit(fn -> System.delete_env("BOOTSTRAP_TEST_SECRET") end)
 
@@ -227,7 +297,7 @@ defmodule Lightning.BootstrapTest do
         put_in(
           scenario(),
           ["credentials", Access.at(0), "body", "apiKey"],
-          "${BOOTSTRAP_TEST_SECRET}"
+          "${env:BOOTSTRAP_TEST_SECRET}"
         )
 
       result = Bootstrap.run(scenario)
@@ -241,7 +311,7 @@ defmodule Lightning.BootstrapTest do
         put_in(
           scenario,
           ["credentials", Access.at(0), "body", "apiKey"],
-          "${BOOTSTRAP_TEST_UNSET_VAR}"
+          "${env:BOOTSTRAP_TEST_UNSET_VAR}"
         )
 
       assert_raise RuntimeError, ~r/BOOTSTRAP_TEST_UNSET_VAR/, fn ->
@@ -249,8 +319,12 @@ defmodule Lightning.BootstrapTest do
       end
     end
 
-    test "leaves JS template literals in job bodies untouched" do
-      body = "fn(s => ({...s, msg: `count is ${count}, id ${state.data.id}`}))"
+    test "leaves plain ${...} in job bodies untouched, even uppercase names set in the environment" do
+      # HOME is set in virtually every shell — proves interpolation can't
+      # collide with a JS template literal even when the name happens to
+      # exist in the environment.
+      body =
+        "fn(s => ({...s, msg: `count is ${count}, home ${HOME}, id ${state.data.id}`}))"
 
       scenario =
         put_in(
@@ -326,6 +400,86 @@ defmodule Lightning.BootstrapTest do
       assert_raise RuntimeError, ~r/use the singular "trigger" key/, fn ->
         Bootstrap.run(raw_triggers)
       end
+    end
+
+    test "supports project description and collections" do
+      scenario =
+        scenario()
+        |> put_in(
+          ["projects", Access.at(0), "description"],
+          "a test project"
+        )
+        |> put_in(
+          ["projects", Access.at(0), "collections"],
+          [%{"name" => "my-collection"}]
+        )
+
+      [%{project: project}] = Bootstrap.run(scenario).projects
+
+      project = Repo.get!(Project, project.id)
+      assert project.description == "a test project"
+
+      assert Repo.get_by(Lightning.Collections.Collection,
+               project_id: project.id,
+               name: "my-collection"
+             )
+    end
+
+    test "rejects unknown keys instead of silently ignoring them" do
+      # top level: typo'd section name
+      assert_raise RuntimeError, ~r/Unknown key\(s\) for scenario: usres/, fn ->
+        scenario()
+        |> Map.put("usres", [])
+        |> Map.delete("users")
+        |> Bootstrap.run()
+      end
+
+      # user level
+      with_bad_user_key =
+        update_in(scenario(), ["users", Access.at(0)], &Map.put(&1, "rol", "x"))
+
+      assert_raise RuntimeError,
+                   ~r/Unknown key\(s\) for user owner@openfn.org: rol/,
+                   fn ->
+                     Bootstrap.run(with_bad_user_key)
+                   end
+
+      # credential level
+      with_bad_credential_key =
+        update_in(
+          scenario(),
+          ["credentials", Access.at(0)],
+          &Map.put(&1, "shcema", "raw")
+        )
+
+      assert_raise RuntimeError,
+                   ~r/Unknown key\(s\) for credential raw-cred: shcema/,
+                   fn ->
+                     Bootstrap.run(with_bad_credential_key)
+                   end
+
+      # project level: a real provisioner field we don't support yet — the
+      # error should name it, not silently drop it
+      with_channels =
+        put_in(scenario(), ["projects", Access.at(0), "channels"], [])
+
+      assert_raise RuntimeError,
+                   ~r/Unknown key\(s\) for project bootstrap-test: channels/,
+                   fn -> Bootstrap.run(with_channels) end
+
+      # member level
+      with_bad_member_key =
+        update_in(
+          scenario(),
+          ["projects", Access.at(0), "members", Access.at(0)],
+          &Map.put(&1, "roel", "owner")
+        )
+
+      assert_raise RuntimeError,
+                   ~r/Unknown key\(s\) for member owner@openfn.org/,
+                   fn ->
+                     Bootstrap.run(with_bad_member_key)
+                   end
     end
 
     test "raises clear errors for invalid scenarios, rolling back" do
