@@ -20,11 +20,20 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
   - the string-keyed workflow state map produced by
     `Lightning.Collaboration.WorkflowSerializer.deserialize_from_ydoc/2`,
     which includes unsaved collaborative edits.
+
+  The YAML is emitted by plain string building (in the same spirit as
+  `Lightning.ExportUtils`): multi-line strings such as job bodies become
+  block scalars, and anything that cannot be written as a plain or block
+  scalar falls back to a JSON-escaped double-quoted scalar, which is valid
+  YAML for any string.
   """
 
   alias Lightning.Workflows.Workflow
 
   require Logger
+
+  # Bare words YAML would read as booleans or null rather than strings
+  @yaml_literals ~w(true false yes no on off null)
 
   @doc """
   Serializes a workflow to a YAML string matching the client-produced spec.
@@ -32,7 +41,7 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
   Accepts a `%Workflow{}` with `:jobs`, `:triggers` and `:edges` preloaded,
   or a string-keyed workflow state map (as deserialized from a Y.Doc).
 
-  Returns `nil` if encoding fails, mirroring `serializeWorkflowToYAML`
+  Returns `nil` if serialization fails, mirroring `serializeWorkflowToYAML`
   returning `undefined` on error.
   """
   @spec serialize(Workflow.t() | map()) :: String.t() | nil
@@ -41,20 +50,10 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
   end
 
   def serialize(%{} = state) do
-    positions = state["positions"] || %{}
-    jobs = state["jobs"] || []
-    triggers = state["triggers"] || []
-    edges = state["edges"] || []
-
-    %{
-      "id" => state["id"],
-      "name" => state["name"],
-      "jobs" => jobs_spec(jobs, positions),
-      "triggers" => triggers_spec(triggers, jobs, positions),
-      "edges" => edges_spec(edges, triggers, jobs)
-    }
-    |> Ymlr.document!()
-    |> String.trim_leading("---\n")
+    state
+    |> spec_pairs()
+    |> to_yaml("")
+    |> Kernel.<>("\n")
   rescue
     error ->
       Logger.error(
@@ -122,129 +121,130 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
     }
   end
 
-  defp jobs_spec(jobs, positions) do
-    Map.new(jobs, fn job ->
-      details =
-        %{
-          "id" => job["id"],
-          "name" => job["name"],
-          "adaptor" => job["adaptor"],
-          "body" => job["body"]
-        }
-        |> maybe_put_pos(positions, job["id"])
+  # Builds the spec as nested {key, value} pair lists (order preserved,
+  # matching the client's key order).
 
-      {hyphenate(job["name"]), details}
-    end)
+  defp spec_pairs(state) do
+    positions = state["positions"] || %{}
+    jobs = state["jobs"] || []
+    triggers = state["triggers"] || []
+    edges = state["edges"] || []
+
+    [
+      {"id", state["id"]},
+      {"name", state["name"]},
+      {"jobs",
+       Enum.map(jobs, fn job ->
+         {hyphenate(job["name"]), job_pairs(job, positions)}
+       end)},
+      {"triggers",
+       Enum.map(triggers, fn trigger ->
+         {trigger["type"], trigger_pairs(trigger, jobs, positions)}
+       end)},
+      {"edges", Enum.map(edges, fn edge -> edge_pairs(edge, triggers, jobs) end)}
+    ]
   end
 
-  defp triggers_spec(triggers, jobs, positions) do
-    Map.new(triggers, fn trigger ->
-      type = trigger["type"]
-
-      details =
-        %{
-          "id" => trigger["id"],
-          "type" => type,
-          "enabled" => trigger["enabled"]
-        }
-        |> then(fn details ->
-          # The client omits positions for kafka triggers
-          if type == "kafka" do
-            details
-          else
-            maybe_put_pos(details, positions, trigger["id"])
-          end
-        end)
-        |> put_type_specific_fields(trigger, jobs)
-
-      {type, details}
-    end)
+  defp job_pairs(job, positions) do
+    [
+      {"id", job["id"]},
+      {"name", job["name"]},
+      {"adaptor", job["adaptor"]},
+      {"body", job["body"]}
+    ] ++ pos_pairs(positions, job["id"])
   end
 
-  defp put_type_specific_fields(details, %{"type" => "cron"} = trigger, jobs) do
+  defp trigger_pairs(trigger, jobs, positions) do
+    type = trigger["type"]
+
+    # The client omits positions for kafka triggers
+    pos = if type == "kafka", do: [], else: pos_pairs(positions, trigger["id"])
+
+    [
+      {"id", trigger["id"]},
+      {"type", type},
+      {"enabled", trigger["enabled"]}
+    ] ++ pos ++ type_specific_pairs(trigger, jobs)
+  end
+
+  defp type_specific_pairs(%{"type" => "cron"} = trigger, jobs) do
     cursor_job =
       trigger["cron_cursor_job_id"] &&
         Enum.find(jobs, &(&1["id"] == trigger["cron_cursor_job_id"]))
 
-    details
-    |> Map.put("cron_expression", trigger["cron_expression"])
-    |> Map.put("cron_cursor_job", cursor_job && hyphenate(cursor_job["name"]))
+    [
+      {"cron_expression", trigger["cron_expression"]},
+      {"cron_cursor_job", cursor_job && hyphenate(cursor_job["name"])}
+    ]
   end
 
-  defp put_type_specific_fields(
-         details,
-         %{"type" => "webhook"} = trigger,
-         _jobs
-       ) do
-    details
-    |> Map.put("webhook_reply", trigger["webhook_reply"])
-    |> put_webhook_response_config(trigger["webhook_response_config"])
+  defp type_specific_pairs(%{"type" => "webhook"} = trigger, _jobs) do
+    [{"webhook_reply", trigger["webhook_reply"]}] ++
+      webhook_response_config_pairs(trigger["webhook_response_config"])
   end
 
-  defp put_type_specific_fields(details, _trigger, _jobs), do: details
+  defp type_specific_pairs(_trigger, _jobs), do: []
 
-  defp put_webhook_response_config(details, %{} = config) do
+  defp webhook_response_config_pairs(%{} = config) do
     codes =
-      %{
-        "success_code" => config["success_code"],
-        "error_code" => config["error_code"]
-      }
-      |> Map.reject(fn {_k, v} -> is_nil(v) end)
+      [
+        {"success_code", config["success_code"]},
+        {"error_code", config["error_code"]}
+      ]
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
 
-    if map_size(codes) > 0 do
-      Map.put(details, "webhook_response_config", codes)
-    else
-      details
-    end
+    if codes == [], do: [], else: [{"webhook_response_config", codes}]
   end
 
-  defp put_webhook_response_config(details, _config), do: details
+  defp webhook_response_config_pairs(_config), do: []
 
-  defp edges_spec(edges, triggers, jobs) do
-    Map.new(edges, fn edge ->
-      source_trigger =
-        edge["source_trigger_id"] &&
-          Enum.find(triggers, &(&1["id"] == edge["source_trigger_id"]))
+  defp edge_pairs(edge, triggers, jobs) do
+    source_trigger =
+      edge["source_trigger_id"] &&
+        Enum.find(triggers, &(&1["id"] == edge["source_trigger_id"]))
 
-      source_job =
-        edge["source_job_id"] &&
-          Enum.find(jobs, &(&1["id"] == edge["source_job_id"]))
+    source_job =
+      edge["source_job_id"] &&
+        Enum.find(jobs, &(&1["id"] == edge["source_job_id"]))
 
-      target_job = Enum.find(jobs, &(&1["id"] == edge["target_job_id"]))
+    target_job = Enum.find(jobs, &(&1["id"] == edge["target_job_id"]))
 
-      details =
-        %{
-          "id" => edge["id"],
-          "condition_type" => presence(edge["condition_type"]) || "always",
-          "enabled" => edge["enabled"] != false,
-          "target_job" => (target_job && hyphenate(target_job["name"])) || ""
-        }
-        |> maybe_put("source_trigger", source_trigger && source_trigger["type"])
-        |> maybe_put("source_job", source_job && hyphenate(source_job["name"]))
-        |> maybe_put("condition_label", presence(edge["condition_label"]))
-        |> maybe_put(
+    source_name =
+      (source_trigger && source_trigger["type"]) ||
+        (source_job && hyphenate(source_job["name"]))
+
+    target_name = (target_job && hyphenate(target_job["name"])) || ""
+
+    pairs =
+      [
+        {"id", edge["id"]},
+        {"condition_type", presence(edge["condition_type"]) || "always"},
+        {"enabled", edge["enabled"] != false},
+        {"target_job", target_name}
+      ] ++
+        maybe_pair("source_trigger", source_trigger && source_trigger["type"]) ++
+        maybe_pair("source_job", source_job && hyphenate(source_job["name"])) ++
+        maybe_pair("condition_label", presence(edge["condition_label"])) ++
+        maybe_pair(
           "condition_expression",
           presence(edge["condition_expression"])
         )
 
-      source_name = details["source_trigger"] || details["source_job"]
-
-      {"#{source_name}->#{details["target_job"]}", details}
-    end)
+    {"#{source_name}->#{target_name}", pairs}
   end
 
-  defp maybe_put_pos(details, positions, id) do
+  defp pos_pairs(positions, id) do
     case positions[id] do
       %{"x" => x, "y" => y} when is_number(x) and is_number(y) ->
-        Map.put(details, "pos", %{"x" => round(x), "y" => round(y)})
+        [{"pos", [{"x", round(x)}, {"y", round(y)}]}]
 
       _ ->
-        details
+        []
     end
   end
 
-  defp maybe_put(details, _key, nil), do: details
-  defp maybe_put(details, key, value), do: Map.put(details, key, value)
+  defp maybe_pair(_key, nil), do: []
+  defp maybe_pair(key, value), do: [{key, value}]
 
   defp presence(nil), do: nil
   defp presence(""), do: nil
@@ -254,4 +254,99 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
     do: String.replace(string, ~r/\s+/, "-")
 
   defp hyphenate(other), do: other
+
+  # YAML emission — plain string building over the ordered pair lists.
+
+  defp to_yaml(pairs, indent) when is_list(pairs) do
+    Enum.map_join(pairs, "\n", fn {key, value} ->
+      emit_pair(key, value, indent)
+    end)
+  end
+
+  defp emit_pair(key, [], indent), do: "#{indent}#{yaml_key(key)}: {}"
+
+  defp emit_pair(key, pairs, indent) when is_list(pairs) do
+    "#{indent}#{yaml_key(key)}:\n" <> to_yaml(pairs, indent <> "  ")
+  end
+
+  defp emit_pair(key, value, indent) when is_binary(value) do
+    if String.contains?(value, "\n") do
+      emit_multiline(key, value, indent)
+    else
+      "#{indent}#{yaml_key(key)}: #{yaml_scalar(value)}"
+    end
+  end
+
+  defp emit_pair(key, value, indent),
+    do: "#{indent}#{yaml_key(key)}: #{yaml_scalar(value)}"
+
+  # Multi-line strings (job bodies, condition expressions) become block
+  # scalars when the content allows it; otherwise fall back to a
+  # JSON-escaped double-quoted scalar (valid YAML for any string).
+  defp emit_multiline(key, value, indent) do
+    cond do
+      not block_scalar_safe?(value) ->
+        "#{indent}#{yaml_key(key)}: #{Jason.encode!(value)}"
+
+      String.ends_with?(value, "\n") and not String.ends_with?(value, "\n\n") ->
+        # "|" (clip) keeps exactly the one trailing newline
+        block_scalar(key, "|", String.trim_trailing(value, "\n"), indent)
+
+      not String.ends_with?(value, "\n") ->
+        # "|-" (strip) for content without a trailing newline
+        block_scalar(key, "|-", value, indent)
+
+      true ->
+        # Multiple trailing newlines don't round-trip through clip/strip
+        "#{indent}#{yaml_key(key)}: #{Jason.encode!(value)}"
+    end
+  end
+
+  defp block_scalar(key, header, content, indent) do
+    lines =
+      content
+      |> String.split("\n")
+      |> Enum.map_join("\n", fn
+        "" -> ""
+        line -> "#{indent}  #{line}"
+      end)
+
+    "#{indent}#{yaml_key(key)}: #{header}\n#{lines}"
+  end
+
+  # Block scalar indentation is auto-detected from the first content line,
+  # so the content is only safe when that line exists and carries no leading
+  # whitespace of its own.
+  defp block_scalar_safe?(value) do
+    case String.split(value, "\n", parts: 2) do
+      [first, _rest] ->
+        first != "" and not String.starts_with?(first, [" ", "\t"])
+
+      _ ->
+        false
+    end
+  end
+
+  defp yaml_key(key) do
+    if plain_scalar?(key), do: key, else: Jason.encode!(key)
+  end
+
+  defp yaml_scalar(nil), do: "null"
+  defp yaml_scalar(true), do: "true"
+  defp yaml_scalar(false), do: "false"
+  defp yaml_scalar(value) when is_number(value), do: to_string(value)
+
+  defp yaml_scalar(value) when is_binary(value) do
+    if plain_scalar?(value), do: value, else: Jason.encode!(value)
+  end
+
+  # A string can be written unquoted when it starts with a letter, ends with
+  # a letter or digit, only contains unambiguous characters, and isn't a
+  # bare word YAML would read as a boolean or null.
+  defp plain_scalar?(value) when is_binary(value) do
+    Regex.match?(~r/^[a-zA-Z][a-zA-Z0-9_\-@\.\/> ]*[a-zA-Z0-9]$/, value) and
+      String.downcase(value) not in @yaml_literals
+  end
+
+  defp plain_scalar?(_value), do: false
 end
