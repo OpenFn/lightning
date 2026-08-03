@@ -448,28 +448,3 @@ export function createMockPhoenixChannel(topic = 'workflow:test') {
   return mockChannel;
 }
 ```
-
-### Yjs Document Mock
-
-```typescript
-// __helpers__/yjsMocks.ts
-export function createMockYDoc(initialData: any = {}) {
-  const doc = new Y.Doc();
-
-  // Initialize with data
-  if (initialData.jobs) {
-    const jobs = doc.getArray('jobs');
-    jobs.push(initialData.jobs);
-  }
-
-  if (initialData.workflow) {
-    const workflow = doc.getMap('workflow');
-    Object.entries(initialData.workflow).forEach(([key, value]) => {
-      workflow.set(key, value);
-    });
-  }
-
-  return doc;
-}
-```
-
