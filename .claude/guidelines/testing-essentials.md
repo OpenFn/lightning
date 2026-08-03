@@ -187,7 +187,7 @@ npm test                             # Run all tests
 npm run test:watch                   # Watch mode
 npm test -- useSession.test.ts       # Specific file
 npm test -- useSession.test.ts:45    # Specific line
-npm test -- --grep "SessionStore"    # Filter by name
+npm test -- -t "SessionStore"        # Filter by name
 ```
 
 ## Additional resources
