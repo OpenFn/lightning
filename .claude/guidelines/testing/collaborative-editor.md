@@ -306,26 +306,6 @@ test('supports undo/redo for job edits', () => {
 
 ## Testing Lightning-Specific Patterns
 
-### Testing Workflow State Management
-
-**✅ DO: Test workflow lock version**
-
-```typescript
-test('increments lock version on workflow changes', async () => {
-  const store = createWorkflowStore();
-
-  const initialVersion = store.getSnapshot().lockVersion;
-
-  act(() => {
-    store.updateWorkflowName('New Workflow Name');
-  });
-
-  await waitFor(() => {
-    expect(store.getSnapshot().lockVersion).toBe(initialVersion + 1);
-  });
-});
-```
-
 ### Testing Adaptor Integration
 
 **✅ DO: Test adaptor version resolution**
