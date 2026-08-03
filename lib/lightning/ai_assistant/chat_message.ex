@@ -11,7 +11,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
   * `content` - The text content of the message (required, 1-10,000 characters)
   * `code` - Optional code associated with the message (e.g., generated workflows)
   * `response_segments` - Optional display timeline of text and status segments
-    for assistant messages (global chat); `nil` for flat messages
+    for assistant messages (global chat); `[]` for flat messages (the column
+    is NULL, which `embeds_many` loads as an empty list)
   * `role` - Who sent the message: `:user` or `:assistant`
   * `status` - Processing status: `:pending`, `:success`, `:error`, or `:cancelled`
   * `is_deleted` - Soft deletion flag (defaults to false)
@@ -73,7 +74,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
           id: Ecto.UUID.t(),
           content: String.t() | nil,
           code: String.t() | nil,
-          response_segments: [Segment.t()] | nil,
+          response_segments: [Segment.t()],
           role: role(),
           status: status(),
           job_id: Ecto.UUID.t() | nil,

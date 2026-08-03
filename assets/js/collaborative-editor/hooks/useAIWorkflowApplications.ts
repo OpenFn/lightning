@@ -692,7 +692,16 @@ export function useAIWorkflowApplications({
     if (!currentSession) return;
     const messages = currentSession.messages;
 
-    if (page !== 'workflow_template' || !messages.length) return;
+    // Global sessions apply page-independently (their streaming applies can
+    // finish while a job is open), so they must reconcile here too —
+    // otherwise a streamingApply record would stay stuck and a failed save
+    // would never retry until the user navigated back to the canvas.
+    if (
+      (page !== 'workflow_template' && !isGlobalSession) ||
+      !messages.length
+    ) {
+      return;
+    }
     if (connectionState !== 'connected') return;
     // Don't auto-apply when readonly (except for new workflow creation)
     if (!canApplyChanges) return;
@@ -768,6 +777,7 @@ export function useAIWorkflowApplications({
   }, [
     currentSession,
     page,
+    isGlobalSession,
     sessionId,
     connectionState,
     launchApply,
