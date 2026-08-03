@@ -575,8 +575,8 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     state = produce(state, draft => {
       draft.streamingContent = (draft.streamingContent || '') + content;
 
-      // Mirror the char into the woven timeline: grow the trailing text
-      // segment, or open a new one after a status segment.
+      // streamingContent stays the flat source of truth; the timeline is a
+      // parallel view of the same text, split by status segments.
       const lastSegment = draft.streamingSegments.at(-1);
       if (lastSegment && lastSegment.type === 'text') {
         lastSegment.content += content;
@@ -588,12 +588,8 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
-   * Append a segment (in practice: a persistent completed-action status,
-   * from Apollo's dedicated `status` event) to the streaming timeline.
-   * Called by the channel registry's char drain so segments land in wire
-   * order relative to the text drained before them. Transient "thinking"
-   * updates never enter the timeline — they live in the scalar
-   * `streamingStatus` (setStreamingStatus), a separate mechanism.
+   * Append a status segment to the streaming timeline. Only the channel
+   * registry's char drain may call this — that is what keeps wire order.
    * @internal
    */
   const _appendStreamingSegment = (segment: ResponseSegment) => {

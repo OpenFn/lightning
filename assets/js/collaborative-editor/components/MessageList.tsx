@@ -682,11 +682,8 @@ export function MessageList({
                       />
                     )}
 
-                    {/* Transient thinking status (e.g. "Reviewing the
-                      workflow...") — dots + italic, replaced by each new
-                      thinking event and cleared when text or a persistent
-                      status segment arrives. Renders below the woven
-                      timeline and in the flat path alike. */}
+                    {/* Transient thinking status — the registry clears it
+                      when text or a persistent status segment arrives. */}
                     {isStreaming(message) && streamingStatus && (
                       <div
                         className="flex items-center gap-2"
