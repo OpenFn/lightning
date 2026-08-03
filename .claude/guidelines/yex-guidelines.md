@@ -618,4 +618,3 @@ If you encounter issues or have questions:
 1. Check this guide first
 2. Review the code references provided
 3. Look at test files for working examples
-4. Get objects before transactions
