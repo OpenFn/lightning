@@ -285,34 +285,6 @@ test('flash message disappears', async ({ page }) => {
 
 ## LiveView Hooks
 
-### Testing JavaScript Hooks
-
-LiveView hooks provide custom client-side behavior:
-
-```typescript
-test('Monaco editor hook initializes', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
-
-  await page.goto('/workflows/123/edit');
-  await liveViewPage.waitForConnected();
-
-  // Element with phx-hook="Monaco"
-  const editorElement = page.locator('[phx-hook="Monaco"]');
-
-  // Wait for hook to mount and initialize
-  await expect(editorElement).toBeVisible();
-
-  // Wait for Monaco editor to be ready
-  await page.waitForFunction(() => {
-    const element = document.querySelector('[phx-hook="Monaco"]');
-    return element && (element as any).monacoEditor !== undefined;
-  });
-
-  // Now safe to interact with editor
-  await page.keyboard.type('console.log("Hello");');
-});
-```
-
 ### Lightning hooks worth knowing
 
 **`Flash`** — flash message containers. This is the one the POM base class uses:
