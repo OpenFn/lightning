@@ -149,4 +149,3 @@ findings list.
   general code quality. That bounds what you *check*, not what you may report:
   if a check turns up a serious security problem outside all three, report it
   under Other Security Observations rather than dropping it.
-- Do not post comments yourself; the workflow handles posting.
