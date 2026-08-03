@@ -115,7 +115,9 @@ in development.
 
 - PostgreSQL with Ecto ORM
 - Dev: `postgres://postgres:postgres@localhost:5432/lightning_dev`
-- Test: `lightning_test` (auto-created by mix test)
+- Test: `lightning_test` — no manual setup step; the `test` alias at
+  `mix.exs:227` runs `ecto.create --quiet` and `ecto.migrate --quiet` before the
+  suite
 - Schemas alongside contexts in `lib/lightning/`
 
 ## Development Guidelines
