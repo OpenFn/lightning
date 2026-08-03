@@ -165,11 +165,6 @@ When decisions are made:
 
 ### 7. Final Validation
 
-Before completing:
-- Verify all core requirements have implementation approaches
-- Check that API contracts are complete
-- Ensure backend/frontend dependencies are clear
-- List actionable next steps
 - Update status to "Review Complete"
 
 ## Usage
