@@ -110,9 +110,9 @@ Structure your findings like this:
 - `.context/shared/architecture/store-structure.md` - Store architecture documentation
 - `.context/shared/architecture/unit-test-structure.md` - Testing architecture
 
-### Feature-Specific
-- `.context/shared/feature/saving/workflow-serialization.md` - Workflow save implementation
-- `.context/shared/feature/yjs/sync-protocol.md` - Yjs synchronization details
+### Topic Directories
+- `.context/saving/workflow-serialization.md` - Workflow save implementation
+- `.context/channels/sync-protocol.md` - Channel synchronisation details
 
 ### Team Notes
 - `.context/shared/notes/meeting-2024-10-01.md` - Team meeting notes
@@ -122,7 +122,7 @@ Structure your findings like this:
 - `.context/frank/notes/testing-ideas.md` - Frank's testing observations
 
 ### Root-Level (Quick Notes/WIP)
-- `.context/NOTES.md` - General project notes
+- `.context/React Patterns Reference.md` - Root-level reference document
 
 Total: 12 relevant documents found
 ```
