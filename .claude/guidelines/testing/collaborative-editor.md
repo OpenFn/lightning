@@ -326,30 +326,6 @@ test('increments lock version on workflow changes', async () => {
 });
 ```
 
-**✅ DO: Test optimistic locking conflicts**
-
-```typescript
-test('detects and handles optimistic locking conflicts', async () => {
-  const store = createWorkflowStore();
-
-  // Simulate stale lock version
-  const staleVersion = store.getSnapshot().lockVersion;
-
-  // Server increments version
-  act(() => {
-    mockChannel._test.emit('workflow_updated', {
-      lock_version: staleVersion + 1,
-    });
-  });
-
-  // Attempt to save with stale version
-  const result = await store.saveWorkflow(staleVersion);
-
-  expect(result.error).toContain('Conflict');
-  expect(result.needsRefresh).toBe(true);
-});
-```
-
 ### Testing Adaptor Integration
 
 **✅ DO: Test adaptor version resolution**
