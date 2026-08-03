@@ -550,33 +550,8 @@ export class WorkflowCollabPage {
 
 ## Index Files
 
-### Exporting Page Objects
-
-Create index files for clean imports:
-
-```typescript
-// pages/index.ts
-export * from './login.page';
-export * from './projects.page';
-export * from './workflows.page';
-export * from './workflow-edit.page';
-export * from './workflow-collab.page';
-export * from './components';
-export * from './base';
-
-// Usage in tests
-import {
-  LoginPage,
-  ProjectsPage,
-  WorkflowEditPage,
-  WorkflowCollabPage
-} from '../pages';
-```
-
-```typescript
-// pages/components/index.ts
-export * from './workflow-diagram.page';
-export * from './job-form.page';
-export * from './job-inspector.page';
-```
+`pages/index.ts` is a flat list of **named** re-exports, not `export *`. Six lines today.
+Add your class to it so tests can `import { ... } from '../pages'`, and read the file
+rather than a copy of it — `pages/index.ts`, `pages/base/index.ts`,
+`pages/components/index.ts`.
 
