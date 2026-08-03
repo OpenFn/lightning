@@ -161,35 +161,6 @@ test('handles channel errors gracefully', async () => {
 });
 ```
 
-### Testing Phoenix Presence
-
-**✅ DO: Test presence tracking**
-
-```typescript
-test('tracks user presence in collaborative session', async () => {
-  const store = createSessionStore();
-  const mockChannel = createMockPhoenixChannel();
-
-  store.initializeSession(mockSocket, 'workflow:123', {
-    id: 'user1',
-    name: 'Test User',
-  });
-
-  // Simulate presence state from server
-  act(() => {
-    mockChannel._test.emit('presence_state', {
-      user1: { metas: [{ online_at: Date.now() }] },
-      user2: { metas: [{ online_at: Date.now() }] },
-    });
-  });
-
-  await waitFor(() => {
-    const presence = store.getSnapshot().presence;
-    expect(Object.keys(presence)).toHaveLength(2);
-  });
-});
-```
-
 ## Testing Store Subscriptions
 
 ### Testing Subscription Notifications
