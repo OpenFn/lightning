@@ -12,15 +12,22 @@ What Gets Removed
    "improve" "leverage" → "use"
 5. Robotic Patterns Rhetorical questions followed by immediate answers Obsessive
    parallel structures Always using exactly three examples Announcement of
-   emphasis What Gets Added Natural Voice Varied sentence lengths Conversational
-   tone Direct statements Specific examples Human Rhythm Natural transitions
-   Confident assertions Personal perspective Authentic phrasing
+   emphasis
 
-Example Transformations Before (AI): "In
-today's rapidly evolving digital landscape, it's crucial to understand that
-leveraging AI effectively isn't just about utilizing cutting-edge
-technology—it's about harnessing its transformative potential to unlock
-unprecedented opportunities."
+What Gets Added
+
+Natural Voice Varied sentence lengths Conversational tone Direct statements
+Specific examples
+
+Human Rhythm Natural transitions Confident assertions Personal perspective
+Authentic phrasing
+
+Example Transformations
+
+Before (AI): "In today's rapidly evolving digital landscape, it's crucial to
+understand that leveraging AI effectively isn't just about utilizing
+cutting-edge technology—it's about harnessing its transformative potential to
+unlock unprecedented opportunities."
 
 After (Human): "AI works best when you use it for specific tasks. Focus on what
 it does well: writing code, analyzing data, and answering questions."
