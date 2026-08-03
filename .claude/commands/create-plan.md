@@ -198,7 +198,7 @@ After structure approval:
 ## Phase 1: [Descriptive Name]
 
 **Implementation Agent**: `[agent-type]`
-<!-- See implement-plan.md for available agents and their capabilities -->
+<!-- See CLAUDE.md §Available Agents for the canonical roster -->
 
 ### Overview
 [What this phase accomplishes]
