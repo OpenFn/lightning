@@ -127,7 +127,8 @@ in development.
 
 ### React/TypeScript
 
-- Props from LiveView are **underscore_cased** (not camelCase)
+- On the `ReactComponent` hook, props arrive as the element's raw attribute
+  names — `data-`prefixed **kebab-case**, not camelCase
 - Use `cn()` utility from `#/utils/cn` for conditional CSS classes
 - Use heroicons via Tailwind: `className="hero-check-micro h-4 w-4"`
 - See `.claude/guidelines/toast-notifications.md` for notification patterns
