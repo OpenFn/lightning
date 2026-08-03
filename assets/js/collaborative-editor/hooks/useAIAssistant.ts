@@ -115,7 +115,9 @@ export const useAIStreamingContent = () => {
 };
 
 /**
- * Get the woven text/status streaming timeline (global assistant streams)
+ * Get the woven text/status streaming timeline. Populated for every stream
+ * (text chunks are mirrored in); status segments only occur on global
+ * assistant streams today.
  */
 export const useAIStreamingSegments = () => {
   const store = useAIStore();

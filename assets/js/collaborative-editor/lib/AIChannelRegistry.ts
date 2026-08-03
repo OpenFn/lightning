@@ -729,9 +729,12 @@ export class AIChannelRegistry {
     // so they land after the text that preceded them on the wire.
     const streamingSegmentHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as {
-        segment: { type: string; content: string };
+        segment?: { type?: string; content?: string };
       };
+      // Only status segments exist on the wire today; anything else is a
+      // contract change and is ignored until the client learns about it.
       if (typedPayload.segment?.type !== 'status') return;
+      if (typeof typedPayload.segment.content !== 'string') return;
 
       if (this.store.getSnapshot().streamingStatus) {
         this.store.setStreamingStatus(null);

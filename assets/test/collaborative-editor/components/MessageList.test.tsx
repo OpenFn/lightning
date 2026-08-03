@@ -1072,6 +1072,33 @@ describe('MessageList', () => {
       );
     });
 
+    it('shows a leading status segment before any text has streamed', () => {
+      // Apollo can complete an action (and emit its status) before the
+      // first text chunk arrives; the streaming placeholder must render
+      // from segments alone.
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          isLoading
+          isGlobalAssistantActive
+          streamingContent={null}
+          streamingStatus={null}
+          streamingSegments={[
+            { type: 'status', content: 'Edited workflow structure' },
+          ]}
+        />
+      );
+
+      expect(screen.getByTestId('streaming-message')).toBeInTheDocument();
+      expect(screen.getByTestId('settled-status')).toHaveTextContent(
+        'Edited workflow structure'
+      );
+    });
+
     it('keeps flat streaming rendering when the global assistant is not active', () => {
       const messages = [
         createMockAIMessage({ role: 'user', content: 'Question' }),

@@ -10,8 +10,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   * `content` - The text content of the message (required, 1-10,000 characters)
   * `code` - Optional code associated with the message (e.g., generated workflows)
-  * `response_segments` - Optional timeline of `%{"type" => "text" | "status", "content" => ...}`
-    segments for assistant messages (global chat); `nil` for flat messages
+  * `response_segments` - Optional display timeline of text and status segments
+    for assistant messages (global chat); `nil` for flat messages
   * `role` - Who sent the message: `:user` or `:assistant`
   * `status` - Processing status: `:pending`, `:success`, `:error`, or `:cancelled`
   * `is_deleted` - Soft deletion flag (defaults to false)
@@ -27,6 +27,45 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   alias Lightning.Workflows.Job
 
+  defmodule Segment do
+    @moduledoc """
+    One entry in an assistant reply's display timeline: a chunk of answer
+    text, or a completed-action status ("Added step send-to-gmail...") woven
+    between texts in stream order. Display-only — the flat `content` field
+    stays the canonical answer.
+    """
+
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    @max_content_length 10_000
+
+    @type t() :: %__MODULE__{type: :text | :status, content: String.t()}
+
+    @derive {Jason.Encoder, only: [:type, :content]}
+    @primary_key false
+    embedded_schema do
+      field :type, Ecto.Enum, values: [:text, :status]
+      field :content, :string
+    end
+
+    @doc false
+    def changeset(segment, attrs) do
+      segment
+      |> cast(attrs, [:type, :content])
+      |> validate_required([:type, :content])
+      |> validate_length(:content, max: @max_content_length)
+    end
+
+    @doc "Maximum length of a single segment's content (matches `content`'s cap)."
+    def max_content_length, do: @max_content_length
+  end
+
+  # A reply's segment count is naturally bounded by the model's output size;
+  # this cap only guards against a runaway or buggy Apollo response bloating
+  # rows that get re-serialized on every channel join.
+  @max_response_segments 200
+
   @type role() :: :user | :assistant
   @type status() :: :pending | :processing | :success | :error | :cancelled
 
@@ -34,7 +73,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
           id: Ecto.UUID.t(),
           content: String.t() | nil,
           code: String.t() | nil,
-          response_segments: [map()] | nil,
+          response_segments: [Segment.t()] | nil,
           role: role(),
           status: status(),
           job_id: Ecto.UUID.t() | nil,
@@ -52,8 +91,9 @@ defmodule Lightning.AiAssistant.ChatMessage do
   schema "ai_chat_messages" do
     field :content, :string
     field :code, :string
-    field :response_segments, {:array, :map}
     field :role, Ecto.Enum, values: [:user, :assistant]
+
+    embeds_many :response_segments, Segment, on_replace: :delete
 
     field :status, Ecto.Enum,
       values: [:pending, :processing, :success, :error, :cancelled]
@@ -83,8 +123,9 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   * `content` and `role` are required
   * `content` must be between 1 and 10,000 characters
-  * `response_segments`, when present, must be a list of maps shaped like
-    `%{"type" => "text" | "status", "content" => binary}`
+  * `response_segments`, when present, must be `#{@max_response_segments}` or
+    fewer segments, each with a `type` of `text` or `status` and a `content`
+    string of at most `#{Segment.max_content_length()}` characters
   * User messages (role: `:user`) require an associated user
   * Status defaults based on role: `:pending` for users, `:success` for assistant
   * If status is explicitly provided, it takes precedence over role-based defaults
@@ -94,7 +135,6 @@ defmodule Lightning.AiAssistant.ChatMessage do
     |> cast(attrs, [
       :content,
       :code,
-      :response_segments,
       :role,
       :status,
       :is_deleted,
@@ -104,14 +144,18 @@ defmodule Lightning.AiAssistant.ChatMessage do
       :processing_started_at,
       :processing_completed_at
     ])
+    |> cast_embed(:response_segments)
+    |> validate_length(:response_segments, max: @max_response_segments)
     |> validate_required([:content, :role])
     |> validate_length(:content, min: 1, max: 10_000)
-    |> validate_response_segments()
     |> maybe_put_user_assoc(attrs[:user] || attrs["user"])
     |> maybe_put_job_assoc(attrs[:job] || attrs["job"])
     |> maybe_require_user()
     |> set_default_status_by_role()
   end
+
+  @doc "Maximum number of segments accepted on a message."
+  def max_response_segments, do: @max_response_segments
 
   @doc """
   Creates a changeset for updating message status.
@@ -137,26 +181,6 @@ defmodule Lightning.AiAssistant.ChatMessage do
     chat_message
     |> change(%{status: status})
   end
-
-  defp validate_response_segments(changeset) do
-    validate_change(changeset, :response_segments, fn :response_segments,
-                                                      segments ->
-      if Enum.all?(segments, &valid_segment?/1) do
-        []
-      else
-        [
-          response_segments:
-            "must be a list of %{\"type\" => \"text\" | \"status\", \"content\" => binary} entries"
-        ]
-      end
-    end)
-  end
-
-  defp valid_segment?(%{"type" => type, "content" => content})
-       when type in ["text", "status"] and is_binary(content),
-       do: true
-
-  defp valid_segment?(_), do: false
 
   defp maybe_put_user_assoc(changeset, user) when not is_nil(user) do
     put_assoc(changeset, :user, user)

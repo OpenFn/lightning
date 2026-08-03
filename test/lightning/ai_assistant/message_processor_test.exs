@@ -7,6 +7,7 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
   import Lightning.Factories
 
   alias Lightning.AiAssistant
+  alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.MessageProcessor
 
   # Note: Integration tests for I/O data scrubbing are tested at lower levels:
@@ -330,7 +331,7 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_msg != nil
       assert assistant_msg.content == "Global response"
       # Flat-string responses have no timeline
-      assert assistant_msg.response_segments == nil
+      assert assistant_msg.response_segments == []
     end
 
     test "persists the segments timeline alongside the flat response",
@@ -397,17 +398,17 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert %{
                content: "Here's the final result.",
                response_segments: [
-                 %{
-                   "type" => "text",
-                   "content" => "I'm going to add a step."
+                 %ChatMessage.Segment{
+                   type: :text,
+                   content: "I'm going to add a step."
                  },
-                 %{
-                   "type" => "status",
-                   "content" => "Adding step send-to-gmail..."
+                 %ChatMessage.Segment{
+                   type: :status,
+                   content: "Adding step send-to-gmail..."
                  },
-                 %{
-                   "type" => "text",
-                   "content" => "Here's the final result."
+                 %ChatMessage.Segment{
+                   type: :text,
+                   content: "Here's the final result."
                  }
                ],
                code: "workflow:\n  name: new",
@@ -504,6 +505,51 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
            body: Stream.map(["upstream exploded"], & &1)
          }}
       end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{
+                 "message_id" => user_message.id
+               })
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assert Enum.find(reloaded.messages, &(&1.role == :user)).status == :error
+      refute Enum.find(reloaded.messages, &(&1.role == :assistant))
+    end
+
+    test "marks the message as error when the assistant reply fails to save",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "generate a workflow", user: user},
+          []
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      # A response over the 10k content cap fails the ChatMessage changeset,
+      # exercising the {:error, %Ecto.Changeset{}} branch in
+      # handle_processing_result/2.
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => String.duplicate("x", 10_001),
+          "usage" => %{}
+        })
+      )
 
       assert :ok =
                perform_job(MessageProcessor, %{

@@ -42,6 +42,12 @@ export interface MessageUser {
 }
 
 /**
+ * Message id of the in-flight streaming placeholder. Applies triggered
+ * mid-stream carry this id instead of a persisted message id.
+ */
+export const STREAMING_MESSAGE_ID = '__streaming__' as const;
+
+/**
  * A single entry in an assistant message's display timeline: either a chunk
  * of answer text or a status update ("Adding step...") woven between texts.
  * Mirrors the backend `response_segments` contract

@@ -115,6 +115,42 @@ describe('AIChannelRegistry streaming', () => {
     ]);
   });
 
+  it('flushes a trailing status into the timeline before the final message lands', () => {
+    // Track timeline appends so we can assert the status entered the
+    // timeline before finalization cleared the streaming state.
+    const appended: unknown[] = [];
+    const originalAppend = store._appendStreamingSegment.bind(store);
+    store._appendStreamingSegment = segment => {
+      appended.push(segment);
+      originalAppend(segment);
+    };
+
+    channel._test.emit('streaming_chunk', { content: 'Hi' });
+    channel._test.emit('streaming_segment', {
+      segment: { type: 'status', content: 'Validated workflow' },
+    });
+    channel._test.emit('new_message', {
+      message: {
+        id: 'final-1',
+        role: 'assistant',
+        content: 'Hi',
+        status: 'success',
+      },
+    });
+
+    // Drain everything; drainThenRun must flush the due status marker
+    // before running the finalize callback.
+    vi.advanceTimersByTime(1000);
+
+    expect(appended).toContainEqual({
+      type: 'status',
+      content: 'Validated workflow',
+    });
+    expect(
+      store.getSnapshot().messages.find(m => m.id === 'final-1')
+    ).toBeTruthy();
+  });
+
   it('does not leak pending status markers from an errored stream into the next one', () => {
     // A status is pinned behind text that will never finish draining.
     channel._test.emit('streaming_chunk', { content: 'Long answer text' });

@@ -68,6 +68,7 @@ import {
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import type { JobCodeContext, Message } from '../types/ai-assistant';
+import { STREAMING_MESSAGE_ID } from '../types/ai-assistant';
 import { Z_INDEX } from '../utils/constants';
 import {
   prepareWorkflowForSerialization,
@@ -661,9 +662,21 @@ export function AIAssistantPanelWrapper({
   useEffect(() => {
     if (!streamingChanges || !canApplyChanges) return;
     // Avoid re-applying the same streaming changes object. The ref is only
-    // set once a change is actually handled, so a change that couldn't apply
-    // stays eligible if the page switches mid-stream.
+    // set once a handler is invoked for the change (whatever its outcome —
+    // a failed apply is recovered by the final new_message auto-apply), so
+    // a change that never reached a handler stays eligible if the page
+    // switches mid-stream.
     if (appliedStreamingChangesRef.current === streamingChanges) return;
+
+    // Every collaborator's browser receives streaming_changes, but only the
+    // author's client auto-applies: the Y.Doc is shared, so concurrent
+    // applies from multiple viewers of the same session would race. Other
+    // collaborators still see the result through the shared doc. When the
+    // author can't be determined (no user info on the message) we fall back
+    // to applying, preserving single-user behavior.
+    const triggeringUserId = messages.findLast(m => m.role === 'user')?.user
+      ?.id;
+    if (triggeringUserId && user?.id && triggeringUserId !== user.id) return;
 
     // Workflow YAML applies to the shared Y.Doc, so global streams are
     // page-independent: global chat streams it from the job code view too,
@@ -678,14 +691,14 @@ export function AIAssistantPanelWrapper({
         appliedStreamingChangesRef.current = streamingChanges;
         // handleApplyWorkflow records the streaming apply in the store
         // (after a successful import) so the final new_message can skip it
-        void handleApplyWorkflow(yaml, '__streaming__');
+        void handleApplyWorkflow(yaml, STREAMING_MESSAGE_ID);
       }
     } else if (aiMode?.page === 'job_code' && 'code' in streamingChanges) {
       // Job code previews open job-editor UI, so they stay page-gated.
       const code = streamingChanges['code'] as string;
       if (code) {
         appliedStreamingChangesRef.current = streamingChanges;
-        handlePreviewJobCode(code, '__streaming__');
+        handlePreviewJobCode(code, STREAMING_MESSAGE_ID);
       }
     }
   }, [
@@ -693,6 +706,8 @@ export function AIAssistantPanelWrapper({
     aiMode?.page,
     canApplyChanges,
     isGlobalAssistantActive,
+    messages,
+    user?.id,
     handleApplyWorkflow,
     handlePreviewJobCode,
   ]);

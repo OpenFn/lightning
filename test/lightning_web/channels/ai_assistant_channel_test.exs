@@ -260,9 +260,18 @@ defmodule LightningWeb.AiAssistantChannelTest do
       user: user
     } do
       segments = [
-        %{"type" => "text", "content" => "Adding a step..."},
-        %{"type" => "status", "content" => "Validating workflow..."},
-        %{"type" => "text", "content" => "Done!"}
+        %Lightning.AiAssistant.ChatMessage.Segment{
+          type: :text,
+          content: "Adding a step..."
+        },
+        %Lightning.AiAssistant.ChatMessage.Segment{
+          type: :status,
+          content: "Validating workflow..."
+        },
+        %Lightning.AiAssistant.ChatMessage.Segment{
+          type: :text,
+          content: "Done!"
+        }
       ]
 
       session =
@@ -300,7 +309,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
                  response_segments: ^segments,
                  content: "Adding a step...\n\nDone!"
                },
-               %{response_segments: nil, content: "Flat response"}
+               %{response_segments: [], content: "Flat response"}
              ] = messages
     end
   end
