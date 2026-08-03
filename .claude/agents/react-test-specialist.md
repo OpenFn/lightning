@@ -41,7 +41,7 @@ When reviewing existing tests:
 ## Lightning Project Context
 
 - React 18+, Vitest, TypeScript (strict), React Testing Library.
-- Props from LiveView are underscore_cased, not camelCased.
+- Props from LiveView arrive as `data-kebab-case` attributes, not camelCase or underscore_case.
 
 Coverage report:
 ```bash
