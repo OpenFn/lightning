@@ -477,53 +477,6 @@ class WorkflowEditPage extends LiveViewPage {
 }
 ```
 
-## Testing Multiple Page Variants
-
-### Handling Old and New Implementations
-
-When introducing a new collaborative editor alongside the old LiveView editor:
-
-```typescript
-// pages/workflow-edit.page.ts (OLD - LiveView)
-export class WorkflowEditPage extends LiveViewPage {
-  // ... existing LiveView implementation
-}
-
-// pages/workflow-collab.page.ts (NEW - React collaborative)
-export class WorkflowCollabPage {
-  constructor(protected page: Page) {}
-
-  // New collaborative editor methods
-  async waitForYjsConnection(): Promise<void> {
-    await this.page.waitForFunction(() => {
-      return window.ydoc && window.ydoc.synced;
-    });
-  }
-
-  async waitForPresenceUpdate(): Promise<void> {
-    // Wait for presence indicator
-    await this.page.waitForSelector('[data-presence="connected"]');
-  }
-}
-```
-
-**Usage in tests:**
-```typescript
-test('old workflow editor', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-  await page.goto('/w/123'); // Old route
-  await workflowEdit.waitForConnected();
-  // Test old editor
-});
-
-test('new collaborative editor', async ({ page }) => {
-  const workflowCollab = new WorkflowCollabPage(page);
-  await page.goto('/collab/w/123'); // New route
-  await workflowCollab.waitForYjsConnection();
-  // Test new editor
-});
-```
-
 ## Index Files
 
 `pages/index.ts` is a flat list of **named** re-exports, not `export *`. Six lines today.
