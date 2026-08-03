@@ -416,27 +416,24 @@ defp to_yjs_variant(value), do: value
 
 **Reference:** `lib/lightning/collaboration/workflow_reconciler.ex:236-240`
 
-### 4. Text Fields Need Special Extraction
+### 4. Y.Text handles need explicit extraction
 
-**Problem:** Y.Text fields don't automatically convert to strings.
+**Problem:** under handle discipline (`to_list/1`, `Yex.Map.fetch/2`) a job's `body` comes
+back as a `%Yex.Text{}`, not a string.
 
-**Solution:** Use `Yex.Text.to_string/1` to extract text content.
+**Solution:** `Yex.Text.to_string/1`, with a binary clause so the same function also handles
+`to_json` output.
 
 ```elixir
-# After calling Yex.Array.to_json(jobs_array)
-jobs = Enum.map(jobs_list, fn job ->
-  %{
-    "id" => job["id"],
-    "body" => extract_text(job["body"])  # Don't forget this!
-  }
-end)
-
-defp extract_text(%Yex.Text{} = text), do: Yex.Text.to_string(text)
-defp extract_text(binary) when is_binary(binary), do: binary
-defp extract_text(nil), do: ""
+# Clauses for both disciplines: to_json flattens Y.Text to a binary, to_list preserves
+# the handle.
+defp extract_text_field(%Yex.Text{} = text), do: Yex.Text.to_string(text)
+defp extract_text_field(string) when is_binary(string), do: string
+defp extract_text_field(nil), do: ""
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:212-217`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:340-356` (definition),
+`:257-270` (usage in `extract_jobs`).
 
 ### 5. Using Deprecated Functions
 
