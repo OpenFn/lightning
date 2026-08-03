@@ -162,11 +162,24 @@ request, not by default.
 
 ## Guidelines Reference
 
-Detailed guidelines in `.claude/guidelines/`:
-- `store-structure.md` - Collaborative editor store architecture
-- `testing-essentials.md` - Unit testing patterns and anti-patterns
-- `e2e-testing.md` - Playwright E2E testing
-- `yex-guidelines.md` - Critical Yex (Yjs/Elixir) usage rules
-- `toast-notifications.md` - Notification patterns
-- `logging.md` - Logger level conventions and Sentry noise (info/warning vs error)
-- `ui-patterns.md` - Button variants, disabled states, Tailwind conventions
+- `.claude/guidelines/store-structure.md` — store responsibilities in the
+  collaborative editor; where new state belongs
+- `.claude/guidelines/yex-guidelines.md` — Yex (Yjs/Elixir) usage rules
+- `.claude/guidelines/toast-notifications.md` — notification patterns
+- `.claude/guidelines/testing-essentials.md` — Vitest unit testing, and the
+  entry point for:
+  - `.claude/guidelines/testing/react-patterns.md` — React Testing Library
+  - `.claude/guidelines/testing/vitest-advanced.md` — fixtures and test data
+  - `.claude/guidelines/testing/collaborative-editor.md` — Y.Doc and Phoenix
+    channel mocks
+- `.claude/guidelines/e2e-testing.md` — Playwright E2E, and the entry point for:
+  - `.claude/guidelines/e2e/phoenix-liveview.md` — driving LiveView pages; the
+    canonical wait patterns
+  - `.claude/guidelines/e2e/page-objects.md` — Page Object Model structure
+  - `.claude/guidelines/e2e/collaborative-testing.md` — multi-user collaborative
+    features
+
+`.claude/rules/logging.md` (Logger levels, Sentry noise) and
+`.claude/rules/ui-patterns.md` (button variants, Tailwind conventions) are not in
+that list because they are not read on request: each declares a `paths:` glob and
+loads by itself when you work on a file it matches.
