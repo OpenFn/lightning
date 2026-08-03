@@ -146,7 +146,7 @@ Wrap Y.Doc updates in transactions, use `observeDeep()` for nested structures, a
 
 ### Code Style
 
-- Props from Phoenix LiveView are underscore_cased (not camelCased).
+- Props from Phoenix LiveView arrive as `data-kebab-case` attributes, not camelCase or underscore_case. See `CollaborativeEditorDataProps` in `CollaborativeEditor.tsx`.
 
 ## Testing
 
