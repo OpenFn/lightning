@@ -14,14 +14,15 @@ The collaborative editor uses [Sonner](https://sonner.emilkowal.ski/) via shadcn
 
 **Provider Location**:
 ```typescript
-<SocketProvider>
-  <SessionProvider>
-    <StoreProvider>
-      <Toaster />  {/* Mounted here */}
-      {/* Rest of app */}
-    </StoreProvider>
-  </SessionProvider>
-</SocketProvider>
+<KeyboardProvider>
+  <SocketProvider>
+    <SessionProvider>
+      <StoreProvider>
+        <LiveViewActionsProvider>
+          <CredentialModalProvider>
+            <MonacoRefProvider>
+              <Toaster />  {/* Mounted here — CollaborativeEditor.tsx:275 */}
+              {/* Rest of app */}
 ```
 
 ## Usage
