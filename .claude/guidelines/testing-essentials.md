@@ -105,29 +105,6 @@ Phoenix Channel mocks for the collaborative editor (`createMockPhoenixChannel`, 
 
 ## Test structure and organization
 
-### File layout
-
-```
-assets/test/
-  collaborative-editor/
-    stores/
-      createSessionStore.test.ts
-      createAdaptorStore.test.ts
-    hooks/
-      useSession.test.ts
-    components/
-      SessionProvider.test.tsx
-    __helpers__/
-      storeHelpers.ts
-      testUtils.ts
-    __fixtures__/
-      adaptorData.ts
-      sessionData.ts
-    mocks/
-      phoenixSocket.ts
-      phoenixChannel.ts
-```
-
 ### Naming
 
 Use descriptive, complete-sentence test names:
