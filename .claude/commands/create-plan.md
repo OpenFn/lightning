@@ -9,7 +9,7 @@ You are tasked with creating detailed implementation plans through an interactiv
 
 **Usage**: `/create-plan $ARGUMENTS`
 
-If `$ARGUMENTS` is provided with an issue file path, read it fully and begin research immediately.
+If `$ARGUMENTS` is provided with an issue file path, read it and begin research immediately.
 If no argument provided, present the initial prompt and ask the user for context.
 
 ## Initial Response
@@ -17,7 +17,7 @@ If no argument provided, present the initial prompt and ask the user for context
 When this command is invoked:
 
 1. **If `$ARGUMENTS` is provided**:
-   - Immediately read the file at `$ARGUMENTS` FULLY
+   - Immediately read the file at `$ARGUMENTS`
    - Begin the research process without waiting for user input
    - Proceed directly to Step 1: Context Gathering & Initial Analysis
 
@@ -41,7 +41,7 @@ Then wait for the user's input.
 
 ### Step 1: Context Gathering & Initial Analysis
 
-1. **Read all mentioned files immediately and FULLY**:
+1. **Read all mentioned files immediately**:
    - Issue/ticket files (e.g., `.context/shared/issues/issue-1234.md`)
    - Research documents
    - Related implementation plans
@@ -289,7 +289,7 @@ After structure approval:
 
 ## Important Guidelines
 
-1. **Read all context files COMPLETELY before planning**. Include specific file paths and line numbers. Automated verification steps should use project-specific commands (e.g., `mix verify`, `npm test`).
+1. Include specific file paths and line numbers. Automated verification steps should use project-specific commands (e.g., `mix verify`, `npm test`).
 
 2. **Track progress** with TodoWrite for non-trivial plans.
 
