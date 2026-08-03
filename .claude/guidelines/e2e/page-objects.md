@@ -11,21 +11,8 @@ models.
 
 ### Directory Structure
 
-```
-assets/test/e2e/pages/
-├── base/
-│   ├── index.ts                 # Re-export base classes
-│   └── liveview.page.ts         # Base class for LiveView pages
-├── components/
-│   ├── index.ts                 # Re-export component POMs
-│   ├── job-form.page.ts         # Job form component
-│   └── workflow-diagram.page.ts # Workflow diagram component
-├── index.ts                     # Re-export all page objects
-├── login.page.ts                # Login page
-├── projects.page.ts             # Projects list page
-├── workflow-edit.page.ts        # Workflow editor (LiveView)
-└── workflow-collab.page.ts      # NEW: Collaborative editor (React)
-```
+`ls assets/test/e2e/pages/` — three directories deep at most: `base/`, `components/`, and the
+page-level POMs at the root, each with an `index.ts` of named re-exports.
 
 ### Class Hierarchy
 
