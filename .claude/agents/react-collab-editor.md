@@ -162,5 +162,5 @@ Before completing any task, verify the Lightning-specific invariants:
 - [ ] Y.Doc updates wrapped in transactions
 - [ ] Observers properly cleaned up
 - [ ] Selectors use withSelector() for stability
-- [ ] Props from LiveView are underscore_cased
+- [ ] Props from LiveView read as `data-kebab-case` attributes
 - [ ] No unnecessary re-renders
