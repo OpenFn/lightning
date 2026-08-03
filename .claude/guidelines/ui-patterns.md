@@ -4,6 +4,22 @@ This document captures UI/UX patterns and design conventions for the Lightning c
 
 **Scope:** These patterns apply specifically to the collaborative editor (`assets/js/collaborative-editor/`).
 
+**Tailwind version:** this repo runs **Tailwind v4**, via the Elixir `tailwind` package
+(the exact pin is in `config/config.exs`, under `config :tailwind`) — *not* the npm
+`tailwindcss` package. The `tailwindcss@3.3.5` entry in `assets/package-lock.json` is stale and
+unused; do not audit Tailwind from it.
+
+Two places hold configuration, and the split matters:
+- **Design tokens** (`primary-*`, `secondary-*`, `danger-*`, fonts) are defined in the
+  `@theme` block of `assets/css/app.css`. New colours go there — v4 does not read them from
+  `theme.extend.colors`.
+- **Plugins, custom variants, keyframes and the `hero-*`/`lucide-*` icon utilities** live in
+  `assets/tailwind.config.ts`, loaded by the v4 `@config` directive at `assets/css/app.css:7`.
+  Removing that directive removes every icon in the app.
+
+v4-only utilities are in active use — `inset-ring-*`, `shadow-xs`, `focus-visible:outline-*`.
+They are correct; do not rewrite them to v3 equivalents.
+
 ## Button Colors and Variants
 
 ### Color Standards
