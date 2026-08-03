@@ -76,7 +76,7 @@ Separate commands from queries:
 - useWorkflowSelector(selector) for complex selections with store access
 - useWorkflowState() for simple state access without selectors
 - useWorkflowActions() for command methods
-- Use withSelector() from common.ts for memoization
+- Use the store's `withSelector()` for memoization — each store builds its own with `createWithSelector` from `common.ts`
 
 **components/** - React components organized by feature
 - inspector/: Property panels and editors
@@ -108,9 +108,13 @@ const { updateJob, removeEdge } = useWorkflowActions();
 
 ### Memoization for Referential Stability
 
-Use withSelector() from common.ts to prevent unnecessary re-renders:
+`common.ts` exports the `createWithSelector` factory; each store calls it once and returns the resulting `withSelector` in its public interface. Use that to prevent unnecessary re-renders:
 
 ```typescript
+// inside the store factory
+const withSelector = createWithSelector(getSnapshot);
+
+// in the component
 const selector = withSelector((state) => state.jobs);
 const jobs = useWorkflowSelector(selector);
 ```
