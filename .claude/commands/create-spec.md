@@ -192,16 +192,6 @@ This creates an issue file at a specific path (e.g., `.context/stuart/issues/363
 - If the user provides just a number, instruct them to run `/get-issue <number>` first to create the issue file
 - This keeps the command focused on its single purpose: converting an existing issue file into a requirements specification
 
-### Process
-
-Once you have the issue file path:
-1. Read the issue file to understand the requirements
-2. Create initial requirements document structure
-3. Guide user through reviewing each requirement
-4. Use agents to find implementation patterns
-5. Document all decisions
-6. Produce final comprehensive spec
-
 ## Output
 
 Final deliverable is a complete requirements spec document that:
