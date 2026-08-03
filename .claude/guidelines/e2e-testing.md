@@ -1,12 +1,5 @@
 # E2E Testing with Playwright
 
-## Overview
-
-End-to-end (E2E) tests validate complete user journeys through the Lightning
-application using Playwright. These tests run against a dedicated test server
-with an isolated database, ensuring tests don't interfere with development or
-production environments.
-
 ## Quick Start
 
 ```bash
