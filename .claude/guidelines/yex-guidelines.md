@@ -1,6 +1,12 @@
 # Yex (Y.js/Elixir) Usage Guidelines for Lightning
 
-This document provides comprehensive guidelines for working with Yex, the Elixir wrapper for the Y.js CRDT library, in the Lightning collaborative editing system.
+This document covers working with Yex, the Elixir wrapper for the Y.js CRDT library, in the
+Lightning collaborative editing system.
+
+**Version:** this targets **y_ex 0.8.0** (`mix.lock`), which builds against **yrs 0.23.1**
+(`deps/y_ex/native/yex/Cargo.lock`; `Cargo.toml` states `0.23.0`, but that is a requirement
+rather than a pin). y_ex is pre-1.0 and its API moves — check `deps/y_ex/lib/` before trusting
+anything here.
 
 ## Table of Contents
 - [Transaction Deadlock Rules](#transaction-deadlock-rules)
