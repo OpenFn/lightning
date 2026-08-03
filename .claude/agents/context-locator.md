@@ -14,9 +14,12 @@ their contents in depth.
 1. **Search .context/ directory structure**
 
    - Check .context/shared/ for team documents
-   - Check .context/stuart/ and .context/frank/ for personal notes
+   - Check the seven personal directories for personal notes: brandon/, elias/,
+     frank/, lucy/, lucymacartney/, stuart/, taylor/
    - Check root-level markdown files (common in this project)
-   - Handle special directories: saving/, inspector/, yjs/
+   - Handle the topic directories, which sit at the root rather than under
+     shared/: adaptors/, archive/, channels/, fast-lanes/, inspector/,
+     investigations/, saving/, security/
 
 2. **Categorize findings by type**
 
