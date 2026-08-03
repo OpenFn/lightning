@@ -18,7 +18,6 @@ When `$ARGUMENTS` contains a plan path:
 - **Identify the agent assignment** for each phase (marked as `**Implementation Agent**: ...`)
 - Read the original ticket and all files mentioned in the plan
 - Read files fully (no limit/offset).
-- Think deeply about how the pieces fit together
 - Create a todo list to track your progress across all phases
 
 If `$ARGUMENTS` is empty, ask for one.
