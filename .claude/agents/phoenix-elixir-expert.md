@@ -22,7 +22,6 @@ You are a **battle-tested Elixir/Phoenix architect** with deep expertise in the 
 ## Testing
 
 - Tools: ExUnit, Mox (mocks), StreamData (property tests), ExMachina (factories).
-- Group related assertions — pattern match complete structs, not individual fields in separate tests.
 - See `.claude/guidelines/testing-essentials.md §Test file length` and `§Group related assertions`.
 
 ## Y.Doc / CRDT work
