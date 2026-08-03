@@ -296,7 +296,10 @@ text = Yex.Text.to_string(body_text)
 
 After `to_json`, ordinary `Map.get/2` with a default handles missing keys — no sentinel needed.
 
-**Wrinkle:** `Yex.Array.to_json` and `Yex.Map.to_json` recurse through nested Y.Maps and Y.Arrays but **leave `%Yex.Text{}` structs in place**. Text leaves still need `Yex.Text.to_string/1` at the consumer — see Gotcha #4.
+**Note:** `Yex.Array.to_json` and `Yex.Map.to_json` recurse all the way down. Nested Y.Maps,
+Y.Arrays *and Y.Texts* all become plain Elixir data — a nested `Y.Text` comes back as a
+binary, not a `%Yex.Text{}`. If you need live text handles, use `to_list/1` (handle
+discipline) instead.
 
 ### Don't cross disciplines mid-layer
 
