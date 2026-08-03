@@ -390,36 +390,31 @@ test('configure job', async ({ page }) => {
 
 ### Component Composition
 
-Page objects compose component objects:
+Two shapes are in use, and they differ in when the child is built.
+
+**`readonly` fields, built in the constructor.** `WorkflowDiagramPage`
+(`workflow-diagram.page.ts:11-24`) holds its two sub-POMs this way:
 
 ```typescript
-// Page contains multiple components
-export class WorkflowEditPage extends LiveViewPage {
-  readonly diagram: WorkflowDiagramPage;
-  readonly sidebar: WorkflowSidebarPage;
-  readonly inspector: JobInspectorPage;
+export class WorkflowDiagramPage {
+  readonly edges: WorkflowDiagramEdgesPage;
+  readonly nodes: WorkflowDiagramNodesPage;
 
-  constructor(page: Page) {
-    super(page);
-    this.diagram = new WorkflowDiagramPage(page);
-    this.sidebar = new WorkflowSidebarPage(page);
-    this.inspector = new JobInspectorPage(page);
+  constructor(protected page: Page) {
+    this.edges = new WorkflowDiagramEdgesPage(page);
+    this.nodes = new WorkflowDiagramNodesPage(page);
   }
 }
-
-// Usage
-test('edit workflow', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-
-  await page.goto('/w/123');
-  await workflowEdit.waitForConnected();
-
-  // Use composed components
-  await workflowEdit.diagram.clickNode('Job 1');
-  await workflowEdit.inspector.setJobName('Updated Name');
-  await workflowEdit.sidebar.expandSection('Settings');
-});
 ```
+
+**A getter, built on access.** `WorkflowCollaborativePage`
+(`workflow-collab.page.ts:34-36`) does it lazily instead — see §Getter factories.
+
+Both are fine. Use `readonly` fields when the child is always needed, a getter when it is
+not.
+
+Note that `WorkflowDiagramPage` does **not** extend `LiveViewPage`, and neither do its two
+sub-POMs. Component POMs in this suite are standalone.
 
 ### Getter factories, and parameters on locators
 
