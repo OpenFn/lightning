@@ -153,6 +153,13 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     workflow_yaml = message.code
     page = get_in(session.meta, ["message_options", "page"])
 
+    if workflow_yaml in [nil, ""] do
+      Logger.warning(
+        "[AI Assistant] Global chat message #{message.id} has no workflow YAML; " <>
+          "Apollo will receive no workflow context (session #{session.id}, page #{inspect(page)})"
+      )
+    end
+
     AiAssistant.query_global_stream(session, message.content,
       workflow_yaml: workflow_yaml,
       page: page
@@ -210,7 +217,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       case session.meta do
         %{"message_options" => %{"attach_io_data" => true, "step_id" => step_id}}
         when is_binary(step_id) ->
-          {input, output} = fetch_and_scrub_io_data(step_id)
+          {input, output} = fetch_and_scrub_io_data(step_id, session.project_id)
 
           options
           |> Keyword.put(:input, input)
@@ -223,9 +230,10 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     AiAssistant.query_stream(enriched_session, message.content, options)
   end
 
-  @spec fetch_and_scrub_io_data(String.t()) :: {map() | nil, map() | nil}
-  defp fetch_and_scrub_io_data(step_id) do
-    case Invocation.get_step_with_dataclips(step_id) do
+  @spec fetch_and_scrub_io_data(String.t(), Ecto.UUID.t()) ::
+          {map() | nil, map() | nil}
+  defp fetch_and_scrub_io_data(step_id, project_id) do
+    case Invocation.get_step_with_dataclips(step_id, project_id) do
       nil ->
         {nil, nil}
 

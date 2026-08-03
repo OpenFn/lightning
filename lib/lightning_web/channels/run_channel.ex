@@ -113,8 +113,6 @@ defmodule LightningWeb.RunChannel do
   end
 
   def handle_in("run:complete", payload, socket) do
-    payload = Map.put(payload, "project_id", socket.assigns.project_id)
-
     case Runs.complete_run(socket.assigns.run, payload) do
       {:ok, run} ->
         # TODO: Turn FailureAlerter into an Oban worker and process async
@@ -486,8 +484,6 @@ defmodule LightningWeb.RunChannel do
          _project_id,
          _run_id
        ) do
-    Logger.error("Project has no environment configured")
-
     error =
       LightningWeb.ErrorFormatter.format(:environment_not_configured, %{
         project: socket.assigns.project_id
@@ -503,8 +499,6 @@ defmodule LightningWeb.RunChannel do
          _project_id,
          _run_id
        ) do
-    Logger.error("Project not found for run")
-
     error = LightningWeb.ErrorFormatter.format(:project_not_found, %{})
     {:reply, {:error, error}, socket}
   end
@@ -518,11 +512,6 @@ defmodule LightningWeb.RunChannel do
        ) do
     project_env =
       Lightning.Projects.get_project!(socket.assigns.project_id).env || "unknown"
-
-    Logger.error(
-      "Credential environment does not match project environment",
-      project_env: project_env
-    )
 
     error =
       LightningWeb.ErrorFormatter.format(
@@ -540,8 +529,6 @@ defmodule LightningWeb.RunChannel do
          _project_id,
          _run_id
        ) do
-    Logger.error("OAuth refresh token has expired")
-
     error =
       LightningWeb.ErrorFormatter.format(reason, %{
         project: socket.assigns.project_id
@@ -557,9 +544,18 @@ defmodule LightningWeb.RunChannel do
          _project_id,
          _run_id
        ) do
-    Logger.error("Could not reach the oauth provider")
+    {:reply, {:error, "Could not reach the OAuth provider. Try again later"},
+     socket}
+  end
 
-    {:reply, {:error, "Could not reach the oauth provider. Try again later"},
+  # Fallback for unexpected error terms
+  defp handle_credential_error(socket, error, id, _project_id, run_id) do
+    Logger.warning(
+      "Unhandled credential resolution error for credential #{id} " <>
+        "(run #{run_id}): #{inspect(error)}"
+    )
+
+    {:reply, {:error, "Could not reach the OAuth provider. Try again later"},
      socket}
   end
 end

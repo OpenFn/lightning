@@ -670,7 +670,33 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref,
                    :error,
-                   "Could not reach the oauth provider. Try again later"
+                   "Could not reach the OAuth provider. Try again later"
+    end
+
+    @tag capture_log: true
+    test "replies cleanly when the OAuth provider times out", %{
+      credential: credential,
+      user: user
+    } do
+      credential = Repo.preload(credential, :oauth_client)
+      endpoint = credential.oauth_client.token_endpoint
+
+      Lightning.AuthProviders.OauthHTTPClient.Mock
+      |> Mox.expect(:call, fn
+        %Tesla.Env{method: :post, url: ^endpoint}, _opts ->
+          {:error, :timeout}
+      end)
+
+      %{socket: socket} =
+        create_socket_and_run(%{credential: credential, user: user})
+
+      ref = push(socket, "fetch:credential", %{"id" => credential.id})
+
+      # The timeout is an untyped transport error; the channel must reply with
+      # an error rather than crashing with a FunctionClauseError.
+      assert_reply ref,
+                   :error,
+                   "Could not reach the OAuth provider. Try again later"
     end
   end
 
@@ -820,6 +846,61 @@ defmodule LightningWeb.RunChannelTest do
                input_dataclip_id: ^dataclip_id
              } =
                Repo.get!(Step, step_id)
+    end
+
+    test "step:start rejects an input_dataclip_id from another project", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      other_project = insert(:project)
+
+      other_dataclip =
+        insert(:dataclip, body: %{"foo" => "bar"}, project: other_project)
+
+      step_id = Ecto.UUID.generate()
+      [%{id: job_id}] = workflow.jobs
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id,
+          "job_id" => job_id,
+          "input_dataclip_id" => other_dataclip.id
+        })
+
+      assert_reply ref, :error, %{input_dataclip_id: ["does not exist"]}
+
+      refute Repo.get(Step, step_id)
+    end
+
+    test "step:start rejects a credential_id from another project", %{
+      socket: socket,
+      run: %{dataclip_id: dataclip_id},
+      workflow: workflow
+    } do
+      other_project = insert(:project)
+
+      other_credential =
+        insert(:credential, name: "Other", user: insert(:user))
+
+      insert(:project_credential,
+        credential: other_credential,
+        project: other_project
+      )
+
+      step_id = Ecto.UUID.generate()
+      [%{id: job_id}] = workflow.jobs
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id,
+          "job_id" => job_id,
+          "credential_id" => other_credential.id,
+          "input_dataclip_id" => dataclip_id
+        })
+
+      assert_reply ref, :error, %{credential_id: ["does not exist"]}
+
+      refute Repo.get(Step, step_id)
     end
 
     @tag project_retention_policy: :erase_all
@@ -1014,7 +1095,7 @@ defmodule LightningWeb.RunChannelTest do
       assert is_nil(dataclip.body), "body is wiped"
       assert is_struct(dataclip.wiped_at, DateTime)
 
-      %{socket: socket} =
+      %{socket: socket, run: run} =
         context
         |> merge_setups([
           :create_run,
@@ -1038,6 +1119,33 @@ defmodule LightningWeb.RunChannelTest do
 
       assert %{output_dataclip_id: nil} = Repo.get(Step, step_id)
       refute get_dataclip_with_body(dataclip_id)
+    end
+
+    test "step:complete cannot complete a step belonging to another run/project",
+         %{socket: socket} do
+      foreign_step = insert_step(insert(:project))
+      output_dataclip_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "step:complete", %{
+          "step_id" => foreign_step.id,
+          "output_dataclip_id" => output_dataclip_id,
+          "output_dataclip" => ~s({"leaked": "data"}),
+          "reason" => "fail"
+        })
+
+      assert_reply ref, :error, errors
+      assert errors == %{step_id: ["not found"]}
+
+      # The foreign step is left untouched.
+      assert %{
+               exit_reason: "success",
+               error_type: nil,
+               finished_at: nil,
+               output_dataclip_id: nil
+             } = Repo.get(Step, foreign_step.id)
+
+      refute Repo.get(Lightning.Invocation.Dataclip, output_dataclip_id)
     end
   end
 
@@ -1312,6 +1420,42 @@ defmodule LightningWeb.RunChannelTest do
               "message" => ["Log with invalid step"],
               "timestamp" => "1699444653874086",
               "step_id" => invalid_step_id
+            }
+          ]
+        })
+
+      assert_reply ref, :error, errors
+      assert errors == %{step_id: ["must be associated with the run"]}
+    end
+
+    test "run:log rejects a step_id belonging to another run/project", %{
+      socket: socket
+    } do
+      foreign_step = insert_step(insert(:project))
+
+      ref =
+        push(socket, "run:log", %{
+          "message" => ["log for a foreign step"],
+          "timestamp" => "1699444653874083",
+          "step_id" => foreign_step.id
+        })
+
+      assert_reply ref, :error, errors
+      assert errors == %{step_id: ["must be associated with the run"]}
+    end
+
+    test "run:batch_logs rejects a step_id belonging to another run/project", %{
+      socket: socket
+    } do
+      foreign_step = insert_step(insert(:project))
+
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "message" => ["log for a foreign step"],
+              "timestamp" => "1699444653874083",
+              "step_id" => foreign_step.id
             }
           ]
         })
@@ -1680,6 +1824,33 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "run:complete", %{
           "reason" => "success",
           "final_dataclip_id" => Ecto.UUID.generate()
+        })
+
+      assert_reply ref, :error, %{errors: %{final_dataclip_id: _}}
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :started
+      assert run.final_dataclip_id == nil
+    end
+
+    @tag run_state: :started
+    test "run:complete rejects a final_dataclip_id from another project", %{
+      socket: socket,
+      run: run
+    } do
+      other_project = insert(:project)
+
+      other_dataclip =
+        insert(:dataclip,
+          project: other_project,
+          body: %{"secret" => "from B"},
+          type: :step_result
+        )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_dataclip_id" => other_dataclip.id
         })
 
       assert_reply ref, :error, %{errors: %{final_dataclip_id: _}}
@@ -2330,7 +2501,7 @@ defmodule LightningWeb.RunChannelTest do
     job =
       build(:job,
         body: ~s[fn(state => { return {...state, extra: "data"} })],
-        project_credential: %{credential: credential}
+        project_credential: %{credential: credential, project: project}
       )
 
     workflow =
@@ -2472,6 +2643,33 @@ defmodule LightningWeb.RunChannelTest do
     |> Repo.get(dataclip_id)
   end
 
+  # Inserts a completed step belonging to its own run in the given project.
+  defp insert_step(project) do
+    %{jobs: [job], triggers: [trigger]} =
+      workflow = insert(:simple_workflow, project: project)
+
+    {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+    dataclip = insert(:dataclip, project: project)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot
+      )
+
+    run =
+      insert(:run,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot
+      )
+
+    insert(:step, runs: [run], job: job, exit_reason: "success")
+  end
+
   # Browser client tests
   describe "joining the run:* channel as browser client" do
     setup do
@@ -2499,7 +2697,8 @@ defmodule LightningWeb.RunChannelTest do
           snapshot: snapshot
         )
 
-      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      session_token = Lightning.Accounts.generate_user_session_token(user)
+      token = Phoenix.Token.encrypt(@endpoint, "user socket", session_token)
       {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
 
       %{
@@ -2581,7 +2780,8 @@ defmodule LightningWeb.RunChannelTest do
 
       step = insert(:step, job: job, runs: [run])
 
-      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      session_token = Lightning.Accounts.generate_user_session_token(user)
+      token = Phoenix.Token.encrypt(@endpoint, "user socket", session_token)
       {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
 
       {:ok, _reply, socket} =
@@ -2646,7 +2846,8 @@ defmodule LightningWeb.RunChannelTest do
         timestamp: DateTime.utc_now()
       )
 
-      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      session_token = Lightning.Accounts.generate_user_session_token(user)
+      token = Phoenix.Token.encrypt(@endpoint, "user socket", session_token)
       {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
 
       {:ok, _reply, socket} =
@@ -2695,7 +2896,8 @@ defmodule LightningWeb.RunChannelTest do
           state: :started
         )
 
-      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      session_token = Lightning.Accounts.generate_user_session_token(user)
+      token = Phoenix.Token.encrypt(@endpoint, "user socket", session_token)
       {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
 
       {:ok, _reply, socket} =

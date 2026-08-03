@@ -234,6 +234,93 @@ defmodule Lightning.ProjectsTest do
       assert project_user == Projects.get_project_user!(project_user.id)
     end
 
+    test "set_notification_pref/3 with a changed value updates the field" do
+      project =
+        project_fixture(
+          project_users: [
+            %{
+              user_id: user_fixture().id,
+              role: :viewer,
+              digest: :daily,
+              failure_alert: false
+            }
+          ]
+        )
+
+      project_user = List.first(project.project_users)
+
+      assert {:ok, %ProjectUser{} = updated} =
+               Projects.set_notification_pref(project_user, :digest, "weekly")
+
+      assert updated.digest == :weekly
+
+      assert {:ok, %ProjectUser{} = updated} =
+               Projects.set_notification_pref(
+                 project_user,
+                 :failure_alert,
+                 "true"
+               )
+
+      assert updated.failure_alert == true
+    end
+
+    test "set_notification_pref/3 with an unchanged value returns :unchanged" do
+      project =
+        project_fixture(
+          project_users: [
+            %{
+              user_id: user_fixture().id,
+              role: :viewer,
+              digest: :daily,
+              failure_alert: false
+            }
+          ]
+        )
+
+      project_user = List.first(project.project_users)
+
+      # String param casts equal to the current atom / boolean.
+      assert :unchanged =
+               Projects.set_notification_pref(project_user, :digest, "daily")
+
+      assert :unchanged =
+               Projects.set_notification_pref(
+                 project_user,
+                 :failure_alert,
+                 "false"
+               )
+
+      assert project_user == Projects.get_project_user!(project_user.id)
+    end
+
+    test "set_notification_pref/3 with an invalid value returns an error changeset" do
+      project =
+        project_fixture(
+          project_users: [
+            %{
+              user_id: user_fixture().id,
+              role: :viewer,
+              digest: :daily,
+              failure_alert: false
+            }
+          ]
+        )
+
+      project_user = List.first(project.project_users)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Projects.set_notification_pref(project_user, :digest, "bogus")
+
+      assert {:error, %Ecto.Changeset{}} =
+               Projects.set_notification_pref(
+                 project_user,
+                 :failure_alert,
+                 "not_a_bool"
+               )
+
+      assert project_user == Projects.get_project_user!(project_user.id)
+    end
+
     test "delete_project/1 deletes the project" do
       %{project: p1, workflow_1_job: w1_job, workflow_1: w1} =
         full_project_fixture(
@@ -446,6 +533,32 @@ defmodule Lightning.ProjectsTest do
       refute Repo.get(Lightning.Channels.Channel, channel.id)
       refute Repo.get(Lightning.Channels.ChannelSnapshot, snapshot.id)
       refute Repo.get(Lightning.Channels.ChannelRequest, request.id)
+    end
+
+    test "delete_project/1 deletes project with associated oauth clients" do
+      project =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      oauth_client = insert(:oauth_client)
+
+      project_oauth_client =
+        insert(:project_oauth_client,
+          project: project,
+          oauth_client: oauth_client
+        )
+
+      assert {:ok, %Project{}} = Projects.delete_project(project)
+
+      refute Repo.get(
+               Lightning.Projects.ProjectOauthClient,
+               project_oauth_client.id
+             )
+
+      assert Repo.get(Lightning.Credentials.OauthClient, oauth_client.id),
+             "The OAuth client itself should survive — only the join row is project-scoped"
     end
 
     test "change_project/1 returns a project changeset" do

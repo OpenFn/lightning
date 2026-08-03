@@ -25,9 +25,11 @@ defmodule Lightning.Runs.PromExPlugin.ImpededProjectHelper do
         select: w.workflow_id,
         distinct: true
 
+    in_progress = Lightning.Run.active_states() -- [:available]
+
     in_progress_runs_query =
       from r in Lightning.Run,
-        where: r.state in [:claimed, :started],
+        where: r.state in ^in_progress,
         join: w in assoc(r, :work_order),
         group_by: w.workflow_id,
         select: %{workflow_id: w.workflow_id, count: count(r.id)}

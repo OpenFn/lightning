@@ -1,4 +1,19 @@
 defmodule Lightning.CollaborationHelpers do
+  alias Lightning.Collaboration.Session
+
+  @doc """
+  Push a string-keyed map into a named Y.Doc array on the given session,
+  as a `Yex.MapPrelim`. Used to inject job/trigger/edge payloads into the
+  shared doc from tests.
+  """
+  def push_to_array(session_pid, array_name, %{} = string_map)
+      when is_binary(array_name) do
+    Session.update_doc(session_pid, fn doc ->
+      Yex.Doc.get_array(doc, array_name)
+      |> Yex.Array.push(Yex.MapPrelim.from(string_map))
+    end)
+  end
+
   @doc """
   Ensure the document supervisor is stopped for a given workflow id.
 

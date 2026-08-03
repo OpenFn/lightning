@@ -74,7 +74,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
   end
 
   def handle_event("toggle_action", %{"action" => "new"}, socket) do
-    with :ok <- can_create_collection(socket) do
+    with :ok <- authorize(socket, :manage_collection, socket.assigns.project) do
       changeset = Collection.form_changeset(%Collection{}, %{})
 
       {:noreply,
@@ -91,10 +91,9 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         %{"action" => "edit", "collection" => collection_name},
         socket
       ) do
-    with :ok <- can_create_collection(socket),
-         {:ok, collection} <-
+    with {:ok, collection} <-
            fetch_project_collection(socket, collection_name),
-         :ok <- can_access_collection(socket, collection) do
+         :ok <- authorize(socket, :manage_collection, collection) do
       changeset =
         Collection.form_changeset(collection, %{raw_name: collection.name})
 
@@ -112,10 +111,9 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         %{"action" => "delete", "collection" => collection_name},
         socket
       ) do
-    with :ok <- can_create_collection(socket),
-         {:ok, collection} <-
+    with {:ok, collection} <-
            fetch_project_collection(socket, collection_name),
-         :ok <- can_access_collection(socket, collection) do
+         :ok <- authorize(socket, :manage_collection, collection) do
       {:noreply, assign(socket, collection: collection, action: :delete)}
     end
   end
@@ -126,7 +124,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         socket
       ) do
     with {:ok, collection} <- fetch_project_collection(socket, collection_name),
-         :ok <- can_access_collection(socket, collection) do
+         :ok <- authorize(socket, :access_collection, collection) do
       preview_json =
         case Collections.get_all(collection, limit: 1, cursor: nil) do
           [] ->
@@ -161,10 +159,9 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
         %{"collection" => collection_name},
         socket
       ) do
-    with :ok <- can_create_collection(socket),
-         {:ok, collection} <-
+    with {:ok, collection} <-
            fetch_project_collection(socket, collection_name),
-         :ok <- can_access_collection(socket, collection) do
+         :ok <- authorize(socket, :manage_collection, collection) do
       case Collections.delete_collection(collection.id) do
         {:ok, _collection} ->
           {:noreply,
@@ -192,7 +189,7 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
   end
 
   def handle_event("save", %{"collection" => params}, socket) do
-    with :ok <- can_create_collection(socket) do
+    with :ok <- authorize(socket, :manage_collection, socket.assigns.project) do
       {:noreply, save_collection(socket, socket.assigns.action, params)}
     end
   end
@@ -237,17 +234,6 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
     end
   end
 
-  defp can_create_collection(socket) do
-    if socket.assigns.can_create_collection do
-      :ok
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action")
-       |> push_navigate(to: socket.assigns.return_to)}
-    end
-  end
-
   defp fetch_project_collection(socket, collection_name) do
     case Collections.get_collection(
            socket.assigns.project.id,
@@ -264,14 +250,13 @@ defmodule LightningWeb.ProjectLive.CollectionsComponent do
     end
   end
 
-  defp can_access_collection(socket, collection) do
-    Permissions.can(
-      Lightning.Policies.Collections,
-      :access_collection,
-      socket.assigns.current_user,
-      collection
-    )
-    |> case do
+  defp authorize(socket, action, resource) do
+    case Permissions.can(
+           :collections,
+           action,
+           socket.assigns.current_user,
+           resource
+         ) do
       :ok ->
         :ok
 

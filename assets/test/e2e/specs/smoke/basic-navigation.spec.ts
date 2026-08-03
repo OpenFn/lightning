@@ -1,11 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { getTestData } from '../../test-data';
+
 import {
   WorkflowsPage,
-  WorkflowEditPage,
+  WorkflowCollaborativePage,
   LoginPage,
   ProjectsPage,
 } from '../../pages';
+import { WorkflowDiagramPage } from '../../pages/components/workflow-diagram.page';
+import { getTestData } from '../../test-data';
 
 test('homepage loads successfully', async ({ page }) => {
   await page.goto('/');
@@ -35,12 +37,13 @@ test.describe('Workflow Navigation with Dynamic Data', () => {
     );
   });
 
-  test('can navigate to existing workflow and see React Flow with 6 nodes', async ({
+  test('can navigate to existing workflow and see React Flow with 5 nodes', async ({
     page,
   }) => {
     const projectsPage = new ProjectsPage(page);
     const workflowsPage = new WorkflowsPage(page);
-    const workflowEdit = new WorkflowEditPage(page);
+    const collabEditor = new WorkflowCollaborativePage(page);
+    const diagram = new WorkflowDiagramPage(page);
 
     // Navigate to project using ProjectsPage POM
     await projectsPage.navigateToProject(testData.projects.openhie.name);
@@ -48,47 +51,27 @@ test.describe('Workflow Navigation with Dynamic Data', () => {
 
     await expect(page.getByText('OpenHIE Workflow')).toBeVisible();
 
-    // Navigate to the workflow using POM
+    // Navigate to the workflow using POM. The workflow route now renders the
+    // collaborative editor directly (the only editor).
     await workflowsPage.navigateToWorkflow(testData.workflows.openhie.name);
-    await workflowEdit.waitForConnected();
 
     // Verify URL contains the actual workflow ID from database
     await expect(page).toHaveURL(
       new RegExp(`/w/${testData.workflows.openhie.id}`)
     );
 
-    await workflowEdit.diagram.verifyReactFlowPresent();
+    // Wait for the collaborative editor to load and sync
+    await collabEditor.waitForReactComponentLoaded();
+    await collabEditor.waitForSynced();
 
-    // Assert we have 5 nodes visible in the workflow
-    await workflowEdit.diagram.nodes.verifyCount(5);
-    await expect(page.getByRole('main')).toMatchAriaSnapshot(`
-      - navigation "Breadcrumb":
-        - list:
-          - listitem:
-            - link "Home":
-              - /url: /
-          - listitem:
-            - link "Projects":
-              - /url: /projects
-          - listitem:
-            - link "openhie-project":
-              - /url: /projects/4adf2644-ed4e-4f97-a24c-ab35b3cb1efa/w
-          - listitem:
-            - link "Workflows":
-              - /url: /projects/4adf2644-ed4e-4f97-a24c-ab35b3cb1efa/w
-          - listitem: OpenHIE Workflow latest
-      - checkbox
-      - switch
-      - link:
-        - /url: /projects/4adf2644-ed4e-4f97-a24c-ab35b3cb1efa/w/01ec091c-c52d-44d8-81df-213505f0da2b?m=settings
-      - link "Run":
-        - /url: /projects/4adf2644-ed4e-4f97-a24c-ab35b3cb1efa/w/01ec091c-c52d-44d8-81df-213505f0da2b?m=workflow_input&s=cae544ab-03dc-4ccc-a09c-fb4edb255d7a
-      - button "Save"
-      - button "Open options user avatar":
-        - img "user avatar"
-      `);
+    await diagram.verifyReactFlowPresent();
 
-    // Assert no error messages are shown
+    // Assert we have 5 nodes visible in the workflow (4 jobs + 1 trigger)
+    await diagram.nodes.verifyCount(5);
+
+    // Assert no error states are shown
+    await collabEditor.verifyNoErrors();
+
     const errorMessage = page.locator('text=Something went wrong');
     await expect(errorMessage).not.toBeVisible();
 

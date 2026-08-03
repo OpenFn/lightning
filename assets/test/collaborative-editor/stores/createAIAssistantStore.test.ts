@@ -336,6 +336,76 @@ describe('createAIAssistantStore', () => {
     });
   });
 
+  describe('Streaming Status', () => {
+    it('should not clear the status when content is appended', () => {
+      // Clearing on new text is the channel buffer's job (at network
+      // arrival), not the drain — so the store must leave status alone.
+      store.setStreamingStatus('Writing code...');
+      store._appendStreamingChunk('Here is the answer');
+
+      expect(store.getSnapshot().streamingStatus).toBe('Writing code...');
+      expect(store.getSnapshot().streamingContent).toBe('Here is the answer');
+    });
+
+    it('should clear the status when set to null', () => {
+      store.setStreamingStatus('Thinking...');
+      store.setStreamingStatus(null);
+
+      expect(store.getSnapshot().streamingStatus).toBeNull();
+    });
+
+    it('should clear the status once changes arrive', () => {
+      store._appendStreamingChunk('Answer');
+      store.setStreamingStatus('Writing code...');
+
+      store._setStreamingChanges({ code: 'fn(s => s)' });
+
+      expect(store.getSnapshot().streamingStatus).toBeNull();
+    });
+  });
+
+  describe('Streaming Apply', () => {
+    it('records, flags, and clears the streaming apply lifecycle', () => {
+      store._setStreamingApply('name: Test');
+      expect(store.getSnapshot().streamingApply).toEqual({
+        yaml: 'name: Test',
+        saveFailed: false,
+      });
+
+      store._setStreamingApplySaveFailed(true);
+      expect(store.getSnapshot().streamingApply?.saveFailed).toBe(true);
+
+      store._setStreamingApplySaveFailed(false);
+      expect(store.getSnapshot().streamingApply?.saveFailed).toBe(false);
+
+      store._clearStreamingApply();
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+
+    it('ignores saveFailed updates when no streaming apply is pending', () => {
+      store._setStreamingApplySaveFailed(true);
+
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+
+    it('is cleared on session change but survives stream-end and disconnect', () => {
+      // The final new_message may arrive after the stream ends or after a
+      // reconnect — the record must survive both so the duplicate import
+      // can still be skipped.
+      store._setStreamingApply('name: Test');
+      store._clearStreaming();
+      store.disconnect();
+      expect(store.getSnapshot().streamingApply).not.toBeNull();
+
+      store.loadSession('session-2');
+      expect(store.getSnapshot().streamingApply).toBeNull();
+
+      store._setStreamingApply('name: Test 2');
+      store.clearSession();
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+  });
+
   describe('State Subscriptions', () => {
     it('should notify subscribers on state changes', () => {
       const subscriber = vi.fn();

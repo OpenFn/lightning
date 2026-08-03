@@ -12,10 +12,13 @@ defmodule Lightning.AuthProviders.AuthConfigForm do
     client_secret: :string,
     redirect_uri: :string,
     redirect_host: :string,
-    redirect_path_func: :function
+    redirect_path_func: :function,
+    allow_unverified_email: :boolean
   }
 
   @fields Map.keys(@types)
+  # allow_unverified_email is optional (a boolean defaulting to false).
+  @required_fields @fields -- [:allow_unverified_email]
 
   defstruct @fields
 
@@ -27,7 +30,7 @@ defmodule Lightning.AuthProviders.AuthConfigForm do
     {form_model, @types}
     |> cast(params, @fields)
     |> generate_redirect_uri()
-    |> validate_required(@fields)
+    |> validate_required(@required_fields)
     |> validate_format(
       :name,
       ~r/^[[:lower:]\d\-\_]+$/,
@@ -79,6 +82,14 @@ defmodule Lightning.AuthProviders.AuthConfigForm do
 
       {:error, message} when is_binary(message) ->
         changeset |> add_error(:discovery_url, message)
+
+      {:error, :insecure_discovery_url} ->
+        changeset
+        |> add_error(:discovery_url, "discovery endpoint must use https")
+
+      {:error, _reason} ->
+        changeset
+        |> add_error(:discovery_url, "could not fetch the discovery document")
 
       {:ok, _provider} ->
         changeset

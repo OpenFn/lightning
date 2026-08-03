@@ -5,6 +5,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   use LightningWeb, :live_component
 
   import LightningWeb.RunLive.Components
+  alias Lightning.WorkOrder
   alias Phoenix.LiveView.JS
 
   @impl true
@@ -261,7 +262,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   <.icon name="hero-x-mark-mini" class="h-4 w-4" />
                 </button>
               <% end %>
-              <%= if @work_order.state not in [:pending, :running] do %>
+              <%= if @work_order.state not in WorkOrder.active_states() do %>
                 <%= if wo_dataclip_available?(@work_order) and @can_run_workflow do %>
                   <button
                     type="button"

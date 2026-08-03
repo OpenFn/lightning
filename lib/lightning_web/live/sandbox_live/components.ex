@@ -249,6 +249,8 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :diverged_workflows, :list, default: []
   attr :source_workflows, :list, required: true
   attr :selected_workflow_ids, :any, required: true
+  attr :credentials, :list, default: []
+  attr :selected_credential_ids, :any, default: %MapSet{}
 
   def merge_modal(assigns) do
     assigns =
@@ -260,6 +262,13 @@ defmodule LightningWeb.SandboxLive.Components do
         merge_select_all_state(
           assigns.selected_workflow_ids,
           assigns.source_workflows
+        )
+      )
+      |> assign(
+        :credentials_select_all_state,
+        merge_select_all_state(
+          assigns.selected_credential_ids,
+          assigns.credentials
         )
       )
 
@@ -361,32 +370,88 @@ defmodule LightningWeb.SandboxLive.Components do
                 </span>
                 <span
                   :if={wf.is_changed && !wf.is_new && !wf.is_deleted}
+                  id={"merge-wf-changed-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-green-700"
-                  title="This workflow has been modified in the sandbox"
+                  phx-hook="Tooltip"
+                  aria-label="This workflow has been modified in the sandbox"
                 >
                   Changed
                 </span>
                 <span
                   :if={wf.is_diverged}
+                  id={"merge-wf-diverged-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-amber-700"
-                  title="This workflow was modified in the target project - this change will be lost"
+                  phx-hook="Tooltip"
+                  aria-label="This workflow was modified in the target project - this change will be lost"
                 >
                   <.icon name="hero-exclamation-triangle-mini" class="h-3.5 w-3.5" />
                   Diverged
                 </span>
                 <span
                   :if={wf.is_new}
+                  id={"merge-wf-new-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-blue-700"
-                  title="This workflow doesn't exist in the target — it will be created"
+                  phx-hook="Tooltip"
+                  aria-label="This workflow doesn't exist in the target — it will be created"
                 >
                   New
                 </span>
                 <span
                   :if={wf.is_deleted}
+                  id={"merge-wf-deleted-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-red-700"
-                  title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
+                  phx-hook="Tooltip"
+                  aria-label="This workflow was deleted in the sandbox. Selecting it removes it from the project too."
                 >
                   Deleted in sandbox
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <div
+            :if={@credentials != []}
+            class="border border-gray-200 rounded-lg overflow-hidden bg-white"
+          >
+            <label class={[
+              "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
+              @credentials_select_all_state == :empty && "cursor-default",
+              @credentials_select_all_state != :empty && "cursor-pointer"
+            ]}>
+              <input
+                type="checkbox"
+                id="merge-select-all-credentials"
+                phx-hook="CheckboxIndeterminate"
+                phx-click="toggle-all-credentials"
+                disabled={@credentials_select_all_state == :empty}
+                checked={@credentials_select_all_state == :all}
+                class={[
+                  "h-4 w-4 rounded border-gray-300 text-indigo-600",
+                  @credentials_select_all_state == :partial && "indeterminate"
+                ]}
+              />
+              <span class="flex-1 text-sm font-medium text-gray-900">
+                Credentials to add
+              </span>
+              <span class="text-xs text-gray-500">
+                {MapSet.size(@selected_credential_ids)} of {length(@credentials)} selected
+              </span>
+            </label>
+            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+              <li
+                :for={credential <- @credentials}
+                class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                phx-click="toggle-credential"
+                phx-value-id={credential.id}
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                  checked={MapSet.member?(@selected_credential_ids, credential.id)}
+                  readonly
+                />
+                <span class="flex-1 text-sm text-gray-700 truncate">
+                  {credential.name}
                 </span>
               </li>
             </ul>

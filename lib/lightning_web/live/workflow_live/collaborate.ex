@@ -11,17 +11,20 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   use LightningWeb, {:live_view, container: {:div, []}}
 
   alias Lightning.AiAssistant
+  alias Lightning.Credentials.Credential
   alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Workflows
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
   alias LightningWeb.Channels.WorkflowJSON
+  alias LightningWeb.CredentialLive
 
   on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount({LightningWeb.Hooks, :ensure_workflow_belongs_to_project})
   on_mount({LightningWeb.Hooks, :check_limits})
-  on_mount({LightningWeb.Hooks, :check_legacy_preference})
 
   @impl true
   def mount(
@@ -29,11 +32,40 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         _session,
         %{assigns: %{project: project, access_root: access_root}} = socket
       ) do
+    if creating_new_workflow?(socket) and
+         not Permissions.can?(
+           :project_users,
+           :create_workflow,
+           socket.assigns.current_user,
+           project
+         ) do
+      unauthorized_to_create(socket, project)
+    else
+      mount_editor(params, project, access_root, socket)
+    end
+  end
+
+  # The dashboard already disables the create button for users without
+  # :create_workflow, so landing here means a typed URL, a stale bookmark or a
+  # shared link. Bounce rather than render: the collaboration channel refuses
+  # the join for these users, but that rejection never reaches the browser (the
+  # provider only registers an "ok" receiver), so every card on the landing
+  # screen would look clickable and do nothing.
+  defp unauthorized_to_create(socket, project) do
+    {:ok,
+     socket
+     |> put_flash(:error, "You are not authorized to perform this action.")
+     |> redirect(to: ~p"/projects/#{project.id}/w")}
+  end
+
+  defp creating_new_workflow?(socket), do: socket.assigns.live_action == :new
+
+  defp mount_editor(params, project, access_root, socket) do
     is_sandbox? = Project.sandbox?(project)
 
     {:ok,
      socket
-     |> assign(workflow_assigns(params, project))
+     |> assign(workflow_assigns(socket.assigns.live_action, params, project))
      |> assign(
        active_menu_item: :overview,
        project: project,
@@ -45,6 +77,8 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
        show_credential_modal: false,
        credential_schema: nil,
        credential_to_edit: nil,
+       new_credential_project_credentials:
+         CredentialLive.Helpers.default_project_credentials(project),
        show_webhook_auth_modal: false,
        webhook_auth_method: nil,
        ai_assistant_enabled: AiAssistant.enabled?()
@@ -66,7 +100,9 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
 
   defp maybe_load_initial_run_data(socket, %{"run" => run_id})
        when is_binary(run_id) do
-    case Lightning.Runs.get(run_id, include: [:steps]) do
+    %{project: project} = socket.assigns
+
+    case Lightning.Runs.get_for_project(run_id, project.id, include: [:steps]) do
       nil -> socket
       run -> assign(socket, initial_run_data: build_run_data(run))
     end
@@ -107,17 +143,33 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
         socket
       )
       when is_binary(credential_id) do
-    # Load the credential for editing with necessary associations
-    credential =
-      Lightning.Credentials.get_credential!(credential_id)
-      |> Lightning.Repo.preload([:oauth_client, :project_credentials])
+    # Only open the edit modal for a credential the user is authorized to edit
+    # (its owner), so a client-supplied id can't load another user's credential.
+    with true <- Lightning.Validators.valid_uuid?(credential_id),
+         %Credential{} = credential <-
+           Lightning.Credentials.get_credential(credential_id),
+         true <-
+           Permissions.can?(
+             Users,
+             :edit_credential,
+             socket.assigns.current_user,
+             credential
+           ) do
+      credential =
+        Lightning.Repo.preload(credential, [:oauth_client, :project_credentials])
 
-    {:noreply,
-     assign(socket,
-       show_credential_modal: true,
-       credential_schema: schema,
-       credential_to_edit: credential
-     )}
+      {:noreply,
+       assign(socket,
+         show_credential_modal: true,
+         credential_schema: schema,
+         credential_to_edit: credential
+       )}
+    else
+      # A malformed, unknown, or non-owned id doesn't open the modal. Tell the
+      # client the open failed (the React side optimistically opened it) so it
+      # resets its state instead of hanging open.
+      _ -> {:noreply, push_event(socket, "credential_modal_closed", %{})}
+    end
   end
 
   def handle_event("open_credential_modal", %{"schema" => schema}, socket) do
@@ -223,11 +275,7 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
           %Lightning.Credentials.Credential{
             schema: @credential_schema,
             user_id: @current_user.id,
-            project_credentials: [
-              %Lightning.Projects.ProjectCredential{
-                project_id: @project.id
-              }
-            ]
+            project_credentials: @new_credential_project_credentials
           }
       }
       on_save={
@@ -369,34 +417,32 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
     |> noreply()
   end
 
-  defp workflow_assigns(params, project) do
-    case params do
-      %{"id" => workflow_id} ->
-        workflow = Workflows.get_workflow!(workflow_id)
+  defp workflow_assigns(:edit, %{"id" => workflow_id}, _project) do
+    workflow = Workflows.get_workflow!(workflow_id)
 
-        %{
-          workflow: workflow,
-          workflow_id: workflow_id,
-          is_new_workflow: false,
-          page_title: "Collaborate on #{workflow.name}"
-        }
+    %{
+      workflow: workflow,
+      workflow_id: workflow_id,
+      is_new_workflow: false,
+      page_title: "Collaborate on #{workflow.name}"
+    }
+  end
 
-      _other ->
-        workflow_id = Ecto.UUID.generate()
+  defp workflow_assigns(:new, _params, project) do
+    workflow_id = Ecto.UUID.generate()
 
-        workflow = %Workflow{
-          id: workflow_id,
-          name: "Untitled Workflow",
-          project_id: project.id
-        }
+    workflow = %Workflow{
+      id: workflow_id,
+      name: "Untitled Workflow",
+      project_id: project.id
+    }
 
-        %{
-          workflow: workflow,
-          workflow_id: workflow_id,
-          is_new_workflow: true,
-          page_title: "New Workflow"
-        }
-    end
+    %{
+      workflow: workflow,
+      workflow_id: workflow_id,
+      is_new_workflow: true,
+      page_title: "New Workflow"
+    }
   end
 
   defp build_credential_payload(credential) do

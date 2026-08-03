@@ -1599,6 +1599,9 @@ defmodule Lightning.InvocationTest do
         timestamp: Timex.now()
       )
 
+      flush_log_search_index()
+      flush_dataclip_search_index()
+
       %{
         project: project,
         dataclip: dataclip,
@@ -1695,6 +1698,18 @@ defmodule Lightning.InvocationTest do
 
     test "search on logs does NOT return 'stem' matches... only exact matches",
          %{project: project} do
+      # Positive control: the log vector is populated, so an exact token matches.
+      # Without this, a regression that leaves search_vector NULL would make the
+      # negative assertions below pass vacuously.
+      assert [_found] =
+               Invocation.search_workorders(
+                 project,
+                 SearchParams.new(%{
+                   "search_term" => "playing",
+                   "search_fields" => ["log"]
+                 })
+               ).entries
+
       assert [] =
                Invocation.search_workorders(
                  project,
@@ -1789,6 +1804,9 @@ defmodule Lightning.InvocationTest do
          %{
            project: project
          } do
+      # Positive control: the dataclip body vector is populated, so a known body
+      # token matches. Without this, a regression that leaves search_vector NULL
+      # would make the negative assertion below pass vacuously.
       assert [_found] =
                Invocation.search_workorders(
                  project,
@@ -1942,6 +1960,9 @@ defmodule Lightning.InvocationTest do
         message: "Processing findme with log_only_value",
         timestamp: Timex.now()
       )
+
+      flush_log_search_index()
+      flush_dataclip_search_index()
 
       %{
         project: project,
@@ -2299,6 +2320,57 @@ defmodule Lightning.InvocationTest do
         assert project_file.status == :enqueued
         assert project_file.type == :export
       end)
+    end
+  end
+
+  describe "get_step_with_dataclips" do
+    setup do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      snapshot = insert(:snapshot, workflow: workflow)
+
+      step =
+        insert(:step,
+          job: job,
+          snapshot: snapshot,
+          input_dataclip: build(:dataclip, project: project, body: %{"a" => 1}),
+          output_dataclip: build(:dataclip, project: project, body: %{"b" => 2})
+        )
+
+      other_project = insert(:project)
+      other_workflow = insert(:workflow, project: other_project)
+      other_job = insert(:job, workflow: other_workflow)
+      other_snapshot = insert(:snapshot, workflow: other_workflow)
+
+      insert(:step,
+        job: other_job,
+        snapshot: other_snapshot,
+        input_dataclip:
+          build(:dataclip, project: other_project, body: %{"c" => 1}),
+        output_dataclip:
+          build(:dataclip, project: other_project, body: %{"d" => 2})
+      )
+
+      %{other_project: other_project, project: project, step: step}
+    end
+
+    test "returns the step with its input and output dataclips preloaded", %{
+      project: project,
+      step: step
+    } do
+      fetched_step = Invocation.get_step_with_dataclips(step.id, project.id)
+
+      assert fetched_step.id == step.id
+      assert fetched_step.input_dataclip.body == %{"a" => 1}
+      assert fetched_step.output_dataclip.body == %{"b" => 2}
+    end
+
+    test "returns nil if the step does not belong to the project", %{
+      other_project: other_project,
+      step: step
+    } do
+      assert Invocation.get_step_with_dataclips(step.id, other_project.id) == nil
     end
   end
 

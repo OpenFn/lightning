@@ -21,6 +21,446 @@ and this project adheres to
 
 ### Fixed
 
+## [2.18.0-pre] - 2026-07-31
+
+### Added
+
+- Report monthly active users (MAU) — distinct users active in the trailing 30
+  days — in the usage tracker submission, alongside the existing 90-day active
+  user count. Reported at both instance and project level, and bumps the usage
+  report schema to version 3.
+  [#4826](https://github.com/OpenFn/lightning/issues/4826)
+- Creating a workflow now starts from a screen offering four ways in: describe
+  it to the AI assistant, build from scratch, pick a template, or import YAML.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
+- Support a comma-separated list of paths in `OPENFN_ADAPTORS_REPO`, merging
+  multiple local adaptor repos in precedence order (earlier paths win on name
+  collisions, and shadowed entries are logged). Lets a private repo override or
+  extend the canonical adaptors in local mode.
+  [#4714](https://github.com/OpenFn/lightning/pull/4714)
+- The template browser now previews the selected template as a read-only diagram
+  before you commit to it. Picking a template from the list only previews it;
+  creating the workflow is a separate Create button. Templates whose definition
+  can't be read say so in the preview and can't be created.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
+
+### Changed
+
+- Updated nodejs version to 24.18.1
+  [#4962](https://github.com/OpenFn/lightning/pull/5027)
+- Migrated off the retired `earmark` markdown dependency in favour of `mdex`.
+  [#4878](https://github.com/OpenFn/lightning/issues/4878)
+- Removed the unused dev-only `phoenix_storybook` dependency, clearing its
+  advisories from the `mix deps.audit` ignore list.
+  [#4846](https://github.com/OpenFn/lightning/issues/4846)
+- New workflows are now written to the database as soon as you choose how to
+  start, rather than being previewed on the canvas until you pressed Create. The
+  Create button and the preview state it belonged to are gone, and the editor
+  header appears once the workflow exists.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
+- Replaced the full-screen AI disclaimer gate in the AI assistant with a
+  persistent disclaimer footer shown in the chat input and landing screen.
+  [#4911](https://github.com/OpenFn/lightning/issues/4911)
+- The template browser and YAML import modals now cover the left side menu
+  instead of sitting behind it, and the YAML file-type hints use the primary
+  colour rather than teal.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
+- The credential revoke-access dialog now sorts the affected workflows
+  alphabetically. The order was previously left to the database and not
+  guaranteed. [#4954](https://github.com/OpenFn/lightning/issues/4954)
+- Updated Phoenix to 1.7.24 to address vulnerabilities in 1.7.23. This
+  implicitly introduces a limit of 100 concurrent channels per Websocket
+  connection (transport). If worker instances are set with a concurrency higher
+  than 100, this will result in failures.
+- Made dev and test database names configurable via `DEV_DATABASE_NAME` and
+  `TEST_DATABASE_NAME` environment variables
+  [#4963](https://github.com/OpenFn/lightning/pull/4963)
+- Bumped bundled CLI to version 1.39.1
+- Bumped bundled worker to version 1.27.4
+- Updated `hackney` to 4.6 to address advisories fixed only in the 4.x line,
+  along with the `httpoison` 3.0 and `sentry` 13.2 bumps it requires. `tzdata`
+  is pinned to an upstream commit, the only version that permits `hackney` 4.x.
+  [#4905](https://github.com/OpenFn/lightning/issues/4905)
+- Updated `swoosh` to 1.26.3 and `tidewave` to 0.8.0.
+  [#4905](https://github.com/OpenFn/lightning/issues/4905)
+- Updated `cowboy` to 2.18.0 and `cowlib` to 2.19.0, clearing CVE-2026-65624 and
+  CVE-2026-59248. [#4905](https://github.com/OpenFn/lightning/issues/4905)
+- Declared `finch` as a direct dependency. It backs the app's own
+  `Lightning.Finch` pool and the default Tesla adapter, but its version was
+  previously dictated by `prom_ex` and `goth`.
+  [#4905](https://github.com/OpenFn/lightning/issues/4905)
+- `bin/worktree` takes a trailing `-- <command>` that runs inside the worktree
+  once it is ready, and also runs when the branch already has a worktree.
+
+### Fixed
+
+- The workflow version dropdown stayed empty after creating and saving a new
+  workflow, until the page was refreshed.
+  [#4973](https://github.com/OpenFn/lightning/issues/4973)
+- Users without permission to create workflows are now redirected away from the
+  new-workflow page. They were previously shown creation options that silently
+  did nothing. [#4848](https://github.com/OpenFn/lightning/issues/4848)
+- Creating a workflow from a template, YAML import, or AI could leave nodes on
+  the canvas with no saved workflow behind them when the save failed. Save
+  failures during creation now surface a persistent Retry prompt, and creation
+  is blocked with immediate feedback when the editor is offline.
+  [#4939](https://github.com/OpenFn/lightning/issues/4939)
+- Reserve space for the scrollbar on the main content area so page content no
+  longer shifts horizontally when switching between tall and short tabs (e.g. on
+  the Project Settings page).
+- Sandbox merge no longer deletes a workflow that was added to the project after
+  the sandbox was branched. Such workflows were never part of the sandbox, so
+  they are excluded from the merge screen entirely. Workflows deleted inside the
+  sandbox still appear and now default to kept, so removing them from the
+  project is opt-in. [#4919](https://github.com/OpenFn/lightning/issues/4919)
+- Support mailto link no longer opens a blank tab; email address is shown as a
+  tooltip for users without a mail client configured
+  [#2435](https://github.com/OpenFn/lightning/issues/2435)
+- Fixed an issue where LOCAL_ADAPTORS is not respected by install_schemas task
+  [#4943](https://github.com/OpenFn/lightning/issues/4943)
+- Prevent AI Assistant channel joins from crashing when a chat references a
+  deleted workflow or project. Missing records now fail authorization cleanly.
+  [#4914](https://github.com/OpenFn/lightning/issues/4914)
+- When an OAuth provider reports that a credential's stored token has expired or
+  been revoked, the credential editor now shows a clear "reauthorize" prompt
+  instead of a generic error, and the condition is logged as a warning rather
+  than an application error.
+  [#4947](https://github.com/OpenFn/lightning/issues/4947)
+- Git hooks now auto-install when compiling from inside a git worktree, where
+  `.git` is a file rather than a directory.
+
+## [2.17.1] - 2026-07-30
+
+### Fixed
+
+- Check ownership before acting on credential deletion cancellation event
+
+## [2.17.0] - 2026-07-21
+
+This is a security release, and we strongly recommend upgrading promptly. It is
+the first remediation wave from an ongoing security review: it closes a broad
+set of issues, several of them high priority. A detailed security advisory will
+follow within 30 days of this release.
+
+### Upgrade notes
+
+- **Postgres TLS certificates are now verified.** Lightning previously performed
+  no certificate validation on SSL connections to Postgres and accepted any
+  server certificate; it now validates the server certificate by default. A
+  self-signed or otherwise unverifiable certificate will stop Lightning from
+  starting. If you use a private CA or a self-signed database certificate, make
+  sure the CA is trusted, or set `DISABLE_DB_SSL_CERT_VERIFY=true` to opt out.
+- **Server-side outbound requests are now guarded by default.** The Channel
+  reverse proxy feature and OAuth provider requests block loopback and
+  private-network destinations to prevent SSRF. This can break local
+  development, or a legitimately-internal destination reached over a private IP.
+  Adjust the Channel policies with `CHANNEL_BLOCK_PRIVATE_NETWORKS` and
+  `CHANNEL_ALLOWED_HOSTS`; see the egress sections of `DEPLOYMENT.md`
+  (`OAuth Provider Egress` and `Channel Egress`) for the full configuration.
+- **Take a database backup before upgrading.** Three of this release's
+  migrations delete data irreversibly: legacy-editor user preferences,
+  pre-existing credential transfers that can no longer be confirmed, and
+  orphaned AI chat sessions.
+- **One migration will abort the upgrade rather than guess.** The
+  `require_project_credentials_project_id` migration sets
+  `project_credentials.project_id` to `NOT NULL` and will raise if any rows have
+  a null `project_id`. Resolve those rows and re-run the migration.
+- **The legacy workflow editor has been removed, along with its route.** All
+  users are now served the collaborative editor.
+- **AI chat sessions now cascade-delete** with the job or workflow they belong
+  to, instead of being left orphaned.
+
+Migrations in this release, all in `priv/repo/migrations/`:
+
+- `20260629143825_clear_prefer_legacy_editor`
+- `20260701152255_remove_legacy_credential_transfers`
+- `20260703124106_require_project_credentials_project_id`
+- `20260707043053_cascade_delete_ai_chat_sessions_with_job_and_workflow`
+- `20260707060146_delete_orphaned_ai_chat_sessions`
+- `20260711013100_add_allow_unverified_email_to_auth_providers`
+
+### Added
+
+- Add `bin/worktree`, a helper that creates a git worktree for a branch and runs
+  the per-worktree slice of `bin/bootstrap` (environment copy, dependencies,
+  assets, database create/migrate) so the worktree is immediately runnable.
+
+### Changed
+
+- Replaced the legacy workflow editor with the collaborative editor for all
+  users. [#4402](https://github.com/OpenFn/lightning/issues/4402)
+
+### Removed
+
+- Removed the legacy workflow editor and its route, together with dead code it
+  left behind and other unreferenced modules and functions surfaced while
+  auditing for the removal.
+
+### Fixed
+
+- Fixed the work-order history export, which was broken for all users and never
+  produced a file.
+
+### Security
+
+- Enforce project scoping consistently across LiveViews, channels, controllers
+  and the worker/run APIs, so a client-supplied resource id can no longer reach
+  data in another project. A range of surfaces loaded a resource by its bare id
+  after checking only that the caller belonged to the project named in the
+  request, which let a member of one project read (and in some cases modify or
+  execute) another project's data. Affected surfaces included run detail views
+  and their logs and dataclips, the dataclip viewer, the workflow dashboard's
+  delete and enable/disable actions, run rerun on the history page and in the
+  editor, manual-run inputs, the project-settings webhook authentication methods
+  and collaborator settings, the provisioning snapshots export, worker
+  step-completion and worker-supplied dataclip and credential references, GitHub
+  App branch listing, and the credential API's project lists. Each now loads its
+  resource scoped to the authorised project and rejects anything outside it;
+  where an action mutates or executes, an appropriate permission is now required
+  as well.
+- Tighten credential ownership and scoping. A job or trigger could reference a
+  project or keychain credential owned by a different project, which would
+  resolve another tenant's secret at run time. Workflow saves, project
+  provisioning imports and sandbox merges now all reject a cross-project
+  credential reference through a single, fail-closed check, and sandbox merges
+  re-map keychain credentials onto the parent project rather than carrying a
+  sandbox-owned reference across. Credential-transfer confirmation is bound to
+  its signed token and to owner and pending-state checks, so a transfer can no
+  longer be redirected. Ownership and transfer-state fields can no longer be set
+  through the ordinary credential edit path, only at creation or through the
+  dedicated transfer flow. The credential deletion confirmation is validated
+  against the credential it was opened for, so a user can no longer delete
+  another user's credential.
+- Strengthen authorisation in the collaborative workflow editor. Client-supplied
+  ids were scoped too weakly, so a member of one project could read another
+  project's workflow snapshots, job code and configuration, run and work-order
+  metadata, dataclips, credentials and external-system metadata before scoping
+  was applied; the editor's channel and session layer now resolves each of these
+  within the caller's own project and returns an indistinguishable not-found for
+  anything outside it. Read-only enforcement previously lived only in the
+  browser, so a project viewer could still mutate the shared document; the
+  editor now drops edits from users without edit permission at the server and
+  guards its write paths there rather than relying on the client. Changing a
+  trigger's webhook authentication now requires owner or admin rather than
+  editor, so an editor can no longer strip authentication off a webhook trigger.
+- Authorise AI assistant sessions against their owning project. Session ids and
+  run references were treated as trusted before being checked, so a signed-in
+  user could read another project's AI chat history, and a session join could
+  seed or poison state under a project the user could not access. Joins now
+  authorise before mutating any session state and accept a follow-run reference
+  only from the session's own project; session loads from the editor are
+  rejected unless the session belongs to the current project; orphaned sessions
+  (whose job or workflow has been deleted) now default-deny and allow only their
+  creator instead of falling through to allow-all; the sessions listing no
+  longer exposes a matching session for an unsaved job to any signed-in user;
+  and step-dataclip fetches for the assistant are scoped to close a
+  cross-project data-disclosure and third-party model egress path.
+- Remove untrusted input from dangerous operations. An operating-system
+  command-injection sink in adaptor metadata fetching, reachable through a
+  credential body or adaptor name, has been removed. Adaptor installation and
+  metadata lookups are now restricted to packages listed in the adaptor
+  registry, with strict package-name validation on every path that writes a
+  job's adaptor, which also rejects names carrying shell metacharacters. The
+  dashboard sort parameters are now validated, so a crafted sort request can no
+  longer exhaust the runtime's atom table and crash the instance.
+- Bind sessions, socket tokens and personal access tokens to account state and
+  second-factor completion. Blocking an account, or scheduling it for deletion,
+  now takes effect at request time across session, socket and API-token
+  authentication, and deletion purges the account's tokens; previously a
+  disabled account's personal access tokens kept working on the collections API.
+  WebSocket tokens are now tied to the user's revocable database session and are
+  torn down on logout, password change or reset, and account disable, across
+  every device. Revoked personal access tokens are now rejected on the
+  collections API, to match the main API. Multi-factor (TOTP) completion is
+  enforced before a session is treated as authenticated on every request format
+  and on the user socket. Single sign-on logins now validate their CSRF state,
+  their identity token and a verified email, and apply the same disabled and
+  scheduled-for-deletion gate as password login. The token deletion confirmation
+  is validated against the token it was opened for, so a user can no longer
+  delete another user's tokens or sessions.
+- Harden the channel proxy against server-side request forgery and cross-tenant
+  access. Proxied requests no longer carry the caller's Lightning session
+  credentials to the destination, and sensitive values are redacted from channel
+  observations. Requests to internal, loopback, link-local and cloud-metadata
+  addresses are blocked by default, evaluated on the resolved address so that
+  DNS and address-encoding tricks do not bypass the guard; operators can adjust
+  the allowed and blocked ranges through configuration. The channel edit form
+  and its destination credentials are scoped to the channel's own project.
+- Harden the OAuth client against server-side request forgery and privilege
+  escalation. Server-side OAuth requests are routed through an egress guard that
+  rejects internal, link-local and cloud-metadata addresses on the resolved
+  address. The OAuth client's instance-wide flag can no longer be set by a
+  non-superuser, so a non-privileged user can no longer publish a client across
+  the whole instance.
+- Authorise collections operations by role rather than by bare project
+  membership. Every collections API verb previously reduced to a single
+  membership check, so a read-only member could modify or delete collection
+  data. Writes now require at least editor, destroying a collection requires
+  owner or admin, and reads remain open to any project member; workers keep full
+  access to collections within their own run's project, and a run can no longer
+  reach collections outside its project. Sandbox merges no longer delete the
+  target project's collections: that deletion is now gated on owner or admin, so
+  an editor-permitted merge leaves the target's collections intact.
+- Gate privileged actions and fields by role. Project-settings save and the
+  self-service project-creation flow no longer mass-assign privileged fields
+  (multi-factor requirement, scheduled deletion, retention, support access and
+  parent project) past their dedicated gates, so, among other things, a project
+  can no longer be attached under an arbitrary parent. Instance-admin views now
+  halt a non-admin at mount, so admin-only actions cannot be driven from a
+  non-admin session. Exporting work-order history now requires run-workflow
+  permission (editor or above) rather than being open to any viewer, and the
+  export scrubs raw dataclip bodies and stored HTTP headers before writing the
+  archive, so a downloaded export can no longer leak webhook authentication
+  headers or credential values.
+
+## [2.16.8] - 2026-07-01
+
+## [2.16.8-pre] - 2026-06-18
+
+### Added
+
+- The job code AI assistant now shows the progress statuses (e.g. "Writing
+  code...") that Apollo streams _after_ the text answer while it generates code,
+  displayed below the answer in the same style as the initial "Thinking..."
+  indicator. Statuses are surfaced in whatever order Apollo sends them.
+  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+
+### Changed
+
+- Global chat can now change multiple workflow steps in a single response. It
+  receives a full workflow YAML from the Apollo AI server with each step's job
+  code embedded, and applies the changes together. When a step is open in the
+  editor, its diff is previewed before applying; previewing several step diffs
+  at once is a follow-up.
+  [#4890](https://github.com/OpenFn/lightning/issues/4890)
+- Redesigned the trigger inspector in the collaborative editor: selecting a
+  trigger now opens a read-only resting panel with an **Edit** button that leads
+  into a guided wizard (Choose → Configure → Finish), replacing the previous
+  edit-in-place form. [#4787](https://github.com/OpenFn/lightning/issues/4787)
+- Consolidate email format validation onto a single canonical validator (Zod v4
+  regex) applied uniformly across user creation, credential transfer, and both
+  collaborator add/invite flows. Fixes a silent inconsistency where
+  plus-addressed emails and other valid addresses were accepted at creation but
+  rejected by the collaborator forms.
+  [#4765](https://github.com/OpenFn/lightning/issues/4765)
+- Consolidated run and work order state definitions into single source of truth
+  by adding `Run.active_states/0`, `WorkOrder.states/0`, and
+  `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
+  codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
+
+### Fixed
+
+- Stop the run channel from crashing during `fetch:credential` when an OAuth
+  provider times out while refreshing a token.
+  [#4853](https://github.com/OpenFn/lightning/issues/4853)
+- Stop the collaborative editor's Session (and the Phoenix channel calling it)
+  from crashing when the cross-node `SharedDoc.unobserve/1` during cleanup hits
+  a SharedDoc on a node that is unreachable (`:noconnection`) or slow to reply
+  (`:timeout`); the failed unobserve is now tolerated as a no-op since the
+  SharedDoc cleans up observers via its own monitor.
+  [#4817](https://github.com/OpenFn/lightning/issues/4817)
+- Fix email format validation not displaying in the Add Collaborators and Invite
+  Collaborator modal. [#4765](https://github.com/OpenFn/lightning/issues/4765)
+- Fix a `workflows_pkey` duplicate-key crash when reconnecting to the
+  collaborative editor after a save. Workflow resolution is now centralised in a
+  single `Lightning.Collaboration.WorkflowResolver`, so the channel join and the
+  session save path can no longer disagree on whether an id should INSERT or
+  UPDATE. [#4830](https://github.com/OpenFn/lightning/issues/4830)
+- Ensure that credentials are properly transferred when merging a sandbox. This
+  fixes a validation error which can occur on merge
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Free up a workflow's name when it is deleted by a merge, so a later merge can
+  reuse that name [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Replace the generic "validation error" on a failed sandbox merge with a clear
+  message, naming the conflicting workflow when there is one
+  [#4831](https://github.com/OpenFn/lightning/issues/4831)
+- Add a credential created in a sandbox to its full ancestor chain, so it
+  survives a merge into any ancestor
+
+## [2.16.7] - 2026-06-04
+
+### Changed
+
+- Stop reporting expected credential-resolution failures (OAuth re-auth needed,
+  misconfigured project environment, transient provider errors) to Sentry. These
+  are now logged once, in `Lightning.Credentials.Resolver`, at `info`/`warning`
+  instead of `error`; only a genuinely missing project still logs at `error`.
+  [#4814](https://github.com/OpenFn/lightning/issues/4814)
+- Extend UUID format validation to all `:binary_id` foreign keys on jobs,
+  triggers, edges and workflows so a malformed id surfaces as a changeset error
+  instead of an `Ecto.ChangeError` at insert; de-duplicate the validator by
+  routing `Channels.SearchParams` onto the shared
+  `Lightning.Validators.validate_uuid`.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- The cron-trigger cursor (`cron_cursor_job_id`) foreign key is now compound and
+  same-workflow, matching workflow edges: a trigger's cursor may only reference
+  a job in its own workflow. Cross-workflow cursors — previously accepted
+  silently by the single-column FK — are now rejected with a changeset error on
+  save and on provisioning/import. A migration nulls any pre-existing
+  cross-workflow cursors (the cron lookup falls back to final-run state when the
+  cursor is nil); this nilification is not reversible.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+
+### Fixed
+
+- Fix icon vertical alignment in sandbox alert banners
+  [#4730](https://github.com/OpenFn/lightning/issues/4730)
+- Fix issue where back button must be pressed 3 times to go back once from the
+  Workflow canvas [#4812](https://github.com/OpenFn/lightning/issues/4812)
+- Reduce `run:log` channel timeouts under heavy log volume by moving `log_lines`
+  search indexing off the insert path. The full-text search vector is now
+  backfilled by a background worker rather than computed synchronously on every
+  insert, so log search is eventually-consistent (typically within a minute).
+  [#4425](https://github.com/OpenFn/lightning/issues/4425)
+- Dataclip inserts no longer roll back when building the full-text search vector
+  is slow. The `jsonb_to_tsvector` work that ran in an `AFTER INSERT` trigger
+  could hold the connection past the timeout and roll back the insert, losing
+  the whole run. The search vector is now built off the insert path by a
+  background `Lightning.Invocation.DataclipSearchVectorWorker` (sharing the
+  `search_indexing` queue with the log-lines worker), making dataclip search
+  eventually consistent.
+  [#4800](https://github.com/OpenFn/lightning/issues/4800)
+- Channel join crashes when multiple users open the same workflow concurrently
+  [#4802](https://github.com/OpenFn/lightning/issues/4802)
+- Fix `purge_deleted` Oban job crashing when a soft-deleted project has
+  associated OAuth clients. The `project_oauth_clients` join rows are now
+  cleaned up alongside the other project-scoped deletes in
+  `ProjectHook.handle_delete_project/1`.
+  [#4807](https://github.com/OpenFn/lightning/pull/4807)
+- Bump Tesla from 1.15.3 to 1.18.2 to pick up the streaming-error fix
+  ([elixir-tesla/tesla#819](https://github.com/elixir-tesla/tesla/pull/819)).
+  The older adapter raised `CaseClauseError` when Finch reported a transport
+  error mid-stream, taking down the AI assistant worker; 1.16+ handles the
+  3-tuple error shape gracefully.
+  [#4781](https://github.com/OpenFn/lightning/issues/4781)
+- Slow GitHub responses cause repo list to fail to load on project settings
+  [#4810](https://github.com/OpenFn/lightning/issues/4810)
+- Workflow channel raises an exception when fetching trigger auth methods for an
+  unpersisted trigger [#4819](https://github.com/OpenFn/lightning/issues/4819)
+- Collaborative session no longer crashes when saving a cron trigger whose
+  `cron_cursor_job_id` references a deleted job. Two independent mechanisms now
+  cooperate, with the server authoritative and the client advisory: server-side,
+  the compound cron-cursor foreign key nulls the cursor when its job is deleted
+  (and rejects cross-workflow cursors), and `save_workflow/3` rescues the
+  resulting constraint error into a changeset error so the session stays up;
+  client-side, a single advisory `reconcileDanglingReferences` pass nulls
+  orphaned cursors before save as a UX fast-path. The client cleanup does not by
+  itself produce the validation error and cannot close the concurrent-editor
+  race — the server resolves that case authoritatively.
+  [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative session no longer crashes when a workflow payload contains a
+  malformed UUID (e.g. an unsubstituted template placeholder) for a job,
+  trigger, or edge id. These ids are now validated in the changesets, so the bad
+  value returns a changeset error instead of raising an `Ecto.ChangeError`
+  during insert. [#4816](https://github.com/OpenFn/lightning/issues/4816)
+- Collaborative workflow saves no longer crash the session/channel when the
+  payload contains a malformed reference or value: `validate_uuid` now checks
+  with `Ecto.UUID.dump/1` (the function that runs at insert) so 16-byte non-hex
+  placeholders are rejected as changeset errors, and `Workflows.save_workflow/3`
+  rescues a typed allow-list of Ecto exceptions (`Ecto.ChangeError`,
+  `Ecto.Query.CastError`, `Ecto.ConstraintError`) and returns a changeset error
+  instead of raising. [#4816](https://github.com/OpenFn/lightning/issues/4816)
+
 ## [2.16.6] - 2026-05-27
 
 ### Fixed

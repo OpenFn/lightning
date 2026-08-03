@@ -5,7 +5,7 @@ import type { XYPosition } from '@xyflow/react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { randomUUID } from '../common';
-import { DEFAULT_TEXT } from '../editor/Editor';
+import { DEFAULT_TEXT } from '../workflow-store/constants';
 import { useWorkflowStore } from '../workflow-store/store';
 
 import { styleEdge } from './styles';

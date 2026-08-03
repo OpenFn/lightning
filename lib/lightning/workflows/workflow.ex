@@ -10,6 +10,7 @@ defmodule Lightning.Workflows.Workflow do
   use Lightning.Schema
 
   alias Lightning.Projects.Project
+  alias Lightning.Validators
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
@@ -85,6 +86,7 @@ defmodule Lightning.Workflows.Workflow do
 
   def validate(changeset) do
     changeset
+    |> Validators.validate_uuid(:project_id)
     |> assoc_constraint(:project)
     |> validate_number(:concurrency, greater_than_or_equal_to: 1)
     |> validate_required([:name])

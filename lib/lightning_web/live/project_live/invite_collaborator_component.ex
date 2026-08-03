@@ -33,6 +33,7 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
       assign(socket,
         changeset:
           InvitedCollaborators.changeset(socket.assigns.collaborators, params)
+          |> Map.put(:action, :validate)
       )
 
     with :ok <- limit_adding_users(socket, params) do

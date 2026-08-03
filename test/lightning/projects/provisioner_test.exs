@@ -2,6 +2,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Auditing.Audit
+  alias Lightning.Credentials.Scoping
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
   alias Lightning.Workflows.Snapshot
@@ -121,6 +122,68 @@ defmodule Lightning.Projects.ProvisionerTest do
                      }
                    ]
                  }
+               ]
+             } = flatten_errors(changeset)
+    end
+
+    test "rejects a job with a malformed adaptor" do
+      %{body: body} = valid_document()
+
+      body =
+        body
+        |> Map.update!("workflows", fn workflows ->
+          workflows
+          |> Enum.map(fn workflow ->
+            workflow
+            |> Map.update!("jobs", fn [first_job | rest] ->
+              [
+                Map.put(
+                  first_job,
+                  "adaptor",
+                  "@openfn/language-http@7.3.2; touch /tmp/x"
+                )
+                | rest
+              ]
+            end)
+          end)
+        end)
+
+      changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, body)
+
+      refute changeset.valid?
+
+      assert %{
+               workflows: [
+                 %{jobs: [%{adaptor: ["adaptor has invalid format"]} | _]}
+               ]
+             } = flatten_errors(changeset)
+    end
+
+    test "rejects a job with an adaptor that is not in the registry" do
+      %{body: body} = valid_document()
+
+      body =
+        body
+        |> Map.update!("workflows", fn workflows ->
+          workflows
+          |> Enum.map(fn workflow ->
+            workflow
+            |> Map.update!("jobs", fn [first_job | rest] ->
+              [
+                Map.put(first_job, "adaptor", "@openfn/language-foo@1.0.0")
+                | rest
+              ]
+            end)
+          end)
+        end)
+
+      changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, body)
+
+      refute changeset.valid?
+
+      assert %{
+               workflows: [
+                 %{jobs: [%{adaptor: ["is not a recognised adaptor"]} | _]}
                ]
              } = flatten_errors(changeset)
     end
@@ -924,6 +987,46 @@ defmodule Lightning.Projects.ProvisionerTest do
              "The soft-deleted workflow should be excluded from the project"
     end
 
+    test "soft-deleting a workflow frees its name for reuse", %{
+      project: project,
+      user: user
+    } do
+      %{
+        body: body,
+        workflows: [%{id: workflow_id}]
+      } = valid_document(project.id)
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      original_name =
+        Repo.get!(Lightning.Workflows.Workflow, workflow_id).name
+
+      {:ok, _} =
+        body
+        |> remove_workflow_from_document(workflow_id)
+        |> then(&Provisioner.import_document(project, user, &1))
+
+      deleted = Repo.get!(Lightning.Workflows.Workflow, workflow_id)
+
+      assert deleted.deleted_at
+
+      assert deleted.name == "#{original_name}_del",
+             "The soft-deleted workflow should release its original name"
+
+      # A fresh workflow can now reuse the freed name on a later import.
+      %{body: reuse_body} = valid_document(project.id)
+
+      reuse_body =
+        Map.update!(reuse_body, "workflows", fn [workflow] ->
+          [Map.put(workflow, "name", original_name)]
+        end)
+
+      assert {:ok, reimported} =
+               Provisioner.import_document(project, user, reuse_body)
+
+      assert Enum.any?(reimported.workflows, &(&1.name == original_name))
+    end
+
     test "disables all triggers on a workflow that is soft-deleted via provisioner",
          %{
            project: project,
@@ -1532,6 +1635,42 @@ defmodule Lightning.Projects.ProvisionerTest do
              } = flatten_errors(changeset)
 
       assert msg =~ "isn't available in this project"
+
+      # Channel was not persisted
+      refute Repo.get(Lightning.Channels.Channel, channel_id)
+    end
+
+    test "rejects a nonexistent destination_credential_id with the shared wording",
+         %{
+           project: %{id: project_id} = project,
+           user: user
+         } do
+      channel_id = Ecto.UUID.generate()
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel_id,
+            "name" => "leaky-channel",
+            "destination_url" => "https://example.com/destination",
+            "enabled" => true,
+            "destination_credential_id" => Ecto.UUID.generate()
+          }
+        ]
+      }
+
+      assert {:error, changeset} =
+               Provisioner.import_document(project, user, body)
+
+      assert %{
+               channels: [
+                 %{destination_auth_method: %{project_credential_id: [msg]}}
+               ]
+             } = flatten_errors(changeset)
+
+      assert msg == Scoping.violation_message(:project_credential_id)
 
       # Channel was not persisted
       refute Repo.get(Lightning.Channels.Channel, channel_id)

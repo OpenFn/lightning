@@ -12,122 +12,43 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import type { MonacoHandle } from '../../../js/collaborative-editor/components/CollaborativeMonaco';
-import type { AIModeResult } from '../../../js/collaborative-editor/hooks/useAIMode';
 import { useAIWorkflowApplications } from '../../../js/collaborative-editor/hooks/useAIWorkflowApplications';
 import { notifications } from '../../../js/collaborative-editor/lib/notifications';
-import type { Job } from '../../../js/collaborative-editor/types';
 import type { ConnectionState } from '../../../js/collaborative-editor/types/ai-assistant';
 
-// Mock modules
-vi.mock('../../../js/yaml/util', () => ({
-  parseWorkflowYAML: vi.fn((yaml: string) => {
-    if (yaml.includes('invalid')) {
-      throw new Error('Invalid YAML syntax');
-    }
-    if (yaml.includes('object-id')) {
-      return {
-        jobs: {
-          'job-1': {
-            id: { invalid: 'object' }, // Object ID (invalid)
-            name: 'Job 1',
-          },
-        },
-      };
-    }
-    return {
-      name: 'Test Workflow',
-      jobs: {
-        'job-1': { id: 'job-1', name: 'Job 1', body: 'console.log("test");' },
-      },
-      triggers: {},
-      edges: [],
-    };
-  }),
-  convertWorkflowSpecToState: vi.fn(
-    (spec: {
-      name: string;
-      jobs: Record<string, unknown>;
-      triggers?: Record<string, unknown>;
-      edges?: unknown[];
-    }) => ({
-      name: spec.name,
-      jobs: spec.jobs,
-      triggers: spec.triggers || {},
-      edges: spec.edges || [],
-    })
-  ),
-  applyJobCredsToWorkflowState: vi.fn((state: unknown, _creds: unknown) => ({
-    ...(state as Record<string, unknown>),
-    _credentialsApplied: true,
-  })),
-  extractJobCredentials: vi.fn((jobs: Job[]) =>
-    jobs.reduce(
-      (acc: Record<string, string>, job: Job & { credential?: string }) => {
-        if (job.credential) {
-          acc[job.id] = job.credential;
-        }
-        return acc;
-      },
-      {} as Record<string, string>
-    )
-  ),
-}));
+import { createAIWorkflowApplicationsMocks } from './__helpers__/aiWorkflowApplicationsTestSetup';
 
-vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
-  notifications: {
-    alert: vi.fn(),
-    success: vi.fn(),
-  },
-}));
+// Mock modules. The mock implementations are dynamically imported from
+// the shared helper (rather than statically imported at the top of this
+// file) because vi.mock() factories are hoisted above imports; a static
+// import here would be referenced before it's initialized.
+vi.mock('../../../js/yaml/util', async () => {
+  const { aiWorkflowApplicationsYamlUtilMock } = await import(
+    './__helpers__/aiWorkflowApplicationsTestSetup'
+  );
+  return aiWorkflowApplicationsYamlUtilMock();
+});
+
+vi.mock('../../../js/collaborative-editor/lib/notifications', async () => {
+  const { aiWorkflowApplicationsNotificationsMock } = await import(
+    './__helpers__/aiWorkflowApplicationsTestSetup'
+  );
+  return aiWorkflowApplicationsNotificationsMock();
+});
 
 describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
-  // Mock functions
-  const mockImportWorkflow = vi.fn(() => Promise.resolve());
-  const mockStartApplyingWorkflow = vi.fn(() => Promise.resolve(true));
-  const mockDoneApplyingWorkflow = vi.fn(() => Promise.resolve());
-  const mockStartApplyingJobCode = vi.fn(() => Promise.resolve(true));
-  const mockDoneApplyingJobCode = vi.fn(() => Promise.resolve());
-  const mockUpdateJob = vi.fn();
-  const mockSetPreviewingMessageId = vi.fn();
-  const mockSetApplyingMessageId = vi.fn();
-  const mockClearDiff = vi.fn();
-  const mockShowDiff = vi.fn();
-
-  const mockWorkflowActions = {
-    importWorkflow: mockImportWorkflow,
-    startApplyingWorkflow: mockStartApplyingWorkflow,
-    doneApplyingWorkflow: mockDoneApplyingWorkflow,
-    startApplyingJobCode: mockStartApplyingJobCode,
-    doneApplyingJobCode: mockDoneApplyingJobCode,
-    updateJob: mockUpdateJob,
-  };
-
-  const createMockMonacoRef = () => ({
-    current: {
-      clearDiff: mockClearDiff,
-      showDiff: mockShowDiff,
-    } as MonacoHandle,
-  });
-
-  const createMockAIMode = (
-    mode: 'workflow_template' | 'job_code',
-    context: Record<string, unknown> = {}
-  ): AIModeResult => ({
-    mode: 'workflow_template',
-    page: mode,
-    context,
-    storageKey: `ai-${mode}`,
-  });
-
-  const createMockJob = (overrides: Partial<Job> = {}): Job => ({
-    id: 'job-1',
-    name: 'Test Job',
-    body: 'console.log("old code");',
-    adaptor: '@openfn/language-http@latest',
-    enabled: true,
-    ...overrides,
-  });
+  const {
+    mockImportWorkflow,
+    mockStartApplyingWorkflow,
+    mockDoneApplyingWorkflow,
+    mockSetPreviewingMessageId,
+    mockSetApplyingMessageId,
+    mockStreamingApplyActions,
+    mockWorkflowActions,
+    createMockMonacoRef,
+    createMockAIMode,
+    createMockJob,
+  } = createAIWorkflowApplicationsMocks();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -149,7 +70,12 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        isSessionConnected: true,
+        isSessionConnecting: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -181,7 +107,12 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        isSessionConnected: true,
+        isSessionConnecting: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -214,7 +145,12 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        isSessionConnected: true,
+        isSessionConnecting: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -252,7 +188,12 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        isSessionConnected: true,
+        isSessionConnecting: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -285,7 +226,12 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        isSessionConnected: true,
+        isSessionConnecting: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -313,7 +259,12 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        isSessionConnected: true,
+        isSessionConnecting: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
@@ -345,7 +296,12 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         setPreviewingMessageId: mockSetPreviewingMessageId,
         previewingMessageId: null,
         setApplyingMessageId: mockSetApplyingMessageId,
+        isNewWorkflow: false,
+        isSessionConnected: true,
+        isSessionConnecting: false,
         appliedMessageIdsRef: { current: new Set() },
+        streamingApply: null,
+        streamingApplyActions: mockStreamingApplyActions,
       })
     );
 
