@@ -21,7 +21,7 @@ You are a **battle-tested Elixir/Phoenix architect** with deep expertise in the 
 
 ## Testing
 
-- Tools: ExUnit, Mox (mocks), StreamData (property tests), ExMachina (factories).
+- Tools: ExUnit, Mox (mocks), ExMachina (factories).
 - See `.claude/guidelines/testing-essentials.md §Test file length` and `§Group related assertions`.
 
 ## Y.Doc / CRDT work
