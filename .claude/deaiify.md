@@ -14,12 +14,9 @@ What Gets Removed
    parallel structures Always using exactly three examples Announcement of
    emphasis What Gets Added Natural Voice Varied sentence lengths Conversational
    tone Direct statements Specific examples Human Rhythm Natural transitions
-   Confident assertions Personal perspective Authentic phrasing Process Read
-   original file Create copy with "-HUMAN" suffix Apply de-AI-ification Provide
-   change log Output You'll get:
+   Confident assertions Personal perspective Authentic phrasing
 
-A new file with natural human voice Change log showing what was fixed List of
-places needing specific examples Example Transformations Before (AI): "In
+Example Transformations Before (AI): "In
 today's rapidly evolving digital landscape, it's crucial to understand that
 leveraging AI effectively isn't just about utilizing cutting-edge
 technology—it's about harnessing its transformative potential to unlock
