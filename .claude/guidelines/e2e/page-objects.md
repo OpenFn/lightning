@@ -49,63 +49,23 @@ Component POMs
 
 ### LiveViewPage Base Class
 
-Provides common functionality for Phoenix LiveView pages:
+Provides common functionality for Phoenix LiveView pages.
+`assets/test/e2e/pages/base/liveview.page.ts` is 104 lines. Read it rather than a copy — this
+file used to carry a transcription of it that had drifted, writing `toHaveClass` where the
+source says `toContainClass`, and omitting `waitForEventAttached` entirely.
 
-```typescript
-// pages/base/liveview.page.ts
-import { expect } from '@playwright/test';
-import type { Page, Locator } from '@playwright/test';
+What the base class gives every page object:
 
-export abstract class LiveViewPage {
-  protected baseSelectors = {
-    phoenixMain: 'div[data-phx-main]',
-    flashMessage: '[id^="flash-"][phx-hook="Flash"]',
-  };
+| Member | Purpose |
+|---|---|
+| `baseSelectors` | `div[data-phx-main]` and `[id^="flash-"][phx-hook="Flash"]` |
+| `waitForConnected()` | Waits for `phx-connected` on the main container |
+| `waitForSocketSettled()` | Pings the socket. Its own docstring says this still needs verifying |
+| `waitForEventAttached(locator, eventType, timeout)` | Waits for a LiveView handler to attach |
+| `expectFlashMessage(text)` | Asserts a flash containing `text` |
+| `clickMenuItem(text)` | Clicks a `#side-menu` link by name |
 
-  constructor(protected page: Page) {}
-
-  /**
-   * Wait for Phoenix LiveView connection.
-   * See `.claude/guidelines/e2e/phoenix-liveview.md §LiveView waits` for the canonical implementation and rationale.
-   */
-  async waitForConnected(): Promise<void> {
-    const locator = this.page.locator(this.baseSelectors.phoenixMain);
-    await expect(locator).toBeVisible();
-    await expect(locator).toHaveClass(/phx-connected/);
-  }
-
-  /**
-   * Wait for WebSocket to settle
-   */
-  async waitForSocketSettled(): Promise<void> {
-    await this.page.waitForFunction(() => {
-      return new Promise(resolve => {
-        window.liveSocket.socket.ping(resolve);
-      });
-    });
-  }
-
-  /**
-   * Assert flash message is visible
-   */
-  async expectFlashMessage(text: string): Promise<void> {
-    const flashMessage = this.page
-      .locator(this.baseSelectors.flashMessage)
-      .filter({ hasText: text });
-    await expect(flashMessage).toBeVisible();
-  }
-
-  /**
-   * Click sidebar menu item
-   */
-  async clickMenuItem(itemText: string): Promise<void> {
-    await this.page
-      .locator('#side-menu')
-      .getByRole('link', { name: itemText })
-      .click();
-  }
-}
-```
+See `.claude/guidelines/e2e/phoenix-liveview.md §LiveView waits` for when to use each.
 
 **Key Principles:**
 - Use `protected page: Page` for subclass access
