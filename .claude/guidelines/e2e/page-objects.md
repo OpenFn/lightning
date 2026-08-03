@@ -421,41 +421,46 @@ test('edit workflow', async ({ page }) => {
 });
 ```
 
-### Factory Methods
+### Getter factories, and parameters on locators
 
-Create component instances with parameters:
+There are no parameterised component constructors in this suite. Two patterns cover the same
+ground, and both are in the code.
+
+**A getter that builds the component on demand.** `workflow-collab.page.ts:34-36`:
 
 ```typescript
-export class WorkflowEditPage extends LiveViewPage {
-  /**
-   * Factory method for job forms by index
-   */
-  jobForm(jobIndex: number): JobFormPage {
-    return new JobFormPage(this.page, jobIndex);
-  }
-
-  /**
-   * Factory method for job nodes by name
-   */
-  jobNode(jobName: string): JobNodePage {
-    return new JobNodePage(this.page, jobName);
-  }
+get jobInspector(): JobInspectorPage {
+  return new JobInspectorPage(this.page);
 }
+```
 
-// Usage
-test('configure multiple jobs', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
+The component takes only `page` (`job-inspector.page.ts:11`), so the getter needs no
+arguments. Reach for this when the component is a singleton on the page.
 
-  await page.goto('/w/123');
-  await workflowEdit.waitForConnected();
+**Parameters on the locator method, not the constructor.** `WorkflowDiagramNodesPage` takes
+only `page` and puts the parameter where the query is:
 
-  // Create different instances
-  await workflowEdit.jobForm(0).nameInput.fill('Job 1');
-  await workflowEdit.jobForm(1).nameInput.fill('Job 2');
+```typescript
+getByName(name: string): Locator          // workflow-diagram-nodes.page.ts:27
+getJobByIndex(index: number): Locator     // :36
+async clickJobByIndex(index: number)      // :137
+```
 
-  await workflowEdit.jobNode('Job 1').clickRunButton();
-  await workflowEdit.jobNode('Job 2').clickDeleteButton();
-});
+This is what replaced the old `jobForm(index)` factory. One instance of the component POM
+handles every node, and there is no per-instance state to get wrong. Prefer it.
+
+`WorkflowCollaborativePage` composes only `jobInspector`, so a test that needs the diagram
+constructs `WorkflowDiagramPage` alongside it — which is what
+`specs/collaborative/edge-validation.spec.ts:41,48` does.
+
+```typescript
+const collabEditor = new WorkflowCollaborativePage(page);
+const diagram = new WorkflowDiagramPage(page);
+
+await collabEditor.open({ projectId, workflowId });
+
+await diagram.nodes.clickJobByIndex(0);
+await collabEditor.jobInspector.setName('Fetch Data');
 ```
 
 ## LiveView-Specific Waiting in POMs
