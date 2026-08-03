@@ -117,64 +117,11 @@ export abstract class LiveViewPage {
 
 ### Structure Pattern
 
-```typescript
-// pages/workflow-edit.page.ts
-import { expect } from '@playwright/test';
-import type { Page, Locator } from '@playwright/test';
-import { LiveViewPage } from './base';
-import { WorkflowDiagramPage, JobFormPage } from './components';
-
-export class WorkflowEditPage extends LiveViewPage {
-  // Component POMs
-  readonly diagram: WorkflowDiagramPage;
-
-  // Selectors specific to this page
-  protected selectors = {
-    topBar: '[data-testid="top-bar"]',
-    saveButton: 'button:has-text("Save")',
-    runButton: '[data-testid="run-workflow-btn"]',
-    workflowNameInput: 'input[name="workflow[name]"]',
-    unsavedChangesIndicator: '.absolute.-m-1.rounded-full.bg-danger-500',
-  };
-
-  constructor(page: Page) {
-    super(page);
-    // Initialize component POMs
-    this.diagram = new WorkflowDiagramPage(page);
-  }
-
-  /**
-   * Factory method for component POMs with parameters
-   */
-  jobForm(jobIndex: number = 0): JobFormPage {
-    return new JobFormPage(this.page, jobIndex);
-  }
-
-  /**
-   * Page-specific actions
-   */
-  async clickSaveWorkflow(): Promise<void> {
-    const topBar = this.page.locator(this.selectors.topBar);
-    const saveButton = topBar.locator(this.selectors.saveButton);
-    await expect(saveButton).toBeVisible();
-    await saveButton.click();
-  }
-
-  async setWorkflowName(name: string): Promise<void> {
-    const nameInput = this.page.locator(this.selectors.workflowNameInput);
-    await expect(nameInput).toBeVisible();
-    await nameInput.fill(name);
-  }
-
-  /**
-   * Return locators for flexible assertions in tests
-   */
-  unsavedChangesIndicator(): Locator {
-    const topBar = this.page.locator(this.selectors.topBar);
-    return topBar.locator(this.selectors.unsavedChangesIndicator);
-  }
-}
-```
+A page-level POM extends `LiveViewPage`, declares its own `selectors`, composes its component
+POMs, and exposes high-level actions. Read `pages/workflow-collab.page.ts` for the current
+example — `WorkflowCollaborativePage` is the one full-page POM in the suite, and
+`pages/login.page.ts`, `projects.page.ts` and `workflows.page.ts` are smaller instances of the
+same shape.
 
 **Key Principles:**
 - Extend `LiveViewPage` for Phoenix LiveView pages
