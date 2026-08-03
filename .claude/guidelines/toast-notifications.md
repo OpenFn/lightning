@@ -206,6 +206,8 @@ vi.mock("sonner", () => ({
     warning: vi.fn(),
     dismiss: vi.fn(),
   },
+  // Toaster.tsx imports this; without it any test that renders Toaster gets undefined.
+  Toaster: () => null,
 }));
 
 // Test notification calls
