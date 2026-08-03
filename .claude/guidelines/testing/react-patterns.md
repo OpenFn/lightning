@@ -35,22 +35,6 @@ test('channel emission drives hook state', async () => {
 });
 ```
 
-## Testing store-backed custom hooks
-
-Subscriptions created inside a hook must be cleaned up on unmount. For Lightning stores that expose a subscriber count for diagnostics:
-
-```typescript
-test('hook cleans up store subscriptions', () => {
-  const { unmount } = renderHook(() => useSession(), {
-    wrapper: createWrapper(),
-  });
-
-  const before = sessionStore._getSubscriberCount?.();
-  unmount();
-  expect(sessionStore._getSubscriberCount?.()).toBeLessThan(before);
-});
-```
-
 ## Context-provider tests
 
 Lightning has two store providers, `SessionProvider` and `StoreProvider`. When asserting "outside provider" behavior, run the hook without a wrapper and assert the thrown error message — the error text is part of the provider contract and is project-specific.
