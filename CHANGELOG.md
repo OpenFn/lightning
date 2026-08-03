@@ -19,6 +19,11 @@ and this project adheres to
 
 ### Changed
 
+- The global chat now starts streaming Apollo's response earlier, so users wait
+  less before seeing output. Lightning handles the several streaming event types
+  Apollo sends, including status updates.
+  [#4969](https://github.com/OpenFn/lightning/pull/4969)
+
 ### Fixed
 
 - The AI assistant no longer appends " 1" to a workflow's name each time it
@@ -328,7 +333,7 @@ Migrations in this release, all in `priv/repo/migrations/`:
   code...") that Apollo streams _after_ the text answer while it generates code,
   displayed below the answer in the same style as the initial "Thinking..."
   indicator. Statuses are surfaced in whatever order Apollo sends them.
-  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+  [#4833](https://github.com/OpenFn/lightning/pull/4833)
 
 ### Changed
 

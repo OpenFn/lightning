@@ -38,6 +38,23 @@ export interface MessageUser {
 }
 
 /**
+ * Message id of the in-flight streaming placeholder. Applies triggered
+ * mid-stream carry this id instead of a persisted message id.
+ */
+export const STREAMING_MESSAGE_ID = '__streaming__' as const;
+
+/**
+ * A single entry in an assistant message's display timeline: either a chunk
+ * of answer text or a status update ("Adding step...") woven between texts.
+ * Mirrors the backend `response_segments` contract
+ * (`{"type": "text" | "status", "content": string}`).
+ */
+export interface ResponseSegment {
+  type: 'text' | 'status';
+  content: string;
+}
+
+/**
  * Message represents a single chat message in the AI assistant
  */
 export interface Message {
@@ -55,6 +72,11 @@ export interface Message {
    * messages carry a full workflow YAML in `code` and never a `job_id`.
    */
   from_global?: boolean;
+  /**
+   * Interleaved text/status timeline for global assistant replies.
+   * `null`/absent for legacy and non-global messages (render flat `content`).
+   */
+  response_segments?: ResponseSegment[] | null;
 }
 
 /**
@@ -160,6 +182,12 @@ export interface AIAssistantState {
   streamingContent: string | null;
   streamingStatus: string | null;
   streamingChanges: Record<string, unknown> | null;
+  /**
+   * Woven text/status timeline built up while a reply streams in.
+   * Append-only during a stream; fed exclusively by the char drain so wire
+   * order is preserved. Reset alongside the other streaming fields.
+   */
+  streamingSegments: ResponseSegment[];
   streamingApply: StreamingApplyState | null;
 
   sessionList: SessionSummary[];
@@ -217,6 +245,7 @@ export interface AIAssistantStore {
   ) => void;
   _setProcessingState: (isProcessing: boolean) => void;
   _appendStreamingChunk: (content: string) => void;
+  _appendStreamingSegment: (segment: ResponseSegment) => void;
   setStreamingStatus: (text: string | null) => void;
   _setStreamingChanges: (changes: Record<string, unknown>) => void;
   _clearStreaming: () => void;

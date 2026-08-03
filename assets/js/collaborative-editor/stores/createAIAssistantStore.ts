@@ -61,6 +61,7 @@ import type {
   JobCodeContext,
   Message,
   MessageStatus,
+  ResponseSegment,
   Session,
   SessionListResponse,
   SessionSummary,
@@ -89,6 +90,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       streamingContent: null,
       streamingStatus: null,
       streamingChanges: null,
+      streamingSegments: [],
       streamingApply: null,
       sessionList: [],
       sessionListLoading: false,
@@ -162,6 +164,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingContent = null;
       draft.streamingStatus = null;
       draft.streamingChanges = null;
+      draft.streamingSegments = [];
     });
 
     notify('disconnect');
@@ -209,6 +212,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingContent = null;
       draft.streamingStatus = null;
       draft.streamingChanges = null;
+      draft.streamingSegments = [];
       draft.streamingApply = null;
     });
 
@@ -418,6 +422,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
           draft.streamingContent = null;
           draft.streamingStatus = null;
           draft.streamingChanges = null;
+          draft.streamingSegments = [];
         } else if (message.status === 'processing') {
           draft.isLoading = true;
         }
@@ -447,6 +452,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
         if (status === 'error') {
           draft.streamingContent = null;
           draft.streamingStatus = null;
+          draft.streamingSegments = [];
         }
         if (status === 'processing') {
           draft.isLoading = true;
@@ -568,8 +574,29 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   const _appendStreamingChunk = (content: string) => {
     state = produce(state, draft => {
       draft.streamingContent = (draft.streamingContent || '') + content;
+
+      // streamingContent stays the flat source of truth; the timeline is a
+      // parallel view of the same text, split by status segments.
+      const lastSegment = draft.streamingSegments.at(-1);
+      if (lastSegment && lastSegment.type === 'text') {
+        lastSegment.content += content;
+      } else {
+        draft.streamingSegments.push({ type: 'text', content });
+      }
     });
     notify('_appendStreamingChunk');
+  };
+
+  /**
+   * Append a status segment to the streaming timeline. Only the channel
+   * registry's char drain may call this — that is what keeps wire order.
+   * @internal
+   */
+  const _appendStreamingSegment = (segment: ResponseSegment) => {
+    state = produce(state, draft => {
+      draft.streamingSegments.push(segment);
+    });
+    notify('_appendStreamingSegment');
   };
 
   const setStreamingStatus = (text: string | null) => {
@@ -593,6 +620,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingContent = null;
       draft.streamingStatus = null;
       draft.streamingChanges = null;
+      draft.streamingSegments = [];
     });
     notify('_clearStreaming');
   };
@@ -720,6 +748,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _initializeContext,
     _setProcessingState,
     _appendStreamingChunk,
+    _appendStreamingSegment,
     setStreamingStatus,
     _setStreamingChanges,
     _clearStreaming,

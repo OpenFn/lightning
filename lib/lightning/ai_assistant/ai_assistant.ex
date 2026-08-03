@@ -1206,6 +1206,31 @@ defmodule Lightning.AiAssistant do
     acc
   end
 
+  # Bridge event: status — a persistent, completed-action status, the same
+  # shape as a persisted `response_segments` entry, so the client renders
+  # live and reloaded status segments identically. Transient "thinking"
+  # updates arrive separately as Anthropic thinking events (see
+  # handle_stream_event/2).
+  defp handle_sse_event(session_id, %{event: "status", data: data}, acc) do
+    case Jason.decode(data) do
+      {:ok, %{"type" => "status", "content" => content} = segment}
+      when is_binary(content) ->
+        # Take only the contract fields so stray keys from Apollo never
+        # reach the client.
+        broadcast_streaming_segment(
+          session_id,
+          Map.take(segment, ["type", "content"])
+        )
+
+      _ ->
+        Logger.warning(
+          "Dropping malformed status event for session #{session_id}"
+        )
+    end
+
+    acc
+  end
+
   # Bridge event: log — skip Python stdout
   defp handle_sse_event(_session_id, %{event: "log"}, acc), do: acc
 
@@ -1274,6 +1299,14 @@ defmodule Lightning.AiAssistant do
     )
   end
 
+  defp broadcast_streaming_segment(session_id, segment) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_segment,
+       %{segment: segment, session_id: session_id}}
+    )
+  end
+
   defp broadcast_streaming_error(session_id, error) do
     Lightning.broadcast(
       "ai_session:#{session_id}",
@@ -1297,7 +1330,9 @@ defmodule Lightning.AiAssistant do
     case error_response do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status not in @success_status_range ->
-        error_message = body["message"]
+        error_message =
+          error_message_from_body(body) ||
+            "AI server returned an error (HTTP #{status})."
 
         Logger.error(
           "AI query failed for session #{session.id}: #{error_message}"
@@ -1321,6 +1356,13 @@ defmodule Lightning.AiAssistant do
         {:error, "Oops! Something went wrong. Please try again."}
     end
   end
+
+  # Streaming requests carry a lazy Stream (a fun or %Stream{} struct) as the
+  # body, so error responses can't be indexed like decoded JSON maps.
+  defp error_message_from_body(body) when is_map(body) and not is_struct(body),
+    do: body["message"]
+
+  defp error_message_from_body(_body), do: nil
 
   defp build_job_message(body) do
     message = body["history"] |> Enum.reverse() |> hd()
@@ -1353,15 +1395,58 @@ defmodule Lightning.AiAssistant do
   defp build_global_message(body) do
     code = extract_global_workflow_yaml(body["attachments"])
 
-    message_attrs = %{
-      role: :assistant,
-      content: body["response"],
-      meta: %{"from_global" => true}
-    }
+    message_attrs =
+      %{
+        role: :assistant,
+        content: body["response"],
+        meta: %{"from_global" => true}
+      }
+      |> put_response_segments(
+        normalize_response_segments(body["response_segments"])
+      )
 
     opts = [usage: body["usage"] || %{}, meta: body["meta"], code: code]
     {message_attrs, opts}
   end
+
+  # Flat replies omit the key entirely: casting nil into embeds_many is an
+  # error, and an absent key leaves the column NULL for legacy parity.
+  defp put_response_segments(attrs, nil), do: attrs
+
+  defp put_response_segments(attrs, segments),
+    do: Map.put(attrs, :response_segments, segments)
+
+  # `response_segments` is the display timeline of the streamed reply (text and status
+  # segments in stream order); `response` stays the flat answer that history
+  # is rebuilt from. Apollo is an external boundary, so invalid or oversized
+  # segments are dropped (and counted in the logs) rather than failing the
+  # save: absent or all-invalid segments mean a flat legacy message. The
+  # segment contract itself lives in `ChatMessage.Segment`.
+  defp normalize_response_segments(segments) when is_list(segments) do
+    {valid, dropped} =
+      Enum.split_with(segments, fn segment ->
+        is_map(segment) and
+          ChatMessage.Segment.changeset(%ChatMessage.Segment{}, segment).valid?
+      end)
+
+    max_segments = ChatMessage.max_response_segments()
+    {kept, truncated} = Enum.split(valid, max_segments)
+
+    if dropped != [] or truncated != [] do
+      Logger.warning(
+        "Discarding response segments from Apollo payload: " <>
+          "#{length(dropped)} invalid, #{length(truncated)} over the " <>
+          "#{max_segments}-segment cap"
+      )
+    end
+
+    case kept do
+      [] -> nil
+      kept -> Enum.map(kept, &Map.take(&1, ["type", "content"]))
+    end
+  end
+
+  defp normalize_response_segments(_segments), do: nil
 
   # Global chat always returns a full workflow YAML (job bodies embedded).
   # The frontend handles per-step diffing and full-workflow apply.
