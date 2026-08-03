@@ -172,18 +172,6 @@ Install Rust: `brew install rust`
 Canonical roster. Command files (`create-plan.md`, `implement-plan.md`,
 `research-codebase.md`) cross-ref this section rather than repeating it.
 
-- **codebase-locator** - Find WHERE files and components live.
-- **codebase-analyzer** - Document HOW specific code works (no critique).
-- **codebase-pattern-finder** - Surface examples of existing patterns.
-- **context-locator** - Discover `.context/` documents about a topic.
-- **context-analyzer** - Extract key insights from a specific context doc.
-- **web-search-researcher** - External documentation and references (on request).
-- **phoenix-elixir-expert** - Elixir/Phoenix backend, Ecto, LiveView, Channels, OTP, ExUnit.
-- **react-collab-editor** - `assets/js/collaborative-editor/`, Y.Doc sync, Immer/useSyncExternalStore, TanStack Form, @xyflow/react.
-- **react-test-specialist** - React unit tests with Vitest; test quality and de-duplication.
-- **security-reviewer** - Security review of pending changes.
-- **idea-machine** - Brainstorming and framing shorthand.
-
 ## Guidelines Reference
 
 Detailed guidelines in `.claude/guidelines/`:
