@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-649427D7.js"></script>
+    <script defer src="dist/sidebar_items-BB853986.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -113,7 +113,9 @@ Lightning
     <section id="moduledoc">
 <p>Represents a message within an AI chat session.</p><p>Messages can be from users (role: :user) or from the AI assistant (role: :assistant).
 User messages start with :pending status and are updated based on processing results.
-Assistant messages typically have :success status when created.</p><h2 id="module-schema-fields" class="section-heading"><a href="#module-schema-fields" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Schema Fields</span></h2><ul><li><code class="inline">content</code> - The text content of the message (required, 1-10,000 characters)</li><li><code class="inline">code</code> - Optional code associated with the message (e.g., generated workflows)</li><li><code class="inline">role</code> - Who sent the message: <code class="inline">:user</code> or <code class="inline">:assistant</code></li><li><code class="inline">status</code> - Processing status: <code class="inline">:pending</code>, <code class="inline">:success</code>, <code class="inline">:error</code>, or <code class="inline">:cancelled</code></li><li><code class="inline">is_deleted</code> - Soft deletion flag (defaults to false)</li><li><code class="inline">is_public</code> - Whether the message is publicly visible (defaults to true)</li><li><code class="inline">meta</code> - Additional metadata (e.g., <code class="inline">&quot;unsaved_job&quot;</code> for job data not yet saved)</li><li><code class="inline">chat_session_id</code> - Reference to the parent chat session</li><li><code class="inline">user_id</code> - Reference to the user who sent the message (required for user messages)</li></ul>
+Assistant messages typically have :success status when created.</p><h2 id="module-schema-fields" class="section-heading"><a href="#module-schema-fields" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Schema Fields</span></h2><ul><li><code class="inline">content</code> - The text content of the message (required, 1-10,000 characters)</li><li><code class="inline">code</code> - Optional code associated with the message (e.g., generated workflows)</li><li><code class="inline">response_segments</code> - Optional display timeline of text and status segments
+for assistant messages (global chat); <code class="inline">[]</code> for flat messages (the column
+is NULL, which <code class="inline">embeds_many</code> loads as an empty list)</li><li><code class="inline">role</code> - Who sent the message: <code class="inline">:user</code> or <code class="inline">:assistant</code></li><li><code class="inline">status</code> - Processing status: <code class="inline">:pending</code>, <code class="inline">:success</code>, <code class="inline">:error</code>, or <code class="inline">:cancelled</code></li><li><code class="inline">is_deleted</code> - Soft deletion flag (defaults to false)</li><li><code class="inline">is_public</code> - Whether the message is publicly visible (defaults to true)</li><li><code class="inline">meta</code> - Additional metadata (e.g., <code class="inline">&quot;unsaved_job&quot;</code> for job data not yet saved)</li><li><code class="inline">chat_session_id</code> - Reference to the parent chat session</li><li><code class="inline">user_id</code> - Reference to the user who sent the message (required for user messages)</li></ul>
     </section>
 
 </div>
@@ -172,6 +174,16 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#max_response_segments/0" data-no-tooltip="" translate="no">max_response_segments()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Maximum number of segments accepted on a message.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#status_changeset/2" data-no-tooltip="" translate="no">status_changeset(chat_message, status)</a>
 
       </div>
@@ -204,7 +216,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
       <h1 class="signature" translate="no">role()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L28" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L70" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -232,7 +244,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
       <h1 class="signature" translate="no">status()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L29" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L71" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -260,7 +272,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L31" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L73" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -286,6 +298,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
   meta: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | nil,
   processing_completed_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>() | nil,
   processing_started_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>() | nil,
+  response_segments: [<a href="Lightning.AiAssistant.ChatMessage.Segment.html#t:t/0">Lightning.AiAssistant.ChatMessage.Segment.t</a>()],
   role: <a href="#t:role/0">role</a>(),
   status: <a href="#t:status/0">status</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>(),
@@ -321,7 +334,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
       <h1 class="signature" translate="no">changeset(chat_message, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L86" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L134" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -330,7 +343,31 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
 
   <section class="docstring">
 
-<p>Creates a changeset for a chat message.</p><h2 id="changeset/2-parameters" class="section-heading"><a href="#changeset/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">chat_message</code> - The ChatMessage struct to update (typically <code class="inline">%ChatMessage{}</code>)</li><li><code class="inline">attrs</code> - Map of attributes to set/update</li></ul><h2 id="changeset/2-validation-rules" class="section-heading"><a href="#changeset/2-validation-rules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Validation Rules</span></h2><ul><li><code class="inline">content</code> and <code class="inline">role</code> are required</li><li><code class="inline">content</code> must be between 1 and 10,000 characters</li><li>User messages (role: <code class="inline">:user</code>) require an associated user</li><li>Status defaults based on role: <code class="inline">:pending</code> for users, <code class="inline">:success</code> for assistant</li><li>If status is explicitly provided, it takes precedence over role-based defaults</li></ul>
+<p>Creates a changeset for a chat message.</p><h2 id="changeset/2-parameters" class="section-heading"><a href="#changeset/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">chat_message</code> - The ChatMessage struct to update (typically <code class="inline">%ChatMessage{}</code>)</li><li><code class="inline">attrs</code> - Map of attributes to set/update</li></ul><h2 id="changeset/2-validation-rules" class="section-heading"><a href="#changeset/2-validation-rules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Validation Rules</span></h2><ul><li><code class="inline">content</code> and <code class="inline">role</code> are required</li><li><code class="inline">content</code> must be between 1 and 10,000 characters</li><li><code class="inline">response_segments</code>, when present, must be <code class="inline">200</code> or
+fewer segments, each with a <code class="inline">type</code> of <code class="inline">text</code> or <code class="inline">status</code> and a <code class="inline">content</code>
+string of at most <code class="inline">10000</code> characters</li><li>User messages (role: <code class="inline">:user</code>) require an associated user</li><li>Status defaults based on role: <code class="inline">:pending</code> for users, <code class="inline">:success</code> for assistant</li><li>If status is explicitly provided, it takes precedence over role-based defaults</li></ul>
+  </section>
+</section>
+<section class="detail" id="max_response_segments/0">
+
+  <div class="detail-header">
+    <a href="#max_response_segments/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">max_response_segments()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L159" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Maximum number of segments accepted on a message.</p>
   </section>
 </section>
 <section class="detail" id="status_changeset/2">
@@ -343,7 +380,7 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
       <h1 class="signature" translate="no">status_changeset(chat_message, status)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L127" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L180" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -354,10 +391,10 @@ Assistant messages typically have :success status when created.</p><h2 id="modul
 
 <p>Creates a changeset for updating message status.</p><p>This is a focused changeset that only updates the status field,
 useful for updating message state during processing.</p><h2 id="status_changeset/2-parameters" class="section-heading"><a href="#status_changeset/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">chat_message</code> - The existing ChatMessage struct</li><li><code class="inline">status</code> - New status (<code class="inline">:pending</code>, <code class="inline">:success</code>, <code class="inline">:error</code>, or <code class="inline">:cancelled</code>)</li></ul><h2 id="status_changeset/2-examples" class="section-heading"><a href="#status_changeset/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Mark message as successful</span><span class="w">
-</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="7540375756-1">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:success</span><span class="p" data-group-id="7540375756-1">)</span><span class="w">
+</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="2801204945-1">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:success</span><span class="p" data-group-id="2801204945-1">)</span><span class="w">
 
 </span><span class="c1"># Mark message as failed</span><span class="w">
-</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="7540375756-2">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:error</span><span class="p" data-group-id="7540375756-2">)</span></code></pre>
+</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="2801204945-2">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:error</span><span class="p" data-group-id="2801204945-2">)</span></code></pre>
   </section>
 </section>
 
