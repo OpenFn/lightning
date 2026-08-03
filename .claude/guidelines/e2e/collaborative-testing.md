@@ -54,39 +54,6 @@ test('multiple users can edit simultaneously', async ({ browser }) => {
 });
 ```
 
-### Authentication Fixtures
-
-Create authentication states for different users:
-
-```typescript
-// global.setup.ts
-import { test as setup, expect } from '@playwright/test';
-
-setup('authenticate users', async ({ browser }) => {
-  // User 1
-  const user1Context = await browser.newContext();
-  const user1Page = await user1Context.newPage();
-  await user1Page.goto('/login');
-  await user1Page.fill('[name="email"]', 'editor@example.com');
-  await user1Page.fill('[name="password"]', 'password');
-  await user1Page.click('button[type="submit"]');
-  await user1Page.waitForURL('/projects');
-  await user1Context.storageState({ path: 'user1-auth.json' });
-  await user1Context.close();
-
-  // User 2
-  const user2Context = await browser.newContext();
-  const user2Page = await user2Context.newPage();
-  await user2Page.goto('/login');
-  await user2Page.fill('[name="email"]', 'viewer@example.com');
-  await user2Page.fill('[name="password"]', 'password');
-  await user2Page.click('button[type="submit"]');
-  await user2Page.waitForURL('/projects');
-  await user2Context.storageState({ path: 'user2-auth.json' });
-  await user2Context.close();
-});
-```
-
 ## Yjs and Y-Phoenix-Channel Testing
 
 ### Waiting for Yjs Connection
