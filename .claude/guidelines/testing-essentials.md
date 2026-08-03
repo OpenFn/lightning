@@ -142,20 +142,7 @@ Not `test('it works')`, `test('test1')`, `test('error')`.
 
 ### Setup
 
-Extract common setup into `beforeEach` or a factory helper:
-
-```typescript
-// __helpers__/storeHelpers.ts
-export function setupAdaptorStoreTest() {
-  const store = createAdaptorStore();
-  const mockChannel = createMockPhoenixChannel();
-  const mockProvider = createMockPhoenixChannelProvider(mockChannel);
-
-  mockChannel.push = createMockPushWithResponse('ok', { adaptors: [] });
-
-  return { store, mockChannel, mockProvider, cleanup: () => { /* ... */ } };
-}
-```
+Extract common setup into `beforeEach` or a factory helper. `assets/test/collaborative-editor/__helpers__/storeHelpers.ts` exports five, one per store shape.
 
 ## Async testing
 
