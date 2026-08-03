@@ -286,6 +286,11 @@ items = Yex.Array.to_list(array)
 - Read-only diffs, comparisons, hashing
 - Anything that ends directly at `|> Repo.insert/1` or `|> broadcast/1`
 
+The serializer's read path splits by object, deliberately: `extract_jobs`/`extract_edges`/
+`extract_triggers` take snapshots, while the workflow metadata stays on handles so
+`Yex.Map.fetch/2` can distinguish an absent key from an explicit nil and let schema defaults
+apply (`workflow_serializer.ex:119-135`).
+
 Primary accessors:
 
 ```elixir
