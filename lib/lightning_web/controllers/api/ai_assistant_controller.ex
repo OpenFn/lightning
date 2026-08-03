@@ -131,23 +131,30 @@ defmodule LightningWeb.API.AiAssistantController do
   end
 
   defp check_unsaved_job_access(nil, _user) do
+    # No matching session: listing returns nothing, so allowing is safe.
     :ok
   end
 
   defp check_unsaved_job_access(
-         %{meta: %{"unsaved_job" => %{"workflow_id" => workflow_id}}},
+         %{meta: %{"unsaved_job" => %{"workflow_id" => workflow_id}}} = session,
          user
        ) do
-    alias Lightning.Repo
+    case Workflows.get_workflow(workflow_id) do
+      nil ->
+        owner_or_forbidden(session, user)
 
-    workflow =
-      Workflows.get_workflow(workflow_id)
-      |> Repo.preload(project: [:project_users])
-
-    check_workflow_access(workflow, user)
+      workflow ->
+        workflow = Lightning.Repo.preload(workflow, project: [:project_users])
+        check_workflow_access(workflow, user)
+    end
   end
 
-  defp check_unsaved_job_access(_, _user), do: :ok
+  # No workflow to authorise against: owner-only, never allow-all (H-8a).
+  defp check_unsaved_job_access(session, user),
+    do: owner_or_forbidden(session, user)
+
+  defp owner_or_forbidden(%{user_id: user_id}, %{id: user_id}), do: :ok
+  defp owner_or_forbidden(_session, _user), do: {:error, :forbidden}
 
   defp check_workflow_access(workflow, user) do
     case Permissions.can(:workflows, :access_read, user, workflow.project) do

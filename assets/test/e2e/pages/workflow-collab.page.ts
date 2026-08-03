@@ -15,7 +15,7 @@ export class WorkflowCollaborativePage extends LiveViewPage {
     // Main container
     collaborativeEditor: '[data-testid="collaborative-editor"]',
 
-    // Connection status (via CollaborationWidget)
+    // Connection status
     syncStatus: 'text=Synced',
     connectedStatus: 'text=Connected',
 

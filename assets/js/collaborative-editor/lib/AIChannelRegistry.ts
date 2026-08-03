@@ -88,7 +88,6 @@ interface JoinResponse {
   session_id: string;
   session_type: SessionType;
   messages: Message[];
-  has_read_disclaimer: boolean;
 }
 
 interface MessageResponse {
@@ -490,30 +489,6 @@ export class AIChannelRegistry {
   }
 
   /**
-   * Mark disclaimer as read through the channel
-   *
-   * @param topic - Channel topic
-   */
-  markDisclaimerRead(topic: string): void {
-    const entry = this.channels.get(topic);
-
-    if (!entry) {
-      logger.error('Cannot mark disclaimer: channel not found', { topic });
-      return;
-    }
-
-    entry.channel
-      .push('mark_disclaimer_read', {})
-      .receive('ok', () => {
-        this.store.markDisclaimerRead();
-      })
-      .receive('error', (response: unknown) => {
-        const typedResponse = response as ChannelError;
-        logger.error('Failed to mark disclaimer', typedResponse);
-      });
-  }
-
-  /**
    * Load sessions list through the channel
    *
    * @param topic - Channel topic
@@ -759,11 +734,6 @@ export class AIChannelRegistry {
             session_type: typedResponse.session_type,
             messages: typedResponse.messages || [],
           });
-        }
-
-        // Set disclaimer state from backend
-        if (typedResponse.has_read_disclaimer) {
-          this.store.markDisclaimerRead();
         }
 
         logger.debug('Channel joined successfully', { topic: entry.topic });

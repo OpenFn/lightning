@@ -67,6 +67,62 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
+
+    test "with a live token and project access", %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      collection = insert(:collection, project: project)
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> get(~p"/collections/#{collection.name}")
+
+      assert json_response(conn, 200) == %{"items" => [], "cursor" => nil}
+    end
+
+    # The user keeps project access, so revocation is the only thing that can
+    # cause the 401.
+    test "with a deleted token, despite project access", %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      collection = insert(:collection, project: project)
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      user_token = Repo.get_by(Lightning.Accounts.UserToken, token: token)
+      {:ok, _} = Lightning.Accounts.delete_token(user_token)
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> get(~p"/collections/#{collection.name}")
+
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
+    # A plain disable revokes only sessions, not personal access tokens, so
+    # this PAT stays valid — the verify/1 blocked-user gate is what returns the
+    # 401.
+    test "with a disabled user, despite project access", %{conn: conn} do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      collection = insert(:collection, project: project)
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      {:ok, _user} =
+        Lightning.Accounts.update_user_details(user, %{disabled: true})
+
+      conn =
+        conn
+        |> assign_bearer(token)
+        |> get(~p"/collections/#{collection.name}")
+
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
   end
 
   describe "GET /collections/:name/:key" do
@@ -441,7 +497,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       user = insert(:user)
 
       project =
-        insert(:project, project_users: [%{user: user}])
+        insert(:project, project_users: [%{user: user, role: :owner}])
 
       collection =
         insert(:collection,
@@ -483,6 +539,106 @@ defmodule LightningWeb.API.CollectionsControllerTest do
         |> delete(~p"/collections/misspelled-collection/foo")
 
       assert json_response(conn, 404) == %{"error" => "Not Found"}
+    end
+  end
+
+  describe "authorization by project role" do
+    setup %{conn: conn} do
+      for role <- [:viewer, :editor, :admin, :owner] do
+        user = insert(:user)
+        project = insert(:project, project_users: [%{user: user, role: role}])
+
+        collection =
+          insert(:collection,
+            project: project,
+            items: [
+              %{key: "foo", value: "bar"},
+              %{key: "baz", value: "qux"}
+            ]
+          )
+
+        token = Lightning.Accounts.generate_api_token(user)
+        conn = assign_bearer(conn, token)
+
+        {role, %{conn: conn, collection: collection}}
+      end
+      |> Map.new()
+      |> then(&{:ok, &1})
+    end
+
+    test "viewers may read but not write", ctx do
+      %{conn: conn, collection: collection} = ctx.viewer
+
+      # reads are allowed
+      assert conn
+             |> get(~p"/collections/#{collection.name}/foo")
+             |> json_response(200)
+
+      assert conn
+             |> get(~p"/collections/#{collection.name}")
+             |> json_response(200)
+
+      # writes are rejected
+      assert conn
+             |> put(~p"/collections/#{collection.name}/new", value: "v")
+             |> json_response(401) == %{"error" => "Unauthorized"}
+
+      assert conn
+             |> post(~p"/collections/#{collection.name}", %{
+               items: [%{key: "new", value: "v"}]
+             })
+             |> json_response(401) == %{"error" => "Unauthorized"}
+
+      assert conn
+             |> delete(~p"/collections/#{collection.name}/foo")
+             |> json_response(401) == %{"error" => "Unauthorized"}
+
+      # delete_all (no key) must not wipe the collection
+      assert conn
+             |> delete(~p"/collections/#{collection.name}")
+             |> json_response(401) == %{"error" => "Unauthorized"}
+
+      assert Collections.get(collection, "foo")
+    end
+
+    test "editors may read and write but not delete_all", ctx do
+      %{conn: conn, collection: collection} = ctx.editor
+
+      assert conn
+             |> put(~p"/collections/#{collection.name}/new", value: "v")
+             |> json_response(200) == %{"upserted" => 1, "error" => nil}
+
+      assert %{"upserted" => 1} =
+               conn
+               |> post(~p"/collections/#{collection.name}", %{
+                 items: [%{key: "another", value: "v"}]
+               })
+               |> json_response(200)
+
+      assert %{"deleted" => 1} =
+               conn
+               |> delete(~p"/collections/#{collection.name}/foo")
+               |> json_response(200)
+
+      # wiping the whole collection is reserved for owners/admins
+      assert conn
+             |> delete(~p"/collections/#{collection.name}")
+             |> json_response(401) == %{"error" => "Unauthorized"}
+
+      assert Collections.get(collection, "baz")
+    end
+
+    for role <- [:admin, :owner] do
+      test "#{role}s may delete_all", ctx do
+        %{conn: conn, collection: collection} = ctx[unquote(role)]
+
+        assert %{"deleted" => 2} =
+                 conn
+                 |> delete(~p"/collections/#{collection.name}")
+                 |> json_response(200)
+
+        refute Collections.get(collection, "foo")
+      end
     end
   end
 
@@ -1193,7 +1349,7 @@ defmodule LightningWeb.API.CollectionsControllerTest do
   describe "?project_id=<uuid> query param" do
     setup %{conn: conn} do
       user = insert(:user)
-      project = insert(:project, project_users: [%{user: user}])
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
 
       collection =
         insert(:collection,
