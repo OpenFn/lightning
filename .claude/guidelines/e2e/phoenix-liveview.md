@@ -369,34 +369,10 @@ test('monitor LiveView messages', async ({ page }) => {
 });
 ```
 
-### Verifying Specific Messages
+### Identifying a LiveView diff frame
 
-```typescript
-test('verify LiveView diff message', async ({ page }) => {
-  const diffReceived = new Promise<boolean>((resolve) => {
-    page.on('websocket', ws => {
-      ws.on('framereceived', frame => {
-        const payload = frame.payload;
-        // LiveView diffs contain "d" (diff) key
-        if (payload.includes('"d":[')) {
-          resolve(true);
-        }
-      });
-    });
-  });
-
-  await page.goto('/workflows');
-
-  // Trigger action that causes server diff
-  await page.getByRole('button', { name: 'Refresh' }).click();
-
-  // Verify diff was received
-  expect(await Promise.race([
-    diffReceived,
-    new Promise(resolve => setTimeout(() => resolve(false), 5000))
-  ])).toBe(true);
-});
-```
+A server-to-client diff carries a `"d"` key in its payload, so `payload.includes('"d":[')`
+is enough to tell a diff from a heartbeat or an event reply when you are reading frames.
 
 ## Lightning-Specific Patterns
 
