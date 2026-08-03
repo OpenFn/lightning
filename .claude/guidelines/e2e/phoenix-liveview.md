@@ -16,22 +16,31 @@ Canonical wait patterns for Phoenix LiveView pages. Other e2e guidelines cross-r
 ### waitForConnected
 
 Wait for the LiveView connection before interacting with elements on the page.
+`LiveViewPage` is `abstract`, so instantiate a concrete subclass — `ProjectsPage`,
+`WorkflowsPage`, `LoginPage` or `WorkflowCollaborativePage`.
 
 ```typescript
-import { LiveViewPage } from '../pages/base';
+import { WorkflowsPage } from '../pages';
 
-test('interact with workflow editor', async ({ page }) => {
-  const workflowPage = new LiveViewPage(page);
+test('workflow list is interactive', async ({ page }) => {
+  const workflowsPage = new WorkflowsPage(page);
 
-  await page.goto('/workflows/123/edit');
+  await page.goto(`/projects/${projectId}/w`);
 
   // Wait for LiveView to connect and mount
-  await workflowPage.waitForConnected();
+  await workflowsPage.waitForConnected();
 
-  // Now safe to interact
-  await page.getByRole('button', { name: 'Add Job' }).click();
+  await workflowsPage.navigateToWorkflow(testData.workflows.openhie.name);
 });
 ```
+
+`WorkflowCollaborativePage.open({ projectId, workflowId })` is the entry point for the
+collaborative editor. It navigates to `/projects/:projectId/w/:workflowId`, waits for
+`[data-testid="collaborative-editor"]` plus `networkidle`, then calls `waitForSynced()`.
+Do **not** treat that last step as a working sync gate: `waitForSynced()` matches
+`text=Synced`, which nothing renders. See
+`.claude/guidelines/e2e/collaborative-testing.md §Two things that will stop you before you
+start`.
 
 `waitForConnected` is defined once, on the base class —
 `assets/test/e2e/pages/base/liveview.page.ts:31-35`. It waits for `div[data-phx-main]` to
