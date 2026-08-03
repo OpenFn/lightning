@@ -173,22 +173,12 @@ test.describe('Workflow Tests', () => {
 
 ### Prefer complete user journeys
 
-```typescript
-// ✅ Test a full workflow, not individual clicks
-test('user can create and configure workflow', async ({ page }) => {
-  await page.goto('/projects/123/w');
-  await page.getByRole('button', { name: 'New Workflow' }).click();
-  await page.fill('[name="name"]', 'Data Pipeline');
-  await page.click('text=Create');
-  await page.getByTestId('add-job').click();
-  await page.fill('[name="job_name"]', 'Fetch Data');
-  await page.fill('[name="adaptor"]', '@openfn/language-http');
-  await page.click('text=Save');
-  await expect(page.getByText('Workflow saved')).toBeVisible();
-});
-```
+Test a whole task the way a user performs it, not one click at a time. Break the journey into
+`test.step()` blocks so a failure points at the phase that broke.
 
-Break complex tests into logical steps with `test.step()` so failures point to the right phase.
+`assets/test/e2e/specs/collaborative/edge-validation.spec.ts` is the worked example to copy from:
+it logs in, opens a workflow, and drags edges between nodes across several steps, all against real
+routes and real selectors.
 
 ### Waiting for Phoenix LiveView
 
