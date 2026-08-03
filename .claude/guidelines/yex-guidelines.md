@@ -105,29 +105,7 @@ array = Yex.Doc.get_array(doc, "my_array") # This is the ONLY way
 text = Yex.Doc.get_text(doc, "my_text")    # This is the ONLY way
 ```
 
-**To insert nested structures (a map inside an array, etc), use Prelim types:**
-
-```elixir
-# ❌ WRONG - You cannot insert a Yex.Map/Array/Text that doesn't exist
-jobs_array = Yex.Doc.get_array(doc, "jobs")
-job_map = Yex.Map.new()  # ERROR! This function doesn't exist
-Yex.Array.push(jobs_array, job_map)
-
-# ✅ CORRECT - Use Prelim types for nested structures
-jobs_array = Yex.Doc.get_array(doc, "jobs")
-job_map = Yex.MapPrelim.from(%{
-  "id" => "abc123",
-  "name" => "My Job",
-  "body" => Yex.TextPrelim.from("console.log('hello');")
-})
-Yex.Array.push(jobs_array, job_map)
-
-# After insertion, prelim becomes real Yex type
-{:ok, real_job_map} = Yex.Array.fetch(jobs_array, 0)
-# real_job_map is now a %Yex.Map{} struct
-{:ok, body_text} = Yex.Map.fetch(real_job_map, "body")
-# body_text is now a %Yex.Text{} struct
-```
+To build nested structures, see [§Prelim Types](#prelim-types).
 
 **Why this matters:**
 - Yex types are bound to a document and worker process
