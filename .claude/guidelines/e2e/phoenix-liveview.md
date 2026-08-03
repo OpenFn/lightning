@@ -209,26 +209,16 @@ test('submit LiveView form', async ({ page }) => {
 
 ### Debounced Inputs
 
-LiveView often debounces rapid input changes:
+LiveView debounces some inputs, so the server response lags the keystroke. Wait on the
+result, never on the clock: a web-first assertion such as
+`await expect(page.getByText('ETL Pipeline')).toBeVisible()` retries until the debounced
+round trip lands.
 
-```typescript
-test('search with debounced input', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
-
-  await page.goto('/workflows');
-  await liveViewPage.waitForConnected();
-
-  // Type search query
-  const searchInput = page.getByPlaceholder('Search workflows...');
-  await searchInput.fill('ETL');
-
-  // Wait for debounce (usually 300-500ms in Lightning)
-  await page.waitForTimeout(600);
-
-  // Or better: wait for results to appear
-  await expect(page.getByText('ETL Pipeline')).toBeVisible();
-});
-```
+**No fixed sleeps.** `page.waitForTimeout()` does not belong in a passing test — it either
+hides a missing wait or wastes the interval. There is no exception for CRDT convergence;
+`expect.poll` and web-first assertions cover it. The suite currently has 26
+`waitForTimeout` calls across its spec files, which is a debt to work down, not a pattern
+to copy.
 
 ## Flash Messages
 
