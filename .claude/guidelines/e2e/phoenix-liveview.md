@@ -62,18 +62,6 @@ await workflowPage.waitForConnected(); // new connection, must re-wait
 
 ## Event Handlers
 
-### Understanding phx-* Attributes
-
-LiveView uses special attributes to bind event handlers:
-
-- `phx-click` - Click events
-- `phx-change` - Form input changes
-- `phx-submit` - Form submissions
-- `phx-blur` - Input blur events
-- `phx-focus` - Input focus events
-- `phx-keydown`/`phx-keyup` - Keyboard events
-- `phx-hook` - JavaScript hook mounting points
-
 ### Waiting for Event Handlers
 
 Event handlers may not be attached immediately after navigation.
