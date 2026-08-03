@@ -19,27 +19,9 @@ When working on E2E tests, consult `.claude/guidelines/e2e-testing.md`.
 
 3. **useSyncExternalStore Integration**: Connect Y.Doc to React using custom external stores (NOT Zustand/Redux) via useSyncExternalStore.
 
-### The Three Update Patterns
+### Store Update Patterns
 
-Choose the appropriate pattern for each data type:
-
-**Pattern 1: Y.Doc → Observer → Immer → Notify** (Most Common)
-- Use for: Collaborative data (jobs, triggers, edges)
-- Flow: Y.Doc observer fires → Update Immer state → Notify React subscribers
-- Implementation: Set up observeDeep() on Y.Doc structures, update state in observer callback, call notify()
-- Example: Job body changes, edge additions, trigger updates
-
-**Pattern 2: Y.Doc + Immediate Immer → Notify** (Use Sparingly)
-- Use for: Operations affecting both collaborative and local state simultaneously
-- Flow: Update Y.Doc in transaction → Immediately update Immer → Notify
-- Warning: Usually Pattern 1 or 3 is better. Only use when truly necessary.
-- Example: Complex operations that need atomic updates across both layers
-
-**Pattern 3: Direct Immer → Notify** (Local State Only)
-- Use for: Local UI state (selections, preferences, transient UI)
-- Flow: Update Immer state → Notify React subscribers
-- No Y.Doc involvement: This data is not collaborative
-- Example: Selected nodes, panel visibility, local form state
+There are **four**, and `.claude/guidelines/store-structure.md` §Store Update Patterns is canonical: it names each one and lists which stores use it. Read it before choosing a pattern — the one covering roughly half the stores here is `Channel → Zod → Immer → Notify`.
 
 ### Command Query Separation (CQS)
 
@@ -59,7 +41,7 @@ Separate commands from queries:
 
 ## Module Structure
 
-**stores/** - External stores implementing subscribe/getSnapshot pattern (see `.claude/guidelines/store-structure.md` for the canonical store catalog).
+**stores/** - External stores implementing subscribe/getSnapshot pattern. `.claude/guidelines/store-structure.md` is canonical: §Store Catalog for the per-store breakdown, §Store Update Patterns for the four update patterns and which stores use each.
 - Each store manages a specific domain (workflow, adaptors, etc.)
 - Implement getSnapshot() for current state
 - Implement subscribe(callback) for change notifications
@@ -161,7 +143,7 @@ Focus on collaborative edge cases: concurrent edits, reconnection/offline, confl
 ## Quality Assurance Checklist
 
 Before completing any task, verify the Lightning-specific invariants:
-- [ ] Correct update pattern used (1, 2, or 3)
+- [ ] Correct update pattern used — one of the four in `store-structure.md` §Store Update Patterns
 - [ ] CQS maintained (commands vs queries)
 - [ ] Y.Doc updates wrapped in transactions
 - [ ] Observers properly cleaned up
