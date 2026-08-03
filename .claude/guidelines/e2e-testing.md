@@ -20,8 +20,8 @@ npm run test:e2e
 # Interactive debugging
 npm run test:e2e:ui
 
-# Debug specific test
-npm run test:e2e:debug workflow.spec.ts
+# Debug a specific test — note the `--`, npm needs it to forward arguments
+npm run test:e2e:debug -- specs/smoke/basic-navigation.spec.ts
 ```
 
 ## Architecture Overview
