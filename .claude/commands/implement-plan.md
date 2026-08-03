@@ -30,7 +30,7 @@ See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the can
 
 **This is the core of the implementation process**:
 
-1. **For each phase**, spawn a FRESH agent of the type specified in the plan
+1. **For each phase**, spawn a FRESH agent of the type specified in the plan. This is the default for any plan with more than one phase; a single-phase plan may be implemented directly.
 
 2. **Each agent gets a focused task**:
    ```
@@ -50,8 +50,7 @@ See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the can
    ```
 
 3. **Wait for each phase to complete** before spawning the next agent
-   - This ensures each phase gets a fresh context window
-   - Prevents context overflow on complex implementations
+   - A fresh agent isolates each phase: a later phase cannot be misled by an earlier phase's abandoned attempts
    - Each agent focuses solely on their phase
 
 4. **Between phases**: verify the previous phase's work (check the plan, review agent output, coordinate manual verification), then move on with a new fresh agent.

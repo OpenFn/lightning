@@ -153,7 +153,7 @@ After structure approval:
 
 1. **Identify agent assignments for each phase**:
    - For each implementation phase, determine which specialized agent should handle it. See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the canonical roster.
-   - Each phase uses a fresh agent instance to avoid context window issues.
+   - Each phase uses a fresh agent instance, which isolates it: a later phase cannot be misled by an earlier phase's abandoned attempts. This is the default for any plan with more than one phase; a single-phase plan may be implemented directly.
    - The agent assignment tells the implementation coordinator which agent to spawn for that phase
 
 2. **Write the plan** to `.context/shared/plans/YYYY-MM-DD-XXXX-description.md`
