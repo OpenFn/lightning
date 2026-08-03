@@ -24,18 +24,50 @@ Calling `Yex.Doc.get_map/2`, `Yex.Doc.get_array/2`, or `Yex.Doc.get_text/2` **in
 
 ### Why this happens
 
-From `/deps/y_ex/lib/doc.ex:6-8`:
+From `deps/y_ex/lib/doc.ex:6-8`:
 
 > It is not recommended to perform operations on a single document from multiple processes simultaneously.
 > If blocked by a transaction, the Beam scheduler threads may potentially deadlock.
 > This limitation is due to the underlying yrs and beam specifications and may be resolved in the future.
 
-The underlying issue:
-1. Yex documents are owned by a worker process (usually a GenServer)
-2. All operations dispatch to this worker process via `GenServer.call`
-3. Transactions hold native (Rust) locks in the underlying yrs library
-4. If you call `get_map/get_array` inside a transaction, it tries to dispatch to the worker process that's already blocked holding the transaction
-5. This creates a deadlock at the BEAM scheduler level, **hanging the entire VM**
+**What you can check in this repo** (y_ex 0.8.0, yrs 0.23.1):
+
+1. `Yex.Doc.transaction/3` opens a yrs `TransactionMut` and stashes it in the *calling
+   process's* dictionary, keyed by the doc reference (`deps/y_ex/lib/doc.ex:159-181`;
+   `cur_txn/1` at `:236-238` is a `Process.get/2`). The NIF that opens it is
+   `native/yex/src/doc.rs:257-275`.
+2. Functions on a shared type look that transaction up and hand it down. `Yex.Map.set/3` calls
+   `Yex.Nif.map_set(map, cur_txn(map), key, content)` (`lib/shared_type/map.ex:44-47`), and
+   `map_set` declares `current_transaction: Option<ResourceArc<TransactionResource>>`
+   (`native/yex/src/map.rs:46-58`). `NifDoc::mutably` reuses it when it is there and opens a
+   new one only when it is not (`doc.rs:143-165`).
+3. `Yex.Doc.get_map/2`, `get_array/2` and `get_text/2` have no such parameter.
+   `get_map/2` is `Yex.Nif.doc_get_or_insert_map(doc, name)` (`doc.ex:133-135`), and that NIF's
+   entire body is `doc.get_or_insert_map(name)` (`doc.rs:247-250`) — nothing to pass the open
+   transaction into, and no route through `mutably`. It goes straight to the yrs document and
+   acquires whatever it needs on its own.
+4. Everywhere else that y_ex opens a transaction for you, it uses yrs's fallible entry points,
+   `try_transact_mut` and `try_transact` (`doc.rs:222`, `:264`, `:271`) — those return an error
+   instead of waiting. `get_or_insert_map` is the one path that does not go through them.
+
+**What has been observed:** calling `Yex.Doc.get_map/2` inside an open transaction, against the
+pinned NIF, hangs immediately. It does not respond to `SIGTERM`, and it takes the whole VM down
+rather than the calling process.
+
+**What is inference, not a read fact:** what yrs does while it waits. `yrs` is a crates.io
+dependency and its source is not vendored here, so nothing below the
+`doc.get_or_insert_map(name)` call at `doc.rs:249` can be checked from this repository. The
+behaviour is consistent with a blocking wait for exclusive access that the open transaction
+already holds, but treat that as an explanation of the symptom rather than something read off a
+file. (The `RwLock` you can see at `doc.rs:268` and `:273` is *not* it — that one guards y_ex's
+own handle to the transaction resource, and it is not what blocks.)
+
+**None of that changes what you have to do.** The wait happens inside a NIF, on a BEAM scheduler
+thread, so the scheduler cannot preempt it or kill it — which is why this shows up as a dead VM
+and not a crashed process. And it happens **whether or not a `GenServer.call` is involved**:
+`Yex.Doc.new/1` defaults `worker_pid` to `self()` (`doc.ex:101`), so a document owned by the
+calling process runs directly with no dispatch at all (`doc.ex:44-56`) — and it still hangs.
+Being inside the worker process is not an exemption.
 
 ---
 
