@@ -138,28 +138,28 @@ test('handles channel connection and disconnection', async () => {
 
 **✅ DO: Test channel error handling**
 
+Use the setup factory and swap in a failing push. Do not hand-roll the push object: `receive` has to
+return the push for chaining, and an object literal cannot do that with `this`.
+
 ```typescript
 test('handles channel errors gracefully', async () => {
-  const store = createAdaptorStore();
-  const mockChannel = createMockPhoenixChannel();
+  const { store, mockChannel, mockProvider, cleanup } = setupAdaptorStoreTest();
 
-  mockChannel.push = () => ({
-    receive: (status: string, callback: (resp?: unknown) => void) => {
-      if (status === 'error') {
-        callback({ reason: 'Network error' });
-      }
-      return this;
-    },
-  });
+  mockChannel.push = createMockChannelPushError('Server error', 'server_error');
+  store._connectChannel(mockProvider);
 
-  store._connectChannel(mockChannel);
   await store.requestAdaptors();
 
   const state = store.getSnapshot();
-  expect(state.error).toContain('Network error');
+  expect(state.error).toContain('Failed to request adaptors');
   expect(state.isLoading).toBe(false);
+
+  cleanup();
 });
 ```
+
+`_connectChannel` takes the **provider**, not the channel. The error string is the store's own
+wrapper, not the server's message.
 
 ## Testing Store Subscriptions
 
