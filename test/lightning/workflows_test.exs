@@ -1065,6 +1065,23 @@ defmodule Lightning.WorkflowsTest do
       assert Workflows.unique_workflow_name("My Workflow", project.id) ==
                "My Workflow 1"
     end
+
+    test "does not treat the excluded workflow's own name as a clash" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project, name: "My Workflow")
+
+      # Re-saving the same workflow under its own name keeps the name...
+      assert Workflows.unique_workflow_name("My Workflow", project.id,
+               exclude_workflow_id: workflow.id
+             ) == "My Workflow"
+
+      # ...but another workflow's name still counts as a collision.
+      insert(:workflow, project: project, name: "Other Workflow")
+
+      assert Workflows.unique_workflow_name("Other Workflow", project.id,
+               exclude_workflow_id: workflow.id
+             ) == "Other Workflow 1"
+    end
   end
 
   describe "save_workflow/3 rescue" do

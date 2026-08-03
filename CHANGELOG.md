@@ -21,6 +21,11 @@ and this project adheres to
 
 ### Fixed
 
+- The AI assistant no longer appends " 1" to a workflow's name each time it
+  edits an already-saved workflow. Name-uniqueness validation now excludes the
+  workflow being edited, so its own name isn't treated as a clash.
+  [#5009](https://github.com/OpenFn/lightning/pull/5009)
+
 ## [2.18.0-pre] - 2026-07-31
 
 ### Added

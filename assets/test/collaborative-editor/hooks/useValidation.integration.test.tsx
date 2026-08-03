@@ -253,8 +253,7 @@ describe('useValidation - Integration', () => {
       () => {
         const errorsMap = ydoc.getMap('errors');
         const workflowErrors = errorsMap.get('workflow') as
-          | Record<string, string[]>
-          | undefined;
+          Record<string, string[]> | undefined;
         // Error should be cleared
         expect(workflowErrors?.name).toBeUndefined();
       },

@@ -89,9 +89,8 @@ vi.mock('../../../js/collaborative-editor/components/inspector', () => ({
 vi.mock(
   '../../../js/collaborative-editor/components/ide/FullScreenIDE',
   async () => {
-    const { useKeyboardShortcut } = await import(
-      '../../../js/collaborative-editor/keyboard'
-    );
+    const { useKeyboardShortcut } =
+      await import('../../../js/collaborative-editor/keyboard');
 
     return {
       FullScreenIDE: ({ onClose }: { onClose: () => void }) => {

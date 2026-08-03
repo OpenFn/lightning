@@ -18,8 +18,7 @@ export function templateToWorkflowState(template: Template): WorkflowState {
 }
 
 export type ParsedTemplate =
-  | { state: WorkflowState; error: null }
-  | { state: null; error: string };
+  { state: WorkflowState; error: null } | { state: null; error: string };
 
 /**
  * `templateToWorkflowState` with the throw turned into a value.

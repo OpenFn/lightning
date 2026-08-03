@@ -236,9 +236,18 @@ defmodule Lightning.Workflows do
   Note: this is check-then-insert, so two concurrent saves can still compute
   the same name and one will lose on the unique constraint. Callers already
   handle that `{:error, changeset}`; no retry is attempted here.
+
+  ## Options
+
+  * `:exclude_workflow_id` - a workflow id whose current name should not
+    count as a clash. Pass the workflow being renamed/edited so its own
+    name doesn't get " 1" appended on every save.
   """
-  @spec unique_workflow_name(String.t() | nil, Ecto.UUID.t()) :: String.t()
-  def unique_workflow_name(base_name, project_id) do
+  @spec unique_workflow_name(String.t() | nil, Ecto.UUID.t(), keyword()) ::
+          String.t()
+  def unique_workflow_name(base_name, project_id, opts \\ []) do
+    exclude_workflow_id = Keyword.get(opts, :exclude_workflow_id)
+
     base_name =
       base_name
       |> to_string()
@@ -253,6 +262,13 @@ defmodule Lightning.Workflows do
         where: w.project_id == ^project_id,
         select: w.name
       )
+      |> then(fn query ->
+        if exclude_workflow_id do
+          from(w in query, where: w.id != ^exclude_workflow_id)
+        else
+          query
+        end
+      end)
       |> Repo.all()
       |> MapSet.new()
 
