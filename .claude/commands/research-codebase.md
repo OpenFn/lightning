@@ -45,7 +45,7 @@ Then wait for the user's research query.
    - Consider which directories, files, or architectural patterns are relevant
 
 3. **Spawn parallel sub-agent tasks for comprehensive research:**
-   - Create multiple Task agents to research different aspects concurrently.
+   - Create Task agents to research different aspects concurrently.
    - See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the canonical agent roster. For research, the relevant agents are typically **codebase-locator**, **codebase-analyzer**, **codebase-pattern-finder**, **context-locator**, **context-analyzer**, and (only when the user explicitly asks for external research) **web-search-researcher**.
    - For web-research agents, instruct them to return LINKS with their findings and INCLUDE those links in your final report.
    - Start with locator agents to find what exists; then run analyzer agents on the most promising findings. Run multiple agents in parallel when they're searching for different things.
@@ -155,7 +155,7 @@ Then wait for the user's research query.
 
 ## Important notes:
 - For Lightning-specific commands referenced in research reports (e.g., `mix verify`, `mix test`), see [CLAUDE.md §Common Commands](../../CLAUDE.md#common-commands).
-- Always use parallel Task agents to maximize efficiency and minimize context usage
+- Use parallel agents for genuinely independent research areas
 - Always run fresh codebase research - never rely solely on existing research documents
 - The .context/ directory provides historical context to supplement live findings
 - Focus on finding concrete file paths and line numbers for developer reference
