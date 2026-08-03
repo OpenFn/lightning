@@ -17,7 +17,9 @@ All stores share the same foundation: closure-based factory (`createXxxStore()`)
 
 ## Initialization Order
 
-All 10 stores are created as peers in `StoreProvider.tsx`'s `useState` initializer. Three `useEffect` hooks wire them to the network in dependency order:
+There are 11 stores. `SessionStore` is created in `SessionProvider.tsx`; the other ten are
+created as peers in `StoreProvider.tsx`'s `useState` initializer. `StoreProvider` runs five
+`useEffect` hooks, three of which wire stores to the network in dependency order:
 
 ```
 1. SessionStore.initializeSession(socket, room, userData)
