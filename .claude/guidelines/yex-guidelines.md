@@ -197,7 +197,7 @@ end)
 
 ### Document Structure in Lightning
 
-Lightning workflows use a consistent Y.Doc structure:
+Lightning workflows use a consistent Y.Doc structure of six root-level collections:
 
 ```elixir
 # Root-level collections
@@ -206,9 +206,10 @@ Lightning workflows use a consistent Y.Doc structure:
 "edges"     (Yex.Array) - Array of edge maps
 "triggers"  (Yex.Array) - Array of trigger maps
 "positions" (Yex.Map)   - Node positions: %{node_id => %{"x" => ..., "y" => ...}}
+"errors"    (Yex.Map)   - Field-level validation errors: %{field_path => error_message}
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:11-28`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:11-21`
 
 ---
 
