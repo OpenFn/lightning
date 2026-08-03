@@ -179,9 +179,9 @@ When decisions are made:
 ```
 /get-issue <issue-number>
 ```
-This creates an issue file at a specific path (e.g., `.context/stuart/issues/3635-workflow-save.md`)
+This creates an issue file at a specific path (e.g., `.context/shared/issues/issue-3635-save-button.md`)
 
 **Step 2:** User creates requirements spec with the file path:
 ```
-/create-spec .context/stuart/issues/3635-workflow-save.md
+/create-spec .context/shared/issues/issue-3635-save-button.md
 ```
