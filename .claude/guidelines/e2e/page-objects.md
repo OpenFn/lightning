@@ -301,7 +301,11 @@ export class WorkflowDiagramPage extends LiveViewPage {
 ```
 
 **Key Principles:**
-- Extend `LiveViewPage` for LiveView components
+- Component POMs take `page` and stand alone — **do not** extend `LiveViewPage`. That base
+  class is for whole LiveView pages; a component has no connection lifecycle of its own.
+  `WorkflowDiagramPage`, `WorkflowDiagramNodesPage`, `WorkflowDiagramEdgesPage` and
+  `JobInspectorPage` all follow this.
+- Compose them from the page object that owns them, as a `readonly` field or a getter
 - Focus on component-specific interactions
 - Provide both actions and assertions
 - Use getters for frequently accessed locators
