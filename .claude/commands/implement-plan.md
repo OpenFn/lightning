@@ -20,7 +20,6 @@ When `$ARGUMENTS` contains a plan path:
 - Read files fully (no limit/offset).
 - Think deeply about how the pieces fit together
 - Create a todo list to track your progress across all phases
-- You coordinate implementation; spawn a fresh specialized agent for each phase.
 
 If `$ARGUMENTS` is empty, ask for one.
 
@@ -62,12 +61,9 @@ See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the can
 
 As the main agent running this command, you are the **coordinator**, not the implementer:
 - You read the plan and understand the full scope
-- You spawn specialized agents for each phase
 - You track overall progress across all phases
 - You handle issues and communicate with the user
 - You coordinate manual verification between phases
-
-Delegate phase implementation to fresh specialized agents rather than implementing directly.
 
 ## Implementation Philosophy
 
