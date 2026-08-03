@@ -216,89 +216,16 @@ test('edit workflow', async ({ page }) => {
 
 ### Component Pattern
 
-Components are reusable UI elements that appear in multiple pages:
+Components are reusable UI elements that appear in multiple pages. The suite's component POMs
+live in `pages/components/`. Read one before writing another —
+`workflow-diagram.page.ts` is 46 lines and shows the whole shape: a plain class taking `page`,
+a `selectors` object, two `readonly` sub-POMs, and two methods.
 
-```typescript
-// pages/components/workflow-diagram.page.ts
-import { expect } from '@playwright/test';
-import type { Page, Locator } from '@playwright/test';
-import { LiveViewPage } from '../base';
-
-export class WorkflowDiagramPage extends LiveViewPage {
-  protected selectors = {
-    reactFlow: '.react-flow',
-    viewport: '.react-flow__viewport',
-    nodes: '.react-flow__node',
-    jobNodes: '.react-flow__node-job',
-    placeholderNode: '.react-flow__node-placeholder',
-    nodeConnector: '[data-handleid="node-connector"]',
-    fitViewButton: '.react-flow__controls-button[data-tooltip="Fit view"]',
-  };
-
-  constructor(page: Page) {
-    super(page);
-  }
-
-  /**
-   * Get node by visible name/text
-   */
-  getNodeByName(nodeName: string): Locator {
-    return this.page
-      .locator(this.selectors.nodes)
-      .filter({ hasText: nodeName });
-  }
-
-  /**
-   * Click on a node
-   */
-  async clickNode(nodeName: string): Promise<void> {
-    const node = this.getNodeByName(nodeName);
-    await expect(node).toBeVisible();
-    await node.click();
-  }
-
-  /**
-   * Verify node exists
-   */
-  async verifyNodeExists(nodeName: string): Promise<void> {
-    await expect(this.getNodeByName(nodeName)).toBeVisible();
-  }
-
-  /**
-   * Click plus button on node to add connection
-   */
-  async clickNodePlusButtonOn(nodeName: string): Promise<void> {
-    const node = this.getNodeByName(nodeName);
-    await node.hover(); // Show the plus button
-
-    const plusButton = node.locator(this.selectors.nodeConnector);
-    await expect(plusButton).toBeVisible();
-    await plusButton.click();
-  }
-
-  /**
-   * Verify React Flow is present
-   */
-  async verifyReactFlowPresent(): Promise<void> {
-    await expect(this.page.locator(this.selectors.reactFlow)).toBeVisible();
-    await expect(this.page.locator(this.selectors.viewport)).toBeVisible();
-  }
-
-  /**
-   * Get all nodes
-   */
-  get allNodes(): Locator {
-    return this.page.locator(this.selectors.nodes);
-  }
-
-  /**
-   * Verify node count
-   */
-  async verifyNodeCount(expectedCount: number): Promise<void> {
-    await expect(this.allNodes).toHaveCount(expectedCount);
-  }
-}
-```
+Selector strategy for the diagram is **React Flow CSS classes**, not testids:
+`.react-flow`, `.react-flow__viewport`, `.react-flow__node`, `.react-flow__node-job`,
+`.react-flow__node-trigger`, `.react-flow__node-placeholder`, plus
+`[data-handleid="node-connector"]` for the plus handle. The node and edge queries live in
+`workflow-diagram-nodes.page.ts` and `workflow-diagram-edges.page.ts`, not on the parent.
 
 **Key Principles:**
 - Component POMs take `page` and stand alone — **do not** extend `LiveViewPage`. That base
