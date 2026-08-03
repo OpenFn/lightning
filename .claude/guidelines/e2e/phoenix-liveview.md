@@ -313,25 +313,23 @@ test('Monaco editor hook initializes', async ({ page }) => {
 });
 ```
 
-### Common Lightning Hooks
+### Lightning hooks worth knowing
 
-**Flash Hook**: Auto-dismissing notifications
-```typescript
-// Located on flash message elements
-const flash = page.locator('[phx-hook="Flash"]');
-```
+**`Flash`** — flash message containers. This is the one the POM base class uses:
+`liveview.page.ts:11` selects `[id^="flash-"][phx-hook="Flash"]`, and
+`expectFlashMessage(text)` filters it by text.
 
-**Monaco Hook**: Code editor initialization
-```typescript
-// Located on code editor containers
-const editor = page.locator('[phx-hook="Monaco"]');
-```
+**`ReactComponent`** and **`HeexReactComponent`** — the two React mount points.
+`ReactComponent` is set from Elixir in `layout_components.ex:374` and `:448`;
+`HeexReactComponent` from `react.ex:121`. They are generic: every React island in the app
+mounts through one of them, so `[phx-hook="ReactComponent"]` tells you React has mounted
+*something*, not which component. Address the component itself, usually via a
+`data-testid` it renders.
 
-**ReactHook**: React component mounting points
-```typescript
-// Located where React components mount
-const reactComponent = page.locator('[phx-hook="ReactHook"]');
-```
+There is no `Monaco` hook and no `ReactHook` hook. Monaco is mounted from React
+(`assets/js/collaborative-editor/components/CollaborativeMonaco.tsx`), not from a
+LiveView hook, so there is no `phx-hook` to wait on and no Monaco-specific testid — wait
+on `.monaco-editor` instead.
 
 ## WebSocket Monitoring
 
