@@ -159,14 +159,6 @@ mix lightning.install_schemas      # Install JSON schemas for validation
 mix lightning.install_adaptor_icons # Install adaptor icons
 ```
 
-## Troubleshooting
-
-### Switching Branches
-Run `./bin/bootstrap` to sync dependencies and migrations.
-
-### Rambo Errors (Apple Silicon)
-Install Rust: `brew install rust`
-
 ## Available Agents
 
 Claude Code injects every agent's name and description each session, so the
