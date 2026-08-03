@@ -27,7 +27,6 @@ MIX_ENV=test mix ecto.create           # First time test DB setup only
 mix test                               # Run all tests (don't use -v flag)
 mix test path/to/test.exs              # Run single file
 mix test path/to/test.exs:42           # Run test at specific line
-mix test --only focus                  # Run tests tagged with @tag :focus
 ```
 
 ### Frontend (always cd into assets/ first)
