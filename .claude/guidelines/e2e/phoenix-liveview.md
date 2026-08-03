@@ -76,24 +76,30 @@ LiveView uses special attributes to bind event handlers:
 
 ### Waiting for Event Handlers
 
-Event handlers may not be immediately attached after navigation:
+Event handlers may not be attached immediately after navigation.
+`waitForEventAttached(locator, eventType, timeout)` is real —
+`liveview.page.ts:74-103` — and for `'click'` it checks that the element carries
+`phx-click` and that `[data-phx-main]` has `phx-connected`.
 
 ```typescript
+import { WorkflowsPage } from '../pages';
+
 test('wait for handlers before clicking', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
+  const workflowsPage = new WorkflowsPage(page);
 
-  await page.goto('/workflows/new');
-  await liveViewPage.waitForConnected();
+  await page.goto(`/projects/${projectId}/w`);
+  await workflowsPage.waitForConnected();
 
-  const createButton = page.getByRole('button', { name: 'Create' });
-
-  // Wait for phx-click handler to be attached
-  await liveViewPage.waitForEventAttached(createButton, 'click');
-
-  // Now safe to click
+  const createButton = page.getByRole('button', {
+    name: 'Create new workflow',
+  });
+  await workflowsPage.waitForEventAttached(createButton, 'click');
   await createButton.click();
 });
 ```
+
+`WorkflowsPage.clickNewWorkflow()` (`workflows.page.ts:21-35`) already does exactly this
+sequence, and is what a test should normally call.
 
 ## Server-Pushed Updates
 
