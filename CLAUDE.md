@@ -113,7 +113,7 @@ in development.
 
 - PostgreSQL with Ecto ORM
 - Dev: `postgres://postgres:postgres@localhost:5432/lightning_dev`
-- Test: `lightning_test` — no manual setup step; the `test` alias at
+- Test: `lightning_test`, no manual setup step; the `test` alias at
   `mix.exs:227` runs `ecto.create --quiet` and `ecto.migrate --quiet` before the
   suite
 - Schemas alongside contexts in `lib/lightning/`
@@ -128,7 +128,7 @@ in development.
 ### React/TypeScript
 
 - On the `ReactComponent` hook, props arrive as the element's raw attribute
-  names — `data-`prefixed **kebab-case**, not camelCase
+  names: `data-`prefixed **kebab-case**, not camelCase
 - Use `cn()` utility from `#/utils/cn` for conditional CSS classes
 - Use heroicons via Tailwind: `className="hero-check-micro h-4 w-4"`
 - See `.claude/guidelines/toast-notifications.md` for notification patterns
@@ -165,21 +165,21 @@ request, not by default.
 These files cite implementation as `file:line` rather than copying it, so read the
 source at the citation instead of trusting a transcription.
 
-- `.claude/guidelines/store-structure.md` — store responsibilities in the
+- `.claude/guidelines/store-structure.md` - store responsibilities in the
   collaborative editor; where new state belongs
-- `.claude/guidelines/yex-guidelines.md` — Yex (Yjs/Elixir) usage rules
-- `.claude/guidelines/toast-notifications.md` — notification patterns
-- `.claude/guidelines/testing-essentials.md` — Vitest unit testing, and the
+- `.claude/guidelines/yex-guidelines.md` - Yex (Yjs/Elixir) usage rules
+- `.claude/guidelines/toast-notifications.md` - notification patterns
+- `.claude/guidelines/testing-essentials.md` - Vitest unit testing, and the
   entry point for:
-  - `.claude/guidelines/testing/react-patterns.md` — React Testing Library
-  - `.claude/guidelines/testing/vitest-advanced.md` — fixtures and test data
-  - `.claude/guidelines/testing/collaborative-editor.md` — Y.Doc and Phoenix
+  - `.claude/guidelines/testing/react-patterns.md` - React Testing Library
+  - `.claude/guidelines/testing/vitest-advanced.md` - fixtures and test data
+  - `.claude/guidelines/testing/collaborative-editor.md` - Y.Doc and Phoenix
     channel mocks
-- `.claude/guidelines/e2e-testing.md` — Playwright E2E, and the entry point for:
-  - `.claude/guidelines/e2e/phoenix-liveview.md` — driving LiveView pages; the
+- `.claude/guidelines/e2e-testing.md` - Playwright E2E, and the entry point for:
+  - `.claude/guidelines/e2e/phoenix-liveview.md` - driving LiveView pages; the
     canonical wait patterns
-  - `.claude/guidelines/e2e/page-objects.md` — Page Object Model structure
-  - `.claude/guidelines/e2e/collaborative-testing.md` — multi-user collaborative
+  - `.claude/guidelines/e2e/page-objects.md` - Page Object Model structure
+  - `.claude/guidelines/e2e/collaborative-testing.md` - multi-user collaborative
     features
 
 `.claude/rules/logging.md` (Logger levels, Sentry noise) and
