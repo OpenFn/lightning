@@ -519,30 +519,4 @@ test('complete collaborative editing flow', async () => {
 });
 ```
 
-## Debugging Helpers
-
-### Logging Yjs Updates
-
-```typescript
-// __helpers__/yjsDebug.ts
-export function logYjsUpdates(ydoc: Y.Doc) {
-  ydoc.on('update', (update: Uint8Array, origin: any) => {
-    console.log('Yjs Update:', {
-      size: update.length,
-      origin: origin?.constructor?.name || origin,
-      timestamp: new Date().toISOString(),
-    });
-  });
-}
-
-// Usage in tests
-test('debug yjs updates', () => {
-  const ydoc = new Y.Doc();
-  logYjsUpdates(ydoc);
-
-  const jobs = ydoc.getArray('jobs');
-  jobs.push([{ id: 'job1', name: 'Test' }]);
-  // Console will show update details
-});
-```
 
