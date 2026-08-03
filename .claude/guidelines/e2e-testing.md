@@ -81,34 +81,10 @@ Lightning uses a **snapshot-based reset strategy** for fast test isolation:
 
 ### Directory Structure
 
-```
-assets/test/e2e/
-├── specs/                      # Test files organized by feature
-│   ├── smoke/                  # Critical path tests
-│   │   └── basic-navigation.spec.ts
-│   ├── workflows/              # Workflow-specific tests
-│   │   ├── workflow-creation.spec.ts
-│   │   └── workflow-editing.spec.ts
-│   └── collaborative/          # Collaborative editor tests
-│       └── multi-user-editing.spec.ts
-├── pages/                      # Page Object Models
-│   ├── base/                   # Base classes
-│   │   ├── index.ts
-│   │   └── liveview.page.ts   # LiveView-specific utilities
-│   ├── components/             # Reusable component POMs
-│   │   ├── job-form.page.ts
-│   │   └── workflow-diagram.page.ts
-│   ├── login.page.ts
-│   ├── projects.page.ts
-│   ├── workflow-edit.page.ts  # Current LiveView editor
-│   ├── workflow-collab.page.ts # NEW: Collaborative editor
-│   └── index.ts
-├── fixtures/                   # Custom fixtures (future)
-├── helpers/                    # Test utilities (future)
-├── e2e-helper.ts              # bin/e2e integration
-├── test-data.ts               # Test data fetching/caching
-└── global.setup.ts            # Global test setup
-```
+`ls assets/test/e2e/` rather than trusting a tree in a doc. The layout: `specs/` grouped by area
+(`smoke/`, `collaborative/`), `pages/` for the Page Object Models (see
+`.claude/guidelines/e2e/page-objects.md`), and at the root `e2e-helper.ts` (the bridge to
+`bin/e2e`), `test-data.ts` and `global.setup.ts`.
 
 ### Test Grouping with Tags
 
