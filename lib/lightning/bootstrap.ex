@@ -368,7 +368,9 @@ defmodule Lightning.Bootstrap do
         (Accounts.get_user_by_email(email) || register_user(spec, email))
         |> confirm_user()
 
-      api_token = if truthy(spec["api_token"]), do: ensure_api_token(user)
+      api_token =
+        if boolean!(spec["api_token"], "api_token for user #{email}"),
+          do: ensure_api_token(user)
 
       {email, %{user: user, api_token: api_token}}
     end)
@@ -383,7 +385,7 @@ defmodule Lightning.Bootstrap do
     }
 
     result =
-      if truthy(spec["superuser"]),
+      if boolean!(spec["superuser"], "superuser for user #{email}"),
         do: Accounts.register_superuser(attrs),
         else: Accounts.create_user(attrs)
 
@@ -846,7 +848,19 @@ defmodule Lightning.Bootstrap do
     raise "Failed to bootstrap #{what}: #{inspect(errors)}"
   end
 
-  defp truthy(true), do: true
-  defp truthy("true"), do: true
-  defp truthy(_other), do: false
+  # Real YAML booleans (`true`/`false`) decode to Elixir booleans, but YAML
+  # 1.1 also treats `yes`/`no`/`on`/`off` as booleans while yamerl doesn't
+  # coerce them — they arrive as plain strings. Accepting only the real
+  # boolean plus "true"/"false" would silently treat `superuser: yes` as
+  # false; raising on anything else (rather than defaulting) makes that kind
+  # of typo visible instead of a silent no-op.
+  defp boolean!(nil, _field), do: false
+  defp boolean!(value, _field) when is_boolean(value), do: value
+  defp boolean!(value, _field) when value in ["true", "yes"], do: true
+  defp boolean!(value, _field) when value in ["false", "no"], do: false
+
+  defp boolean!(value, field) do
+    raise "Expected #{field} to be a boolean (true/false or yes/no), " <>
+            "got: #{inspect(value)}"
+  end
 end

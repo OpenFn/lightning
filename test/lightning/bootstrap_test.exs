@@ -402,6 +402,54 @@ defmodule Lightning.BootstrapTest do
       end
     end
 
+    test "coerces YAML-1.1-style booleans strictly, without silently defaulting to false" do
+      # "yes"/"true" (and real booleans) turn superuser/api_token on
+      yesses =
+        scenario()
+        |> put_in(["users", Access.at(0), "email"], "yesses@openfn.org")
+        |> put_in(["users", Access.at(0), "superuser"], "yes")
+        |> put_in(["users", Access.at(0), "api_token"], "true")
+        |> put_in(["credentials", Access.at(0), "owner"], "yesses@openfn.org")
+        |> put_in(
+          ["projects", Access.at(0), "members", Access.at(0), "email"],
+          "yesses@openfn.org"
+        )
+
+      result = Bootstrap.run(yesses)
+      %{user: owner, api_token: token} = result.users["yesses@openfn.org"]
+      assert owner.role == :superuser
+      assert is_binary(token)
+
+      # "no"/"false" turn them off explicitly — a fresh user, since existing
+      # users are matched (not re-converged) by email
+      noes =
+        scenario()
+        |> put_in(["users", Access.at(0), "email"], "noes@openfn.org")
+        |> put_in(["users", Access.at(0), "superuser"], "no")
+        |> put_in(["users", Access.at(0), "api_token"], "false")
+        |> put_in(["credentials", Access.at(0), "owner"], "noes@openfn.org")
+        |> put_in(
+          ["projects", Access.at(0), "members", Access.at(0), "email"],
+          "noes@openfn.org"
+        )
+        |> put_in(["projects", Access.at(0), "name"], "noes-project")
+
+      result = Bootstrap.run(noes)
+      %{user: owner, api_token: token} = result.users["noes@openfn.org"]
+      assert owner.role == :user
+      assert token == nil
+
+      # anything else raises rather than silently defaulting to false
+      garbage =
+        scenario()
+        |> put_in(["users", Access.at(0), "email"], "garbage@openfn.org")
+        |> put_in(["users", Access.at(0), "superuser"], "on")
+
+      assert_raise RuntimeError, ~r/Expected superuser for user.*boolean/, fn ->
+        Bootstrap.run(garbage)
+      end
+    end
+
     test "supports project description and collections" do
       scenario =
         scenario()

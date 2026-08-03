@@ -45,16 +45,19 @@ being silently ignored.
 
 ### users
 
-| key          | required | default            | notes                                 |
-| ------------ | -------- | ------------------ | ------------------------------------- |
-| `email`      | yes      |                    | matched on re-run                     |
-| `first_name` |          | derived from email |                                       |
-| `last_name`  |          | `User`             |                                       |
-| `password`   |          | `welcome12345`     |                                       |
-| `superuser`  |          | `false`            |                                       |
-| `api_token`  |          | `false`            | `true` = generate/reuse, see manifest |
+| key          | required | default            | notes                                          |
+| ------------ | -------- | ------------------ | ---------------------------------------------- |
+| `email`      | yes      |                    | matched on re-run                              |
+| `first_name` |          | derived from email |                                                |
+| `last_name`  |          | `User`             |                                                |
+| `password`   |          | `welcome12345`     |                                                |
+| `superuser`  |          | `false`            | boolean, see below                             |
+| `api_token`  |          | `false`            | boolean; `true` = generate/reuse, see manifest |
 
-Users are created confirmed.
+Users are created confirmed. `superuser` and `api_token` accept a real YAML
+boolean or the strings `"true"`/`"yes"`/`"false"`/`"no"`; anything else (e.g.
+YAML 1.1's `on`/`off`, which `yaml_elixir` doesn't coerce) raises rather than
+silently being treated as `false`.
 
 ### credentials
 
