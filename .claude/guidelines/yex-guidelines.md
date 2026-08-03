@@ -106,7 +106,7 @@ def serialize_to_ydoc(doc, workflow) do
 end
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:54-70`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:57-93`
 
 ### ❌ DON'T DO THIS
 
@@ -152,7 +152,7 @@ To build nested structures, see [§Prelim Types](#prelim-types).
 - Prelim types are "plans" that become real Yex types when inserted
 - This is different from typical Elixir APIs where you can create structs directly
 
-**Reference:** `deps/y_ex/lib/doc.ex:113-135`, `lib/lightning/collaboration/workflow_serializer.ex:114-127`
+**Reference:** `deps/y_ex/lib/doc.ex:113-135`, `lib/lightning/collaboration/workflow_serializer.ex:164-178`
 
 ---
 
@@ -184,7 +184,7 @@ def handle_call({Yex.Doc, :run, fun}, _from, state) do
 end
 ```
 
-**Reference:** `deps/y_ex/lib/server/doc_server_worker.ex:125-130`
+**Reference:** `deps/y_ex/lib/server/doc_server_worker.ex:123-130`
 
 ### Transactions
 
@@ -270,7 +270,7 @@ Yex.Map.set(map, "numbers", array_prelim)
 # job["body"] is a %Yex.Text{} struct
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:114-127`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:164-178`
 
 ## Reading data: handle vs snapshot discipline
 
@@ -365,7 +365,7 @@ concurrency = Map.get(workflow, "concurrency")  # nil if absent
 
 If you see advice to "use the `:not_found` / `:error` sentinel" on a layer that's already `to_json`-ed, the layer is straddling — drop the sentinel or drop the `to_json`, don't do both.
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:172-217`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:109-154` (read path), `:257-270` (`extract_jobs`)
 
 ### Subscribing to document updates
 
@@ -441,7 +441,7 @@ defp to_yjs_variant(value) when is_atom(value), do: value |> to_string()
 defp to_yjs_variant(value), do: value
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_reconciler.ex:236-240`
+**Reference:** `lib/lightning/collaboration/workflow_reconciler.ex:252-256`
 
 ### 4. Y.Text handles need explicit extraction
 
@@ -494,7 +494,7 @@ job_map = Yex.MapPrelim.from(%{
 })
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:116-124`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:165-173`
 
 ### 7. Finding Array Items by ID
 
@@ -514,7 +514,7 @@ index = Enum.find_index(jobs_array, fn job ->
 end)
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_reconciler.ex:222-234`
+**Reference:** `lib/lightning/collaboration/workflow_reconciler.ex:238-250`
 
 ---
 
@@ -537,7 +537,7 @@ test "serialize workflow to Y.Doc" do
 end
 ```
 
-**Reference:** `test/lightning/collaboration/workflow_serializer_test.exs:21-26`
+**Reference:** `test/lightning/collaboration/workflow_serializer_test.exs:15-27`
 
 ### Monitoring Updates in Tests
 
@@ -590,7 +590,7 @@ test "round-trip: serialize then deserialize" do
 end
 ```
 
-**Reference:** `test/lightning/collaboration/workflow_serializer_test.exs:662-776`
+**Reference:** `test/lightning/collaboration/workflow_serializer_test.exs:875`
 
 ### Helper functions for tests
 
