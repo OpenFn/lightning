@@ -161,7 +161,7 @@ Then wait for the user's research query.
 - Focus on finding concrete file paths and line numbers for developer reference
 - Each sub-agent prompt should be specific and focused on read-only documentation operations
 - Link to GitHub when possible for permanent references
-- Explore all of .context/ directory, including shared/, stuart/, frank/, and root-level files (see `.claude/agents/context-locator.md` for the `.context/` layout)
+- Explore all of .context/, including root-level files (see `.claude/agents/context-locator.md` for the `.context/` layout)
 - Don't write the research document with placeholder values
 - **Frontmatter consistency**:
   - Always include frontmatter at the beginning of research documents
