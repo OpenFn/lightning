@@ -568,31 +568,24 @@ end
 
 **Reference:** `test/lightning/collaboration/workflow_serializer_test.exs:662-776`
 
-### Helper Functions for Tests
+### Helper functions for tests
 
-```elixir
-# Preload workflow associations
-defp preload_workflow_associations(workflow) do
-  Repo.preload(workflow, [:jobs, :edges, :triggers])
-end
+These live in the test suite. Copy from the one whose discipline you want, and check what it
+returns before you use it — the same name means different things in different files, and none
+of them carries a typespec, so nothing stops them drifting further apart.
 
-# Find item in Y.Array by ID
-defp find_in_ydoc_array(array, id) do
-  array
-  |> Enum.find(fn item ->
-    case item do
-      %Yex.Map{} = map -> Yex.Map.fetch!(map, "id") == id
-      map when is_map(map) -> Map.get(map, "id") == id
-    end
-  end)
-end
+- `test/lightning/collaboration/workflow_serializer_test.exs:11-13` —
+  `preload_workflow_associations/1`.
+- `test/lightning/collaboration/workflow_reconciler_test.exs:783-805` —
+  `find_in_ydoc_array/2` under **snapshot discipline**: returns `Yex.Map.to_map(map)`, a plain
+  Elixir map, so `result["id"]` works.
+- `test/lightning/collaboration/workflow_reconciler_test.exs:807-813` — `assert_one_update/1`.
+- `test/lightning/collaboration/session_test.exs:706-711` — a second `find_in_ydoc_array/2`,
+  under **handle discipline**: returns the live `%Yex.Map{}`, so you need `Yex.Map.fetch!/2` and
+  `result["id"]` raises.
 
-# Assert single update
-defp assert_one_update(doc) do
-  assert_receive {:update_v1, _, nil, ^doc}
-  refute_receive {:update_v1, _, nil, ^doc}, nil, "Got a second update"
-end
-```
+The two `find_in_ydoc_array/2` are not interchangeable. See
+[Reading data](#reading-data-handle-vs-snapshot-discipline).
 
 ---
 
