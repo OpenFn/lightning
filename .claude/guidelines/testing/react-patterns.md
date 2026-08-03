@@ -53,7 +53,7 @@ test('hook cleans up store subscriptions', () => {
 
 ## Context-provider tests
 
-Lightning uses a provider per top-level store (SessionProvider, AdaptorProvider, etc.). When asserting "outside provider" behavior, run the hook without a wrapper and assert the thrown error message — the error text is part of the provider contract and is project-specific.
+Lightning has two store providers, `SessionProvider` and `StoreProvider`. When asserting "outside provider" behavior, run the hook without a wrapper and assert the thrown error message — the error text is part of the provider contract and is project-specific.
 
 ```typescript
 test('useSession throws outside provider', () => {
