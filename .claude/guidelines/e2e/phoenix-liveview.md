@@ -234,21 +234,32 @@ test('search with debounced input', async ({ page }) => {
 
 ### Asserting Flash Messages
 
-Lightning uses LiveView flash messages for notifications:
+Lightning uses LiveView flash messages for notifications. `expectFlashMessage` is on the
+base class, so call it through a concrete page object — `LiveViewPage` is `abstract` and
+cannot be instantiated.
 
 ```typescript
+import { ProjectsPage } from '../pages';
+
 test('verify flash message', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
+  const projectsPage = new ProjectsPage(page);
 
-  await page.goto('/workflows/123/edit');
-  await liveViewPage.waitForConnected();
+  await page.goto('/');
+  await projectsPage.waitForConnected();
 
-  await page.getByRole('button', { name: 'Save' }).click();
+  // ... the action under test
 
-  // Flash message appears via LiveView push
-  await liveViewPage.expectFlashMessage('Workflow saved successfully.');
+  await projectsPage.expectFlashMessage('<the exact flash text the action pushes>');
 });
 ```
+
+The match is a `hasText` filter, so pass text that really appears — read it off the
+`put_flash` call in the LiveView rather than guessing.
+
+Most feedback inside the React collaborative editor is a toast, not a LiveView flash, so
+`expectFlashMessage` is usually the wrong assertion there. The hosting LiveView does push
+one flash — the authorization error at
+`lib/lightning_web/live/workflow_live/collaborate.ex:57`.
 
 `expectFlashMessage` is defined once, on the base class —
 `assets/test/e2e/pages/base/liveview.page.ts:41-46`. Read it there.
