@@ -423,19 +423,25 @@ test('interact with workflow editor', async ({ page }) => {
 
 ### Sidebar Navigation
 
+`clickMenuItem(text)` is real (`liveview.page.ts:16-21`): it scopes a `getByRole('link')`
+to `#side-menu`. It lives on the abstract base, so reach it through a concrete page
+object — `ProjectsPage` or `WorkflowsPage`, both of which extend `LiveViewPage`.
+
 ```typescript
+import { ProjectsPage, WorkflowsPage } from '../pages';
+
 test('navigate sidebar menu', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
+  const workflowsPage = new WorkflowsPage(page);
 
-  await page.goto('/projects/123/w');
-  await liveViewPage.waitForConnected();
+  await page.goto(`/projects/${projectId}/w`);
+  await workflowsPage.waitForConnected();
 
-  // Sidebar menu items
-  await liveViewPage.clickMenuItem('Workflows');
-  await liveViewPage.waitForConnected();
-
-  await liveViewPage.clickMenuItem('Settings');
-  await liveViewPage.waitForConnected();
+  // Each sidebar click crosses LiveViews, so re-wait every time
+  await workflowsPage.clickMenuItem('Workflows');
+  await workflowsPage.waitForConnected();
 });
 ```
+
+`ProjectsPage.navigateToProjects()` (`projects.page.ts:34-37`) already wraps the
+click-plus-re-wait pair for that one destination.
 
