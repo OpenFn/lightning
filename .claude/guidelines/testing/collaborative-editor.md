@@ -377,27 +377,6 @@ test('resolves adaptor versions correctly', () => {
 });
 ```
 
-### Testing Credential Management
-
-**✅ DO: Test credential selection**
-
-```typescript
-test('filters credentials by project', () => {
-  const store = createCredentialStore();
-
-  store.setCredentials([
-    { id: 'cred1', project_id: 'proj1', name: 'Cred 1' },
-    { id: 'cred2', project_id: 'proj2', name: 'Cred 2' },
-    { id: 'cred3', project_id: 'proj1', name: 'Cred 3' },
-  ]);
-
-  const projectCreds = store.getCredentialsByProject('proj1');
-
-  expect(projectCreds).toHaveLength(2);
-  expect(projectCreds.map(c => c.id)).toEqual(['cred1', 'cred3']);
-});
-```
-
 ## Channel Mocks
 
 `createMockPhoenixChannel` and `createMockPhoenixChannelProvider` live in `assets/test/collaborative-editor/mocks/phoenixChannel.ts`. Read that file; it is richer than any paste of it here. Beyond the Phoenix `Channel` interface the mock channel exposes a `_test` handle — `emit`, `triggerClose`, `triggerError`, `getHandlers`, `setState` — and the module also exports `waitForAsync` and `waitForCondition`.
