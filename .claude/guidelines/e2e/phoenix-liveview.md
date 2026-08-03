@@ -147,16 +147,8 @@ test('save and verify persistence', async ({ page }) => {
 });
 ```
 
-**What `waitForSocketSettled()` does:**
-```typescript
-async waitForSocketSettled(): Promise<void> {
-  await this.page.waitForFunction(() => {
-    return new Promise(resolve => {
-      window.liveSocket.socket.ping(resolve);
-    });
-  });
-}
-```
+`waitForSocketSettled` is defined once, on the base class —
+`assets/test/e2e/pages/base/liveview.page.ts:55-61`. Read it there.
 
 ## Form Handling
 
