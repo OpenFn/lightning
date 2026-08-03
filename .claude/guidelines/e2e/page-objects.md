@@ -524,30 +524,6 @@ test('new collaborative editor', async ({ page }) => {
 });
 ```
 
-### Shared Component POMs
-
-Reuse component POMs across implementations:
-
-```typescript
-// Both use same diagram component
-export class WorkflowEditPage extends LiveViewPage {
-  readonly diagram: WorkflowDiagramPage;
-
-  constructor(page: Page) {
-    super(page);
-    this.diagram = new WorkflowDiagramPage(page);
-  }
-}
-
-export class WorkflowCollabPage {
-  readonly diagram: WorkflowDiagramPage;
-
-  constructor(page: Page) {
-    this.diagram = new WorkflowDiagramPage(page);
-  }
-}
-```
-
 ## Index Files
 
 `pages/index.ts` is a flat list of **named** re-exports, not `export *`. Six lines today.
