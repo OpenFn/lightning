@@ -1,5 +1,17 @@
 # E2E Testing with Playwright
 
+For generic Playwright behaviour — auto-waiting, web-first assertions, semantic locators
+(`getByRole` / `getByLabel` / `getByTestId`), network interception, file upload and download,
+accessibility snapshots — use the [upstream Playwright docs](https://playwright.dev/docs/intro).
+Those patterns are not re-documented here. What is documented here is Lightning-specific.
+
+**Check the installed Playwright version before trusting recall on an API.** Read
+`assets/package.json` and `assets/node_modules/playwright-core/package.json` for what is actually
+installed, then verify the API against `assets/node_modules/playwright-core/types/types.d.ts`.
+`package.json` declares a caret range, so the installed version moves without the declaration
+changing. This is not hypothetical: three APIs taught in these guidelines had been superseded —
+`Locator.type` (use `pressSequentially`), `waitForSelector`, and `networkidle`.
+
 ## Quick Start
 
 ```bash
@@ -196,12 +208,33 @@ DATABASE_URL=postgres://postgres:postgres@localhost/lightning_test_e2e # E2E dat
 `playwright.config.ts:17,36` reads `PORT` for both `baseURL` and the `webServer` health check,
 so changing it changes both.
 
+## Lightning defaults worth remembering
+
+- **One workflow route form:** `/projects/:project_id/w/:id` (`router.ex:246`), with
+  `/projects/:project_id/w/new` for a new one and `/projects/:project_id/w` for the list. There is
+  no bare `/w/:id` and no `/collab/` prefix. The retired legacy editor URLs
+  `/projects/:project_id/w/:id/legacy` redirect (`router.ex:252-253`). Login is `/users/log_in`
+  (`router.ex:132`), not `/login`.
+- **Every LiveView navigation opens a new WebSocket** — re-call `waitForConnected()` after a link
+  click that crosses LiveViews.
+- **The workflow diagram has no fixed testids.** Address it by React Flow classes: `.react-flow`,
+  `.react-flow__viewport`, `.react-flow__node`, `.react-flow__node-job`,
+  `.react-flow__node-trigger`, `.react-flow__node-placeholder`. Nodes do carry a testid, but a
+  parameterised one — `job-node-${id}` / `trigger-node-${id}`
+  (`assets/js/workflow-diagram/nodes/Node.tsx:120`) — so `[data-testid="job-node"]` matches
+  nothing.
+- **Fixed testids in the collaborative editor**, five of them: `collaborative-editor`,
+  `job-inspector`, `save-workflow-button`, `undo-button`, `redo-button`. `workflow-canvas` and
+  `workflow-diagram` do not exist.
+- Prefer `getByTestId` only where `getByRole` or `getByLabel` cannot identify the target uniquely.
+
 ## Related Guidelines
 
-- **Modern Playwright patterns:** `.claude/guidelines/e2e/playwright-patterns.md`
-- **Phoenix LiveView testing:** `.claude/guidelines/e2e/phoenix-liveview.md`
-- **Page Object Model:** `.claude/guidelines/e2e/page-objects.md`
-- **Collaborative testing:** `.claude/guidelines/e2e/collaborative-testing.md`
+| What you need | File |
+|---|---|
+| LiveView connection waits (`waitForConnected`, `waitForSocketSettled`, `waitForEventAttached`), flash messages, hooks, WebSocket frame monitoring | [`e2e/phoenix-liveview.md`](./e2e/phoenix-liveview.md) |
+| Page Object Model conventions — the `LiveViewPage` base, standalone component POMs, composition, getter factories | [`e2e/page-objects.md`](./e2e/page-objects.md) |
+| Multi-user setup, presence, cursor awareness, CRDT convergence, offline and reconnect | [`e2e/collaborative-testing.md`](./e2e/collaborative-testing.md) |
 
 ## Troubleshooting
 
