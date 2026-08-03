@@ -282,27 +282,28 @@ test('handles concurrent job edits from multiple users', () => {
 ```typescript
 test('supports undo/redo for job edits', () => {
   const ydoc = new Y.Doc();
-  const jobs = ydoc.getArray('jobs');
+  const jobs = ydoc.getArray<Y.Map<string>>('jobs');
   const undoManager = new Y.UndoManager(jobs);
 
-  // Add job
-  jobs.push([{ id: 'job1', name: 'Initial Name' }]);
+  const job = new Y.Map<string>();
+  job.set('id', 'job1');
+  job.set('name', 'Initial Name');
+  jobs.push([job]);
 
-  // Modify job
-  const job = jobs.get(0);
-  job.name = 'Updated Name';
+  // Separate transaction so the UndoManager does not merge it with the insert.
+  undoManager.stopCapturing();
+  job.set('name', 'Updated Name');
+  expect(jobs.get(0).get('name')).toBe('Updated Name');
 
-  expect(jobs.get(0).name).toBe('Updated Name');
-
-  // Undo
   undoManager.undo();
-  expect(jobs.get(0).name).toBe('Initial Name');
+  expect(jobs.get(0).get('name')).toBe('Initial Name');
 
-  // Redo
   undoManager.redo();
-  expect(jobs.get(0).name).toBe('Updated Name');
+  expect(jobs.get(0).get('name')).toBe('Updated Name');
 });
 ```
+
+The job has to be a `Y.Map` for the edit to be a Yjs transaction at all, and `stopCapturing()` is load-bearing: `Y.UndoManager` merges operations inside its `captureTimeout` window into one undo step, so without it the insert and the edit undo together.
 
 ## Testing Lightning-Specific Patterns
 
