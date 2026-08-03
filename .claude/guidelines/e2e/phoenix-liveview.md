@@ -160,31 +160,6 @@ async waitForSocketSettled(): Promise<void> {
 
 ## Form Handling
 
-### LiveView Forms with phx-change
-
-LiveView forms trigger events on every change:
-
-```typescript
-test('form updates trigger LiveView events', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
-
-  await page.goto('/workflows/new');
-  await liveViewPage.waitForConnected();
-
-  // Each input change triggers phx-change event
-  await page.getByLabel('Workflow name').fill('ETL Pipeline');
-
-  // LiveView may update UI based on validation
-  await expect(page.getByText('Name is valid')).toBeVisible();
-
-  // Select dropdown triggers phx-change
-  await page.getByLabel('Workflow type').selectOption('event-based');
-
-  // LiveView updates form based on selection
-  await expect(page.getByLabel('Trigger type')).toBeVisible();
-});
-```
-
 ### Debounced Inputs
 
 LiveView debounces some inputs, so the server response lags the keystroke. Wait on the
