@@ -199,21 +199,8 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
   defp webhook_response_config_pairs(_config), do: []
 
   defp edge_pairs(edge, triggers, jobs) do
-    source_trigger =
-      edge["source_trigger_id"] &&
-        Enum.find(triggers, &(&1["id"] == edge["source_trigger_id"]))
-
-    source_job =
-      edge["source_job_id"] &&
-        Enum.find(jobs, &(&1["id"] == edge["source_job_id"]))
-
-    target_job = Enum.find(jobs, &(&1["id"] == edge["target_job_id"]))
-
-    source_name =
-      (source_trigger && source_trigger["type"]) ||
-        (source_job && hyphenate(source_job["name"]))
-
-    target_name = (target_job && hyphenate(target_job["name"])) || ""
+    source = edge_source(edge, triggers, jobs)
+    target_name = edge_target_name(edge, jobs)
 
     pairs =
       [
@@ -222,15 +209,41 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
         {"enabled", edge["enabled"] != false},
         {"target_job", target_name}
       ] ++
-        maybe_pair("source_trigger", source_trigger && source_trigger["type"]) ++
-        maybe_pair("source_job", source_job && hyphenate(source_job["name"])) ++
+        maybe_pair("source_trigger", source.trigger_type) ++
+        maybe_pair("source_job", source.job_name) ++
         maybe_pair("condition_label", presence(edge["condition_label"])) ++
         maybe_pair(
           "condition_expression",
           presence(edge["condition_expression"])
         )
 
-    {"#{source_name}->#{target_name}", pairs}
+    {"#{source.name}->#{target_name}", pairs}
+  end
+
+  defp edge_source(edge, triggers, jobs) do
+    trigger =
+      edge["source_trigger_id"] &&
+        Enum.find(triggers, &(&1["id"] == edge["source_trigger_id"]))
+
+    job =
+      edge["source_job_id"] &&
+        Enum.find(jobs, &(&1["id"] == edge["source_job_id"]))
+
+    trigger_type = trigger && trigger["type"]
+    job_name = job && hyphenate(job["name"])
+
+    %{
+      trigger_type: trigger_type,
+      job_name: job_name,
+      name: trigger_type || job_name
+    }
+  end
+
+  defp edge_target_name(edge, jobs) do
+    case Enum.find(jobs, &(&1["id"] == edge["target_job_id"])) do
+      nil -> ""
+      job -> hyphenate(job["name"])
+    end
   end
 
   defp pos_pairs(positions, id) do
