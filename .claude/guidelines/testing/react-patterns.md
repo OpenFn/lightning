@@ -1,6 +1,6 @@
 # React Testing Patterns
 
-Lightning-specific React Testing Library patterns. For general RTL, `act()`, `waitFor`, `renderHook`, and `userEvent` usage see the [React Testing Library docs](https://testing-library.com/react).
+Lightning-specific React Testing Library patterns. React Testing Library is pinned at **16.3.0** on React **18.3.1**. For general RTL, `act()`, `waitFor`, `renderHook`, and `userEvent` usage see the [React Testing Library docs](https://testing-library.com/react).
 
 ## Cross-references
 
