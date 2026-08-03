@@ -29,20 +29,20 @@ assets/test/e2e/pages/
 
 ### Class Hierarchy
 
-```
-Page
-  ↓
-LiveViewPage (base/liveview.page.ts)
-  ↓
-  ├── WorkflowEditPage (workflow-edit.page.ts)
-  ├── ProjectsPage (projects.page.ts)
-  └── WorkflowsPage (workflows.page.ts)
+There is one inheritance chain, and component POMs are **not** in it.
 
-LiveViewPage
-  ↓
-Component POMs
-  ├── WorkflowDiagramPage (components/workflow-diagram.page.ts)
-  └── JobFormPage (components/job-form.page.ts)
+```
+LiveViewPage (abstract — base/liveview.page.ts)
+  ├── LoginPage                  (login.page.ts)
+  ├── ProjectsPage               (projects.page.ts)
+  ├── WorkflowsPage              (workflows.page.ts)
+  └── WorkflowCollaborativePage  (workflow-collab.page.ts)
+
+Standalone, constructed with `page`, composed by the above:
+  WorkflowDiagramPage            (components/workflow-diagram.page.ts)
+    ├── WorkflowDiagramNodesPage (components/workflow-diagram-nodes.page.ts)
+    └── WorkflowDiagramEdgesPage (components/workflow-diagram-edges.page.ts)
+  JobInspectorPage               (components/job-inspector.page.ts)
 ```
 
 ## Base Classes
