@@ -38,6 +38,11 @@ emails and API tokens, project/workflow/job ids, and trigger webhook paths
 
 Top-level keys: `users`, `credentials`, `projects`. All lists optional.
 
+Every key at every level (except inside workflow/trigger/job/edge maps, which
+pass through to the provisioner — see below) is checked against an allow-list. A
+typo'd or unsupported key raises immediately, naming the bad key, rather than
+being silently ignored.
+
 ### users
 
 | key          | required | default            | notes                                 |
@@ -58,7 +63,7 @@ Users are created confirmed.
 | `name`   | yes      |         | unique per scenario; matched on re-run |
 | `owner`  | yes      |         | email of a user declared above         |
 | `schema` |          | `raw`   | e.g. `dhis2`, `http`, `postgresql`     |
-| `body`   |          | `{}`    | secret values; supports `${ENV_VAR}`   |
+| `body`   |          | `{}`    | secret values; supports `${env:VAR}`   |
 
 Existing credentials (matched by owner+name) are reused as-is; bodies are not
 updated on re-run.
@@ -68,13 +73,21 @@ updated on re-run.
 | key           | required | notes                                |
 | ------------- | -------- | ------------------------------------ |
 | `name`        | yes      | url-safe (lowercase, digits, dashes) |
-| `members`     | yes      | at least one `role: owner`           |
+| `description` |          |                                      |
+| `members`     | yes      | exactly one `role: owner`            |
 | `credentials` |          | names to expose to this project      |
+| `collections` |          | list of `{ name }`                   |
 | `workflows`   |          |                                      |
 
+`channels` isn't supported yet — declaring it raises rather than being silently
+dropped.
+
 Members: `{ email, role }` with role one of `owner`, `admin`, `editor`, `viewer`
-(default `editor`). Re-runs add missing members and correct drifted roles, but
-never remove anyone.
+(default `editor`). Exactly one member must be `owner`. Re-runs add missing
+members and correct drifted roles, but never remove anyone — so an ownership
+handover (declaring a different member as `owner`) only succeeds if the old
+owner is also declared, with a non-owner role, in the same run; otherwise it
+fails cleanly rather than silently leaving two owners.
 
 ### workflows
 
@@ -124,13 +137,13 @@ loudly rather than being silently dropped.
 
 ### Environment interpolation
 
-Any string value anywhere in the file may reference `${SOME_ENV_VAR}`; the
+Any string value anywhere in the file may reference `${env:SOME_VAR}`; the
 variable is resolved when the scenario runs and it is an error for it to be
 unset. Use this to keep secrets out of committed scenario files.
 
-Only `SCREAMING_SNAKE_CASE` names are treated as env references, so JS template
-literals in job bodies (`${count}`, `${state.data}`) pass through untouched.
-Avoid uppercase `${...}` literals in job bodies — they will be interpolated.
+Interpolation is explicit — only the `${env:...}` form is replaced. Plain
+`${...}` is left alone, so JS template literals in job bodies (`${id}`,
+`${HOME}`, `${state.data}`) can never collide with it.
 
 ## Safety
 

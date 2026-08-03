@@ -29,7 +29,7 @@ credentials:
     schema: raw
     body:
       apiKey: not-a-real-key
-      # secrets can come from the environment: apiKey: ${MY_API_KEY}
+      # secrets can come from the environment: apiKey: ${env:MY_API_KEY}
 
 projects:
   - name: example-project
