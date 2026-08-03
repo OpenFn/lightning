@@ -363,10 +363,9 @@ When spawning research sub-tasks:
    - Expected output format
 4. **Be specific about directories** — name the exact path (e.g., `assets/`, `lib/`):
    - Include the full path context in your prompts
-5. **Specify read-only tools** to use
-6. **Request specific file:line references** in responses
-7. **Wait for all tasks to complete** before synthesizing
-8. **Verify sub-task results**:
+5. **Request specific file:line references** in responses
+6. **Wait for all tasks to complete** before synthesizing
+7. **Verify sub-task results**:
    - If a sub-task returns unexpected results, spawn follow-up tasks
    - Cross-check findings against the actual codebase
    - Don't accept results that seem incorrect
