@@ -2,6 +2,7 @@
 name: idea-machine
 description: Takes a problem statement and generates several distinct solution approaches with pros, cons and complexity. Use when planning a large feature and the implementation options are still open. Searches the codebase for existing patterns and the web for proven solutions.
 tools: Agent, Grep, Glob, Read, TodoWrite, WebSearch, WebFetch
+effort: high
 color: cyan
 ---
 
