@@ -19,4 +19,3 @@ Focus on showing existing patterns as they are. Don't critique, evaluate, or rec
 - **Document patterns** - Show what patterns are actually used
 - **Include tests** - Show existing test patterns
 - **Full file paths** - With line numbers
-- **No evaluation** - Just show what exists without judgment
