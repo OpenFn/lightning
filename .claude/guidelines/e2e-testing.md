@@ -209,7 +209,10 @@ testing patterns.
 
 ### Using Page Object Models
 
-Use POMs for reusable interactions rather than inline CSS selectors scattered across tests. See `.claude/guidelines/e2e/page-objects.md` for patterns, and **always read an existing POM file before adding new methods** to avoid duplicating helpers like `loginIfNeeded`.
+Use POMs for reusable interactions rather than inline CSS selectors scattered across tests. Read
+the existing POM before adding a method — `loginIfNeeded` is the sort of helper that gets written
+twice. See `.claude/guidelines/e2e/page-objects.md` for the class hierarchy and composition
+patterns.
 
 ### Authentication
 
