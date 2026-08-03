@@ -68,25 +68,6 @@ end
 - Verifying a state transition (before → action → after)
 - Related side effects of a single command
 
-### Quick decision tree
-
-```
-Is this testing a single operation?
-  → YES: Can you group assertions?
-    → YES: Group them in one test
-    → NO: Is the setup identical?
-      → YES: Still consider grouping
-      → NO: Separate tests OK
-
-Is this testing user-facing behavior?
-  → YES: Write the test
-  → NO: Skip it (probably testing framework/library code)
-
-Will this test catch a real bug?
-  → YES: Write the test
-  → NO: Skip it (probably testing trivial getters/setters)
-```
-
 ## Test file length
 
 **Test files over 400 lines: consolidate.** Group related assertions, extract setup into `test/collaborative-editor/__helpers__/`, and split by behaviour rather than by property. New work already meets this — files added in the last three months run to a median of 196 lines. Roughly half the older suite does not, and the largest file is 1,955 lines; that is legacy, not licence. Nothing enforces this; reviewers do.
