@@ -99,9 +99,9 @@ If you're past 400 lines you're probably:
 
 ## Channel mocks
 
-Phoenix Channel mocks for the collaborative editor (`createMockPhoenixChannel`, `createMockPushWithResponse`) are Lightning-specific and live in one place.
+Phoenix Channel mocks for the collaborative editor are Lightning-specific and live in the test tree, not in these guidelines. `assets/test/collaborative-editor/mocks/phoenixChannel.ts` exports `createMockPhoenixChannel` and `createMockPhoenixChannelProvider`; `assets/test/collaborative-editor/__helpers__/storeHelpers.ts` exports the per-store setup factories that wire a mock channel into a store; `assets/test/collaborative-editor/__helpers__/channelMocks.ts` exports the push-response helpers (`createMockChannelPushOk`, `createMockChannelPushError`, and four more). Read those files rather than reconstructing the mocks.
 
-> See `.claude/guidelines/testing/collaborative-editor.md §Channel Mocks` for the canonical implementation.
+> `.claude/guidelines/testing/collaborative-editor.md §Channel Mocks` covers what the mock channel exposes beyond the Phoenix `Channel` interface.
 
 ## Test structure and organization
 
