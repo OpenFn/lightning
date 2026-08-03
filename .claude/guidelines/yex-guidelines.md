@@ -88,21 +88,21 @@ end
 
 ## Core Concepts
 
-### Critical: You Cannot Create Map/Array/Text Directly
+### You cannot create Map/Array/Text directly
 
 Yex.Map, Yex.Array, and Yex.Text **cannot be created directly**. They can only be obtained through `Yex.Doc.get_map/2`, `Yex.Doc.get_array/2`, and `Yex.Doc.get_text/2`.
 
 ```elixir
 # ❌ WRONG - These functions DO NOT EXIST
-map = Yex.Map.new()          # NO! This function doesn't exist
-array = Yex.Array.new()      # NO! This function doesn't exist
-text = Yex.Text.new()        # NO! This function doesn't exist
+map = Yex.Map.new()          # Does not exist in y_ex 0.8.0
+array = Yex.Array.new()      # Does not exist in y_ex 0.8.0
+text = Yex.Text.new()        # Does not exist in y_ex 0.8.0
 
 # ✅ CORRECT - Only way to create these types
 doc = Yex.Doc.new()
-map = Yex.Doc.get_map(doc, "my_map")       # This is the ONLY way
-array = Yex.Doc.get_array(doc, "my_array") # This is the ONLY way
-text = Yex.Doc.get_text(doc, "my_text")    # This is the ONLY way
+map = Yex.Doc.get_map(doc, "my_map")       # The only constructor
+array = Yex.Doc.get_array(doc, "my_array") # The only constructor
+text = Yex.Doc.get_text(doc, "my_text")    # The only constructor
 ```
 
 To build nested structures, see [§Prelim Types](#prelim-types).
