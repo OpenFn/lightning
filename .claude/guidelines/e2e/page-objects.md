@@ -1,11 +1,7 @@
 # Page Object Model (POM) Best Practices
 
-## Overview
-
-The Page Object Model pattern encapsulates page structure and interactions,
-making tests more maintainable and readable. Lightning uses a hierarchical POM
-structure with base classes, page-specific models, and reusable component
-models.
+Lightning's e2e suite uses a hierarchical POM structure: one abstract LiveView base class,
+page-level models that extend it, and standalone component models they compose.
 
 ## POM Architecture
 
