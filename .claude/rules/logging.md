@@ -1,3 +1,8 @@
+---
+paths:
+  - "lib/**/*.ex"
+---
+
 # Logging - Logger Levels and Sentry Noise
 
 This guideline covers how to choose `Logger` levels in the Lightning Phoenix app so that real bugs stay visible and Sentry stays signal-rich.
