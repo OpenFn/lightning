@@ -185,9 +185,3 @@ This creates an issue file at a specific path (e.g., `.context/stuart/issues/363
 ```
 /create-spec .context/stuart/issues/3635-workflow-save.md
 ```
-
-### Important
-
-- **Argument must be a file path**, not an issue number
-- If the user provides just a number, instruct them to run `/get-issue <number>` first to create the issue file
-- This keeps the command focused on its single purpose: converting an existing issue file into a requirements specification
