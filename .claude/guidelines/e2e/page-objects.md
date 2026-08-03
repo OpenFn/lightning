@@ -183,35 +183,6 @@ export class WorkflowEditPage extends LiveViewPage {
 - Provide high-level methods for user actions
 - Return `Locator` for flexible assertions
 
-### Using the Page Object
-
-```typescript
-import { WorkflowEditPage } from '../pages';
-
-test('edit workflow', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-
-  await page.goto('/w/123');
-  await workflowEdit.waitForConnected();
-
-  // Use page methods
-  await workflowEdit.setWorkflowName('Updated Name');
-
-  // Use component methods
-  await workflowEdit.diagram.clickNode('Job 1');
-
-  // Use factory methods
-  await workflowEdit.jobForm(0).nameInput.fill('New Job Name');
-
-  // Save and verify
-  await workflowEdit.clickSaveWorkflow();
-  await workflowEdit.expectFlashMessage('Workflow saved');
-
-  // Use locator methods for assertions
-  await expect(workflowEdit.unsavedChangesIndicator()).not.toBeVisible();
-});
-```
-
 ## Component POMs
 
 ### Component Pattern
