@@ -5,7 +5,7 @@ Testing patterns specific to Lightning's collaborative workflow editor, includin
 ## Overview
 
 The Lightning collaborative editor combines:
-- **Yjs** - CRDT for real-time document synchronization
+- **Yjs** - CRDT for real-time document synchronization (pinned at **13.6.27**)
 - **Phoenix Channels** - WebSocket communication layer
 - **React stores** - Client-side state management
 - **Y-Phoenix-Channel** - Yjs + Phoenix integration
