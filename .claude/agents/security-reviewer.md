@@ -131,6 +131,8 @@ findings list.
 - Read the actual code. Do not guess from file names.
 - Only flag issues you can substantiate. If uncertain, say so instead of
   asserting FAIL.
-- Stay in scope: S0, S1, S2 only. Do not flag style, performance, or general
-  code quality.
+- Stay in scope: check S0, S1, S2 only, and never flag style, performance or
+  general code quality. That bounds what you *check*, not what you may report:
+  if a check turns up a serious security problem outside all three, report it
+  under Other Security Observations rather than dropping it.
 - Do not post comments yourself; the workflow handles posting.
