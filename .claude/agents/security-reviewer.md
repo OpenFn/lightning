@@ -22,7 +22,8 @@ and S2 (audit trail). Be focused and cite precise file:line references.
 
 ## Scoping (do this first)
 
-1. Read the PR diff. Make a short list of changed files.
+1. The PR diff is supplied to you in the prompt — you have no tool that can
+   fetch it. Read what you were given and make a short list of changed files.
 2. For each file, decide which of S0/S1/S2 could plausibly apply. A pure
    frontend/styling/docs change usually applies to none; a test-only change
    applies to none except changes under `test/lightning/policies/`, which are
