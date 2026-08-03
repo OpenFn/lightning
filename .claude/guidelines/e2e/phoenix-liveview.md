@@ -185,28 +185,6 @@ test('form updates trigger LiveView events', async ({ page }) => {
 });
 ```
 
-### Form Submission
-
-```typescript
-test('submit LiveView form', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
-
-  await page.goto('/workflows/new');
-  await liveViewPage.waitForConnected();
-
-  // Fill form
-  await page.getByLabel('Workflow name').fill('Test Workflow');
-  await page.getByLabel('Description').fill('Test description');
-
-  // Submit triggers phx-submit
-  await page.getByRole('button', { name: 'Create' }).click();
-
-  // LiveView handles submission and redirects/updates
-  await expect(page).toHaveURL(/\/w\/[a-f0-9-]+/);
-  await expect(page.getByText('Workflow created')).toBeVisible();
-});
-```
-
 ### Debounced Inputs
 
 LiveView debounces some inputs, so the server response lags the keystroke. Wait on the
