@@ -162,6 +162,9 @@ request, not by default.
 
 ## Guidelines Reference
 
+These files cite implementation as `file:line` rather than copying it, so read the
+source at the citation instead of trusting a transcription.
+
 - `.claude/guidelines/store-structure.md` — store responsibilities in the
   collaborative editor; where new state belongs
 - `.claude/guidelines/yex-guidelines.md` — Yex (Yjs/Elixir) usage rules
