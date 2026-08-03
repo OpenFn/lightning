@@ -147,23 +147,29 @@ test.describe('Workflow Tests', () => {
 });
 ```
 
-**Test data shape:**
+**Test data shape** (`test-data.ts:21-35`):
 
 ```typescript
 {
   users: {
-    editor: { id, email, password, firstName, lastName },
-    viewer: { id, email, password, firstName, lastName },
-    admin: { id, email, password, firstName, lastName },
+    admin: { email, password, id },   // demo@openfn.org
+    editor: { email, password, id },  // editor@openfn.org
+    viewer: { email, password, id },  // viewer@openfn.org
+    super?: { email, password, id },  // optional
   },
   projects: {
-    openhie: { id, name, description },
+    openhie: { id, name },
+    dhis2: { id, name },
   },
   workflows: {
     openhie: { id, name, projectId },
+    dhis2: { id, name, projectId },
   }
 }
 ```
+
+No `firstName` / `lastName` on a user, and no `description` on a project. `super` is optional, so
+guard it before use.
 
 **✅ DO: Use test data for navigation and assertions.**
 **✅ DO: Create new data for modification tests** — don't mutate seeded records.
