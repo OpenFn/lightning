@@ -19,8 +19,12 @@ SNAPSHOT_FILE="${SNAPSHOT_FILE:-/tmp/demo_data_snapshot.sql}"
 
 # Optional declarative bootstrap scenario (see bin/e2e.d/scenarios/README.md).
 # May be a scenario name (resolved under scenarios/) or a path to a file.
+# SCENARIOS_DIR must be absolute: it's consumed inside run_in_project_root,
+# which cd's to PROJECT_ROOT, while dirname "$0" is relative to the caller's
+# cwd. PROJECT_ROOT is exported (absolute) by bin/e2e; fall back to resolving
+# our own location for direct invocations of this script.
 SCENARIO="${SCENARIO:-}"
-SCENARIOS_DIR="$(dirname "$0")/scenarios"
+SCENARIOS_DIR="${PROJECT_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}/bin/e2e.d/scenarios"
 
 # Helper functions
 run_in_project_root() {
@@ -147,13 +151,24 @@ resolve_scenario() {
     exit 1
   fi
 
+  # Make the path absolute - it's consumed inside run_in_project_root, which
+  # cd's away from the caller's cwd.
+  SCENARIO_FILE="$(realpath "$SCENARIO_FILE")"
   export SCENARIO_FILE
 
   if [[ "${SNAPSHOT_FILE_OVERRIDDEN:-false}" != "true" ]]; then
-    local slug
+    # Include a content hash in the slug so editing a scenario invalidates
+    # its snapshot instead of silently restoring stale data, and same-named
+    # scenarios in different directories don't share one.
+    local slug content_hash
     slug="$(basename "$SCENARIO_FILE")"
     slug="${slug%.*}"
-    SNAPSHOT_FILE="/tmp/lightning_e2e_snapshot__${slug}.sql"
+    if command -v shasum >/dev/null 2>&1; then
+      content_hash="$(shasum -a 256 "$SCENARIO_FILE" | cut -c1-12)"
+    else
+      content_hash="$(sha256sum "$SCENARIO_FILE" | cut -c1-12)"
+    fi
+    SNAPSHOT_FILE="/tmp/lightning_e2e_snapshot__${slug}-${content_hash}.sql"
   fi
 
   echo "📋 Using scenario: $SCENARIO_FILE"
