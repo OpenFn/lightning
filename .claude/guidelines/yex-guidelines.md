@@ -51,6 +51,7 @@ def serialize_to_ydoc(doc, workflow) do
   edges_array = Yex.Doc.get_array(doc, "edges")
   triggers_array = Yex.Doc.get_array(doc, "triggers")
   positions = Yex.Doc.get_map(doc, "positions")
+  errors = Yex.Doc.get_map(doc, "errors")
 
   # Step 2: Start transaction and use the pre-retrieved objects
   Yex.Doc.transaction(doc, "initialize_workflow_document", fn ->
