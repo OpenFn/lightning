@@ -33,15 +33,11 @@ test('interact with workflow editor', async ({ page }) => {
 });
 ```
 
-**Implementation** (canonical — `page-objects.md` cross-refs this):
-
-```typescript
-async waitForConnected(): Promise<void> {
-  const locator = this.page.locator('[data-phx-main]');
-  await expect(locator).toBeVisible();
-  await expect(locator).toHaveClass(/phx-connected/);
-}
-```
+`waitForConnected` is defined once, on the base class —
+`assets/test/e2e/pages/base/liveview.page.ts:31-35`. It waits for `div[data-phx-main]` to
+be visible and to carry the class `phx-connected`. Read the implementation there rather
+than from a copy: the two copies that used to sit in these guidelines had both drifted the
+same way, writing `toHaveClass` where the source says `toContainClass`.
 
 ### Detecting connection state via liveSocket
 
