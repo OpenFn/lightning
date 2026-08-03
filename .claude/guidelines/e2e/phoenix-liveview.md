@@ -99,28 +99,13 @@ test('wait for handlers before clicking', async ({ page }) => {
 
 ### Waiting for Server Updates
 
-LiveView can push updates from server to client. Use web-first assertions to
-wait for these updates:
+LiveView pushes updates from server to client. Use web-first assertions with a generous
+timeout — they retry until the push lands, so no explicit wait is needed.
 
-```typescript
-test('workflow status updates in real-time', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
-
-  await page.goto('/workflows/123');
-  await liveViewPage.waitForConnected();
-
-  // Trigger workflow execution
-  await page.getByRole('button', { name: 'Run' }).click();
-
-  // Wait for server to push status update
-  await expect(page.getByTestId('workflow-status'))
-    .toHaveText('Running', { timeout: 10000 });
-
-  // Wait for completion
-  await expect(page.getByTestId('workflow-status'))
-    .toHaveText('Completed', { timeout: 30000 });
-});
-```
+For a worked example, read `assets/test/e2e/specs/collaborative/job-step-sync.spec.ts`: a
+real end-to-end server-push test on a real route with real assertions. The `beforeAll` /
+`getTestData()` shape it uses is written out in
+`.claude/guidelines/e2e-testing.md §Test Data Management`.
 
 ### Polling with Socket Ping
 
