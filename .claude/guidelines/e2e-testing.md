@@ -28,27 +28,13 @@ npm run test:e2e:debug workflow.spec.ts
 
 ### Test Environment
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Playwright Test Runner                   │
-│  (Node.js process, port 4003 baseURL)                      │
-└────────────────┬────────────────────────────────────────────┘
-                 │
-                 ├──► Browser Contexts (isolated sessions)
-                 │    ├── User 1 Context (auth state)
-                 │    └── User 2 Context (different auth)
-                 │
-                 ├──► bin/e2e Helper Integration
-                 │    ├── Database reset (snapshot-based)
-                 │    ├── Test data fetching
-                 │    └── Server lifecycle management
-                 │
-                 └──► E2E Server (Phoenix)
-                      ├── Port: 4003
-                      ├── Database: lightning_test_e2e
-                      ├── LiveView WebSocket connections
-                      └── Real-time collaborative features
-```
+- The Playwright runner is a Node process; `baseURL` defaults to `http://localhost:4003`, driven by
+  `PORT`.
+- It starts and stops a Phoenix server on that port against the `lightning_test_e2e` database, via
+  the `webServer` entry in `playwright.config.ts`.
+- `bin/e2e` handles database reset from a snapshot, test-data fetching and server lifecycle;
+  `assets/test/e2e/e2e-helper.ts` is the TypeScript bridge to it.
+- Everything runs in a single browser context today. Nothing in the suite opens a second one.
 
 **Key Components:**
 - **playwright.config.ts**: Test configuration, server coordination
