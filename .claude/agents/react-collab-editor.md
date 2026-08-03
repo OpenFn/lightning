@@ -140,7 +140,7 @@ Wrap Y.Doc updates in transactions, use `observeDeep()` for nested structures, a
 - Use withSelector() for all selectors to ensure referential stability
 - Memoize expensive computations with useMemo
 - Use React.memo for components that render frequently
-- Debounce Y.Doc updates from forms (200-300ms typical)
+- Debounce Y.Doc updates from forms — `createWorkflowStore.setClientErrors` uses 500ms for TanStack Form validation errors; check the call site rather than assuming a house figure
 - Avoid creating new objects/arrays in render
 - Prevent memory leaks in long-running collaborative sessions
 
