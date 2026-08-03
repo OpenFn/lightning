@@ -9,7 +9,7 @@ Lightning's collaborative editor uses **three layers of state management**, dist
 1. **Y.Doc-backed (collaborative)** — Real-time multi-user data via Yjs CRDTs
    - WorkflowStore (workflow structure), AwarenessStore (user presence)
 2. **Phoenix Channel-backed (server-authoritative)** — Data pushed/pulled via the workflow channel
-   - SessionContextStore, AdaptorStore, CredentialStore, HistoryStore, AIAssistantStore
+   - SessionContextStore, AdaptorStore, CredentialStore, MetadataStore, HistoryStore, AIAssistantStore
 3. **Local-only (no network)** — Client-side UI state
    - UIStore, EditorPreferencesStore
 
