@@ -270,12 +270,15 @@ export default defineConfig({
 
 ### Environment variables
 
+Both of these are defaulted by `bin/e2e.d/manager:6,9`, so you only set them to override:
+
 ```bash
 PORT=4003                                                              # E2E server port
 DATABASE_URL=postgres://postgres:postgres@localhost/lightning_test_e2e # E2E database
-PWDEBUG=1                                                              # Enable inspector
-DEBUG=pw:api                                                           # Verbose API logs
 ```
+
+`playwright.config.ts:17,36` reads `PORT` for both `baseURL` and the `webServer` health check,
+so changing it changes both.
 
 ## Related Guidelines
 
