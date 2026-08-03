@@ -337,37 +337,29 @@ const reactComponent = page.locator('[phx-hook="ReactHook"]');
 
 ### Listening to WebSocket Events
 
+Register the listener **before** `goto` — a LiveView opens its socket during mount, so a
+listener attached afterwards misses the join frames.
+
 ```typescript
 test('monitor LiveView messages', async ({ page }) => {
-  const messages: string[] = [];
+  const received: string[] = [];
 
-  // Listen to WebSocket
   page.on('websocket', ws => {
-    console.log(`WebSocket connected: ${ws.url()}`);
-
-    ws.on('framereceived', frame => {
-      const payload = frame.payload;
-      console.log('Received:', payload);
-      messages.push(payload);
-    });
-
-    ws.on('framesent', frame => {
-      console.log('Sent:', frame.payload);
-    });
+    ws.on('framereceived', frame => received.push(frame.payload as string));
   });
 
-  await page.goto('/workflows/123/edit');
+  const workflowsPage = new WorkflowsPage(page);
+  await page.goto(`/projects/${projectId}/w`);
+  await workflowsPage.waitForConnected();
 
-  // Make changes that trigger WebSocket messages
-  await page.getByLabel('Workflow name').fill('Updated');
-
-  // Wait for messages
-  await page.waitForTimeout(1000);
-
-  // Verify messages were sent/received
-  expect(messages.length).toBeGreaterThan(0);
+  await expect
+    .poll(() => received.length, { timeout: 5000 })
+    .toBeGreaterThan(0);
 });
 ```
+
+This is the only WebSocket-frame example in the guidelines. `collaborative-testing.md`
+points here rather than keeping a second copy.
 
 ### Identifying a LiveView diff frame
 
