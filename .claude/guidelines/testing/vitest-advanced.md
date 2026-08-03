@@ -28,35 +28,6 @@ export const mockAdaptorsList: Adaptor[] = [
 ];
 ```
 
-### Adaptor builder for flexible data
-
-```typescript
-// fixtures/builders.ts
-export class AdaptorBuilder {
-  private adaptor: Partial<Adaptor> = {};
-
-  withName(name: string) {
-    this.adaptor.name = name;
-    return this;
-  }
-
-  withVersions(...versions: string[]) {
-    this.adaptor.versions = versions.map(v => ({ version: v }));
-    this.adaptor.latest = versions[0];
-    return this;
-  }
-
-  build(): Adaptor {
-    return {
-      name: this.adaptor.name ?? '@openfn/language-test',
-      versions: this.adaptor.versions ?? [{ version: '1.0.0' }],
-      repo: this.adaptor.repo ?? 'https://github.com/test',
-      latest: this.adaptor.latest ?? '1.0.0',
-    };
-  }
-}
-```
-
 ## Test isolation for Lightning stores
 
 Each Lightning store holds subscriber state. Always construct a fresh store per test to avoid cross-test leakage.
