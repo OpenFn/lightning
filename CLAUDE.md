@@ -23,7 +23,6 @@ mix verify                   # Run all code quality checks before committing
 ### Elixir Testing
 
 ```bash
-MIX_ENV=test mix ecto.create           # First time test DB setup only
 mix test                               # Run all tests (don't use -v flag)
 mix test path/to/test.exs              # Run single file
 mix test path/to/test.exs:42           # Run test at specific line
