@@ -6,7 +6,7 @@ These guidelines ensure maintainable, readable tests that focus on behavior rath
 
 ## Test behavior not implementation
 
-Test what a user or a calling module observes — inputs, outputs, side effects — not internal data structures or private fields. Micro-tests that assert "uses a Map internally" or "notifies subscribers exactly twice" are coupling tests to implementation and will break on refactor without signalling a real regression.
+Test what a user or a calling module observes. Asserting internal data structures or private fields couples the test to the implementation. Counting store notifications is the exception the stores earn: `useSyncExternalStore` re-renders once per `notify()`, so an exact count is the only way to catch a double-notify regression. Count when the number is the behaviour; do not count as a way of asserting how the store is built internally.
 
 ## Group related assertions
 
