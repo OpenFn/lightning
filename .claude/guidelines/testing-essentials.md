@@ -89,13 +89,7 @@ Will this test catch a real bug?
 
 ## Test file length
 
-**Test files > 400 lines → consolidate.**
-
-If you're past 400 lines you're probably:
-1. Testing framework features instead of your logic
-2. Splitting one assertion per test
-3. Not using test helpers or fixtures
-4. Testing implementation details
+**Test files over 400 lines: consolidate.** Group related assertions, extract setup into `test/collaborative-editor/__helpers__/`, and split by behaviour rather than by property. New work already meets this — files added in the last three months run to a median of 196 lines. Roughly half the older suite does not, and the largest file is 1,955 lines; that is legacy, not licence. Nothing enforces this; reviewers do.
 
 ## Channel mocks
 
