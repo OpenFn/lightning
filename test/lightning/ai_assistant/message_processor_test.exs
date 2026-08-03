@@ -471,6 +471,141 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_msg.content == "Workflow response"
     end
 
+    test "clamps segments over the cap instead of failing the save",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      global_meta = %{
+        "message_options" => %{
+          "use_global_assistant" => true,
+          "page" => "/projects/p1/workflows/w1"
+        }
+      }
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "add a step", user: user},
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      max = ChatMessage.max_response_segments()
+
+      segments =
+        for i <- 1..(max + 1) do
+          %{"type" => "text", "content" => "segment #{i}"}
+        end
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Done!",
+          "response_segments" => segments,
+          "usage" => %{}
+        })
+      )
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant_msg = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      assert length(assistant_msg.response_segments) == max
+      assert log =~ "over the #{max}-segment cap"
+    end
+
+    test "broadcasts valid status events as streaming segments and drops malformed ones",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      global_meta = %{
+        "message_options" => %{
+          "use_global_assistant" => true,
+          "page" => "/projects/p1/workflows/w1"
+        }
+      }
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "add a step", user: user},
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      segment = %{
+        "type" => "status",
+        "content" => "Adding step send-to-gmail..."
+      }
+
+      sse_body =
+        "event: status\ndata: #{Jason.encode!(segment)}\n\n" <>
+          "event: status\ndata: {not json\n\n" <>
+          "event: status\ndata: #{Jason.encode!(%{"type" => "status", "content" => 123})}\n\n" <>
+          "event: complete\ndata: #{Jason.encode!(%{"response" => "Done!", "usage" => %{}})}\n\n"
+
+      Mox.stub(Lightning.Tesla.Mock, :call, fn %{url: url}, _opts ->
+        assert url =~ "/stream"
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           headers: [{"content-type", "text/event-stream"}],
+           body: sse_body
+         }}
+      end)
+
+      Lightning.subscribe("ai_session:#{session.id}")
+      session_id = session.id
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      # The well-formed status event reaches the session topic verbatim...
+      assert_receive {:ai_assistant, :streaming_segment,
+                      %{segment: ^segment, session_id: ^session_id}}
+
+      # ...while the two malformed ones are dropped with a warning, never
+      # broadcast.
+      refute_receive {:ai_assistant, :streaming_segment, _}, 100
+      assert log =~ "Dropping malformed status event"
+    end
+
     test "marks the message as error when a streaming request returns non-2xx",
          %{user: user, project: project} do
       workflow = insert(:workflow, project: project)
