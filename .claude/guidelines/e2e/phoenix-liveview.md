@@ -1,13 +1,6 @@
 # Testing Phoenix LiveView with Playwright
 
-## Overview
-
-Phoenix LiveView uses WebSocket connections to provide real-time, server-rendered
-interactivity. Testing LiveView applications requires special handling for
-connection lifecycle, event handlers, and server-pushed updates.
-
-This guide covers Lightning-specific patterns for testing Phoenix LiveView
-components with Playwright.
+Lightning-specific patterns for driving Phoenix LiveView pages from Playwright.
 
 ## LiveView waits
 
