@@ -124,27 +124,24 @@ test('workflow status updates in real-time', async ({ page }) => {
 
 ### Polling with Socket Ping
 
-For critical operations, ensure WebSocket messages are processed:
+`waitForSocketSettled()` pings the LiveView socket and resolves on the reply, as a way of
+letting pending messages drain before you assert.
+
+**Treat it as unproven.** Its own docstring says so: *"This _hopefully_ ensures that any
+pending messages have been processed. NOTE: still needs to be verified."* A `ping` reply
+tells you the socket is responsive; it does not prove an earlier `phx-submit` has been
+handled. Prefer asserting on the effect you actually care about, and reach for this only
+when there is no observable effect to wait on.
 
 ```typescript
-test('save and verify persistence', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
+const workflowsPage = new WorkflowsPage(page);
 
-  await page.goto('/workflows/123/edit');
-  await liveViewPage.waitForConnected();
+await page.goto(`/projects/${projectId}/w`);
+await workflowsPage.waitForConnected();
 
-  // Make changes
-  await page.getByLabel('Workflow name').fill('Updated Name');
+// ... the action under test
 
-  // Save
-  await page.getByRole('button', { name: 'Save' }).click();
-
-  // Wait for socket to settle (all pending messages processed)
-  await liveViewPage.waitForSocketSettled();
-
-  // Verify save was processed
-  await expect(page.getByText('Workflow saved')).toBeVisible();
-});
+await workflowsPage.waitForSocketSettled();
 ```
 
 `waitForSocketSettled` is defined once, on the base class —
