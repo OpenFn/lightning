@@ -47,7 +47,6 @@ Then wait for the user's research query.
 3. **Spawn parallel sub-agent tasks for comprehensive research:**
    - Create multiple Task agents to research different aspects concurrently.
    - See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the canonical agent roster. For research, the relevant agents are typically **codebase-locator**, **codebase-analyzer**, **codebase-pattern-finder**, **context-locator**, **context-analyzer**, and (only when the user explicitly asks for external research) **web-search-researcher**.
-   - All agents are documentarians, not critics: they describe what exists without suggesting improvements.
    - For web-research agents, instruct them to return LINKS with their findings and INCLUDE those links in your final report.
    - Start with locator agents to find what exists; then run analyzer agents on the most promising findings. Run multiple agents in parallel when they're searching for different things.
 
