@@ -4,7 +4,9 @@ This guideline covers how to use toast notifications in the collaborative workfl
 
 ## Overview
 
-The collaborative editor uses [Sonner](https://sonner.emilkowal.ski/) via shadcn/ui for toast notifications. Toasts provide immediate user feedback for operations like saving, errors, and validations.
+The collaborative editor uses [Sonner](https://sonner.emilkowal.ski/) **2.x**
+(`^2.0.7` in `assets/package.json`) via shadcn/ui for toast notifications. Toasts provide
+immediate user feedback for operations like saving, errors, and validations.
 
 ## Architecture
 
