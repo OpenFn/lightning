@@ -231,38 +231,7 @@ For tests requiring multiple users, see `.claude/guidelines/e2e/collaborative-te
 
 ### playwright.config.ts
 
-```typescript
-export default defineConfig({
-  testDir: './test/e2e',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: 'list',
-
-  use: {
-    baseURL: 'http://localhost:4003',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-  },
-
-  projects: [
-    { name: 'setup', testMatch: /global\.setup\.ts/ },
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup'],
-    },
-  ],
-
-  webServer: {
-    command: 'bin/e2e start',
-    url: 'http://localhost:4003',
-    reuseExistingServer: !process.env.CI,
-    timeout: 60 * 1000,
-  },
-});
-```
+`assets/playwright.config.ts` is 40 lines. Read it rather than a copy of it.
 
 **Lightning specifics:**
 - `workers: 1` in CI avoids database contention
