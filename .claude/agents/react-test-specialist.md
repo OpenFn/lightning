@@ -43,10 +43,8 @@ When reviewing existing tests:
 - React 18+, Vitest, TypeScript (strict), React Testing Library.
 - Props from LiveView are underscore_cased, not camelCased.
 
-Key testing commands:
+Coverage report:
 ```bash
 cd assets
-npm test              # Run tests once
-npm run test:watch    # Run tests in watch mode
-npm run test:coverage # Generate coverage report
+npm run test:coverage
 ```
