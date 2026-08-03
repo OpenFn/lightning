@@ -141,7 +141,6 @@ If you were part of the implementation:
 ## Important Guidelines
 
 1. **Report all deviations from the plan.** Flag severity where useful, but don't pre-filter — the reader triages what matters
-2. **Run all automated checks** - Don't skip verification commands
 
 ## Validation Checklist
 
