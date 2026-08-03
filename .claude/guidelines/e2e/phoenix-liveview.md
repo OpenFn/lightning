@@ -250,16 +250,8 @@ test('verify flash message', async ({ page }) => {
 });
 ```
 
-**What `expectFlashMessage()` does:**
-```typescript
-async expectFlashMessage(text: string): Promise<void> {
-  const flashMessage = this.page
-    .locator('[id^="flash-"][phx-hook="Flash"]')
-    .filter({ hasText: text });
-
-  await expect(flashMessage).toBeVisible();
-}
-```
+`expectFlashMessage` is defined once, on the base class —
+`assets/test/e2e/pages/base/liveview.page.ts:41-46`. Read it there.
 
 ### Flash Message Lifecycle
 
