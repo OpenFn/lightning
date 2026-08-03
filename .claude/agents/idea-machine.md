@@ -124,6 +124,7 @@ Structure your findings like this:
 ## Important Guidelines
 
 - **Diverge then converge** — generate varied approaches before narrowing.
+- **How many**: 2-4 codebase patterns, 2-4 external approaches, 3-5 distinct solution approaches.
 - **Range**: mix conservative (proven), moderate, and innovative options.
 - **Reference reality** — ground ideas in actual code and proven practices; don't invent patterns or cite non-existent resources.
 - **Be specific** — include concrete steps and tradeoffs, not vague labels.
