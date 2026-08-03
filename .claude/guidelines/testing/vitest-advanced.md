@@ -10,23 +10,7 @@ Lightning-specific fixture and test-data patterns. Vitest is pinned at **3.2.4**
 
 ## Lightning adaptor fixtures
 
-Adaptors follow a fixed shape driven by the `@openfn/language-*` registry. Use a dedicated fixtures file rather than inline objects.
-
-```typescript
-// fixtures/adaptorData.ts
-export const mockAdaptor: Adaptor = {
-  name: '@openfn/language-http',
-  versions: [{ version: '2.1.0' }, { version: '2.0.5' }],
-  repo: 'https://github.com/OpenFn/adaptors/tree/main/packages/http',
-  latest: '2.1.0',
-};
-
-export const mockAdaptorsList: Adaptor[] = [
-  mockAdaptor,
-  mockAdaptorDhis2,
-  mockAdaptorSalesforce,
-];
-```
+Adaptors follow a fixed shape driven by the `@openfn/language-*` registry. Use a dedicated fixtures file rather than inline objects: `assets/test/collaborative-editor/fixtures/adaptorData.ts` already holds `mockAdaptor`, `mockAdaptorVersions`, `mockAdaptorsList`, four more named adaptors, and two override-taking factories (`createMockAdaptor`, `createMockAdaptorsList`). Import from there rather than writing a new one.
 
 ## Test isolation for Lightning stores
 
