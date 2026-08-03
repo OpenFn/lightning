@@ -333,9 +333,9 @@ Referential invariants (e.g. a cron trigger's `cron_cursor_job_id` must point at
 live job in the same workflow) are enforced **authoritatively on the server** — the
 compound foreign key (`ON DELETE SET NULL (cron_cursor_job_id)`) plus the
 `Workflows.save_workflow/3` rescue. The client has exactly ONE advisory cleanup
-function, `adapters/reconcileDanglingReferences.ts`, invoked from every structural
-mutation that can orphan a reference (`removeJob`, `YAMLStateToYDoc.applyToYDoc`,
-and defensively before save in `saveWorkflow`/`saveAndSyncWorkflow`). It is a UX
+function, `adapters/reconcileDanglingReferences.ts`, invoked from the two structural mutations
+that can orphan a reference (`removeJob` at `createWorkflowStore.ts:1018`, and
+`YAMLStateToYDoc.applyToYDoc` at `YAMLStateToYDoc.ts:168`). It is a UX
 fast-path only: it cannot close the concurrent-editor race (a collaborator's delete
 that has not yet merged into this client's doc), and it is NOT the correctness
 guarantee. **Do not add per-path client cursor cleanup** — if a new structural
