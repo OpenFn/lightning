@@ -1,7 +1,7 @@
 ---
 name: security-reviewer
 description: Performs OpenFn-specific security checks on PR changes. Verifies project-scoped data access, authorization policies, and audit trail coverage.
-tools: Read, Grep, Glob, LS
+tools: Read, Grep, Glob
 model: sonnet
 maxTurns: 50
 ---

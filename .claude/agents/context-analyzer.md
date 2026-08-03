@@ -1,7 +1,7 @@
 ---
 name: context-analyzer
 description: The research equivalent of codebase-analyzer. Use this subagent_type when wanting to deep dive on context documents. Not commonly needed otherwise.
-tools: Read, Grep, Glob, LS
+tools: Read, Grep, Glob
 model: sonnet
 ---
 

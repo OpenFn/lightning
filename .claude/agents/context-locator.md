@@ -1,7 +1,7 @@
 ---
 name: context-locator
 description: Discovers relevant documents in .context/ directory - the context equivalent of codebase-locator for finding project documentation, notes, and historical context
-tools: Grep, Glob, LS
+tools: Grep, Glob
 model: haiku
 ---
 
