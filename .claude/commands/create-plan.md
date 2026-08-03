@@ -221,6 +221,7 @@ After structure approval:
 - [ ] Type checking passes: `<project typecheck command>`
 - [ ] Linting passes: `<project lint command>`
 - [ ] Integration tests pass: `<project integration test command>`
+- [ ] API endpoint returns 200: `curl localhost:<port>/api/new-endpoint`
 
 #### Manual Verification:
 - [ ] Feature works as expected when tested via UI
@@ -310,23 +311,6 @@ After structure approval:
    - Performance under real conditions
    - Edge cases that are hard to automate
    - User acceptance criteria
-
-**Format example:**
-```markdown
-### Success Criteria:
-
-#### Automated Verification:
-- [ ] Database migration runs successfully: `<migrate command>`
-- [ ] All unit tests pass: `<test command>`
-- [ ] No linting errors: `<lint command>`
-- [ ] API endpoint returns 200: `curl localhost:<port>/api/new-endpoint`
-
-#### Manual Verification:
-- [ ] New feature appears correctly in the UI
-- [ ] Performance is acceptable with 1000+ items
-- [ ] Error messages are user-friendly
-- [ ] Feature works correctly on mobile devices
-```
 
 ## Common Patterns
 
