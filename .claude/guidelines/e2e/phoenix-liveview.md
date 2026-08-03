@@ -400,27 +400,6 @@ test('verify LiveView diff message', async ({ page }) => {
 
 ## Lightning-Specific Patterns
 
-### Workflow Editor (LiveView)
-
-```typescript
-import { WorkflowEditPage } from '../pages';
-
-test('interact with workflow editor', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-
-  await page.goto('/w/123');
-  await workflowEdit.waitForConnected();
-  await page.waitForLoadState('networkidle');
-
-  // Use workflow-specific methods
-  await workflowEdit.setWorkflowName('Updated');
-  await workflowEdit.diagram.clickNode('Job 1');
-  await workflowEdit.clickSaveWorkflow();
-
-  await workflowEdit.expectFlashMessage('Workflow saved');
-});
-```
-
 ### Sidebar Navigation
 
 `clickMenuItem(text)` is real (`liveview.page.ts:16-21`): it scopes a `getByRole('link')`
