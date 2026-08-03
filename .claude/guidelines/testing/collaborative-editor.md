@@ -216,32 +216,6 @@ test('notifies subscribers on state change', () => {
 });
 ```
 
-**✅ DO: Test selective subscriptions**
-
-```typescript
-test('only notifies when subscribed fields change', () => {
-  const store = createAdaptorStore();
-  let notificationCount = 0;
-
-  const unsubscribe = store.subscribe(
-    (state) => state.isLoading,
-    () => {
-      notificationCount++;
-    }
-  );
-
-  // This should trigger notification
-  store.setLoading(true);
-  expect(notificationCount).toBe(1);
-
-  // This should NOT trigger notification (different field)
-  store.setError('Some error');
-  expect(notificationCount).toBe(1); // Still 1
-
-  unsubscribe();
-});
-```
-
 ## Testing Collaborative Features
 
 ### Testing Conflict Resolution
