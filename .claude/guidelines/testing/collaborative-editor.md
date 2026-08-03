@@ -51,21 +51,6 @@ test('handles job insertions in Yjs array', () => {
 });
 ```
 
-**✅ DO: Test Yjs map operations**
-
-```typescript
-test('updates workflow metadata in Yjs map', () => {
-  const ydoc = new Y.Doc();
-  const workflow = ydoc.getMap('workflow');
-
-  workflow.set('name', 'My Workflow');
-  workflow.set('project_id', 'project-123');
-
-  expect(workflow.get('name')).toBe('My Workflow');
-  expect(workflow.get('project_id')).toBe('project-123');
-});
-```
-
 ### Testing Yjs Observability
 
 **✅ DO: Test Yjs observers**
