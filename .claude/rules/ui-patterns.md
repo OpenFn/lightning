@@ -1,3 +1,9 @@
+---
+paths:
+  - "assets/js/**/*.tsx"
+  - "lib/**/*.heex"
+---
+
 # UI Patterns and Guidelines
 
 This document captures UI/UX patterns and design conventions for the Lightning collaborative editor.
