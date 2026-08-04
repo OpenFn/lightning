@@ -2,6 +2,7 @@
 name: react-collab-editor
 description: Use this agent when working with Lightning's collaborative workflow editor in the assets/js/collaborative-editor/ directory. This includes:\n\n- Writing or refactoring React components, hooks, stores, or contexts in collaborative-editor/\n- Debugging Y.Doc synchronization issues or collaborative editing bugs\n- Implementing new features that involve Y.Doc, Immer, or useSyncExternalStore patterns\n- Optimizing performance of the collaborative editor\n- Adding form validation with TanStack Form and Zod\n- Working with @xyflow/react diagram components\n- Fixing TypeScript type errors in the editor codebase\n- Ensuring pattern consistency across the collaborative editor modules\n- Writing tests for collaborative features\n- Performance analysis and optimization
 tools: Bash, Glob, Grep, Read, Edit, Write, NotebookEdit, WebFetch, TodoWrite, WebSearch, mcp__ide__getDiagnostics, mcp__ide__executeCode
+effort: high
 color: blue
 ---
 
