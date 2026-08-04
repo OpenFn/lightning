@@ -174,3 +174,6 @@ config :lightning, LightningWeb.CollectionsController,
 # The OIDC test suite serves discovery/JWKS/userinfo/token over http on
 # localhost via Bypass; allow those loopback endpoints to skip TLS verification.
 config :lightning, :auth_providers_allow_insecure_loopback, true
+
+# Allow declarative kickstarting (Lightning.Kickstart) in the test suite.
+config :lightning, Lightning.Kickstart, enabled: true
