@@ -259,17 +259,26 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                   />
                 </.td>
                 <.td class="text-right">
-                  <%= if @can_delete_workflow do %>
+                  <div class="flex justify-end gap-3">
                     <.link
-                      href="#"
                       class="table-action"
-                      phx-click="delete_workflow"
-                      phx-value-id={workflow.id}
-                      data-confirm="Are you sure you'd like to delete this workflow?"
+                      navigate={~p"/projects/#{@project.id}/w/#{workflow.id}/health"}
+                      onclick="event.stopPropagation()"
                     >
-                      Delete
+                      Health
                     </.link>
-                  <% end %>
+                    <%= if @can_delete_workflow do %>
+                      <.link
+                        href="#"
+                        class="table-action"
+                        phx-click="delete_workflow"
+                        phx-value-id={workflow.id}
+                        data-confirm="Are you sure you'd like to delete this workflow?"
+                      >
+                        Delete
+                      </.link>
+                    <% end %>
+                  </div>
                 </.td>
               </.tr>
             <% end %>

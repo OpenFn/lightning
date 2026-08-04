@@ -112,6 +112,7 @@ config :esbuild,
          js/app.js
          js/react/components/DataclipViewer.tsx
          js/react/components/CollectionPreviewViewer.tsx
+         js/react/components/WorkflowHealth.tsx
          js/collaborative-editor/CollaborativeEditor.tsx
          js/picker/Picker.tsx
          js/picker/PickerButton.tsx
