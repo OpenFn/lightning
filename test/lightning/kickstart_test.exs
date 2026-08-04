@@ -1,9 +1,9 @@
-defmodule Lightning.BootstrapTest do
+defmodule Lightning.KickstartTest do
   use Lightning.DataCase, async: false
 
   alias Lightning.Accounts
-  alias Lightning.Bootstrap
   alias Lightning.Credentials.Credential
+  alias Lightning.Kickstart
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.ProjectUser
@@ -33,7 +33,7 @@ defmodule Lightning.BootstrapTest do
       ],
       "projects" => [
         %{
-          "name" => "bootstrap-test",
+          "name" => "kickstart-test",
           "members" => [
             %{"email" => "owner@openfn.org", "role" => "owner"},
             %{"email" => "editor@openfn.org", "role" => "editor"}
@@ -66,7 +66,7 @@ defmodule Lightning.BootstrapTest do
 
   describe "run/1" do
     test "creates users, credentials, project, workflow and manifest" do
-      result = Bootstrap.run(scenario())
+      result = Kickstart.run(scenario())
 
       # users: confirmed, correct roles, api token only where requested
       %{user: owner, api_token: token} = result.users["owner@openfn.org"]
@@ -139,7 +139,7 @@ defmodule Lightning.BootstrapTest do
       assert trigger_edge.condition_type == :always
 
       # manifest carries what a harness needs
-      manifest = Bootstrap.manifest(result)
+      manifest = Kickstart.manifest(result)
 
       assert [%{email: "owner@openfn.org", api_token: ^token} | _] =
                Enum.sort_by(manifest.users, & &1.email, :desc)
@@ -149,12 +149,12 @@ defmodule Lightning.BootstrapTest do
 
       assert webhook_path == "/i/#{trigger.id}"
 
-      assert Bootstrap.summary(result) =~ "bootstrap-test"
+      assert Kickstart.summary(result) =~ "kickstart-test"
     end
 
     test "re-running the same scenario converges instead of duplicating" do
-      first = Bootstrap.run(scenario())
-      second = Bootstrap.run(scenario())
+      first = Kickstart.run(scenario())
+      second = Kickstart.run(scenario())
 
       # deterministic ids: everything resolves to the same records
       [%{project: p1, workflows: [w1]}] = first.projects
@@ -183,7 +183,7 @@ defmodule Lightning.BootstrapTest do
     end
 
     test "re-running corrects drifted member roles without removing members" do
-      Bootstrap.run(scenario())
+      Kickstart.run(scenario())
 
       updated =
         update_in(
@@ -194,7 +194,7 @@ defmodule Lightning.BootstrapTest do
           end
         )
 
-      [%{project: project}] = Bootstrap.run(updated).projects
+      [%{project: project}] = Kickstart.run(updated).projects
 
       editor = Accounts.get_user_by_email("editor@openfn.org")
 
@@ -206,7 +206,7 @@ defmodule Lightning.BootstrapTest do
     end
 
     test "same-run ownership handover demotes the old owner before promoting the new one" do
-      Bootstrap.run(scenario())
+      Kickstart.run(scenario())
 
       handover =
         update_in(
@@ -220,7 +220,7 @@ defmodule Lightning.BootstrapTest do
           end
         )
 
-      [%{project: project}] = Bootstrap.run(handover).projects
+      [%{project: project}] = Kickstart.run(handover).projects
 
       owner = Accounts.get_user_by_email("owner@openfn.org")
       editor = Accounts.get_user_by_email("editor@openfn.org")
@@ -251,12 +251,12 @@ defmodule Lightning.BootstrapTest do
       assert_raise RuntimeError,
                    ~r/more than one member with\n?\s*role: owner/,
                    fn ->
-                     Bootstrap.run(two_owners)
+                     Kickstart.run(two_owners)
                    end
     end
 
     test "promoting a new owner while an undeclared owner remains raises a friendly error, not a raw constraint crash" do
-      Bootstrap.run(scenario())
+      Kickstart.run(scenario())
 
       # editor@ is promoted to owner, but owner@ is omitted from this run's
       # members (so, per the never-remove-members contract, they keep their
@@ -271,7 +271,7 @@ defmodule Lightning.BootstrapTest do
         )
 
       assert_raise RuntimeError, ~r/only have one owner|only one owner/, fn ->
-        Bootstrap.run(promote_only)
+        Kickstart.run(promote_only)
       end
     end
 
@@ -285,22 +285,22 @@ defmodule Lightning.BootstrapTest do
           workflow_id
         )
 
-      [%{workflows: [workflow_info]}] = Bootstrap.run(scenario).projects
+      [%{workflows: [workflow_info]}] = Kickstart.run(scenario).projects
       assert workflow_info.id == workflow_id
     end
 
     test "interpolates ${env:VAR} from the environment and fails when unset" do
-      System.put_env("BOOTSTRAP_TEST_SECRET", "from-env")
-      on_exit(fn -> System.delete_env("BOOTSTRAP_TEST_SECRET") end)
+      System.put_env("KICKSTART_TEST_SECRET", "from-env")
+      on_exit(fn -> System.delete_env("KICKSTART_TEST_SECRET") end)
 
       scenario =
         put_in(
           scenario(),
           ["credentials", Access.at(0), "body", "apiKey"],
-          "${env:BOOTSTRAP_TEST_SECRET}"
+          "${env:KICKSTART_TEST_SECRET}"
         )
 
-      result = Bootstrap.run(scenario)
+      result = Kickstart.run(scenario)
 
       credential_id = result.credentials["raw-cred"].id
 
@@ -311,11 +311,11 @@ defmodule Lightning.BootstrapTest do
         put_in(
           scenario,
           ["credentials", Access.at(0), "body", "apiKey"],
-          "${env:BOOTSTRAP_TEST_UNSET_VAR}"
+          "${env:KICKSTART_TEST_UNSET_VAR}"
         )
 
-      assert_raise RuntimeError, ~r/BOOTSTRAP_TEST_UNSET_VAR/, fn ->
-        Bootstrap.run(missing)
+      assert_raise RuntimeError, ~r/KICKSTART_TEST_UNSET_VAR/, fn ->
+        Kickstart.run(missing)
       end
     end
 
@@ -341,7 +341,7 @@ defmodule Lightning.BootstrapTest do
           body
         )
 
-      [%{workflows: [%{jobs: jobs}]}] = Bootstrap.run(scenario).projects
+      [%{workflows: [%{jobs: jobs}]}] = Kickstart.run(scenario).projects
       job_b = Enum.find(jobs, &(&1.name == "job-b"))
 
       assert Repo.get!(Job, job_b.id).body == body
@@ -361,7 +361,7 @@ defmodule Lightning.BootstrapTest do
           end
         )
 
-      [%{workflows: [workflow_info]}] = Bootstrap.run(scenario).projects
+      [%{workflows: [workflow_info]}] = Kickstart.run(scenario).projects
 
       assert workflow_info.trigger == nil
       assert Repo.aggregate(Trigger, :count) == 0
@@ -376,7 +376,7 @@ defmodule Lightning.BootstrapTest do
         )
 
       assert_raise RuntimeError, ~r/Duplicate name.*job-a/, fn ->
-        Bootstrap.run(duplicate_jobs)
+        Kickstart.run(duplicate_jobs)
       end
 
       duplicate_users =
@@ -387,7 +387,7 @@ defmodule Lightning.BootstrapTest do
         )
 
       assert_raise RuntimeError, ~r/Duplicate email/, fn ->
-        Bootstrap.run(duplicate_users)
+        Kickstart.run(duplicate_users)
       end
 
       raw_triggers =
@@ -398,7 +398,7 @@ defmodule Lightning.BootstrapTest do
         )
 
       assert_raise RuntimeError, ~r/use the singular "trigger" key/, fn ->
-        Bootstrap.run(raw_triggers)
+        Kickstart.run(raw_triggers)
       end
     end
 
@@ -415,7 +415,7 @@ defmodule Lightning.BootstrapTest do
           "yesses@openfn.org"
         )
 
-      result = Bootstrap.run(yesses)
+      result = Kickstart.run(yesses)
       %{user: owner, api_token: token} = result.users["yesses@openfn.org"]
       assert owner.role == :superuser
       assert is_binary(token)
@@ -434,7 +434,7 @@ defmodule Lightning.BootstrapTest do
         )
         |> put_in(["projects", Access.at(0), "name"], "noes-project")
 
-      result = Bootstrap.run(noes)
+      result = Kickstart.run(noes)
       %{user: owner, api_token: token} = result.users["noes@openfn.org"]
       assert owner.role == :user
       assert token == nil
@@ -446,7 +446,7 @@ defmodule Lightning.BootstrapTest do
         |> put_in(["users", Access.at(0), "superuser"], "on")
 
       assert_raise RuntimeError, ~r/Expected superuser for user.*boolean/, fn ->
-        Bootstrap.run(garbage)
+        Kickstart.run(garbage)
       end
     end
 
@@ -462,7 +462,7 @@ defmodule Lightning.BootstrapTest do
           [%{"name" => "my-collection"}]
         )
 
-      [%{project: project}] = Bootstrap.run(scenario).projects
+      [%{project: project}] = Kickstart.run(scenario).projects
 
       project = Repo.get!(Project, project.id)
       assert project.description == "a test project"
@@ -479,7 +479,7 @@ defmodule Lightning.BootstrapTest do
         scenario()
         |> Map.put("usres", [])
         |> Map.delete("users")
-        |> Bootstrap.run()
+        |> Kickstart.run()
       end
 
       # user level
@@ -489,7 +489,7 @@ defmodule Lightning.BootstrapTest do
       assert_raise RuntimeError,
                    ~r/Unknown key\(s\) for user owner@openfn.org: rol/,
                    fn ->
-                     Bootstrap.run(with_bad_user_key)
+                     Kickstart.run(with_bad_user_key)
                    end
 
       # credential level
@@ -503,7 +503,7 @@ defmodule Lightning.BootstrapTest do
       assert_raise RuntimeError,
                    ~r/Unknown key\(s\) for credential raw-cred: shcema/,
                    fn ->
-                     Bootstrap.run(with_bad_credential_key)
+                     Kickstart.run(with_bad_credential_key)
                    end
 
       # project level: a real provisioner field we don't support yet — the
@@ -512,8 +512,8 @@ defmodule Lightning.BootstrapTest do
         put_in(scenario(), ["projects", Access.at(0), "channels"], [])
 
       assert_raise RuntimeError,
-                   ~r/Unknown key\(s\) for project bootstrap-test: channels/,
-                   fn -> Bootstrap.run(with_channels) end
+                   ~r/Unknown key\(s\) for project kickstart-test: channels/,
+                   fn -> Kickstart.run(with_channels) end
 
       # member level
       with_bad_member_key =
@@ -526,7 +526,7 @@ defmodule Lightning.BootstrapTest do
       assert_raise RuntimeError,
                    ~r/Unknown key\(s\) for member owner@openfn.org/,
                    fn ->
-                     Bootstrap.run(with_bad_member_key)
+                     Kickstart.run(with_bad_member_key)
                    end
     end
 
@@ -540,7 +540,7 @@ defmodule Lightning.BootstrapTest do
         )
 
       assert_raise RuntimeError, ~r/ghost@openfn.org/, fn ->
-        Bootstrap.run(undeclared)
+        Kickstart.run(undeclared)
       end
 
       # nothing was left behind by the failed run
@@ -554,7 +554,7 @@ defmodule Lightning.BootstrapTest do
           &[%{"from" => "trigger", "to" => "nope"} | &1]
         )
 
-      assert_raise RuntimeError, ~r/"nope"/, fn -> Bootstrap.run(bad_edge) end
+      assert_raise RuntimeError, ~r/"nope"/, fn -> Kickstart.run(bad_edge) end
 
       # projects need an owner
       no_owner =
@@ -565,7 +565,7 @@ defmodule Lightning.BootstrapTest do
         )
 
       assert_raise RuntimeError, ~r/role: owner/, fn ->
-        Bootstrap.run(no_owner)
+        Kickstart.run(no_owner)
       end
 
       # unknown provisioner fields fail loudly rather than being dropped
@@ -577,17 +577,17 @@ defmodule Lightning.BootstrapTest do
         )
 
       assert_raise RuntimeError, ~r/extraneous parameters/i, fn ->
-        Bootstrap.run(typo)
+        Kickstart.run(typo)
       end
     end
 
-    test "raises when bootstrapping is disabled" do
-      original = Application.get_env(:lightning, Bootstrap)
-      Application.put_env(:lightning, Bootstrap, enabled: false)
-      on_exit(fn -> Application.put_env(:lightning, Bootstrap, original) end)
+    test "raises when kickstarting is disabled" do
+      original = Application.get_env(:lightning, Kickstart)
+      Application.put_env(:lightning, Kickstart, enabled: false)
+      on_exit(fn -> Application.put_env(:lightning, Kickstart, original) end)
 
-      assert_raise RuntimeError, ~r/Lightning.Bootstrap is disabled/, fn ->
-        Bootstrap.run(scenario())
+      assert_raise RuntimeError, ~r/Lightning.Kickstart is disabled/, fn ->
+        Kickstart.run(scenario())
       end
     end
   end
@@ -617,7 +617,7 @@ defmodule Lightning.BootstrapTest do
                 - { from: trigger, to: yaml-job }
       """)
 
-      result = Bootstrap.run_file(scenario_path, manifest: manifest_path)
+      result = Kickstart.run_file(scenario_path, manifest: manifest_path)
 
       [%{workflows: [%{trigger: %{id: trigger_id}}]}] = result.projects
       assert %{type: :cron} = Repo.get!(Trigger, trigger_id)
@@ -635,7 +635,7 @@ defmodule Lightning.BootstrapTest do
     end
 
     test "the checked-in example scenario stays runnable" do
-      result = Bootstrap.run_file("bin/e2e.d/scenarios/example.yaml")
+      result = Kickstart.run_file("bin/e2e.d/scenarios/example.yaml")
 
       assert [%{project: %{name: "example-project"}}] = result.projects
       assert result.users |> Map.keys() |> length() == 3
@@ -643,7 +643,7 @@ defmodule Lightning.BootstrapTest do
 
     test "rejects unsupported file extensions" do
       assert_raise RuntimeError, ~r/Unsupported scenario file extension/, fn ->
-        Bootstrap.run_file(__ENV__.file)
+        Kickstart.run_file(__ENV__.file)
       end
     end
   end

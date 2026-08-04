@@ -17,7 +17,7 @@ if [[ -n "${SNAPSHOT_FILE:-}" ]]; then
 fi
 SNAPSHOT_FILE="${SNAPSHOT_FILE:-/tmp/demo_data_snapshot.sql}"
 
-# Optional declarative bootstrap scenario (see bin/e2e.d/scenarios/README.md).
+# Optional declarative kickstart scenario (see bin/e2e.d/scenarios/README.md).
 # May be a scenario name (resolved under scenarios/) or a path to a file.
 # SCENARIOS_DIR must be absolute: it's consumed inside run_in_project_root,
 # which cd's to PROJECT_ROOT, while dirname "$0" is relative to the caller's
@@ -56,7 +56,7 @@ Commands:
   enable-experimental-features  Enable experimental features for a user (default: editor@openfn.org)
   help            Show this help message (default)
 
-Bootstrap Scenarios:
+Kickstart Scenarios:
   start, setup and reset accept --scenario <name|path> to boot into a custom,
   declaratively-defined data set instead of the default demo data. A <name>
   resolves to bin/e2e.d/scenarios/<name>.{yaml,yml,json}; a path is used as-is.
@@ -179,7 +179,7 @@ resolve_scenario() {
 seed_data() {
   if [[ -n "${SCENARIO_FILE:-}" ]]; then
     echo "Seeding from scenario: $SCENARIO_FILE"
-    run_in_project_root "mix lightning.bootstrap '${SCENARIO_FILE}'"
+    run_in_project_root "mix lightning.kickstart '${SCENARIO_FILE}'"
   else
     seed_demo_data
   fi

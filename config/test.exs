@@ -193,5 +193,6 @@ config :lightning,
          Mox.allow(LightningMock, owner, pid)
          :ok
        end
-# Allow declarative bootstrapping (Lightning.Bootstrap) in the test suite.
-config :lightning, Lightning.Bootstrap, enabled: true
+
+# Allow declarative kickstarting (Lightning.Kickstart) in the test suite.
+config :lightning, Lightning.Kickstart, enabled: true
