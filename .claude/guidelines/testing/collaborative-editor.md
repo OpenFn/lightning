@@ -5,7 +5,7 @@ Testing patterns specific to Lightning's collaborative workflow editor, includin
 ## Overview
 
 The Lightning collaborative editor combines:
-- **Yjs** - CRDT for real-time document synchronization
+- **Yjs** - CRDT for real-time document synchronization (pinned at **13.6.27**)
 - **Phoenix Channels** - WebSocket communication layer
 - **React stores** - Client-side state management
 - **Y-Phoenix-Channel** - Yjs + Phoenix integration
@@ -83,7 +83,7 @@ test('observes changes to Yjs document', () => {
   jobs.push([{ id: 'job1', name: 'Test' }]);
 
   expect(updates).toHaveLength(1);
-  expect(updates[0].added).toHaveLength(1);
+  expect(updates[0].added.size).toBe(1);
 });
 ```
 
@@ -138,57 +138,28 @@ test('handles channel connection and disconnection', async () => {
 
 **✅ DO: Test channel error handling**
 
+Use the setup factory and swap in a failing push. Do not hand-roll the push object: `receive` has to
+return the push for chaining, and an object literal cannot do that with `this`.
+
 ```typescript
 test('handles channel errors gracefully', async () => {
-  const store = createAdaptorStore();
-  const mockChannel = createMockPhoenixChannel();
+  const { store, mockChannel, mockProvider, cleanup } = setupAdaptorStoreTest();
 
-  mockChannel.push = () => ({
-    receive: (status: string, callback: (resp?: unknown) => void) => {
-      if (status === 'error') {
-        callback({ reason: 'Network error' });
-      }
-      return this;
-    },
-  });
+  mockChannel.push = createMockChannelPushError('Server error', 'server_error');
+  store._connectChannel(mockProvider);
 
-  store._connectChannel(mockChannel);
   await store.requestAdaptors();
 
   const state = store.getSnapshot();
-  expect(state.error).toContain('Network error');
+  expect(state.error).toContain('Failed to request adaptors');
   expect(state.isLoading).toBe(false);
+
+  cleanup();
 });
 ```
 
-### Testing Phoenix Presence
-
-**✅ DO: Test presence tracking**
-
-```typescript
-test('tracks user presence in collaborative session', async () => {
-  const store = createSessionStore();
-  const mockChannel = createMockPhoenixChannel();
-
-  store.initializeSession(mockSocket, 'workflow:123', {
-    id: 'user1',
-    name: 'Test User',
-  });
-
-  // Simulate presence state from server
-  act(() => {
-    mockChannel._test.emit('presence_state', {
-      user1: { metas: [{ online_at: Date.now() }] },
-      user2: { metas: [{ online_at: Date.now() }] },
-    });
-  });
-
-  await waitFor(() => {
-    const presence = store.getSnapshot().presence;
-    expect(Object.keys(presence)).toHaveLength(2);
-  });
-});
-```
+`_connectChannel` takes the **provider**, not the channel. The error string is the store's own
+wrapper, not the server's message.
 
 ## Testing Store Subscriptions
 
@@ -211,32 +182,6 @@ test('notifies subscribers on state change', () => {
   expect(updates).toHaveLength(2);
   expect(updates[0].ydoc).toBeDefined();
   expect(updates[1].provider).toBeDefined();
-
-  unsubscribe();
-});
-```
-
-**✅ DO: Test selective subscriptions**
-
-```typescript
-test('only notifies when subscribed fields change', () => {
-  const store = createAdaptorStore();
-  let notificationCount = 0;
-
-  const unsubscribe = store.subscribe(
-    (state) => state.isLoading,
-    () => {
-      notificationCount++;
-    }
-  );
-
-  // This should trigger notification
-  store.setLoading(true);
-  expect(notificationCount).toBe(1);
-
-  // This should NOT trigger notification (different field)
-  store.setError('Some error');
-  expect(notificationCount).toBe(1); // Still 1
 
   unsubscribe();
 });
@@ -282,73 +227,30 @@ test('handles concurrent job edits from multiple users', () => {
 ```typescript
 test('supports undo/redo for job edits', () => {
   const ydoc = new Y.Doc();
-  const jobs = ydoc.getArray('jobs');
+  const jobs = ydoc.getArray<Y.Map<string>>('jobs');
   const undoManager = new Y.UndoManager(jobs);
 
-  // Add job
-  jobs.push([{ id: 'job1', name: 'Initial Name' }]);
+  const job = new Y.Map<string>();
+  job.set('id', 'job1');
+  job.set('name', 'Initial Name');
+  jobs.push([job]);
 
-  // Modify job
-  const job = jobs.get(0);
-  job.name = 'Updated Name';
+  // Separate transaction so the UndoManager does not merge it with the insert.
+  undoManager.stopCapturing();
+  job.set('name', 'Updated Name');
+  expect(jobs.get(0).get('name')).toBe('Updated Name');
 
-  expect(jobs.get(0).name).toBe('Updated Name');
-
-  // Undo
   undoManager.undo();
-  expect(jobs.get(0).name).toBe('Initial Name');
+  expect(jobs.get(0).get('name')).toBe('Initial Name');
 
-  // Redo
   undoManager.redo();
-  expect(jobs.get(0).name).toBe('Updated Name');
+  expect(jobs.get(0).get('name')).toBe('Updated Name');
 });
 ```
+
+The job has to be a `Y.Map` for the edit to be a Yjs transaction at all, and `stopCapturing()` is load-bearing: `Y.UndoManager` merges operations inside its `captureTimeout` window into one undo step, so without it the insert and the edit undo together.
 
 ## Testing Lightning-Specific Patterns
-
-### Testing Workflow State Management
-
-**✅ DO: Test workflow lock version**
-
-```typescript
-test('increments lock version on workflow changes', async () => {
-  const store = createWorkflowStore();
-
-  const initialVersion = store.getSnapshot().lockVersion;
-
-  act(() => {
-    store.updateWorkflowName('New Workflow Name');
-  });
-
-  await waitFor(() => {
-    expect(store.getSnapshot().lockVersion).toBe(initialVersion + 1);
-  });
-});
-```
-
-**✅ DO: Test optimistic locking conflicts**
-
-```typescript
-test('detects and handles optimistic locking conflicts', async () => {
-  const store = createWorkflowStore();
-
-  // Simulate stale lock version
-  const staleVersion = store.getSnapshot().lockVersion;
-
-  // Server increments version
-  act(() => {
-    mockChannel._test.emit('workflow_updated', {
-      lock_version: staleVersion + 1,
-    });
-  });
-
-  // Attempt to save with stale version
-  const result = await store.saveWorkflow(staleVersion);
-
-  expect(result.error).toContain('Conflict');
-  expect(result.needsRefresh).toBe(true);
-});
-```
 
 ### Testing Adaptor Integration
 
@@ -377,172 +279,8 @@ test('resolves adaptor versions correctly', () => {
 });
 ```
 
-### Testing Credential Management
-
-**✅ DO: Test credential selection**
-
-```typescript
-test('filters credentials by project', () => {
-  const store = createCredentialStore();
-
-  store.setCredentials([
-    { id: 'cred1', project_id: 'proj1', name: 'Cred 1' },
-    { id: 'cred2', project_id: 'proj2', name: 'Cred 2' },
-    { id: 'cred3', project_id: 'proj1', name: 'Cred 3' },
-  ]);
-
-  const projectCreds = store.getCredentialsByProject('proj1');
-
-  expect(projectCreds).toHaveLength(2);
-  expect(projectCreds.map(c => c.id)).toEqual(['cred1', 'cred3']);
-});
-```
-
 ## Channel Mocks
 
-Canonical `createMockPhoenixChannel` helper for Lightning collaborative-editor tests. Other test guidelines cross-reference this implementation.
+`createMockPhoenixChannel` and `createMockPhoenixChannelProvider` live in `assets/test/collaborative-editor/mocks/phoenixChannel.ts`. Read that file; it is richer than any paste of it here. Beyond the Phoenix `Channel` interface the mock channel exposes a `_test` handle — `emit`, `triggerClose`, `triggerError`, `getHandlers`, `setState` — and the module also exports `waitForAsync` and `waitForCondition`.
 
-```typescript
-// __helpers__/phoenixMocks.ts
-export function createMockPhoenixChannel(topic = 'workflow:test') {
-  const eventHandlers = new Map<string, Set<Function>>();
-  const mockChannel = {
-    topic,
-    on(event: string, handler: Function) {
-      if (!eventHandlers.has(event)) {
-        eventHandlers.set(event, new Set());
-      }
-      eventHandlers.get(event)!.add(handler);
-      return mockChannel;
-    },
-    off(event: string, handler: Function) {
-      eventHandlers.get(event)?.delete(handler);
-      return mockChannel;
-    },
-    push(event: string, payload: any) {
-      return {
-        receive(status: string, callback: Function) {
-          if (status === 'ok') {
-            setTimeout(() => callback({ status: 'ok' }), 0);
-          }
-          return this;
-        },
-      };
-    },
-    leave() {
-      return this;
-    },
-    // Test utilities
-    _test: {
-      emit(event: string, payload: any) {
-        const handlers = eventHandlers.get(event);
-        if (handlers) {
-          handlers.forEach(handler => handler(payload));
-        }
-      },
-      getHandlers(event: string) {
-        return Array.from(eventHandlers.get(event) || []);
-      },
-    },
-  };
-  return mockChannel;
-}
-```
-
-### Yjs Document Mock
-
-```typescript
-// __helpers__/yjsMocks.ts
-export function createMockYDoc(initialData: any = {}) {
-  const doc = new Y.Doc();
-
-  // Initialize with data
-  if (initialData.jobs) {
-    const jobs = doc.getArray('jobs');
-    jobs.push(initialData.jobs);
-  }
-
-  if (initialData.workflow) {
-    const workflow = doc.getMap('workflow');
-    Object.entries(initialData.workflow).forEach(([key, value]) => {
-      workflow.set(key, value);
-    });
-  }
-
-  return doc;
-}
-```
-
-## Integration Testing Patterns
-
-### Testing Full Collaborative Flow
-
-**✅ DO: Test complete collaborative editing flow**
-
-```typescript
-test('complete collaborative editing flow', async () => {
-  // Setup two users
-  const user1Store = createSessionStore();
-  const user2Store = createSessionStore();
-
-  const user1Channel = createMockPhoenixChannel();
-  const user2Channel = createMockPhoenixChannel();
-
-  // Initialize sessions
-  user1Store.initializeSession(mockSocket, 'workflow:123', {
-    id: 'user1',
-    name: 'User 1',
-  });
-
-  user2Store.initializeSession(mockSocket, 'workflow:123', {
-    id: 'user2',
-    name: 'User 2',
-  });
-
-  // User 1 adds a job
-  act(() => {
-    const jobs = user1Store.getSnapshot().ydoc?.getArray('jobs');
-    jobs?.push([{ id: 'job1', name: 'New Job' }]);
-  });
-
-  // Simulate sync to user 2
-  const update = Y.encodeStateAsUpdate(user1Store.getSnapshot().ydoc!);
-  act(() => {
-    Y.applyUpdate(user2Store.getSnapshot().ydoc!, update);
-  });
-
-  await waitFor(() => {
-    const user2Jobs = user2Store.getSnapshot().ydoc?.getArray('jobs');
-    expect(user2Jobs?.length).toBe(1);
-    expect(user2Jobs?.get(0)).toMatchObject({ id: 'job1' });
-  });
-});
-```
-
-## Debugging Helpers
-
-### Logging Yjs Updates
-
-```typescript
-// __helpers__/yjsDebug.ts
-export function logYjsUpdates(ydoc: Y.Doc) {
-  ydoc.on('update', (update: Uint8Array, origin: any) => {
-    console.log('Yjs Update:', {
-      size: update.length,
-      origin: origin?.constructor?.name || origin,
-      timestamp: new Date().toISOString(),
-    });
-  });
-}
-
-// Usage in tests
-test('debug yjs updates', () => {
-  const ydoc = new Y.Doc();
-  logYjsUpdates(ydoc);
-
-  const jobs = ydoc.getArray('jobs');
-  jobs.push([{ id: 'job1', name: 'Test' }]);
-  // Console will show update details
-});
-```
-
+Push responses come from `assets/test/collaborative-editor/__helpers__/channelMocks.ts` (`createMockChannelPushOk`, `createMockChannelPushError`, `createMockChannelPushTimeout`, `createMockChannelPushByEvent`, `createMockChannelPushWithHandler`), and the per-store wiring from `__helpers__/storeHelpers.ts`.
