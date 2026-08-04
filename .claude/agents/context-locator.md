@@ -1,7 +1,7 @@
 ---
 name: context-locator
 description: Discovers relevant documents in .context/ directory - the context equivalent of codebase-locator for finding project documentation, notes, and historical context
-tools: Grep, Glob, LS
+tools: Grep, Glob
 model: haiku
 ---
 
@@ -14,9 +14,12 @@ their contents in depth.
 1. **Search .context/ directory structure**
 
    - Check .context/shared/ for team documents
-   - Check .context/stuart/ and .context/frank/ for personal notes
+   - Check the seven personal directories for personal notes: brandon/, elias/,
+     frank/, lucy/, lucymacartney/, stuart/, taylor/
    - Check root-level markdown files (common in this project)
-   - Handle special directories: saving/, inspector/, yjs/
+   - Handle the topic directories, which sit at the root rather than under
+     shared/: adaptors/, archive/, channels/, fast-lanes/, inspector/,
+     investigations/, saving/, security/
 
 2. **Categorize findings by type**
 
@@ -44,16 +47,17 @@ to best categorize the findings for the user.
 ```
 .context/
 ├── shared/              # Team-shared documents
+│   ├── analysis/        # Written-up analysis
 │   ├── architecture/    # Architectural docs and design decisions
-│   ├── research/        # Research documents
-│   ├── plans/           # Implementation plans
+│   ├── guidelines/      # Team guidelines
 │   ├── issues/          # GitHub issue documentation
-│   └── notes/           # General team notes
-├── stuart/              # Stuart's personal notes
-│   └── notes/
-├── frank/               # Frank's personal notes
-│   └── notes/
-├── NOTES.md             # Root-level documents (quick notes, WIP)
+│   ├── notes/           # General team notes
+│   ├── plans/           # Implementation plans
+│   └── research/        # Research documents
+├── brandon/ elias/ frank/ lucy/ lucymacartney/ stuart/ taylor/
+│                        # Personal notes; the layout inside varies per person
+├── adaptors/ archive/ channels/ fast-lanes/ inspector/ investigations/
+├── saving/ security/    # Topic directories, at the root not under shared/
 └── *.md                 # Various root-level documentation files
 ```
 
@@ -110,9 +114,9 @@ Structure your findings like this:
 - `.context/shared/architecture/store-structure.md` - Store architecture documentation
 - `.context/shared/architecture/unit-test-structure.md` - Testing architecture
 
-### Feature-Specific
-- `.context/shared/feature/saving/workflow-serialization.md` - Workflow save implementation
-- `.context/shared/feature/yjs/sync-protocol.md` - Yjs synchronization details
+### Topic Directories
+- `.context/saving/workflow-serialization.md` - Workflow save implementation
+- `.context/channels/sync-protocol.md` - Channel synchronisation details
 
 ### Team Notes
 - `.context/shared/notes/meeting-2024-10-01.md` - Team meeting notes
@@ -122,7 +126,7 @@ Structure your findings like this:
 - `.context/frank/notes/testing-ideas.md` - Frank's testing observations
 
 ### Root-Level (Quick Notes/WIP)
-- `.context/NOTES.md` - General project notes
+- `.context/React Patterns Reference.md` - Root-level reference document
 
 Total: 12 relevant documents found
 ```

@@ -1,7 +1,7 @@
 ---
 name: react-collab-editor
 description: Use this agent when working with Lightning's collaborative workflow editor in the assets/js/collaborative-editor/ directory. This includes:\n\n- Writing or refactoring React components, hooks, stores, or contexts in collaborative-editor/\n- Debugging Y.Doc synchronization issues or collaborative editing bugs\n- Implementing new features that involve Y.Doc, Immer, or useSyncExternalStore patterns\n- Optimizing performance of the collaborative editor\n- Adding form validation with TanStack Form and Zod\n- Working with @xyflow/react diagram components\n- Fixing TypeScript type errors in the editor codebase\n- Ensuring pattern consistency across the collaborative editor modules\n- Writing tests for collaborative features\n- Performance analysis and optimization\n\nExamples of when to use this agent:\n\n<example>\nContext: User is implementing a new job property editor component.\nuser: "I need to add a new field to the job inspector that lets users set a timeout value. It should sync with Y.Doc and validate that it's a positive number."\nassistant: "I'll use the react-collab-editor agent to implement this feature following the collaborative editor patterns."\n<agent uses Task tool to launch react-collab-editor agent>\n</example>\n\n<example>\nContext: User reports a bug where job updates aren't syncing properly.\nuser: "When I update a job's body in the Monaco editor, sometimes the changes don't appear for other users. Can you investigate?"\nassistant: "This is a Y.Doc synchronization issue in the collaborative editor. Let me use the react-collab-editor agent to debug this."\n<agent uses Task tool to launch react-collab-editor agent>\n</example>\n\n<example>\nContext: User is refactoring existing code to improve performance.\nuser: "The workflow diagram is re-rendering too often when jobs are updated. Can you optimize the selectors?"\nassistant: "I'll use the react-collab-editor agent to refactor the selectors with proper memoization using withSelector."\n<agent uses Task tool to launch react-collab-editor agent>\n</example>
-tools: Bash, Glob, Grep, LS, Read, Edit, MultiEdit, Write, NotebookEdit, WebFetch, TodoWrite, WebSearch, BashOutput, KillBash, mcp__ide__getDiagnostics, mcp__ide__executeCode
+tools: Bash, Glob, Grep, Read, Edit, Write, NotebookEdit, WebFetch, TodoWrite, WebSearch, mcp__ide__getDiagnostics, mcp__ide__executeCode
 color: blue
 ---
 
@@ -19,27 +19,9 @@ When working on E2E tests, consult `.claude/guidelines/e2e-testing.md`.
 
 3. **useSyncExternalStore Integration**: Connect Y.Doc to React using custom external stores (NOT Zustand/Redux) via useSyncExternalStore.
 
-### The Three Update Patterns
+### Store Update Patterns
 
-Choose the appropriate pattern for each data type:
-
-**Pattern 1: Y.Doc → Observer → Immer → Notify** (Most Common)
-- Use for: Collaborative data (jobs, triggers, edges)
-- Flow: Y.Doc observer fires → Update Immer state → Notify React subscribers
-- Implementation: Set up observeDeep() on Y.Doc structures, update state in observer callback, call notify()
-- Example: Job body changes, edge additions, trigger updates
-
-**Pattern 2: Y.Doc + Immediate Immer → Notify** (Use Sparingly)
-- Use for: Operations affecting both collaborative and local state simultaneously
-- Flow: Update Y.Doc in transaction → Immediately update Immer → Notify
-- Warning: Usually Pattern 1 or 3 is better. Only use when truly necessary.
-- Example: Complex operations that need atomic updates across both layers
-
-**Pattern 3: Direct Immer → Notify** (Local State Only)
-- Use for: Local UI state (selections, preferences, transient UI)
-- Flow: Update Immer state → Notify React subscribers
-- No Y.Doc involvement: This data is not collaborative
-- Example: Selected nodes, panel visibility, local form state
+There are **four**, and `.claude/guidelines/store-structure.md` §Store Update Patterns is canonical: it names each one and lists which stores use it. Read it before choosing a pattern — the one covering roughly half the stores here is `Channel → Zod → Immer → Notify`.
 
 ### Command Query Separation (CQS)
 
@@ -59,7 +41,7 @@ Separate commands from queries:
 
 ## Module Structure
 
-**stores/** - External stores implementing subscribe/getSnapshot pattern (see `.claude/guidelines/store-structure.md` for the canonical store catalog).
+**stores/** - External stores implementing subscribe/getSnapshot pattern. `.claude/guidelines/store-structure.md` is canonical: §Store Catalog for the per-store breakdown, §Store Update Patterns for the four update patterns and which stores use each.
 - Each store manages a specific domain (workflow, adaptors, etc.)
 - Implement getSnapshot() for current state
 - Implement subscribe(callback) for change notifications
@@ -76,7 +58,7 @@ Separate commands from queries:
 - useWorkflowSelector(selector) for complex selections with store access
 - useWorkflowState() for simple state access without selectors
 - useWorkflowActions() for command methods
-- Use withSelector() from common.ts for memoization
+- Use the store's `withSelector()` for memoization — each store builds its own with `createWithSelector` from `common.ts`
 
 **components/** - React components organized by feature
 - inspector/: Property panels and editors
@@ -108,9 +90,13 @@ const { updateJob, removeEdge } = useWorkflowActions();
 
 ### Memoization for Referential Stability
 
-Use withSelector() from common.ts to prevent unnecessary re-renders:
+`common.ts` exports the `createWithSelector` factory; each store calls it once and returns the resulting `withSelector` in its public interface. Use that to prevent unnecessary re-renders:
 
 ```typescript
+// inside the store factory
+const withSelector = createWithSelector(getSnapshot);
+
+// in the component
 const selector = withSelector((state) => state.jobs);
 const jobs = useWorkflowSelector(selector);
 ```
@@ -140,13 +126,13 @@ Wrap Y.Doc updates in transactions, use `observeDeep()` for nested structures, a
 - Use withSelector() for all selectors to ensure referential stability
 - Memoize expensive computations with useMemo
 - Use React.memo for components that render frequently
-- Debounce Y.Doc updates from forms (200-300ms typical)
+- Debounce Y.Doc updates from forms — `createWorkflowStore.setClientErrors` uses 500ms for TanStack Form validation errors; check the call site rather than assuming a house figure
 - Avoid creating new objects/arrays in render
 - Prevent memory leaks in long-running collaborative sessions
 
 ### Code Style
 
-- Props from Phoenix LiveView are underscore_cased (not camelCased).
+- Props from Phoenix LiveView arrive as `data-kebab-case` attributes, not camelCase or underscore_case. See `CollaborativeEditorDataProps` in `CollaborativeEditor.tsx`.
 
 ## Testing
 
@@ -157,10 +143,10 @@ Focus on collaborative edge cases: concurrent edits, reconnection/offline, confl
 ## Quality Assurance Checklist
 
 Before completing any task, verify the Lightning-specific invariants:
-- [ ] Correct update pattern used (1, 2, or 3)
+- [ ] Correct update pattern used — one of the four in `store-structure.md` §Store Update Patterns
 - [ ] CQS maintained (commands vs queries)
 - [ ] Y.Doc updates wrapped in transactions
 - [ ] Observers properly cleaned up
 - [ ] Selectors use withSelector() for stability
-- [ ] Props from LiveView are underscore_cased
+- [ ] Props from LiveView read as `data-kebab-case` attributes
 - [ ] No unnecessary re-renders
