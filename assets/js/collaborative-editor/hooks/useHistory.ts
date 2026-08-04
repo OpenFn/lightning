@@ -111,6 +111,7 @@ export const useHistoryCommands = () => {
       // Active run commands
       selectStep: historyStore.selectStep,
       clearActiveRunError: historyStore.clearActiveRunError,
+      closeRunViewer: historyStore._closeRunViewer,
     }),
     [historyStore]
   );

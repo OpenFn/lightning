@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Added
 
+- The workflow title in the editor breadcrumbs is now clickable, returning to
+  the root workflow editor view: it closes the full IDE (equivalent to its close
+  button), closes any other open panel, deselects the current node, and drops
+  any run-viewing context, landing on the bare canvas.
+  [#4984](https://github.com/OpenFn/lightning/pull/4984)
+
 ### Changed
 
 - The global chat now starts streaming Apollo's response earlier, so users wait
