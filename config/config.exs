@@ -10,6 +10,10 @@ import Config
 config :lightning,
   ecto_repos: [Lightning.Repo]
 
+# Apollo (AI assistant service) — see Config.Bootstrap for what the
+# timeout governs and how APOLLO_TIMEOUT overrides it.
+config :lightning, :apollo, timeout: 120_000
+
 config :lightning, Lightning.Repo,
   types: Lightning.PostgrexTypes,
   log: :debug

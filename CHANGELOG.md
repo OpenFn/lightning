@@ -32,6 +32,12 @@ and this project adheres to
 
 ### Fixed
 
+- `APOLLO_TIMEOUT` now governs every request to Apollo, including the streaming
+  requests all AI chats use. Streaming previously read an internal timeout key
+  that no environment could set, so it was always 120s regardless of
+  configuration; that dead key is removed.
+  [#5043](https://github.com/OpenFn/lightning/pull/5043)
+
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
