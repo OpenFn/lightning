@@ -158,6 +158,12 @@ function WorkflowPreviewFlow({ state }: WorkflowPreviewProps) {
   return (
     <div ref={containerRef} className="h-full w-full">
       <ReactFlow
+        // Without this the diagram is an unlabelled graphics region. The name
+        // comes from the state rather than the caller so every host gets one;
+        // it can be blank, since the blank-workflow YAML ships without a name.
+        aria-label={
+          state.name ? `Preview of ${state.name}` : 'Workflow preview'
+        }
         nodes={model.nodes}
         edges={model.edges}
         nodeTypes={nodeTypes as unknown as NodeTypes}
