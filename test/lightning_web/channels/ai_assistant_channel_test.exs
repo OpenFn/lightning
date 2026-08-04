@@ -30,7 +30,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
         :timeout -> 5_000
-        :streaming_timeout -> 120_000
       end
     end)
 
