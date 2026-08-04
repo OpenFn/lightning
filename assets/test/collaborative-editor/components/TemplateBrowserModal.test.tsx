@@ -94,7 +94,7 @@ async function renderModal(overrides: Partial<TemplateBrowserModalProps> = {}) {
     templates: [] as Template[],
     loading: false,
     isSaving: false,
-    onSelect: vi.fn(),
+    onCreate: vi.fn(),
     searchQuery: '',
     onSearchChange: vi.fn(),
     ...overrides,
@@ -214,12 +214,12 @@ describe('TemplateBrowserModal', () => {
 
     test('clicking a card previews it instead of creating a workflow', async () => {
       const user = userEvent.setup();
-      const onSelect = vi.fn();
+      const onCreate = vi.fn();
       const templates = [
         makeBaseTemplate({ name: 'Alpha' }),
         makeUserTemplate({ name: 'Beta' }),
       ];
-      await renderModal({ templates, onSelect });
+      await renderModal({ templates, onCreate });
 
       await user.click(screen.getByRole('button', { name: 'Beta' }));
 
@@ -228,32 +228,32 @@ describe('TemplateBrowserModal', () => {
         'true'
       );
       // The whole point of the preview: browsing is free of side effects.
-      expect(onSelect).not.toHaveBeenCalled();
+      expect(onCreate).not.toHaveBeenCalled();
     });
 
     test('"Create" creates from the previewed template', async () => {
       const user = userEvent.setup();
-      const onSelect = vi.fn();
+      const onCreate = vi.fn();
       const templates = [
         makeBaseTemplate({ name: 'Alpha' }),
         makeUserTemplate({ name: 'Beta' }),
       ];
-      await renderModal({ templates, onSelect });
+      await renderModal({ templates, onCreate });
 
       await user.click(screen.getByRole('button', { name: 'Beta' }));
       await user.click(screen.getByRole('button', { name: 'Create' }));
 
-      expect(onSelect).toHaveBeenCalledExactlyOnceWith(templates[1]);
+      expect(onCreate).toHaveBeenCalledExactlyOnceWith(templates[1]);
     });
 
     test('re-points the preview when a search hides the previewed template', async () => {
       const user = userEvent.setup();
-      const onSelect = vi.fn();
+      const onCreate = vi.fn();
       const templates = [
         makeBaseTemplate({ name: 'Alpha' }),
         makeUserTemplate({ name: 'Beta' }),
       ];
-      const { updateProps } = await renderModal({ templates, onSelect });
+      const { updateProps } = await renderModal({ templates, onCreate });
 
       await user.click(screen.getByRole('button', { name: 'Beta' }));
       await updateProps({ searchQuery: 'zzznomatch' });
@@ -268,7 +268,7 @@ describe('TemplateBrowserModal', () => {
 
       // The real hazard: creating from a template the list no longer shows.
       await user.click(screen.getByRole('button', { name: 'Create' }));
-      expect(onSelect).toHaveBeenCalledExactlyOnceWith(templates[0]);
+      expect(onCreate).toHaveBeenCalledExactlyOnceWith(templates[0]);
     });
   });
 
@@ -297,17 +297,17 @@ describe('TemplateBrowserModal', () => {
   describe('unreadable template', () => {
     test('disables create rather than letting it fail on the same YAML', async () => {
       const user = userEvent.setup();
-      const onSelect = vi.fn();
+      const onCreate = vi.fn();
       const templates = [
         makeBaseTemplate({ name: 'Broken', code: 'not: [valid workflow' }),
       ];
-      await renderModal({ templates, onSelect });
+      await renderModal({ templates, onCreate });
 
       const createButton = screen.getByRole('button', { name: 'Create' });
       expect(createButton).toBeDisabled();
 
       await user.click(createButton);
-      expect(onSelect).not.toHaveBeenCalled();
+      expect(onCreate).not.toHaveBeenCalled();
     });
 
     test('leaves create usable once a readable template is previewed', async () => {

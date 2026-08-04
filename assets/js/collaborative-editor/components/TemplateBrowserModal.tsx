@@ -21,7 +21,7 @@ export interface TemplateBrowserModalProps {
   templates: Template[];
   loading?: boolean;
   isSaving?: boolean;
-  onSelect: (template: Template) => void;
+  onCreate: (template: Template) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
 }
@@ -32,7 +32,7 @@ export function TemplateBrowserModal({
   templates,
   loading = false,
   isSaving = false,
-  onSelect,
+  onCreate,
   searchQuery,
   onSearchChange,
 }: TemplateBrowserModalProps) {
@@ -242,7 +242,7 @@ export function TemplateBrowserModal({
                   >
                     <span className="shrink-0">
                       <ActionButton
-                        onClick={() => onSelect(previewed)}
+                        onClick={() => onCreate(previewed)}
                         disabled={isSaving || parsed?.error != null}
                         loading={isSaving}
                       >
