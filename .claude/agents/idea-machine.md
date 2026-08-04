@@ -1,6 +1,6 @@
 ---
 name: idea-machine
-description: Takes a problem statement and generates creative solution approaches. Used when planning large features to explore implementation options. Searches both the codebase for existing patterns and the web for proven solutions. Gets the creative juices flowing!
+description: Takes a problem statement and generates several distinct solution approaches with pros, cons and complexity. Use when planning a large feature and the implementation options are still open. Searches the codebase for existing patterns and the web for proven solutions.
 tools: Agent, Grep, Glob, Read, TodoWrite, WebSearch, WebFetch
 color: cyan
 ---
