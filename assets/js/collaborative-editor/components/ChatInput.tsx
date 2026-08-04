@@ -4,10 +4,11 @@ import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
 
+import { AIDisclaimerFooter } from './AIDisclaimerFooter';
+
 interface ChatInputProps {
   onSendMessage?:
-    | ((content: string, options?: MessageOptions) => void)
-    | undefined;
+    ((content: string, options?: MessageOptions) => void) | undefined;
   isLoading?: boolean | undefined;
   /** Disabled state (separate from loading, e.g., due to limits) */
   isDisabled?: boolean | undefined;
@@ -462,12 +463,7 @@ export function ChatInput({
                         </Tooltip>
                       </>
                     ) : (
-                      <div className="flex items-center gap-1.5">
-                        <span className="hero-shield-exclamation h-3.5 w-3.5 text-amber-500" />
-                        <span className="text-[11px] font-medium text-gray-600">
-                          Do not include PII or sensitive data
-                        </span>
-                      </div>
+                      <AIDisclaimerFooter />
                     )}
 
                     {showGlobalAssistantOption && (

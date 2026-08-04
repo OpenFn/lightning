@@ -21,6 +21,9 @@ export default {
       max: 'max-content',
     },
     extend: {
+      boxShadow: {
+        card: '0 4px 16px 0 rgba(0, 0, 0, 0.06)',
+      },
       animation: {
         'spin-pause': 'spin-pause 2s infinite ease',
         'fill-up': 'fill-up 2s infinite ease-in',
@@ -52,6 +55,26 @@ export default {
           },
           '-ms-overflow-style': 'none',
           'scrollbar-width': 'none',
+        },
+        // A scrollbar that still says "there is more below" without the
+        // chunky default track, which collides with rounded containers.
+        '.thin-scrollbar': {
+          'scrollbar-width': 'thin',
+          'scrollbar-color': '#d1d5db transparent',
+          '&::-webkit-scrollbar': {
+            width: '6px',
+            height: '6px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#d1d5db',
+            borderRadius: '3px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: '#9ca3af',
+          },
         },
       });
     }),

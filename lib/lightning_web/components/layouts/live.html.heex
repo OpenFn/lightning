@@ -65,9 +65,17 @@
                   <.icon name="hero-user-group-mini" class="h-5 w-5 shrink-0" />
                   <span class="menu-item-text truncate">Community</span>
                 </Menu.menu_item>
-                <Menu.menu_item href={"mailto:" <> Lightning.Config.instance_admin_email()}>
+                <Menu.menu_item
+                  href={"mailto:" <> Lightning.Config.instance_admin_email()}
+                  target="_self"
+                >
                   <.icon name="hero-lifebuoy-mini" class="h-5 w-5 shrink-0" />
-                  <span class="menu-item-text truncate">Support</span>
+                  <span
+                    class="menu-item-text truncate"
+                    title={Lightning.Config.instance_admin_email()}
+                  >
+                    Support
+                  </span>
                 </Menu.menu_item>
               <% end %>
             <% end %>

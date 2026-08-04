@@ -1287,8 +1287,7 @@ export const createWorkflowStore = (
         // Type assertion needed because Y.Map.get returns unknown
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         const typedEntityErrors = entityErrors as
-          | Record<string, Record<string, string[]>>
-          | undefined;
+          Record<string, Record<string, string[]>> | undefined;
 
         const updatedEntityErrors = {
           ...(typedEntityErrors ?? {}),
@@ -1389,8 +1388,7 @@ export const createWorkflowStore = (
           // Type assertion needed because Y.Map.get returns unknown
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           const typedEntityErrors = entityErrors as
-            | Record<string, Record<string, string[]>>
-            | undefined;
+            Record<string, Record<string, string[]>> | undefined;
 
           return typedEntityErrors?.[entityId] ?? {};
         }
@@ -1484,7 +1482,7 @@ export const createWorkflowStore = (
     saved_at?: string;
     lock_version?: number;
     workflow?: BaseWorkflow;
-  } | null> => {
+  }> => {
     const { ydoc, provider } = ensureConnected();
 
     const workflow = ydoc.getMap('workflow').toJSON();

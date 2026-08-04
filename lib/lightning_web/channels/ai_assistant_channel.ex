@@ -51,8 +51,7 @@ defmodule LightningWeb.AiAssistantChannel do
        %{
          session_id: session.id,
          session_type: session_type,
-         messages: format_messages(session.messages),
-         has_read_disclaimer: AiAssistant.user_has_read_disclaimer?(user)
+         messages: format_messages(session.messages)
        },
        assign(socket,
          session_id: session.id,
@@ -116,14 +115,6 @@ defmodule LightningWeb.AiAssistantChannel do
     else
       reply_unauthorized_error("message not found or unauthorized", socket)
     end
-  end
-
-  @impl true
-  def handle_in("mark_disclaimer_read", _params, socket) do
-    user = socket.assigns.current_user
-
-    {:ok, _user} = AiAssistant.mark_disclaimer_read(user)
-    {:reply, {:ok, %{success: true}}, socket}
   end
 
   @impl true
@@ -357,6 +348,18 @@ defmodule LightningWeb.AiAssistantChannel do
         %{assigns: %{session_id: session_id}} = socket
       ) do
     broadcast(socket, "streaming_changes", %{changes: changes})
+    {:noreply, socket}
+  end
+
+  # Streaming: a persistent completed-action status segment (same shape as a
+  # response_segments entry)
+  @impl true
+  def handle_info(
+        {:ai_assistant, :streaming_segment,
+         %{segment: segment, session_id: session_id}},
+        %{assigns: %{session_id: session_id}} = socket
+      ) do
+    broadcast(socket, "streaming_segment", %{segment: segment})
     {:noreply, socket}
   end
 
@@ -862,6 +865,7 @@ defmodule LightningWeb.AiAssistantChannel do
       id: message.id,
       content: message.content,
       code: message.code,
+      response_segments: message.response_segments,
       role: to_string(message.role),
       status: to_string(message.status),
       inserted_at: message.inserted_at,

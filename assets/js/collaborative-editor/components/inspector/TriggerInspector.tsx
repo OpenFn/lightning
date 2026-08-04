@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import type { Workflow } from '../../types/workflow';
 
@@ -36,12 +36,6 @@ export function TriggerInspector({
   // section expanded. `undefined` = the plain Edit button → Choose step. Only
   // the webhook show panel produces a non-undefined focus.
   const [editFocus, setEditFocus] = useState<EditFocus | undefined>(undefined);
-
-  // Reset to the resting state whenever a different trigger is selected.
-  useEffect(() => {
-    setView('show');
-    setEditFocus(undefined);
-  }, [trigger.id]);
 
   // The "edit" view is reachable only via a show panel's Edit button, which is
   // already disabled when the user can't edit the workflow, so no extra

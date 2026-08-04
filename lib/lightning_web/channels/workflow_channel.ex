@@ -238,8 +238,6 @@ defmodule LightningWeb.WorkflowChannel do
         project_repo_connection: render_repo_connection(project_repo_connection),
         webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
         workflow_template: render_workflow_template(workflow_template),
-        has_read_ai_disclaimer:
-          Lightning.AiAssistant.user_has_read_disclaimer?(user),
         experimental_features_enabled:
           Lightning.Accounts.experimental_features_enabled?(user),
         limits: render_limits(project.id),
@@ -260,14 +258,6 @@ defmodule LightningWeb.WorkflowChannel do
         limit: render_limit_result(limit_result)
       }
     end)
-  end
-
-  @impl true
-  def handle_in("mark_ai_disclaimer_read", _params, socket) do
-    {:ok, _user} =
-      Lightning.AiAssistant.mark_disclaimer_read(socket.assigns.current_user)
-
-    {:reply, {:ok, %{success: true}}, socket}
   end
 
   @impl true
@@ -368,6 +358,13 @@ defmodule LightningWeb.WorkflowChannel do
         workflow: workflow
       })
 
+      # The workflow now has a DB row, so this channel is no longer editing a
+      # brand-new (:new) workflow. No client rejoin happens after a first save,
+      # so we must self-promote the cached kind + struct here; otherwise
+      # request_versions / get_context keep short-circuiting to empty for the
+      # rest of this session (until a full page refresh re-joins as :existing).
+      socket = assign(socket, workflow: workflow, workflow_kind: :existing)
+
       {:reply,
        {:ok,
         %{
@@ -458,8 +455,9 @@ defmodule LightningWeb.WorkflowChannel do
   @impl true
   def handle_in("validate_workflow_name", %{"workflow" => params}, socket) do
     project = socket.assigns.project
+    workflow_id = socket.assigns.workflow_id
 
-    validated_params = ensure_unique_name(params, project)
+    validated_params = ensure_unique_name(params, project, workflow_id)
 
     {:reply, {:ok, %{workflow: validated_params}}, socket}
   end
@@ -1029,6 +1027,15 @@ defmodule LightningWeb.WorkflowChannel do
       }}, socket}
   end
 
+  defp workflow_error_reply(socket, {:error, :snapshot_failed}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{base: ["An internal error occurred"]},
+        type: "internal_error"
+      }}, socket}
+  end
+
   defp workflow_error_reply(
          socket,
          {:error, %Lightning.Extensions.Message{text: text}}
@@ -1182,41 +1189,14 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  defp ensure_unique_name(params, project) do
-    workflow_name =
-      params["name"]
-      |> to_string()
-      |> String.trim()
-      |> case do
-        "" -> "Untitled workflow"
-        name -> name
-      end
-
-    existing_workflows = Lightning.Projects.list_workflows(project)
-    unique_name = generate_unique_name(workflow_name, existing_workflows)
-
-    Map.put(params, "name", unique_name)
-  end
-
-  defp generate_unique_name(base_name, existing_workflows) do
-    existing_names = MapSet.new(existing_workflows, & &1.name)
-
-    if MapSet.member?(existing_names, base_name) do
-      find_available_name(base_name, existing_names)
-    else
-      base_name
-    end
-  end
-
-  defp find_available_name(base_name, existing_names) do
-    1
-    |> Stream.iterate(&(&1 + 1))
-    |> Stream.map(&"#{base_name} #{&1}")
-    |> Enum.find(&name_available?(&1, existing_names))
-  end
-
-  defp name_available?(name, existing_names) do
-    not MapSet.member?(existing_names, name)
+  defp ensure_unique_name(params, project, workflow_id) do
+    Map.put(
+      params,
+      "name",
+      Lightning.Workflows.unique_workflow_name(params["name"], project.id,
+        exclude_workflow_id: workflow_id
+      )
+    )
   end
 
   # Loads a trigger only if it belongs to the given workflow, so existence and

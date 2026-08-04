@@ -515,32 +515,6 @@ defmodule Lightning.Config.Bootstrap do
       cors_origin:
         env!("CORS_ORIGIN", :string, "*") |> String.split(",") |> List.wrap()
 
-    github_client_id = env!("SSO_GITHUB_CLIENT_ID", :string, nil)
-    github_client_secret = env!("SSO_GITHUB_CLIENT_SECRET", :string, nil)
-
-    if github_client_id && github_client_secret do
-      github_redirect_uri =
-        sso_redirect_uri(url_scheme, host, url_port, "github")
-
-      config :lightning, :github_oauth,
-        client_id: github_client_id,
-        client_secret: github_client_secret,
-        redirect_uri: github_redirect_uri
-    end
-
-    google_client_id = env!("SSO_GOOGLE_CLIENT_ID", :string, nil)
-    google_client_secret = env!("SSO_GOOGLE_CLIENT_SECRET", :string, nil)
-
-    if google_client_id && google_client_secret do
-      google_redirect_uri =
-        sso_redirect_uri(url_scheme, host, url_port, "google")
-
-      config :lightning, :google_oauth,
-        client_id: google_client_id,
-        client_secret: google_client_secret,
-        redirect_uri: google_redirect_uri
-    end
-
     # Escape hatch for self-hosted deployments whose OAuth provider lives on an
     # internal network: allowlist those hosts so the pinned egress adapter lets
     # them through. Only applied when set, so the secure default (block all
@@ -694,7 +668,7 @@ defmodule Lightning.Config.Bootstrap do
       tags: %{host: host},
       release: release[:label],
       enable_source_code_context: true,
-      root_source_code_path: File.cwd!()
+      root_source_code_paths: [File.cwd!()]
 
     config :lightning, Lightning.PromEx,
       disabled: not env!("PROMEX_ENABLED", &Utils.ensure_boolean/1, false),
@@ -1077,14 +1051,6 @@ defmodule Lightning.Config.Bootstrap do
   rescue
     e ->
       {:error, worker_key_error("could not be parsed: #{Exception.message(e)}")}
-  end
-
-  defp sso_redirect_uri(url_scheme, host, url_port, provider) do
-    if url_port in [80, 443] do
-      "#{url_scheme}://#{host}/authenticate/#{provider}/callback"
-    else
-      "#{url_scheme}://#{host}:#{url_port}/authenticate/#{provider}/callback"
-    end
   end
 
   defp worker_key_error(reason) do

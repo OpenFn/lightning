@@ -152,8 +152,10 @@ defmodule Lightning.Workflows do
           keyword()
         ) ::
           {:ok, Workflow.t()}
-          | {:error, Ecto.Changeset.t(Workflow.t())}
-          | {:error, :workflow_deleted}
+          | {:error,
+             Ecto.Changeset.t(Workflow.t())
+             | :workflow_deleted
+             | :snapshot_failed}
   def save_workflow(changeset_or_attrs, actor, opts \\ [])
 
   def save_workflow(
@@ -218,6 +220,66 @@ defmodule Lightning.Workflows do
   def save_workflow(%{} = attrs, actor, opts) do
     Workflow.changeset(%Workflow{}, attrs)
     |> save_workflow(actor, opts)
+  end
+
+  @doc """
+  Returns a workflow name that is unique within the given project, derived
+  from `base_name`. A blank or nil `base_name` defaults to
+  "Untitled workflow". On collision, appends " 1", " 2", etc. until a free
+  name is found.
+
+  The check includes soft-deleted rows because the unique index on
+  `[:name, :project_id]` is not partial. (Delete paths rename workflows to
+  `<name>_del` via `soft_delete_changeset/1`, so in practice deletion frees
+  the original name — but any row still occupying a name must be avoided.)
+
+  Note: this is check-then-insert, so two concurrent saves can still compute
+  the same name and one will lose on the unique constraint. Callers already
+  handle that `{:error, changeset}`; no retry is attempted here.
+
+  ## Options
+
+  * `:exclude_workflow_id` - a workflow id whose current name should not
+    count as a clash. Pass the workflow being renamed/edited so its own
+    name doesn't get " 1" appended on every save.
+  """
+  @spec unique_workflow_name(String.t() | nil, Ecto.UUID.t(), keyword()) ::
+          String.t()
+  def unique_workflow_name(base_name, project_id, opts \\ []) do
+    exclude_workflow_id = Keyword.get(opts, :exclude_workflow_id)
+
+    base_name =
+      base_name
+      |> to_string()
+      |> String.trim()
+      |> case do
+        "" -> "Untitled workflow"
+        name -> name
+      end
+
+    existing_names =
+      from(w in Workflow,
+        where: w.project_id == ^project_id,
+        select: w.name
+      )
+      |> then(fn query ->
+        if exclude_workflow_id do
+          from(w in query, where: w.id != ^exclude_workflow_id)
+        else
+          query
+        end
+      end)
+      |> Repo.all()
+      |> MapSet.new()
+
+    if MapSet.member?(existing_names, base_name) do
+      1
+      |> Stream.iterate(&(&1 + 1))
+      |> Stream.map(&"#{base_name} #{&1}")
+      |> Enum.find(&(not MapSet.member?(existing_names, &1)))
+    else
+      base_name
+    end
   end
 
   # Builds the Ecto.Multi pipeline for save_workflow. Does NOT call
@@ -337,7 +399,7 @@ defmodule Lightning.Workflows do
       """
     end)
 
-    {:error, false}
+    {:error, :snapshot_failed}
   end
 
   defp handle_save_result(

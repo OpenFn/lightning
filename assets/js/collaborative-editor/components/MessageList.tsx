@@ -5,11 +5,10 @@ import remarkGfm from 'remark-gfm';
 import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import { cn } from '#/utils/cn';
 
-import type { Message } from '../types/ai-assistant';
+import type { Message, ResponseSegment } from '../types/ai-assistant';
+import { STREAMING_MESSAGE_ID } from '../types/ai-assistant';
 
 import { Tooltip } from '../../components/Tooltip';
-
-const STREAMING_MESSAGE_ID = '__streaming__' as const;
 
 const PROSE_CLASSES =
   'text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4';
@@ -24,6 +23,17 @@ const BouncingDots = () => (
     <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.15s]" />
     <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.3s]" />
   </>
+);
+
+/** A settled status row in the woven timeline ("Edited workflow structure" + tick) */
+const StatusSegmentRow = ({ content }: { content: string }) => (
+  <div className="flex items-center gap-2" data-testid="settled-status">
+    <span
+      className="hero-check-micro h-3.5 w-3.5 shrink-0 text-gray-400"
+      aria-hidden="true"
+    />
+    <span className="text-xs text-gray-400 italic">{content}</span>
+  </div>
 );
 
 /**
@@ -158,6 +168,55 @@ const MarkdownContent = ({
     </div>
   );
 };
+
+/**
+ * Woven timeline of text and status segments (global assistant replies).
+ * Text segments render as markdown blocks; status segments as italic rows.
+ * Status segments are completed actions and always render settled (tick).
+ * The transient thinking indicator (dots) renders separately, from the
+ * scalar streamingStatus, below the timeline.
+ */
+const SegmentTimeline = ({
+  segments,
+  streaming = false,
+  showAddButtons = false,
+  isWriteDisabled = false,
+}: {
+  segments: ResponseSegment[];
+  streaming?: boolean;
+  showAddButtons?: boolean;
+  isWriteDisabled?: boolean;
+}) => (
+  <>
+    {segments.map((segment, index) => {
+      const isLast = index === segments.length - 1;
+
+      if (segment.type === 'status') {
+        return (
+          <StatusSegmentRow
+            // Timeline is append-only, so index keys are stable
+            key={index}
+            content={segment.content}
+          />
+        );
+      }
+
+      return (
+        <MarkdownContent
+          key={index}
+          content={
+            streaming && isLast
+              ? segment.content.replace(/\n+$/, '')
+              : segment.content
+          }
+          showAddButtons={showAddButtons}
+          isWriteDisabled={isWriteDisabled}
+          className={PROSE_CLASSES}
+        />
+      );
+    })}
+  </>
+);
 
 /**
  * Copy text to clipboard using modern Clipboard API
@@ -408,6 +467,14 @@ interface MessageListProps {
   isWriteDisabled?: boolean;
   streamingContent?: string | null;
   streamingStatus?: string | null;
+  /** Woven text/status timeline built while a reply streams in */
+  streamingSegments?: ResponseSegment[] | null;
+  /**
+   * Whether the global assistant is active. Gates the woven streaming
+   * timeline — non-global streams keep the flat content + single scalar
+   * status row behavior.
+   */
+  isGlobalAssistantActive?: boolean;
 }
 
 export function MessageList({
@@ -426,6 +493,8 @@ export function MessageList({
   isWriteDisabled = false,
   streamingContent,
   streamingStatus,
+  streamingSegments,
+  isGlobalAssistantActive = false,
 }: MessageListProps) {
   const loadingRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -491,21 +560,44 @@ export function MessageList({
   // NOTE: This useMemo must be BEFORE the early return to maintain consistent
   // hook count across renders (React rules of hooks).
   const displayMessages = useMemo(() => {
-    if (streamingContent && messages.length > 0) {
+    // A global reply can open with a status segment before any text has
+    // streamed (Apollo edits the workflow first, then writes prose), so the
+    // placeholder must exist as soon as either arrives.
+    const hasStream =
+      !!streamingContent ||
+      (isGlobalAssistantActive && !!streamingSegments?.length);
+    if (hasStream && messages.length > 0) {
       return [
         ...messages,
         {
           id: STREAMING_MESSAGE_ID,
           role: 'assistant' as const,
-          content: streamingContent,
+          content: streamingContent ?? '',
           status: 'streaming' as const,
         } as Message & { status: 'streaming' },
       ];
     }
     return messages;
-  }, [messages, streamingContent]);
+  }, [messages, streamingContent, streamingSegments, isGlobalAssistantActive]);
 
   const isStreaming = (message: Message) => message.id === STREAMING_MESSAGE_ID;
+
+  // Woven text/status timeline to render instead of flat content, or null.
+  // - Completed messages: persisted `response_segments` (global replies).
+  // - Streaming placeholder: live `streamingSegments`. Gated on the global
+  //   assistant being active as a deliberate blast-radius hold: job and
+  //   workflow chat are live services, and keeping their streaming render
+  //   on the flat `streamingContent` path means this PR cannot change what
+  //   they display. Only Apollo's global endpoint emits status segments
+  //   today; lift the gate when that changes.
+  const timelineSegments = (message: Message): ResponseSegment[] | null => {
+    if (isStreaming(message)) {
+      return isGlobalAssistantActive && streamingSegments?.length
+        ? streamingSegments
+        : null;
+    }
+    return message.response_segments?.length ? message.response_segments : null;
+  };
 
   if (messages.length === 0) {
     return (
@@ -535,270 +627,302 @@ export function MessageList({
         }
       }}
     >
-      {displayMessages.map(message => (
-        <div
-          key={message.id}
-          data-role={`${message.role}-message`}
-          className={cn('group px-6 py-4')}
-        >
-          <div className="max-w-3xl mx-auto">
-            {message.role === 'assistant' ? (
-              <div
-                data-testid={
-                  isStreaming(message)
-                    ? 'streaming-message'
-                    : 'assistant-message'
-                }
-              >
-                <div className="space-y-3">
-                  <MarkdownContent
-                    content={
-                      isStreaming(message)
-                        ? message.content.replace(/\n+$/, '')
-                        : message.content
-                    }
-                    showAddButtons={
-                      !isStreaming(message) && showAddButtons && !message.code
-                    }
-                    isWriteDisabled={isWriteDisabled}
-                    className={PROSE_CLASSES}
-                  />
+      {displayMessages.map(message => {
+        const segments = timelineSegments(message);
+        const showMessageAddButtons =
+          !isStreaming(message) && showAddButtons && !message.code;
 
-                  {/* Status (e.g. "Generating code...") Apollo may stream
-                      after the text answer, while we wait for code. Same
-                      visual as the pre-text loading indicator. */}
-                  {isStreaming(message) && streamingStatus && (
-                    <div
-                      className="flex items-center gap-2"
-                      data-testid="streaming-status"
-                    >
-                      <div className="flex items-center gap-1">
-                        <BouncingDots />
-                      </div>
-                      <span className="text-xs text-gray-400 italic">
-                        {streamingStatus}
-                      </span>
-                    </div>
-                  )}
-
-                  {!isStreaming(message) && message.code && (
-                    <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
+        return (
+          <div
+            key={message.id}
+            data-role={`${message.role}-message`}
+            className={cn('group px-6 py-4')}
+          >
+            <div className="max-w-3xl mx-auto">
+              {message.role === 'assistant' ? (
+                <div
+                  data-testid={
+                    isStreaming(message)
+                      ? 'streaming-message'
+                      : 'assistant-message'
+                  }
+                >
+                  <div className="space-y-3">
+                    {message.status === 'error' &&
+                    !isStreaming(message) &&
+                    message.content.trim() ? (
                       <div
-                        className={cn(
-                          'w-full px-4 py-2 bg-gray-50 flex items-center justify-between gap-2',
-                          expandedYaml.has(message.id) &&
-                            'border-b border-gray-200'
-                        )}
+                        className="rounded-lg border border-red-200 bg-red-50 px-3 py-2"
+                        data-testid="ai-validation-error"
                       >
-                        <button
-                          type="button"
-                          data-testid="expand-code-button"
-                          onClick={() => {
-                            setExpandedYaml(prev => {
-                              const next = new Set(prev);
-                              if (next.has(message.id)) {
-                                next.delete(message.id);
-                              } else {
-                                next.add(message.id);
-                              }
-                              return next;
-                            });
-                          }}
-                          className="flex items-center gap-2 hover:opacity-75 transition-opacity"
+                        <div className="flex items-start gap-2">
+                          <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-red-700 leading-relaxed">
+                            {message.content}
+                          </p>
+                        </div>
+                      </div>
+                    ) : segments ? (
+                      <SegmentTimeline
+                        segments={segments}
+                        streaming={isStreaming(message)}
+                        showAddButtons={showMessageAddButtons}
+                        isWriteDisabled={isWriteDisabled}
+                      />
+                    ) : (
+                      <MarkdownContent
+                        content={
+                          isStreaming(message)
+                            ? message.content.replace(/\n+$/, '')
+                            : message.content
+                        }
+                        showAddButtons={showMessageAddButtons}
+                        isWriteDisabled={isWriteDisabled}
+                        className={PROSE_CLASSES}
+                      />
+                    )}
+
+                    {/* Transient thinking status — the registry clears it
+                      when text or a persistent status segment arrives. */}
+                    {isStreaming(message) && streamingStatus && (
+                      <div
+                        className="flex items-center gap-2"
+                        data-testid="streaming-status"
+                      >
+                        <div className="flex items-center gap-1">
+                          <BouncingDots />
+                        </div>
+                        <span className="text-xs text-gray-400 italic">
+                          {streamingStatus}
+                        </span>
+                      </div>
+                    )}
+
+                    {!isStreaming(message) && message.code && (
+                      <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
+                        <div
+                          className={cn(
+                            'w-full px-4 py-2 bg-gray-50 flex items-center justify-between gap-2',
+                            expandedYaml.has(message.id) &&
+                              'border-b border-gray-200'
+                          )}
                         >
-                          <span
+                          <button
+                            type="button"
+                            data-testid="expand-code-button"
+                            onClick={() => {
+                              setExpandedYaml(prev => {
+                                const next = new Set(prev);
+                                if (next.has(message.id)) {
+                                  next.delete(message.id);
+                                } else {
+                                  next.add(message.id);
+                                }
+                                return next;
+                              });
+                            }}
+                            className="flex items-center gap-2 hover:opacity-75 transition-opacity"
+                          >
+                            <span
+                              className={cn(
+                                'transition-transform duration-200',
+                                expandedYaml.has(message.id) ? 'rotate-90' : ''
+                              )}
+                            >
+                              <span className="hero-chevron-right h-4 w-4 text-gray-500" />
+                            </span>
+                            <span className="text-xs text-left font-medium text-gray-700">
+                              {message.job_id
+                                ? 'Generated Job Code'
+                                : 'Generated Workflow'}
+                            </span>
+                          </button>
+                          <CodeActionButtons
+                            code={message.code}
+                            showAdd={showAddButtons}
+                            showApply={showApplyButton}
+                            showPreview={
+                              !!message.job_id ||
+                              (!!message.from_global && canPreviewGlobalStep)
+                            }
+                            onApply={() => {
+                              if (message.job_id) {
+                                onApplyJobCode?.(message.code!, message.id);
+                              } else {
+                                onApplyWorkflow?.(message.code!, message.id);
+                              }
+                            }}
+                            onPreview={() => {
+                              if (message.from_global) {
+                                // Per-step diff from the full workflow YAML
+                                onPreviewGlobalStep?.(
+                                  message.code!,
+                                  message.id
+                                );
+                              } else {
+                                onPreviewJobCode?.(message.code!, message.id);
+                              }
+                            }}
+                            isApplying={!!applyingMessageId}
+                            isPreviewActive={previewingMessageId === message.id}
+                            isWriteDisabled={isWriteDisabled}
+                          />
+                        </div>
+                        {expandedYaml.has(message.id) && (
+                          <pre
+                            className="bg-slate-100 text-slate-800 p-3 overflow-x-auto text-xs font-mono"
+                            data-testid="generated-code"
+                          >
+                            <code>{message.code}</code>
+                          </pre>
+                        )}
+                      </div>
+                    )}
+
+                    {!isStreaming(message) &&
+                      message.status === 'error' &&
+                      !message.content.trim() && (
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200"
+                          data-testid="ai-error-message"
+                        >
+                          <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0" />
+                          <span className="text-sm text-red-700 flex-1">
+                            Failed to send message. Please try again.
+                          </span>
+                          {onRetryMessage && (
+                            <button
+                              type="button"
+                              onClick={() => onRetryMessage(message.id)}
+                              className={cn(
+                                'inline-flex items-center gap-1.5 px-3 py-1.5',
+                                'text-xs font-medium rounded-md',
+                                'bg-red-100 text-red-700 hover:bg-red-200',
+                                'transition-colors duration-150',
+                                'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
+                              )}
+                            >
+                              <span className="hero-arrow-path h-3.5 w-3.5" />
+                              Retry
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                    {!isStreaming(message) &&
+                      message.status === 'processing' && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <BouncingDots />
+                          </div>
+                        </div>
+                      )}
+
+                    <div
+                      className={cn(
+                        'mt-2 flex items-center gap-2 text-xs text-gray-400',
+                        isStreaming(message)
+                          ? 'invisible'
+                          : 'animate-[fade-in-keys_0.3s_ease-in]'
+                      )}
+                    >
+                      <span>{formatTimestamp(message.inserted_at)}</span>
+                      <span>•</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void (async () => {
+                            const success = await doCopy(message.content);
+                            if (success) {
+                              setCopiedMessageId(message.id);
+                              setTimeout(() => setCopiedMessageId(null), 2000);
+                            }
+                          })();
+                        }}
+                        className={cn(
+                          'flex items-center gap-1 transition-colors duration-200',
+                          copiedMessageId === message.id
+                            ? 'text-green-600'
+                            : 'text-gray-400 hover:text-gray-600'
+                        )}
+                        title={
+                          copiedMessageId === message.id
+                            ? 'Copied!'
+                            : 'Copy message'
+                        }
+                      >
+                        <span
+                          className={cn(
+                            'h-3 w-3',
+                            copiedMessageId === message.id
+                              ? 'hero-check'
+                              : 'hero-clipboard-document'
+                          )}
+                        />
+                        <span>
+                          {copiedMessageId === message.id ? 'Copied' : 'Copy'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-end" data-testid="user-message">
+                  <div className="flex flex-col items-end max-w-[85%] min-w-0">
+                    <div className="rounded-2xl bg-gray-100 px-4 py-2 max-w-full">
+                      <div
+                        style={{ overflowWrap: 'break-word' }}
+                        className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap max-w-full"
+                      >
+                        {message.content}
+                      </div>
+                    </div>
+
+                    {message.status === 'error' && (
+                      <div
+                        className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200"
+                        data-testid="ai-error-message"
+                      >
+                        <span className="hero-exclamation-circle h-3.5 w-3.5 text-red-600" />
+                        <span className="text-xs text-red-700 flex-1">
+                          Failed to send
+                        </span>
+                        {onRetryMessage && (
+                          <button
+                            type="button"
+                            onClick={() => onRetryMessage(message.id)}
                             className={cn(
-                              'transition-transform duration-200',
-                              expandedYaml.has(message.id) ? 'rotate-90' : ''
+                              'inline-flex items-center gap-1 px-2 py-1',
+                              'text-xs font-medium rounded-md',
+                              'bg-red-100 text-red-700 hover:bg-red-200',
+                              'transition-colors duration-150',
+                              'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
                             )}
                           >
-                            <span className="hero-chevron-right h-4 w-4 text-gray-500" />
-                          </span>
-                          <span className="text-xs text-left font-medium text-gray-700">
-                            {message.job_id
-                              ? 'Generated Job Code'
-                              : 'Generated Workflow'}
-                          </span>
-                        </button>
-                        <CodeActionButtons
-                          code={message.code}
-                          showAdd={showAddButtons}
-                          showApply={showApplyButton}
-                          showPreview={
-                            !!message.job_id ||
-                            (!!message.from_global && canPreviewGlobalStep)
-                          }
-                          onApply={() => {
-                            if (message.job_id) {
-                              onApplyJobCode?.(message.code!, message.id);
-                            } else {
-                              onApplyWorkflow?.(message.code!, message.id);
-                            }
-                          }}
-                          onPreview={() => {
-                            if (message.from_global) {
-                              // Per-step diff from the full workflow YAML
-                              onPreviewGlobalStep?.(message.code!, message.id);
-                            } else {
-                              onPreviewJobCode?.(message.code!, message.id);
-                            }
-                          }}
-                          isApplying={!!applyingMessageId}
-                          isPreviewActive={previewingMessageId === message.id}
-                          isWriteDisabled={isWriteDisabled}
-                        />
-                      </div>
-                      {expandedYaml.has(message.id) && (
-                        <pre
-                          className="bg-slate-100 text-slate-800 p-3 overflow-x-auto text-xs font-mono"
-                          data-testid="generated-code"
-                        >
-                          <code>{message.code}</code>
-                        </pre>
-                      )}
-                    </div>
-                  )}
-
-                  {!isStreaming(message) && message.status === 'error' && (
-                    <div
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200"
-                      data-testid="ai-error-message"
-                    >
-                      <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0" />
-                      <span className="text-sm text-red-700 flex-1">
-                        Failed to send message. Please try again.
-                      </span>
-                      {onRetryMessage && (
-                        <button
-                          type="button"
-                          onClick={() => onRetryMessage(message.id)}
-                          className={cn(
-                            'inline-flex items-center gap-1.5 px-3 py-1.5',
-                            'text-xs font-medium rounded-md',
-                            'bg-red-100 text-red-700 hover:bg-red-200',
-                            'transition-colors duration-150',
-                            'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
-                          )}
-                        >
-                          <span className="hero-arrow-path h-3.5 w-3.5" />
-                          Retry
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {!isStreaming(message) && message.status === 'processing' && (
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <BouncingDots />
-                      </div>
-                    </div>
-                  )}
-
-                  <div
-                    className={cn(
-                      'mt-2 flex items-center gap-2 text-xs text-gray-400',
-                      isStreaming(message)
-                        ? 'invisible'
-                        : 'animate-[fade-in-keys_0.3s_ease-in]'
-                    )}
-                  >
-                    <span>{formatTimestamp(message.inserted_at)}</span>
-                    <span>•</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void (async () => {
-                          const success = await doCopy(message.content);
-                          if (success) {
-                            setCopiedMessageId(message.id);
-                            setTimeout(() => setCopiedMessageId(null), 2000);
-                          }
-                        })();
-                      }}
-                      className={cn(
-                        'flex items-center gap-1 transition-colors duration-200',
-                        copiedMessageId === message.id
-                          ? 'text-green-600'
-                          : 'text-gray-400 hover:text-gray-600'
-                      )}
-                      title={
-                        copiedMessageId === message.id
-                          ? 'Copied!'
-                          : 'Copy message'
-                      }
-                    >
-                      <span
-                        className={cn(
-                          'h-3 w-3',
-                          copiedMessageId === message.id
-                            ? 'hero-check'
-                            : 'hero-clipboard-document'
+                            <span className="hero-arrow-path h-3 w-3" />
+                            Retry
+                          </button>
                         )}
-                      />
-                      <span>
-                        {copiedMessageId === message.id ? 'Copied' : 'Copy'}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-end" data-testid="user-message">
-                <div className="flex flex-col items-end max-w-[85%] min-w-0">
-                  <div className="rounded-2xl bg-gray-100 px-4 py-2 max-w-full">
-                    <div
-                      style={{ overflowWrap: 'break-word' }}
-                      className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap max-w-full"
-                    >
-                      {message.content}
-                    </div>
-                  </div>
-
-                  {message.status === 'error' && (
-                    <div
-                      className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200"
-                      data-testid="ai-error-message"
-                    >
-                      <span className="hero-exclamation-circle h-3.5 w-3.5 text-red-600" />
-                      <span className="text-xs text-red-700 flex-1">
-                        Failed to send
-                      </span>
-                      {onRetryMessage && (
-                        <button
-                          type="button"
-                          onClick={() => onRetryMessage(message.id)}
-                          className={cn(
-                            'inline-flex items-center gap-1 px-2 py-1',
-                            'text-xs font-medium rounded-md',
-                            'bg-red-100 text-red-700 hover:bg-red-200',
-                            'transition-colors duration-150',
-                            'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
-                          )}
-                        >
-                          <span className="hero-arrow-path h-3 w-3" />
-                          Retry
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  <span className="text-xs text-gray-400 mt-1">
-                    {formatUserName(message.user) ? (
-                      <>
-                        Sent by {formatUserName(message.user)} •{' '}
-                        {formatTimestamp(message.inserted_at)}
-                      </>
-                    ) : (
-                      formatTimestamp(message.inserted_at)
+                      </div>
                     )}
-                  </span>
+
+                    <span className="text-xs text-gray-400 mt-1">
+                      {formatUserName(message.user) ? (
+                        <>
+                          Sent by {formatUserName(message.user)} •{' '}
+                          {formatTimestamp(message.inserted_at)}
+                        </>
+                      ) : (
+                        formatTimestamp(message.inserted_at)
+                      )}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {isLoading && !streamingContent && (
         <div

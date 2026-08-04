@@ -26,11 +26,7 @@ export type MessageRole = 'user' | 'assistant';
  * - cancelled: Message was cancelled by user
  */
 export type MessageStatus =
-  | 'pending'
-  | 'processing'
-  | 'success'
-  | 'error'
-  | 'cancelled';
+  'pending' | 'processing' | 'success' | 'error' | 'cancelled';
 
 /**
  * User info attached to a message for attribution in collaborative sessions
@@ -39,6 +35,23 @@ export interface MessageUser {
   id: string;
   first_name: string | null;
   last_name: string | null;
+}
+
+/**
+ * Message id of the in-flight streaming placeholder. Applies triggered
+ * mid-stream carry this id instead of a persisted message id.
+ */
+export const STREAMING_MESSAGE_ID = '__streaming__' as const;
+
+/**
+ * A single entry in an assistant message's display timeline: either a chunk
+ * of answer text or a status update ("Adding step...") woven between texts.
+ * Mirrors the backend `response_segments` contract
+ * (`{"type": "text" | "status", "content": string}`).
+ */
+export interface ResponseSegment {
+  type: 'text' | 'status';
+  content: string;
 }
 
 /**
@@ -59,6 +72,11 @@ export interface Message {
    * messages carry a full workflow YAML in `code` and never a `job_id`.
    */
   from_global?: boolean;
+  /**
+   * Interleaved text/status timeline for global assistant replies.
+   * `null`/absent for legacy and non-global messages (render flat `content`).
+   */
+  response_segments?: ResponseSegment[] | null;
 }
 
 /**
@@ -129,10 +147,22 @@ export interface Session {
  * Connection state for the Phoenix Channel
  */
 export type ConnectionState =
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'error';
+  'disconnected' | 'connecting' | 'connected' | 'error';
+
+/**
+ * Tracks a workflow YAML that was applied to the canvas early, during
+ * streaming, so the auto-apply of the final new_message can be skipped
+ * when it carries the same YAML (re-importing identical content dirties
+ * the Y.Doc and shows a false "unsaved changes" indicator).
+ *
+ * Only set after a successful import, so failed applies never need to
+ * reset it. `saveFailed` records that the post-import auto-save of a new
+ * workflow is still owed.
+ */
+export interface StreamingApplyState {
+  yaml: string;
+  saveFailed: boolean;
+}
 
 /**
  * AI Assistant state managed by the store
@@ -152,6 +182,13 @@ export interface AIAssistantState {
   streamingContent: string | null;
   streamingStatus: string | null;
   streamingChanges: Record<string, unknown> | null;
+  /**
+   * Woven text/status timeline built up while a reply streams in.
+   * Append-only during a stream; fed exclusively by the char drain so wire
+   * order is preserved. Reset alongside the other streaming fields.
+   */
+  streamingSegments: ResponseSegment[];
+  streamingApply: StreamingApplyState | null;
 
   sessionList: SessionSummary[];
   sessionListLoading: boolean;
@@ -163,8 +200,6 @@ export interface AIAssistantState {
 
   jobCodeContext: JobCodeContext | null;
   workflowTemplateContext: WorkflowTemplateContext | null;
-
-  hasReadDisclaimer: boolean;
 }
 
 /**
@@ -195,8 +230,6 @@ export interface AIAssistantStore {
     append?: boolean;
   }) => Promise<void>;
 
-  markDisclaimerRead: () => void;
-
   _setConnectionState: (state: ConnectionState, error?: string) => void;
   _setSession: (session: Session) => void;
   _clearSession: () => void;
@@ -212,9 +245,13 @@ export interface AIAssistantStore {
   ) => void;
   _setProcessingState: (isProcessing: boolean) => void;
   _appendStreamingChunk: (content: string) => void;
+  _appendStreamingSegment: (segment: ResponseSegment) => void;
   setStreamingStatus: (text: string | null) => void;
   _setStreamingChanges: (changes: Record<string, unknown>) => void;
   _clearStreaming: () => void;
+  _setStreamingApply: (yaml: string) => void;
+  _setStreamingApplySaveFailed: (saveFailed: boolean) => void;
+  _clearStreamingApply: () => void;
   _connectChannel: (channelProvider: unknown) => () => void;
 }
 

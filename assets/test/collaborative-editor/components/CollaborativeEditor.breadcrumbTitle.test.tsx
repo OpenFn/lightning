@@ -62,6 +62,7 @@ vi.mock('../../../js/collaborative-editor/components/VersionDropdown', () => ({
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),
   useLatestSnapshotLockVersion: () => 1,
+  useIsNewWorkflow: () => false,
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({

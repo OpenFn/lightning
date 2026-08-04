@@ -444,6 +444,84 @@ defmodule LightningWeb.CredentialLiveTest do
       refute credential.scheduled_deletion
     end
 
+    test "cannot cancel the scheduled deletion of another user's credential", %{
+      conn: conn
+    } do
+      other_credential =
+        insert(:credential,
+          user: insert(:user),
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      refute has_element?(
+               index_live,
+               "#credential-actions-#{other_credential.id}-cancel-deletion"
+             )
+
+      # send the event anyway
+      index_live
+      |> with_target("#credentials-index-component")
+      |> render_click("cancel_credential_deletion", %{id: other_credential.id})
+
+      assert_patched(index_live, ~p"/credentials")
+
+      assert render(index_live) =~
+               "You are not authorized to perform this action"
+
+      assert Lightning.Repo.reload(other_credential).scheduled_deletion
+    end
+
+    test "non credential owner cannot cancel a scheduled deletion in project settings page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      credential_owner = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: user, role: :owner},
+            %{user: credential_owner, role: :admin}
+          ]
+        )
+
+      # Set scheduled_deletion directly rather than via
+      # schedule_credential_deletion/1, which detaches the project associations
+      # the credential needs to stay visible on this page.
+      credential =
+        insert(:credential,
+          user: credential_owner,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          project_credentials: [%{project: project}]
+        )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ credential.name
+
+      refute has_element?(
+               view,
+               "#credential-actions-#{credential.id}-cancel-deletion"
+             )
+
+      # send the event anyway
+      view
+      |> with_target("#credentials-index-component")
+      |> render_click("cancel_credential_deletion", %{id: credential.id})
+
+      assert_patched(view, ~p"/projects/#{project}/settings")
+
+      assert render(view) =~ "You are not authorized to perform this action"
+
+      assert Lightning.Repo.reload(credential).scheduled_deletion
+    end
+
     test "delete credentials in project settings page", %{
       conn: conn,
       user: user
