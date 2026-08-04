@@ -66,7 +66,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     # The Finch receive_timeout on the streaming client is the primary
     # timeout mechanism. The Oban worker timeout is a safety net that
     # should be slightly longer.
-    timeout_ms = Lightning.Config.apollo(:timeout) || 120_000
+    timeout_ms = Lightning.Config.apollo(:timeout)
 
     timeout_ms + 10_000
   end

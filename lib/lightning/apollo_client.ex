@@ -302,7 +302,7 @@ defmodule Lightning.ApolloClient do
         client_params,
         {Tesla.Adapter.Finch,
          name: Lightning.Finch,
-         receive_timeout: Lightning.Config.apollo(:timeout) || 120_000}
+         receive_timeout: Lightning.Config.apollo(:timeout)}
       )
     else
       Tesla.client(client_params)
@@ -314,7 +314,7 @@ defmodule Lightning.ApolloClient do
     # time-to-headers and each gap between SSE chunks (not total duration —
     # the MessageProcessor job ceiling, derived from the same value, does
     # that).
-    timeout = Lightning.Config.apollo(:timeout) || 120_000
+    timeout = Lightning.Config.apollo(:timeout)
 
     client_params = [
       {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},

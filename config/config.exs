@@ -10,6 +10,10 @@ import Config
 config :lightning,
   ecto_repos: [Lightning.Repo]
 
+# Apollo (AI assistant service). APOLLO_TIMEOUT (runtime env) overrides the
+# timeout; this compiled value is the default everywhere it isn't set.
+config :lightning, :apollo, timeout: 120_000
+
 config :lightning, Lightning.Repo,
   types: Lightning.PostgrexTypes,
   log: :debug
