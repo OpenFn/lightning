@@ -13,7 +13,7 @@ import { filterTemplates, matchesQuery } from '../utils/filterTemplates';
 import { tryTemplateToWorkflowState } from '../utils/templateWorkflowState';
 
 import { ActionButton } from './ds/ActionButton';
-import { TemplatePreview } from './TemplatePreview';
+import { PreviewMessage, WorkflowPreview } from './WorkflowPreview';
 
 export interface TemplateBrowserModalProps {
   isOpen: boolean;
@@ -60,7 +60,10 @@ export function TemplateBrowserModal({
   // button, pointing at a template the user can no longer see.
   const previewed = visibleTemplates.find(t => t.id === previewedId) ?? null;
 
-  // The modal stays mounted, so reset on close rather than on unmount.
+  // The modal stays mounted between opens, so the previous selection would
+  // otherwise still be here next time. Clearing on open hands the choice back
+  // to the effect below, which points the preview at the first visible
+  // template.
   useEffect(() => {
     if (isOpen) setPreviewedId(null);
   }, [isOpen]);
@@ -74,12 +77,13 @@ export function TemplateBrowserModal({
     setPreviewedId(firstVisibleId);
   }, [isOpen, hasPreview, firstVisibleId]);
 
-  // Don't offer Create for a template we already know we can't read: the
-  // preview is showing the user why, and clicking through would only reach the
-  // same parse failure and a vaguer toast. The preview parses this template
-  // too — same helper, so the two can't disagree about what's broken.
-  const previewError = useMemo(
-    () => (previewed ? tryTemplateToWorkflowState(previewed).error : null),
+  // The one parse the modal does. It answers both questions at once — what the
+  // preview draws, and whether Create is worth offering — so the diagram and
+  // the button can't disagree about which templates are broken. Creating parses
+  // again on purpose: that parse mints the ids the new workflow is built from,
+  // and reusing these would give two workflows the same job ids.
+  const parsed = useMemo(
+    () => (previewed ? tryTemplateToWorkflowState(previewed) : null),
     [previewed]
   );
 
@@ -118,11 +122,22 @@ export function TemplateBrowserModal({
             </button>
           </div>
 
-          {/* Two panes: list on the left, preview on the right */}
-          <div className="flex flex-1 min-h-0 gap-5 px-6 pb-6">
-            {/* List pane */}
-            <div className="w-72 shrink-0 flex flex-col min-h-0">
-              <div className="relative">
+          {/* Two panes: list on the left, preview on the right. The gutter
+              between them is split evenly either side of the scrollbar: the
+              list's own pr-1 on one side, this gap-1 on the other, so the
+              scrollbar's lane sits centred in the gutter rather than pressed
+              against one edge of it. */}
+          <div className="flex flex-1 min-h-0 gap-1 px-4 pb-4">
+            {/* List pane. The search sits above the scrolling box rather than
+                inside it, so the scrollbar's track starts at the first card
+                instead of running the column's full height — and so the input
+                can't drift on an overscroll bounce the way a sticky one does.
+                The cost is that nothing narrows the input by the scrollbar's
+                width, so it carries that width itself: 15px is the list's own
+                pr-1 plus the 11px a thin scrollbar takes in Chrome. Change one
+                and change the other, or the two right edges drift apart. */}
+            <div className="relative w-72 shrink-0 flex flex-col min-h-0">
+              <div className="relative mb-4 pr-3.75">
                 <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
                   <span className="hero-magnifying-glass h-4 w-4 text-gray-400" />
                 </span>
@@ -135,18 +150,20 @@ export function TemplateBrowserModal({
                   disabled={loading}
                   className="w-full rounded-md border border-gray-200 py-2 pl-9 pr-3 text-sm
                     text-gray-900 placeholder:text-gray-400
-                    focus:outline-none focus-visible:ring-1 focus-visible:border-gray-300 focus-visible:ring-gray-300
+                    focus:outline-none focus-visible:ring-0 focus-visible:border-gray-500 focus-visible:ring-gray-500
                     disabled:opacity-50"
                 />
               </div>
 
-              <div className="mt-4 flex-1 min-h-0 overflow-y-auto thin-scrollbar pr-2">
+              <div className="flex-1 min-h-0 overflow-y-auto thin-scrollbar pr-1">
                 {loading ? (
                   <p className="py-8 text-center text-sm text-gray-500">
                     Loading templates...
                   </p>
                 ) : (
-                  <div className="flex flex-col gap-4 py-1">
+                  /* pb-1 leaves room for the last card's focus ring, which the
+                     scroll container would otherwise clip. */
+                  <div className="flex flex-col gap-2 pb-1">
                     {visibleTemplates.map(template => (
                       <TemplateSelectCard
                         key={template.id}
@@ -167,51 +184,66 @@ export function TemplateBrowserModal({
                   </div>
                 )}
               </div>
+
+              {/* Fades the list out at its bottom edge, so a card cut off by
+                  the fold reads as "there is more" rather than as the end.
+                  Sits over the scroll box rather than masking it, which leaves
+                  the scrollbar — painted above page content by the browser —
+                  crisp. Harmless when the list is short: the bottom of the box
+                  is then empty white, and white over white shows nothing. */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-white to-transparent"
+              />
             </div>
 
             {/* Preview pane */}
-            <div className="flex flex-1 min-w-0 flex-col rounded-lg border border-gray-200 bg-gray-50">
+            <div className="flex flex-1 min-w-0 flex-col rounded-lg border border-gray-200 bg-gray-50 overflow-clip">
               <div className="flex-1 min-h-0">
-                {previewed ? (
+                {parsed?.state ? (
                   // Keyed so a template switch remounts rather than trying to
                   // animate one graph into another. That means each selection
-                  // re-parses and re-lays-out from scratch, which is cheap at
-                  // template scale (a handful of nodes) and keeps the preview
-                  // free of any carried-over viewport or node state.
-                  <TemplatePreview key={previewed.id} template={previewed} />
+                  // lays out from scratch, which is cheap at template scale (a
+                  // handful of nodes) and keeps the preview free of any
+                  // carried-over viewport or node state.
+                  <WorkflowPreview key={previewed?.id} state={parsed.state} />
+                ) : parsed ? (
+                  <PreviewMessage
+                    message="This template can't be previewed."
+                    detail={parsed.error}
+                  />
                 ) : (
-                  <div className="flex h-full items-center justify-center p-6">
-                    <p className="text-sm text-gray-500">
-                      Select a template to preview it.
-                    </p>
-                  </div>
+                  <PreviewMessage message="Select a template to preview it." />
                 )}
               </div>
 
               {previewed && (
-                <div className="flex items-center justify-between gap-4 border-t border-gray-200 bg-white/60 px-4 py-3">
+                <div className="flex items-center justify-between bg-white gap-14 p-4">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-gray-900">
                       {previewed.name}
                     </p>
-                    {previewed.description && (
-                      <p className="mt-0.5 line-clamp-2 text-sm text-gray-500">
-                        {previewed.description}
-                      </p>
-                    )}
+                    {/* Two lines tall whatever the description says, and
+                        rendered even when there isn't one. This footer is a
+                        sibling of the diagram, so any change in its height
+                        resizes the canvas — and the preview refits itself at a
+                        different zoom as you click down the list. */}
+                    <p className="mt-0.5 line-clamp-2 min-h-[2lh] text-sm text-gray-500">
+                      {previewed.description}
+                    </p>
                   </div>
                   {/* Wrapped in a span because a disabled button emits no
                       pointer events for the tooltip to hang off. */}
                   <Tooltip
                     content={
-                      previewError ? 'This template can’t be read.' : null
+                      parsed?.error ? "This template can't be read." : null
                     }
                     side="top"
                   >
                     <span className="shrink-0">
                       <ActionButton
                         onClick={() => onSelect(previewed)}
-                        disabled={isSaving || previewError !== null}
+                        disabled={isSaving || parsed?.error != null}
                         loading={isSaving}
                       >
                         {isSaving ? 'Creating...' : 'Create'}
@@ -248,11 +280,11 @@ function TemplateSelectCard({
       disabled={disabled}
       aria-pressed={selected}
       className={cn(
-        'w-full text-left rounded-lg border bg-white p-3 transition-colors',
+        'w-full text-left rounded-lg border bg-white p-4 transition-colors',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         'focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-300',
         selected
-          ? 'border-gray-400 ring-gray-400'
+          ? 'border-gray-500 ring-gray-500'
           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
       )}
     >

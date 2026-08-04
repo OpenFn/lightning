@@ -1,31 +1,29 @@
 /**
- * TemplatePreview - read-only template diagram
+ * WorkflowPreview - read-only workflow diagram
  *
  * The point of these tests is as much architectural as behavioural: the
  * component is rendered with NO StoreProvider, NO SessionProvider, NO Y.Doc and
  * NO Phoenix channel. If a future change couples the preview to the
  * collaborative editor's machinery, these tests stop compiling or start
  * throwing — which is exactly the guard we want.
+ *
+ * The preview takes a parsed state, so these build one the same way the real
+ * callers do rather than hand-rolling a fixture that could drift from what the
+ * YAML layer actually produces.
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
-import { TemplatePreview } from '#/collaborative-editor/components/TemplatePreview';
-import type { BaseTemplate } from '#/collaborative-editor/types/template';
+import { WorkflowPreview } from '#/collaborative-editor/components/WorkflowPreview';
+import type { WorkflowState } from '#/yaml/types';
+import { convertWorkflowSpecToState, parseWorkflowYAML } from '#/yaml/util';
 
-function makeTemplate(code: string): BaseTemplate {
-  return {
-    id: 'template-under-test',
-    name: 'Template',
-    description: '',
-    code,
-    tags: [],
-    isBase: true,
-  };
+function stateFrom(yaml: string): WorkflowState {
+  return convertWorkflowSpecToState(parseWorkflowYAML(yaml));
 }
 
-const VALID_YAML = `name: "Two step workflow"
+const TWO_STEP_YAML = `name: "Two step workflow"
 jobs:
   Fetch-data:
     name: Fetch data
@@ -53,9 +51,9 @@ edges:
     condition_type: on_job_success
     enabled: true`;
 
-describe('TemplatePreview', () => {
+describe('WorkflowPreview', () => {
   test('renders a node per job and trigger, with no editor providers present', async () => {
-    render(<TemplatePreview template={makeTemplate(VALID_YAML)} />);
+    render(<WorkflowPreview state={stateFrom(TWO_STEP_YAML)} />);
 
     // Layout is async, so the nodes appear on a later tick.
     await waitFor(() => {
@@ -68,7 +66,7 @@ describe('TemplatePreview', () => {
 
   test('draws no editing affordances on the nodes', async () => {
     const { container } = render(
-      <TemplatePreview template={makeTemplate(VALID_YAML)} />
+      <WorkflowPreview state={stateFrom(TWO_STEP_YAML)} />
     );
 
     await waitFor(() => {
@@ -85,17 +83,5 @@ describe('TemplatePreview', () => {
       container.querySelector('[data-handleid="node-connector"]')
     ).toBeNull();
     expect(container.querySelector('.hero-plus')).toBeNull();
-  });
-
-  test('falls back to a message when the template YAML cannot be parsed', () => {
-    render(<TemplatePreview template={makeTemplate('not: [valid workflow')} />);
-
-    expect(screen.getByText(/can't be previewed/i)).toBeInTheDocument();
-  });
-
-  test('falls back rather than throwing when the YAML is empty', () => {
-    render(<TemplatePreview template={makeTemplate('')} />);
-
-    expect(screen.getByText(/can't be previewed/i)).toBeInTheDocument();
   });
 });
