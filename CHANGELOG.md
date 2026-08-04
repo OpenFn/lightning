@@ -25,6 +25,14 @@ and this project adheres to
 
 ### Changed
 
+- Removed the unreachable non-streaming AI chat path. Since streaming became the
+  only dispatch route for AI messages, the synchronous
+  `AiAssistant.query`/`query_workflow` functions and the Apollo
+  `job_chat`/`workflow_chat`/`test` HTTP calls behind them had no callers, so
+  they are gone along with their tests. All AI chats continue to use the
+  streaming endpoints, which are unchanged.
+  [#5046](https://github.com/OpenFn/lightning/issues/5046)
+
 - The global chat now starts streaming Apollo's response earlier, so users wait
   less before seeing output. Lightning handles the several streaming event types
   Apollo sends, including status updates.
