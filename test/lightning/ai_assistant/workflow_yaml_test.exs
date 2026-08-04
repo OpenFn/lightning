@@ -178,4 +178,170 @@ defmodule Lightning.AiAssistant.WorkflowYAMLTest do
              } = parsed
     end
   end
+
+  # Helpers for the "hostile input" describe below: a minimal valid state
+  # map (the Y.Doc-deserialized shape) that individual tests override to
+  # inject hostile values.
+  defp hostile_state(overrides) do
+    Map.merge(
+      %{
+        "id" => "00000000-0000-4000-8000-000000000000",
+        "name" => "Hostile Workflow",
+        "jobs" => [job_entry(%{})],
+        "triggers" => [
+          %{
+            "id" => trigger_id(),
+            "type" => "webhook",
+            "enabled" => true,
+            "webhook_reply" => nil,
+            "webhook_response_config" => nil
+          }
+        ],
+        "edges" => [edge_entry(%{})],
+        "positions" => nil
+      },
+      overrides
+    )
+  end
+
+  defp job_id, do: "11111111-1111-4111-8111-111111111111"
+  defp job2_id, do: "22222222-2222-4222-8222-222222222222"
+  defp trigger_id, do: "33333333-3333-4333-8333-333333333333"
+
+  defp job_entry(overrides) do
+    Map.merge(
+      %{
+        "id" => job_id(),
+        "name" => "Job One",
+        "adaptor" => "@openfn/language-common@latest",
+        "body" => "fn(s => s);"
+      },
+      overrides
+    )
+  end
+
+  defp edge_entry(overrides) do
+    Map.merge(
+      %{
+        "id" => "44444444-4444-4444-8444-444444444444",
+        "condition_type" => "always",
+        "condition_label" => nil,
+        "condition_expression" => nil,
+        "enabled" => true,
+        "source_trigger_id" => trigger_id(),
+        "source_job_id" => nil,
+        "target_job_id" => job_id()
+      },
+      overrides
+    )
+  end
+
+  defp serialize_and_parse(state) do
+    yaml = WorkflowYAML.serialize(state)
+    assert is_binary(yaml)
+    YamlElixir.read_from_string!(yaml)
+  end
+
+  describe "serialize/1 with hostile input" do
+    test "a job body with a bare CR round-trips through the quoted fallback" do
+      body = "a\rb\nc"
+
+      parsed =
+        serialize_and_parse(
+          hostile_state(%{"jobs" => [job_entry(%{"body" => body})]})
+        )
+
+      # A bare CR is invalid inside a block scalar, so the value must take
+      # the quoted fallback and come back byte-for-byte.
+      assert get_in(parsed, ["jobs", "Job-One", "body"]) == body
+    end
+
+    test "a job body with CRLF line endings round-trips byte-for-byte" do
+      body = "line1\r\nline2"
+
+      parsed =
+        serialize_and_parse(
+          hostile_state(%{"jobs" => [job_entry(%{"body" => body})]})
+        )
+
+      # A block scalar would silently normalize the CRLF away; the quoted
+      # fallback escapes it instead.
+      assert get_in(parsed, ["jobs", "Job-One", "body"]) == body
+    end
+
+    test "jobs whose names hyphenate to the same key keep the last one" do
+      parsed =
+        serialize_and_parse(
+          hostile_state(%{
+            "jobs" => [
+              job_entry(%{"name" => "My Job", "body" => "first()"}),
+              job_entry(%{
+                "id" => job2_id(),
+                "name" => "My-Job",
+                "body" => "second()"
+              })
+            ]
+          })
+        )
+
+      # Duplicate mapping keys would make the client's own YAML.parse throw;
+      # the client's JS object assignment keeps the last write, so match it.
+      assert %{"My-Job" => job_spec} = parsed["jobs"]
+      assert map_size(parsed["jobs"]) == 1
+      assert job_spec["id"] == job2_id()
+      assert job_spec["body"] == "second()"
+    end
+
+    test "edges that collide on source->target keep the last one" do
+      parsed =
+        serialize_and_parse(
+          hostile_state(%{
+            "edges" => [
+              edge_entry(%{"condition_type" => "on_job_success"}),
+              edge_entry(%{
+                "id" => "55555555-5555-4555-8555-555555555555",
+                "condition_type" => "on_job_failure"
+              })
+            ]
+          })
+        )
+
+      assert %{"webhook->Job-One" => edge_spec} = parsed["edges"]
+      assert map_size(parsed["edges"]) == 1
+      assert edge_spec["id"] == "55555555-5555-4555-8555-555555555555"
+      assert edge_spec["condition_type"] == "on_job_failure"
+    end
+
+    test "a nil job name is keyed as an empty string, not a null key" do
+      parsed =
+        serialize_and_parse(
+          hostile_state(%{"jobs" => [job_entry(%{"name" => nil})]})
+        )
+
+      assert %{"" => job_spec} = parsed["jobs"]
+      assert job_spec["id"] == job_id()
+      assert job_spec["name"] == nil
+    end
+
+    test "DEL, C1 controls and Unicode line separators are escaped" do
+      # PyYAML hard-rejects raw 0x7F and folds U+0085 into a space, so the
+      # quoted fallback must escape them beyond what Jason does.
+      body = "a\d\nb\u{0085}c\u{2028}d"
+
+      yaml =
+        WorkflowYAML.serialize(
+          hostile_state(%{"jobs" => [job_entry(%{"body" => body})]})
+        )
+
+      refute yaml =~ "\d"
+      refute yaml =~ "\u{0085}"
+      refute yaml =~ "\u{2028}"
+
+      assert get_in(YamlElixir.read_from_string!(yaml), [
+               "jobs",
+               "Job-One",
+               "body"
+             ]) == body
+    end
+  end
 end

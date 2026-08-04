@@ -221,7 +221,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     kind, reason ->
       Logger.error(
         "[AI Assistant] Failed to build workflow YAML from the live doc for " <>
-          "workflow #{workflow_id}: #{Exception.format(kind, reason)}"
+          "workflow #{workflow_id}: #{Exception.format(kind, reason, __STACKTRACE__)}"
       )
 
       nil

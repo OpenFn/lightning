@@ -35,6 +35,14 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
   # Bare words YAML would read as booleans or null rather than strings
   @yaml_literals ~w(true false yes no on off null)
 
+  # Characters that must never appear raw in emitted YAML: C0 controls other
+  # than \n and \t (notably \r — bare CR is invalid in a block scalar and
+  # CRLF gets silently normalized away by parsers), DEL and C1 controls
+  # (0x7F-0x9F — PyYAML hard-rejects raw 0x7F and folds U+0085 into a space),
+  # and the Unicode line separators U+2028/U+2029. Values containing any of
+  # these are routed through the quoted fallback, which escapes them.
+  @unsafe_chars ~r/[\x00-\x08\x0B-\x1F\x7F-\x9F\x{2028}\x{2029}]/u
+
   @doc """
   Serializes a workflow to a YAML string matching the client-produced spec.
 
@@ -46,18 +54,25 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
   """
   @spec serialize(Workflow.t() | map()) :: String.t() | nil
   def serialize(%Workflow{} = workflow) do
-    workflow |> to_state() |> serialize()
+    # to_state/1 runs inside the rescued body so a workflow with unloaded
+    # associations degrades to nil like any other serialization failure,
+    # keeping the nil-on-failure promise for both input shapes.
+    serialize_state(fn -> to_state(workflow) end, workflow.id)
   end
 
   def serialize(%{} = state) do
-    state
+    serialize_state(fn -> state end, state["id"])
+  end
+
+  defp serialize_state(state_fun, id) do
+    state_fun.()
     |> spec_pairs()
     |> to_yaml("")
     |> Kernel.<>("\n")
   rescue
     error ->
       Logger.error(
-        "[AI Assistant] Failed to serialize workflow #{inspect(state["id"])} " <>
+        "[AI Assistant] Failed to serialize workflow #{inspect(id)} " <>
           "to YAML: #{Exception.message(error)}"
       )
 
@@ -134,15 +149,34 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
       {"id", state["id"]},
       {"name", state["name"]},
       {"jobs",
-       Enum.map(jobs, fn job ->
-         {hyphenate(job["name"]), job_pairs(job, positions)}
-       end)},
+       jobs
+       |> Enum.map(fn job ->
+         # Coerce nil names to "" so the mapping key is never a bare null
+         {hyphenate(job["name"] || ""), job_pairs(job, positions)}
+       end)
+       |> dedupe_keys()},
       {"triggers",
-       Enum.map(triggers, fn trigger ->
-         {trigger["type"], trigger_pairs(trigger, jobs, positions)}
-       end)},
-      {"edges", Enum.map(edges, fn edge -> edge_pairs(edge, triggers, jobs) end)}
+       triggers
+       |> Enum.map(fn trigger ->
+         {trigger["type"] || "", trigger_pairs(trigger, jobs, positions)}
+       end)
+       |> dedupe_keys()},
+      {"edges",
+       edges
+       |> Enum.map(fn edge -> edge_pairs(edge, triggers, jobs) end)
+       |> dedupe_keys()}
     ]
+  end
+
+  # Nodes whose names hyphenate (or whose source->target pair collides) to
+  # the same mapping key keep only the last occurrence, matching the client,
+  # where JS object assignment makes the last write win. Duplicate YAML keys
+  # would otherwise make the client's own YAML.parse throw.
+  defp dedupe_keys(pairs) do
+    pairs
+    |> Enum.reverse()
+    |> Enum.uniq_by(fn {key, _value} -> key end)
+    |> Enum.reverse()
   end
 
   defp job_pairs(job, positions) do
@@ -205,6 +239,9 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
     pairs =
       [
         {"id", edge["id"]},
+        # Deliberate divergence from the client: it emits store values
+        # verbatim because its store never leaves these unset; server-side
+        # sources can, so nil-harden here rather than emit invalid YAML.
         {"condition_type", presence(edge["condition_type"]) || "always"},
         {"enabled", edge["enabled"] != false},
         {"target_job", target_name}
@@ -299,7 +336,7 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
   defp emit_multiline(key, value, indent) do
     cond do
       not block_scalar_safe?(value) ->
-        "#{indent}#{yaml_key(key)}: #{Jason.encode!(value)}"
+        "#{indent}#{yaml_key(key)}: #{quoted(value)}"
 
       String.ends_with?(value, "\n") and not String.ends_with?(value, "\n\n") ->
         # "|" (clip) keeps exactly the one trailing newline
@@ -311,7 +348,7 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
 
       true ->
         # Multiple trailing newlines don't round-trip through clip/strip
-        "#{indent}#{yaml_key(key)}: #{Jason.encode!(value)}"
+        "#{indent}#{yaml_key(key)}: #{quoted(value)}"
     end
   end
 
@@ -329,19 +366,22 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
 
   # Block scalar indentation is auto-detected from the first content line,
   # so the content is only safe when that line exists and carries no leading
-  # whitespace of its own.
+  # whitespace of its own. Content with characters a block scalar cannot
+  # carry raw (CR — bare or as part of CRLF — and other control characters)
+  # must go through the quoted fallback instead.
   defp block_scalar_safe?(value) do
-    case String.split(value, "\n", parts: 2) do
-      [first, _rest] ->
-        first != "" and not String.starts_with?(first, [" ", "\t"])
+    not Regex.match?(@unsafe_chars, value) and
+      case String.split(value, "\n", parts: 2) do
+        [first, _rest] ->
+          first != "" and not String.starts_with?(first, [" ", "\t"])
 
-      _ ->
-        false
-    end
+        _ ->
+          false
+      end
   end
 
   defp yaml_key(key) do
-    if plain_scalar?(key), do: key, else: Jason.encode!(key)
+    if plain_scalar?(key), do: key, else: quoted(key)
   end
 
   defp yaml_scalar(nil), do: "null"
@@ -350,7 +390,22 @@ defmodule Lightning.AiAssistant.WorkflowYAML do
   defp yaml_scalar(value) when is_number(value), do: to_string(value)
 
   defp yaml_scalar(value) when is_binary(value) do
-    if plain_scalar?(value), do: value, else: Jason.encode!(value)
+    if plain_scalar?(value), do: value, else: quoted(value)
+  end
+
+  # Double-quoted fallback scalar. Jason escapes everything below 0x20, but
+  # leaves DEL and the C1 controls (0x7F-0x9F) and U+2028/U+2029 raw —
+  # PyYAML (Apollo is Python) hard-rejects raw 0x7F and silently folds
+  # U+0085 into a space — so escape those as \\uXXXX after encoding.
+  defp quoted(value) do
+    Regex.replace(
+      ~r/[\x7F-\x9F\x{2028}\x{2029}]/u,
+      Jason.encode!(value),
+      fn <<codepoint::utf8>> ->
+        "\\u" <>
+          (codepoint |> Integer.to_string(16) |> String.pad_leading(4, "0"))
+      end
+    )
   end
 
   # A string can be written unquoted when it starts with a letter, ends with
