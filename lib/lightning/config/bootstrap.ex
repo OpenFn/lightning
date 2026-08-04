@@ -141,8 +141,9 @@ defmodule Lightning.Config.Bootstrap do
       # APOLLO_TIMEOUT (ms) bounds every request to Apollo. For streaming
       # (all AI chat) it is the time-to-headers and max gap between SSE
       # chunks; the AI job's total-runtime ceiling is derived from it
-      # (+10s). The compiled default is 120_000 (config.exs). Size it above the longest
-      # expected AI run.
+      # (+10s). Unset, it falls back to the per-env compiled config
+      # (config.exs default 120_000; dev.exs overrides to 300_000). Size it
+      # above the longest expected AI run.
       timeout:
         env!(
           "APOLLO_TIMEOUT",
