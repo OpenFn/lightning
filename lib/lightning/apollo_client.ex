@@ -310,10 +310,9 @@ defmodule Lightning.ApolloClient do
   end
 
   defp stream_client do
-    # One knob for all Apollo requests: APOLLO_TIMEOUT. For streams it bounds
-    # time-to-headers and each gap between SSE chunks (not total duration —
-    # the MessageProcessor job ceiling, derived from the same value, does
-    # that).
+    # receive_timeout bounds time-to-headers and each gap between SSE
+    # chunks, not total stream duration — the MessageProcessor job timeout
+    # bounds that.
     timeout = Lightning.Config.apollo(:timeout)
 
     client_params = [
