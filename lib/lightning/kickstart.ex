@@ -1,6 +1,6 @@
-defmodule Lightning.Bootstrap do
+defmodule Lightning.Kickstart do
   @moduledoc """
-  Declarative, idempotent bootstrapping of Lightning from a scenario file.
+  Declarative, idempotent kickstarting of Lightning from a scenario file.
 
   Given a plain map (typically decoded from a YAML/JSON scenario file), this
   module creates users (with optional API tokens), credentials and projects,
@@ -11,7 +11,7 @@ defmodule Lightning.Bootstrap do
   It serves local development (`bin/e2e --scenario`), external test harnesses
   (boot Lightning into a known state, read the manifest, drive the public
   APIs) and initial-state seeding of real deployments
-  (`bin/lightning eval 'Lightning.Setup.bootstrap("/etc/lightning/state.yaml")'`).
+  (`bin/lightning eval 'Lightning.Setup.kickstart("/etc/lightning/state.yaml")'`).
 
   ## Idempotency
 
@@ -37,9 +37,9 @@ defmodule Lightning.Bootstrap do
 
   ## Safety
 
-  Bootstrapping creates users (including superusers) and must be explicitly
+  Kickstarting creates users (including superusers) and must be explicitly
   enabled. It is enabled in `dev` and `test` config; releases opt in with the
-  `ALLOW_BOOTSTRAP=true` environment variable. `run/1` raises otherwise.
+  `ALLOW_KICKSTART=true` environment variable. `run/1` raises otherwise.
 
   ## Scenario shape
 
@@ -120,7 +120,7 @@ defmodule Lightning.Bootstrap do
 
   # Namespace for deterministic (UUIDv5-style) record ids. Changing it changes
   # every derived id, breaking idempotent re-runs against existing databases.
-  @uuid_namespace "lightning.bootstrap.v1"
+  @uuid_namespace "lightning.kickstart.v1"
 
   @roles %{
     "owner" => :owner,
@@ -156,7 +156,7 @@ defmodule Lightning.Bootstrap do
   Returns a result map describing the records; pass it to `manifest/1` for a
   JSON-encodable summary or `summary/1` for a human-readable one.
 
-  Raises unless bootstrapping is enabled (see the module docs), and rolls the
+  Raises unless kickstarting is enabled (see the module docs), and rolls the
   whole run back on any error.
   """
   @spec run(map()) :: result()
@@ -289,7 +289,7 @@ defmodule Lightning.Bootstrap do
         ["  project  #{project.name} (#{project.id})" | workflow_lines]
       end)
 
-    Enum.join(["Bootstrapped:" | user_lines ++ project_lines], "\n")
+    Enum.join(["Kickstarted:" | user_lines ++ project_lines], "\n")
   end
 
   defp workflow_manifest(%{id: id, name: name, trigger: trigger, jobs: jobs}) do
@@ -319,11 +319,11 @@ defmodule Lightning.Bootstrap do
 
     unless enabled do
       raise """
-      Lightning.Bootstrap is disabled.
+      Lightning.Kickstart is disabled.
 
-      Bootstrapping creates users (including superusers) and must be opted
-      into. Set ALLOW_BOOTSTRAP=true in the environment (for a release), or
-      configure `config :lightning, Lightning.Bootstrap, enabled: true`.
+      Kickstarting creates users (including superusers) and must be opted
+      into. Set ALLOW_KICKSTART=true in the environment (for a release), or
+      configure `config :lightning, Lightning.Kickstart, enabled: true`.
       """
     end
   end
@@ -802,7 +802,7 @@ defmodule Lightning.Bootstrap do
   end
 
   # A typo or an unsupported provisioner field (e.g. "channels", not yet
-  # handled by the bootstrapper) would otherwise be silently ignored — fail
+  # handled by the kickstarter) would otherwise be silently ignored — fail
   # loudly and name the bad key(s) instead.
   defp allowed_keys!(map, allowed, context) when is_map(map) do
     unknown = Map.keys(map) -- allowed
@@ -845,7 +845,7 @@ defmodule Lightning.Bootstrap do
         end)
       end)
 
-    raise "Failed to bootstrap #{what}: #{inspect(errors)}"
+    raise "Failed to kickstart #{what}: #{inspect(errors)}"
   end
 
   # Real YAML booleans (`true`/`false`) decode to Elixir booleans, but YAML

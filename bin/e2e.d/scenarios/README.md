@@ -1,8 +1,8 @@
-# Bootstrap scenarios
+# Kickstart scenarios
 
 A scenario is a YAML (or JSON) file describing the exact state you want a
 Lightning instance booted into: users, credentials, projects, workflows.
-Scenarios are executed by `Lightning.Bootstrap`, which provisions workflows
+Scenarios are executed by `Lightning.Kickstart`, which provisions workflows
 through the same engine as the `/api/provision` HTTP API.
 
 ## Running
@@ -14,11 +14,11 @@ bin/e2e setup --scenario /path/to/my.yaml
 bin/e2e reset --scenario example
 
 # directly, against whatever DATABASE_URL/MIX_ENV is configured
-mix lightning.bootstrap bin/e2e.d/scenarios/example.yaml \
+mix lightning.kickstart bin/e2e.d/scenarios/example.yaml \
   --manifest /tmp/manifest.json
 
-# in a release (docker/k8s), gated behind ALLOW_BOOTSTRAP=true
-bin/lightning eval 'Lightning.Setup.bootstrap("/etc/lightning/state.yaml")'
+# in a release (docker/k8s), gated behind ALLOW_KICKSTART=true
+bin/lightning eval 'Lightning.Setup.kickstart("/etc/lightning/state.yaml")'
 ```
 
 Re-running a scenario is **idempotent**: users are matched by email, credentials
@@ -150,5 +150,5 @@ Interpolation is explicit — only the `${env:...}` form is replaced. Plain
 
 ## Safety
 
-Bootstrapping creates users (including superusers) and is disabled outside
-dev/test. Releases must opt in with `ALLOW_BOOTSTRAP=true`.
+Kickstarting creates users (including superusers) and is disabled outside
+dev/test. Releases must opt in with `ALLOW_KICKSTART=true`.

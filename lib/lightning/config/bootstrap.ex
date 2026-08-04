@@ -103,12 +103,12 @@ defmodule Lightning.Config.Bootstrap do
              Application.fetch_env!(:lightning, :is_resettable_demo)
            )
 
-    config :lightning, Lightning.Bootstrap,
+    config :lightning, Lightning.Kickstart,
       enabled:
         env!(
-          "ALLOW_BOOTSTRAP",
+          "ALLOW_KICKSTART",
           &Utils.ensure_boolean/1,
-          Application.get_env(:lightning, Lightning.Bootstrap, [])
+          Application.get_env(:lightning, Lightning.Kickstart, [])
           |> Keyword.get(:enabled, false)
         )
 

@@ -175,5 +175,5 @@ config :lightning, LightningWeb.CollectionsController,
 # localhost via Bypass; allow those loopback endpoints to skip TLS verification.
 config :lightning, :auth_providers_allow_insecure_loopback, true
 
-# Allow declarative bootstrapping (Lightning.Bootstrap) in the test suite.
-config :lightning, Lightning.Bootstrap, enabled: true
+# Allow declarative kickstarting (Lightning.Kickstart) in the test suite.
+config :lightning, Lightning.Kickstart, enabled: true

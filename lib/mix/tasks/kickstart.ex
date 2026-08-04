@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Lightning.Bootstrap do
+defmodule Mix.Tasks.Lightning.Kickstart do
   @shortdoc "Populates Lightning from a declarative scenario file"
 
   @moduledoc """
@@ -7,15 +7,15 @@ defmodule Mix.Tasks.Lightning.Bootstrap do
   Creates users (with optional API tokens), credentials and projects, and
   provisions workflows through the same engine as the `/api/provision` HTTP
   API. Idempotent: re-running the same scenario converges instead of
-  duplicating. See `Lightning.Bootstrap` for the file format and semantics.
+  duplicating. See `Lightning.Kickstart` for the file format and semantics.
 
   The database must already be migrated (`mix ecto.migrate`). For releases,
-  use `bin/lightning eval 'Lightning.Setup.bootstrap("/path/state.yaml")'`
-  with `ALLOW_BOOTSTRAP=true` instead.
+  use `bin/lightning eval 'Lightning.Setup.kickstart("/path/state.yaml")'`
+  with `ALLOW_KICKSTART=true` instead.
 
   ## Usage
 
-      mix lightning.bootstrap SCENARIO_FILE [OPTIONS]
+      mix lightning.kickstart SCENARIO_FILE [OPTIONS]
 
   ## Arguments
 
@@ -28,8 +28,8 @@ defmodule Mix.Tasks.Lightning.Bootstrap do
 
   ## Examples
 
-      mix lightning.bootstrap bin/e2e.d/scenarios/example.yaml
-      mix lightning.bootstrap state.yaml --manifest /tmp/manifest.json
+      mix lightning.kickstart bin/e2e.d/scenarios/example.yaml
+      mix lightning.kickstart state.yaml --manifest /tmp/manifest.json
   """
 
   use Mix.Task
@@ -50,12 +50,12 @@ defmodule Mix.Tasks.Lightning.Bootstrap do
 
         _other ->
           Mix.raise(
-            "Usage: mix lightning.bootstrap SCENARIO_FILE [--manifest PATH]"
+            "Usage: mix lightning.kickstart SCENARIO_FILE [--manifest PATH]"
           )
       end
 
     Mix.Task.run("app.config")
 
-    Lightning.Setup.bootstrap(path, opts)
+    Lightning.Setup.kickstart(path, opts)
   end
 end

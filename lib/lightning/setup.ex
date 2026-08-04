@@ -28,28 +28,28 @@ defmodule Lightning.Setup do
   end
 
   @doc """
-  Bootstrap the instance from a declarative scenario file, without needing the
-  full application running. See `Lightning.Bootstrap` for the file format.
+  Kickstart the instance from a declarative scenario file, without needing the
+  full application running. See `Lightning.Kickstart` for the file format.
 
   Designed for release environments:
 
-      bin/lightning eval 'Lightning.Setup.bootstrap("/etc/lightning/state.yaml")'
-      bin/lightning eval 'Lightning.Setup.bootstrap("/state.yaml", manifest: "/state.manifest.json")'
+      bin/lightning eval 'Lightning.Setup.kickstart("/etc/lightning/state.yaml")'
+      bin/lightning eval 'Lightning.Setup.kickstart("/state.yaml", manifest: "/state.manifest.json")'
 
-  Requires `ALLOW_BOOTSTRAP=true` in a release. Prints a summary of the
+  Requires `ALLOW_KICKSTART=true` in a release. Prints a summary of the
   records; pass `manifest: path` to also write the JSON manifest (ids, API
   tokens, webhook paths) for consumption by scripts or test harnesses.
   """
-  @spec bootstrap(Path.t(), keyword()) :: Lightning.Bootstrap.result()
-  def bootstrap(path, opts \\ []) do
+  @spec kickstart(Path.t(), keyword()) :: Lightning.Kickstart.result()
+  def kickstart(path, opts \\ []) do
     {:ok, _pid} = ensure_minimum_setup()
 
     {:ok, result, _apps} =
       Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
-        Lightning.Bootstrap.run_file(path, opts)
+        Lightning.Kickstart.run_file(path, opts)
       end)
 
-    IO.puts(Lightning.Bootstrap.summary(result))
+    IO.puts(Lightning.Kickstart.summary(result))
     result
   end
 

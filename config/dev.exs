@@ -187,5 +187,5 @@ config :git_hooks,
     # ]
   ]
 
-# Allow declarative bootstrapping (Lightning.Bootstrap) in local development.
-config :lightning, Lightning.Bootstrap, enabled: true
+# Allow declarative kickstarting (Lightning.Kickstart) in local development.
+config :lightning, Lightning.Kickstart, enabled: true
