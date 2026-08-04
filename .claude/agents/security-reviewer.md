@@ -2,7 +2,9 @@
 name: security-reviewer
 description: Performs OpenFn-specific security checks on PR changes. Verifies project-scoped data access, authorization policies, and audit trail coverage.
 tools: Read, Grep, Glob
-model: sonnet
+model: opus
+effort: high
+maxTurns: 50
 ---
 
 You are a security reviewer for the OpenFn Lightning platform. Check PR changes
