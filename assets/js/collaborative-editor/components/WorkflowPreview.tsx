@@ -98,7 +98,19 @@ function WorkflowPreviewFlow({ state }: WorkflowPreviewProps) {
   const [model, setModel] = useState<Flow.Model>(EMPTY_MODEL);
 
   useEffect(() => {
-    const { jobs, triggers, edges } = state;
+    const { jobs, triggers, edges, positions } = state;
+
+    // Authored positions are the ones that get applied when this state is
+    // turned into a real workflow, so draw those rather than laying out fresh.
+    // Otherwise the preview shows a tidy Dagre graph and the created workflow
+    // opens in whatever arrangement its author left behind.
+    //
+    // A partial set is treated as none: every node needs a position, and
+    // falling back to a full layout beats inventing the missing ones.
+    const placed =
+      positions && [...jobs, ...triggers].every(node => positions[node.id])
+        ? positions
+        : null;
 
     // `disabled: true` suppresses the placeholder "+" affordances on nodes.
     // The cast is pre-existing type debt shared with WorkflowDiagram.tsx: the
@@ -111,11 +123,19 @@ function WorkflowPreviewFlow({ state }: WorkflowPreviewProps) {
         edges,
         disabled: true,
       } as unknown as Lightning.Workflow,
-      {},
+      placed ?? {},
       EMPTY_MODEL,
       createEmptyRunInfo(),
       null
     );
+
+    if (placed) {
+      // `layout` runs Dagre unconditionally, so authored positions only survive
+      // if it is skipped entirely. Framing is still ReactFlow's job: `fitView`
+      // below fits whatever bounds these positions produce, at any scale.
+      setModel(initial);
+      return;
+    }
 
     const rect = containerRef.current?.getBoundingClientRect();
     void layout(

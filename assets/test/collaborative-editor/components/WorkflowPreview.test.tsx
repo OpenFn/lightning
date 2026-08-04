@@ -51,6 +51,35 @@ edges:
     condition_type: on_job_success
     enabled: true`;
 
+/**
+ * The same shape, but published by someone who had switched the canvas to
+ * manual layout: every node carries a `pos`. This is what a real user's
+ * template looks like once they have arranged it by hand.
+ */
+const POSITIONED_YAML = `name: "Positioned workflow"
+jobs:
+  Fetch-data:
+    name: Fetch data
+    adaptor: "@openfn/language-http@latest"
+    body: |
+      get('https://example.com');
+    pos:
+      x: 640
+      y: 420
+triggers:
+  webhook:
+    type: webhook
+    enabled: true
+    pos:
+      x: 640
+      y: 180
+edges:
+  webhook->Fetch-data:
+    source_trigger: webhook
+    target_job: Fetch-data
+    condition_type: always
+    enabled: true`;
+
 describe('WorkflowPreview', () => {
   test('renders a node per job and trigger, with no editor providers present', async () => {
     render(<WorkflowPreview state={stateFrom(TWO_STEP_YAML)} />);
@@ -83,5 +112,49 @@ describe('WorkflowPreview', () => {
       container.querySelector('[data-handleid="node-connector"]')
     ).toBeNull();
     expect(container.querySelector('.hero-plus')).toBeNull();
+  });
+
+  describe('authored positions', () => {
+    /**
+     * Creating a workflow from a state applies its positions verbatim, so the
+     * preview has to draw those rather than a fresh auto-layout — otherwise it
+     * shows one arrangement and the user lands on another. This is the
+     * assertion that keeps the two honest.
+     */
+    test('draws nodes where the state says, not where Dagre would put them', async () => {
+      const state = stateFrom(POSITIONED_YAML);
+      const { container } = render(<WorkflowPreview state={state} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Fetch data')).toBeInTheDocument();
+      });
+
+      const job = state.jobs[0]!;
+      const authored = state.positions![job.id]!;
+
+      expect(container.querySelector(`[data-id="${job.id}"]`)).toHaveStyle({
+        transform: `translate(${authored.x}px,${authored.y}px)`,
+      });
+    });
+
+    test('lays out fresh when only some nodes carry a position', async () => {
+      // A hand-edited or partially-migrated template. Every node needs a
+      // position, so a partial set is ignored wholesale rather than leaving the
+      // rest at an undefined coordinate.
+      const state = stateFrom(POSITIONED_YAML);
+      const trigger = state.triggers[0]!;
+      delete state.positions![trigger.id];
+
+      const { container } = render(<WorkflowPreview state={state} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Fetch data')).toBeInTheDocument();
+      });
+
+      const job = state.jobs[0]!;
+      expect(container.querySelector(`[data-id="${job.id}"]`)).not.toHaveStyle({
+        transform: 'translate(640px,420px)',
+      });
+    });
   });
 });
