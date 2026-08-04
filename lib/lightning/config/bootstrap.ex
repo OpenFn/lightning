@@ -139,11 +139,11 @@ defmodule Lightning.Config.Bootstrap do
           Utils.get_env([:lightning, :apollo, :endpoint])
         ),
       # APOLLO_TIMEOUT (ms) bounds every request to Apollo. For streaming
-      # (all AI chat) it is the time-to-headers and max gap between SSE
-      # chunks; the AI job's total-runtime ceiling is derived from it
-      # (+10s). Unset, it falls back to the per-env compiled config
-      # (config.exs default 120_000; dev.exs overrides to 300_000). Size it
-      # above the longest expected AI run.
+      # (all AI chat) it is the time-to-headers and the max gap between SSE
+      # chunks — and because the AI job's total-runtime ceiling is derived
+      # from the same value, it effectively bounds the whole run too, so
+      # size it above the longest expected AI run. Unset, it falls back to
+      # the per-env compiled config.
       timeout:
         env!(
           "APOLLO_TIMEOUT",
