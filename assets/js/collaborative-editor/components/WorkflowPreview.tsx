@@ -20,17 +20,15 @@ import {
   type EdgeTypes,
   type NodeTypes,
   ReactFlow,
-  ReactFlowProvider,
-  useReactFlow,
 } from '@xyflow/react';
-import { useEffect, useRef, useState } from 'react';
+import { useMemo } from 'react';
 
 import { FIT_PADDING } from '#/workflow-diagram/constants';
 import edgeTypes from '#/workflow-diagram/edges';
-import layout from '#/workflow-diagram/layout';
 import nodeTypes from '#/workflow-diagram/nodes';
 import type { Flow, Lightning } from '#/workflow-diagram/types';
 import fromWorkflow from '#/workflow-diagram/util/from-workflow';
+import computeStaticPositions from '#/workflow-diagram/util/static-layout';
 
 import type { WorkflowState } from '../../yaml/types';
 import { createEmptyRunInfo } from '../utils/runStepsTransformer';
@@ -48,9 +46,6 @@ export function WorkflowPreview({ state }: WorkflowPreviewProps) {
   // and it must never be able to take its host — or the workflow creation path
   // behind it — down with it. Callers key this component by whatever they are
   // previewing, so switching also resets a tripped boundary.
-  //
-  // Each preview gets its own ReactFlowProvider so it cannot share viewport or
-  // node state with the real canvas.
   return (
     <ErrorBoundary
       label="WorkflowPreview"
@@ -58,9 +53,7 @@ export function WorkflowPreview({ state }: WorkflowPreviewProps) {
       // user's way out is simply to pick something else.
       fallback={() => <PreviewMessage message="This can't be previewed." />}
     >
-      <ReactFlowProvider>
-        <WorkflowPreviewFlow state={state} />
-      </ReactFlowProvider>
+      <WorkflowPreviewFlow state={state} />
     </ErrorBoundary>
   );
 }
@@ -93,11 +86,11 @@ export function PreviewMessage({
 }
 
 function WorkflowPreviewFlow({ state }: WorkflowPreviewProps) {
-  const flow = useReactFlow();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [model, setModel] = useState<Flow.Model>(EMPTY_MODEL);
-
-  useEffect(() => {
+  // Deriving the whole model in a memo, rather than an effect writing to
+  // state, is possible because laying out is a pure function of the workflow.
+  // Nothing here needs a ReactFlowInstance, a measured container, or a render
+  // to have happened first, so there is no reason to wait for one.
+  const model = useMemo<Flow.Model>(() => {
     const { jobs, triggers, edges, positions } = state;
 
     // Authored positions are the ones that get applied when this state is
@@ -129,34 +122,23 @@ function WorkflowPreviewFlow({ state }: WorkflowPreviewProps) {
       null
     );
 
-    if (placed) {
-      // `layout` runs Dagre unconditionally, so authored positions only survive
-      // if it is skipped entirely. Framing is still ReactFlow's job: `fitView`
-      // below fits whatever bounds these positions produce, at any scale.
-      setModel(initial);
-      return;
-    }
+    // `fromWorkflow` only sets a position where one was supplied, so the
+    // auto-layout branch has to fill them in. Framing stays ReactFlow's job:
+    // `fitView` below fits whatever bounds either branch produces.
+    if (placed) return initial;
 
-    const rect = containerRef.current?.getBoundingClientRect();
-    void layout(
-      initial,
-      setModel,
-      flow,
-      { width: rect?.width ?? 0, height: rect?.height ?? 0 },
-      // `duration: false` skips interpolating the nodes into place — there is
-      // no previous layout to animate from.
-      //
-      // Deliberately no `forceFit`: framing the graph is left to ReactFlow's
-      // own `fitView` prop below. `forceFit` would fit on a fixed 20ms timer,
-      // which both races node measurement and outlives this component when the
-      // caller switches to another workflow — ReactFlow instead holds the fit
-      // until the nodes are measured, then runs it once.
-      { duration: false }
-    );
-  }, [state, flow]);
+    const computed = computeStaticPositions(initial);
+    return {
+      ...initial,
+      nodes: initial.nodes.map(node => ({
+        ...node,
+        position: computed[node.id] ?? { x: 0, y: 0 },
+      })),
+    };
+  }, [state]);
 
   return (
-    <div ref={containerRef} className="h-full w-full">
+    <div className="h-full w-full">
       <ReactFlow
         // Without this the diagram is an unlabelled graphics region. The name
         // comes from the state rather than the caller so every host gets one;

@@ -1,10 +1,9 @@
 import type { ReactFlowInstance } from '@xyflow/react';
 import { timer } from 'd3-timer';
 
-import Dagre from '../../vendor/dagre.cjs';
-
 import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from './constants';
 import type { Flow, Positions } from './types';
+import computeStaticPositions from './util/static-layout';
 import { getVisibleRect, isPointInRect } from './util/viewport';
 
 export type LayoutOpts = {
@@ -27,30 +26,21 @@ const calculateLayout = async (
   // @ts-ignore _default is a temporary flag added by us
   const newPlaceholders = model.nodes.filter(n => n.position?._default);
 
-  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-  g.setGraph({
-    rankdir: 'TB',
-    nodesep: 250,
-    edgesep: 200,
-    ranksep: 150,
-  });
-
-  edges.forEach(edge => g.setEdge(edge.source, edge.target));
-  nodes.forEach(node =>
-    g.setNode(node.id, { ...node, width: NODE_WIDTH, height: NODE_HEIGHT })
-  );
-
-  Dagre.layout(g, { disableOptimalOrderHeuristic: true });
+  const staticPositions = computeStaticPositions(model);
 
   const newModel = {
-    nodes: nodes.map(node => {
-      const { x, y, width, height } = g.node(node.id);
-
-      return {
-        ...node,
-        position: { x, y, width, height },
-      };
-    }),
+    nodes: nodes.map(node => ({
+      ...node,
+      position: {
+        // computeStaticPositions returns an entry per node, so the fallback is
+        // unreachable — it only satisfies the index signature.
+        ...(staticPositions[node.id] ?? { x: 0, y: 0 }),
+        // Dagre echoes back the dimensions it was given, which is where these
+        // used to come from.
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
+      },
+    })),
     edges,
   };
 
