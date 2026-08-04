@@ -302,7 +302,7 @@ defmodule Lightning.ApolloClient do
         client_params,
         {Tesla.Adapter.Finch,
          name: Lightning.Finch,
-         receive_timeout: Lightning.Config.apollo(:timeout)}
+         receive_timeout: Lightning.Config.apollo(:timeout) || 120_000}
       )
     else
       Tesla.client(client_params)
@@ -310,8 +310,11 @@ defmodule Lightning.ApolloClient do
   end
 
   defp stream_client do
-    streaming_timeout =
-      Lightning.Config.apollo(:streaming_timeout) || 120_000
+    # One knob for all Apollo requests: APOLLO_TIMEOUT. For streams it bounds
+    # time-to-headers and each gap between SSE chunks (not total duration —
+    # the MessageProcessor job ceiling, derived from the same value, does
+    # that).
+    timeout = Lightning.Config.apollo(:timeout) || 120_000
 
     client_params = [
       {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
@@ -322,8 +325,7 @@ defmodule Lightning.ApolloClient do
     if match?({Tesla.Adapter.Finch, _}, Application.get_env(:tesla, :adapter)) do
       Tesla.client(
         client_params,
-        {Tesla.Adapter.Finch,
-         name: Lightning.Finch, receive_timeout: streaming_timeout}
+        {Tesla.Adapter.Finch, name: Lightning.Finch, receive_timeout: timeout}
       )
     else
       Tesla.client(client_params)
