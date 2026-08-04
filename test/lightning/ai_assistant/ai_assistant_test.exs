@@ -3159,7 +3159,10 @@ defmodule Lightning.AiAssistantTest do
         AiAssistant.save_message(session, %{
           role: :user,
           content: "modify workflow",
-          user: user
+          user: user,
+          # needed to avoid flaky sorting: same-second timestamps tie with
+          # the assistant reply saved below
+          inserted_at: DateTime.utc_now() |> DateTime.add(-1)
         })
 
       complete_payload =
