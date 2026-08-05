@@ -197,6 +197,32 @@ describe('useAIInitialMessage', () => {
     expect(mockClearInitialMessage).toHaveBeenCalled();
   });
 
+  it('routes the landing prompt through the global assistant', () => {
+    renderHook(() =>
+      useAIInitialMessage({
+        initialMessage: 'Create a workflow for DHIS2',
+        aiMode: workflowTemplateMode,
+        sessionId: null,
+        connectionState: 'disconnected',
+        isAIAssistantPanelOpen: true,
+        aiStore: mockAiStore as AIAssistantStoreInstance,
+        workflowData: defaultWorkflowData,
+        updateSearchParams: mockUpdateSearchParams,
+        clearAIAssistantInitialMessage: mockClearInitialMessage,
+      })
+    );
+
+    // The auto-sent landing message always uses the global assistant and
+    // carries the page context Apollo expects (mirroring a manual global send)
+    expect(mockAiStore.connect).toHaveBeenCalledWith(
+      'workflow_template',
+      expect.objectContaining({
+        use_global_assistant: true,
+        page: 'workflows/Test Workflow',
+      })
+    );
+  });
+
   it('sends initial message in job_code mode', () => {
     renderHook(() =>
       useAIInitialMessage({
@@ -218,6 +244,11 @@ describe('useAIInitialMessage', () => {
         job_id: 'job-1',
         content: 'Help me with this job',
       })
+    );
+    // Forced global routing only applies to workflow_template (landing) sends
+    expect(mockAiStore.connect).toHaveBeenCalledWith(
+      'job_code',
+      expect.not.objectContaining({ use_global_assistant: true })
     );
     expect(mockUpdateSearchParams).toHaveBeenCalledWith({
       'j-chat': 'new',
@@ -343,11 +374,14 @@ describe('useAIInitialMessage', () => {
       })
     );
 
-    // Should still connect, just without workflow code
+    // Should still connect, just without workflow code; global routing still
+    // applies, with the page falling back to a generic name
     expect(mockAiStore.connect).toHaveBeenCalledWith(
       'workflow_template',
       expect.objectContaining({
         content: 'Create a workflow',
+        use_global_assistant: true,
+        page: 'workflows/workflow',
       })
     );
   });

@@ -7,6 +7,12 @@
  * - Prepares the workflow context
  * - Initiates the AI connection with the message
  * - Clears the initial message after sending
+ *
+ * The landing prompt always routes through the GLOBAL assistant (#5040):
+ * the auto-send carries `use_global_assistant: true` (plus the `page`
+ * context Apollo expects), mirroring a manual global send. This only
+ * affects the first, auto-sent message — follow-up messages keep
+ * consulting the ChatInput global-assistant checkbox as before.
  */
 
 import { useEffect, useRef } from 'react';
@@ -97,7 +103,10 @@ export function useAIInitialMessage({
       const { mode, context } = aiMode;
       const { workflow, jobs, triggers, edges, positions } = workflowData;
 
-      let finalContext: JobCodeContext | WorkflowTemplateContext = {
+      let finalContext: (JobCodeContext | WorkflowTemplateContext) & {
+        use_global_assistant?: boolean;
+        page?: string;
+      } = {
         ...context,
         content: initialMessage,
       };
@@ -120,6 +129,16 @@ export function useAIInitialMessage({
             };
           }
         }
+
+        // The landing prompt is always handled by the global assistant.
+        // Mirror the manual global send in AIAssistantPanelWrapper: set the
+        // flag plus the `page` Apollo receives as context (the workflow is
+        // not saved yet, so its name may just be the default placeholder).
+        finalContext = {
+          ...finalContext,
+          use_global_assistant: true,
+          page: `workflows/${workflow?.name || 'workflow'}`,
+        };
       }
 
       // Initialize store with context including content

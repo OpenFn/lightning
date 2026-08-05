@@ -3910,5 +3910,75 @@ defmodule LightningWeb.AiAssistantChannelTest do
       # ...and the message carries no job_id, even though a step was open.
       assert user_msg.job_id == nil
     end
+
+    test "join with use_global_assistant and an unsaved workflow_id creates a global-routed session",
+         %{socket: socket, project: project} do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_usage,
+        fn _, _ -> Ecto.Multi.new() end
+      )
+
+      # The "Build with AI" landing flow joins with a client-generated
+      # workflow id that has no DB row yet.
+      unsaved_workflow_id = Ecto.UUID.generate()
+
+      params = %{
+        "project_id" => project.id,
+        "workflow_id" => unsaved_workflow_id,
+        "content" => "Build a workflow that syncs DHIS2 to a spreadsheet",
+        "use_global_assistant" => true,
+        "page" => "workflows/Untitled workflow"
+      }
+
+      # Oban runs inline in tests, so the first message is processed during
+      # the join itself — it must hit the global chat endpoint.
+      Mox.expect(Lightning.Tesla.Mock, :call, fn %{url: url}, _opts ->
+        assert url =~ "/services/global_chat/stream"
+
+        body =
+          Jason.encode!(%{
+            "response" => "Global response",
+            "attachments" => [],
+            "usage" => %{}
+          })
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           headers: [{"content-type", "text/event-stream"}],
+           body: "event: complete\ndata: #{body}\n\n"
+         }}
+      end)
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 params
+               )
+
+      assert response.session_type == "workflow_template"
+
+      session = AiAssistant.get_session!(response.session_id)
+
+      # The workflow doesn't exist yet, so the session stays unbound and
+      # records the client-generated id in meta...
+      assert session.workflow_id == nil
+      assert session.meta["unsaved_workflow"]["id"] == unsaved_workflow_id
+
+      # ...while still carrying the global routing options.
+      assert session.meta["message_options"]["use_global_assistant"] == true
+
+      assert session.meta["message_options"]["page"] ==
+               "workflows/Untitled workflow"
+
+      # The global endpoint's reply came back as the assistant message.
+      assistant_msg = Enum.find(session.messages, &(&1.role == :assistant))
+      assert assistant_msg != nil
+      assert assistant_msg.content == "Global response"
+      assert assistant_msg.meta == %{"from_global" => true}
+    end
   end
 end

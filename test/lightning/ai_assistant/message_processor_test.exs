@@ -333,6 +333,121 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_msg.response_segments == []
     end
 
+    test "logs at info, not warning, when a brand-new unsaved workflow has no YAML",
+         %{user: user, project: project} do
+      # The "Build with AI" landing flow: the workflow only exists client-side,
+      # so the session carries the unsaved_workflow marker and no workflow_id.
+      global_meta = %{
+        "message_options" => %{
+          "use_global_assistant" => true,
+          "page" => "workflows/Untitled workflow"
+        },
+        "unsaved_workflow" => %{"id" => Ecto.UUID.generate(), "is_new" => true}
+      }
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: nil,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "build me a workflow", user: user},
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+      assert user_message.code == nil
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Global response",
+          "attachments" => [],
+          "usage" => %{}
+        })
+      )
+
+      # The test env logger level is :warning; let this module's info line
+      # through so we can assert on it.
+      Logger.put_module_level(MessageProcessor, :info)
+      on_exit(fn -> Logger.delete_module_level(MessageProcessor) end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      # A brand-new workflow legitimately has no YAML: no warning...
+      refute log =~ "has no workflow YAML"
+      # ...just an honest info line.
+      assert log =~ "[info]"
+      assert log =~ "is for a new workflow, no YAML to attach"
+    end
+
+    test "still warns when a session bound to an existing workflow has no YAML",
+         %{user: user, project: project} do
+      workflow = insert(:workflow, project: project)
+
+      global_meta = %{
+        "message_options" => %{
+          "use_global_assistant" => true,
+          "page" => "workflows/Existing workflow"
+        }
+      }
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: global_meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{role: :user, content: "help with my workflow", user: user},
+          meta: global_meta
+        )
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+      assert user_message.code == nil
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Global response",
+          "attachments" => [],
+          "usage" => %{}
+        })
+      )
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{
+                     "message_id" => user_message.id
+                   })
+        end)
+
+      assert log =~ "has no workflow YAML"
+      refute log =~ "no YAML to attach"
+    end
+
     test "persists the segments timeline alongside the flat response",
          %{user: user, project: project} do
       workflow = insert(:workflow, project: project)

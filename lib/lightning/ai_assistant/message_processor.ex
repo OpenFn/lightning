@@ -156,16 +156,40 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     page = get_in(session.meta, ["message_options", "page"])
 
     if workflow_yaml in [nil, ""] do
-      Logger.warning(
-        "[AI Assistant] Global chat message #{message.id} has no workflow YAML; " <>
-          "Apollo will receive no workflow context (session #{session.id}, page #{inspect(page)})"
-      )
+      log_missing_workflow_yaml(session, message, page)
     end
 
     AiAssistant.query_global_stream(session, message.content,
       workflow_yaml: workflow_yaml,
       page: page
     )
+  end
+
+  # A brand-new workflow legitimately has no YAML yet (e.g. the "Build with
+  # AI" landing prompt fires before the workflow is ever saved), so log that
+  # at info. Only a session bound to an existing workflow with no YAML
+  # indicates something actually went wrong.
+  defp log_missing_workflow_yaml(session, message, page) do
+    if saved_workflow?(session) do
+      Logger.warning(
+        "[AI Assistant] Global chat message #{message.id} has no workflow YAML; " <>
+          "Apollo will receive no workflow context (session #{session.id}, page #{inspect(page)})"
+      )
+    else
+      Logger.info(
+        "[AI Assistant] Global chat message #{message.id} is for a new workflow, " <>
+          "no YAML to attach (session #{session.id}, page #{inspect(page)})"
+      )
+    end
+  end
+
+  # A session is only ever bound (workflow_id set) to a workflow that existed
+  # in the DB at bind time; unsaved workflows are tracked via the
+  # meta["unsaved_workflow"] marker with workflow_id left nil, and the marker
+  # is swapped for the real workflow_id when the workflow is first saved.
+  defp saved_workflow?(session) do
+    not is_nil(session.workflow_id) and
+      is_nil(get_in(session.meta, ["unsaved_workflow"]))
   end
 
   @spec job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()

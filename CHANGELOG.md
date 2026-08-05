@@ -25,6 +25,11 @@ and this project adheres to
 
 ### Changed
 
+- Creating a workflow with "Build with AI" from the new-workflow landing screen
+  now sends the prompt to the global AI assistant instead of the workflow
+  template chat. Follow-up messages in the conversation behave as before.
+  [#5040](https://github.com/OpenFn/lightning/issues/5040)
+
 - Remove the unreachable, non-streaming code in the AI assistant
   [#5046](https://github.com/OpenFn/lightning/issues/5046)
 
