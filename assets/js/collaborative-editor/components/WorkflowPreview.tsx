@@ -23,7 +23,7 @@ import {
   ReactFlowProvider,
   useReactFlow,
 } from '@xyflow/react';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 
 import { FIT_PADDING } from '#/workflow-diagram/constants';
 import edgeTypes from '#/workflow-diagram/edges';
@@ -43,7 +43,14 @@ export interface WorkflowPreviewProps {
   state: WorkflowState;
 }
 
-export function WorkflowPreview({ state }: WorkflowPreviewProps) {
+// Memoised because hosts re-render for reasons that have nothing to do with the
+// diagram — scrolling a list beside it, say — and re-running a ReactFlow tree
+// is not cheap. `state` is the only prop, so a host that keeps it stable, as
+// one parsing under useMemo does, redraws only when the workflow itself
+// changes.
+export const WorkflowPreview = memo(function WorkflowPreview({
+  state,
+}: WorkflowPreviewProps) {
   // The boundary is the outermost layer on purpose: the preview is a nicety,
   // and it must never be able to take its host — or the workflow creation path
   // behind it — down with it. Callers key this component by whatever they are
@@ -63,7 +70,7 @@ export function WorkflowPreview({ state }: WorkflowPreviewProps) {
       </ReactFlowProvider>
     </ErrorBoundary>
   );
-}
+});
 
 /**
  * The preview pane's text state — "nothing selected", "can't be read", and the
@@ -132,7 +139,9 @@ function WorkflowPreviewFlow({ state }: WorkflowPreviewProps) {
     if (placed) {
       // `layout` runs Dagre unconditionally, so authored positions only survive
       // if it is skipped entirely. Framing is still ReactFlow's job: `fitView`
-      // below fits whatever bounds these positions produce, at any scale.
+      // below fits whatever bounds these positions produce, down to the
+      // `minZoom` floor — an arrangement spread wider than that shows its
+      // middle only, and panning and zooming are off.
       setModel(initial);
       return;
     }
