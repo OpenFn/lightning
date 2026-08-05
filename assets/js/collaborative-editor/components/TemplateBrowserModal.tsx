@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Tooltip } from '#/components/Tooltip';
 import { cn } from '#/utils/cn';
 
+import { useOverlayScrollbar } from '../hooks/useOverlayScrollbar';
+import { useScrollMetrics } from '../hooks/useScrollMetrics';
 import {
   isBaseTemplate,
   type Template,
@@ -45,10 +47,9 @@ export function TemplateBrowserModal({
   const anyBaseTemplateMatches =
     q.length > 0 && baseTemplates.some(t => matchesQuery(t, q));
 
-  // Which template the preview pane is showing. Local rather than in UIStore:
-  // nothing outside this modal observes it, and it is meant to die with the
-  // modal. UIStore holds the fetched templates and the search query because
-  // those are shared and survive a close; this does not.
+  // Which template the preview pane is showing. Local rather than in UIStore
+  // because nothing outside this modal observes it and it is meant to die with
+  // the modal, unlike the fetched templates and the search query.
   const [previewedId, setPreviewedId] = useState<string | null>(null);
 
   // Base templates are always listed, search or not — they are the starting
@@ -61,9 +62,8 @@ export function TemplateBrowserModal({
   const previewed = visibleTemplates.find(t => t.id === previewedId) ?? null;
 
   // The modal stays mounted between opens, so the previous selection would
-  // otherwise still be here next time. Clearing on open hands the choice back
-  // to the effect below, which points the preview at the first visible
-  // template.
+  // otherwise still be here next time. Clearing hands the choice back to the
+  // effect below.
   useEffect(() => {
     if (isOpen) setPreviewedId(null);
   }, [isOpen]);
@@ -85,6 +85,18 @@ export function TemplateBrowserModal({
   const parsed = useMemo(
     () => (previewed ? tryTemplateToWorkflowState(previewed) : null),
     [previewed]
+  );
+
+  // The list hides its own scrollbar and this draws one in the gutter instead,
+  // so the space either side of the cards stays the width it is written as: a
+  // native scrollbar takes its width out of the content box, and charges a
+  // different amount on each platform. The fade at the bottom of the list reads
+  // the same measurements, so the two can't disagree about what is left below.
+  const { scrollRef, contentRef, element, metrics, canScrollDown } =
+    useScrollMetrics();
+  const { thumb, handleThumbPointerDown } = useOverlayScrollbar(
+    element,
+    metrics
   );
 
   return (
@@ -109,7 +121,6 @@ export function TemplateBrowserModal({
             'data-leave:duration-200 data-leave:ease-in'
           )}
         >
-          {/* Header */}
           <div className="flex items-center justify-between px-6 py-5">
             <h2 className="text-xl font-medium text-gray-900">Templates</h2>
             <button
@@ -122,82 +133,113 @@ export function TemplateBrowserModal({
             </button>
           </div>
 
-          {/* Two panes: list on the left, preview on the right. The gutter
-              between them is split evenly either side of the scrollbar: the
-              list's own pr-1 on one side, this gap-1 on the other, so the
-              scrollbar's lane sits centred in the gutter rather than pressed
-              against one edge of it. */}
-          <div className="flex flex-1 min-h-0 gap-1 px-4 pb-4">
-            {/* List pane. The search sits above the scrolling box rather than
-                inside it, so the scrollbar's track starts at the first card
-                instead of running the column's full height — and so the input
-                can't drift on an overscroll bounce the way a sticky one does.
-                The cost is that nothing narrows the input by the scrollbar's
-                width, so it carries that width itself: 15px is the list's own
-                pr-1 plus the 11px a thin scrollbar takes in Chrome. Change one
-                and change the other, or the two right edges drift apart. */}
-            <div className="relative w-72 shrink-0 flex flex-col min-h-0">
-              <div className="relative mb-4 pr-3.75">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-                  <span className="hero-magnifying-glass h-4 w-4 text-gray-400" />
-                </span>
-                <input
-                  type="text"
-                  aria-label="Search templates"
-                  placeholder="Search templates"
-                  value={searchQuery}
-                  onChange={e => onSearchChange(e.target.value)}
-                  disabled={loading}
-                  className="w-full rounded-md border border-gray-200 py-2 pl-9 pr-3 text-sm
-                    text-gray-900 placeholder:text-gray-400
-                    focus:outline-none focus-visible:ring-0 focus-visible:border-gray-500 focus-visible:ring-gray-500
-                    disabled:opacity-50"
-                />
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-y-auto thin-scrollbar pr-1">
-                {loading ? (
-                  <p className="py-8 text-center text-sm text-gray-500">
-                    Loading templates...
-                  </p>
-                ) : (
-                  /* pb-1 leaves room for the last card's focus ring, which the
-                     scroll container would otherwise clip. */
-                  <div className="flex flex-col gap-2 pb-1">
-                    {visibleTemplates.map(template => (
-                      <TemplateSelectCard
-                        key={template.id}
-                        template={template}
-                        selected={template.id === previewedId}
-                        disabled={isSaving}
-                        onClick={() => setPreviewedId(template.id)}
+          {/* Two panes with a 24px gutter between them, matching the 24px
+              outside them and in the header. They stay equal only because the
+              list's scrollbar is drawn in the gutter — see the overlay
+              scrollbar above. */}
+          <div className="flex flex-1 min-h-0 px-6 pb-6">
+            {/* List pane. The search scrolls with the list rather than sitting
+                above it, so the two share one width and their edges line up by
+                construction rather than by matching numbers in two places.
+                `overscroll-none` keeps it still during a rubber-band bounce. */}
+            <div className="relative w-76 shrink-0 flex flex-col min-h-0">
+              {/* `scroll-pt-12` clears the sticky search: without it a card
+                  reached by Tab is scrolled flush with the top of the box,
+                  which is where the search sits. 48px covers the input and its
+                  `pb-2`. */}
+              <div
+                ref={scrollRef}
+                className="flex-1 min-h-0 overflow-y-auto overscroll-none no-scrollbar scroll-pt-12"
+              >
+                {/* One wrapper around everything scrollable, so the thumb can
+                    watch a single element for height changes. Watching the
+                    children instead would miss the swap from the loading
+                    message to the list. */}
+                <div ref={contentRef}>
+                  {/* Opaque so cards pass under it rather than through it. */}
+                  <div className="sticky top-0 z-10 bg-white pb-2">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                        <span className="hero-magnifying-glass h-4 w-4 text-gray-400" />
+                      </span>
+                      {/* `ring-0` cancels the blue focus ring the forms plugin
+                          puts on every text input; the border carries focus
+                          here instead. */}
+                      <input
+                        type="text"
+                        aria-label="Search templates"
+                        placeholder="Search templates"
+                        value={searchQuery}
+                        onChange={e => onSearchChange(e.target.value)}
+                        disabled={loading}
+                        className="w-full rounded-md border border-gray-200 py-2 pl-9 pr-3 text-sm
+                        text-gray-900 placeholder:text-gray-400
+                        focus:outline-none focus-visible:ring-0 focus-visible:border-gray-500
+                        disabled:opacity-50"
                       />
-                    ))}
-                    {userTemplates.length > 0 &&
-                      filteredUserTemplates.length === 0 &&
-                      searchQuery.trim() &&
-                      !anyBaseTemplateMatches && (
-                        <p className="py-2 text-sm text-gray-500">
-                          No saved templates match your search.
-                        </p>
-                      )}
+                    </div>
                   </div>
-                )}
+
+                  {loading ? (
+                    <p className="py-8 text-center text-sm text-gray-500">
+                      Loading templates...
+                    </p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {visibleTemplates.map(template => (
+                        <TemplateSelectCard
+                          key={template.id}
+                          template={template}
+                          selected={template.id === previewedId}
+                          disabled={isSaving}
+                          onClick={() => setPreviewedId(template.id)}
+                        />
+                      ))}
+                      {userTemplates.length > 0 &&
+                        filteredUserTemplates.length === 0 &&
+                        searchQuery.trim() &&
+                        !anyBaseTemplateMatches && (
+                          <p className="py-2 text-sm text-gray-500">
+                            No saved templates match your search.
+                          </p>
+                        )}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Fades the list out at its bottom edge, so a card cut off by
-                  the fold reads as "there is more" rather than as the end.
-                  Sits over the scroll box rather than masking it, which leaves
-                  the scrollbar — painted above page content by the browser —
-                  crisp. Harmless when the list is short: the bottom of the box
-                  is then empty white, and white over white shows nothing. */}
+              {/* The fold at the bottom of the list. Only while there is
+                  something below it — over the last card it would just be
+                  bleaching a description nothing is hiding — and faded rather
+                  than unmounted so it eases away instead of blinking out. */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-white to-transparent"
+                className={cn(
+                  `pointer-events-none absolute inset-x-0 bottom-0 h-8
+                   bg-linear-to-t from-white to-transparent
+                   transition-opacity duration-200`,
+                  canScrollDown ? 'opacity-100' : 'opacity-0'
+                )}
               />
             </div>
 
-            {/* Preview pane */}
+            {/* The gutter, and the scrollbar's home. Making it an element
+                rather than a `gap` gives the thumb somewhere to sit that is
+                measured from both panes, so it centres between them instead of
+                being offset from one by a number that has to be kept in step
+                with the padding. */}
+            <div className="relative w-6 shrink-0">
+              {thumb && (
+                <div
+                  aria-hidden="true"
+                  onPointerDown={handleThumbPointerDown}
+                  style={{ top: thumb.top, height: thumb.height }}
+                  className="absolute left-1/2 w-1.5 -translate-x-1/2 rounded-full
+                    bg-gray-300 transition-colors hover:bg-gray-400"
+                />
+              )}
+            </div>
+
             <div className="flex flex-1 min-w-0 flex-col rounded-lg border border-gray-200 bg-gray-50 overflow-clip">
               <div className="flex-1 min-h-0">
                 {parsed?.state ? (
@@ -282,9 +324,14 @@ function TemplateSelectCard({
       className={cn(
         'w-full text-left rounded-lg border bg-white p-4 transition-colors',
         'disabled:opacity-50 disabled:cursor-not-allowed',
-        'focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-300',
+        // Inset because the scroll box clips at its own edge and the cards run
+        // its full width, so an outward ring would lose its sides. That puts it
+        // against the card's border, which is why it is the focus colour and
+        // not a grey: a grey either vanishes into that border or reads as the
+        // selected card's.
+        'focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary-600',
         selected
-          ? 'border-gray-500 ring-gray-500'
+          ? 'border-gray-500'
           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
       )}
     >
