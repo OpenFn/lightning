@@ -295,13 +295,17 @@ describe('TemplateBrowserModal', () => {
   });
 
   describe('unreadable template', () => {
-    test('disables create rather than letting it fail on the same YAML', async () => {
+    test('says why the preview is empty and disables create rather than letting it fail on the same YAML', async () => {
       const user = userEvent.setup();
       const onCreate = vi.fn();
       const templates = [
         makeBaseTemplate({ name: 'Broken', code: 'not: [valid workflow' }),
       ];
       await renderModal({ templates, onCreate });
+
+      // Without this the preview pane can fall back to blank and still pass:
+      // a disabled Create button on its own leaves the user no reason why.
+      expect(screen.getByText(/can't be previewed/i)).toBeInTheDocument();
 
       const createButton = screen.getByRole('button', { name: 'Create' });
       expect(createButton).toBeDisabled();
