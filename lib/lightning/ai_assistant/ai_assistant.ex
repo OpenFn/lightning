@@ -764,11 +764,12 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
-  Queries the AI assistant for job-specific code assistance.
+  Queries the AI service for job-specific code assistance with streaming.
 
-  Sends a user query to the Apollo AI service along with job context (expression and adaptor)
-  and conversation history. The AI provides targeted assistance for coding tasks, debugging,
-  and adaptor-specific guidance.
+  Sends a user query to the Apollo AI service along with job context
+  (expression and adaptor) and conversation history, using SSE streaming.
+  Text chunks and status updates are broadcast via PubSub as they arrive.
+  The complete message is saved to the database when the stream finishes.
 
   ## Parameters
 
@@ -779,39 +780,6 @@ defmodule Lightning.AiAssistant do
 
   - `{:ok, session}` - AI responded successfully, session updated with response
   - `{:error, reason}` - Query failed, reason is either a string error message or changeset
-  """
-  @spec query(ChatSession.t(), String.t(), opts()) ::
-          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
-  def query(session, content, opts \\ []) do
-    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
-
-    initial_context = %{
-      expression: session.expression,
-      adaptor: session.adaptor,
-      log: session.logs
-    }
-
-    context = build_context(initial_context, opts)
-
-    history = build_history(session)
-    {meta, metrics_opt_in} = apollo_meta(session)
-
-    ApolloClient.job_chat(
-      content,
-      context: context,
-      history: history,
-      meta: meta,
-      metrics_opt_in: metrics_opt_in
-    )
-    |> handle_ai_response(session, &build_job_message/1)
-  end
-
-  @doc """
-  Queries the AI service for job assistance with streaming.
-
-  Same as `query/3` but uses SSE streaming. Text chunks and status updates
-  are broadcast via PubSub as they arrive. The complete message is saved
-  to the database when the stream finishes.
   """
   @spec query_stream(ChatSession.t(), String.t(), opts()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
@@ -883,10 +851,11 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
-  Queries the AI service for workflow template generation.
+  Queries the AI service for workflow template generation with streaming.
 
-  Sends a request to generate or modify workflow templates based on user requirements.
-  Can include validation errors from previous attempts to help the AI provide corrections.
+  Sends a request to generate or modify workflow templates based on user
+  requirements, using SSE streaming. Can include validation errors from
+  previous attempts to help the AI provide corrections.
 
   ## Parameters
 
@@ -900,32 +869,6 @@ defmodule Lightning.AiAssistant do
 
   - `{:ok, session}` - Workflow template generated successfully
   - `{:error, reason}` - Generation failed, reason is either a string error message or changeset
-  """
-  @spec query_workflow(ChatSession.t(), String.t(), opts()) ::
-          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
-  def query_workflow(session, content, opts \\ []) do
-    code = Keyword.get(opts, :code)
-    errors = Keyword.get(opts, :errors)
-
-    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
-
-    {meta, metrics_opt_in} = apollo_meta(session)
-
-    ApolloClient.workflow_chat(
-      content,
-      code: code,
-      errors: errors,
-      history: build_history(session),
-      meta: meta,
-      metrics_opt_in: metrics_opt_in
-    )
-    |> handle_ai_response(session, &build_workflow_message/1)
-  end
-
-  @doc """
-  Queries the AI service for workflow template generation with streaming.
-
-  Same as `query_workflow/3` but uses SSE streaming.
   """
   @spec query_workflow_stream(ChatSession.t(), String.t(), opts()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
@@ -1312,18 +1255,6 @@ defmodule Lightning.AiAssistant do
       "ai_session:#{session_id}",
       {:ai_assistant, :streaming_error, %{error: error, session_id: session_id}}
     )
-  end
-
-  defp handle_ai_response(response, session, message_builder) do
-    case response do
-      {:ok, %Tesla.Env{status: status, body: body}}
-      when status in @success_status_range ->
-        {message_attrs, opts} = message_builder.(body)
-        save_message(session, message_attrs, opts)
-
-      error ->
-        handle_error_response(error, session)
-    end
   end
 
   defp handle_error_response(error_response, session) do

@@ -25,6 +25,9 @@ and this project adheres to
 
 ### Changed
 
+- Remove the unreachable, non-streaming code in the AI assistant
+  [#5046](https://github.com/OpenFn/lightning/issues/5046)
+
 - The global chat now starts streaming Apollo's response earlier, so users wait
   less before seeing output. Lightning handles the several streaming event types
   Apollo sends, including status updates.
