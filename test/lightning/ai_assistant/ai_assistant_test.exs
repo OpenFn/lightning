@@ -440,7 +440,7 @@ defmodule Lightning.AiAssistantTest do
       assert session.expression == job_1.body
 
       assert session.adaptor ==
-               Lightning.AdaptorRegistry.resolve_adaptor(job_1.adaptor)
+               Lightning.Adaptors.PackageName.to_wire(job_1.adaptor)
 
       assert length(session.messages) == 1
       message = hd(session.messages)
@@ -968,7 +968,7 @@ defmodule Lightning.AiAssistantTest do
       assert updated_session.expression == expression
 
       assert updated_session.adaptor ==
-               Lightning.AdaptorRegistry.resolve_adaptor(adaptor)
+               Lightning.Adaptors.PackageName.to_wire(adaptor)
     end
   end
 
@@ -1092,7 +1092,7 @@ defmodule Lightning.AiAssistantTest do
       assert enriched.expression == job.body
 
       assert enriched.adaptor ==
-               Lightning.AdaptorRegistry.resolve_adaptor(job.adaptor)
+               Lightning.Adaptors.PackageName.to_wire(job.adaptor)
     end
 
     test "adds run logs when follow_run_id is in meta", %{
@@ -1258,7 +1258,7 @@ defmodule Lightning.AiAssistantTest do
       assert enriched.expression == "console.log('test');"
 
       assert enriched.adaptor ==
-               Lightning.AdaptorRegistry.resolve_adaptor(
+               Lightning.Adaptors.PackageName.to_wire(
                  "@openfn/language-http@latest"
                )
     end

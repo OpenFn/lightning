@@ -10,7 +10,8 @@ import { useSyncExternalStore, useContext, useMemo } from 'react';
 import { StoreContext } from '../contexts/StoreProvider';
 import type { AdaptorStoreInstance } from '../stores/createAdaptorStore';
 import type { Adaptor } from '../types/adaptor';
-import type { Job } from '../types/workflow';
+import type { Workflow } from '../types/workflow';
+import { extractPackageName } from '../utils/adaptorUtils';
 
 /**
  * Main hook for accessing the AdaptorStore instance
@@ -86,88 +87,88 @@ export const useAdaptor = (name: string): Adaptor | null => {
 };
 
 /**
- * Extracts adaptor package name from a full adaptor specifier
- * e.g., "@openfn/language-common@1.0.0" -> "@openfn/language-common"
+ * Hook to read an adaptor's square-shape icon URL from the AdaptorStore.
+ *
+ * Accepts a full adaptor specifier (with or without version suffix). When no
+ * StoreProvider is mounted (e.g. the LiveView workflow-editor path), returns
+ * `null` rather than throwing so consumers fall back to their string label.
  */
-const getAdaptorPackageName = (adaptor: string | undefined): string | null => {
-  if (!adaptor) return null;
-  const match = adaptor.match(/^(@[^@]+)@/);
-  return match ? match[1] : null;
+export const useAdaptorIconUrl = (
+  adaptor: string | null | undefined
+): string | null => {
+  const context = useContext(StoreContext);
+  const adaptorStore = context?.adaptorStore ?? null;
+
+  const packageName = adaptor ? extractPackageName(adaptor) : null;
+
+  const selectIconUrl = useMemo(() => {
+    if (!adaptorStore) return () => null;
+    return adaptorStore.withSelector(state => {
+      if (!packageName) return null;
+      const found = state.adaptors.find(a => a.name === packageName);
+      return found?.icon_urls?.square ?? null;
+    });
+  }, [adaptorStore, packageName]);
+
+  const noopSubscribe = useMemo(() => () => () => {}, []);
+
+  return useSyncExternalStore(
+    adaptorStore?.subscribe ?? noopSubscribe,
+    selectIconUrl
+  );
 };
 
 /**
- * Hook to get project-specific adaptors and all adaptors
- * Returns both project adaptors and all adaptors from backend endpoint
- *
- * Project adaptors are merged from two sources:
- * 1. Backend DB (saved jobs)
- * 2. Y.Doc state (unsaved jobs in collaborative editor)
- *
- * This ensures newly added adaptors appear in projectAdaptors before saving.
+ * Hook to derive the subset of the adaptor catalogue that is referenced by jobs
+ * in the current Y.Doc workflow. Pure selector — the catalogue comes from
+ * `request_adaptors` and the jobs come from the collaborative workflow store.
  */
-export const useProjectAdaptors = (): {
-  projectAdaptors: Adaptor[];
+export const useAdaptorsInUse = (): {
+  adaptorsInUse: Adaptor[];
   allAdaptors: Adaptor[];
   isLoading: boolean;
 } => {
   const context = useContext(StoreContext);
   if (!context) {
-    throw new Error('useProjectAdaptors must be used within a StoreProvider');
+    throw new Error('useAdaptorsInUse must be used within a StoreProvider');
   }
 
   const { adaptorStore, workflowStore } = context;
 
-  // Get adaptor state from adaptor store
-  const selectAdaptorData = adaptorStore.withSelector(state => ({
-    backendProjectAdaptors: state.projectAdaptors || [],
-    allAdaptors: state.adaptors,
-    isLoading: state.isLoading,
-  }));
+  const selectAdaptors = adaptorStore.withSelector(state => state.adaptors);
+  const selectIsLoading = adaptorStore.withSelector(state => state.isLoading);
+  const selectJobs = workflowStore.withSelector(state => state.jobs);
 
-  const adaptorData = useSyncExternalStore(
+  const allAdaptors = useSyncExternalStore(
     adaptorStore.subscribe,
-    selectAdaptorData
+    selectAdaptors
+  );
+  const isLoading = useSyncExternalStore(
+    adaptorStore.subscribe,
+    selectIsLoading
+  );
+  const jobs: Workflow.Job[] = useSyncExternalStore(
+    workflowStore.subscribe,
+    selectJobs
   );
 
-  // Get jobs from workflow store (Y.Doc state)
-  const selectJobs = workflowStore.withSelector(state => state.jobs);
-  const jobs: Job[] = useSyncExternalStore(workflowStore.subscribe, selectJobs);
+  const adaptorsInUse = useMemo(() => {
+    if (jobs.length === 0) return [];
 
-  // Merge backend project adaptors with Y.Doc job adaptors
-  const projectAdaptors = useMemo(() => {
-    const { backendProjectAdaptors, allAdaptors } = adaptorData;
-
-    // Get adaptor names already in backend list
-    const backendAdaptorNames = new Set(
-      backendProjectAdaptors.map(a => a.name)
-    );
-
-    // Find adaptors used in Y.Doc jobs that aren't in backend list
-    const ydocAdaptorNames = new Set<string>();
+    const names = new Set<string>();
     for (const job of jobs) {
-      const packageName = getAdaptorPackageName(job.adaptor);
-      if (packageName && !backendAdaptorNames.has(packageName)) {
-        ydocAdaptorNames.add(packageName);
-      }
+      if (!job.adaptor) continue;
+      names.add(extractPackageName(job.adaptor));
     }
 
-    // If no new adaptors from Y.Doc, return backend list as-is
-    if (ydocAdaptorNames.size === 0) {
-      return backendProjectAdaptors;
-    }
-
-    // Find full adaptor objects from allAdaptors for Y.Doc adaptors
-    const ydocAdaptors = allAdaptors.filter(a => ydocAdaptorNames.has(a.name));
-
-    // Merge and sort
-    return [...backendProjectAdaptors, ...ydocAdaptors].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-  }, [adaptorData, jobs]);
+    return allAdaptors
+      .filter(a => names.has(a.name))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allAdaptors, jobs]);
 
   return {
-    projectAdaptors,
-    allAdaptors: adaptorData.allAdaptors,
-    isLoading: adaptorData.isLoading,
+    adaptorsInUse,
+    allAdaptors,
+    isLoading,
   };
 };

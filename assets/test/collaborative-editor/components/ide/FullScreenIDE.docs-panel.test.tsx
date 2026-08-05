@@ -269,8 +269,8 @@ vi.mock('../../../../js/collaborative-editor/hooks/useCredentials', () => ({
 
 // Mock adaptor hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
-  useProjectAdaptors: () => ({
-    projectAdaptors: [],
+  useAdaptorsInUse: () => ({
+    adaptorsInUse: [],
     allAdaptors: [],
   }),
 }));

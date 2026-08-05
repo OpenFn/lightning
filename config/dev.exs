@@ -131,6 +131,18 @@ config :lightning, :auth_providers_allow_insecure_loopback, true
 
 config :lightning, :apollo, endpoint: "http://localhost:3000", timeout: 300_000
 
+# Lightning.Adaptors.NPM upstream URLs — explicit override for clarity in dev.
+# Each key is read by a single sub-module:
+#   * registry_url → NPM.Registry  (npm search + packument)
+#   * jsdelivr_url → NPM.Schema    (configuration-schema.json fetch)
+#   * github_url   → NPM.GitHub    (raw icon GETs)
+#   * github_ref   → NPM.GitHub    (git ref under OpenFn/adaptors)
+config :lightning, Lightning.Adaptors.NPM,
+  registry_url: "https://registry.npmjs.org",
+  github_url: "https://raw.githubusercontent.com",
+  github_ref: "main",
+  jsdelivr_url: "https://cdn.jsdelivr.net"
+
 # Philter's egress guard blocks private/loopback ranges by default; allow
 # localhost so channel proxies can reach services running on the dev machine.
 # Matching is on the literal host string in the URL, so "localhost" only allows

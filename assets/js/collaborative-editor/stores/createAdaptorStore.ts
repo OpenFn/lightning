@@ -96,6 +96,29 @@ import { wrapStoreWithDevTools } from './devtools';
 
 const logger = _logger.ns('AdaptorStore').seal();
 
+// Deep-equality check tailored to the Adaptor shape so referential identity is
+// preserved across no-op `adaptors_updated` pushes.
+function adaptorsEqual(a: Adaptor, b: Adaptor): boolean {
+  if (a === b) return true;
+  if (
+    a.name !== b.name ||
+    a.repo !== b.repo ||
+    a.latest !== b.latest ||
+    a.icon_urls.square !== b.icon_urls.square ||
+    a.icon_urls.rectangle !== b.icon_urls.rectangle ||
+    a.versions.length !== b.versions.length
+  ) {
+    return false;
+  }
+  for (let i = 0; i < a.versions.length; i++) {
+    const aVer = a.versions[i];
+    const bVer = b.versions[i];
+    if (!aVer || !bVer) return false;
+    if (aVer.version !== bVer.version) return false;
+  }
+  return true;
+}
+
 // sorts adaptors coming into the adaptor store
 // 1. sorts the versions for every adaptor
 // 2. sorts the adaptors themselves by name
@@ -119,7 +142,6 @@ export const createAdaptorStore = (): AdaptorStore => {
   let state: AdaptorState = produce(
     {
       adaptors: [],
-      projectAdaptors: [],
       isLoading: false,
       error: null,
       lastUpdated: null,
@@ -170,14 +192,36 @@ export const createAdaptorStore = (): AdaptorStore => {
     const result = AdaptorsListSchema.safeParse(rawData);
 
     if (result.success) {
-      const adaptors = sortAdaptors(result.data);
+      const incoming = sortAdaptors(result.data);
+      const existing = state.adaptors;
+      const existingByName = new Map(existing.map(a => [a.name, a]));
 
-      state = produce(state, draft => {
-        draft.adaptors = adaptors;
-        draft.isLoading = false;
-        draft.error = null;
-        draft.lastUpdated = Date.now();
+      // Merge by name to preserve referential identity of unchanged adaptors so
+      // `withSelector` consumers don't re-render on no-op `adaptors_updated`
+      // pushes.
+      const merged: Adaptor[] = incoming.map(next => {
+        const prev = existingByName.get(next.name);
+        return prev && adaptorsEqual(prev, next) ? prev : next;
       });
+
+      const arrayUnchanged =
+        merged.length === existing.length &&
+        merged.every((a, i) => a === existing[i]);
+
+      if (arrayUnchanged) {
+        state = produce(state, draft => {
+          draft.isLoading = false;
+          draft.error = null;
+          draft.lastUpdated = Date.now();
+        });
+      } else {
+        state = produce(state, draft => {
+          draft.adaptors = merged;
+          draft.isLoading = false;
+          draft.error = null;
+          draft.lastUpdated = Date.now();
+        });
+      }
       notify('handleAdaptorsReceived');
     } else {
       const errorMessage = `Invalid adaptors data: ${result.error.message}`;
@@ -267,7 +311,6 @@ export const createAdaptorStore = (): AdaptorStore => {
     devtools.connect();
 
     void requestAdaptors();
-    void requestProjectAdaptors();
 
     return () => {
       devtools.disconnect();
@@ -310,56 +353,6 @@ export const createAdaptorStore = (): AdaptorStore => {
     }
   };
 
-  /**
-   * Request project adaptors from server via channel
-   */
-  const requestProjectAdaptors = async (): Promise<void> => {
-    if (!channelProvider?.channel) {
-      logger.warn('Cannot request project adaptors - no channel connected');
-      setError('No connection available');
-      return;
-    }
-
-    setLoading(true);
-    clearError();
-
-    try {
-      logger.debug('Requesting project adaptors');
-      const response = await channelRequest(
-        channelProvider.channel,
-        'request_project_adaptors',
-        {}
-      );
-
-      if (response && typeof response === 'object') {
-        const { project_adaptors, all_adaptors } = response as {
-          project_adaptors: unknown;
-          all_adaptors: unknown;
-        };
-
-        const projectResult = AdaptorsListSchema.safeParse(project_adaptors);
-        const allResult = AdaptorsListSchema.safeParse(all_adaptors);
-
-        if (projectResult.success && allResult.success) {
-          state = produce(state, draft => {
-            draft.projectAdaptors = sortAdaptors(projectResult.data);
-            draft.adaptors = sortAdaptors(allResult.data);
-            draft.isLoading = false;
-            draft.error = null;
-          });
-          notify('requestProjectAdaptors');
-        } else {
-          const errorMessage = 'Invalid project adaptors data';
-          logger.error(errorMessage, { projectResult, allResult });
-          setError(errorMessage);
-        }
-      }
-    } catch (error) {
-      logger.error('Project adaptors request failed', error);
-      setError('Failed to request project adaptors');
-    }
-  };
-
   // =============================================================================
   // QUERY HELPERS
   // =============================================================================
@@ -390,7 +383,6 @@ export const createAdaptorStore = (): AdaptorStore => {
 
     // Commands (CQS pattern)
     requestAdaptors,
-    requestProjectAdaptors,
     setAdaptors,
     setLoading,
     setError,
@@ -403,13 +395,6 @@ export const createAdaptorStore = (): AdaptorStore => {
 
     // Internal methods (not part of public AdaptorStore interface)
     _connectChannel: connectChannel,
-    // Test helper to set project adaptors directly
-    _setProjectAdaptors: (adaptors: Adaptor[]) => {
-      state = produce(state, draft => {
-        draft.projectAdaptors = sortAdaptors(adaptors);
-      });
-      notify('_setProjectAdaptors');
-    },
   };
 };
 

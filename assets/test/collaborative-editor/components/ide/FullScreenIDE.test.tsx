@@ -317,8 +317,8 @@ vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
     loading: false,
     error: null,
   }),
-  useProjectAdaptors: () => ({
-    projectAdaptors: [],
+  useAdaptorsInUse: () => ({
+    adaptorsInUse: [],
     allAdaptors: [],
   }),
   useAdaptors: () => [],

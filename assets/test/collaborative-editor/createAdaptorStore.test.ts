@@ -407,4 +407,103 @@ describe('createAdaptorStore', () => {
       expect(notFound).toHaveLength(0);
     });
   });
+
+  describe('handleAdaptorsReceived merge-by-name', () => {
+    adaptorTest(
+      'preserves referential identity across identical pushes',
+      async ({ mockChannel, mockProvider }) => {
+        const store = createAdaptorStore();
+        mockChannel.push = createMockChannelPushOk({
+          adaptors: mockAdaptorsList,
+        });
+        store._connectChannel(mockProvider as any);
+        await store.requestAdaptors();
+
+        const selectAdaptors = store.withSelector(state => state.adaptors);
+        const firstRef = selectAdaptors();
+        const firstItems = firstRef.map(a => a);
+
+        const mockChannelWithTest = mockChannel as typeof mockChannel & {
+          _test: { emit: (event: string, message: unknown) => void };
+        };
+        mockChannelWithTest._test.emit('adaptors_updated', mockAdaptorsList);
+
+        await waitForCondition(() => store.getSnapshot().lastUpdated !== null);
+
+        const secondRef = selectAdaptors();
+        expect(secondRef).toBe(firstRef);
+        secondRef.forEach((adaptor, i) => {
+          expect(adaptor).toBe(firstItems[i]);
+        });
+      }
+    );
+
+    adaptorTest(
+      'replaces only the changed entry when one adaptor mutates',
+      async ({ mockChannel, mockProvider }) => {
+        const store = createAdaptorStore();
+        mockChannel.push = createMockChannelPushOk({
+          adaptors: mockAdaptorsList,
+        });
+        store._connectChannel(mockProvider as any);
+        await store.requestAdaptors();
+
+        const beforeItems = store
+          .getSnapshot()
+          .adaptors.reduce<Record<string, unknown>>((acc, a) => {
+            acc[a.name] = a;
+            return acc;
+          }, {});
+
+        const target = mockAdaptorsList[0]!;
+        const mutated = mockAdaptorsList.map(a =>
+          a.name === target.name
+            ? {
+                ...a,
+                versions: [{ version: '99.0.0' }, ...a.versions],
+                latest: '99.0.0',
+              }
+            : a
+        );
+
+        const mockChannelWithTest = mockChannel as typeof mockChannel & {
+          _test: { emit: (event: string, message: unknown) => void };
+        };
+        mockChannelWithTest._test.emit('adaptors_updated', mutated);
+
+        await waitForCondition(
+          () => store.findAdaptorByName(target.name)?.latest === '99.0.0'
+        );
+
+        const after = store.getSnapshot().adaptors;
+        for (const adaptor of after) {
+          if (adaptor.name === target.name) {
+            expect(adaptor).not.toBe(beforeItems[adaptor.name]);
+          } else {
+            expect(adaptor).toBe(beforeItems[adaptor.name]);
+          }
+        }
+      }
+    );
+
+    adaptorTest(
+      'connectChannel does not request project adaptors',
+      async ({ mockChannel, mockProvider }) => {
+        const pushes: string[] = [];
+        const originalPush = mockChannel.push.bind(mockChannel);
+        mockChannel.push = ((event: string, payload: unknown) => {
+          pushes.push(event);
+          return originalPush(event, payload);
+        }) as typeof mockChannel.push;
+
+        const store = createAdaptorStore();
+        store._connectChannel(mockProvider as any);
+
+        await waitForCondition(() => pushes.includes('request_adaptors'));
+
+        expect(pushes).toContain('request_adaptors');
+        expect(pushes).not.toContain('request_project_adaptors');
+      }
+    );
+  });
 });
