@@ -21,6 +21,11 @@ and this project adheres to
 
 ### Fixed
 
+- History exports to Google Cloud Storage crashed after the Tesla 1.18.3
+  security update, which no longer accepts the atom-labelled multipart parts
+  that `google_gax` builds.
+  [#5049](https://github.com/OpenFn/lightning/issues/5049)
+
 ## [2.18.0-pre] - 2026-07-31
 
 ### Added

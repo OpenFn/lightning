@@ -45,6 +45,17 @@ Mox.defmock(Lightning.Extensions.MockProjectHook,
 Mox.defmock(Lightning.MockConfig, for: Lightning.Config)
 Application.put_env(:lightning, Lightning.Config, Lightning.MockConfig)
 
+# Goth only starts when STORAGE_BACKEND=gcs, so it is never running under test.
+Mox.defmock(Lightning.Storage.GCS.MockTokenSource,
+  for: Lightning.Storage.GCS.TokenSource
+)
+
+Application.put_env(
+  :lightning,
+  Lightning.Storage.GCS.TokenSource,
+  Lightning.Storage.GCS.MockTokenSource
+)
+
 Mox.defmock(LightningMock, for: Lightning)
 Application.put_env(:lightning, Lightning, LightningMock)
 
