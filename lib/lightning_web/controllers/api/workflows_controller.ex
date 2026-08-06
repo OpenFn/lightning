@@ -562,6 +562,19 @@ defmodule LightningWeb.API.WorkflowsController do
     |> json(%{id: workflow_id, errors: ["Not Found"]})
   end
 
+  defp maybe_handle_error(conn, {:error, :workflow_deleted}, workflow_id),
+    do: maybe_handle_error(conn, {:error, :not_found}, workflow_id)
+
+  defp maybe_handle_error(conn, {:error, reason}, workflow_id)
+       when reason in [:snapshot_failed, false] do
+    conn
+    |> put_status(:internal_server_error)
+    |> json(%{
+      id: workflow_id,
+      errors: ["Could not save the workflow snapshot."]
+    })
+  end
+
   defp maybe_handle_error(_conn, result, _workflow_id) when is_map(result),
     do: result
 
