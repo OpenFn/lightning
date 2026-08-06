@@ -33,27 +33,27 @@ defmodule Lightning.Storage.GCS do
 
   @impl true
   def store(source_path, destination_path) do
-    {:ok, destination_path} = prefix_storage_path(destination_path)
-
-    conn()
-    |> Tesla.post(
-      "#{@host}/upload/storage/v1/b/#{encode(bucket!())}/o",
-      stream_file(source_path),
-      query: [uploadType: "media", name: destination_path],
-      headers: [{"content-type", "application/octet-stream"}]
-    )
-    |> handle_response()
+    with {:ok, destination_path} <- prefix_storage_path(destination_path) do
+      conn()
+      |> Tesla.post(
+        "#{@host}/upload/storage/v1/b/#{encode(bucket!())}/o",
+        stream_file(source_path),
+        query: [uploadType: "media", name: destination_path],
+        headers: [{"content-type", "application/octet-stream"}]
+      )
+      |> handle_response()
+    end
   end
 
   @impl true
   def delete(object_path) do
-    {:ok, object_path} = prefix_storage_path(object_path)
-
-    conn()
-    |> Tesla.delete(
-      "#{@host}/storage/v1/b/#{encode(bucket!())}/o/#{encode(object_path)}"
-    )
-    |> handle_response()
+    with {:ok, object_path} <- prefix_storage_path(object_path) do
+      conn()
+      |> Tesla.delete(
+        "#{@host}/storage/v1/b/#{encode(bucket!())}/o/#{encode(object_path)}"
+      )
+      |> handle_response()
+    end
   end
 
   @impl true
@@ -107,8 +107,11 @@ defmodule Lightning.Storage.GCS do
   end
 
   defp prefix_storage_path(destination_path) do
-    Path.safe_relative(
-      Path.join(Lightning.Config.storage(:path), destination_path)
-    )
+    path = Path.join(Lightning.Config.storage(:path), destination_path)
+
+    case Path.safe_relative(path) do
+      {:ok, safe_path} -> {:ok, safe_path}
+      :error -> {:error, {:unsafe_storage_path, path}}
+    end
   end
 end

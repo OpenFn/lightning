@@ -144,4 +144,27 @@ defmodule Lightning.Storage.GCSTest do
       end
     end
   end
+
+  describe "unsafe storage paths" do
+    setup do
+      # Path.safe_relative/1 rejects the joined path, which is what an absolute
+      # STORAGE_PATH produces.
+      stub(Lightning.MockConfig, :storage, fn
+        :path -> "/var/lightning"
+        :bucket -> @bucket
+      end)
+
+      :ok
+    end
+
+    test "delete/1 returns an error instead of raising" do
+      assert {:error, {:unsafe_storage_path, "/var/lightning/exports/f.zip"}} =
+               GCS.delete("exports/f.zip")
+    end
+
+    test "store/2 returns an error instead of raising" do
+      assert {:error, {:unsafe_storage_path, "/var/lightning/exports/f.zip"}} =
+               GCS.store(source_file("an export"), "exports/f.zip")
+    end
+  end
 end
