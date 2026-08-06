@@ -8,8 +8,6 @@ defmodule Lightning.AuthProviders.Handler do
   alias Lightning.AuthProviders.TLS
   alias Lightning.AuthProviders.WellKnown
 
-  @scope "openid email profile"
-
   @jwks_cache :auth_provider_jwks
   @jwks_ttl :timer.minutes(10)
 
@@ -22,6 +20,7 @@ defmodule Lightning.AuthProviders.Handler do
           name: String.t(),
           client: OAuth2.Client.t(),
           wellknown: WellKnown.t(),
+          scope: String.t(),
           allow_unverified_email: boolean()
         }
 
@@ -30,10 +29,17 @@ defmodule Lightning.AuthProviders.Handler do
           client_secret: String.t(),
           redirect_uri: String.t(),
           wellknown: WellKnown.t(),
+          scope: String.t(),
           allow_unverified_email: boolean()
         ]
 
-  defstruct [:name, :client, :wellknown, allow_unverified_email: false]
+  defstruct [
+    :name,
+    :client,
+    :wellknown,
+    scope: "openid email profile",
+    allow_unverified_email: false
+  ]
 
   @doc """
   Create a new Provider struct, expects a name and opts:
@@ -54,6 +60,7 @@ defmodule Lightning.AuthProviders.Handler do
 
       :ok ->
         wellknown = opts[:wellknown]
+        scope = opts[:scope] || "openid email profile"
 
         client =
           OAuth2.Client.new(
@@ -78,6 +85,7 @@ defmodule Lightning.AuthProviders.Handler do
            name: name,
            client: client,
            wellknown: wellknown,
+           scope: scope,
            allow_unverified_email: opts[:allow_unverified_email] || false
          )}
     end
@@ -112,54 +120,108 @@ defmodule Lightning.AuthProviders.Handler do
     end
   end
 
-  @spec authorize_url(
-          handler :: __MODULE__.t(),
-          state :: String.t(),
-          nonce :: String.t()
-        ) :: String.t()
-  def authorize_url(handler, state, nonce) do
-    OAuth2.Client.authorize_url!(handler.client,
-      scope: @scope,
-      state: state,
-      nonce: nonce
+  @doc """
+  Builds the provider authorize URL.
+
+  Extra `params` (e.g. `state:`) are forwarded to the OAuth2 client; the
+  configured `scope` is always included. Callers should pass an unguessable
+  `state` to protect the callback against CSRF.
+  """
+  @spec authorize_url(handler :: __MODULE__.t(), params :: keyword()) ::
+          String.t()
+  def authorize_url(handler, params \\ []) do
+    OAuth2.Client.authorize_url!(
+      handler.client,
+      Keyword.put(params, :scope, handler.scope)
     )
   end
 
   @spec get_token(handler :: __MODULE__.t(), code :: String.t()) ::
           {:ok, OAuth2.AccessToken.t()} | {:error, map() | atom()}
   def get_token(handler, code) when is_binary(code) do
-    if TLS.secure_url?(handler.wellknown.token_endpoint) do
-      case OAuth2.Client.get_token(handler.client, code: code, scope: @scope) do
-        {:ok, client} -> {:ok, client.token}
-        {:error, %OAuth2.Response{body: body}} -> {:error, body}
-        {:error, %OAuth2.Error{}} -> {:error, :token_request_failed}
-      end
-    else
-      {:error, :insecure_token_endpoint}
+    case OAuth2.Client.get_token(handler.client,
+           code: code,
+           scope: handler.scope
+         ) do
+      {:ok, client} -> {:ok, client.token}
+      {:error, %OAuth2.Response{body: body}} -> {:error, body}
+      {:error, %OAuth2.Error{}} -> {:error, :token_request_failed}
     end
   end
 
   @spec get_userinfo(handler :: __MODULE__.t(), token :: OAuth2.AccessToken.t()) ::
-          map()
+          {:ok, map()} | {:error, term()}
   def get_userinfo(handler, token) do
-    userinfo_endpoint = handler.wellknown.userinfo_endpoint
+    client = %{handler.client | token: token}
 
-    # Fetch userinfo directly over verified TLS rather than through the OAuth2
-    # client (which does not verify the chain), since its `email`/`email_verified`
-    # can decide a login on the fallback path. Refuse a plaintext endpoint (the
-    # ssl opts are inert over http) so the bearer token and the trusted email are
-    # never exchanged in the clear. Loopback is allowed for the test suite.
-    unless TLS.secure_url?(userinfo_endpoint) do
-      raise "refusing to fetch userinfo over an unverified (non-https) endpoint"
+    case OAuth2.Client.get(client, handler.wellknown.userinfo_endpoint) do
+      {:ok, %OAuth2.Response{body: userinfo}} ->
+        {:ok, maybe_resolve_email(client, handler.wellknown, userinfo)}
+
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
 
-    headers = [{"authorization", "Bearer #{token.access_token}"}]
-    opts = [ssl: TLS.verify_opts(), timeout: 10_000, recv_timeout: 10_000]
+  # Some providers (e.g. GitHub) don't carry a verification status in userinfo.
+  # The `/user/emails` endpoint is authoritative, so we derive `email_verified`
+  # from it rather than assuming a present userinfo email is verified.
+  defp maybe_resolve_email(
+         client,
+         %{user_emails_endpoint: endpoint},
+         %{} = userinfo
+       )
+       when is_binary(endpoint) do
+    emails = fetch_emails(client, endpoint)
 
-    %HTTPoison.Response{status_code: 200, body: body} =
-      HTTPoison.get!(userinfo_endpoint, headers, opts)
+    if is_binary(userinfo["email"]) do
+      Map.put(userinfo, "email_verified", verified?(emails, userinfo["email"]))
+    else
+      case select_primary_verified_email(emails) do
+        nil ->
+          userinfo
 
-    Jason.decode!(body)
+        email ->
+          userinfo
+          |> Map.put("email", email)
+          |> Map.put("email_verified", true)
+      end
+    end
+  end
+
+  defp maybe_resolve_email(_client, _wellknown, userinfo), do: userinfo
+
+  defp fetch_emails(client, endpoint) do
+    case OAuth2.Client.get(client, endpoint) do
+      {:ok, %OAuth2.Response{body: emails}} when is_list(emails) -> emails
+      _ -> []
+    end
+  end
+
+  defp verified?(emails, email) do
+    target = String.downcase(email)
+
+    Enum.any?(emails, fn
+      %{"verified" => true, "email" => candidate} when is_binary(candidate) ->
+        String.downcase(candidate) == target
+
+      _ ->
+        false
+    end)
+  end
+
+  defp select_primary_verified_email(emails) do
+    primary =
+      Enum.find_value(emails, fn
+        %{"primary" => true, "verified" => true, "email" => email} -> email
+        _ -> nil
+      end)
+
+    primary ||
+      Enum.find_value(emails, fn
+        %{"verified" => true, "email" => email} -> email
+        _ -> nil
+      end)
   end
 
   @doc """

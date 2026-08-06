@@ -4,13 +4,22 @@ defmodule LightningWeb.ReAuthenticateLive.New do
   """
   use LightningWeb, :live_view
   alias Lightning.Accounts
+  alias Lightning.Accounts.User
 
   @impl true
   def mount(_params, %{"user_return_to" => return_to}, socket) do
+    has_password = User.has_password?(socket.assigns.current_user)
+
+    {options, active_option} =
+      if has_password,
+        do: {[:password, :totp], :password},
+        else: {[:totp], :totp}
+
     {:ok,
      assign(socket,
-       authentication_options: [:password, :totp],
-       active_option: :password,
+       has_password: has_password,
+       authentication_options: options,
+       active_option: active_option,
        return_to: return_to,
        error_message: nil
      ), layout: {LightningWeb.Layouts, :app}}

@@ -71,6 +71,36 @@ defmodule LightningWeb.ReAuthenticateLiveTest do
       refute html =~ "Authentication Code"
     end
 
+    test "SSO user with no password and mfa enabled sees totp only", %{
+      conn: conn
+    } do
+      user =
+        insert(:user,
+          hashed_password: nil,
+          mfa_enabled: true,
+          user_totp: build(:user_totp)
+        )
+
+      conn = log_in_user(conn, user)
+      {:ok, _live, html} = live(conn, ~p"/auth/confirm_access")
+
+      assert html =~ "Authentication Code"
+      refute html =~ "Enter your password to confirm access"
+      refute html =~ "Use your password instead"
+    end
+
+    test "SSO user with no password and no mfa is told to set one up", %{
+      conn: conn
+    } do
+      user = insert(:user, hashed_password: nil, mfa_enabled: false)
+
+      conn = log_in_user(conn, user)
+      {:ok, live, html} = live(conn, ~p"/auth/confirm_access")
+
+      assert html =~ "set a password or enable two-factor authentication"
+      refute has_element?(live, "form#reauthentication-form")
+    end
+
     test "user can reauthenticate using the correct password", %{
       conn: conn
     } do

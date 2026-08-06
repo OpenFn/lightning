@@ -308,6 +308,13 @@ defmodule Lightning.Factories do
     }
   end
 
+  def user_identity_factory do
+    %Lightning.Accounts.UserIdentity{
+      provider: "github",
+      uid: sequence(:user_identity_uid, &"uid-#{&1}")
+    }
+  end
+
   def user_token_factory do
     %Lightning.Accounts.UserToken{
       token: fn -> Ecto.UUID.generate() end

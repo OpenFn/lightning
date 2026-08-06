@@ -89,7 +89,11 @@ defmodule Lightning.AuthProvidersTest do
         })
         |> URI.to_string()
 
-      assert Handler.authorize_url(handler, "the-state", "the-nonce") == auth_url
+      assert Handler.authorize_url(handler,
+               state: "the-state",
+               nonce: "the-nonce"
+             ) ==
+               auth_url
     end
 
     test "from_model carries the allow_unverified_email flag", %{

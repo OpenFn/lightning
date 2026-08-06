@@ -2,12 +2,17 @@ defmodule LightningWeb.OidcController do
   use LightningWeb, :controller
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.User
   alias Lightning.AuthProviders
   alias Lightning.AuthProviders.Handler
+  alias Lightning.SafetyString
   alias LightningWeb.OauthCredentialHelper
   alias LightningWeb.UserAuth
 
   action_fallback LightningWeb.FallbackController
+
+  @oauth_state_session_key :sso_oauth_state
+  @pending_signup_session_key :sso_pending_signup
 
   plug :fetch_current_user
 
@@ -15,27 +20,35 @@ defmodule LightningWeb.OidcController do
   Given a known provider, redirect them to the authorize url on the provider
   """
   def show(conn, %{"provider" => provider}) do
-    case AuthProviders.get_handler(provider) do
-      {:ok, handler} ->
-        if conn.assigns.current_user do
-          UserAuth.redirect_if_user_is_authenticated(conn, nil)
-        else
-          state = random_token()
-          nonce = random_token()
+    with {:ok, handler} <- AuthProviders.get_handler(provider) do
+      if conn.assigns.current_user do
+        UserAuth.redirect_if_user_is_authenticated(conn, nil)
+      else
+        {conn, authorize_url} =
+          authorize_redirect(conn, handler, provider, :login)
 
-          conn
-          |> put_pending(state, nonce)
-          |> redirect(external: Handler.authorize_url(handler, state, nonce))
-        end
+        redirect(conn, external: authorize_url)
+      end
+    end
+  end
 
-      # A missing provider keeps its 404 via the fallback controller; any other
-      # build failure (e.g. an unreachable or insecure discovery url) sends the
-      # user back to login rather than surfacing a 500.
-      {:error, :not_found} = error ->
-        error
+  @doc """
+  Initiates an SSO link flow for an already-authenticated user. The intent,
+  provider and current user are carried in a session-bound `state` and the
+  user is redirected to the provider's authorize URL. On callback the
+  controller links the resulting identity to the current account rather than
+  logging in.
+  """
+  def link(conn, %{"provider" => provider}) do
+    with {:ok, handler} <- AuthProviders.get_handler(provider) do
+      if conn.assigns.current_user do
+        {conn, authorize_url} =
+          authorize_redirect(conn, handler, provider, :link)
 
-      {:error, _reason} ->
-        login_redirect(conn)
+        redirect(conn, external: authorize_url)
+      else
+        redirect(conn, to: Routes.user_session_path(conn, :new))
+      end
     end
   end
 
@@ -43,33 +56,27 @@ defmodule LightningWeb.OidcController do
   Once the user has completed the authorization flow from above, they are
   returned here, and the authorization code is used to log them in.
   """
-  def new(conn, %{"provider" => provider, "code" => code} = params) do
-    # Consume this flow's state from the session up front (a matching entry also
-    # yields its nonce), so a replay can't reuse it and other in-flight flows
-    # are left intact.
-    {nonce, conn} = pop_pending(conn, params["state"])
+  def new(conn, %{"provider" => provider, "code" => code, "state" => state}) do
+    case verify_oauth_state(conn, provider, state) do
+      {:ok, intent, nonce, conn} ->
+        complete_sso_callback(conn, provider, code, intent, nonce)
 
-    # Resolve the handler separately from the login chain: a missing provider
-    # keeps its 404, and any other build failure (unreachable/insecure discovery)
-    # sends the user back to login rather than rendering a token-error page.
-    case AuthProviders.get_handler(provider) do
-      {:ok, handler} ->
-        complete_login(conn, handler, code, nonce)
-
-      {:error, :not_found} = error ->
-        error
-
-      {:error, _reason} ->
-        login_redirect(conn)
+      {:error, conn} ->
+        conn
+        |> put_flash(:error, "Authentication failed")
+        |> redirect(to: Routes.user_session_path(conn, :new))
     end
   end
 
-  # Any other callback carrying a provider (a consent-denial `error`, or a bare
-  # revisit with neither `code` nor `error`) redirects to login rather than
-  # crashing or falling through to the credential-popup clause.
-  def new(conn, %{"provider" => _provider} = params) do
-    {_nonce, conn} = pop_pending(conn, params["state"])
-    login_redirect(conn)
+  # An SSO callback that arrives without our `state` (or with the provider's
+  # error) can't be tied back to the browser that started the flow, so we
+  # reject it.
+  def new(conn, %{"provider" => _provider} = params)
+      when is_map_key(params, "code") or is_map_key(params, "error") do
+    conn
+    |> delete_session(@oauth_state_session_key)
+    |> put_flash(:error, "Authentication failed")
+    |> redirect(to: Routes.user_session_path(conn, :new))
   end
 
   def new(conn, %{"state" => state, "code" => code}) do
@@ -82,83 +89,163 @@ defmodule LightningWeb.OidcController do
     close_browser_window(conn)
   end
 
-  def new(conn, _params) do
-    redirect(conn, to: Routes.user_session_path(conn, :new))
-  end
+  @doc """
+  Renders the confirmation page shown after a successful SSO callback that
+  would create a brand-new account. We ask the user to confirm before
+  provisioning so they aren't surprised by an account they didn't realise was
+  being created.
+  """
+  def confirm_signup(conn, _params) do
+    case get_session(conn, @pending_signup_session_key) do
+      %{} = pending ->
+        render(conn, :confirm_signup, pending: pending)
 
-  defp complete_login(conn, handler, code, nonce) do
-    with :ok <- check_state(nonce),
-         {:ok, token} <- Handler.get_token(handler, code),
-         {:ok, claims} <- Handler.verify_id_token(handler, token, nonce),
-         {:ok, email} <- verified_email(handler, token, claims) do
-      log_in_by_email(conn, email)
-    else
-      # Our own checks (state, id_token, email_verified) and a transport failure
-      # fail the login without revealing which one tripped.
-      {:error, reason} when is_atom(reason) ->
-        login_redirect(conn)
-
-      # A token-endpoint error body (map or string) keeps its rendered response.
-      {:error, body} ->
-        {:error, body}
+      _ ->
+        conn
+        |> clear_pending_signup()
+        |> put_flash(:error, "No pending sign-up to confirm.")
+        |> redirect(to: Routes.user_session_path(conn, :new))
     end
   end
 
-  defp login_redirect(conn) do
+  @doc """
+  Confirms a pending SSO signup. Creates the account, links the identity, and
+  logs the user in.
+  """
+  def complete_signup(conn, _params) do
+    case get_session(conn, @pending_signup_session_key) do
+      %{
+        "provider" => provider,
+        "uid" => uid,
+        "email" => email,
+        "first_name" => first_name,
+        "last_name" => last_name
+      } ->
+        attrs = %{
+          email: email,
+          first_name: first_name,
+          last_name: last_name
+        }
+
+        case Accounts.register_user_from_sso(attrs, provider, uid) do
+          {:ok, user} ->
+            conn
+            |> clear_pending_signup()
+            |> do_log_in(user)
+
+          {:error, _changeset} ->
+            conn
+            |> clear_pending_signup()
+            |> put_flash(
+              :error,
+              "Could not create your account. Please try again."
+            )
+            |> redirect(to: Routes.user_session_path(conn, :new))
+        end
+
+      _ ->
+        conn
+        |> clear_pending_signup()
+        |> put_flash(:error, "No pending sign-up to confirm.")
+        |> redirect(to: Routes.user_session_path(conn, :new))
+    end
+  end
+
+  @doc """
+  Cancels a pending SSO signup, clearing the stashed state.
+  """
+  def cancel_signup(conn, _params) do
     conn
-    |> put_flash(:error, "We couldn't sign you in. Please try again.")
+    |> clear_pending_signup()
     |> redirect(to: Routes.user_session_path(conn, :new))
   end
 
-  # In-flight SSO flows are kept as a small `state => nonce` map so concurrent
-  # or double-fired logins don't clobber each other.
-  defp put_pending(conn, state, nonce) do
-    pending =
-      conn
-      |> get_session(:oidc_pending)
-      |> Kernel.||(%{})
-      |> cap_pending()
-      |> Map.put(state, nonce)
-
-    put_session(conn, :oidc_pending, pending)
+  defp clear_pending_signup(conn) do
+    delete_session(conn, @pending_signup_session_key)
   end
 
-  # Bound the number of in-flight flows before adding this one, so a burst of
-  # stale states can't grow the session unboundedly nor crowd out the state
-  # we're about to store (which must survive to complete the current login).
-  # Eviction drops existing entries in map (not insertion) order; concurrent
-  # unfinished flows in a single session are rare enough that which one goes
-  # doesn't matter.
-  defp cap_pending(pending) when map_size(pending) >= 5,
-    do: pending |> Enum.drop(map_size(pending) - 4) |> Map.new()
-
-  defp cap_pending(pending), do: pending
-
-  defp pop_pending(conn, state) when is_binary(state) do
-    pending = get_session(conn, :oidc_pending) || %{}
-    {nonce, remaining} = Map.pop(pending, state)
-    {nonce, put_session(conn, :oidc_pending, remaining)}
+  defp complete_sso_callback(conn, provider, code, intent, nonce) do
+    with {:ok, handler} <- AuthProviders.get_handler(provider),
+         {:ok, token} <- Handler.get_token(handler, code) do
+      if intent == :login and legacy_provider?(provider) do
+        # The admin-configured (AuthConfig) provider is a real OIDC provider:
+        # verify the signed id_token before trusting any identity claim. This is
+        # the flow v2.17.0's security release hardened; the env-based social
+        # providers (GitHub/Google) keep main's userinfo-based path.
+        verified_legacy_login(conn, handler, token, nonce)
+      else
+        social_callback(conn, handler, provider, token, intent)
+      end
+    else
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "Authentication failed")
+        |> redirect(to: failure_redirect(conn, intent))
+    end
   end
 
-  defp pop_pending(conn, _state), do: {nil, conn}
+  # main's original userinfo-based flow, used for the env-based social providers
+  # (GitHub/Google) and for the SSO link flow.
+  defp social_callback(conn, handler, provider, token, intent) do
+    with {:ok, userinfo} <- Handler.get_userinfo(handler, token),
+         {:ok, uid} <- fetch_uid(userinfo) do
+      case intent do
+        :link ->
+          handle_sso_link(conn, conn.assigns.current_user, provider, uid)
 
-  defp check_state(nonce) when is_binary(nonce), do: :ok
-  defp check_state(_nonce), do: {:error, :invalid_state}
+        :login ->
+          handle_sso_login(conn, provider, uid, userinfo)
+      end
+    else
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "Authentication failed")
+        |> redirect(to: failure_redirect(conn, intent))
+    end
+  end
 
+  # Verify the id_token from the admin-configured (AuthConfig) provider, then log
+  # in the account matching its verified email. Ported from the v2.17.0 security
+  # release (lightning-security #149); scoped to this provider because only the
+  # discovery-configured provider publishes the JWKS the verification needs.
+  defp verified_legacy_login(conn, handler, token, nonce) do
+    with {:ok, claims} <- Handler.verify_id_token(handler, token, nonce),
+         {:ok, email} <- verified_email(handler, token, claims) do
+      case Accounts.get_user_by_email(email) do
+        %User{} = user ->
+          do_log_in(conn, user)
+
+        nil ->
+          conn
+          |> put_flash(:error, "Could not find user account")
+          |> redirect(to: Routes.user_session_path(conn, :new))
+      end
+    else
+      {:error, reason} when reason in [:email_not_verified, :missing_email] ->
+        conn
+        |> put_flash(
+          :error,
+          "Your email address has not been verified. Please verify it with your provider and try signing in again."
+        )
+        |> redirect(to: Routes.user_session_path(conn, :new))
+
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "Authentication failed")
+        |> redirect(to: Routes.user_session_path(conn, :new))
+    end
+  end
+
+  # The email must come from the verified id_token; userinfo (bound to the same
+  # subject) only fills a claim the id_token omitted.
   defp verified_email(handler, token, claims) do
     cond do
-      # The id_token carries both email and a verified flag: trust it directly.
       is_binary(claims["email"]) and not is_nil(claims["email_verified"]) ->
         accept_email(handler, claims["email"], claims["email_verified"])
 
-      # The id_token carries an email but no verified flag, and the operator has
-      # opted into trusting this provider: no userinfo round-trip needed.
       is_binary(claims["email"]) and handler.allow_unverified_email ->
         {:ok, claims["email"]}
 
-      # Otherwise consult userinfo (bound to the subject) for the email /
-      # email_verified the id_token didn't carry — so a provider that puts
-      # `email` in the id_token but `email_verified` only in userinfo still works.
       true ->
         from_userinfo(handler, token, claims)
     end
@@ -168,9 +255,6 @@ defmodule LightningWeb.OidcController do
     userinfo = bound_userinfo(handler, token, claims["sub"])
 
     cond do
-      # The id_token's email (its own email_verified was absent, hence we're
-      # here); take the verified flag from userinfo, but only when userinfo isn't
-      # attesting a different email (else its flag wouldn't vouch for this one).
       is_binary(claims["email"]) ->
         verified =
           if same_email?(userinfo["email"], claims["email"]),
@@ -178,7 +262,6 @@ defmodule LightningWeb.OidcController do
 
         accept_email(handler, claims["email"], verified)
 
-      # Both the email and its verified flag come from userinfo.
       is_binary(userinfo["email"]) ->
         accept_email(handler, userinfo["email"], userinfo["email_verified"])
 
@@ -190,80 +273,288 @@ defmodule LightningWeb.OidcController do
   defp accept_email(handler, email, verified) do
     cond do
       not is_binary(email) -> {:error, :missing_email}
-      email_verified?(handler, verified) -> {:ok, email}
+      email_trusted?(handler, verified) -> {:ok, email}
       true -> {:error, :email_not_verified}
     end
   end
 
-  # Fetch userinfo only when it's bound to the authenticated id_token subject;
-  # a missing/mismatched/failed response yields no claims, so the caller falls
+  # Fetch userinfo only when it's bound to the authenticated id_token subject; a
+  # missing/mismatched/failed response yields no claims, so the caller falls
   # through to a verification failure rather than trusting an unbound email.
   defp bound_userinfo(handler, token, sub) do
-    userinfo = Handler.get_userinfo(handler, token)
+    case Handler.get_userinfo(handler, token) do
+      {:ok, userinfo} when is_binary(sub) ->
+        if userinfo["sub"] == sub, do: userinfo, else: %{}
 
-    if is_binary(sub) and userinfo["sub"] == sub, do: userinfo, else: %{}
+      _ ->
+        %{}
+    end
   rescue
     _ -> %{}
   end
 
-  # Require the provider to assert `email_verified` (an absent or false claim is
-  # rejected), unless the operator has explicitly marked this provider trusted
-  # for unverified emails.
-  defp email_verified?(%{allow_unverified_email: true}, _verified), do: true
-  defp email_verified?(_handler, verified), do: verified in [true, "true"]
-
   # userinfo's email_verified only vouches for the id_token email when userinfo
   # isn't naming a different address. An absent userinfo email (it carried only
-  # the flag) is fine; a present one must match, case-insensitively. A malformed
-  # (non-string) email is treated as a mismatch so we fail closed, not crash.
+  # the flag) is fine; a present one must match, case-insensitively.
   defp same_email?(nil, _id_token_email), do: true
 
   defp same_email?(userinfo_email, id_token_email)
-       when is_binary(userinfo_email),
+       when is_binary(userinfo_email) and is_binary(id_token_email),
        do: String.downcase(userinfo_email) == String.downcase(id_token_email)
 
   defp same_email?(_userinfo_email, _id_token_email), do: false
 
-  defp log_in_by_email(conn, email) do
-    case Accounts.get_user_by_email(email) do
-      nil ->
-        conn
-        |> put_flash(:error, "Could not find user account")
-        |> redirect(to: Routes.user_session_path(conn, :new))
+  # Require the provider to assert email_verified (absent/false is rejected),
+  # unless the operator has marked this AuthConfig provider trusted for
+  # unverified emails.
+  defp email_trusted?(%{allow_unverified_email: true}, _verified), do: true
+  defp email_trusted?(_handler, verified), do: verified in [true, "true"]
 
-      user ->
-        log_in_via_sso(conn, user)
+  defp legacy_provider?(provider) do
+    not is_nil(AuthProviders.get_existing(provider))
+  end
+
+  defp handle_sso_link(conn, %User{} = current_user, provider, uid) do
+    case Accounts.get_user_by_identity(provider, uid) do
+      %User{id: id} when id == current_user.id ->
+        conn
+        |> put_flash(
+          :info,
+          "Your #{AuthProviders.display_name(provider)} account is already linked."
+        )
+        |> redirect(to: ~p"/profile")
+
+      %User{} ->
+        conn
+        |> put_flash(
+          :error,
+          "This #{AuthProviders.display_name(provider)} identity is already linked to a different account."
+        )
+        |> redirect(to: ~p"/profile")
+
+      nil ->
+        case Accounts.link_user_identity(current_user, provider, uid) do
+          {:ok, _identity} ->
+            conn
+            |> put_flash(
+              :info,
+              "Linked your #{AuthProviders.display_name(provider)} account."
+            )
+            |> redirect(to: ~p"/profile")
+
+          {:error, :identity_already_linked} ->
+            conn
+            |> put_flash(
+              :error,
+              "This #{AuthProviders.display_name(provider)} identity is already linked to a different account."
+            )
+            |> redirect(to: ~p"/profile")
+
+          {:error, :provider_already_linked} ->
+            conn
+            |> put_flash(
+              :error,
+              "You already have a #{AuthProviders.display_name(provider)} account linked. Unlink it first to link a different one."
+            )
+            |> redirect(to: ~p"/profile")
+
+          {:error, _reason} ->
+            conn
+            |> put_flash(
+              :error,
+              "Could not link your #{AuthProviders.display_name(provider)} account. Please try again."
+            )
+            |> redirect(to: ~p"/profile")
+        end
     end
   end
 
-  # Shares the account-state gate (Accounts.login_blocked?/1) with the password
-  # login path, keeping this path's own redirect responses.
-  defp log_in_via_sso(conn, user) do
-    if Accounts.login_blocked?(user) do
-      conn
-      |> put_flash(
-        :error,
-        UserAuth.login_blocked_message(Accounts.login_blocked_reason(user))
-      )
-      |> redirect(to: Routes.user_session_path(conn, :new))
-    else
-      if user.mfa_enabled do
-        conn
-        |> UserAuth.log_in_user(user)
-        |> UserAuth.mark_totp_pending()
-        |> redirect(
-          to: Routes.user_totp_path(conn, :new, user: %{"remember_me" => "true"})
-        )
-      else
-        conn
-        |> UserAuth.log_in_user(user)
-        |> UserAuth.redirect_with_return_to(%{"remember_me" => "true"})
+  defp handle_sso_login(conn, provider, uid, userinfo) do
+    with {:ok, email} <- get_provider_email(userinfo, conn) do
+      case Accounts.get_user_by_identity(provider, uid) do
+        %User{} = user ->
+          do_log_in(conn, user)
+
+        nil ->
+          if email_verified?(userinfo) do
+            handle_unlinked_identity(conn, provider, uid, email, userinfo)
+          else
+            conn
+            |> put_flash(
+              :error,
+              "Your #{AuthProviders.display_name(provider)} email address has not been verified. Please verify it with #{AuthProviders.display_name(provider)} and try signing in again."
+            )
+            |> redirect(to: Routes.user_session_path(conn, :new))
+          end
       end
     end
   end
 
-  defp random_token do
-    32 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
+  defp get_provider_email(%{"email" => email}, _conn) when is_binary(email) do
+    {:ok, email}
+  end
+
+  defp get_provider_email(_userinfo, conn) do
+    conn
+    |> put_flash(
+      :error,
+      "Could not retrieve your email from the provider. Please ensure your email address is accessible."
+    )
+    |> redirect(to: failure_redirect(conn, :login))
+  end
+
+  defp handle_unlinked_identity(conn, provider, uid, email, userinfo) do
+    case Accounts.get_user_by_email(email) do
+      %User{} ->
+        conn
+        |> put_flash(
+          :info,
+          "An account already exists for #{email}. Sign in and link your #{AuthProviders.display_name(provider)} account from your profile settings to use single sign-on."
+        )
+        |> redirect(to: Routes.user_session_path(conn, :new))
+
+      nil ->
+        request_signup_confirmation(conn, provider, uid, email, userinfo)
+    end
+  end
+
+  defp request_signup_confirmation(conn, provider, uid, email, userinfo) do
+    %{first_name: first_name, last_name: last_name} = extract_name(userinfo)
+
+    pending = %{
+      "provider" => provider,
+      "uid" => uid,
+      "email" => email,
+      "first_name" => first_name,
+      "last_name" => last_name
+    }
+
+    conn
+    |> put_session(@pending_signup_session_key, pending)
+    |> redirect(to: ~p"/authenticate/signup/confirm")
+  end
+
+  defp do_log_in(conn, %{mfa_enabled: true} = user) do
+    conn
+    |> UserAuth.log_in_user(user)
+    |> UserAuth.mark_totp_pending()
+    |> redirect(
+      to: Routes.user_totp_path(conn, :new, user: %{"remember_me" => "true"})
+    )
+  end
+
+  defp do_log_in(conn, user) do
+    conn
+    |> UserAuth.log_in_user(user)
+    |> UserAuth.redirect_with_return_to(%{"remember_me" => "true"})
+  end
+
+  defp fetch_uid(userinfo) do
+    case extract_uid(userinfo) do
+      nil -> {:error, :no_uid}
+      uid -> {:ok, uid}
+    end
+  end
+
+  defp email_verified?(%{"email_verified" => verified}),
+    do: verified in [true, "true"]
+
+  defp email_verified?(_), do: false
+
+  defp extract_uid(%{"sub" => sub}) when is_binary(sub), do: sub
+  defp extract_uid(%{"id" => id}) when is_integer(id), do: to_string(id)
+  defp extract_uid(%{"id" => id}) when is_binary(id), do: id
+  defp extract_uid(_), do: nil
+
+  defp extract_name(%{"given_name" => first, "family_name" => last})
+       when is_binary(first) and is_binary(last) do
+    %{first_name: first, last_name: last}
+  end
+
+  defp extract_name(%{"name" => name}) when is_binary(name) do
+    case String.split(name, " ", parts: 2) do
+      [first, last] -> %{first_name: first, last_name: last}
+      [first] -> %{first_name: first, last_name: ""}
+    end
+  end
+
+  defp extract_name(_), do: %{first_name: "", last_name: ""}
+
+  # Mints a single-use, session-bound state and returns the provider authorize
+  # URL carrying it. The nonce lives in the session (the secret the attacker
+  # can't read); the encrypted state carries the same nonce plus the intent,
+  # provider and — for the link flow — the user it must remain bound to.
+  defp authorize_redirect(conn, handler, provider, intent) do
+    nonce = Base.url_encode64(:crypto.strong_rand_bytes(24), padding: false)
+
+    user_id =
+      case conn.assigns.current_user do
+        %User{id: id} -> id
+        _ -> ""
+      end
+
+    state =
+      SafetyString.encode([
+        nonce,
+        to_string(intent),
+        provider,
+        to_string(user_id)
+      ])
+
+    conn = put_session(conn, @oauth_state_session_key, nonce)
+
+    # The same nonce is sent to the provider as the OIDC `nonce`, so it comes
+    # back bound into the signed id_token and can be checked in verify_id_token —
+    # this is what ties the token to the browser that started the flow.
+    {conn, Handler.authorize_url(handler, state: state, nonce: nonce)}
+  end
+
+  # Verifies the callback `state` against the nonce stashed in the session. The
+  # nonce is consumed (single-use) regardless of outcome. On the link flow the
+  # state must also still belong to the currently authenticated user.
+  defp verify_oauth_state(conn, provider, state) do
+    session_nonce = get_session(conn, @oauth_state_session_key)
+    conn = delete_session(conn, @oauth_state_session_key)
+
+    with [nonce, intent, state_provider, user_id] <- decode_oauth_state(state),
+         true <- is_binary(session_nonce),
+         true <- Plug.Crypto.secure_compare(nonce, session_nonce),
+         true <- state_provider == provider,
+         {:ok, intent} <- authorize_intent(conn, intent, user_id) do
+      {:ok, intent, nonce, conn}
+    else
+      _ -> {:error, conn}
+    end
+  end
+
+  defp decode_oauth_state(state) when is_binary(state) do
+    SafetyString.decode(state)
+  rescue
+    _ -> :error
+  end
+
+  defp decode_oauth_state(_state), do: :error
+
+  defp authorize_intent(_conn, "login", _user_id), do: {:ok, :login}
+
+  defp authorize_intent(conn, "link", user_id) do
+    case conn.assigns.current_user do
+      %User{id: id} ->
+        if to_string(id) == user_id, do: {:ok, :link}, else: :error
+
+      _ ->
+        :error
+    end
+  end
+
+  defp authorize_intent(_conn, _intent, _user_id), do: :error
+
+  defp failure_redirect(conn, intent) do
+    if intent == :link && conn.assigns.current_user do
+      ~p"/profile"
+    else
+      Routes.user_session_path(conn, :new)
+    end
   end
 
   defp broadcast_message(state, data) do

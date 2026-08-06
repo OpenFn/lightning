@@ -55,6 +55,9 @@ and this project adheres to
   user count. Reported at both instance and project level, and bumps the usage
   report schema to version 3.
   [#4826](https://github.com/OpenFn/lightning/issues/4826)
+- Single Sign-On (SSO) sign-in with GitHub and Google. Users can sign in with an
+  external identity provider and link or unlink providers from their profile
+  settings. [#4621](https://github.com/OpenFn/lightning/issues/4621)
 - Creating a workflow now starts from a screen offering four ways in: describe
   it to the AI assistant, build from scratch, pick a template, or import YAML.
   [#4848](https://github.com/OpenFn/lightning/issues/4848)
