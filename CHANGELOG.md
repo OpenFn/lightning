@@ -25,6 +25,7 @@ and this project adheres to
 
 ### Changed
 
+- Bumped bundled worker to version 1.29.0
 - Remove the unreachable, non-streaming code in the AI assistant
   [#5046](https://github.com/OpenFn/lightning/issues/5046)
 
