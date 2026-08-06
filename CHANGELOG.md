@@ -19,6 +19,9 @@ and this project adheres to
 
 ### Changed
 
+- Template modal preview UI improvements.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
+
 ### Fixed
 
 - History exports to Google Cloud Storage crashed after the Tesla 1.18.3
