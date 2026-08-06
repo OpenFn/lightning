@@ -19,6 +19,12 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [2.18.0-pre1] - 2026-08-06
+
+### Changed
+
 - Template modal preview UI improvements.
   [#4848](https://github.com/OpenFn/lightning/issues/4848)
 
