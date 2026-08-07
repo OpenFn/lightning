@@ -196,11 +196,29 @@ describe('MessageList', () => {
   });
 
   describe('Message Status', () => {
-    it('should show error state for failed messages', () => {
+    it('should show error content in styled box for assistant error with content', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
-          content: 'Failed message',
+          content: 'YAML parse failed: unexpected token',
+          status: 'error',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      // Non-empty content renders inline in a red validation error box
+      expect(screen.getByTestId('ai-validation-error')).toBeInTheDocument();
+      expect(
+        screen.getByText('YAML parse failed: unexpected token')
+      ).toBeInTheDocument();
+    });
+
+    it('should show "Failed to send message" banner for assistant error with no content', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '',
           status: 'error',
         }),
       ];
@@ -820,6 +838,291 @@ describe('MessageList', () => {
 
       // Use semantic query via data-testid
       expect(screen.getByTestId('message-list')).toBeInTheDocument();
+    });
+  });
+
+  describe('Global Messages (from_global)', () => {
+    it('renders global message as Generated Workflow with Apply and no Preview on canvas', async () => {
+      const onApplyWorkflow = vi.fn();
+      const onApplyJobCode = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          code: 'name: Test\njobs: {}',
+          from_global: true,
+        }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          onApplyWorkflow={onApplyWorkflow}
+          onApplyJobCode={onApplyJobCode}
+          showApplyButton
+        />
+      );
+
+      // No job_id -> existing "Generated Workflow" branch, workflow apply
+      expect(screen.getByText('Generated Workflow')).toBeInTheDocument();
+      expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByText('Apply'));
+      expect(onApplyWorkflow).toHaveBeenCalledWith(
+        'name: Test\njobs: {}',
+        'msg-global'
+      );
+      expect(onApplyJobCode).not.toHaveBeenCalled();
+    });
+
+    it('shows Preview routed to onPreviewGlobalStep when a step is open', async () => {
+      const onPreviewGlobalStep = vi.fn();
+      const onPreviewJobCode = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          code: 'name: Test\njobs: {}',
+          from_global: true,
+        }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          onPreviewGlobalStep={onPreviewGlobalStep}
+          onPreviewJobCode={onPreviewJobCode}
+          canPreviewGlobalStep
+        />
+      );
+
+      // Label stays "Generated Workflow" — it is one
+      expect(screen.getByText('Generated Workflow')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByText('Preview'));
+      expect(onPreviewGlobalStep).toHaveBeenCalledWith(
+        'name: Test\njobs: {}',
+        'msg-global'
+      );
+      expect(onPreviewJobCode).not.toHaveBeenCalled();
+    });
+
+    it('keeps job-code messages unchanged: Preview routes to onPreviewJobCode', async () => {
+      const onPreviewGlobalStep = vi.fn();
+      const onPreviewJobCode = vi.fn();
+      const onApplyWorkflow = vi.fn();
+      const onApplyJobCode = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-job',
+          role: 'assistant',
+          code: 'fn(state => state)',
+          job_id: 'job-1',
+        }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          onPreviewGlobalStep={onPreviewGlobalStep}
+          onPreviewJobCode={onPreviewJobCode}
+          onApplyWorkflow={onApplyWorkflow}
+          onApplyJobCode={onApplyJobCode}
+          showApplyButton
+        />
+      );
+
+      expect(screen.getByText('Generated Job Code')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByText('Preview'));
+      expect(onPreviewJobCode).toHaveBeenCalledWith(
+        'fn(state => state)',
+        'msg-job'
+      );
+      expect(onPreviewGlobalStep).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByText('Apply'));
+      expect(onApplyJobCode).toHaveBeenCalledWith(
+        'fn(state => state)',
+        'msg-job'
+      );
+      expect(onApplyWorkflow).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Response Segments Timeline', () => {
+    it('renders text blocks and settled status rows in segment order', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: 'Final answer',
+          response_segments: [
+            { type: 'text', content: 'Adding a step first.' },
+            { type: 'status', content: 'Adding step send-to-gmail...' },
+            { type: 'text', content: 'Final answer' },
+            { type: 'status', content: 'Validating workflow...' },
+          ],
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      const assistantMessage = screen.getByTestId('assistant-message');
+
+      // Statuses render settled: italic gray rows, no bouncing dots
+      const statusRows = screen.getAllByTestId('settled-status');
+      expect(statusRows).toHaveLength(2);
+      expect(statusRows[0]).toHaveTextContent('Adding step send-to-gmail...');
+      expect(statusRows[1]).toHaveTextContent('Validating workflow...');
+      statusRows.forEach(row => {
+        expect(row.querySelector('.animate-bounce')).not.toBeInTheDocument();
+        expect(row.querySelector('.italic')).toBeInTheDocument();
+      });
+
+      // Both text segments render (not the joined flat content once)
+      expect(screen.getByText('Adding a step first.')).toBeInTheDocument();
+      expect(screen.getByText('Final answer')).toBeInTheDocument();
+
+      // DOM order matches segment order: text, status, text, status
+      const textContent = assistantMessage.textContent ?? '';
+      expect(textContent.indexOf('Adding a step first.')).toBeLessThan(
+        textContent.indexOf('Adding step send-to-gmail...')
+      );
+      expect(textContent.indexOf('Adding step send-to-gmail...')).toBeLessThan(
+        textContent.indexOf('Final answer')
+      );
+      expect(textContent.indexOf('Final answer')).toBeLessThan(
+        textContent.indexOf('Validating workflow...')
+      );
+    });
+
+    it('renders flat content when response_segments is absent or empty', () => {
+      const messages = [
+        createMockAIMessage({
+          id: '1',
+          role: 'assistant',
+          content: 'Legacy flat message',
+        }),
+        createMockAIMessage({
+          id: '2',
+          role: 'assistant',
+          content: 'Empty segments message',
+          response_segments: [],
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(screen.getByText('Legacy flat message')).toBeInTheDocument();
+      expect(screen.getByText('Empty segments message')).toBeInTheDocument();
+      expect(screen.queryByTestId('settled-status')).not.toBeInTheDocument();
+    });
+
+    it('settles timeline statuses with ticks and shows the thinking scalar with dots (global active)', () => {
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      const { rerender } = render(
+        <MessageList
+          messages={messages}
+          isLoading
+          isGlobalAssistantActive
+          streamingContent="Answer"
+          streamingStatus="Writing the next step..."
+          streamingSegments={[
+            { type: 'status', content: 'Edited workflow structure' },
+            { type: 'text', content: 'Answer' },
+            { type: 'status', content: 'Added step send-to-gmail' },
+          ]}
+        />
+      );
+
+      // Timeline statuses are completed actions: settled + tick, even the
+      // trailing one, even mid-stream.
+      const settled = screen.getAllByTestId('settled-status');
+      expect(settled).toHaveLength(2);
+      for (const row of settled) {
+        expect(row.querySelector('.animate-bounce')).not.toBeInTheDocument();
+        expect(row.querySelector('.hero-check-micro')).toBeInTheDocument();
+      }
+
+      // The transient thinking status renders below with dots.
+      const thinking = screen.getByTestId('streaming-status');
+      expect(thinking).toHaveTextContent('Writing the next step...');
+      expect(thinking.querySelectorAll('.animate-bounce')).toHaveLength(3);
+
+      // No thinking scalar → no dots row at all.
+      rerender(
+        <MessageList
+          messages={messages}
+          isLoading
+          isGlobalAssistantActive
+          streamingContent="Answer"
+          streamingStatus={null}
+          streamingSegments={[
+            { type: 'status', content: 'Edited workflow structure' },
+            { type: 'text', content: 'Answer' },
+          ]}
+        />
+      );
+      expect(screen.queryByTestId('streaming-status')).not.toBeInTheDocument();
+      expect(screen.getByTestId('settled-status')).toHaveTextContent(
+        'Edited workflow structure'
+      );
+    });
+
+    it('shows a leading status segment before any text has streamed', () => {
+      // Apollo can complete an action (and emit its status) before the
+      // first text chunk arrives; the streaming placeholder must render
+      // from segments alone.
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          isLoading
+          isGlobalAssistantActive
+          streamingContent={null}
+          streamingStatus={null}
+          streamingSegments={[
+            { type: 'status', content: 'Edited workflow structure' },
+          ]}
+        />
+      );
+
+      expect(screen.getByTestId('streaming-message')).toBeInTheDocument();
+      expect(screen.getByTestId('settled-status')).toHaveTextContent(
+        'Edited workflow structure'
+      );
+    });
+
+    it('keeps flat streaming rendering when the global assistant is not active', () => {
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          isLoading
+          streamingContent="Flat answer"
+          streamingStatus="Generating code..."
+          streamingSegments={[
+            { type: 'text', content: 'Flat answer' },
+            { type: 'status', content: 'Generating code...' },
+          ]}
+        />
+      );
+
+      // Flat content + single scalar status row, no woven timeline
+      expect(screen.getByText('Flat answer')).toBeInTheDocument();
+      expect(screen.queryByTestId('settled-status')).not.toBeInTheDocument();
+      const status = screen.getByTestId('streaming-status');
+      expect(status).toHaveTextContent('Generating code...');
+      expect(status.querySelectorAll('.animate-bounce')).toHaveLength(3);
     });
   });
 

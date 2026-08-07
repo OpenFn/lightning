@@ -9,7 +9,6 @@ defmodule LightningWeb.Router do
   import Phoenix.LiveDashboard.Router
 
   alias CredentialLive
-  alias JobLive
   alias ProjectLive
   alias UserLive
 
@@ -187,7 +186,7 @@ defmodule LightningWeb.Router do
 
     get "/users/send-confirmation-email", UserConfirmationController, :send_email
 
-    get "/credentials/transfer/:credential_id/:receiver_id/:token",
+    get "/credentials/transfer/:token",
         CredentialTransferController,
         :confirm
 
@@ -212,8 +211,6 @@ defmodule LightningWeb.Router do
     end
 
     live_session :settings, on_mount: LightningWeb.InitAssigns do
-      live "/settings", SettingsLive.Index, :index
-
       live "/settings/users/new", UserLive.Edit, :new
       live "/settings/users/:id", UserLive.Edit, :edit
       live "/settings/users/:id/delete", UserLive.Index, :delete
@@ -235,8 +232,6 @@ defmodule LightningWeb.Router do
       live "/mfa_required", ProjectLive.MFARequired, :index
 
       scope "/projects/:project_id", as: :project do
-        live "/jobs", JobLive.Index, :index
-
         live "/settings/delete", ProjectLive.Settings, :delete
 
         live "/history", RunLive.Index, :index
@@ -247,10 +242,15 @@ defmodule LightningWeb.Router do
         live "/dataclips/:id/show", DataclipLive.Show, :show
 
         live "/w", WorkflowLive.Index, :index
-        live "/w/new/legacy", WorkflowLive.Edit, :new
         live "/w/new", WorkflowLive.Collaborate, :new
-        live "/w/:id/legacy", WorkflowLive.Edit, :edit
         live "/w/:id", WorkflowLive.Collaborate, :edit
+
+        # Redirect retired legacy editor URLs to the collaborative editor,
+        # preserving the query string. The collaborative editor uses different
+        # query param names than the legacy editor; the raw query string is
+        # forwarded as-is except the run param which maps a -> run.
+        get "/w/new/legacy", LegacyRedirectController, :new
+        get "/w/:id/legacy", LegacyRedirectController, :edit
 
         live "/channels", ChannelLive.Index, :index
         live "/channels/new", ChannelLive.Index, :new

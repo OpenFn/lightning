@@ -221,6 +221,35 @@ defmodule LightningWeb.CredentialLiveTest do
       refute has_element?(view, "#delete-credential-#{credential.id}-modal")
     end
 
+    test "rejects deleting another user's credential via a tampered id", %{
+      conn: conn,
+      credential: credential
+    } do
+      # a credential owned by a different user
+      other = insert(:credential, user: insert(:user), name: "someone-elses")
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      # open the delete modal for the current user's own credential
+      open_delete_credential_modal(index_live, credential.id)
+
+      # confirm deletion, but with a foreign credential's id (tampered phx-value-id)
+      {:ok, _index_live, html} =
+        index_live
+        |> element(
+          "#delete-credential-#{credential.id}-modal button",
+          "Delete credential"
+        )
+        |> render_click(%{"id" => other.id})
+        |> follow_redirect(conn)
+
+      # the request is rejected, and nothing is scheduled for deletion: not the
+      # foreign credential, and not the one the modal was opened for
+      assert html =~ "You can&#39;t perform this action"
+      assert Lightning.Repo.reload!(other).scheduled_deletion == nil
+      assert Lightning.Repo.reload!(credential).scheduled_deletion == nil
+    end
+
     test "can schedule for deletion a credential that is associated to activities",
          %{
            conn: conn,
@@ -413,6 +442,84 @@ defmodule LightningWeb.CredentialLiveTest do
         Lightning.Repo.get(Lightning.Credentials.Credential, credential.id)
 
       refute credential.scheduled_deletion
+    end
+
+    test "cannot cancel the scheduled deletion of another user's credential", %{
+      conn: conn
+    } do
+      other_credential =
+        insert(:credential,
+          user: insert(:user),
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      refute has_element?(
+               index_live,
+               "#credential-actions-#{other_credential.id}-cancel-deletion"
+             )
+
+      # send the event anyway
+      index_live
+      |> with_target("#credentials-index-component")
+      |> render_click("cancel_credential_deletion", %{id: other_credential.id})
+
+      assert_patched(index_live, ~p"/credentials")
+
+      assert render(index_live) =~
+               "You are not authorized to perform this action"
+
+      assert Lightning.Repo.reload(other_credential).scheduled_deletion
+    end
+
+    test "non credential owner cannot cancel a scheduled deletion in project settings page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      credential_owner = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: user, role: :owner},
+            %{user: credential_owner, role: :admin}
+          ]
+        )
+
+      # Set scheduled_deletion directly rather than via
+      # schedule_credential_deletion/1, which detaches the project associations
+      # the credential needs to stay visible on this page.
+      credential =
+        insert(:credential,
+          user: credential_owner,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          project_credentials: [%{project: project}]
+        )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ credential.name
+
+      refute has_element?(
+               view,
+               "#credential-actions-#{credential.id}-cancel-deletion"
+             )
+
+      # send the event anyway
+      view
+      |> with_target("#credentials-index-component")
+      |> render_click("cancel_credential_deletion", %{id: credential.id})
+
+      assert_patched(view, ~p"/projects/#{project}/settings")
+
+      assert render(view) =~ "You are not authorized to perform this action"
+
+      assert Lightning.Repo.reload(credential).scheduled_deletion
     end
 
     test "delete credentials in project settings page", %{
@@ -1248,7 +1355,10 @@ defmodule LightningWeb.CredentialLiveTest do
       button_html = delete_credential_button(view, project.id) |> render()
 
       assert button_html =~
-               "data-confirm=\"Warning: This credential is in use by the following workflows: #{workflow_with_credential_1.name}, #{workflow_with_credential_2.name}. If you revoke access to the &quot;#{project.name}&quot; project, runs for those workflows will probably fail until you provide a new credential. Are you sure you want to revoke access?"
+               "data-confirm=\"Warning: This credential is in use by the following workflows:"
+
+      assert button_html =~
+               ". If you revoke access to the &quot;#{project.name}&quot; project, runs for those workflows will probably fail until you provide a new credential. Are you sure you want to revoke access?"
 
       assert button_html =~ workflow_with_credential_1.name
       assert button_html =~ workflow_with_credential_2.name
@@ -1391,20 +1501,200 @@ defmodule LightningWeb.CredentialLiveTest do
         :error === assigns[:oauth_progress]
       end)
 
-      # After the error state, check the rendered content
       html = view |> element("#credential-form-#{credential.id}") |> render()
 
-      # Check for 401 error message content
-      assert html =~ "Your authorization with"
-      assert html =~ "expired or was revoked"
+      assert html =~ "session has expired"
 
-      # The button text for 401 errors is "Sign In Again"
       assert view
              |> element(
                "#credential-form-#{credential.id} button",
                "Sign In Again"
              )
              |> has_element?()
+    end
+
+    test "renders reauthorize prompt when refresh token is revoked",
+         %{
+           conn: conn,
+           user: user,
+           token: token
+         } do
+      oauth_client = insert(:oauth_client, user: user, userinfo_endpoint: nil)
+
+      expired_token =
+        Map.put(token, "expires_at", DateTime.to_unix(DateTime.utc_now()) - 3600)
+
+      credential =
+        insert(:credential,
+          user: user,
+          schema: "oauth",
+          oauth_client: oauth_client
+        )
+        |> with_body(%{
+          name: "main",
+          body: expired_token
+        })
+
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
+
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 400,
+               body:
+                 Jason.encode!(%{
+                   "error" => "invalid_grant",
+                   "error_description" => "Token has been expired or revoked."
+                 })
+             }}
+        end
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_edit_credential_modal(view, credential.id)
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-#{credential.id}-main"
+          )
+
+        :error === assigns[:oauth_progress]
+      end)
+
+      html = view |> element("#credential-form-#{credential.id}") |> render()
+
+      assert html =~ "revoked"
+      refute html =~ "An error occurred during authentication"
+
+      assert view
+             |> element(
+               "#credential-form-#{credential.id} button",
+               "Reauthorize"
+             )
+             |> has_element?()
+    end
+
+    test "a failed refresh with a 5xx keeps the transient provider-error message",
+         %{conn: conn, user: user, token: token} do
+      oauth_client = insert(:oauth_client, user: user, userinfo_endpoint: nil)
+
+      expired_token =
+        Map.put(token, "expires_at", DateTime.to_unix(DateTime.utc_now()) - 3600)
+
+      credential =
+        insert(:credential,
+          user: user,
+          schema: "oauth",
+          oauth_client: oauth_client
+        )
+        |> with_body(%{name: "main", body: expired_token})
+
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/revoke" ->
+            {:ok, %Tesla.Env{status: 200, body: Jason.encode!(%{})}}
+
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 503,
+               body: Jason.encode!(%{"error" => "server_error"})
+             }}
+        end
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_edit_credential_modal(view, credential.id)
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-#{credential.id}-main"
+          )
+
+        :error === assigns[:oauth_progress]
+      end)
+
+      html = view |> element("#credential-form-#{credential.id}") |> render()
+
+      assert html =~ "technical difficulties"
+      refute html =~ "revoked"
+      refute html =~ "An error occurred during authentication"
+    end
+
+    test "a code-exchange failure is not treated as a refresh reauthorization",
+         %{conn: conn, user: user} do
+      insert(:project, project_users: [%{user: user, role: :owner}])
+
+      oauth_client =
+        insert(:oauth_client,
+          user: user,
+          mandatory_scopes: "",
+          optional_scopes: ""
+        )
+
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 400,
+               body:
+                 Jason.encode!(%{
+                   "error" => "invalid_grant",
+                   "error_description" => "Bad authorization code."
+                 })
+             }}
+        end
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      open_create_credential_modal(view)
+      view |> select_credential_type(oauth_client.id)
+      view |> click_continue()
+      view |> fill_credential(%{name: "My Generic OAuth Credential"})
+
+      {_, component_assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "generic-oauth-component-new-main"
+        )
+
+      [subscription_id, mod, _component_id, _env] =
+        get_decoded_state(component_assigns[:authorize_url])
+
+      view |> element("#authorize-button") |> render_click()
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(
+        subscription_id,
+        mod,
+        id: "generic-oauth-component-new-main",
+        code: "authcode123",
+        current_tab: "main"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new-main"
+          )
+
+        :error === assigns[:oauth_progress]
+      end)
+
+      html = view |> render()
+
+      assert html =~ "An error occurred during authentication"
+      refute html =~ "Refresh Token Revoked"
     end
   end
 
@@ -2215,10 +2505,7 @@ defmodule LightningWeb.CredentialLiveTest do
         subject: "Transfer #{credential.name} to #{receiver.first_name}"
       )
 
-      assert Repo.get_by(Lightning.Accounts.UserToken,
-               context: "credential_transfer",
-               user_id: credential.user_id
-             )
+      assert Repo.reload(credential).transfer_status == :pending
     end
 
     test "closes modal", %{view: view, credential: credential} do
@@ -2393,12 +2680,6 @@ defmodule LightningWeb.CredentialLiveTest do
         Repo.get(Lightning.Credentials.Credential, credential.id)
 
       assert is_nil(updated_credential.transfer_status)
-
-      # Verify token was deleted
-      refute Repo.get_by(Lightning.Accounts.UserToken,
-               context: "credential_transfer",
-               user_id: credential.user_id
-             )
     end
 
     test "closes modal after canceling revoke", %{
@@ -2606,14 +2887,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # Get the main environment body
       main_body = Enum.find(credential.credential_bodies, &(&1.name == "main"))
-      token = Lightning.AuthProviders.Common.TokenBody.new(main_body.body)
 
       assert %{
-               access_token: "ya29.a0AVvZ",
-               refresh_token: "1//03vpp6Li",
-               expires_at: _,
-               scope: "scope_1 scope_2"
-             } = token
+               "access_token" => "ya29.a0AVvZ",
+               "refresh_token" => "1//03vpp6Li",
+               "expires_at" => _,
+               "scope" => "scope_1 scope_2"
+             } = main_body.body
     end
 
     test "allow the user to edit an oauth credential", %{

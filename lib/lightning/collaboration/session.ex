@@ -119,8 +119,8 @@ defmodule Lightning.Collaboration.Session do
         SharedDoc.observe(shared_doc_pid)
         Logger.info("Joined SharedDoc for #{document_name}")
 
-        # We track the user presence here so the the original WorkflowLive.Edit
-        # can be stopped from editing the workflow when someone else is editing it.
+        # We track the user presence here so editors can see when someone else
+        # is editing the workflow.
         # Note: Presence tracking uses workflow.id, not document_name, because
         # presence is about showing who is editing the workflow, not which version
         Presence.track_user_presence(
@@ -215,6 +215,8 @@ defmodule Lightning.Collaboration.Session do
   ## Returns
   - `{:ok, workflow}` - Successfully saved
   - `{:error, :workflow_deleted}` - Workflow has been deleted
+  - `{:error, :snapshot_failed}` - Snapshot creation failed; it shares the
+    save's transaction, so the whole save rolled back and nothing persisted
   - `{:error, changeset}` - Validation or persistence error
 
   ## Examples
@@ -229,6 +231,7 @@ defmodule Lightning.Collaboration.Session do
           {:ok, Lightning.Workflows.Workflow.t()}
           | {:error,
              :workflow_deleted
+             | :snapshot_failed
              | :deserialization_failed
              | :internal_error
              | Ecto.Changeset.t()}
@@ -375,6 +378,13 @@ defmodule Lightning.Collaboration.Session do
         )
 
         {:reply, {:error, :workflow_deleted}, state}
+
+      {:error, :snapshot_failed} ->
+        Logger.warning(
+          "Failed to save snapshot for workflow #{state.workflow.id}"
+        )
+
+        {:reply, {:error, :snapshot_failed}, state}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         all_errors =

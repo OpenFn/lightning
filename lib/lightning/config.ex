@@ -82,12 +82,6 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def oauth_provider(key) do
-      Application.get_env(:lightning, :oauth_clients)
-      |> Keyword.get(key)
-    end
-
-    @impl true
     def purge_deleted_after_days do
       Application.get_env(:lightning, :purge_deleted_after_days)
     end
@@ -316,15 +310,6 @@ defmodule Lightning.Config do
     end
 
     @impl true
-    def ui_metrics_tracking_enabled? do
-      Keyword.get(ui_metrics_tracking_config(), :enabled)
-    end
-
-    defp ui_metrics_tracking_config do
-      Application.get_env(:lightning, :ui_metrics_tracking, [])
-    end
-
-    @impl true
     def credential_transfer_token_validity_in_days do
       2
     end
@@ -362,14 +347,6 @@ defmodule Lightning.Config do
     def external_metrics_module do
       Application.get_env(:lightning, Lightning.Extensions, [])
       |> Keyword.get(:external_metrics)
-    end
-
-    @impl true
-    def ai_assistant_modes do
-      %{
-        job: LightningWeb.Live.AiAssistant.Modes.JobCode,
-        workflow: LightningWeb.Live.AiAssistant.Modes.WorkflowTemplate
-      }
     end
 
     @impl true
@@ -503,7 +480,6 @@ defmodule Lightning.Config do
   @callback metrics_run_queue_metrics_period_seconds() :: integer()
   @callback metrics_stalled_run_threshold_seconds() :: integer()
   @callback metrics_unclaimed_run_threshold_seconds() :: integer()
-  @callback oauth_provider(key :: atom()) :: keyword() | nil
   @callback promex_metrics_endpoint_authorization_required?() :: boolean()
   @callback promex_metrics_endpoint_scheme() :: String.t()
   @callback promex_metrics_endpoint_token() :: String.t()
@@ -522,7 +498,6 @@ defmodule Lightning.Config do
   @callback storage() :: term()
   @callback storage(key :: atom()) :: term()
   @callback token_signer() :: Joken.Signer.t()
-  @callback ui_metrics_tracking_enabled?() :: boolean()
   @callback usage_tracking() :: Keyword.t()
   @callback usage_tracking_cleartext_uuids_enabled?() :: boolean()
   @callback usage_tracking_cron_opts() :: [Oban.Plugins.Cron.cron_input()]
@@ -539,7 +514,6 @@ defmodule Lightning.Config do
   @callback gdpr_banner() :: map() | false
   @callback gdpr_preferences() :: map() | false
   @callback external_metrics_module() :: module() | nil
-  @callback ai_assistant_modes() :: %{atom() => module()}
   @callback per_workflow_claim_limit() :: pos_integer()
   @callback claim_work_mem() :: String.t() | nil
   @callback log_queue_queries() :: boolean()
@@ -615,10 +589,6 @@ defmodule Lightning.Config do
 
   def repo_connection_token_signer do
     impl().repo_connection_token_signer()
-  end
-
-  def oauth_provider(key) do
-    impl().oauth_provider(key)
   end
 
   def purge_deleted_after_days do
@@ -775,10 +745,6 @@ defmodule Lightning.Config do
     impl().promex_enabled?()
   end
 
-  def ui_metrics_tracking_enabled? do
-    impl().ui_metrics_tracking_enabled?()
-  end
-
   def credential_transfer_token_validity_in_days do
     impl().credential_transfer_token_validity_in_days()
   end
@@ -805,10 +771,6 @@ defmodule Lightning.Config do
 
   def external_metrics_module do
     impl().external_metrics_module()
-  end
-
-  def ai_assistant_modes do
-    impl().ai_assistant_modes()
   end
 
   def metrics_run_performance_age_seconds do

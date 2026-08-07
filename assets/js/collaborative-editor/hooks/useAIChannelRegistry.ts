@@ -163,14 +163,6 @@ export const useAISessionCommands = () => {
     registry.retryMessage(topic, messageId);
   };
 
-  const markDisclaimerRead = () => {
-    if (!registry || !topic) {
-      console.warn('Cannot mark disclaimer: registry or topic not available');
-      return;
-    }
-    registry.markDisclaimerRead(topic);
-  };
-
   const loadSessions = (offset = 0, limit = 20) => {
     if (!registry || !topic) {
       console.warn('Cannot load sessions: registry or topic not available');
@@ -198,7 +190,6 @@ export const useAISessionCommands = () => {
   return {
     sendMessage,
     retryMessage,
-    markDisclaimerRead,
     loadSessions,
     updateContext,
     isConnected,

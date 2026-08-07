@@ -354,21 +354,6 @@ export const CloseInspectorPanelViaEscape = createKeyCombinationHook(
 );
 
 /**
- * Hook to close a node panel when the "Escape" key is pressed.
- *
- * This hook listens globally and executes the `closeAction`, which simulates a click
- * to close a node panel in the workflow canvas. It has a lower priority, ensuring it does
- * not interfere with higher-priority handlers for the "Escape" key (e.g., `CloseInspectorPanelViaEscape`).
- *
- * Priority: `PRIORITY.NORMAL`, meaning it will yield to higher-priority handlers for the "Escape" key.
- */
-export const CloseNodePanelViaEscape = createKeyCombinationHook(
-  isEscape,
-  closeAction,
-  PRIORITY.NORMAL
-);
-
-/**
  * Determines if the key combination for "Ctrl+M" (or "Cmd+M" on macOS) is pressed.
  *
  * @param e - The keyboard event to evaluate.

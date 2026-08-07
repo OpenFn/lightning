@@ -145,6 +145,29 @@ defmodule LightningWeb.WorkflowControllerTest do
       assert html_response(conn, 403) =~ "Forbidden"
     end
 
+    test "requires workflow to be part of the specified project", %{
+      conn: conn,
+      project: user_project
+    } do
+      other_project = insert(:project)
+
+      other_project_workflow =
+        insert(:workflow, project: other_project) |> with_snapshot()
+
+      other_project_job = insert(:job, workflow: other_project_workflow)
+
+      conn =
+        post(
+          conn,
+          ~p"/projects/#{user_project}/workflows/#{other_project_workflow}/runs",
+          %{
+            job_id: other_project_job.id
+          }
+        )
+
+      assert html_response(conn, 403) =~ "Forbidden"
+    end
+
     test "returns 404 when job not found", %{
       conn: conn,
       project: project,

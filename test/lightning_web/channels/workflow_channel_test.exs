@@ -83,7 +83,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       other_project = insert(:project)
       foreign_workflow = insert(:workflow, project: other_project)
 
-      assert {:error, %{reason: "workflow does not belong to specified project"}} =
+      assert {:error, %{reason: "workflow not found"}} =
                LightningWeb.UserSocket
                |> socket("user_#{user.id}", %{current_user: user})
                |> subscribe_and_join(
@@ -91,6 +91,79 @@ defmodule LightningWeb.WorkflowChannelTest do
                  "workflow:collaborate:#{foreign_workflow.id}",
                  %{"project_id" => project.id, "action" => "new"}
                )
+    end
+
+    test "rejects \"edit\" version join for a snapshot owned by another project",
+         %{project: project, user: user} do
+      # The version (":vN") path must enforce the same project-ownership check
+      # as the latest :edit path. A user authorised on their own project must
+      # not read a snapshot version of a workflow in a DIFFERENT project by
+      # supplying its id and version in the topic.
+      other_project = insert(:project)
+      foreign_workflow = insert(:workflow, project: other_project)
+
+      {:ok, snapshot} =
+        foreign_workflow.id
+        |> Lightning.Workflows.get_workflow(include: [:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Snapshot.create()
+
+      assert {:error, %{reason: "workflow not found"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{foreign_workflow.id}:v#{snapshot.lock_version}",
+                 %{"project_id" => project.id, "action" => "edit"}
+               )
+    end
+
+    test "rejects \"edit\" join for a workflow owned by another project", %{
+      project: project,
+      user: user
+    } do
+      # Latest-version :edit path: a foreign workflow must be refused with the
+      # same "workflow not found" as a non-existent one (no existence oracle).
+      other_project = insert(:project)
+      foreign_workflow = insert(:workflow, project: other_project)
+
+      assert {:error, %{reason: "workflow not found"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{foreign_workflow.id}",
+                 %{"project_id" => project.id, "action" => "edit"}
+               )
+    end
+
+    test "does not reveal which snapshot versions exist to a non-member", %{
+      workflow: workflow,
+      project: project
+    } do
+      # A non-member who supplies the workflow's correct owning project must get
+      # the same "unauthorized" whether the version exists or not, so the error
+      # cannot be used to enumerate a workflow's snapshot versions.
+      non_member = insert(:user)
+
+      {:ok, snapshot} =
+        workflow.id
+        |> Lightning.Workflows.get_workflow(include: [:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Snapshot.create()
+
+      join = fn version ->
+        LightningWeb.UserSocket
+        |> socket("user_#{non_member.id}", %{current_user: non_member})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{version}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+      end
+
+      assert {:error, %{reason: "unauthorized"}} = join.(snapshot.lock_version)
+
+      assert {:error, %{reason: "unauthorized"}} =
+               join.(snapshot.lock_version + 999)
     end
 
     test "accepts authorized users with proper assigns", %{
@@ -106,6 +179,84 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert socket_project.id == project.id
       assert %{session_pid: session_pid} = socket.assigns
       assert is_pid(session_pid)
+    end
+  end
+
+  describe "yjs frame authorization" do
+    setup %{project: project, workflow: workflow} do
+      # A genuine read-only member of the project, joined to the same room.
+      viewer = insert(:user)
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      %{viewer_socket: viewer_socket, viewer: viewer}
+    end
+
+    test "drops a viewer's mutating \"yjs\" (sync_update) frame", %{
+      viewer_socket: viewer_socket
+    } do
+      session_pid = viewer_socket.assigns.session_pid
+      original_name = workflow_name(session_pid)
+
+      chunk = build_name_mutation(session_pid, :sync_update, "Mutated By Viewer")
+      push(viewer_socket, "yjs", {:binary, chunk})
+      await_channel_processed(viewer_socket)
+
+      assert workflow_name(session_pid) == original_name
+    end
+
+    test "drops a viewer's mutating \"yjs_sync\" (sync_step2) frame", %{
+      viewer_socket: viewer_socket
+    } do
+      # sync_step2 also carries a document update, so it must be dropped too —
+      # otherwise a viewer could change the document by sending sync_step2
+      # instead of sync_update.
+      session_pid = viewer_socket.assigns.session_pid
+      original_name = workflow_name(session_pid)
+
+      chunk = build_name_mutation(session_pid, :sync_step2, "Mutated By Viewer")
+      push(viewer_socket, "yjs_sync", {:binary, chunk})
+      await_channel_processed(viewer_socket)
+
+      assert workflow_name(session_pid) == original_name
+    end
+
+    test "still serves a viewer's read handshake (sync_step1)", %{
+      viewer_socket: viewer_socket
+    } do
+      # A viewer must be able to load the document for reading, so the sync
+      # handshake is not rejected.
+      session_pid = viewer_socket.assigns.session_pid
+
+      {:ok, step1} = Yex.Sync.get_sync_step1(Yex.Doc.new())
+      chunk = Yex.Sync.message_encode!({:sync, step1})
+
+      ref = push(viewer_socket, "yjs_sync", {:binary, chunk})
+
+      refute_reply ref, :error, _payload, 200
+      assert Process.alive?(session_pid)
+    end
+
+    test "an editor's \"yjs\" (sync_update) frame mutates the shared doc", %{
+      socket: socket
+    } do
+      # Positive control: blocking view-only writes must not break editing for
+      # a user who is allowed to edit the workflow.
+      session_pid = socket.assigns.session_pid
+
+      chunk = build_name_mutation(session_pid, :sync_update, "Edited By Owner")
+      push(socket, "yjs", {:binary, chunk})
+      await_channel_processed(socket)
+
+      assert workflow_name(session_pid) == "Edited By Owner"
     end
   end
 
@@ -253,6 +404,22 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert job_id == job.id
+    end
+
+    test "returns job_not_found for a job in another project (no cross-tenant credential use)",
+         %{socket: socket} do
+      # A job outside the session's workflow must be indistinguishable from a
+      # non-existent one, so its credential is never resolved or used.
+      other_project = insert(:project)
+      other_workflow = insert(:workflow, project: other_project)
+      other_job = insert(:job, workflow: other_workflow)
+
+      ref = push(socket, "request_metadata", %{"job_id" => other_job.id})
+
+      assert_reply ref, :ok, %{
+        job_id: _job_id,
+        metadata: %{error: "job_not_found"}
+      }
     end
   end
 
@@ -431,6 +598,54 @@ defmodule LightningWeb.WorkflowChannelTest do
       # For unsaved workflows, latest_snapshot_lock_version should be nil
       assert %{latest_snapshot_lock_version: nil} = response
     end
+
+    test "returns latest_snapshot_lock_version after the first save of a " <>
+           "from-scratch workflow without a rejoin",
+         %{
+           user: user,
+           project: project
+         } do
+      # Companion to the request_versions regression below: get_context reads
+      # the same workflow_kind assign, so a channel left frozen at :new after
+      # its first save starves the header of the latest version too.
+      workflow_id = Ecto.UUID.generate()
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow_id}",
+          %{"project_id" => project.id, "action" => "new"}
+        )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(workflow_id)
+      end)
+
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "seed_name", fn ->
+        Yex.Map.set(workflow_map, "name", "From Scratch Workflow")
+      end)
+
+      push_to_array(session_pid, "triggers", %{
+        "id" => Ecto.UUID.generate(),
+        "type" => "webhook",
+        "enabled" => true
+      })
+
+      save_ref = push(socket, "save_workflow", %{})
+      assert_reply save_ref, :ok, %{lock_version: lock_version}
+
+      # Same socket, no rejoin: the context must now report the saved version.
+      context_ref = push(socket, "get_context", %{})
+      assert_reply context_ref, :ok, response
+
+      assert %{latest_snapshot_lock_version: ^lock_version} = response
+    end
   end
 
   describe "save_workflow" do
@@ -519,6 +734,42 @@ defmodule LightningWeb.WorkflowChannelTest do
       if reply_type == :error do
         assert response.type in ["optimistic_lock_error", "validation_error"]
       end
+    end
+
+    test "handles a snapshot save failure as a generic internal error", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      # A snapshot is captured with the workflow's post-save lock_version
+      # (optimistic_lock bumps it by 1). Pre-occupying that lock_version with
+      # another snapshot forces the snapshot insert's own
+      # unique_constraint([:workflow_id, :lock_version]) to fail, driving the
+      # save down the {:error, :snapshot_failed} path (workflows.ex,
+      # session.ex, workflow_channel.ex) without any mocking.
+      insert(:snapshot,
+        workflow: workflow,
+        lock_version: workflow.lock_version + 1
+      )
+
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Snapshot Collision")
+      end)
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{base: ["An internal error occurred"]},
+        type: "internal_error"
+      }
+
+      # The workflow itself was not persisted with the attempted change,
+      # since the transaction rolls back entirely on the snapshot failure.
+      refute Lightning.Workflows.get_workflow!(workflow.id).name ==
+               "Snapshot Collision"
     end
 
     test "handles deleted workflow", %{socket: socket, workflow: workflow} do
@@ -646,6 +897,67 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert message =~ "don't have permission to edit"
+    end
+
+    test "a persisted job with a cross-project credential fails the save with a named base error",
+         %{project: project, user: user} do
+      # Own workflow + persisted job, poisoned past validation (legacy data), all
+      # BEFORE the join so the session hydrates the Y.Doc carrying the poison and
+      # the job survives cast_assoc as an unchanged association (see caveat above).
+      workflow = insert(:workflow, project: project)
+      other = insert(:project)
+      pc = insert(:project_credential, project: other)
+
+      job =
+        insert(:job, workflow: workflow, name: "leaky", project_credential: nil)
+
+      job
+      |> Ecto.Changeset.change(project_credential_id: pc.id)
+      |> Repo.update!()
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      # A trivial, valid Y.Doc edit so the save has something to commit.
+      doc = Lightning.Collaboration.Session.get_doc(socket.assigns.session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "t", fn ->
+        Yex.Map.set(workflow_map, "name", "renamed")
+      end)
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{"base" => [msg]},
+        type: "validation_error"
+      }
+
+      assert msg =~ ~s(job "leaky")
+      assert msg =~ "isn't available in this project"
+
+      # Rollback: the workflow name change did not land...
+      assert Lightning.Workflows.get_workflow!(workflow.id).name == workflow.name
+
+      # ...and — critically — the poisoned job was NOT silently deleted. This is
+      # the exact regression this pin exists to catch: a doc missing the job
+      # would make cast_assoc drop it and the save succeed. Assert it still
+      # exists AND still holds the foreign credential (unchanged), proving the
+      # transaction rolled back rather than "fixing" the data by deletion.
+      reloaded = Repo.get(Lightning.Workflows.Job, job.id)
+
+      assert reloaded,
+             "poisoned job must still exist — a passing save silently deleted it"
+
+      assert reloaded.project_credential_id == pc.id
     end
   end
 
@@ -1277,6 +1589,32 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert validated["other_field"] == "value"
     end
 
+    test "returns the workflow's own name unchanged when editing it", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => workflow.name}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == workflow.name
+    end
+
+    test "still suffixes when the name clashes with a different workflow", %{
+      socket: socket
+    } do
+      # "Test Workflow" belongs to a different workflow, so it still suffixes.
+      ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "Test Workflow"}
+        })
+
+      assert_reply ref, :ok, %{workflow: validated}
+      assert validated["name"] == "Test Workflow 1"
+    end
+
     test "sequential numbering skips gaps", %{socket: socket} do
       # Create workflows with gaps: "Gap Test", "Gap Test 1", "Gap Test 3"
       insert(:workflow,
@@ -1695,6 +2033,40 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Verify the specific work order is included
       work_order_ids = Enum.map(history, & &1.id)
       assert old_work_order.id in work_order_ids
+    end
+
+    test "does not surface a work order from another project via a foreign run_id",
+         %{socket: socket, workflow: workflow, project: project} do
+      workflow = with_snapshot(workflow)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      own_dataclip = insert(:dataclip, project: project)
+
+      {:ok, own_work_order} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: own_dataclip,
+          workflow: workflow
+        )
+
+      # A run belonging to a DIFFERENT project the socket has no access to.
+      other_project = insert(:project)
+      other_workflow = insert(:workflow, project: other_project)
+      job = insert(:job, workflow: other_workflow)
+      dataclip = insert(:dataclip, project: other_project)
+      foreign_work_order = insert(:workorder, workflow: other_workflow)
+
+      foreign_run =
+        insert(:run,
+          work_order: foreign_work_order,
+          starting_job: job,
+          dataclip: dataclip
+        )
+
+      ref = push(socket, "request_history", %{"run_id" => foreign_run.id})
+
+      assert_reply ref, :ok, %{history: history}
+      work_order_ids = Enum.map(history, & &1.id)
+      refute foreign_work_order.id in work_order_ids
+      assert own_work_order.id in work_order_ids
     end
   end
 
@@ -2191,6 +2563,34 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert length(broadcasted_methods) == 2
     end
 
+    test "update_trigger_auth_methods broadcasts the trigger's canonical id", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method, project: project, auth_type: :api)
+
+      # A client sending a non-canonical (uppercase) but valid id still matches
+      # the stored row; the broadcast must carry the canonical id so every
+      # collaborator keys the update the same way.
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => String.upcase(trigger.id),
+          "auth_method_ids" => [auth_method.id]
+        })
+
+      assert_reply ref, :ok, %{success: true}
+
+      assert_broadcast "trigger_auth_methods_updated", %{
+        trigger_id: broadcasted_trigger_id
+      }
+
+      assert broadcasted_trigger_id == trigger.id
+    end
+
     test "update_trigger_auth_methods logs debug message", %{
       socket: socket,
       workflow: workflow,
@@ -2300,6 +2700,49 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert reason =~ "permission"
     end
 
+    test "update_trigger_auth_methods rejects an editor (owner/admin only)", %{
+      workflow: workflow,
+      project: project
+    } do
+      # Managing webhook auth requires :write_webhook_auth_method (owner/admin),
+      # not :edit_workflow, so an editor must not be able to strip a webhook's
+      # authentication.
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      {:ok, _, editor_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor.id}", %{current_user: editor})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      ref =
+        push(editor_socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => []
+        })
+
+      assert_reply ref, :error, %{reason: reason}
+      assert reason =~ "permission"
+    end
+
+    test "update_trigger_auth_methods returns an error for a missing trigger", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => Ecto.UUID.generate(),
+          "auth_method_ids" => []
+        })
+
+      assert_reply ref, :error, %{reason: "trigger not found"}
+    end
+
     test "update_trigger_auth_methods rejects trigger from different workflow",
          %{
            socket: socket,
@@ -2322,8 +2765,22 @@ defmodule LightningWeb.WorkflowChannelTest do
           "auth_method_ids" => [auth_method.id]
         })
 
-      assert_reply ref, :error, %{reason: reason}
-      assert reason =~ "does not belong"
+      # Indistinguishable from a non-existent trigger, so the reply doesn't
+      # reveal that this trigger exists in another workflow.
+      assert_reply ref, :error, %{reason: "trigger not found"}
+    end
+
+    test "update_trigger_auth_methods handles a malformed trigger_id", %{
+      socket: socket
+    } do
+      # A non-UUID id must not crash the session; it reads as not found.
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => "not-a-uuid",
+          "auth_method_ids" => []
+        })
+
+      assert_reply ref, :error, %{reason: "trigger not found"}
     end
 
     test "update_trigger_auth_methods filters out non-existent auth method IDs",
@@ -2495,7 +2952,9 @@ defmodule LightningWeb.WorkflowChannelTest do
       user1 = insert(:user)
       user2 = insert(:user)
 
-      insert(:project_user, project: project, user: user1, role: :editor)
+      # user1 needs owner/admin to change webhook auth; user2 (editor) is a
+      # lower-role collaborator that should still receive the broadcast.
+      insert(:project_user, project: project, user: user1, role: :admin)
       insert(:project_user, project: project, user: user2, role: :editor)
 
       # Both join the channel
@@ -3084,6 +3543,62 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert versions == []
     end
 
+    test "returns versions after the first save of a from-scratch workflow " <>
+           "without a rejoin",
+         %{
+           user: user,
+           project: project
+         } do
+      # A from-scratch workflow joins with action="new" (kind :new) and never
+      # rejoins after its first save, so the channel must self-promote out of
+      # :new on save. Before the fix, request_versions on the same socket kept
+      # short-circuiting to [] until a full page refresh.
+      workflow_id = Ecto.UUID.generate()
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow_id}",
+          %{"project_id" => project.id, "action" => "new"}
+        )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(workflow_id)
+      end)
+
+      # Sanity check: the channel starts out believing this is a brand-new
+      # workflow, which is exactly the state that used to wedge request_versions.
+      assert socket.assigns.workflow_kind == :new
+
+      # Seed a minimal, valid, saveable workflow into the Y.Doc: a name plus a
+      # valid webhook trigger.
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "seed_name", fn ->
+        Yex.Map.set(workflow_map, "name", "From Scratch Workflow")
+      end)
+
+      push_to_array(session_pid, "triggers", %{
+        "id" => Ecto.UUID.generate(),
+        "type" => "webhook",
+        "enabled" => true
+      })
+
+      save_ref = push(socket, "save_workflow", %{})
+      assert_reply save_ref, :ok, %{lock_version: lv}
+
+      # Same socket, no rejoin: the first save produces exactly one version,
+      # and it is the latest.
+      versions_ref = push(socket, "request_versions", %{})
+      assert_reply versions_ref, :ok, %{versions: versions}
+
+      assert [%{lock_version: ^lv, is_latest: true}] = versions
+    end
+
     test "does not short-circuit for a version-view socket", %{
       workflow: workflow,
       user: user,
@@ -3218,47 +3733,6 @@ defmodule LightningWeb.WorkflowChannelTest do
                "Middle Template",
                "Zebra Template"
              ]
-    end
-  end
-
-  describe "mark_ai_disclaimer_read" do
-    test "successfully marks AI disclaimer as read", %{
-      socket: socket,
-      user: user
-    } do
-      # Verify user hasn't read the disclaimer yet
-      user = Lightning.Accounts.get_user!(user.id)
-      assert user.preferences["ai_assistant.disclaimer_read_at"] == nil
-
-      ref = push(socket, "mark_ai_disclaimer_read", %{})
-
-      assert_reply ref, :ok, %{success: true}
-
-      # Verify user preferences were updated
-      updated_user = Lightning.Accounts.get_user!(user.id)
-      assert updated_user.preferences["ai_assistant.disclaimer_read_at"] != nil
-    end
-
-    test "is idempotent - can be called multiple times", %{
-      socket: socket,
-      user: user
-    } do
-      # Mark as read the first time
-      ref1 = push(socket, "mark_ai_disclaimer_read", %{})
-      assert_reply ref1, :ok, %{success: true}
-
-      user = Lightning.Accounts.get_user!(user.id)
-      first_read_at = user.preferences["ai_assistant.disclaimer_read_at"]
-      assert first_read_at != nil
-
-      # Mark as read again - should succeed without error
-      ref2 = push(socket, "mark_ai_disclaimer_read", %{})
-      assert_reply ref2, :ok, %{success: true}
-
-      # Timestamp may or may not be updated depending on implementation,
-      # but the call should succeed
-      updated_user = Lightning.Accounts.get_user!(user.id)
-      assert updated_user.preferences["ai_assistant.disclaimer_read_at"] != nil
     end
   end
 
@@ -3496,5 +3970,46 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref3, :ok, %{}
       assert_broadcast "job_code_applied", %{message_id: ^message_id}
     end
+  end
+
+  defp workflow_name(session_pid) do
+    Yex.Map.fetch!(
+      Yex.Doc.get_map(
+        Lightning.Collaboration.Session.get_doc(session_pid),
+        "workflow"
+      ),
+      "name"
+    )
+  end
+
+  defp build_name_mutation(session_pid, type, new_name) do
+    shared_doc = Lightning.Collaboration.Session.get_doc(session_pid)
+    {:ok, state_vector} = Yex.encode_state_vector(shared_doc)
+    full_state = Yex.encode_state_as_update!(shared_doc)
+
+    client_doc = Yex.Doc.new()
+    Yex.apply_update(client_doc, full_state)
+    client_map = Yex.Doc.get_map(client_doc, "workflow")
+
+    Yex.Doc.transaction(client_doc, "mutation", fn ->
+      Yex.Map.set(client_map, "name", new_name)
+    end)
+
+    {:ok, sync_message} =
+      case type do
+        :sync_update ->
+          Yex.Sync.get_update(
+            Yex.encode_state_as_update!(client_doc, state_vector)
+          )
+
+        :sync_step2 ->
+          Yex.Sync.get_sync_step2(client_doc, state_vector)
+      end
+
+    Yex.Sync.message_encode!({:sync, sync_message})
+  end
+
+  defp await_channel_processed(socket) do
+    :sys.get_state(socket.channel_pid)
   end
 end
