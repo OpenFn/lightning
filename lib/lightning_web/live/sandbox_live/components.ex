@@ -257,9 +257,6 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :selected_credential_ids, :any, default: %MapSet{}
   attr :collections_to_add, :list, default: []
   attr :selected_collection_names, :any, default: %MapSet{}
-  attr :collections_to_delete, :list, default: []
-  attr :selected_collection_delete_ids, :any, default: %MapSet{}
-  attr :can_delete_collections, :boolean, default: false
 
   def merge_modal(assigns) do
     assigns =
@@ -285,13 +282,6 @@ defmodule LightningWeb.SandboxLive.Components do
         merge_select_all_state(
           assigns.selected_collection_names,
           assigns.collections_to_add
-        )
-      )
-      |> assign(
-        :collections_delete_select_all_state,
-        merge_select_all_state(
-          assigns.selected_collection_delete_ids,
-          assigns.collections_to_delete
         )
       )
 
@@ -523,111 +513,6 @@ defmodule LightningWeb.SandboxLive.Components do
             </ul>
           </div>
 
-          <div
-            :if={@collections_to_delete != [] and @can_delete_collections}
-            id="merge-collections-to-delete"
-            class="border border-gray-200 rounded-lg overflow-hidden bg-white"
-          >
-            <label class={[
-              "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
-              @collections_delete_select_all_state == :empty && "cursor-default",
-              @collections_delete_select_all_state != :empty && "cursor-pointer"
-            ]}>
-              <input
-                type="checkbox"
-                id="merge-select-all-collections-to-delete"
-                phx-hook="CheckboxIndeterminate"
-                phx-click="toggle-all-collections-to-delete"
-                disabled={@collections_delete_select_all_state == :empty}
-                checked={@collections_delete_select_all_state == :all}
-                class={[
-                  "h-4 w-4 rounded border-gray-300 text-red-600",
-                  @collections_delete_select_all_state == :partial &&
-                    "indeterminate"
-                ]}
-              />
-              <span class="flex-1 text-sm font-medium text-red-700">
-                Collections to delete from {get_selected_target_label(
-                  @target_options,
-                  @merge_form[:target_id].value
-                )}
-              </span>
-              <span class="text-xs text-gray-500">
-                {MapSet.size(@selected_collection_delete_ids)} of {length(
-                  @collections_to_delete
-                )} selected
-              </span>
-            </label>
-            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-              <li
-                :for={collection <- @collections_to_delete}
-                class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                phx-click="toggle-collection-to-delete"
-                phx-value-id={collection.id}
-              >
-                <input
-                  type="checkbox"
-                  class="h-4 w-4 rounded border-gray-300 text-red-600"
-                  checked={
-                    MapSet.member?(@selected_collection_delete_ids, collection.id)
-                  }
-                  readonly
-                />
-                <span class="flex-1 text-sm text-gray-700 truncate">
-                  {collection.name}
-                </span>
-                <span class="text-xs text-gray-500 whitespace-nowrap">
-                  {items_label(collection.item_count)}, {format_size(
-                    collection.byte_size
-                  )}
-                </span>
-              </li>
-            </ul>
-            <p class="px-3 py-2 text-xs text-red-700 bg-gray-50 border-t border-gray-200">
-              Selected collections and their items are permanently deleted.
-            </p>
-          </div>
-
-          <div
-            :if={@collections_to_delete != [] and not @can_delete_collections}
-            id="merge-collections-target-only"
-            class="border border-gray-200 rounded-lg overflow-hidden bg-white"
-          >
-            <div class="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
-              <span class="flex-1 text-sm font-medium text-gray-900">
-                Collections only in {get_selected_target_label(
-                  @target_options,
-                  @merge_form[:target_id].value
-                )}
-              </span>
-            </div>
-            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-              <li
-                :for={collection <- @collections_to_delete}
-                class="flex items-center gap-3 px-3 py-2"
-              >
-                <span class="flex-1 text-sm text-gray-700 truncate">
-                  {collection.name}
-                </span>
-                <span class="text-xs text-gray-500 whitespace-nowrap">
-                  {items_label(collection.item_count)}, {format_size(
-                    collection.byte_size
-                  )}
-                </span>
-              </li>
-            </ul>
-            <p class="px-3 py-2 text-sm text-gray-700 bg-gray-50 border-t border-gray-200">
-              Collections that only exist in
-              <strong class="font-medium text-gray-900">
-                {get_selected_target_label(
-                  @target_options,
-                  @merge_form[:target_id].value
-                )}
-              </strong>
-              are always kept.
-            </p>
-          </div>
-
           <Common.alert
             id="merge-deletion-warning"
             type="warning"
@@ -668,16 +553,6 @@ defmodule LightningWeb.SandboxLive.Components do
     </.modal>
     """
   end
-
-  defp items_label(1), do: "1 item"
-  defp items_label(count), do: "#{count} items"
-
-  defp format_size(bytes) when bytes < 1024, do: "#{bytes} B"
-
-  defp format_size(bytes) when bytes < 1_048_576,
-    do: "#{Float.round(bytes / 1024, 1)} KB"
-
-  defp format_size(bytes), do: "#{Float.round(bytes / 1_048_576, 1)} MB"
 
   defp merge_select_all_state(_selected, []), do: :empty
 

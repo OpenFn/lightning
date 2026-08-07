@@ -36,11 +36,11 @@ and this project adheres to
 
 ### Fixed
 
-- Merging a sandbox no longer deletes the parent project's collections by
-  default. The merge screen now lists the collections a merge would add and the
-  ones that exist only in the target, each individually selectable like
-  workflows and credentials; deleting target-only collections requires owner or
-  admin rights on the target and nothing is deleted unless selected.
+- Merging a sandbox no longer deletes the parent project's collections, ever.
+  Collections that exist only in the sandbox are created empty in the target and
+  are individually selectable in the merge screen, like workflows and
+  credentials; collections that exist only in the target are always kept.
+  Deleting a collection remains available in the project's settings.
   [#5054](https://github.com/OpenFn/lightning/pull/5054)
 
 - `APOLLO_TIMEOUT` now governs every request to Apollo, including the streaming

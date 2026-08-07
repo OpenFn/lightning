@@ -5,22 +5,6 @@ defmodule Lightning.CollectionsTest do
   alias Lightning.Collections.Collection
   alias Lightning.Collections.Item
 
-  describe "item_counts/1" do
-    test "returns counts per collection, omitting collections without items" do
-      with_items =
-        insert(:collection,
-          items: [%{key: "k1", value: "v1"}, %{key: "k2", value: "v2"}]
-        )
-
-      empty = insert(:collection)
-
-      assert Collections.item_counts([with_items.id, empty.id]) ==
-               %{with_items.id => 2}
-
-      assert Collections.item_counts([]) == %{}
-    end
-  end
-
   describe "get_collection/1" do
     test "get a collection" do
       %{id: collection_id, name: collection_name} = insert(:collection)

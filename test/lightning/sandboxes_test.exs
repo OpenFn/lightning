@@ -624,8 +624,7 @@ defmodule Lightning.Projects.SandboxesTest do
       insert(:collection, project: source, name: "only-in-source")
       insert(:collection, project: target, name: "shared")
 
-      assert {:ok, %{created: 1, deleted: 0}} =
-               Sandboxes.sync_collections(source, target)
+      assert {:ok, %{created: 1}} = Sandboxes.sync_collections(source, target)
 
       target_names =
         target
@@ -636,51 +635,6 @@ defmodule Lightning.Projects.SandboxesTest do
       assert target_names == ["only-in-source", "shared"]
     end
 
-    test "deletes collections in target that are missing from source, including items" do
-      source = insert(:project)
-      target = insert(:project)
-
-      insert(:collection, project: source, name: "shared")
-      insert(:collection, project: target, name: "shared")
-
-      dropped =
-        insert(:collection,
-          project: target,
-          name: "only-in-target",
-          items: [%{key: "k", value: "v"}]
-        )
-
-      assert {:ok, %{created: 0, deleted: 1}} =
-               Sandboxes.sync_collections(source, target, allow_deletions: true)
-
-      refute Lightning.Repo.get(Lightning.Collections.Collection, dropped.id)
-
-      assert Lightning.Repo.all(
-               from i in Lightning.Collections.Item,
-                 where: i.collection_id == ^dropped.id
-             ) == []
-    end
-
-    test "restricts deletions to the approved ids when given" do
-      source = insert(:project)
-      target = insert(:project)
-
-      insert(:collection, project: source, name: "shared")
-      insert(:collection, project: target, name: "shared")
-
-      approved = insert(:collection, project: target, name: "approved")
-      kept = insert(:collection, project: target, name: "not-approved")
-
-      assert {:ok, %{created: 0, deleted: 1}} =
-               Sandboxes.sync_collections(source, target,
-                 allow_deletions: true,
-                 approved_ids: [approved.id]
-               )
-
-      refute Lightning.Repo.get(Lightning.Collections.Collection, approved.id)
-      assert Lightning.Repo.get(Lightning.Collections.Collection, kept.id)
-    end
-
     test "restricts creations to the approved names when given" do
       source = insert(:project)
       target = insert(:project)
@@ -688,7 +642,7 @@ defmodule Lightning.Projects.SandboxesTest do
       insert(:collection, project: source, name: "wanted")
       insert(:collection, project: source, name: "unwanted")
 
-      assert {:ok, %{created: 1, deleted: 0}} =
+      assert {:ok, %{created: 1}} =
                Sandboxes.sync_collections(source, target,
                  approved_names: ["wanted"]
                )
@@ -709,39 +663,7 @@ defmodule Lightning.Projects.SandboxesTest do
       insert(:collection, project: source, name: "a")
       insert(:collection, project: target, name: "a")
 
-      assert {:ok, %{created: 0, deleted: 0}} =
-               Sandboxes.sync_collections(source, target)
-    end
-
-    test "fires the collection-delete hook with the combined byte size" do
-      Mox.verify_on_exit!()
-
-      source = insert(:project)
-      %{id: target_id} = target = insert(:project)
-
-      insert(:collection, project: source, name: "keep")
-      insert(:collection, project: target, name: "keep")
-
-      insert(:collection,
-        project: target,
-        name: "drop-a",
-        byte_size_sum: 120
-      )
-
-      insert(:collection,
-        project: target,
-        name: "drop-b",
-        byte_size_sum: 45
-      )
-
-      Mox.expect(
-        Lightning.Extensions.MockCollectionHook,
-        :handle_delete,
-        fn ^target_id, 165 -> :ok end
-      )
-
-      assert {:ok, %{created: 0, deleted: 2}} =
-               Sandboxes.sync_collections(source, target, allow_deletions: true)
+      assert {:ok, %{created: 0}} = Sandboxes.sync_collections(source, target)
     end
 
     test "does not copy collection data across" do
@@ -754,8 +676,7 @@ defmodule Lightning.Projects.SandboxesTest do
         items: [%{key: "k", value: "v"}]
       )
 
-      assert {:ok, %{created: 1, deleted: 0}} =
-               Sandboxes.sync_collections(source, target)
+      assert {:ok, %{created: 1}} = Sandboxes.sync_collections(source, target)
 
       [new_collection] = Lightning.Collections.list_project_collections(target)
 
@@ -771,32 +692,24 @@ defmodule Lightning.Projects.SandboxesTest do
       target = insert(:project)
 
       insert(:collection, project: source, name: "to-create")
-      insert(:collection, project: target, name: "to-delete")
 
       result =
         Lightning.Repo.transaction(fn ->
-          {:ok, _summary} =
-            Sandboxes.sync_collections(source, target, allow_deletions: true)
+          {:ok, _summary} = Sandboxes.sync_collections(source, target)
 
           Lightning.Repo.rollback(:simulated_failure)
         end)
 
       assert result == {:error, :simulated_failure}
 
-      target_names =
-        target
-        |> Lightning.Collections.list_project_collections()
-        |> Enum.map(& &1.name)
-
-      assert target_names == ["to-delete"]
+      assert Lightning.Collections.list_project_collections(target) == []
     end
 
-    test "leaves target-only collections intact by default (fail-safe)" do
+    test "never deletes target-only collections" do
       source = insert(:project)
       target = insert(:project)
 
-      insert(:collection, project: source, name: "shared")
-      insert(:collection, project: target, name: "shared")
+      insert(:collection, project: source, name: "new-in-source")
 
       kept =
         insert(:collection,
@@ -805,8 +718,7 @@ defmodule Lightning.Projects.SandboxesTest do
           items: [%{key: "k", value: "v"}]
         )
 
-      assert {:ok, %{created: 0, deleted: 0}} =
-               Sandboxes.sync_collections(source, target)
+      assert {:ok, %{created: 1}} = Sandboxes.sync_collections(source, target)
 
       assert Lightning.Repo.get(Lightning.Collections.Collection, kept.id)
 
@@ -814,22 +726,6 @@ defmodule Lightning.Projects.SandboxesTest do
                from i in Lightning.Collections.Item,
                  where: i.collection_id == ^kept.id
              ) != []
-    end
-
-    test "creates source-only collections but leaves target-only intact when :allow_deletions is false" do
-      source = insert(:project)
-      target = insert(:project)
-
-      insert(:collection, project: source, name: "new-in-source")
-
-      insert(:collection,
-        project: target,
-        name: "keep-me",
-        items: [%{key: "k", value: "v"}]
-      )
-
-      assert {:ok, %{created: 1, deleted: 0}} =
-               Sandboxes.sync_collections(source, target, allow_deletions: false)
 
       target_names =
         target
@@ -837,18 +733,22 @@ defmodule Lightning.Projects.SandboxesTest do
         |> Enum.map(& &1.name)
 
       assert "new-in-source" in target_names
-      assert "keep-me" in target_names
+      assert "only-in-target" in target_names
     end
   end
 
-  defp merge_target_only_collection(actor_role, approve? \\ false) do
+  # Merges a sandbox into a parent that has a collection the sandbox lacks,
+  # and returns the parent's collection names afterwards. `opts_fun` builds
+  # the merge opts from the target-only collection, so tests can craft
+  # deletion-shaped options and prove they are ignored.
+  defp merge_target_only_collection(actor_role, opts_fun \\ fn _ -> %{} end) do
     actor = insert(:user)
     parent = insert(:project)
     ensure_member!(parent, actor, actor_role)
 
     insert(:simple_workflow, project: parent)
 
-    # Exists only on the target, so a merge could delete it.
+    # Exists only on the target; a merge must never delete it.
     collection =
       insert(:collection,
         project: parent,
@@ -864,9 +764,8 @@ defmodule Lightning.Projects.SandboxesTest do
 
     insert(:simple_workflow, project: sandbox)
 
-    opts = if approve?, do: %{delete_collections: [collection.id]}, else: %{}
-
-    assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor, opts)
+    assert {:ok, _updated} =
+             Sandboxes.merge(sandbox, parent, actor, opts_fun.(collection))
 
     parent
     |> Lightning.Collections.list_project_collections()
@@ -954,50 +853,25 @@ defmodule Lightning.Projects.SandboxesTest do
       refute Repo.exists?(from p in Project, where: p.name == ^marker_name)
     end
 
-    test "collection deletion during merge requires an explicit opt-in" do
-      # Without the opt-in even an owner merge keeps target-only collections.
+    test "a merge never deletes target-only collections, whatever the role" do
       assert "target-only" in merge_target_only_collection(:owner)
-
-      # Listing the collection's id deletes it on an owner merge.
-      refute "target-only" in merge_target_only_collection(:owner, true)
+      assert "target-only" in merge_target_only_collection(:admin)
+      assert "target-only" in merge_target_only_collection(:editor)
     end
 
-    test "collection deletion opt-in is still gated on owner/admin" do
-      # An editor merge must not prune target-only collections even when the
-      # caller listed them.
-      assert "target-only" in merge_target_only_collection(:editor, true)
-    end
-
-    test "merge deletes only the collections the caller listed" do
-      actor = insert(:user)
-      parent = insert(:project)
-      ensure_member!(parent, actor, :owner)
-
-      insert(:simple_workflow, project: parent)
-
-      listed = insert(:collection, project: parent, name: "listed")
-      insert(:collection, project: parent, name: "not-listed")
-
-      sandbox =
-        insert(:project,
-          parent: parent,
-          project_users: [%{user: actor, role: :owner}]
-        )
-
-      insert(:simple_workflow, project: sandbox)
-
-      assert {:ok, _updated} =
-               Sandboxes.merge(sandbox, parent, actor, %{
-                 delete_collections: [listed.id]
-               })
-
-      parent_names =
-        parent
-        |> Lightning.Collections.list_project_collections()
-        |> Enum.map(& &1.name)
-
-      refute "listed" in parent_names
-      assert "not-listed" in parent_names
+    test "deletion-shaped merge options passed by a caller are ignored" do
+      # A stale or crafted caller might still send the old deletion options;
+      # the merge must keep the collection regardless, even for an owner.
+      assert "target-only" in merge_target_only_collection(
+               :owner,
+               fn collection ->
+                 %{
+                   delete_collections: [collection.id],
+                   allow_deletions: true,
+                   approved_ids: [collection.id]
+                 }
+               end
+             )
     end
 
     test "merge creates only the collections the caller listed" do
@@ -1034,7 +908,7 @@ defmodule Lightning.Projects.SandboxesTest do
   end
 
   describe "preview_collections/2" do
-    test "reports source-only names to create and target-only collections to delete" do
+    test "reports source-only names to create, ignoring target-only collections" do
       source = insert(:project)
       target = insert(:project)
 
@@ -1049,11 +923,10 @@ defmodule Lightning.Projects.SandboxesTest do
           items: [%{key: "k", value: "v"}]
         )
 
-      assert %{to_create: ["only-in-source"], to_delete: [collection]} =
+      # Target-only collections are not part of a merge, so the preview has
+      # nothing to say about them.
+      assert %{to_create: ["only-in-source"]} =
                Sandboxes.preview_collections(source, target)
-
-      assert collection.id == target_only.id
-      assert collection.name == "only-in-target"
 
       # Previewing changes nothing.
       assert Lightning.Repo.get(
@@ -1062,18 +935,17 @@ defmodule Lightning.Projects.SandboxesTest do
              )
     end
 
-    test "returns empty lists when both projects hold the same collections" do
+    test "returns an empty list when both projects hold the same collections" do
       source = insert(:project)
       target = insert(:project)
 
       insert(:collection, project: source, name: "same")
       insert(:collection, project: target, name: "same")
 
-      assert %{to_create: [], to_delete: []} =
-               Sandboxes.preview_collections(source, target)
+      assert %{to_create: []} = Sandboxes.preview_collections(source, target)
     end
 
-    test "matches what sync_collections does with deletions allowed" do
+    test "matches what sync_collections creates" do
       source = insert(:project)
       target = insert(:project)
 
@@ -1081,11 +953,10 @@ defmodule Lightning.Projects.SandboxesTest do
       insert(:collection, project: source, name: "new-b")
       insert(:collection, project: target, name: "old-a")
 
-      assert %{to_create: ["new-a", "new-b"], to_delete: [%{name: "old-a"}]} =
+      assert %{to_create: ["new-a", "new-b"]} =
                Sandboxes.preview_collections(source, target)
 
-      assert {:ok, %{created: 2, deleted: 1}} =
-               Sandboxes.sync_collections(source, target, allow_deletions: true)
+      assert {:ok, %{created: 2}} = Sandboxes.sync_collections(source, target)
     end
   end
 

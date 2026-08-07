@@ -2,7 +2,6 @@ defmodule LightningWeb.SandboxLive.Index do
   use LightningWeb, :live_view
 
   alias Ecto.Changeset
-  alias Lightning.Collections
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.MergeProjects
@@ -463,51 +462,6 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   @impl true
-  def handle_event("toggle-collection-to-delete", %{"id" => id}, socket) do
-    in_list? =
-      Enum.any?(socket.assigns.merge_collections_to_delete, &(&1.id == id))
-
-    if socket.assigns.merge_can_delete_collections and in_list? do
-      selected = socket.assigns.merge_selected_collection_delete_ids
-
-      new_selected =
-        if MapSet.member?(selected, id) do
-          MapSet.delete(selected, id)
-        else
-          MapSet.put(selected, id)
-        end
-
-      {:noreply,
-       assign(socket, :merge_selected_collection_delete_ids, new_selected)}
-    else
-      {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_event("toggle-all-collections-to-delete", _params, socket) do
-    if socket.assigns.merge_can_delete_collections do
-      all_ids =
-        MapSet.new(socket.assigns.merge_collections_to_delete, & &1.id)
-
-      new_selected =
-        if MapSet.equal?(
-             socket.assigns.merge_selected_collection_delete_ids,
-             all_ids
-           ) do
-          MapSet.new()
-        else
-          all_ids
-        end
-
-      {:noreply,
-       assign(socket, :merge_selected_collection_delete_ids, new_selected)}
-    else
-      {:noreply, socket}
-    end
-  end
-
-  @impl true
   def handle_event(
         "confirm-merge",
         %{"merge" => %{"target_id" => target_id}},
@@ -663,9 +617,6 @@ defmodule LightningWeb.SandboxLive.Index do
           selected_credential_ids={@merge_selected_credential_ids}
           collections_to_add={@merge_collections_to_add}
           selected_collection_names={@merge_selected_collection_names}
-          collections_to_delete={@merge_collections_to_delete}
-          selected_collection_delete_ids={@merge_selected_collection_delete_ids}
-          can_delete_collections={@merge_can_delete_collections}
         />
 
         <.live_component
@@ -808,46 +759,16 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:merge_collections_target_id, nil)
     |> assign(:merge_collections_to_add, [])
     |> assign(:merge_selected_collection_names, MapSet.new())
-    |> assign(:merge_collections_to_delete, [])
-    |> assign(:merge_selected_collection_delete_ids, MapSet.new())
-    |> assign(:merge_can_delete_collections, false)
   end
 
   defp assign_merge_collections(socket, sandbox, target_project) do
-    %{to_create: to_create, to_delete: to_delete} =
+    %{to_create: to_create} =
       Sandboxes.preview_collections(sandbox, target_project)
-
-    can_delete? =
-      Permissions.can?(
-        :collections,
-        :manage_collection,
-        socket.assigns.current_user,
-        target_project
-      )
 
     socket
     |> assign(:merge_collections_target_id, target_project.id)
     |> assign(:merge_collections_to_add, to_create)
     |> assign(:merge_selected_collection_names, MapSet.new(to_create))
-    |> assign(:merge_collections_to_delete, deletable_collection_rows(to_delete))
-    |> assign(:merge_selected_collection_delete_ids, MapSet.new())
-    |> assign(:merge_can_delete_collections, can_delete?)
-  end
-
-  # Target-only collections carry item/size metadata so the user can weigh
-  # what deleting them would remove. One grouped count query, no per-row
-  # lookups.
-  defp deletable_collection_rows(to_delete) do
-    item_counts = Collections.item_counts(Enum.map(to_delete, & &1.id))
-
-    Enum.map(to_delete, fn collection ->
-      %{
-        id: collection.id,
-        name: collection.name,
-        item_count: Map.get(item_counts, collection.id, 0),
-        byte_size: collection.byte_size_sum
-      }
-    end)
   end
 
   # The change event fires for every input in the merge form (toggling any
@@ -1166,24 +1087,14 @@ defmodule LightningWeb.SandboxLive.Index do
   end
 
   # Collection choices are only honored for the target they were previewed
-  # against, and the delete half re-checks the permission for the submitted
-  # target at confirm time. For any other target the merge falls back to its
-  # safe defaults: create every source-only collection, delete nothing. The
-  # names/ids passed along are the ones the user saw in the modal; the merge
-  # itself re-derives the diff, so only previewed collections that still
-  # qualify are created or deleted.
-  defp approved_collection_changes(assigns, target, actor) do
+  # against. For any other target the merge falls back to its default:
+  # create every source-only collection. There is nothing destructive to
+  # gate - a merge never deletes collections.
+  defp approved_collection_changes(assigns, target, _actor) do
     if assigns.merge_collections_target_id == target.id do
-      delete_ids =
-        if Permissions.can?(:collections, :manage_collection, actor, target) do
-          MapSet.to_list(assigns.merge_selected_collection_delete_ids)
-        else
-          []
-        end
-
-      {MapSet.to_list(assigns.merge_selected_collection_names), delete_ids}
+      MapSet.to_list(assigns.merge_selected_collection_names)
     else
-      {nil, []}
+      nil
     end
   end
 
@@ -1193,15 +1104,14 @@ defmodule LightningWeb.SandboxLive.Index do
          actor,
          {selected_workflow_ids, deleted_target_workflow_ids},
          selected_credential_ids,
-         {collection_names_to_create, collection_ids_to_delete}
+         collection_names_to_create
        ) do
     maybe_commit_to_github(target, "pre-merge commit")
 
     opts = %{
       selected_workflow_ids: selected_workflow_ids,
       deleted_target_workflow_ids: deleted_target_workflow_ids,
-      selected_credential_ids: selected_credential_ids,
-      delete_collections: collection_ids_to_delete
+      selected_credential_ids: selected_credential_ids
     }
 
     opts =
