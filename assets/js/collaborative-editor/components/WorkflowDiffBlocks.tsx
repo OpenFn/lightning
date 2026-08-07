@@ -181,7 +181,7 @@ const DiffHunks = ({ step }: { step: StepChange }) => (
   </div>
 );
 
-const StepDiffBlock = ({ step }: { step: StepChange }) => {
+export const StepDiffBlock = ({ step }: { step: StepChange }) => {
   const totalDiffLines = step.hunks.reduce(
     (total, hunk) => total + hunk.lines.length,
     0
@@ -218,7 +218,7 @@ const structureLabel: Record<StructuralChange['kind'], string> = {
   rename: 'Rename',
 };
 
-const StructureBlock = ({ rows }: { rows: StructuralChange[] }) => (
+export const StructureBlock = ({ rows }: { rows: StructuralChange[] }) => (
   <DiffBlockShell
     title="Structure"
     summary={pluralize(rows.length, 'change')}
@@ -255,6 +255,30 @@ const StructureBlock = ({ rows }: { rows: StructuralChange[] }) => (
 );
 
 /**
+ * Presentational tail block: a list of step diffs plus the Structure block.
+ * Used both for whole change sets (legacy flat messages) and for the
+ * leftovers of an interleaved timeline (steps no status segment claimed).
+ */
+export const WorkflowChangeBlocks = ({
+  steps,
+  structure,
+}: {
+  steps: StepChange[];
+  structure: StructuralChange[];
+}) => {
+  if (steps.length === 0 && structure.length === 0) return null;
+
+  return (
+    <div className="space-y-2" data-testid="workflow-diff-blocks">
+      {steps.map((step, index) => (
+        <StepDiffBlock key={`${step.type}-${step.name}-${index}`} step={step} />
+      ))}
+      {structure.length > 0 && <StructureBlock rows={structure} />}
+    </div>
+  );
+};
+
+/**
  * Renders the change set between the workflow as it was when the user sent
  * their message (`beforeYaml`, null → empty workflow) and the workflow the
  * assistant returned (`afterYaml`). Renders nothing when nothing changed or
@@ -276,13 +300,6 @@ export function WorkflowDiffBlocks({
   if (!changes) return null;
 
   return (
-    <div className="space-y-2" data-testid="workflow-diff-blocks">
-      {changes.steps.map((step, index) => (
-        <StepDiffBlock key={`${step.type}-${step.name}-${index}`} step={step} />
-      ))}
-      {changes.structure.length > 0 && (
-        <StructureBlock rows={changes.structure} />
-      )}
-    </div>
+    <WorkflowChangeBlocks steps={changes.steps} structure={changes.structure} />
   );
 }

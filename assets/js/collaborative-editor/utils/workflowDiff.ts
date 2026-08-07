@@ -372,3 +372,57 @@ export const deriveWorkflowChanges = (
 
   return { steps, structure };
 };
+
+/**
+ * Statuses that announce writing/editing a step, e.g.
+ * `Wrote code for "Transform data", "Http"` or `Added step send-to-gmail`.
+ * Deliberately excludes read-only statuses ("Read code for...",
+ * "Reviewing...", "Checking...") so they never attract a diff block.
+ * Bare "add"/"remove" are not matched (a step *named* "Add contact" quoted
+ * inside a read status must not read as a write verb) — only inflected
+ * forms Apollo actually emits.
+ */
+const WRITE_STATUS_PATTERN =
+  /\b(wrote|writ\w*|edit\w*|updat\w*|add(?:ed|ing|s)|remov(?:ed|ing|es)|creat\w*|renam\w*)\b/i;
+
+export interface StepDiffAssignment {
+  /**
+   * Timeline segment index → step diffs to render immediately after that
+   * status row. Only write/edit statuses that mention a changed step's
+   * name attract its block; each block is assigned once (first match wins).
+   */
+  byStatusIndex: Map<number, StepChange[]>;
+  /** Steps no status segment claimed — rendered at the end of the message */
+  unmatched: StepChange[];
+}
+
+/**
+ * Distributes derived step diffs across a message's status segments so each
+ * diff renders right after the status that announced writing that step
+ * (Claude-Code style). Matching is case-insensitive substring on the step
+ * name, which tolerates quotes and punctuation around the name.
+ */
+export const assignStepDiffsToStatuses = (
+  steps: StepChange[],
+  segments: Array<{ type: string; content: string }>
+): StepDiffAssignment => {
+  const byStatusIndex = new Map<number, StepChange[]>();
+  const remaining = new Set(steps);
+
+  segments.forEach((segment, index) => {
+    if (segment.type !== 'status') return;
+    if (remaining.size === 0) return;
+    if (!WRITE_STATUS_PATTERN.test(segment.content)) return;
+
+    const content = segment.content.toLowerCase();
+    const matched = [...remaining].filter(step =>
+      content.includes(step.name.toLowerCase())
+    );
+    if (matched.length > 0) {
+      byStatusIndex.set(index, matched);
+      matched.forEach(step => remaining.delete(step));
+    }
+  });
+
+  return { byStatusIndex, unmatched: steps.filter(s => remaining.has(s)) };
+};

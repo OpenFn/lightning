@@ -9,7 +9,13 @@
 // Disabled because we reference navigator.clipboard.writeText in expect() calls
 // which TypeScript sees as an unbound method. This is safe in tests where we're
 // checking if the mocked method was called, not actually calling it.
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -842,7 +848,7 @@ describe('MessageList', () => {
   });
 
   describe('Global Messages (from_global)', () => {
-    it('renders global message as Generated Workflow with Apply and no Preview on canvas', async () => {
+    it('renders global message with a compact action row (Apply/Copy, no YAML panel)', async () => {
       const onApplyWorkflow = vi.fn();
       const onApplyJobCode = vi.fn();
       const messages = [
@@ -863,11 +869,18 @@ describe('MessageList', () => {
         />
       );
 
-      // No job_id -> existing "Generated Workflow" branch, workflow apply
-      expect(screen.getByText('Generated Workflow')).toBeInTheDocument();
+      // The diff blocks say what changed, so no raw YAML panel for global
+      expect(screen.queryByText('Generated Workflow')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('expand-code-button')
+      ).not.toBeInTheDocument();
       expect(screen.queryByText('Preview')).not.toBeInTheDocument();
 
-      await userEvent.click(screen.getByText('Apply'));
+      // The action row keeps Apply (recovery path) and Copy reachable
+      const actions = screen.getByTestId('global-workflow-actions');
+      expect(within(actions).getByText('Copy')).toBeInTheDocument();
+
+      await userEvent.click(within(actions).getByText('Apply'));
       expect(onApplyWorkflow).toHaveBeenCalledWith(
         'name: Test\njobs: {}',
         'msg-global'
@@ -895,9 +908,6 @@ describe('MessageList', () => {
           canPreviewGlobalStep
         />
       );
-
-      // Label stays "Generated Workflow" — it is one
-      expect(screen.getByText('Generated Workflow')).toBeInTheDocument();
 
       await userEvent.click(screen.getByText('Preview'));
       expect(onPreviewGlobalStep).toHaveBeenCalledWith(
@@ -973,6 +983,44 @@ describe('MessageList', () => {
         '    source_trigger: webhook',
         '    target_job: transform-data',
         '    condition_type: always',
+        '    enabled: true',
+      ].join('\n') + '\n';
+
+    /** Two-step workflow: webhook -> Transform data -> Send to Gmail */
+    const twoStepYaml = (transformBody: string, gmailBody: string) =>
+      [
+        'id: wf-1',
+        'name: Test Workflow',
+        'jobs:',
+        '  transform-data:',
+        '    id: job-1',
+        '    name: Transform data',
+        "    adaptor: '@openfn/language-common@latest'",
+        '    body: |',
+        `      ${transformBody}`,
+        '  send-to-gmail:',
+        '    id: job-2',
+        '    name: Send to Gmail',
+        "    adaptor: '@openfn/language-gmail@latest'",
+        '    body: |',
+        `      ${gmailBody}`,
+        'triggers:',
+        '  webhook:',
+        '    id: trigger-1',
+        '    type: webhook',
+        '    enabled: true',
+        'edges:',
+        '  webhook->transform-data:',
+        '    id: edge-1',
+        '    source_trigger: webhook',
+        '    target_job: transform-data',
+        '    condition_type: always',
+        '    enabled: true',
+        '  transform-data->send-to-gmail:',
+        '    id: edge-2',
+        '    source_job: transform-data',
+        '    target_job: send-to-gmail',
+        '    condition_type: on_job_success',
         '    enabled: true',
       ].join('\n') + '\n';
 
@@ -1150,6 +1198,141 @@ describe('MessageList', () => {
       expect(screen.getByTestId('diff-line-added')).toHaveTextContent(
         'fn(state => state);'
       );
+    });
+
+    describe('interleaved with response segments', () => {
+      it('renders both mentioned step diffs right after the write status row, not at the end', () => {
+        const messages = [
+          createMockAIMessage({
+            id: 'msg-user',
+            role: 'user',
+            content: 'Update both steps',
+            code: twoStepYaml('fn(state => state);', 'sendEmail();'),
+          }),
+          createMockAIMessage({
+            id: 'msg-global',
+            role: 'assistant',
+            content: 'All done.',
+            code: twoStepYaml('fn(state => state.data);', 'sendEmail(body);'),
+            from_global: true,
+            response_segments: [
+              { type: 'text', content: 'Let me update those steps.' },
+              {
+                type: 'status',
+                content: 'Wrote code for "Transform data", "Send to Gmail"',
+              },
+              { type: 'text', content: 'All done.' },
+            ],
+          }),
+        ];
+
+        render(<MessageList messages={messages} />);
+
+        // Both diffs live in the inline container after the status row
+        const inline = screen.getByTestId('status-step-diffs');
+        const headers = within(inline).getAllByTestId('diff-block-header');
+        expect(headers).toHaveLength(2);
+        expect(headers[0]).toHaveTextContent('Update(Transform data)');
+        expect(headers[1]).toHaveTextContent('Update(Send to Gmail)');
+
+        // ...immediately after the status row that announced the writes
+        const statusRow = screen.getByTestId('settled-status');
+        expect(statusRow.nextElementSibling).toBe(inline);
+
+        // Nothing left over for the end of the message
+        expect(
+          screen.queryByTestId('workflow-diff-blocks')
+        ).not.toBeInTheDocument();
+      });
+
+      it('does not attach diffs to read-only statuses like "Read code for X"', () => {
+        const messages = [
+          createMockAIMessage({
+            id: 'msg-user',
+            role: 'user',
+            content: 'Update the transform',
+            code: twoStepYaml('fn(state => state);', 'sendEmail();'),
+          }),
+          createMockAIMessage({
+            id: 'msg-global',
+            role: 'assistant',
+            content: 'Done.',
+            code: twoStepYaml('fn(state => state.data);', 'sendEmail();'),
+            from_global: true,
+            response_segments: [
+              { type: 'status', content: 'Read code for "Transform data"' },
+              { type: 'text', content: 'Done.' },
+            ],
+          }),
+        ];
+
+        render(<MessageList messages={messages} />);
+
+        // The read status attracts nothing; the diff falls to the end
+        expect(
+          screen.queryByTestId('status-step-diffs')
+        ).not.toBeInTheDocument();
+        const tail = screen.getByTestId('workflow-diff-blocks');
+        expect(within(tail).getByTestId('diff-block-header')).toHaveTextContent(
+          'Update(Transform data)'
+        );
+      });
+
+      it('renders diffs no status mentioned at the end of the message', () => {
+        const messages = [
+          createMockAIMessage({
+            id: 'msg-user',
+            role: 'user',
+            content: 'Update both steps',
+            code: twoStepYaml('fn(state => state);', 'sendEmail();'),
+          }),
+          createMockAIMessage({
+            id: 'msg-global',
+            role: 'assistant',
+            content: 'Done.',
+            code: twoStepYaml('fn(state => state.data);', 'sendEmail(body);'),
+            from_global: true,
+            response_segments: [
+              { type: 'status', content: 'Wrote code for "Transform data"' },
+              { type: 'text', content: 'Done.' },
+            ],
+          }),
+        ];
+
+        render(<MessageList messages={messages} />);
+
+        // Mentioned step renders inline...
+        const inline = screen.getByTestId('status-step-diffs');
+        expect(
+          within(inline).getByTestId('diff-block-header')
+        ).toHaveTextContent('Update(Transform data)');
+
+        // ...the unmentioned one falls to the end
+        const tail = screen.getByTestId('workflow-diff-blocks');
+        expect(within(tail).getByTestId('diff-block-header')).toHaveTextContent(
+          'Update(Send to Gmail)'
+        );
+      });
+    });
+
+    it('keeps the Generated Workflow panel for non-global assistant messages', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-template',
+          role: 'assistant',
+          content: 'Here is a workflow.',
+          code: workflowYaml('fn(state => state);'),
+          // no from_global: workflow-template chat message
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(screen.getByText('Generated Workflow')).toBeInTheDocument();
+      expect(screen.getByTestId('expand-code-button')).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('global-workflow-actions')
+      ).not.toBeInTheDocument();
     });
   });
 

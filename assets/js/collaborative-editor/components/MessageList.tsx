@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -10,7 +10,17 @@ import { STREAMING_MESSAGE_ID } from '../types/ai-assistant';
 
 import { Tooltip } from '../../components/Tooltip';
 
-import { WorkflowDiffBlocks } from './WorkflowDiffBlocks';
+import type { StepChange } from '../utils/workflowDiff';
+import {
+  assignStepDiffsToStatuses,
+  deriveWorkflowChanges,
+} from '../utils/workflowDiff';
+
+import {
+  StepDiffBlock,
+  WorkflowChangeBlocks,
+  WorkflowDiffBlocks,
+} from './WorkflowDiffBlocks';
 
 const PROSE_CLASSES =
   'text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4';
@@ -183,23 +193,40 @@ const SegmentTimeline = ({
   streaming = false,
   showAddButtons = false,
   isWriteDisabled = false,
+  stepDiffsByStatusIndex,
 }: {
   segments: ResponseSegment[];
   streaming?: boolean;
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
+  /**
+   * Per-status step diffs (segment index → blocks) rendered right after
+   * the status row that announced writing those steps. Completed global
+   * replies only — streaming timelines never pass this.
+   */
+  stepDiffsByStatusIndex?: Map<number, StepChange[]>;
 }) => (
   <>
     {segments.map((segment, index) => {
       const isLast = index === segments.length - 1;
 
       if (segment.type === 'status') {
+        const stepDiffs = stepDiffsByStatusIndex?.get(index);
         return (
-          <StatusSegmentRow
-            // Timeline is append-only, so index keys are stable
-            key={index}
-            content={segment.content}
-          />
+          // Timeline is append-only, so index keys are stable
+          <Fragment key={index}>
+            <StatusSegmentRow content={segment.content} />
+            {stepDiffs && stepDiffs.length > 0 && (
+              <div className="space-y-2" data-testid="status-step-diffs">
+                {stepDiffs.map((step, stepIndex) => (
+                  <StepDiffBlock
+                    key={`${step.type}-${step.name}-${stepIndex}`}
+                    step={step}
+                  />
+                ))}
+              </div>
+            )}
+          </Fragment>
         );
       }
 
@@ -219,6 +246,57 @@ const SegmentTimeline = ({
     })}
   </>
 );
+
+/**
+ * Timeline of a completed global reply with its workflow diff blocks woven
+ * in: each changed step's diff renders immediately after the status segment
+ * that announced writing it ("Wrote code for \"X\", \"Y\"" → the X and Y
+ * blocks), and anything no status claimed — plus the Structure block —
+ * renders at the end.
+ */
+const GlobalReplyTimeline = ({
+  segments,
+  beforeYaml,
+  afterYaml,
+  showAddButtons = false,
+  isWriteDisabled = false,
+}: {
+  segments: ResponseSegment[];
+  beforeYaml: string | null;
+  afterYaml: string;
+  showAddButtons?: boolean;
+  isWriteDisabled?: boolean;
+}) => {
+  // Derived once per message (keyed on the YAML snapshots), not per segment
+  const changes = useMemo(
+    () => deriveWorkflowChanges(beforeYaml, afterYaml),
+    [beforeYaml, afterYaml]
+  );
+  const assignment = useMemo(
+    () =>
+      changes
+        ? assignStepDiffsToStatuses(changes.steps, segments)
+        : { byStatusIndex: new Map<number, StepChange[]>(), unmatched: [] },
+    [changes, segments]
+  );
+
+  return (
+    <>
+      <SegmentTimeline
+        segments={segments}
+        showAddButtons={showAddButtons}
+        isWriteDisabled={isWriteDisabled}
+        stepDiffsByStatusIndex={assignment.byStatusIndex}
+      />
+      {changes && (
+        <WorkflowChangeBlocks
+          steps={assignment.unmatched}
+          structure={changes.structure}
+        />
+      )}
+    </>
+  );
+};
 
 /**
  * Copy text to clipboard using modern Clipboard API
@@ -692,12 +770,26 @@ export function MessageList({
                         </div>
                       </div>
                     ) : segments ? (
-                      <SegmentTimeline
-                        segments={segments}
-                        streaming={isStreaming(message)}
-                        showAddButtons={showMessageAddButtons}
-                        isWriteDisabled={isWriteDisabled}
-                      />
+                      !isStreaming(message) &&
+                      message.from_global &&
+                      message.code ? (
+                        <GlobalReplyTimeline
+                          segments={segments}
+                          beforeYaml={
+                            beforeYamlByMessageId.get(message.id) ?? null
+                          }
+                          afterYaml={message.code}
+                          showAddButtons={showMessageAddButtons}
+                          isWriteDisabled={isWriteDisabled}
+                        />
+                      ) : (
+                        <SegmentTimeline
+                          segments={segments}
+                          streaming={isStreaming(message)}
+                          showAddButtons={showMessageAddButtons}
+                          isWriteDisabled={isWriteDisabled}
+                        />
+                      )
                     ) : (
                       <MarkdownContent
                         content={
@@ -727,9 +819,12 @@ export function MessageList({
                       </div>
                     )}
 
+                    {/* Legacy/flat global replies (no timeline): all diff
+                      blocks render together at the end of the message */}
                     {!isStreaming(message) &&
                       message.from_global &&
-                      message.code && (
+                      message.code &&
+                      !segments && (
                         <WorkflowDiffBlocks
                           beforeYaml={
                             beforeYamlByMessageId.get(message.id) ?? null
@@ -738,86 +833,108 @@ export function MessageList({
                         />
                       )}
 
-                    {!isStreaming(message) && message.code && (
-                      <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
-                        <div
-                          className={cn(
-                            'w-full px-4 py-2 bg-gray-50 flex items-center justify-between gap-2',
-                            expandedYaml.has(message.id) &&
-                              'border-b border-gray-200'
-                          )}
-                        >
-                          <button
-                            type="button"
-                            data-testid="expand-code-button"
-                            onClick={() => {
-                              setExpandedYaml(prev => {
-                                const next = new Set(prev);
-                                if (next.has(message.id)) {
-                                  next.delete(message.id);
-                                } else {
-                                  next.add(message.id);
-                                }
-                                return next;
-                              });
-                            }}
-                            className="flex items-center gap-2 hover:opacity-75 transition-opacity"
-                          >
-                            <span
-                              className={cn(
-                                'transition-transform duration-200',
-                                expandedYaml.has(message.id) ? 'rotate-90' : ''
-                              )}
-                            >
-                              <span className="hero-chevron-right h-4 w-4 text-gray-500" />
-                            </span>
-                            <span className="text-xs text-left font-medium text-gray-700">
-                              {message.job_id
-                                ? 'Generated Job Code'
-                                : 'Generated Workflow'}
-                            </span>
-                          </button>
+                    {/* Global replies: the diff blocks above say what
+                      changed, so the raw YAML panel is dropped — but the
+                      actions stay (Apply is the recovery path when
+                      auto-apply didn't land). */}
+                    {!isStreaming(message) &&
+                      message.from_global &&
+                      message.code && (
+                        <div data-testid="global-workflow-actions">
                           <CodeActionButtons
                             code={message.code}
                             showAdd={showAddButtons}
                             showApply={showApplyButton}
-                            showPreview={
-                              !!message.job_id ||
-                              (!!message.from_global && canPreviewGlobalStep)
-                            }
+                            showPreview={canPreviewGlobalStep}
                             onApply={() => {
-                              if (message.job_id) {
-                                onApplyJobCode?.(message.code!, message.id);
-                              } else {
-                                onApplyWorkflow?.(message.code!, message.id);
-                              }
+                              onApplyWorkflow?.(message.code!, message.id);
                             }}
                             onPreview={() => {
-                              if (message.from_global) {
-                                // Per-step diff from the full workflow YAML
-                                onPreviewGlobalStep?.(
-                                  message.code!,
-                                  message.id
-                                );
-                              } else {
-                                onPreviewJobCode?.(message.code!, message.id);
-                              }
+                              // Per-step diff from the full workflow YAML
+                              onPreviewGlobalStep?.(message.code!, message.id);
                             }}
                             isApplying={!!applyingMessageId}
                             isPreviewActive={previewingMessageId === message.id}
                             isWriteDisabled={isWriteDisabled}
                           />
                         </div>
-                        {expandedYaml.has(message.id) && (
-                          <pre
-                            className="bg-slate-100 text-slate-800 p-3 overflow-x-auto text-xs font-mono"
-                            data-testid="generated-code"
+                      )}
+
+                    {!isStreaming(message) &&
+                      message.code &&
+                      !message.from_global && (
+                        <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
+                          <div
+                            className={cn(
+                              'w-full px-4 py-2 bg-gray-50 flex items-center justify-between gap-2',
+                              expandedYaml.has(message.id) &&
+                                'border-b border-gray-200'
+                            )}
                           >
-                            <code>{message.code}</code>
-                          </pre>
-                        )}
-                      </div>
-                    )}
+                            <button
+                              type="button"
+                              data-testid="expand-code-button"
+                              onClick={() => {
+                                setExpandedYaml(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(message.id)) {
+                                    next.delete(message.id);
+                                  } else {
+                                    next.add(message.id);
+                                  }
+                                  return next;
+                                });
+                              }}
+                              className="flex items-center gap-2 hover:opacity-75 transition-opacity"
+                            >
+                              <span
+                                className={cn(
+                                  'transition-transform duration-200',
+                                  expandedYaml.has(message.id)
+                                    ? 'rotate-90'
+                                    : ''
+                                )}
+                              >
+                                <span className="hero-chevron-right h-4 w-4 text-gray-500" />
+                              </span>
+                              <span className="text-xs text-left font-medium text-gray-700">
+                                {message.job_id
+                                  ? 'Generated Job Code'
+                                  : 'Generated Workflow'}
+                              </span>
+                            </button>
+                            <CodeActionButtons
+                              code={message.code}
+                              showAdd={showAddButtons}
+                              showApply={showApplyButton}
+                              showPreview={!!message.job_id}
+                              onApply={() => {
+                                if (message.job_id) {
+                                  onApplyJobCode?.(message.code!, message.id);
+                                } else {
+                                  onApplyWorkflow?.(message.code!, message.id);
+                                }
+                              }}
+                              onPreview={() => {
+                                onPreviewJobCode?.(message.code!, message.id);
+                              }}
+                              isApplying={!!applyingMessageId}
+                              isPreviewActive={
+                                previewingMessageId === message.id
+                              }
+                              isWriteDisabled={isWriteDisabled}
+                            />
+                          </div>
+                          {expandedYaml.has(message.id) && (
+                            <pre
+                              className="bg-slate-100 text-slate-800 p-3 overflow-x-auto text-xs font-mono"
+                              data-testid="generated-code"
+                            >
+                              <code>{message.code}</code>
+                            </pre>
+                          )}
+                        </div>
+                      )}
 
                     {!isStreaming(message) &&
                       message.status === 'error' &&

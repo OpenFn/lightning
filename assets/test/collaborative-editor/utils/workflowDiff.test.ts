@@ -8,7 +8,11 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
-import { deriveWorkflowChanges } from '../../../js/collaborative-editor/utils/workflowDiff';
+import {
+  assignStepDiffsToStatuses,
+  deriveWorkflowChanges,
+} from '../../../js/collaborative-editor/utils/workflowDiff';
+import type { StepChange } from '../../../js/collaborative-editor/utils/workflowDiff';
 
 interface YamlJob {
   key: string;
@@ -444,5 +448,64 @@ describe('deriveWorkflowChanges', () => {
       ).toBeNull();
       expect(warnSpy).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('assignStepDiffsToStatuses', () => {
+  const step = (name: string): StepChange => ({
+    type: 'update',
+    name,
+    addedLines: 1,
+    removedLines: 1,
+    hunks: [],
+  });
+
+  it('assigns steps to the write status that mentions them, case-insensitively', () => {
+    const steps = [step('Transform data'), step('Send to Gmail')];
+    const segments = [
+      { type: 'text', content: 'Updating now.' },
+      {
+        type: 'status',
+        content: 'Wrote code for "TRANSFORM DATA", "Send to Gmail"',
+      },
+    ];
+
+    const { byStatusIndex, unmatched } = assignStepDiffsToStatuses(
+      steps,
+      segments
+    );
+    expect(byStatusIndex.get(1)).toEqual(steps);
+    expect(unmatched).toEqual([]);
+  });
+
+  it('skips read-only statuses and assigns each step once (first write wins)', () => {
+    const steps = [step('Transform data')];
+    const segments = [
+      { type: 'status', content: 'Read code for "Transform data"' },
+      { type: 'status', content: 'Checking "Transform data"' },
+      { type: 'status', content: 'Edited "Transform data"' },
+      { type: 'status', content: 'Updated "Transform data" again' },
+    ];
+
+    const { byStatusIndex, unmatched } = assignStepDiffsToStatuses(
+      steps,
+      segments
+    );
+    expect([...byStatusIndex.keys()]).toEqual([2]);
+    expect(unmatched).toEqual([]);
+  });
+
+  it('leaves unmentioned steps unmatched', () => {
+    const steps = [step('Transform data'), step('Send to Gmail')];
+    const segments = [
+      { type: 'status', content: 'Wrote code for "Transform data"' },
+    ];
+
+    const { byStatusIndex, unmatched } = assignStepDiffsToStatuses(
+      steps,
+      segments
+    );
+    expect(byStatusIndex.get(0)).toEqual([steps[0]]);
+    expect(unmatched).toEqual([steps[1]]);
   });
 });
