@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+- The AI assistant now shows what changed after a global reply edits your
+  workflow: each reply that modified the workflow renders per-step code diffs
+  (red/green, with line numbers) plus a compact summary of structural changes
+  like added or removed paths, trigger changes and step renames. The diff
+  compares the workflow as it was when you sent your message against the
+  workflow the assistant returned.
+  [#5036](https://github.com/OpenFn/lightning/issues/5036)
+
 - The workflow title in the editor breadcrumbs is now clickable, returning to
   the root workflow editor view: it closes the full IDE (equivalent to its close
   button), closes any other open panel, deselects the current node, and drops

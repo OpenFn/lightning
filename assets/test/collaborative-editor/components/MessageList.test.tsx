@@ -950,6 +950,209 @@ describe('MessageList', () => {
     });
   });
 
+  describe('Workflow Diff Blocks (global messages)', () => {
+    const workflowYaml = (body: string) =>
+      [
+        'id: wf-1',
+        'name: Test Workflow',
+        'jobs:',
+        '  transform-data:',
+        '    id: job-1',
+        '    name: Transform data',
+        "    adaptor: '@openfn/language-common@latest'",
+        '    body: |',
+        `      ${body}`,
+        'triggers:',
+        '  webhook:',
+        '    id: trigger-1',
+        '    type: webhook',
+        '    enabled: true',
+        'edges:',
+        '  webhook->transform-data:',
+        '    id: edge-1',
+        '    source_trigger: webhook',
+        '    target_job: transform-data',
+        '    condition_type: always',
+        '    enabled: true',
+      ].join('\n') + '\n';
+
+    it('renders a diff block with header and red/green rows for a changed step', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Change the transform',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Done, I updated the step.',
+          code: workflowYaml('fn(state => state.data);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(screen.getByTestId('workflow-diff-blocks')).toBeInTheDocument();
+      expect(screen.getByTestId('diff-block')).toBeInTheDocument();
+      expect(screen.getByTestId('diff-block-header')).toHaveTextContent(
+        'Update(Transform data)'
+      );
+      expect(screen.getByTestId('diff-block-summary')).toHaveTextContent(
+        'Added 1 line, removed 1 line'
+      );
+
+      // Small update -> expanded by default with red/green rows
+      const removed = screen.getByTestId('diff-line-removed');
+      const added = screen.getByTestId('diff-line-added');
+      expect(removed).toHaveTextContent('fn(state => state);');
+      expect(removed).toHaveClass('bg-red-100');
+      expect(added).toHaveTextContent('fn(state => state.data);');
+      expect(added).toHaveClass('bg-green-100');
+    });
+
+    it('renders a Structure block for edge/trigger changes', () => {
+      const before = workflowYaml('fn(state => state);');
+      const after = before.replace(
+        'type: webhook\n    enabled: true',
+        'type: webhook\n    enabled: false'
+      );
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Disable the trigger',
+          code: before,
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Disabled it.',
+          code: after,
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(screen.getByTestId('structure-block')).toBeInTheDocument();
+      const row = screen.getByTestId('structure-row');
+      expect(row).toHaveTextContent('webhook trigger');
+      expect(row.getAttribute('data-change')).toBe('modify');
+      // No step bodies changed -> no per-step diff blocks
+      expect(screen.queryByTestId('diff-block')).not.toBeInTheDocument();
+    });
+
+    it('renders all-adds diff when the preceding user message has no code', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Build me a workflow',
+          // no code: client had no workflow to serialize
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Here you go.',
+          code: workflowYaml('fn(state => state);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      // Step block plus a Structure block (trigger + edge adds)
+      const headers = screen.getAllByTestId('diff-block-header');
+      expect(headers[0]).toHaveTextContent('Add(Transform data)');
+      expect(headers[1]).toHaveTextContent('Structure');
+      const structureRows = screen.getAllByTestId('structure-row');
+      expect(structureRows).toHaveLength(2);
+      structureRows.forEach(row => {
+        expect(row.getAttribute('data-change')).toBe('add');
+      });
+      // Add blocks are collapsed by default: no diff rows until expanded
+      expect(screen.queryByTestId('diff-line-added')).not.toBeInTheDocument();
+    });
+
+    it('renders nothing when the workflow is unchanged', () => {
+      const yaml = workflowYaml('fn(state => state);');
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Just answer a question',
+          code: yaml,
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'No changes needed.',
+          code: yaml,
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(
+        screen.queryByTestId('workflow-diff-blocks')
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders no diff blocks for non-global assistant messages with code', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Fix my job code',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-job',
+          role: 'assistant',
+          content: 'Here is the code.',
+          code: 'fn(state => state.data);',
+          job_id: 'job-1',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(
+        screen.queryByTestId('workflow-diff-blocks')
+      ).not.toBeInTheDocument();
+    });
+
+    it('expands a collapsed add block on toggle click', async () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Build me a workflow',
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Here you go.',
+          code: workflowYaml('fn(state => state);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      const toggles = screen.getAllByTestId('diff-block-toggle');
+      // First toggle belongs to the Add step block
+      await userEvent.click(toggles[0]!);
+      expect(screen.getByTestId('diff-line-added')).toHaveTextContent(
+        'fn(state => state);'
+      );
+    });
+  });
+
   describe('Response Segments Timeline', () => {
     it('renders text blocks and settled status rows in segment order', () => {
       const messages = [
