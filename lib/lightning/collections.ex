@@ -56,6 +56,23 @@ defmodule Lightning.Collections do
   end
 
   @doc """
+  Returns a map of collection id to item count for the given collection ids,
+  in a single grouped query. Ids with no items are absent from the map.
+  """
+  @spec item_counts([Ecto.UUID.t()]) :: %{Ecto.UUID.t() => non_neg_integer()}
+  def item_counts([]), do: %{}
+
+  def item_counts(collection_ids) when is_list(collection_ids) do
+    from(i in Item,
+      where: i.collection_id in ^collection_ids,
+      group_by: i.collection_id,
+      select: {i.collection_id, count(i.collection_id)}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   Looks up a collection by name across all projects.
 
   Returns `{:error, :conflict}` when the name exists in more than one

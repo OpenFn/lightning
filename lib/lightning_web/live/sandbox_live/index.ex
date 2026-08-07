@@ -2,6 +2,7 @@ defmodule LightningWeb.SandboxLive.Index do
   use LightningWeb, :live_view
 
   alias Ecto.Changeset
+  alias Lightning.Collections
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.MergeProjects
@@ -594,8 +595,7 @@ defmodule LightningWeb.SandboxLive.Index do
           selected_workflow_ids={@merge_selected_workflow_ids}
           credentials={@merge_credentials}
           selected_credential_ids={@merge_selected_credential_ids}
-          collections_to_add={@merge_collections_to_add}
-          collections_to_delete={@merge_collections_to_delete}
+          collections={@merge_collections}
           can_delete_collections={@merge_can_delete_collections}
           delete_collections?={@merge_delete_collections?}
         />
@@ -738,8 +738,7 @@ defmodule LightningWeb.SandboxLive.Index do
   defp assign_merge_collections(socket, _sandbox, nil) do
     socket
     |> assign(:merge_collections_target_id, nil)
-    |> assign(:merge_collections_to_add, [])
-    |> assign(:merge_collections_to_delete, [])
+    |> assign(:merge_collections, [])
     |> assign(:merge_collections_to_delete_ids, [])
     |> assign(:merge_can_delete_collections, false)
     |> assign(:merge_delete_collections?, false)
@@ -759,11 +758,35 @@ defmodule LightningWeb.SandboxLive.Index do
 
     socket
     |> assign(:merge_collections_target_id, target_project.id)
-    |> assign(:merge_collections_to_add, to_create)
-    |> assign(:merge_collections_to_delete, Enum.map(to_delete, & &1.name))
+    |> assign(:merge_collections, build_collection_rows(to_create, to_delete))
     |> assign(:merge_collections_to_delete_ids, Enum.map(to_delete, & &1.id))
     |> assign(:merge_can_delete_collections, can_delete?)
     |> assign(:merge_delete_collections?, false)
+  end
+
+  # One row per affected collection for the modal's collections panel:
+  # source-only names get added, target-only collections carry item/size
+  # metadata so the user can weigh the delete opt-in.
+  defp build_collection_rows(to_create, to_delete) do
+    item_counts = Collections.item_counts(Enum.map(to_delete, & &1.id))
+
+    add_rows =
+      Enum.map(to_create, fn name ->
+        %{id: nil, name: name, action: :add, item_count: 0, byte_size: 0}
+      end)
+
+    target_only_rows =
+      Enum.map(to_delete, fn collection ->
+        %{
+          id: collection.id,
+          name: collection.name,
+          action: :target_only,
+          item_count: Map.get(item_counts, collection.id, 0),
+          byte_size: collection.byte_size_sum
+        }
+      end)
+
+    Enum.sort_by(add_rows ++ target_only_rows, & &1.name)
   end
 
   # The change event fires for every input in the merge form (toggling any

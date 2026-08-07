@@ -2431,11 +2431,10 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> form("#merge-sandbox-modal form")
       |> render_change(%{"merge" => %{"target_id" => other.id}})
 
-      target_only_html =
-        view |> element("#merge-collections-target-only") |> render()
+      panel_html = view |> element("#merge-collections-panel") |> render()
 
-      assert target_only_html =~ "other-only"
-      refute target_only_html =~ "root-only"
+      assert panel_html =~ "other-only"
+      refute panel_html =~ "root-only"
 
       refute view |> element("#merge-delete-collections") |> render() =~
                "checked"
@@ -2531,14 +2530,19 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert "root-only" in root_names
     end
 
-    test "merge modal lists collections the merge would add and the target-only ones",
+    test "merge modal lists affected collections with badges and metadata",
          %{
            conn: conn,
            root: root,
            sandbox: sandbox
          } do
       insert(:collection, project: sandbox, name: "sandbox-only-col")
-      insert(:collection, project: root, name: "parent-only-col")
+
+      insert(:collection,
+        project: root,
+        name: "parent-only-col",
+        items: [%{key: "k1", value: "v1"}, %{key: "k2", value: "v2"}]
+      )
 
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
 
@@ -2546,25 +2550,37 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
       |> render_click()
 
-      to_add_html =
-        view |> element("#merge-collections-to-add") |> render()
+      panel_html = view |> element("#merge-collections-panel") |> render()
 
-      assert to_add_html =~ "Collections to add"
-      assert to_add_html =~ "sandbox-only-col"
+      # Sandbox-only collections show as additions.
+      assert panel_html =~ "sandbox-only-col"
+      assert panel_html =~ "Will be added"
 
-      target_only_html =
-        view |> element("#merge-collections-target-only") |> render()
-
-      assert target_only_html =~ "Collections only in #{root.name}"
-      assert target_only_html =~ "parent-only-col"
+      # Target-only collections show item-count metadata and are kept by
+      # default.
+      assert panel_html =~ "parent-only-col"
+      assert panel_html =~ "2 items"
+      assert panel_html =~ "Kept"
+      refute panel_html =~ "Will be deleted"
 
       # The owner gets the delete opt-in, unchecked by default.
       assert has_element?(view, "#merge-delete-collections")
-      refute target_only_html =~ "checked"
-      assert target_only_html =~ "Also delete these collections from"
+      refute panel_html =~ "checked"
+      assert panel_html =~ "Also delete collections that only exist in"
+
+      # Checking the opt-in flips the target-only badges in place.
+      view
+      |> element("#merge-delete-collections")
+      |> render_click()
+
+      panel_html = view |> element("#merge-collections-panel") |> render()
+
+      assert panel_html =~ "Will be deleted"
+      refute panel_html =~ "Kept"
+      assert panel_html =~ "Will be added"
     end
 
-    test "merge modal hides the collection sections when there is nothing to show",
+    test "merge modal hides the collections panel when there is nothing to show",
          %{
            conn: conn,
            root: root,
@@ -2579,8 +2595,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
       |> render_click()
 
-      refute has_element?(view, "#merge-collections-to-add")
-      refute has_element?(view, "#merge-collections-target-only")
+      refute has_element?(view, "#merge-collections-panel")
     end
 
     test "an editor on the target sees the list without the delete opt-in and cannot force it",
@@ -2608,11 +2623,10 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
       |> render_click()
 
-      target_only_html =
-        view |> element("#merge-collections-target-only") |> render()
+      panel_html = view |> element("#merge-collections-panel") |> render()
 
-      assert target_only_html =~ "parent-only"
-      assert target_only_html =~ "These collections will be kept."
+      assert panel_html =~ "parent-only"
+      assert panel_html =~ "are always kept."
       refute has_element?(view, "#merge-delete-collections")
 
       # A crafted toggle event must not enable deletion either.
