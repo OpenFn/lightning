@@ -261,6 +261,69 @@ defmodule Lightning.AdaptorRegistryTest do
     end
   end
 
+  describe "exists?/2" do
+    setup do
+      file_path =
+        Briefly.create!(extname: ".json")
+        |> tap(fn path ->
+          File.write!(path, ~S"""
+          [
+            {
+              "latest": "1.6.2",
+              "name": "@openfn/language-common",
+              "repo": "git+https://github.com/openfn/language-common.git",
+              "versions": []
+            },
+            {
+              "latest": "3.0.5",
+              "name": "@openfn/language-dhis2",
+              "repo": "git+https://github.com/openfn/language-dhis2.git",
+              "versions": []
+            }
+          ]
+          """)
+        end)
+
+      registry =
+        start_supervised!(
+          {AdaptorRegistry, [name: :exists_registry, use_cache: file_path]}
+        )
+
+      {:ok, registry: registry}
+    end
+
+    test "returns true for a package present in the registry" do
+      assert AdaptorRegistry.exists?(:exists_registry, "@openfn/language-common")
+      assert AdaptorRegistry.exists?(:exists_registry, "@openfn/language-dhis2")
+    end
+
+    test "returns false for a package absent from the registry" do
+      refute AdaptorRegistry.exists?(:exists_registry, "@openfn/language-http")
+    end
+
+    test "returns false for nil" do
+      refute AdaptorRegistry.exists?(:exists_registry, nil)
+    end
+  end
+
+  describe "exists?/2 in local mode" do
+    @tag :tmp_dir
+    test "returns true for a locally-listed adaptor", %{
+      tmp_dir: tmp_dir,
+      test: test
+    } do
+      adaptor_name = "locally-listed"
+      [tmp_dir, "packages", adaptor_name] |> Path.join() |> File.mkdir_p!()
+
+      start_supervised!(
+        {AdaptorRegistry, [name: test, local_adaptors_repos: [tmp_dir]]}
+      )
+
+      assert AdaptorRegistry.exists?(test, "@openfn/language-#{adaptor_name}")
+      refute AdaptorRegistry.exists?(test, "@openfn/language-common")
+    end
+  end
+
   describe "resolve_package_name/1" do
     test "it can split an NPM style package name" do
       assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@1.2.3") ==
@@ -276,6 +339,19 @@ defmodule Lightning.AdaptorRegistryTest do
 
       assert AdaptorRegistry.resolve_package_name("") ==
                {nil, nil}
+    end
+
+    test "returns {nil, nil} for strings that aren't clean npm package names" do
+      for bad <- [
+            "@openfn/x\npwd\nb@1.0.0",
+            "@openfn/language-http@1.0.0; touch /tmp/x",
+            "@openfn/language-common@latest and stuff",
+            "  @openfn/language-http",
+            "$(whoami)"
+          ] do
+        assert AdaptorRegistry.resolve_package_name(bad) == {nil, nil},
+               "expected #{inspect(bad)} to be rejected"
+      end
     end
 
     @tag :tmp_dir

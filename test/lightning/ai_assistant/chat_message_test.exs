@@ -152,6 +152,97 @@ defmodule Lightning.AiAssistant.ChatMessageTest do
       assert changeset.valid?
     end
 
+    test "accepts a valid segments timeline and casts to Segment embeds" do
+      segments = [
+        %{"type" => "text", "content" => "Adding a step..."},
+        %{"type" => "status", "content" => "Validating workflow..."},
+        %{"type" => "text", "content" => "Done!"}
+      ]
+
+      changeset =
+        ChatMessage.changeset(%ChatMessage{}, %{
+          content: "Adding a step...\n\nDone!",
+          role: :assistant,
+          response_segments: segments
+        })
+
+      assert changeset.valid?
+
+      assert [
+               %ChatMessage.Segment{type: :text, content: "Adding a step..."},
+               %ChatMessage.Segment{
+                 type: :status,
+                 content: "Validating workflow..."
+               },
+               %ChatMessage.Segment{type: :text, content: "Done!"}
+             ] = Ecto.Changeset.apply_changes(changeset).response_segments
+    end
+
+    test "leaves segments empty when the key is absent (flat message)" do
+      changeset =
+        ChatMessage.changeset(%ChatMessage{}, %{
+          content: "Flat response",
+          role: :assistant
+        })
+
+      assert changeset.valid?
+
+      assert Ecto.Changeset.apply_changes(changeset).response_segments == []
+    end
+
+    test "rejects segments with unknown types or non-binary content" do
+      invalid_segments = [
+        [%{"type" => "thinking", "content" => "hmm"}],
+        [%{"type" => "text", "content" => 123}],
+        [%{"content" => "no type"}],
+        [%{"type" => "text", "content" => "ok"}, %{"type" => "status"}]
+      ]
+
+      for segments <- invalid_segments do
+        changeset =
+          ChatMessage.changeset(%ChatMessage{}, %{
+            content: "Test message",
+            role: :assistant,
+            response_segments: segments
+          })
+
+        refute changeset.valid?, "expected #{inspect(segments)} to be invalid"
+      end
+    end
+
+    test "rejects segments over the count cap and content over the length cap" do
+      too_many =
+        for i <- 1..(ChatMessage.max_response_segments() + 1) do
+          %{"type" => "text", "content" => "segment #{i}"}
+        end
+
+      changeset =
+        ChatMessage.changeset(%ChatMessage{}, %{
+          content: "Test message",
+          role: :assistant,
+          response_segments: too_many
+        })
+
+      refute changeset.valid?
+
+      oversized = [
+        %{
+          "type" => "text",
+          "content" =>
+            String.duplicate("x", ChatMessage.Segment.max_content_length() + 1)
+        }
+      ]
+
+      changeset =
+        ChatMessage.changeset(%ChatMessage{}, %{
+          content: "Test message",
+          role: :assistant,
+          response_segments: oversized
+        })
+
+      refute changeset.valid?
+    end
+
     test "sets pending status by default for user messages" do
       user = insert(:user)
 

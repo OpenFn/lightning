@@ -11,10 +11,38 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Policies.Users
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias LightningWeb.LiveHelpers
+
+  # Gates the admin space. Halts the mount and redirects when the user can't
+  # access it, so admin-only LiveViews can't be mounted (and their per-event
+  # handlers can't be invoked) by a non-admin socket.
+  def on_mount(
+        :ensure_admin,
+        _params,
+        _session,
+        %{assigns: %{current_user: nil}} = socket
+      ) do
+    {:halt, redirect(socket, to: ~p"/users/log_in")}
+  end
+
+  def on_mount(:ensure_admin, _params, _session, socket) do
+    can_access_admin_space =
+      Users
+      |> Permissions.can?(:access_admin_space, socket.assigns.current_user, {})
+
+    if can_access_admin_space do
+      {:cont, socket}
+    else
+      {:halt,
+       socket
+       |> put_flash(:nav, :no_access)
+       |> redirect(to: ~p"/projects")}
+    end
+  end
 
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access
@@ -79,6 +107,59 @@ defmodule LightningWeb.Hooks do
   end
 
   def on_mount(:project_scope, _, _session, socket) do
+    {:cont, socket}
+  end
+
+  def on_mount(
+        :ensure_workflow_belongs_to_project,
+        %{"id" => workflow_id},
+        _session,
+        %{assigns: %{project: project}} = socket
+      ) do
+    workflow_exists? =
+      Lightning.Workflows.workflow_exists_in_project?(project.id, workflow_id)
+
+    if workflow_exists? do
+      {:cont, socket}
+    else
+      {:halt,
+       socket
+       |> put_flash(:error, "Workflow not found")
+       |> redirect(to: ~p"/projects/#{project}/w")}
+    end
+  end
+
+  def on_mount(
+        :ensure_workflow_belongs_to_project,
+        _params,
+        _session,
+        socket
+      ) do
+    {:cont, socket}
+  end
+
+  def on_mount(
+        :ensure_run_belongs_to_project,
+        %{"id" => run_id},
+        _session,
+        %{assigns: %{project: project}} = socket
+      ) do
+    if Lightning.Runs.get_for_project(run_id, project.id) do
+      {:cont, socket}
+    else
+      {:halt,
+       socket
+       |> put_flash(:error, "Run not found")
+       |> redirect(to: ~p"/projects/#{project}/history")}
+    end
+  end
+
+  def on_mount(
+        :ensure_run_belongs_to_project,
+        _params,
+        _session,
+        socket
+      ) do
     {:cont, socket}
   end
 

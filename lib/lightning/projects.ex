@@ -449,6 +449,32 @@ defmodule Lightning.Projects do
     ProjectUser |> Repo.get!(id) |> Repo.preload(include)
   end
 
+  @doc """
+  Gets a project user by id only when it belongs to `project`.
+
+  Returns `nil` for a malformed, missing, or cross-project id. Use this instead
+  of `get_project_user!/2` whenever the id comes from client input scoped to a
+  project in the URL, so an action can't reach a membership in another project.
+  """
+  @spec get_project_user_for_project(term(), Project.t(), keyword()) ::
+          ProjectUser.t() | nil
+  def get_project_user_for_project(id, project, opts \\ [])
+
+  def get_project_user_for_project(id, %Project{id: project_id}, opts)
+      when is_binary(id) do
+    include = Keyword.get(opts, :include, [])
+
+    with {:ok, uuid} <- Ecto.UUID.cast(id),
+         %ProjectUser{project_id: ^project_id} = project_user <-
+           Repo.get(ProjectUser, uuid) do
+      Repo.preload(project_user, include)
+    else
+      _ -> nil
+    end
+  end
+
+  def get_project_user_for_project(_id, _project, _opts), do: nil
+
   @spec get_project_user(Ecto.UUID.t()) :: ProjectUser.t() | nil
   def get_project_user(id) when is_binary(id), do: Repo.get(ProjectUser, id)
 
@@ -652,6 +678,27 @@ defmodule Lightning.Projects do
     project_user
     |> ProjectUser.changeset(attrs)
     |> Repo.update()
+  end
+
+  @notification_pref_fields [:failure_alert, :digest]
+
+  @doc """
+  Updates a single notification preference on a project user.
+
+  Returns `:unchanged` when the submitted value casts equal to the current
+  value, so callers can skip the success flash on a no-op submit.
+  """
+  @spec set_notification_pref(ProjectUser.t(), atom(), term()) ::
+          {:ok, ProjectUser.t()} | {:error, Ecto.Changeset.t()} | :unchanged
+  def set_notification_pref(%ProjectUser{} = project_user, field, value)
+      when field in @notification_pref_fields do
+    changeset = ProjectUser.changeset(project_user, %{field => value})
+
+    cond do
+      not changeset.valid? -> {:error, changeset}
+      Ecto.Changeset.changed?(changeset, field) -> Repo.update(changeset)
+      true -> :unchanged
+    end
   end
 
   @spec add_project_users(Project.t(), [map(), ...], boolean()) ::
@@ -974,6 +1021,17 @@ defmodule Lightning.Projects do
   def get_projects_for_user(%User{} = user) do
     user
     |> projects_for_user_query()
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns the ids of every project the user holds a membership on, at any
+  depth. Unlike `get_projects_for_user/1` (top-level roots only), this includes
+  sandboxes, so it matches the membership check used by `:access_project`.
+  """
+  @spec member_project_ids(User.t()) :: [Ecto.UUID.t()]
+  def member_project_ids(%User{id: user_id}) do
+    from(pu in ProjectUser, where: pu.user_id == ^user_id, select: pu.project_id)
     |> Repo.all()
   end
 
@@ -1408,7 +1466,9 @@ defmodule Lightning.Projects do
     project = get_project!(project_id)
 
     snapshots =
-      if snapshot_ids, do: Snapshot.get_all_by_ids(snapshot_ids), else: nil
+      if snapshot_ids,
+        do: Snapshot.get_all_by_ids(snapshot_ids, project_id),
+        else: nil
 
     {:ok, _yaml} = ExportUtils.generate_new_yaml(project, snapshots)
   end

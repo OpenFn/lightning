@@ -20,3 +20,12 @@ export interface BaseTemplate {
 }
 
 export type Template = WorkflowTemplate | BaseTemplate;
+
+/**
+ * `isBase` is the only field that distinguishes the templates we ship from the
+ * ones a user published, and the difference matters to the UI: base templates
+ * are always listed, and are labelled so users can tell them apart.
+ */
+export function isBaseTemplate(template: Template): template is BaseTemplate {
+  return 'isBase' in template && template.isBase;
+}
