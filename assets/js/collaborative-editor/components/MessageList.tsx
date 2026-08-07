@@ -535,10 +535,6 @@ interface MessageListProps {
   onApplyWorkflow?: ((yaml: string, messageId: string) => void) | undefined;
   onApplyJobCode?: ((code: string, messageId: string) => void) | undefined;
   onPreviewJobCode?: ((code: string, messageId: string) => void) | undefined;
-  /** Per-step diff preview for global messages (extracts the open job's body from the YAML) */
-  onPreviewGlobalStep?: ((yaml: string, messageId: string) => void) | undefined;
-  /** Whether a job is open in the IDE, enabling preview for global messages */
-  canPreviewGlobalStep?: boolean;
   applyingMessageId?: string | null | undefined;
   previewingMessageId?: string | null | undefined;
   showAddButtons?: boolean;
@@ -563,8 +559,6 @@ export function MessageList({
   onApplyWorkflow,
   onApplyJobCode,
   onPreviewJobCode,
-  onPreviewGlobalStep,
-  canPreviewGlobalStep = false,
   applyingMessageId,
   previewingMessageId,
   showAddButtons = false,
@@ -833,33 +827,10 @@ export function MessageList({
                         />
                       )}
 
-                    {/* Global replies: the diff blocks above say what
-                      changed, so the raw YAML panel is dropped — but the
-                      actions stay (Apply is the recovery path when
-                      auto-apply didn't land). */}
-                    {!isStreaming(message) &&
-                      message.from_global &&
-                      message.code && (
-                        <div data-testid="global-workflow-actions">
-                          <CodeActionButtons
-                            code={message.code}
-                            showAdd={showAddButtons}
-                            showApply={showApplyButton}
-                            showPreview={canPreviewGlobalStep}
-                            onApply={() => {
-                              onApplyWorkflow?.(message.code!, message.id);
-                            }}
-                            onPreview={() => {
-                              // Per-step diff from the full workflow YAML
-                              onPreviewGlobalStep?.(message.code!, message.id);
-                            }}
-                            isApplying={!!applyingMessageId}
-                            isPreviewActive={previewingMessageId === message.id}
-                            isWriteDisabled={isWriteDisabled}
-                          />
-                        </div>
-                      )}
-
+                    {/* Global replies render no "Generated Workflow" panel
+                      and no action buttons: changes auto-apply (failures
+                      surface their own retry paths), so the diff blocks
+                      above are the entire representation of the change. */}
                     {!isStreaming(message) &&
                       message.code &&
                       !message.from_global && (

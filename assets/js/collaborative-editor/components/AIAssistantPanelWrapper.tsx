@@ -788,8 +788,6 @@ export function AIAssistantPanelWrapper({
                 onPreviewJobCode={
                   aiMode?.page === 'job_code' ? handlePreviewJobCode : undefined
                 }
-                onPreviewGlobalStep={handlePreviewGlobalStep}
-                canPreviewGlobalStep={aiMode?.page === 'job_code'}
                 applyingMessageId={
                   // If anyone is applying (including other users), pass the message ID
                   // to show "APPLYING..." state. Prioritize stored message ID from store,

@@ -848,13 +848,13 @@ describe('MessageList', () => {
   });
 
   describe('Global Messages (from_global)', () => {
-    it('renders global message with a compact action row (Apply/Copy, no YAML panel)', async () => {
+    it('renders no YAML panel and no action buttons for global messages', () => {
       const onApplyWorkflow = vi.fn();
-      const onApplyJobCode = vi.fn();
       const messages = [
         createMockAIMessage({
           id: 'msg-global',
           role: 'assistant',
+          content: 'Done.',
           code: 'name: Test\njobs: {}',
           from_global: true,
         }),
@@ -864,61 +864,28 @@ describe('MessageList', () => {
         <MessageList
           messages={messages}
           onApplyWorkflow={onApplyWorkflow}
-          onApplyJobCode={onApplyJobCode}
           showApplyButton
+          showAddButtons
         />
       );
 
-      // The diff blocks say what changed, so no raw YAML panel for global
+      // Global changes auto-apply, so the whole Generated Workflow block
+      // disappears — no panel, no Apply/Copy/Preview/Add row. The diff
+      // blocks are the entire representation of the change.
       expect(screen.queryByText('Generated Workflow')).not.toBeInTheDocument();
       expect(
         screen.queryByTestId('expand-code-button')
       ).not.toBeInTheDocument();
+      expect(screen.queryByText('Apply')).not.toBeInTheDocument();
       expect(screen.queryByText('Preview')).not.toBeInTheDocument();
-
-      // The action row keeps Apply (recovery path) and Copy reachable
-      const actions = screen.getByTestId('global-workflow-actions');
-      expect(within(actions).getByText('Copy')).toBeInTheDocument();
-
-      await userEvent.click(within(actions).getByText('Apply'));
-      expect(onApplyWorkflow).toHaveBeenCalledWith(
-        'name: Test\njobs: {}',
-        'msg-global'
-      );
-      expect(onApplyJobCode).not.toHaveBeenCalled();
-    });
-
-    it('shows Preview routed to onPreviewGlobalStep when a step is open', async () => {
-      const onPreviewGlobalStep = vi.fn();
-      const onPreviewJobCode = vi.fn();
-      const messages = [
-        createMockAIMessage({
-          id: 'msg-global',
-          role: 'assistant',
-          code: 'name: Test\njobs: {}',
-          from_global: true,
-        }),
-      ];
-
-      render(
-        <MessageList
-          messages={messages}
-          onPreviewGlobalStep={onPreviewGlobalStep}
-          onPreviewJobCode={onPreviewJobCode}
-          canPreviewGlobalStep
-        />
-      );
-
-      await userEvent.click(screen.getByText('Preview'));
-      expect(onPreviewGlobalStep).toHaveBeenCalledWith(
-        'name: Test\njobs: {}',
-        'msg-global'
-      );
-      expect(onPreviewJobCode).not.toHaveBeenCalled();
+      expect(screen.queryByText('Add')).not.toBeInTheDocument();
+      // The only Copy left is the message-footer copy, not a code action
+      expect(
+        screen.queryByTestId('apply-workflow-button')
+      ).not.toBeInTheDocument();
     });
 
     it('keeps job-code messages unchanged: Preview routes to onPreviewJobCode', async () => {
-      const onPreviewGlobalStep = vi.fn();
       const onPreviewJobCode = vi.fn();
       const onApplyWorkflow = vi.fn();
       const onApplyJobCode = vi.fn();
@@ -934,7 +901,6 @@ describe('MessageList', () => {
       render(
         <MessageList
           messages={messages}
-          onPreviewGlobalStep={onPreviewGlobalStep}
           onPreviewJobCode={onPreviewJobCode}
           onApplyWorkflow={onApplyWorkflow}
           onApplyJobCode={onApplyJobCode}
@@ -949,7 +915,6 @@ describe('MessageList', () => {
         'fn(state => state)',
         'msg-job'
       );
-      expect(onPreviewGlobalStep).not.toHaveBeenCalled();
 
       await userEvent.click(screen.getByText('Apply'));
       expect(onApplyJobCode).toHaveBeenCalledWith(
@@ -1330,8 +1295,9 @@ describe('MessageList', () => {
 
       expect(screen.getByText('Generated Workflow')).toBeInTheDocument();
       expect(screen.getByTestId('expand-code-button')).toBeInTheDocument();
+      // No diff blocks either — this is not a global reply
       expect(
-        screen.queryByTestId('global-workflow-actions')
+        screen.queryByTestId('workflow-diff-blocks')
       ).not.toBeInTheDocument();
     });
   });
