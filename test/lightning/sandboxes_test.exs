@@ -800,14 +800,14 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
-  defp merge_target_only_collection(actor_role) do
+  defp merge_target_only_collection(actor_role, opts \\ %{}) do
     actor = insert(:user)
     parent = insert(:project)
     ensure_member!(parent, actor, actor_role)
 
     insert(:simple_workflow, project: parent)
 
-    # Exists only on the target, so a merge would otherwise delete it.
+    # Exists only on the target, so a merge could delete it.
     insert(:collection,
       project: parent,
       name: "target-only",
@@ -822,7 +822,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     insert(:simple_workflow, project: sandbox)
 
-    assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+    assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor, opts)
 
     parent
     |> Lightning.Collections.list_project_collections()
@@ -910,11 +910,78 @@ defmodule Lightning.Projects.SandboxesTest do
       refute Repo.exists?(from p in Project, where: p.name == ^marker_name)
     end
 
-    test "collection deletion during merge is gated on owner/admin" do
-      # An editor merge must not prune target-only collections, an owner merge
-      # still does.
-      assert "target-only" in merge_target_only_collection(:editor)
-      refute "target-only" in merge_target_only_collection(:owner)
+    test "collection deletion during merge requires an explicit opt-in" do
+      # Without the opt-in even an owner merge keeps target-only collections.
+      assert "target-only" in merge_target_only_collection(:owner)
+
+      # With the opt-in an owner merge deletes them.
+      refute "target-only" in merge_target_only_collection(:owner, %{
+               delete_collections: true
+             })
+    end
+
+    test "collection deletion opt-in is still gated on owner/admin" do
+      # An editor merge must not prune target-only collections even when the
+      # caller opted in.
+      assert "target-only" in merge_target_only_collection(:editor, %{
+               delete_collections: true
+             })
+    end
+  end
+
+  describe "preview_collections/2" do
+    test "reports source-only names to create and target-only collections to delete" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "shared")
+      insert(:collection, project: source, name: "only-in-source")
+      insert(:collection, project: target, name: "shared")
+
+      target_only =
+        insert(:collection,
+          project: target,
+          name: "only-in-target",
+          items: [%{key: "k", value: "v"}]
+        )
+
+      assert %{to_create: ["only-in-source"], to_delete: [collection]} =
+               Sandboxes.preview_collections(source, target)
+
+      assert collection.id == target_only.id
+      assert collection.name == "only-in-target"
+
+      # Previewing changes nothing.
+      assert Lightning.Repo.get(
+               Lightning.Collections.Collection,
+               target_only.id
+             )
+    end
+
+    test "returns empty lists when both projects hold the same collections" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "same")
+      insert(:collection, project: target, name: "same")
+
+      assert %{to_create: [], to_delete: []} =
+               Sandboxes.preview_collections(source, target)
+    end
+
+    test "matches what sync_collections does with deletions allowed" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "new-a")
+      insert(:collection, project: source, name: "new-b")
+      insert(:collection, project: target, name: "old-a")
+
+      assert %{to_create: ["new-a", "new-b"], to_delete: [%{name: "old-a"}]} =
+               Sandboxes.preview_collections(source, target)
+
+      assert {:ok, %{created: 2, deleted: 1}} =
+               Sandboxes.sync_collections(source, target, allow_deletions: true)
     end
   end
 

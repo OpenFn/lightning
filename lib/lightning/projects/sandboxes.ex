@@ -167,7 +167,18 @@ defmodule Lightning.Projects.Sandboxes do
   * `target` - The project receiving the merge
   * `actor` - The user performing the merge
   * `opts` - Merge options (`:selected_workflow_ids`,
-    `:deleted_target_workflow_ids`, `:selected_credential_ids`)
+    `:deleted_target_workflow_ids`, `:selected_credential_ids`,
+    `:delete_collections`)
+
+  ## Collections
+
+  Collections that exist only in the sandbox are created empty in the target.
+  Collections that exist only in the target are kept by default. Pass
+  `delete_collections: true` to delete them (and their items) instead; the
+  deletion additionally requires the actor to hold `:manage_collection` on
+  the target, so an editor merge never prunes target collections even when
+  opted in. Use `preview_collections/2` to show callers what a merge would
+  change before they commit.
 
   ## Credential attachment
 
@@ -208,10 +219,13 @@ defmodule Lightning.Projects.Sandboxes do
       ) do
     selected_credential_ids = Map.get(opts, :selected_credential_ids, [])
 
-    # `:merge_sandbox` allows editors, but deleting collections needs owner/admin.
-    # Gate only the destructive half so an editor can merge without pruning data.
+    # Deleting target-only collections is opt-in (`:delete_collections`) and,
+    # on top of that, needs owner/admin rights on the target. `:merge_sandbox`
+    # allows editors, so gate the destructive half separately: a merge never
+    # prunes target data unless the caller asked for it and is allowed to.
     allow_collection_deletions? =
-      Permissions.can?(:collections, :manage_collection, actor, target)
+      Map.get(opts, :delete_collections, false) and
+        Permissions.can?(:collections, :manage_collection, actor, target)
 
     Repo.transact(fn ->
       # Preload once so both attach_sandbox_keychains and merge_project derive
@@ -1094,6 +1108,35 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
+  Computes the collection changes a merge from `source` into `target` would
+  make, without applying anything.
+
+  Returns a map with:
+
+  * `:to_create` - sorted names that exist only in the source and would be
+    created empty in the target
+  * `:to_delete` - `Collection` structs (sorted by name) that exist only in
+    the target and would be deleted, with their items, if the merge is run
+    with `delete_collections: true`
+
+  Used by the merge screen to show what a merge would change before the
+  user commits to it.
+  """
+  @spec preview_collections(Project.t(), Project.t()) :: %{
+          to_create: [String.t()],
+          to_delete: [Collection.t()]
+        }
+  def preview_collections(%Project{} = source, %Project{} = target) do
+    %{to_create: to_create, to_delete: to_delete} =
+      collections_diff(source, target)
+
+    %{
+      to_create: to_create |> MapSet.to_list() |> Enum.sort(),
+      to_delete: Enum.sort_by(to_delete, & &1.name)
+    }
+  end
+
+  @doc """
   Synchronises collection names from a sandbox to its merge target.
 
   Names only in the source are created empty in the target; names only in
@@ -1107,8 +1150,9 @@ defmodule Lightning.Projects.Sandboxes do
 
     * `:allow_deletions` - when `true`, target-only collections (and their items)
       are deleted so the target matches the source. Defaults to `false`: callers
-      must opt in. The merge path opts in only when the actor holds
-      `:manage_collection`, so an editor merge never prunes target collections.
+      must opt in. The merge path opts in only when the caller passed
+      `delete_collections: true` and the actor holds `:manage_collection`, so
+      target collections are never pruned silently.
   """
   @spec sync_collections(Project.t(), Project.t(), keyword()) ::
           {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
@@ -1116,20 +1160,10 @@ defmodule Lightning.Projects.Sandboxes do
   def sync_collections(%Project{} = source, %Project{} = target, opts \\ []) do
     allow_deletions? = Keyword.get(opts, :allow_deletions, false)
 
-    source_names = source |> Collections.list_project_collections() |> names()
+    %{to_create: to_create, to_delete: deletable} =
+      collections_diff(source, target)
 
-    target_collections = Collections.list_project_collections(target)
-    target_names = names(target_collections)
-
-    to_create = MapSet.difference(source_names, target_names)
-
-    collections_to_delete =
-      if allow_deletions? do
-        names_to_delete = MapSet.difference(target_names, source_names)
-        Enum.filter(target_collections, &(&1.name in names_to_delete))
-      else
-        []
-      end
+    collections_to_delete = if allow_deletions?, do: deletable, else: []
 
     to_delete_ids = Enum.map(collections_to_delete, & &1.id)
 
@@ -1146,6 +1180,23 @@ defmodule Lightning.Projects.Sandboxes do
 
       %{created: created, deleted: deleted}
     end)
+  end
+
+  # Name-set diff between a source and target project's collections. The
+  # single source of truth for both the merge-time sync and the preview the
+  # merge screen shows.
+  defp collections_diff(source, target) do
+    source_names = source |> Collections.list_project_collections() |> names()
+
+    target_collections = Collections.list_project_collections(target)
+    target_names = names(target_collections)
+
+    names_to_delete = MapSet.difference(target_names, source_names)
+
+    %{
+      to_create: MapSet.difference(source_names, target_names),
+      to_delete: Enum.filter(target_collections, &(&1.name in names_to_delete))
+    }
   end
 
   defp names(collections), do: MapSet.new(collections, & &1.name)

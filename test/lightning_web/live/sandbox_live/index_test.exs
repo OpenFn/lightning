@@ -2293,13 +2293,14 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert "new-col" in parent_names
     end
 
-    test "collections deleted from sandbox are removed from parent on merge", %{
-      conn: conn,
-      root: root,
-      sandbox: sandbox
-    } do
+    test "collections missing from the sandbox are kept in the parent by default",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
       # Parent has a collection, sandbox does not
-      insert(:collection, project: root, name: "to-delete")
+      insert(:collection, project: root, name: "parent-only")
 
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
       mock_provisioner_ok(root)
@@ -2319,7 +2320,136 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         Lightning.Collections.list_project_collections(root)
         |> Enum.map(& &1.name)
 
-      refute "to-delete" in parent_names
+      assert "parent-only" in parent_names
+    end
+
+    test "collections missing from the sandbox are deleted when the user opts in",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      insert(:collection, project: root, name: "parent-only")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> element("#merge-delete-collections-toggle")
+      |> render_click()
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      refute "parent-only" in parent_names
+    end
+
+    test "merge modal lists collections the merge would add and the target-only ones",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      insert(:collection, project: sandbox, name: "sandbox-only-col")
+      insert(:collection, project: root, name: "parent-only-col")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      to_add_html =
+        view |> element("#merge-collections-to-add") |> render()
+
+      assert to_add_html =~ "Collections to add"
+      assert to_add_html =~ "sandbox-only-col"
+
+      target_only_html =
+        view |> element("#merge-collections-target-only") |> render()
+
+      assert target_only_html =~ "Collections only in #{root.name}"
+      assert target_only_html =~ "parent-only-col"
+
+      # The owner gets the delete opt-in, unchecked by default.
+      assert has_element?(view, "#merge-delete-collections")
+      refute target_only_html =~ "checked"
+      assert target_only_html =~ "Also delete these collections from"
+    end
+
+    test "merge modal hides the collection sections when there is nothing to show",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      insert(:collection, project: root, name: "shared")
+      insert(:collection, project: sandbox, name: "shared")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      refute has_element?(view, "#merge-collections-to-add")
+      refute has_element?(view, "#merge-collections-target-only")
+    end
+
+    test "an editor on the target sees the list without the delete opt-in and cannot force it",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      editor = insert(:user)
+      insert(:project_user, project: root, user: editor, role: :editor)
+      insert(:project_user, project: sandbox, user: editor, role: :admin)
+
+      insert(:collection, project: root, name: "parent-only")
+
+      conn = log_in_user(conn, editor)
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      target_only_html =
+        view |> element("#merge-collections-target-only") |> render()
+
+      assert target_only_html =~ "parent-only"
+      assert target_only_html =~ "These collections will be kept."
+      refute has_element?(view, "#merge-delete-collections")
+
+      # A crafted toggle event must not enable deletion either.
+      render_click(view, "toggle-delete-collections", %{})
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      assert "parent-only" in parent_names
     end
 
     test "collections present in both are unchanged after merge", %{

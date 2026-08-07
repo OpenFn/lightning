@@ -255,6 +255,10 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :selected_workflow_ids, :any, required: true
   attr :credentials, :list, default: []
   attr :selected_credential_ids, :any, default: %MapSet{}
+  attr :collections_to_add, :list, default: []
+  attr :collections_to_delete, :list, default: []
+  attr :can_delete_collections, :boolean, default: false
+  attr :delete_collections?, :boolean, default: false
 
   def merge_modal(assigns) do
     assigns =
@@ -451,6 +455,81 @@ defmodule LightningWeb.SandboxLive.Components do
                 </span>
               </li>
             </ul>
+          </div>
+
+          <div
+            :if={@collections_to_add != []}
+            id="merge-collections-to-add"
+            class="border border-gray-200 rounded-lg overflow-hidden bg-white"
+          >
+            <div class="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
+              <span class="flex-1 text-sm font-medium text-gray-900">
+                Collections to add
+              </span>
+              <span class="text-xs text-gray-500">
+                Created empty in the target
+              </span>
+            </div>
+            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+              <li
+                :for={name <- @collections_to_add}
+                class="flex items-center gap-3 px-3 py-2"
+              >
+                <span class="flex-1 text-sm text-gray-700 truncate">
+                  {name}
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <div
+            :if={@collections_to_delete != []}
+            id="merge-collections-target-only"
+            class="border border-gray-200 rounded-lg overflow-hidden bg-white"
+          >
+            <div class="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
+              <span class="flex-1 text-sm font-medium text-gray-900">
+                Collections only in {get_selected_target_label(
+                  @target_options,
+                  @merge_form[:target_id].value
+                )}
+              </span>
+            </div>
+            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+              <li
+                :for={name <- @collections_to_delete}
+                class="flex items-center gap-3 px-3 py-2"
+              >
+                <span class="flex-1 text-sm text-gray-700 truncate">
+                  {name}
+                </span>
+              </li>
+            </ul>
+            <label
+              :if={@can_delete_collections}
+              id="merge-delete-collections-toggle"
+              class="flex items-start gap-3 px-3 py-2 bg-gray-50 border-t border-gray-200 cursor-pointer"
+              phx-click="toggle-delete-collections"
+            >
+              <input
+                type="checkbox"
+                id="merge-delete-collections"
+                class="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600"
+                checked={@delete_collections?}
+                readonly
+              />
+              <span class="text-sm text-gray-700" phx-no-format>
+                Also delete these collections from
+                <strong class="font-medium text-gray-900">{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>
+                (this permanently deletes their data)
+              </span>
+            </label>
+            <p
+              :if={!@can_delete_collections}
+              class="px-3 py-2 text-sm text-gray-700 bg-gray-50 border-t border-gray-200"
+            >
+              These collections will be kept.
+            </p>
           </div>
 
           <Common.alert
