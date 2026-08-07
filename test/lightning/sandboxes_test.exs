@@ -681,6 +681,27 @@ defmodule Lightning.Projects.SandboxesTest do
       assert Lightning.Repo.get(Lightning.Collections.Collection, kept.id)
     end
 
+    test "restricts creations to the approved names when given" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "wanted")
+      insert(:collection, project: source, name: "unwanted")
+
+      assert {:ok, %{created: 1, deleted: 0}} =
+               Sandboxes.sync_collections(source, target,
+                 approved_names: ["wanted"]
+               )
+
+      target_names =
+        target
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+
+      assert "wanted" in target_names
+      refute "unwanted" in target_names
+    end
+
     test "is a no-op when both projects have the same collections" do
       source = insert(:project)
       target = insert(:project)
@@ -977,6 +998,38 @@ defmodule Lightning.Projects.SandboxesTest do
 
       refute "listed" in parent_names
       assert "not-listed" in parent_names
+    end
+
+    test "merge creates only the collections the caller listed" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:simple_workflow, project: parent)
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      insert(:collection, project: sandbox, name: "chosen")
+      insert(:collection, project: sandbox, name: "left-out")
+
+      assert {:ok, _updated} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 create_collections: ["chosen"]
+               })
+
+      parent_names =
+        parent
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+
+      assert "chosen" in parent_names
+      refute "left-out" in parent_names
     end
   end
 

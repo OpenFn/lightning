@@ -168,19 +168,22 @@ defmodule Lightning.Projects.Sandboxes do
   * `actor` - The user performing the merge
   * `opts` - Merge options (`:selected_workflow_ids`,
     `:deleted_target_workflow_ids`, `:selected_credential_ids`,
-    `:delete_collections`)
+    `:create_collections`, `:delete_collections`)
 
   ## Collections
 
-  Collections that exist only in the sandbox are created empty in the target.
-  Collections that exist only in the target are kept by default. To delete
-  some (with their items), pass `:delete_collections` as the list of target
-  collection ids the user agreed to delete, taken from `preview_collections/2`.
-  Only listed collections that are still target-only at merge time are
-  deleted, so a collection added to the target after the preview is never
-  swept up. The deletion additionally requires the actor to hold
-  `:manage_collection` on the target, so an editor merge never prunes target
-  collections even when the caller lists ids.
+  Collections that exist only in the sandbox are created empty in the target;
+  pass `:create_collections` (a list of names from `preview_collections/2`)
+  to create only those instead. Collections that exist only in the target are
+  kept by default. To delete some (with their items), pass
+  `:delete_collections` as the list of target collection ids the user agreed
+  to delete, taken from `preview_collections/2`. Only listed collections that
+  are still target-only at merge time are deleted, so a collection added to
+  the target after the preview is never swept up. The deletion additionally
+  requires the actor to hold `:manage_collection` on the target, so an editor
+  merge never prunes target collections even when the caller lists ids.
+  Defaults (both options absent): create all source-only collections, delete
+  nothing.
 
   ## Credential attachment
 
@@ -221,12 +224,19 @@ defmodule Lightning.Projects.Sandboxes do
       ) do
     selected_credential_ids = Map.get(opts, :selected_credential_ids, [])
 
-    # Deleting target-only collections is opt-in and pinned to what the
-    # caller previewed: `:delete_collections` lists the collection ids the
-    # user agreed to delete. On top of that it needs owner/admin rights on
+    # Collection changes are pinned to what the caller previewed:
+    # `:create_collections` lists the names to create (nil means all
+    # source-only ones) and `:delete_collections` lists the collection ids
+    # the user agreed to delete. Deleting also needs owner/admin rights on
     # the target. `:merge_sandbox` allows editors, so gate the destructive
     # half separately: a merge never prunes target data unless the caller
     # listed it and is allowed to delete it.
+    approved_collection_creation_names =
+      case Map.get(opts, :create_collections) do
+        names when is_list(names) -> names
+        _other -> nil
+      end
+
     approved_collection_deletion_ids =
       case Map.get(opts, :delete_collections, []) do
         ids when is_list(ids) -> ids
@@ -264,7 +274,8 @@ defmodule Lightning.Projects.Sandboxes do
            {:ok, _} <-
              sync_collections(source, target,
                allow_deletions: allow_collection_deletions?,
-               approved_ids: approved_collection_deletion_ids
+               approved_ids: approved_collection_deletion_ids,
+               approved_names: approved_collection_creation_names
              ) do
         {:ok, updated_target}
       end
@@ -1131,8 +1142,10 @@ defmodule Lightning.Projects.Sandboxes do
     with their ids in `:delete_collections`
 
   Used by the merge screen to show what a merge would change before the
-  user commits to it. The ids in `:to_delete` are what a caller passes back
-  as `:delete_collections`, so the merge only ever deletes what was shown.
+  user commits to it. The names in `:to_create` are what a caller passes
+  back as `:create_collections`, and the ids in `:to_delete` are what a
+  caller passes back as `:delete_collections`, so the merge only ever
+  applies what was shown.
   """
   @spec preview_collections(Project.t(), Project.t()) :: %{
           to_create: [String.t()],
@@ -1169,6 +1182,9 @@ defmodule Lightning.Projects.Sandboxes do
       target-only collections not in the list are kept. Defaults to no
       restriction. The merge path passes the ids the user previewed, so a
       collection that became target-only after the preview is kept.
+    * `:approved_names` - restricts creations to these collection names;
+      source-only collections not in the list are not created. Defaults to
+      no restriction (all source-only collections are created).
   """
   @spec sync_collections(Project.t(), Project.t(), keyword()) ::
           {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
@@ -1176,9 +1192,16 @@ defmodule Lightning.Projects.Sandboxes do
   def sync_collections(%Project{} = source, %Project{} = target, opts \\ []) do
     allow_deletions? = Keyword.get(opts, :allow_deletions, false)
     approved_ids = Keyword.get(opts, :approved_ids)
+    approved_names = Keyword.get(opts, :approved_names)
 
-    %{to_create: to_create, to_delete: deletable} =
+    %{to_create: creatable, to_delete: deletable} =
       collections_diff(source, target)
+
+    to_create =
+      case approved_names do
+        nil -> creatable
+        names -> Enum.filter(creatable, &(&1 in names))
+      end
 
     collections_to_delete =
       cond do

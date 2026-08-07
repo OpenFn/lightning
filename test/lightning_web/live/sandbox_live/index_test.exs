@@ -2323,13 +2323,14 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert "parent-only" in parent_names
     end
 
-    test "collections missing from the sandbox are deleted when the user opts in",
+    test "only the collections the user selects for deletion are deleted",
          %{
            conn: conn,
            root: root,
            sandbox: sandbox
          } do
-      insert(:collection, project: root, name: "parent-only")
+      selected = insert(:collection, project: root, name: "selected-col")
+      insert(:collection, project: root, name: "unselected-col")
 
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
       mock_provisioner_ok(root)
@@ -2344,7 +2345,9 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_click()
 
       view
-      |> element("#merge-delete-collections")
+      |> element(
+        "#merge-collections-to-delete li[phx-value-id='#{selected.id}']"
+      )
       |> render_click()
 
       view |> form("#merge-sandbox-modal form") |> render_submit()
@@ -2353,16 +2356,17 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         Lightning.Collections.list_project_collections(root)
         |> Enum.map(& &1.name)
 
-      refute "parent-only" in parent_names
+      refute "selected-col" in parent_names
+      assert "unselected-col" in parent_names
     end
 
-    test "the delete opt-in survives other checkbox toggles in the same form",
-         %{
-           conn: conn,
-           root: root,
-           sandbox: sandbox
-         } do
-      insert(:collection, project: root, name: "parent-only")
+    test "select-all marks every target-only collection for deletion", %{
+      conn: conn,
+      root: root,
+      sandbox: sandbox
+    } do
+      insert(:collection, project: root, name: "doomed-a")
+      insert(:collection, project: root, name: "doomed-b")
 
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
       mock_provisioner_ok(root)
@@ -2377,15 +2381,92 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_click()
 
       view
-      |> element("#merge-delete-collections")
+      |> element("#merge-select-all-collections-to-delete")
+      |> render_click()
+
+      assert view |> element("#merge-collections-to-delete") |> render() =~
+               "2 of 2 selected"
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      refute "doomed-a" in parent_names
+      refute "doomed-b" in parent_names
+    end
+
+    test "unchecking a collection to add leaves it out of the merge", %{
+      conn: conn,
+      root: root,
+      sandbox: sandbox
+    } do
+      insert(:collection, project: sandbox, name: "col-a")
+      insert(:collection, project: sandbox, name: "col-b")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Both rows start selected; deselect one.
+      assert view |> element("#merge-collections-to-add") |> render() =~
+               "2 of 2 selected"
+
+      view
+      |> element("#merge-collections-to-add li[phx-value-name='col-b']")
+      |> render_click()
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      assert "col-a" in parent_names
+      refute "col-b" in parent_names
+    end
+
+    test "collection selections survive other checkbox toggles in the same form",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      parent_only = insert(:collection, project: root, name: "parent-only")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> element(
+        "#merge-collections-to-delete li[phx-value-id='#{parent_only.id}']"
+      )
       |> render_click()
 
       # Toggling any other checkbox in the merge form fires its change event
-      # with an unchanged target; the opt-in must survive that.
+      # with an unchanged target; the selection must survive that.
       view |> form("#merge-sandbox-modal form") |> render_change()
 
-      assert view |> element("#merge-delete-collections") |> render() =~
-               "checked"
+      assert view |> element("#merge-collections-to-delete") |> render() =~
+               "1 of 1 selected"
 
       view |> form("#merge-sandbox-modal form") |> render_submit()
 
@@ -2396,14 +2477,14 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute "parent-only" in parent_names
     end
 
-    test "changing the target recomputes the preview and clears the opt-in",
+    test "changing the target recomputes the preview and clears the selections",
          %{
            conn: conn,
            root: root,
            sandbox: sandbox,
            user: user
          } do
-      insert(:collection, project: root, name: "root-only")
+      root_only = insert(:collection, project: root, name: "root-only")
 
       other =
         insert(:project,
@@ -2421,32 +2502,33 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_click()
 
       view
-      |> element("#merge-delete-collections")
+      |> element(
+        "#merge-collections-to-delete li[phx-value-id='#{root_only.id}']"
+      )
       |> render_click()
 
-      assert view |> element("#merge-delete-collections") |> render() =~
-               "checked"
+      assert view |> element("#merge-collections-to-delete") |> render() =~
+               "1 of 1 selected"
 
       view
       |> form("#merge-sandbox-modal form")
       |> render_change(%{"merge" => %{"target_id" => other.id}})
 
-      panel_html = view |> element("#merge-collections-panel") |> render()
+      panel_html =
+        view |> element("#merge-collections-to-delete") |> render()
 
       assert panel_html =~ "other-only"
       refute panel_html =~ "root-only"
-
-      refute view |> element("#merge-delete-collections") |> render() =~
-               "checked"
+      assert panel_html =~ "0 of 1 selected"
     end
 
-    test "a collection added to the target after the preview is kept even with the opt-in",
+    test "a collection added to the target after the preview is kept even when deletions are selected",
          %{
            conn: conn,
            root: root,
            sandbox: sandbox
          } do
-      insert(:collection, project: root, name: "previewed")
+      previewed = insert(:collection, project: root, name: "previewed")
 
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
       mock_provisioner_ok(root)
@@ -2461,7 +2543,9 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_click()
 
       view
-      |> element("#merge-delete-collections")
+      |> element(
+        "#merge-collections-to-delete li[phx-value-id='#{previewed.id}']"
+      )
       |> render_click()
 
       # Someone adds a collection to the target while the modal is open.
@@ -2477,14 +2561,14 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert "added-later" in parent_names
     end
 
-    test "the opt-in is ignored when the submitted target differs from the previewed one",
+    test "collection selections are ignored when the submitted target differs from the previewed one",
          %{
            conn: conn,
            root: root,
            sandbox: sandbox,
            user: user
          } do
-      insert(:collection, project: root, name: "root-only")
+      root_only = insert(:collection, project: root, name: "root-only")
 
       other =
         insert(:project,
@@ -2507,9 +2591,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
       |> render_click()
 
-      # Opt in while the preview is for the default target (root)...
+      # Select a deletion while the preview is for the default target
+      # (root)...
       view
-      |> element("#merge-delete-collections")
+      |> element(
+        "#merge-collections-to-delete li[phx-value-id='#{root_only.id}']"
+      )
       |> render_click()
 
       # ...then submit a crafted event pointing at a different target.
@@ -2530,7 +2617,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert "root-only" in root_names
     end
 
-    test "merge modal lists affected collections with badges and metadata",
+    test "merge modal lists collections to add and to delete in separate panels",
          %{
            conn: conn,
            root: root,
@@ -2550,37 +2637,27 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
       |> render_click()
 
-      panel_html = view |> element("#merge-collections-panel") |> render()
+      # Sandbox-only collections list in their own panel, all preselected.
+      to_add_html = view |> element("#merge-collections-to-add") |> render()
 
-      # Sandbox-only collections show as additions.
-      assert panel_html =~ "sandbox-only-col"
-      assert panel_html =~ "Will be added"
+      assert to_add_html =~ "Collections to add"
+      assert to_add_html =~ "sandbox-only-col"
+      assert to_add_html =~ "1 of 1 selected"
+      assert has_element?(view, "#merge-select-all-collections-to-add")
 
-      # Target-only collections show item-count metadata and are kept by
-      # default.
-      assert panel_html =~ "parent-only-col"
-      assert panel_html =~ "2 items"
-      assert panel_html =~ "Kept"
-      refute panel_html =~ "Will be deleted"
+      # Target-only collections list separately with item-count metadata,
+      # none selected by default.
+      to_delete_html =
+        view |> element("#merge-collections-to-delete") |> render()
 
-      # The owner gets the delete opt-in, unchecked by default.
-      assert has_element?(view, "#merge-delete-collections")
-      refute panel_html =~ "checked"
-      assert panel_html =~ "Also delete collections that only exist in"
-
-      # Checking the opt-in flips the target-only badges in place.
-      view
-      |> element("#merge-delete-collections")
-      |> render_click()
-
-      panel_html = view |> element("#merge-collections-panel") |> render()
-
-      assert panel_html =~ "Will be deleted"
-      refute panel_html =~ "Kept"
-      assert panel_html =~ "Will be added"
+      assert to_delete_html =~ "Collections to delete from #{root.name}"
+      assert to_delete_html =~ "parent-only-col"
+      assert to_delete_html =~ "2 items"
+      assert to_delete_html =~ "0 of 1 selected"
+      assert has_element?(view, "#merge-select-all-collections-to-delete")
     end
 
-    test "merge modal hides the collections panel when there is nothing to show",
+    test "merge modal hides the collection panels when there is nothing to show",
          %{
            conn: conn,
            root: root,
@@ -2595,10 +2672,12 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
       |> render_click()
 
-      refute has_element?(view, "#merge-collections-panel")
+      refute has_element?(view, "#merge-collections-to-add")
+      refute has_element?(view, "#merge-collections-to-delete")
+      refute has_element?(view, "#merge-collections-target-only")
     end
 
-    test "an editor on the target sees the list without the delete opt-in and cannot force it",
+    test "an editor on the target sees the list without checkboxes and cannot force a deletion",
          %{
            conn: conn,
            root: root,
@@ -2608,7 +2687,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       insert(:project_user, project: root, user: editor, role: :editor)
       insert(:project_user, project: sandbox, user: editor, role: :admin)
 
-      insert(:collection, project: root, name: "parent-only")
+      parent_only = insert(:collection, project: root, name: "parent-only")
 
       conn = log_in_user(conn, editor)
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
@@ -2623,14 +2702,18 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> element("#branch-rewire-sandbox-#{sandbox.id} button")
       |> render_click()
 
-      panel_html = view |> element("#merge-collections-panel") |> render()
+      panel_html =
+        view |> element("#merge-collections-target-only") |> render()
 
       assert panel_html =~ "parent-only"
       assert panel_html =~ "are always kept."
-      refute has_element?(view, "#merge-delete-collections")
+      refute panel_html =~ "checkbox"
+      refute has_element?(view, "#merge-collections-to-delete")
 
       # A crafted toggle event must not enable deletion either.
-      render_click(view, "toggle-delete-collections", %{})
+      render_click(view, "toggle-collection-to-delete", %{
+        "id" => parent_only.id
+      })
 
       view |> form("#merge-sandbox-modal form") |> render_submit()
 
