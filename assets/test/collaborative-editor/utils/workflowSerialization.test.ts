@@ -7,7 +7,7 @@ import {
 
 describe('workflowSerialization', () => {
   describe('serializeWorkflowToYAML', () => {
-    it('includes entity IDs in serialized YAML', () => {
+    it('serializes the workflow to v2 portability YAML', () => {
       const workflow = {
         id: 'workflow-uuid-123',
         name: 'Test Workflow',
@@ -44,10 +44,17 @@ describe('workflowSerialization', () => {
       const yaml = serializeWorkflowToYAML(workflow);
 
       expect(yaml).toBeDefined();
-      expect(yaml).toContain('id: workflow-uuid-123');
-      expect(yaml).toContain('id: job-uuid-456');
-      expect(yaml).toContain('id: trigger-uuid-789');
-      expect(yaml).toContain('id: edge-uuid-abc');
+      // v2 wire shape: top-level `name`, unified `steps:` array, trigger
+      // discriminator under `type:`, job code under `expression:`.
+      expect(yaml).toContain('name: Test Workflow');
+      expect(yaml).toContain('steps:');
+      expect(yaml).toContain('type: webhook');
+      expect(yaml).toContain('expression:');
+      // v2 is stateless — UUIDs do not appear on the wire; steps reference
+      // each other by hyphenated step id (derived from name).
+      expect(yaml).not.toContain('workflow-uuid-123');
+      expect(yaml).not.toContain('job-uuid-456');
+      expect(yaml).not.toContain('trigger-uuid-789');
     });
 
     it('preserves all job properties', () => {
@@ -78,7 +85,7 @@ describe('workflowSerialization', () => {
       const yaml = serializeWorkflowToYAML(workflow);
 
       expect(yaml).toContain('name: My Job');
-      expect(yaml).toContain('adaptor: "@openfn/language-common@latest"');
+      expect(yaml).toContain('@openfn/language-common@latest');
       expect(yaml).toContain('console.log("hello");');
     });
   });

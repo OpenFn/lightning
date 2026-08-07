@@ -245,6 +245,185 @@ defmodule Lightning.VersionControlTest do
 
       assert Repo.aggregate(ProjectRepoConnection, :count) == 0
     end
+
+    test "returns a changeset error when sandbox claims an ancestor's (repo, branch)" do
+      parent = insert(:project)
+
+      insert(:project_repo_connection,
+        project: parent,
+        repo: "someaccount/somerepo",
+        branch: "main"
+      )
+
+      sandbox = insert(:project, parent: parent)
+      user = user_with_valid_github_oauth()
+
+      params = %{
+        "project_id" => sandbox.id,
+        "repo" => "someaccount/somerepo",
+        "branch" => "main",
+        "github_installation_id" => "1234",
+        "sync_direction" => "pull",
+        "accept" => "true"
+      }
+
+      assert {:error, %Ecto.Changeset{valid?: false} = changeset} =
+               VersionControl.create_github_connection(params, user)
+
+      assert {msg, _} = changeset.errors[:branch]
+
+      assert msg =~
+               "already linked to another project in the same project family"
+
+      # parent's existing connection is the only one in the DB
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+    end
+
+    test "returns a changeset error when a sibling sandbox already uses the (repo, branch)" do
+      parent = insert(:project)
+      sibling_a = insert(:project, parent: parent)
+      sibling_b = insert(:project, parent: parent)
+
+      insert(:project_repo_connection,
+        project: sibling_a,
+        repo: "someaccount/somerepo",
+        branch: "feature"
+      )
+
+      user = user_with_valid_github_oauth()
+
+      params = %{
+        "project_id" => sibling_b.id,
+        "repo" => "someaccount/somerepo",
+        "branch" => "feature",
+        "github_installation_id" => "1234",
+        "sync_direction" => "pull",
+        "accept" => "true"
+      }
+
+      assert {:error, %Ecto.Changeset{valid?: false} = changeset} =
+               VersionControl.create_github_connection(params, user)
+
+      assert {msg, _} = changeset.errors[:branch]
+
+      assert msg =~
+               "already linked to another project in the same project family"
+
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+    end
+
+    test "DB unique index closes the check-then-insert race even when the application-level guard is bypassed" do
+      # Build two raw structs that have already passed the in-memory guard —
+      # this models the race window in which two concurrent transactions both
+      # SELECT no-row before either INSERTs. With the unique index in place,
+      # exactly one INSERT survives; the other raises Ecto.ConstraintError on
+      # `project_repo_connections_root_repo_branch_index`.
+      parent = insert(:project)
+      sibling_a = insert(:project, parent: parent)
+      sibling_b = insert(:project, parent: parent)
+
+      build_struct = fn project ->
+        %Lightning.VersionControl.ProjectRepoConnection{
+          project_id: project.id,
+          root_project_id: parent.id,
+          repo: "someaccount/somerepo",
+          branch: "main",
+          github_installation_id: "1234",
+          access_token: "token-#{project.id}"
+        }
+      end
+
+      assert {:ok, _} = Repo.insert(build_struct.(sibling_a))
+
+      # `Repo.insert/1` on a struct (no changeset) wraps the underlying
+      # Postgres unique violation into Ecto.ConstraintError because no
+      # `unique_constraint/3` was declared on the struct path.
+      assert_raise Ecto.ConstraintError,
+                   ~r/project_repo_connections_root_repo_branch/,
+                   fn ->
+                     Repo.insert(build_struct.(sibling_b))
+                   end
+
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+    end
+
+    test "tree_unique_violation? identifies a real Repo.insert constraint failure on (root_project_id, repo, branch)" do
+      # Models the production race window: two transactions A and B both
+      # validate `tree_branch_conflict?` and see no row, so both pass the
+      # in-memory guard. A inserts first; B's INSERT then trips the unique
+      # index. `insert_repo_connection/1` translates that result into
+      # `{:error, :branch_used_in_project_tree}` via `tree_unique_violation?`.
+      #
+      # We can't simulate the race deterministically through
+      # `create_github_connection` (the in-memory guard is a same-module local
+      # call which Mimic can't redirect, and racing two test processes inside
+      # SQL Sandbox is flaky). Instead we reproduce B's exact post-validation
+      # state — a changeset with the `unique_constraint(:branch, name: ...)`
+      # declaration but no in-memory branch error — and assert that:
+      #
+      #   1. `Repo.insert/1` returns `{:error, %Changeset{}}` with the unique
+      #      constraint translated by Ecto into a tagged error,
+      #   2. `tree_unique_violation?/1` returns true on that changeset, which
+      #      is the predicate `insert_repo_connection/1` keys off of.
+      #
+      # The one-line translation `if predicate, do: {:error, :atom}` in
+      # `insert_repo_connection/1` is then trivial control flow that can't
+      # silently regress without the predicate first failing.
+      parent = insert(:project)
+      sibling_a = insert(:project, parent: parent)
+      sibling_b = insert(:project, parent: parent)
+
+      insert(:project_repo_connection,
+        project: sibling_a,
+        repo: "someaccount/somerepo",
+        branch: "main"
+      )
+
+      tree_unique_index = "project_repo_connections_root_repo_branch_index"
+
+      tree_branch_message =
+        "this branch is already linked to another project in the same project family; use a different branch"
+
+      racing_changeset =
+        %ProjectRepoConnection{}
+        |> Ecto.Changeset.cast(
+          %{
+            project_id: sibling_b.id,
+            root_project_id: parent.id,
+            repo: "someaccount/somerepo",
+            branch: "main",
+            github_installation_id: "1234",
+            access_token: "race-token"
+          },
+          [
+            :project_id,
+            :root_project_id,
+            :repo,
+            :branch,
+            :github_installation_id,
+            :access_token
+          ]
+        )
+        |> Ecto.Changeset.unique_constraint(:branch,
+          name: tree_unique_index,
+          message: tree_branch_message
+        )
+
+      assert {:error, failed} = Repo.insert(racing_changeset)
+      assert ProjectRepoConnection.tree_unique_violation?(failed)
+
+      # Sanity: the changeset error matches the shape `tree_unique_violation?`
+      # expects — Ecto tags the error with `constraint: :unique` and the
+      # exact index name when the declared `unique_constraint/3` matches.
+      assert {_msg,
+              [
+                {:constraint, :unique},
+                {:constraint_name, ^tree_unique_index}
+              ]} = failed.errors[:branch]
+
+      # Sibling A's row is still the only one — B's INSERT was rejected.
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
+    end
   end
 
   describe "remove_github_connection/2" do

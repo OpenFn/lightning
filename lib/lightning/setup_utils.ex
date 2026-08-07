@@ -122,6 +122,7 @@ defmodule Lightning.SetupUtils do
           Accounts.register_superuser(%{
             first_name: "Sizwe",
             last_name: "Super",
+            support_user: true,
             email: "super@openfn.org",
             password: "welcome12345"
           })

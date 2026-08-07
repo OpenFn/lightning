@@ -59,7 +59,8 @@ export function formatChannelErrorMessage(channelError: ChannelError): string {
   const fError = Object.values(errors)
     .flat(2)
     .find(v => v && typeof v === 'object' && Object.keys(v).length > 0) as
-    Record<string, unknown> | undefined;
+    | Record<string, unknown>
+    | undefined;
 
   if (fError) {
     const msg = Object.entries(fError)

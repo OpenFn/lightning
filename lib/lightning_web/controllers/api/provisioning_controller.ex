@@ -195,7 +195,7 @@ defmodule LightningWeb.API.ProvisioningController do
              conn.assigns.current_resource,
              project
            ) do
-      {:ok, yaml} = Projects.export_project(:yaml, id, params["snapshots"])
+      {:ok, yaml} = Projects.export_project(:yaml, id, params["snapshots"], :v1)
 
       conn
       |> put_resp_content_type("text/yaml")
