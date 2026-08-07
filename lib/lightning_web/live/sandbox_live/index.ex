@@ -423,7 +423,7 @@ defmodule LightningWeb.SandboxLive.Index do
      |> assign(:merge_selected_workflow_ids, selected_ids)
      |> assign(:merge_credentials, merge_credentials)
      |> assign(:merge_selected_credential_ids, selected_credential_ids)
-     |> assign_merge_collections(sandbox, target_project)}
+     |> maybe_assign_merge_collections(sandbox, target_project)}
   end
 
   @impl true
@@ -488,9 +488,8 @@ defmodule LightningWeb.SandboxLive.Index do
               selected_credential_ids =
                 MapSet.to_list(socket.assigns.merge_selected_credential_ids)
 
-              delete_collections? =
-                socket.assigns.merge_delete_collections? and
-                  socket.assigns.merge_can_delete_collections
+              collection_ids_to_delete =
+                approved_collection_deletions(socket.assigns, target, actor)
 
               source
               |> perform_merge(
@@ -498,7 +497,7 @@ defmodule LightningWeb.SandboxLive.Index do
                 actor,
                 selected_ids,
                 selected_credential_ids,
-                delete_collections?
+                collection_ids_to_delete
               )
               |> handle_merge_result(socket, source, target, root_project, actor)
             else
@@ -730,10 +729,7 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:merge_selected_workflow_ids, MapSet.new())
     |> assign(:merge_credentials, [])
     |> assign(:merge_selected_credential_ids, MapSet.new())
-    |> assign(:merge_collections_to_add, [])
-    |> assign(:merge_collections_to_delete, [])
-    |> assign(:merge_can_delete_collections, false)
-    |> assign(:merge_delete_collections?, false)
+    |> assign_merge_collections(nil, nil)
   end
 
   # Computes what a merge would do to the target's collections and whether
@@ -741,8 +737,10 @@ defmodule LightningWeb.SandboxLive.Index do
   # unchecked; picking a new target resets it.
   defp assign_merge_collections(socket, _sandbox, nil) do
     socket
+    |> assign(:merge_collections_target_id, nil)
     |> assign(:merge_collections_to_add, [])
     |> assign(:merge_collections_to_delete, [])
+    |> assign(:merge_collections_to_delete_ids, [])
     |> assign(:merge_can_delete_collections, false)
     |> assign(:merge_delete_collections?, false)
   end
@@ -760,10 +758,25 @@ defmodule LightningWeb.SandboxLive.Index do
       )
 
     socket
+    |> assign(:merge_collections_target_id, target_project.id)
     |> assign(:merge_collections_to_add, to_create)
     |> assign(:merge_collections_to_delete, Enum.map(to_delete, & &1.name))
+    |> assign(:merge_collections_to_delete_ids, Enum.map(to_delete, & &1.id))
     |> assign(:merge_can_delete_collections, can_delete?)
     |> assign(:merge_delete_collections?, false)
+  end
+
+  # The change event fires for every input in the merge form (toggling any
+  # checkbox re-submits it), so only recompute the collections preview - and
+  # reset the delete opt-in - when the target actually changed.
+  defp maybe_assign_merge_collections(socket, sandbox, target_project) do
+    new_target_id = target_project && target_project.id
+
+    if socket.assigns.merge_collections_target_id == new_target_id do
+      socket
+    else
+      assign_merge_collections(socket, sandbox, target_project)
+    end
   end
 
   defp merge_changeset(params \\ %{}) do
@@ -1068,13 +1081,28 @@ defmodule LightningWeb.SandboxLive.Index do
     MergeProjects.diverged_workflows(target_project, source)
   end
 
+  # Only honor the delete opt-in for the target it was previewed against,
+  # and re-check the permission for the submitted target at confirm time.
+  # The ids passed along are the ones the user saw in the modal; the merge
+  # itself re-derives what is target-only, so only previewed collections
+  # that still qualify get deleted.
+  defp approved_collection_deletions(assigns, target, actor) do
+    if assigns.merge_delete_collections? and
+         assigns.merge_collections_target_id == target.id and
+         Permissions.can?(:collections, :manage_collection, actor, target) do
+      assigns.merge_collections_to_delete_ids
+    else
+      []
+    end
+  end
+
   defp perform_merge(
          source,
          target,
          actor,
          {selected_workflow_ids, deleted_target_workflow_ids},
          selected_credential_ids,
-         delete_collections?
+         collection_ids_to_delete
        ) do
     maybe_commit_to_github(target, "pre-merge commit")
 
@@ -1082,7 +1110,7 @@ defmodule LightningWeb.SandboxLive.Index do
       selected_workflow_ids: selected_workflow_ids,
       deleted_target_workflow_ids: deleted_target_workflow_ids,
       selected_credential_ids: selected_credential_ids,
-      delete_collections: delete_collections?
+      delete_collections: collection_ids_to_delete
     }
 
     case Sandboxes.merge(source, target, actor, opts) do

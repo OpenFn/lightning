@@ -661,6 +661,26 @@ defmodule Lightning.Projects.SandboxesTest do
              ) == []
     end
 
+    test "restricts deletions to the approved ids when given" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "shared")
+      insert(:collection, project: target, name: "shared")
+
+      approved = insert(:collection, project: target, name: "approved")
+      kept = insert(:collection, project: target, name: "not-approved")
+
+      assert {:ok, %{created: 0, deleted: 1}} =
+               Sandboxes.sync_collections(source, target,
+                 allow_deletions: true,
+                 approved_ids: [approved.id]
+               )
+
+      refute Lightning.Repo.get(Lightning.Collections.Collection, approved.id)
+      assert Lightning.Repo.get(Lightning.Collections.Collection, kept.id)
+    end
+
     test "is a no-op when both projects have the same collections" do
       source = insert(:project)
       target = insert(:project)
@@ -800,7 +820,7 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
-  defp merge_target_only_collection(actor_role, opts \\ %{}) do
+  defp merge_target_only_collection(actor_role, approve? \\ false) do
     actor = insert(:user)
     parent = insert(:project)
     ensure_member!(parent, actor, actor_role)
@@ -808,11 +828,12 @@ defmodule Lightning.Projects.SandboxesTest do
     insert(:simple_workflow, project: parent)
 
     # Exists only on the target, so a merge could delete it.
-    insert(:collection,
-      project: parent,
-      name: "target-only",
-      items: [%{key: "k", value: "v"}]
-    )
+    collection =
+      insert(:collection,
+        project: parent,
+        name: "target-only",
+        items: [%{key: "k", value: "v"}]
+      )
 
     sandbox =
       insert(:project,
@@ -821,6 +842,8 @@ defmodule Lightning.Projects.SandboxesTest do
       )
 
     insert(:simple_workflow, project: sandbox)
+
+    opts = if approve?, do: %{delete_collections: [collection.id]}, else: %{}
 
     assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor, opts)
 
@@ -914,18 +937,46 @@ defmodule Lightning.Projects.SandboxesTest do
       # Without the opt-in even an owner merge keeps target-only collections.
       assert "target-only" in merge_target_only_collection(:owner)
 
-      # With the opt-in an owner merge deletes them.
-      refute "target-only" in merge_target_only_collection(:owner, %{
-               delete_collections: true
-             })
+      # Listing the collection's id deletes it on an owner merge.
+      refute "target-only" in merge_target_only_collection(:owner, true)
     end
 
     test "collection deletion opt-in is still gated on owner/admin" do
       # An editor merge must not prune target-only collections even when the
-      # caller opted in.
-      assert "target-only" in merge_target_only_collection(:editor, %{
-               delete_collections: true
-             })
+      # caller listed them.
+      assert "target-only" in merge_target_only_collection(:editor, true)
+    end
+
+    test "merge deletes only the collections the caller listed" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:simple_workflow, project: parent)
+
+      listed = insert(:collection, project: parent, name: "listed")
+      insert(:collection, project: parent, name: "not-listed")
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      assert {:ok, _updated} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 delete_collections: [listed.id]
+               })
+
+      parent_names =
+        parent
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+
+      refute "listed" in parent_names
+      assert "not-listed" in parent_names
     end
   end
 

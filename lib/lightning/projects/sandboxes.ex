@@ -173,12 +173,14 @@ defmodule Lightning.Projects.Sandboxes do
   ## Collections
 
   Collections that exist only in the sandbox are created empty in the target.
-  Collections that exist only in the target are kept by default. Pass
-  `delete_collections: true` to delete them (and their items) instead; the
-  deletion additionally requires the actor to hold `:manage_collection` on
-  the target, so an editor merge never prunes target collections even when
-  opted in. Use `preview_collections/2` to show callers what a merge would
-  change before they commit.
+  Collections that exist only in the target are kept by default. To delete
+  some (with their items), pass `:delete_collections` as the list of target
+  collection ids the user agreed to delete, taken from `preview_collections/2`.
+  Only listed collections that are still target-only at merge time are
+  deleted, so a collection added to the target after the preview is never
+  swept up. The deletion additionally requires the actor to hold
+  `:manage_collection` on the target, so an editor merge never prunes target
+  collections even when the caller lists ids.
 
   ## Credential attachment
 
@@ -219,12 +221,20 @@ defmodule Lightning.Projects.Sandboxes do
       ) do
     selected_credential_ids = Map.get(opts, :selected_credential_ids, [])
 
-    # Deleting target-only collections is opt-in (`:delete_collections`) and,
-    # on top of that, needs owner/admin rights on the target. `:merge_sandbox`
-    # allows editors, so gate the destructive half separately: a merge never
-    # prunes target data unless the caller asked for it and is allowed to.
+    # Deleting target-only collections is opt-in and pinned to what the
+    # caller previewed: `:delete_collections` lists the collection ids the
+    # user agreed to delete. On top of that it needs owner/admin rights on
+    # the target. `:merge_sandbox` allows editors, so gate the destructive
+    # half separately: a merge never prunes target data unless the caller
+    # listed it and is allowed to delete it.
+    approved_collection_deletion_ids =
+      case Map.get(opts, :delete_collections, []) do
+        ids when is_list(ids) -> ids
+        _other -> []
+      end
+
     allow_collection_deletions? =
-      Map.get(opts, :delete_collections, false) and
+      approved_collection_deletion_ids != [] and
         Permissions.can?(:collections, :manage_collection, actor, target)
 
     Repo.transact(fn ->
@@ -253,7 +263,8 @@ defmodule Lightning.Projects.Sandboxes do
            :ok <- reject_out_of_project_credentials(target),
            {:ok, _} <-
              sync_collections(source, target,
-               allow_deletions: allow_collection_deletions?
+               allow_deletions: allow_collection_deletions?,
+               approved_ids: approved_collection_deletion_ids
              ) do
         {:ok, updated_target}
       end
@@ -1117,10 +1128,11 @@ defmodule Lightning.Projects.Sandboxes do
     created empty in the target
   * `:to_delete` - `Collection` structs (sorted by name) that exist only in
     the target and would be deleted, with their items, if the merge is run
-    with `delete_collections: true`
+    with their ids in `:delete_collections`
 
   Used by the merge screen to show what a merge would change before the
-  user commits to it.
+  user commits to it. The ids in `:to_delete` are what a caller passes back
+  as `:delete_collections`, so the merge only ever deletes what was shown.
   """
   @spec preview_collections(Project.t(), Project.t()) :: %{
           to_create: [String.t()],
@@ -1150,20 +1162,30 @@ defmodule Lightning.Projects.Sandboxes do
 
     * `:allow_deletions` - when `true`, target-only collections (and their items)
       are deleted so the target matches the source. Defaults to `false`: callers
-      must opt in. The merge path opts in only when the caller passed
-      `delete_collections: true` and the actor holds `:manage_collection`, so
+      must opt in. The merge path opts in only when the caller listed ids in
+      `:delete_collections` and the actor holds `:manage_collection`, so
       target collections are never pruned silently.
+    * `:approved_ids` - restricts deletions to these collection ids;
+      target-only collections not in the list are kept. Defaults to no
+      restriction. The merge path passes the ids the user previewed, so a
+      collection that became target-only after the preview is kept.
   """
   @spec sync_collections(Project.t(), Project.t(), keyword()) ::
           {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
           | {:error, term()}
   def sync_collections(%Project{} = source, %Project{} = target, opts \\ []) do
     allow_deletions? = Keyword.get(opts, :allow_deletions, false)
+    approved_ids = Keyword.get(opts, :approved_ids)
 
     %{to_create: to_create, to_delete: deletable} =
       collections_diff(source, target)
 
-    collections_to_delete = if allow_deletions?, do: deletable, else: []
+    collections_to_delete =
+      cond do
+        not allow_deletions? -> []
+        is_nil(approved_ids) -> deletable
+        true -> Enum.filter(deletable, &(&1.id in approved_ids))
+      end
 
     to_delete_ids = Enum.map(collections_to_delete, & &1.id)
 

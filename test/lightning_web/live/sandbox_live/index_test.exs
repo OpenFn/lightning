@@ -2344,7 +2344,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_click()
 
       view
-      |> element("#merge-delete-collections-toggle")
+      |> element("#merge-delete-collections")
       |> render_click()
 
       view |> form("#merge-sandbox-modal form") |> render_submit()
@@ -2354,6 +2354,181 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> Enum.map(& &1.name)
 
       refute "parent-only" in parent_names
+    end
+
+    test "the delete opt-in survives other checkbox toggles in the same form",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      insert(:collection, project: root, name: "parent-only")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> element("#merge-delete-collections")
+      |> render_click()
+
+      # Toggling any other checkbox in the merge form fires its change event
+      # with an unchanged target; the opt-in must survive that.
+      view |> form("#merge-sandbox-modal form") |> render_change()
+
+      assert view |> element("#merge-delete-collections") |> render() =~
+               "checked"
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      refute "parent-only" in parent_names
+    end
+
+    test "changing the target recomputes the preview and clears the opt-in",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox,
+           user: user
+         } do
+      insert(:collection, project: root, name: "root-only")
+
+      other =
+        insert(:project,
+          name: "other-target",
+          parent: root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      insert(:collection, project: other, name: "other-only")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> element("#merge-delete-collections")
+      |> render_click()
+
+      assert view |> element("#merge-delete-collections") |> render() =~
+               "checked"
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_change(%{"merge" => %{"target_id" => other.id}})
+
+      target_only_html =
+        view |> element("#merge-collections-target-only") |> render()
+
+      assert target_only_html =~ "other-only"
+      refute target_only_html =~ "root-only"
+
+      refute view |> element("#merge-delete-collections") |> render() =~
+               "checked"
+    end
+
+    test "a collection added to the target after the preview is kept even with the opt-in",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      insert(:collection, project: root, name: "previewed")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> element("#merge-delete-collections")
+      |> render_click()
+
+      # Someone adds a collection to the target while the modal is open.
+      insert(:collection, project: root, name: "added-later")
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      refute "previewed" in parent_names
+      assert "added-later" in parent_names
+    end
+
+    test "the opt-in is ignored when the submitted target differs from the previewed one",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox,
+           user: user
+         } do
+      insert(:collection, project: root, name: "root-only")
+
+      other =
+        insert(:project,
+          name: "other-target",
+          parent: root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      insert(:collection, project: other, name: "other-only")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Opt in while the preview is for the default target (root)...
+      view
+      |> element("#merge-delete-collections")
+      |> render_click()
+
+      # ...then submit a crafted event pointing at a different target.
+      render_submit(view, "confirm-merge", %{
+        "merge" => %{"target_id" => other.id}
+      })
+
+      other_names =
+        Lightning.Collections.list_project_collections(other)
+        |> Enum.map(& &1.name)
+
+      assert "other-only" in other_names
+
+      root_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      assert "root-only" in root_names
     end
 
     test "merge modal lists collections the merge would add and the target-only ones",

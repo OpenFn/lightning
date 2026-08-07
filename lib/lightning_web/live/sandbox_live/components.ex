@@ -507,16 +507,14 @@ defmodule LightningWeb.SandboxLive.Components do
             </ul>
             <label
               :if={@can_delete_collections}
-              id="merge-delete-collections-toggle"
               class="flex items-start gap-3 px-3 py-2 bg-gray-50 border-t border-gray-200 cursor-pointer"
-              phx-click="toggle-delete-collections"
             >
               <input
                 type="checkbox"
                 id="merge-delete-collections"
+                phx-click="toggle-delete-collections"
                 class="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600"
                 checked={@delete_collections?}
-                readonly
               />
               <span class="text-sm text-gray-700" phx-no-format>
                 Also delete these collections from
