@@ -24,9 +24,8 @@ defmodule Lightning.CollaborationHelpers do
   singletons and of any other test's tree. `start_supervised!/1` ties the tree's
   lifetime to the test, so it is torn down automatically on exit.
 
-  Pass the returned instance to `start_collaboration_document/3`,
-  `ensure_doc_supervisor_stopped/2`, and `stop_all_collaboration_documents/1` to
-  drive documents under this isolated tree.
+  Pass the returned instance to `start_collaboration_document/3` and
+  `ensure_doc_supervisor_stopped/2` to drive documents under this isolated tree.
   """
   def start_collaboration_instance do
     base = :"col_#{System.unique_integer([:positive])}"
@@ -142,27 +141,5 @@ defmodule Lightning.CollaborationHelpers do
 
   def ensure_doc_supervisor_stopped(%Instance{} = instance, workflow_id) do
     Lightning.Collaborate.stop_document(instance, "workflow:#{workflow_id}")
-  end
-
-  @doc """
-  Stop every collaboration document still running.
-
-  A safety net for the `async: false` collaboration suites. Each document should
-  already be tied to its own test via `start_collaboration_document/_` (or
-  `ensure_doc_supervisor_stopped/_`); this only catches a stray document a call
-  site left running, keeping it out of the next test.
-
-  Pass an `%Instance{}` to sweep only that test-owned tree. A test that drives
-  its own isolated instance does not need this sweep at all: the instance's
-  supervisor is `start_supervised!`-owned and `owner: self()` monitoring already
-  tears every document down on exit.
-  """
-  def stop_all_collaboration_documents do
-    stop_all_collaboration_documents(Instance.default())
-  end
-
-  def stop_all_collaboration_documents(%Instance{} = instance) do
-    Lightning.Collaboration.Registry.doc_supervisor_names(instance.registry)
-    |> Enum.each(&Lightning.Collaborate.stop_document(instance, &1))
   end
 end

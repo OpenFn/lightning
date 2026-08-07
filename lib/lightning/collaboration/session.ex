@@ -42,7 +42,9 @@ defmodule Lightning.Collaboration.Session do
   @type start_opts :: [
           workflow: Lightning.Workflows.Workflow.t(),
           user: User.t(),
-          parent_pid: pid()
+          document_name: String.t(),
+          parent_pid: pid(),
+          pg_scope: atom()
         ]
 
   @doc """

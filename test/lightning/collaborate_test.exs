@@ -12,14 +12,44 @@ defmodule Lightning.CollaborateTest do
   # DynamicSupervisor, and `:pg` scope), so concurrent tests can't see or
   # collide with each other's documents, sessions, or process-group members.
   # The instance is `start_supervised!`-owned, so the whole tree — including the
-  # DB-writing SharedDoc/PersistenceWriter children — is torn down before this
-  # test process (the sandbox owner) exits, avoiding a connection-checkin race.
+  # DB-writing SharedDoc/PersistenceWriter children — is torn down while this
+  # test's sandbox connection is still checked out, avoiding a checkin race.
   setup do
     instance = start_collaboration_instance()
     user = insert(:user)
     workflow = insert(:workflow)
 
     {:ok, instance: instance, user: user, workflow: workflow}
+  end
+
+  describe "start_or_find_document/4" do
+    test "reports whether this call created the document tree", %{
+      instance: instance,
+      workflow: workflow
+    } do
+      document_name = "workflow:#{workflow.id}"
+
+      assert {:created, pid} =
+               Collaborate.start_or_find_document(
+                 instance,
+                 workflow,
+                 document_name,
+                 owner: self()
+               )
+
+      # `start/2` only tears a document down when it created it, so a second
+      # caller must be told `:found` even though the underlying
+      # `DynamicSupervisor.start_child/2` answers `{:error, {:already_started,
+      # _}}`. Reporting `:created` here would let a caller whose session fails
+      # to start stop a document other sessions are using.
+      assert {:found, ^pid} =
+               Collaborate.start_or_find_document(
+                 instance,
+                 workflow,
+                 document_name,
+                 owner: self()
+               )
+    end
   end
 
   describe "start/2" do

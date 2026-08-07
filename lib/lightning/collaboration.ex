@@ -33,10 +33,10 @@ defmodule Lightning.Collaborate do
 
   require Logger
 
+  @spec start(opts :: Keyword.t()) :: GenServer.on_start()
   @spec start(instance :: Instance.t(), opts :: Keyword.t()) ::
           GenServer.on_start()
   def start(instance \\ Instance.default(), opts) do
-    session_id = Ecto.UUID.generate()
     parent_pid = Keyword.get(opts, :parent_pid, self())
 
     user = Keyword.fetch!(opts, :user)
@@ -52,51 +52,72 @@ defmodule Lightning.Collaborate do
       "Starting collaboration for document: #{document_name} (workflow: #{workflow.id})"
     )
 
-    # Ensure document supervisor exists for this document. Track whether THIS
-    # call started the document, so we only tear down a doc we orphaned.
-    started_here? =
-      case lookup_shared_doc(instance, document_name) do
-        nil ->
-          Logger.info("Starting document for #{document_name}")
+    with {:ok, started_here?} <-
+           ensure_document(instance, workflow, document_name) do
+      case start_session(instance, document_name,
+             workflow: workflow,
+             user: user,
+             parent_pid: parent_pid
+           ) do
+        {:ok, _session_pid} = ok ->
+          ok
 
-          {:ok, _doc_supervisor_pid} =
-            start_document(instance, workflow, document_name)
-
-          true
-
-        _shared_doc_pid ->
-          Logger.info("Found existing document for #{document_name}")
-          false
+        error ->
+          # Only tear down a document this call created: one we merely found may
+          # have other sessions attached to it.
+          if started_here?, do: stop_document(instance, document_name)
+          error
       end
-
-    # Start session for this user
-    result =
-      SessionSupervisor.start_child(
-        instance.dynamic_supervisor,
-        {
-          Session,
-          workflow: workflow,
-          user: user,
-          parent_pid: parent_pid,
-          document_name: document_name,
-          registry: instance.registry,
-          pg_scope: instance.pg_scope,
-          name:
-            Registry.via(
-              instance.registry,
-              {:session, "#{document_name}:#{session_id}", user.id}
-            )
-        }
-      )
-
-    case result do
-      {:ok, _session_pid} ->
-        result
-
-      _error ->
-        if started_here?, do: stop_document(instance, document_name)
-        result
     end
+  end
+
+  # Ensures the document tree for `document_name` is running, reporting whether
+  # THIS call created it. The answer can only come from the start attempt: `:pg`
+  # membership is registered inside `DocumentSupervisor.init/1`, so a lookup
+  # taken beforehand says "absent" for a document another caller is mid-start.
+  @spec ensure_document(
+          Instance.t(),
+          Lightning.Workflows.Workflow.t(),
+          String.t()
+        ) :: {:ok, boolean()} | {:error, term()}
+  defp ensure_document(instance, workflow, document_name) do
+    case start_or_find_document(instance, workflow, document_name, []) do
+      {:created, _pid} ->
+        Logger.info("Starting document for #{document_name}")
+        {:ok, true}
+
+      {:found, _pid} ->
+        Logger.info("Found existing document for #{document_name}")
+        {:ok, false}
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  @spec start_session(Instance.t(), String.t(), Keyword.t()) ::
+          GenServer.on_start()
+  defp start_session(instance, document_name, opts) do
+    session_id = Ecto.UUID.generate()
+    user = Keyword.fetch!(opts, :user)
+
+    SessionSupervisor.start_child(
+      instance.dynamic_supervisor,
+      {
+        Session,
+        workflow: Keyword.fetch!(opts, :workflow),
+        user: user,
+        parent_pid: Keyword.fetch!(opts, :parent_pid),
+        document_name: document_name,
+        registry: instance.registry,
+        pg_scope: instance.pg_scope,
+        name:
+          Registry.via(
+            instance.registry,
+            {:session, "#{document_name}:#{session_id}", user.id}
+          )
+      }
+    )
   end
 
   @doc """
@@ -141,23 +162,23 @@ defmodule Lightning.Collaborate do
   @spec start_document(
           workflow :: Lightning.Workflows.Workflow.t(),
           document_name :: String.t()
-        ) :: {:ok, pid()}
+        ) :: {:ok, pid()} | {:error, term()}
   @spec start_document(
           workflow :: Lightning.Workflows.Workflow.t(),
           document_name :: String.t(),
           opts :: Keyword.t()
-        ) :: {:ok, pid()}
+        ) :: {:ok, pid()} | {:error, term()}
   @spec start_document(
           instance :: Instance.t(),
           workflow :: Lightning.Workflows.Workflow.t(),
           document_name :: String.t()
-        ) :: {:ok, pid()}
+        ) :: {:ok, pid()} | {:error, term()}
   @spec start_document(
           instance :: Instance.t(),
           workflow :: Lightning.Workflows.Workflow.t(),
           document_name :: String.t(),
           opts :: Keyword.t()
-        ) :: {:ok, pid()}
+        ) :: {:ok, pid()} | {:error, term()}
   def start_document(%Lightning.Workflows.Workflow{} = workflow, document_name) do
     start_document(Instance.default(), workflow, document_name, [])
   end
@@ -182,6 +203,24 @@ defmodule Lightning.Collaborate do
         opts
       )
       when is_list(opts) do
+    case start_or_find_document(instance, workflow, document_name, opts) do
+      {:created, pid} -> {:ok, pid}
+      {:found, pid} -> {:ok, pid}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  # Starts the document tree, distinguishing a tree this call created from one
+  # that was already running. Public only so the created/found distinction can
+  # be asserted directly; `start/2`'s teardown correctness rests on it.
+  @doc false
+  @spec start_or_find_document(
+          Instance.t(),
+          Lightning.Workflows.Workflow.t(),
+          String.t(),
+          Keyword.t()
+        ) :: {:created, pid()} | {:found, pid()} | {:error, term()}
+  def start_or_find_document(instance, workflow, document_name, opts) do
     doc_opts =
       [
         workflow: workflow,
@@ -204,15 +243,9 @@ defmodule Lightning.Collaborate do
            instance.dynamic_supervisor,
            {DocumentSupervisor, doc_opts}
          ) do
-      {:ok, pid} -> {:ok, pid}
-      {:error, {:already_started, pid}} -> {:ok, pid}
-    end
-  end
-
-  defp lookup_shared_doc(%Instance{} = instance, document_name) do
-    case :pg.get_members(instance.pg_scope, document_name) do
-      [] -> nil
-      [shared_doc_pid | _] -> shared_doc_pid
+      {:ok, pid} -> {:created, pid}
+      {:error, {:already_started, pid}} -> {:found, pid}
+      {:error, _reason} = error -> error
     end
   end
 

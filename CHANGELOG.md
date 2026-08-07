@@ -373,6 +373,12 @@ Migrations in this release, all in `priv/repo/migrations/`:
   by adding `Run.active_states/0`, `WorkOrder.states/0`, and
   `WorkOrder.active_states/0` and replacing all hardcoded state lists across the
   codebase [#4589](https://github.com/OpenFn/lightning/issues/4589)
+- The collaboration supervision tree is no longer tied to a single set of global
+  process names. The registry, dynamic supervisor and `:pg` scope a tree owns
+  are described by a `Lightning.Collaboration.Instance` struct whose defaults
+  are the existing production atoms, so several independent trees can run
+  alongside each other and the collaboration test suite runs async rather than
+  serially.
 - Collaborative editing documents now shut down deterministically. A document
   tree can be handed an `owner` process to monitor, and when that owner exits it
   stops cleanly with a final persistence flush; `Lightning.Collaborate` gains a

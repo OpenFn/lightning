@@ -129,8 +129,9 @@ defmodule Lightning.Collaboration.Registry do
   @doc """
   Count registered processes, optionally restricted to a key prefix.
 
-  With no key (`count/0`, or `count/1` with a registry), counts every entry in
-  the registry. With a key, counts entries whose key starts with it.
+  A `nil` key counts every entry in the registry; any other key counts entries
+  whose key starts with it. The one-argument form takes the key, not the
+  registry — `count("workflow:x")` uses the default registry.
   """
   def count(registry \\ __MODULE__, key)
 
@@ -159,19 +160,6 @@ defmodule Lightning.Collaboration.Registry do
        [{:==, {:binary_part, :"$2", 0, byte_size(key)}, key}], [[:"$1", :"$3"]]},
       {{{:"$1", :"$2", :"$5"}, :"$3", :"$4"},
        [{:==, {:binary_part, :"$2", 0, byte_size(key)}, key}], [[:"$1", :"$3"]]}
-    ])
-  end
-
-  @doc """
-  List the `document_name`s of every registered DocumentSupervisor.
-
-  The match spec lives here, beside the other key-shape knowledge this module
-  owns, rather than being hand-rolled by callers.
-  """
-  @spec doc_supervisor_names(registry :: atom()) :: [binary()]
-  def doc_supervisor_names(registry \\ __MODULE__) do
-    Registry.select(registry, [
-      {{{:doc_supervisor, :"$1"}, :_, :_}, [], [:"$1"]}
     ])
   end
 

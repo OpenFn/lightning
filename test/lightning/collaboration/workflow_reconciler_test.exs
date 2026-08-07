@@ -15,9 +15,13 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
   # under async because every test inserts a fresh workflow with a unique id, so
   # its document name (`workflow:<uuid>`) never collides with another test's —
   # the same isolation production already relies on between concurrent
-  # workflows. Determinism comes from ownership, not from a private registry:
-  # each document is started with `owner: self()` and torn down (flush included)
-  # before this test process — the sandbox owner — exits.
+  # workflows.
+  #
+  # The isolation holds only as long as nothing else touches the global instance
+  # concurrently. Any other async test that opens a collaboration document must
+  # do so on its own instance (`start_collaboration_instance/0`), and nothing may
+  # act on the global instance in bulk — a sweep over every registered document
+  # will tear these documents down mid-test.
 
   setup do
     # Stub the broadcast calls that the reconcile path makes from the test
@@ -43,16 +47,22 @@ defmodule Lightning.Collaboration.WorkflowReconcilerTest do
     # as production does; document-name uniqueness (a fresh workflow per test)
     # keeps concurrent tests isolated.
     #
-    # Teardown must run the document's flush `:normal` (so DocumentSupervisor's
-    # terminate/2 runs) rather than via ExUnit's supervised `:shutdown` (which a
+    # Teardown must stop the document `:normal` so DocumentSupervisor's
+    # terminate/2 runs, rather than via ExUnit's supervised `:shutdown` (which a
     # non-trapping DocumentSupervisor turns into an abrupt kill, skipping the
     # flush and leaving its DB-writing children to be killed mid-query — a sandbox
-    # disconnect). So the document is started owner-monitored (not
-    # `start_supervised!`) and the `on_exit` below stops it `:normal` via
-    # `Collaborate.stop_document/1` (flush-inclusive). The default registry is the
-    # app global, alive throughout `on_exit`; the callback is registered after
-    # DataCase's `stop_owner` and runs LIFO before it, so the flush completes
-    # while this test — the sandbox owner — is still alive.
+    # disconnect). Hence owner-monitored startup plus a `:normal`
+    # `Collaborate.stop_document/1` in `on_exit`, not `start_supervised!`.
+    #
+    # Those two teardowns race: `owner: self()` is the test process, so its `:DOWN`
+    # fires as the test body ends, while `on_exit` runs later in a separate
+    # process. Either order flushes. The DocumentSupervisor only drops its
+    # registry entry once terminate/2 has returned, and terminate/2 stops the
+    # SharedDoc synchronously, whose `Persistence.unbind/3` blocks on the
+    # PersistenceWriter's `:flush_and_stop`. So `stop_document` finding no pid
+    # means the flush already completed, and finding a live one means its
+    # `GenServer.stop` blocks through the flush. Either way the writes have landed
+    # before DataCase's `stop_owner` reclaims the sandbox connection.
     defp start_session(workflow, user) do
       document_name = "workflow:#{workflow.id}"
 
