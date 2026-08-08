@@ -246,8 +246,9 @@ describe('LogTabPanel', () => {
     });
 
     test('fetches initial logs on mount', async () => {
-      const { channelRequest } =
-        await import('../../../../js/collaborative-editor/hooks/useChannel');
+      const { channelRequest } = await import(
+        '../../../../js/collaborative-editor/hooks/useChannel'
+      );
 
       mockUseActiveRun.mockReturnValue(createMockRun());
 
@@ -536,8 +537,9 @@ describe('LogTabPanel', () => {
       );
 
       // Mock channelRequest to return empty logs
-      const { channelRequest } =
-        await import('../../../../js/collaborative-editor/hooks/useChannel');
+      const { channelRequest } = await import(
+        '../../../../js/collaborative-editor/hooks/useChannel'
+      );
       vi.mocked(channelRequest).mockResolvedValue({ logs: [] });
 
       render(<LogTabPanel />);
@@ -556,8 +558,9 @@ describe('LogTabPanel', () => {
         createMockRun({ id: 'run-1', state: 'claimed' })
       );
 
-      const { channelRequest } =
-        await import('../../../../js/collaborative-editor/hooks/useChannel');
+      const { channelRequest } = await import(
+        '../../../../js/collaborative-editor/hooks/useChannel'
+      );
       vi.mocked(channelRequest).mockResolvedValue({ logs: [] });
 
       render(<LogTabPanel />);
@@ -572,8 +575,9 @@ describe('LogTabPanel', () => {
     test('shows "Nothing yet" message when no run', async () => {
       mockUseActiveRun.mockReturnValue(null);
 
-      const { channelRequest } =
-        await import('../../../../js/collaborative-editor/hooks/useChannel');
+      const { channelRequest } = await import(
+        '../../../../js/collaborative-editor/hooks/useChannel'
+      );
       vi.mocked(channelRequest).mockResolvedValue({ logs: [] });
 
       render(<LogTabPanel />);
@@ -593,8 +597,9 @@ describe('LogTabPanel', () => {
         createMockRun({ id: 'run-1', state: 'available' })
       );
 
-      const { channelRequest } =
-        await import('../../../../js/collaborative-editor/hooks/useChannel');
+      const { channelRequest } = await import(
+        '../../../../js/collaborative-editor/hooks/useChannel'
+      );
       // First return empty, simulating initial state
       vi.mocked(channelRequest).mockResolvedValue({ logs: [] });
 
@@ -629,8 +634,9 @@ describe('LogTabPanel', () => {
         createMockRun({ id: 'run-1', state: 'available' })
       );
 
-      const { channelRequest } =
-        await import('../../../../js/collaborative-editor/hooks/useChannel');
+      const { channelRequest } = await import(
+        '../../../../js/collaborative-editor/hooks/useChannel'
+      );
       vi.mocked(channelRequest).mockResolvedValue({ logs: [] });
 
       const { container } = render(<LogTabPanel />);
