@@ -39,8 +39,14 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
   PersistenceWriter (via the SharedDoc) and stops both children. Because the
   child spec uses `restart: :transient`, a `:normal` stop is not restarted by
   the DynamicSupervisor.
+
+  The default timeout must stay above what `terminate/2` can take, or a slow
+  flush makes this exit `:timeout` while the tree is still running and
+  unflushed — and `Collaborate.stop_document/2` reports that as `:ok`.
+  `terminate/2` bounds each child stop at 5s, so 15s leaves headroom over the
+  10s worst case.
   """
-  def stop(pid, timeout \\ 5_000) when is_pid(pid) do
+  def stop(pid, timeout \\ 15_000) when is_pid(pid) do
     GenServer.stop(pid, :normal, timeout)
   end
 
