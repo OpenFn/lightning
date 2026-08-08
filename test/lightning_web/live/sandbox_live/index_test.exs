@@ -2403,6 +2403,41 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute "col-b" in parent_names
     end
 
+    test "a collection created in the sandbox after the modal opens is still created on merge",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      insert(:collection, project: sandbox, name: "col-a")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Someone adds a collection to the sandbox while the modal is open.
+      # The sandbox is deleted after the merge, so missing this collection
+      # would lose it for good; the merge must still create it.
+      insert(:collection, project: sandbox, name: "added-later")
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      assert "col-a" in parent_names
+      assert "added-later" in parent_names
+    end
+
     test "changing the target recomputes the preview and resets the selections",
          %{
            conn: conn,

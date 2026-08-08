@@ -509,8 +509,8 @@ defmodule LightningWeb.SandboxLive.Index do
               selected_credential_ids =
                 MapSet.to_list(socket.assigns.merge_selected_credential_ids)
 
-              collection_changes =
-                approved_collection_changes(socket.assigns, target, actor)
+              skip_collections =
+                skipped_collection_names(socket.assigns, target)
 
               source
               |> perform_merge(
@@ -518,7 +518,7 @@ defmodule LightningWeb.SandboxLive.Index do
                 actor,
                 selected_ids,
                 selected_credential_ids,
-                collection_changes
+                skip_collections
               )
               |> handle_merge_result(socket, source, target, root_project, actor)
             else
@@ -751,9 +751,9 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign_merge_collections(nil, nil)
   end
 
-  # Computes what a merge would do to the target's collections and whether
-  # this user may delete the target-only ones. Deleting always starts
-  # unchecked; picking a new target resets it.
+  # Previews the collections the merge would create in the target (the
+  # sandbox-only names), all preselected. Unchecking a row skips creating
+  # that collection; picking a new target recomputes the list.
   defp assign_merge_collections(socket, _sandbox, nil) do
     socket
     |> assign(:merge_collections_target_id, nil)
@@ -773,7 +773,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
   # The change event fires for every input in the merge form (toggling any
   # checkbox re-submits it), so only recompute the collections preview - and
-  # reset the delete opt-in - when the target actually changed.
+  # reset the row selections - when the target actually changed.
   defp maybe_assign_merge_collections(socket, sandbox, target_project) do
     new_target_id = target_project && target_project.id
 
@@ -1086,15 +1086,20 @@ defmodule LightningWeb.SandboxLive.Index do
     MergeProjects.diverged_workflows(target_project, source)
   end
 
-  # Collection choices are only honored for the target they were previewed
-  # against. For any other target the merge falls back to its default:
-  # create every source-only collection. There is nothing destructive to
-  # gate - a merge never deletes collections.
-  defp approved_collection_changes(assigns, target, _actor) do
+  # The merge always creates whatever collections the target lacks; only
+  # names the user explicitly unchecked are skipped. The unchecked set is
+  # honored only for the target it was previewed against - for any other
+  # target nothing is skipped. Either way a collection added to the sandbox
+  # after the preview still gets created: skipping is explicit, creating is
+  # the default.
+  defp skipped_collection_names(assigns, target) do
     if assigns.merge_collections_target_id == target.id do
-      MapSet.to_list(assigns.merge_selected_collection_names)
+      assigns.merge_collections_to_add
+      |> MapSet.new()
+      |> MapSet.difference(assigns.merge_selected_collection_names)
+      |> MapSet.to_list()
     else
-      nil
+      []
     end
   end
 
@@ -1104,22 +1109,16 @@ defmodule LightningWeb.SandboxLive.Index do
          actor,
          {selected_workflow_ids, deleted_target_workflow_ids},
          selected_credential_ids,
-         collection_names_to_create
+         skip_collections
        ) do
     maybe_commit_to_github(target, "pre-merge commit")
 
     opts = %{
       selected_workflow_ids: selected_workflow_ids,
       deleted_target_workflow_ids: deleted_target_workflow_ids,
-      selected_credential_ids: selected_credential_ids
+      selected_credential_ids: selected_credential_ids,
+      skip_collections: skip_collections
     }
-
-    opts =
-      if is_nil(collection_names_to_create) do
-        opts
-      else
-        Map.put(opts, :create_collections, collection_names_to_create)
-      end
 
     case Sandboxes.merge(source, target, actor, opts) do
       {:ok, _updated_target} = success ->

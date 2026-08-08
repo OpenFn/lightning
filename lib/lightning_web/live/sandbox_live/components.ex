@@ -467,17 +467,12 @@ defmodule LightningWeb.SandboxLive.Components do
             id="merge-collections-to-add"
             class="border border-gray-200 rounded-lg overflow-hidden bg-white"
           >
-            <label class={[
-              "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
-              @collections_add_select_all_state == :empty && "cursor-default",
-              @collections_add_select_all_state != :empty && "cursor-pointer"
-            ]}>
+            <label class="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200 cursor-pointer">
               <input
                 type="checkbox"
                 id="merge-select-all-collections-to-add"
                 phx-hook="CheckboxIndeterminate"
                 phx-click="toggle-all-collections-to-add"
-                disabled={@collections_add_select_all_state == :empty}
                 checked={@collections_add_select_all_state == :all}
                 class={[
                   "h-4 w-4 rounded border-gray-300 text-indigo-600",

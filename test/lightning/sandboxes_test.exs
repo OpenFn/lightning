@@ -635,7 +635,7 @@ defmodule Lightning.Projects.SandboxesTest do
       assert target_names == ["only-in-source", "shared"]
     end
 
-    test "restricts creations to the approved names when given" do
+    test "skips only the collection names the caller listed" do
       source = insert(:project)
       target = insert(:project)
 
@@ -644,7 +644,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert {:ok, %{created: 1}} =
                Sandboxes.sync_collections(source, target,
-                 approved_names: ["wanted"]
+                 skip_names: ["unwanted"]
                )
 
       target_names =
@@ -874,7 +874,7 @@ defmodule Lightning.Projects.SandboxesTest do
              )
     end
 
-    test "merge creates only the collections the caller listed" do
+    test "merge skips only the collections the caller unchecked" do
       actor = insert(:user)
       parent = insert(:project)
       ensure_member!(parent, actor, :owner)
@@ -894,7 +894,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert {:ok, _updated} =
                Sandboxes.merge(sandbox, parent, actor, %{
-                 create_collections: ["chosen"]
+                 skip_collections: ["left-out"]
                })
 
       parent_names =
@@ -904,6 +904,36 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert "chosen" in parent_names
       refute "left-out" in parent_names
+    end
+
+    test "merge rejects a malformed skip list instead of widening it" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:simple_workflow, project: parent)
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+      insert(:collection, project: sandbox, name: "col")
+
+      # A MapSet is not a list; treating it as "skip nothing" would silently
+      # create collections the caller meant to leave out.
+      assert_raise ArgumentError, ~r/skip_collections/, fn ->
+        Sandboxes.merge(sandbox, parent, actor, %{
+          skip_collections: MapSet.new(["col"])
+        })
+      end
+
+      # Same for a list with non-name members.
+      assert_raise ArgumentError, ~r/skip_collections/, fn ->
+        Sandboxes.merge(sandbox, parent, actor, %{skip_collections: [123]})
+      end
     end
   end
 
