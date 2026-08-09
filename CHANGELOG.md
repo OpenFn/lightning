@@ -36,6 +36,11 @@ and this project adheres to
 
 ### Fixed
 
+- YAML imports now invalidate validation state immediately when pasted content
+  changes or the input mode switches, so Create cannot persist stale workflow
+  content.
+  [#5023](https://github.com/OpenFn/lightning/issues/5023)
+
 - `APOLLO_TIMEOUT` now governs every request to Apollo, including the streaming
   requests all AI chats use. Streaming previously read an internal timeout key
   that no environment could set, so it was always 120s regardless of
