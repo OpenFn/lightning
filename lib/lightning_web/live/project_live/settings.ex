@@ -664,13 +664,12 @@ defmodule LightningWeb.ProjectLive.Settings do
           |> Ecto.Changeset.cast(%{role: role}, [:role])
           |> Ecto.Changeset.validate_inclusion(:role, ~w(viewer editor admin))
 
-        case Ecto.Changeset.get_change(changeset, :role) do
-          nil ->
-            {:noreply, socket}
-
-          role ->
-            Projects.update_project_user(project_user, %{role: role})
-            |> dispatch_flash(socket)
+        if changeset.valid? do
+          Projects.update_project_user(project_user, %{
+            role: Ecto.Changeset.get_change(changeset, :role)
+          })
+        else
+          {:error, :invalid_role}
         end
     end
   end
