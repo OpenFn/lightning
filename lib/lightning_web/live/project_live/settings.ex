@@ -641,7 +641,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         %{"project_user_id" => project_user_id, "role" => role},
         %{assigns: assigns} = socket
       ) do
-    project_user = Projects.get_project_user!(project_user_id)
+    project_user = Projects.get_project_user!(project_user_id, include: :user)
 
     cond do
       project_user.project_id != assigns.project.id ->
@@ -652,7 +652,9 @@ defmodule LightningWeb.ProjectLive.Settings do
       !role_editable?(
         project_user,
         assigns.current_user,
-        assigns.can_edit_project_user_role
+        assigns.can_edit_project_user_role,
+        assigns.project,
+        assigns.sandbox?
       ) ->
         {:noreply,
          socket
@@ -668,8 +670,11 @@ defmodule LightningWeb.ProjectLive.Settings do
           Projects.update_project_user(project_user, %{
             role: Ecto.Changeset.get_change(changeset, :role)
           })
+          |> dispatch_flash(socket)
         else
-          {:error, :invalid_role}
+          {:noreply,
+           socket
+           |> put_flash(:error, "Invalid role")}
         end
     end
   end
@@ -903,10 +908,13 @@ defmodule LightningWeb.ProjectLive.Settings do
   defp role_editable?(
          project_user,
          current_user,
-         can_edit_project_user_role
+         can_edit_project_user_role,
+         project,
+         sandbox?
        ) do
     can_edit_project_user_role and project_user.role != :owner and
-      project_user.user_id != current_user.id
+      project_user.user_id != current_user.id and
+      not (sandbox? and parent_admin?(project, project_user))
   end
 
   defp user_has_valid_oauth_token(user) do
