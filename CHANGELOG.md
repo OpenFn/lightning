@@ -224,6 +224,10 @@ and this project adheres to
   warns which triggers and channels will lose authentication.
 - Deleting a webhook auth method now logs each trigger and channel it was
   detached from, in addition to the deletion itself.
+- Project settings now allow `owner` and `admin` users to edit collaborator
+  roles inline (viewer/editor/admin) without remove-and-readd. Owner rows and
+  self-role edits remain non-editable.
+  [#3603](https://github.com/OpenFn/lightning/issues/3603)
 
 ### Changed
 
@@ -545,10 +549,6 @@ and this project adheres to
   [#4962](https://github.com/OpenFn/lightning/pull/5027)
 - Migrated off the retired `earmark` markdown dependency in favour of `mdex`.
   [#4878](https://github.com/OpenFn/lightning/issues/4878)
-- Project settings now allow `owner` and `admin` users to edit collaborator
-  roles inline (viewer/editor/admin) without remove-and-readd. Owner rows and
-  self-role edits remain non-editable.
-  [#4993](https://github.com/OpenFn/lightning/pull/4993)
 - Removed the unused dev-only `phoenix_storybook` dependency, clearing its
   advisories from the `mix deps.audit` ignore list.
   [#4846](https://github.com/OpenFn/lightning/issues/4846)
