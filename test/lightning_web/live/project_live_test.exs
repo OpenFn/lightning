@@ -4554,9 +4554,10 @@ defmodule LightningWeb.ProjectLiveTest do
                :editor
     end
 
-    test "disallowed role payload is rejected and DB remains unchanged", %{
-      conn: conn
-    } do
+    test "disallowed role payload is rejected with authorization refusal and DB remains unchanged",
+         %{
+           conn: conn
+         } do
       project = insert(:project)
 
       owner = insert(:user)
@@ -4578,7 +4579,7 @@ defmodule LightningWeb.ProjectLiveTest do
           "role" => "owner"
         })
 
-      assert html =~ "Invalid role"
+      assert html =~ "You are not authorized to perform this action"
 
       assert Repo.get!(Lightning.Projects.ProjectUser, viewer_project_user.id).role ==
                :viewer
