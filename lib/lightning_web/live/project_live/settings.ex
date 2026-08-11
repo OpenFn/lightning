@@ -932,9 +932,8 @@ defmodule LightningWeb.ProjectLive.Settings do
          project,
          sandbox?
        ) do
-    can_remove_project_user and project_user.role != :owner and
-      project_user.user_id != current_user.id and
-      not (sandbox? and parent_admin?(project, project_user))
+    can_remove_project_user and
+      project_user_mutable?(project_user, current_user, project, sandbox?)
   end
 
   # Notification prefs are self-only (:edit_failure_alerts / :edit_digest_alerts),
@@ -960,7 +959,12 @@ defmodule LightningWeb.ProjectLive.Settings do
          project,
          sandbox?
        ) do
-    can_edit_project_user_role and project_user.role != :owner and
+    can_edit_project_user_role and
+      project_user_mutable?(project_user, current_user, project, sandbox?)
+  end
+
+  defp project_user_mutable?(project_user, current_user, project, sandbox?) do
+    project_user.role != :owner and
       project_user.user_id != current_user.id and
       not (sandbox? and parent_admin?(project, project_user))
   end
