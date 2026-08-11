@@ -641,41 +641,35 @@ defmodule LightningWeb.ProjectLive.Settings do
         %{"project_user_id" => project_user_id, "role" => role},
         %{assigns: assigns} = socket
       ) do
-    project_user = Projects.get_project_user!(project_user_id, include: :user)
-
-    cond do
-      project_user.project_id != assigns.project.id ->
+    with {:ok, uuid} <- Ecto.UUID.cast(project_user_id),
+         %{} = project_user <- Projects.get_project_user(uuid),
+         project_user <- Lightning.Repo.preload(project_user, :user),
+         true <- project_user.project_id == assigns.project.id,
+         true <-
+           role_editable?(
+             project_user,
+             assigns.current_user,
+             assigns.can_edit_project_user_role,
+             assigns.project,
+             assigns.sandbox?
+           ),
+         changeset <-
+           {%{role: to_string(project_user.role)}, %{role: :string}}
+           |> Ecto.Changeset.cast(%{role: role}, [:role])
+           |> Ecto.Changeset.validate_inclusion(:role, ~w(viewer editor admin)),
+         true <- changeset.valid? do
+      Projects.update_project_user(project_user, %{
+        role: Ecto.Changeset.get_change(changeset, :role)
+      })
+      |> dispatch_flash(socket)
+    else
+      _ ->
         {:noreply,
-         socket
-         |> put_flash(:error, "You are not authorized to perform this action")}
-
-      !role_editable?(
-        project_user,
-        assigns.current_user,
-        assigns.can_edit_project_user_role,
-        assigns.project,
-        assigns.sandbox?
-      ) ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "You are not authorized to perform this action")}
-
-      true ->
-        changeset =
-          {%{role: project_user.role |> to_string()}, %{role: :string}}
-          |> Ecto.Changeset.cast(%{role: role}, [:role])
-          |> Ecto.Changeset.validate_inclusion(:role, ~w(viewer editor admin))
-
-        if changeset.valid? do
-          Projects.update_project_user(project_user, %{
-            role: Ecto.Changeset.get_change(changeset, :role)
-          })
-          |> dispatch_flash(socket)
-        else
-          {:noreply,
-           socket
-           |> put_flash(:error, "Invalid role")}
-        end
+         put_flash(
+           socket,
+           :error,
+           "You are not authorized to perform this action"
+         )}
     end
   end
 
