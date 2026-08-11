@@ -4554,7 +4554,7 @@ defmodule LightningWeb.ProjectLiveTest do
                :editor
     end
 
-    test "invalid role payload is rejected and DB remains unchanged", %{
+    test "disallowed role payload is rejected and DB remains unchanged", %{
       conn: conn
     } do
       project = insert(:project)
@@ -4578,10 +4578,66 @@ defmodule LightningWeb.ProjectLiveTest do
           "role" => "owner"
         })
 
-      assert html =~ "Error when updating the project user"
+      assert html =~ "Invalid role"
 
       assert Repo.get!(Lightning.Projects.ProjectUser, viewer_project_user.id).role ==
                :viewer
+    end
+
+    test "admin crafted set_role cannot target owner row", %{conn: conn} do
+      project = insert(:project)
+
+      owner = insert(:user)
+      admin = insert(:user)
+
+      owner_project_user =
+        insert(:project_user, project: project, user: owner, role: :owner)
+
+      insert(:project_user, project: project, user: admin, role: :admin)
+
+      conn = log_in_user(conn, admin)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      html =
+        render_change(view, "set_role", %{
+          "project_user_id" => owner_project_user.id,
+          "role" => "viewer"
+        })
+
+      assert html =~ "You are not authorized to perform this action"
+
+      assert Repo.get!(Lightning.Projects.ProjectUser, owner_project_user.id).role ==
+               :owner
+    end
+
+    test "admin crafted set_role cannot target own row", %{conn: conn} do
+      project = insert(:project)
+
+      owner = insert(:user)
+      admin = insert(:user)
+
+      insert(:project_user, project: project, user: owner, role: :owner)
+
+      admin_project_user =
+        insert(:project_user, project: project, user: admin, role: :admin)
+
+      conn = log_in_user(conn, admin)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      html =
+        render_change(view, "set_role", %{
+          "project_user_id" => admin_project_user.id,
+          "role" => "viewer"
+        })
+
+      assert html =~ "You are not authorized to perform this action"
+
+      assert Repo.get!(Lightning.Projects.ProjectUser, admin_project_user.id).role ==
+               :admin
     end
 
     test "cross-project project_user_id payload is rejected", %{conn: conn} do
