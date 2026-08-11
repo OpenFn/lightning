@@ -27,6 +27,10 @@ defmodule LightningWeb.SandboxLive.Components do
     @color_palette
   end
 
+  def random_color do
+    Enum.random(color_palette_hex_colors())
+  end
+
   attr :current_project, Project, required: true
   attr :enable_create_button, :boolean, required: true
   attr :disabled_button_tooltip, :string, default: nil
@@ -370,38 +374,30 @@ defmodule LightningWeb.SandboxLive.Components do
                 </span>
                 <span
                   :if={wf.is_changed && !wf.is_new && !wf.is_deleted}
-                  id={"merge-wf-changed-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-green-700"
-                  phx-hook="Tooltip"
-                  aria-label="This workflow has been modified in the sandbox"
+                  title="This workflow has been modified in the sandbox"
                 >
                   Changed
                 </span>
                 <span
                   :if={wf.is_diverged}
-                  id={"merge-wf-diverged-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-amber-700"
-                  phx-hook="Tooltip"
-                  aria-label="This workflow was modified in the target project - this change will be lost"
+                  title="This workflow was modified in the target project - this change will be lost"
                 >
                   <.icon name="hero-exclamation-triangle-mini" class="h-3.5 w-3.5" />
                   Diverged
                 </span>
                 <span
                   :if={wf.is_new}
-                  id={"merge-wf-new-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-blue-700"
-                  phx-hook="Tooltip"
-                  aria-label="This workflow doesn't exist in the target — it will be created"
+                  title="This workflow doesn't exist in the target — it will be created"
                 >
                   New
                 </span>
                 <span
                   :if={wf.is_deleted}
-                  id={"merge-wf-deleted-#{wf.id}"}
                   class="flex items-center gap-1 text-xs font-medium text-red-700"
-                  phx-hook="Tooltip"
-                  aria-label="This workflow was deleted in the sandbox. Selecting it removes it from the project too."
+                  title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
                 >
                   Deleted in sandbox
                 </span>

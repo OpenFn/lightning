@@ -168,5 +168,34 @@ defmodule Lightning.MetadataServiceTest do
                }
              }
     end
+
+    test "refuses a well-formed adaptor that is not in the registry (whitelist)" do
+      path =
+        Briefly.create!(extname: ".json")
+        |> tap(fn path -> File.write!(path, ~s({"secret": "leaked"})) end)
+
+      FakeRambo.Helpers.stub_run(
+        {:ok, %{status: 0, out: ~s({"message":["#{path}"]}\n), err: ""}}
+      )
+
+      credential =
+        insert(:credential)
+        |> with_body(%{name: "main", body: %{"username" => "user"}})
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert MetadataService.fetch("@openfn/language-notreal", credential) ==
+                   {
+                     :error,
+                     %Lightning.MetadataService.Error{
+                       type: "no_matching_adaptor",
+                       __exception__: true
+                     }
+                   }
+        end)
+
+      assert log =~ "Refusing to install non-permitted adaptor"
+      assert log =~ "@openfn/language-notreal"
+    end
   end
 end

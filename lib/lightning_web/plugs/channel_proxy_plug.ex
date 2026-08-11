@@ -260,12 +260,20 @@ defmodule LightningWeb.ChannelProxyPlug do
   end
 
   defp build_strip_headers(client_auth_types) do
+    # `cookie` is always stripped: the channel proxies to a tenant-controlled
+    # destination, so the caller's ambient Lightning session cookie
+    # (`_lightning_key`) must never be forwarded there, or it could be captured
+    # and replayed to hijack the session.
+    ["cookie" | client_auth_strip_headers(client_auth_types)]
+    |> Enum.uniq()
+  end
+
+  defp client_auth_strip_headers(client_auth_types) do
     Enum.flat_map(client_auth_types, fn
       :api -> ["x-api-key"]
       :basic -> ["authorization"]
       _ -> []
     end)
-    |> Enum.uniq()
   end
 
   defp fetch_channel(uuid) do

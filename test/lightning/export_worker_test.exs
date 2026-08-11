@@ -92,7 +92,7 @@ defmodule Lightning.ExportWorkerTest do
                  args: %{
                    "project_id" => project.id,
                    "project_file" => project_file.id,
-                   "search_params" => to_string_key_map(search_params)
+                   "search_params" => to_oban_args(search_params)
                  }
                })
 
@@ -196,7 +196,7 @@ defmodule Lightning.ExportWorkerTest do
                  args: %{
                    "project_id" => non_existent_project_id,
                    "project_file" => project_file.id,
-                   "search_params" => to_string_key_map(search_params)
+                   "search_params" => to_oban_args(search_params)
                  }
                })
 
@@ -204,6 +204,161 @@ defmodule Lightning.ExportWorkerTest do
       assert project_file.status == :failed
       assert is_nil(project_file.path)
     end
+
+    test "marks project file as failed when the search params are invalid",
+         %{project: project, project_file: project_file} do
+      assert {:error, %Ecto.Changeset{}} =
+               ExportWorker.perform(%Oban.Job{
+                 args: %{
+                   "project_id" => project.id,
+                   "project_file" => project_file.id,
+                   "search_params" => %{"status" => ["gone_status"]}
+                 }
+               })
+
+      project_file = Repo.reload(project_file)
+      assert project_file.status == :failed
+      assert is_nil(project_file.path)
+    end
+  end
+
+  describe "perform/1 dataclip scrubbing" do
+    test "scrubs webhook auth secrets from exported http_request dataclips" do
+      project = insert(:project)
+      project_file = insert(:project_file, project: project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+      job = insert(:job, workflow: workflow)
+
+      webhook_auth =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic,
+          username: "secretuser",
+          password: "secretpass"
+        )
+
+      trigger
+      |> Repo.preload(:webhook_auth_methods)
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:webhook_auth_methods, [webhook_auth])
+      |> Repo.update!()
+
+      http_dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :http_request,
+          body: %{
+            "data" => "keep-me",
+            "authorization" => "Basic #{Base.encode64("secretuser:secretpass")}"
+          }
+        )
+
+      step = insert(:step, job: job, input_dataclip: http_dataclip)
+
+      insert(:run,
+        work_order:
+          build(:workorder,
+            workflow: workflow,
+            trigger: trigger,
+            dataclip: http_dataclip,
+            state: :success
+          ),
+        starting_trigger: trigger,
+        dataclip: http_dataclip,
+        state: :success,
+        steps: [step]
+      )
+
+      zip_file_path = run_export!(project, project_file)
+
+      content =
+        extract_and_read(zip_file_path, "dataclips/#{http_dataclip.id}.json")
+
+      refute content =~ "secretuser"
+      refute content =~ "secretpass"
+      refute content =~ Base.encode64("secretuser:secretpass")
+      assert content =~ "***"
+      assert content =~ "keep-me"
+    end
+
+    test "scrubs credential secrets from exported step_result dataclips" do
+      project = insert(:project)
+      project_file = insert(:project_file, project: project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      credential =
+        insert(:credential, name: "Secret Cred", user: build(:user))
+        |> with_body(%{body: %{"password" => "super-secret-value"}})
+
+      project_credential =
+        insert(:project_credential, credential: credential, project: project)
+
+      job =
+        insert(:job, workflow: workflow, project_credential: project_credential)
+
+      input_dataclip = insert(:dataclip, project: project, body: %{})
+
+      output_dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :step_result,
+          body: %{"result" => "super-secret-value", "keep" => "visible"}
+        )
+
+      step =
+        insert(:step,
+          job: job,
+          input_dataclip: input_dataclip,
+          output_dataclip: output_dataclip,
+          started_at: DateTime.utc_now()
+        )
+
+      insert(:run,
+        work_order:
+          build(:workorder,
+            workflow: workflow,
+            trigger: trigger,
+            dataclip: input_dataclip,
+            state: :success
+          ),
+        starting_trigger: trigger,
+        dataclip: input_dataclip,
+        state: :success,
+        steps: [step]
+      )
+
+      zip_file_path = run_export!(project, project_file)
+
+      content =
+        extract_and_read(zip_file_path, "dataclips/#{output_dataclip.id}.json")
+
+      refute content =~ "super-secret-value"
+      assert content =~ "***"
+      assert content =~ "visible"
+    end
+  end
+
+  defp run_export!(project, project_file) do
+    zip_file_path = "exports/#{project.id}/#{project_file.id}.zip"
+
+    on_exit(fn ->
+      if File.exists?(zip_file_path) do
+        {_, 0} = System.cmd("rm", ["-r", Path.dirname(zip_file_path)])
+      end
+    end)
+
+    assert :ok ==
+             ExportWorker.perform(%Oban.Job{
+               args: %{
+                 "project_id" => project.id,
+                 "project_file" => project_file.id,
+                 "search_params" => to_oban_args(SearchParams.new(%{}))
+               }
+             })
+
+    zip_file_path
   end
 
   def extract_and_read(zip_file_path, target_file_name) do
@@ -217,12 +372,11 @@ defmodule Lightning.ExportWorkerTest do
     File.read!(file_path)
   end
 
-  defp to_string_key_map(struct) do
-    struct
-    |> Map.from_struct()
-    |> Enum.reduce(%{}, fn {key, value}, acc ->
-      Map.put(acc, Atom.to_string(key), value)
-    end)
+  # Oban stores job args as JSONB, so search params come back from the queue as
+  # a string-keyed map with string values. Round-trip through JSON so perform/1
+  # is handed exactly what it gets in production.
+  defp to_oban_args(struct) do
+    struct |> JSON.encode!() |> JSON.decode!()
   end
 
   defp lists_equivalent?(list1, list2) do
