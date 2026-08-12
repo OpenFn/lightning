@@ -42,6 +42,10 @@ and this project adheres to
 - `eligible_for_claim/0` now breaks ties with `id` after `priority` and
   `inserted_at`, so two runs inserted in the same microsecond no longer get
   claimed in a nondeterministic order.
+- `mix lightning.gen_workflow_hash` no longer lowers the VM-wide logger level
+  when called in-process, which silenced log assertions in unrelated tests and
+  made them fail depending on run order.
+  [#5060](https://github.com/OpenFn/lightning/pull/5060)
 
 ## [2.18.1] - 2026-08-28
 

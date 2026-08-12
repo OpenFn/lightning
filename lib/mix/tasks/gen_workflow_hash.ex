@@ -27,8 +27,6 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHash do
   alias Lightning.Workflows
   alias Lightning.WorkflowVersions
 
-  require Logger
-
   @impl Mix.Task
   def run(args) do
     {opts, positional, invalid} =
@@ -54,14 +52,14 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHash do
     end
   end
 
+  # The Logger level is global to the VM and never restored, so only quieten it
+  # when this task owns the boot — in-process the repo is already up.
   defp start_repo do
-    Logger.configure(level: :error)
-    Mix.Task.run("app.config")
-    {:ok, _} = Application.ensure_all_started(:ecto_sql)
-
-    case Lightning.Repo.start_link(pool_size: 1) do
-      {:ok, _pid} -> :ok
-      {:error, {:already_started, _pid}} -> :ok
+    if is_nil(Process.whereis(Lightning.Repo)) do
+      Logger.configure(level: :error)
+      Mix.Task.run("app.config")
+      {:ok, _} = Application.ensure_all_started(:ecto_sql)
+      {:ok, _} = Lightning.Repo.start_link(pool_size: 1)
     end
   end
 
