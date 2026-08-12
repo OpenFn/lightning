@@ -19,6 +19,23 @@ and this project adheres to
 
 ### Changed
 
+- The collaboration supervision tree is no longer tied to a single set of global
+  process names. The registry, dynamic supervisor and `:pg` scope a tree owns
+  are described by a `Lightning.Collaboration.Instance` struct whose defaults
+  are the existing production atoms, so several independent trees can run
+  alongside each other and the collaboration test suite runs async rather than
+  serially.
+- Collaborative editing documents now shut down deterministically. A document
+  tree can be handed an `owner` process to monitor, and when that owner exits it
+  stops cleanly with a final persistence flush; `Lightning.Collaborate` gains a
+  synchronous, idempotent `stop_document/1`. Production behaviour is unchanged
+  (documents started by a LiveView still outlive it), but tests can now bind a
+  document's lifetime to the test that starts it, fixing intermittent failures
+  caused by document processes leaking between runs.
+- `Lightning.Collaborate.start/2` now only tears down a collaboration document
+  when that call created it. A caller that raced another's start could
+  previously stop a document other sessions were using.
+
 ### Fixed
 
 ## [2.18.0-pre1] - 2026-08-06
