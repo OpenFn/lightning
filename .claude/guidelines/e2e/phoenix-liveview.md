@@ -1,13 +1,6 @@
 # Testing Phoenix LiveView with Playwright
 
-## Overview
-
-Phoenix LiveView uses WebSocket connections to provide real-time, server-rendered
-interactivity. Testing LiveView applications requires special handling for
-connection lifecycle, event handlers, and server-pushed updates.
-
-This guide covers Lightning-specific patterns for testing Phoenix LiveView
-components with Playwright.
+Lightning-specific patterns for driving Phoenix LiveView pages from Playwright.
 
 ## LiveView waits
 
@@ -16,32 +9,37 @@ Canonical wait patterns for Phoenix LiveView pages. Other e2e guidelines cross-r
 ### waitForConnected
 
 Wait for the LiveView connection before interacting with elements on the page.
+`LiveViewPage` is `abstract`, so instantiate a concrete subclass — `ProjectsPage`,
+`WorkflowsPage`, `LoginPage` or `WorkflowCollaborativePage`.
 
 ```typescript
-import { LiveViewPage } from '../pages/base';
+import { WorkflowsPage } from '../pages';
 
-test('interact with workflow editor', async ({ page }) => {
-  const workflowPage = new LiveViewPage(page);
+test('workflow list is interactive', async ({ page }) => {
+  const workflowsPage = new WorkflowsPage(page);
 
-  await page.goto('/workflows/123/edit');
+  await page.goto(`/projects/${projectId}/w`);
 
   // Wait for LiveView to connect and mount
-  await workflowPage.waitForConnected();
+  await workflowsPage.waitForConnected();
 
-  // Now safe to interact
-  await page.getByRole('button', { name: 'Add Job' }).click();
+  await workflowsPage.navigateToWorkflow(testData.workflows.openhie.name);
 });
 ```
 
-**Implementation** (canonical — `page-objects.md` cross-refs this):
+`WorkflowCollaborativePage.open({ projectId, workflowId })` is the entry point for the
+collaborative editor. It navigates to `/projects/:projectId/w/:workflowId`, waits for
+`[data-testid="collaborative-editor"]` plus `networkidle`, then calls `waitForSynced()`.
+Do **not** treat that last step as a working sync gate: `waitForSynced()` matches
+`text=Synced`, which nothing renders. See
+`.claude/guidelines/e2e/collaborative-testing.md §Two things that will stop you before you
+start`.
 
-```typescript
-async waitForConnected(): Promise<void> {
-  const locator = this.page.locator('[data-phx-main]');
-  await expect(locator).toBeVisible();
-  await expect(locator).toHaveClass(/phx-connected/);
-}
-```
+`waitForConnected` is defined once, on the base class —
+`assets/test/e2e/pages/base/liveview.page.ts:31-35`. It waits for `div[data-phx-main]` to
+be visible and to carry the class `phx-connected`. Read the implementation there rather
+than from a copy: the two copies that used to sit in these guidelines had both drifted the
+same way, writing `toHaveClass` where the source says `toContainClass`.
 
 ### Detecting connection state via liveSocket
 
@@ -62,204 +60,118 @@ await workflowPage.waitForConnected(); // new connection, must re-wait
 
 ## Event Handlers
 
-### Understanding phx-* Attributes
-
-LiveView uses special attributes to bind event handlers:
-
-- `phx-click` - Click events
-- `phx-change` - Form input changes
-- `phx-submit` - Form submissions
-- `phx-blur` - Input blur events
-- `phx-focus` - Input focus events
-- `phx-keydown`/`phx-keyup` - Keyboard events
-- `phx-hook` - JavaScript hook mounting points
-
 ### Waiting for Event Handlers
 
-Event handlers may not be immediately attached after navigation:
+Event handlers may not be attached immediately after navigation.
+`waitForEventAttached(locator, eventType, timeout)` is real —
+`liveview.page.ts:74-103` — and for `'click'` it checks that the element carries
+`phx-click` and that `[data-phx-main]` has `phx-connected`.
 
 ```typescript
+import { WorkflowsPage } from '../pages';
+
 test('wait for handlers before clicking', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
+  const workflowsPage = new WorkflowsPage(page);
 
-  await page.goto('/workflows/new');
-  await liveViewPage.waitForConnected();
+  await page.goto(`/projects/${projectId}/w`);
+  await workflowsPage.waitForConnected();
 
-  const createButton = page.getByRole('button', { name: 'Create' });
-
-  // Wait for phx-click handler to be attached
-  await liveViewPage.waitForEventAttached(createButton, 'click');
-
-  // Now safe to click
+  const createButton = page.getByRole('button', {
+    name: 'Create new workflow',
+  });
+  await workflowsPage.waitForEventAttached(createButton, 'click');
   await createButton.click();
 });
 ```
+
+`WorkflowsPage.clickNewWorkflow()` (`workflows.page.ts:21-35`) already does exactly this
+sequence, and is what a test should normally call.
 
 ## Server-Pushed Updates
 
 ### Waiting for Server Updates
 
-LiveView can push updates from server to client. Use web-first assertions to
-wait for these updates:
+LiveView pushes updates from server to client. Use web-first assertions with a generous
+timeout — they retry until the push lands, so no explicit wait is needed.
 
-```typescript
-test('workflow status updates in real-time', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
-
-  await page.goto('/workflows/123');
-  await liveViewPage.waitForConnected();
-
-  // Trigger workflow execution
-  await page.getByRole('button', { name: 'Run' }).click();
-
-  // Wait for server to push status update
-  await expect(page.getByTestId('workflow-status'))
-    .toHaveText('Running', { timeout: 10000 });
-
-  // Wait for completion
-  await expect(page.getByTestId('workflow-status'))
-    .toHaveText('Completed', { timeout: 30000 });
-});
-```
+For a worked example, read `assets/test/e2e/specs/collaborative/job-step-sync.spec.ts`: a
+real end-to-end server-push test on a real route with real assertions. The `beforeAll` /
+`getTestData()` shape it uses is written out in
+`.claude/guidelines/e2e-testing.md §Test Data Management`.
 
 ### Polling with Socket Ping
 
-For critical operations, ensure WebSocket messages are processed:
+`waitForSocketSettled()` pings the LiveView socket and resolves on the reply, as a way of
+letting pending messages drain before you assert.
+
+**Treat it as unproven.** Its own docstring says so: *"This _hopefully_ ensures that any
+pending messages have been processed. NOTE: still needs to be verified."* A `ping` reply
+tells you the socket is responsive; it does not prove an earlier `phx-submit` has been
+handled. Prefer asserting on the effect you actually care about, and reach for this only
+when there is no observable effect to wait on.
 
 ```typescript
-test('save and verify persistence', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
+const workflowsPage = new WorkflowsPage(page);
 
-  await page.goto('/workflows/123/edit');
-  await liveViewPage.waitForConnected();
+await page.goto(`/projects/${projectId}/w`);
+await workflowsPage.waitForConnected();
 
-  // Make changes
-  await page.getByLabel('Workflow name').fill('Updated Name');
+// ... the action under test
 
-  // Save
-  await page.getByRole('button', { name: 'Save' }).click();
-
-  // Wait for socket to settle (all pending messages processed)
-  await liveViewPage.waitForSocketSettled();
-
-  // Verify save was processed
-  await expect(page.getByText('Workflow saved')).toBeVisible();
-});
+await workflowsPage.waitForSocketSettled();
 ```
 
-**What `waitForSocketSettled()` does:**
-```typescript
-async waitForSocketSettled(): Promise<void> {
-  await this.page.waitForFunction(() => {
-    return new Promise(resolve => {
-      window.liveSocket.socket.ping(resolve);
-    });
-  });
-}
-```
+`waitForSocketSettled` is defined once, on the base class —
+`assets/test/e2e/pages/base/liveview.page.ts:55-61`. Read it there.
 
 ## Form Handling
 
-### LiveView Forms with phx-change
-
-LiveView forms trigger events on every change:
-
-```typescript
-test('form updates trigger LiveView events', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
-
-  await page.goto('/workflows/new');
-  await liveViewPage.waitForConnected();
-
-  // Each input change triggers phx-change event
-  await page.getByLabel('Workflow name').fill('ETL Pipeline');
-
-  // LiveView may update UI based on validation
-  await expect(page.getByText('Name is valid')).toBeVisible();
-
-  // Select dropdown triggers phx-change
-  await page.getByLabel('Workflow type').selectOption('event-based');
-
-  // LiveView updates form based on selection
-  await expect(page.getByLabel('Trigger type')).toBeVisible();
-});
-```
-
-### Form Submission
-
-```typescript
-test('submit LiveView form', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
-
-  await page.goto('/workflows/new');
-  await liveViewPage.waitForConnected();
-
-  // Fill form
-  await page.getByLabel('Workflow name').fill('Test Workflow');
-  await page.getByLabel('Description').fill('Test description');
-
-  // Submit triggers phx-submit
-  await page.getByRole('button', { name: 'Create' }).click();
-
-  // LiveView handles submission and redirects/updates
-  await expect(page).toHaveURL(/\/w\/[a-f0-9-]+/);
-  await expect(page.getByText('Workflow created')).toBeVisible();
-});
-```
-
 ### Debounced Inputs
 
-LiveView often debounces rapid input changes:
+LiveView debounces some inputs, so the server response lags the keystroke. Wait on the
+result, never on the clock: a web-first assertion such as
+`await expect(page.getByText('ETL Pipeline')).toBeVisible()` retries until the debounced
+round trip lands.
 
-```typescript
-test('search with debounced input', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
-
-  await page.goto('/workflows');
-  await liveViewPage.waitForConnected();
-
-  // Type search query
-  const searchInput = page.getByPlaceholder('Search workflows...');
-  await searchInput.fill('ETL');
-
-  // Wait for debounce (usually 300-500ms in Lightning)
-  await page.waitForTimeout(600);
-
-  // Or better: wait for results to appear
-  await expect(page.getByText('ETL Pipeline')).toBeVisible();
-});
-```
+**No fixed sleeps.** `page.waitForTimeout()` does not belong in a passing test — it either
+hides a missing wait or wastes the interval. There is no exception for CRDT convergence;
+`expect.poll` and web-first assertions cover it. The suite currently has 26
+`waitForTimeout` calls across its spec files, which is a debt to work down, not a pattern
+to copy.
 
 ## Flash Messages
 
 ### Asserting Flash Messages
 
-Lightning uses LiveView flash messages for notifications:
+Lightning uses LiveView flash messages for notifications. `expectFlashMessage` is on the
+base class, so call it through a concrete page object — `LiveViewPage` is `abstract` and
+cannot be instantiated.
 
 ```typescript
+import { ProjectsPage } from '../pages';
+
 test('verify flash message', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
+  const projectsPage = new ProjectsPage(page);
 
-  await page.goto('/workflows/123/edit');
-  await liveViewPage.waitForConnected();
+  await page.goto('/');
+  await projectsPage.waitForConnected();
 
-  await page.getByRole('button', { name: 'Save' }).click();
+  // ... the action under test
 
-  // Flash message appears via LiveView push
-  await liveViewPage.expectFlashMessage('Workflow saved successfully.');
+  await projectsPage.expectFlashMessage('<the exact flash text the action pushes>');
 });
 ```
 
-**What `expectFlashMessage()` does:**
-```typescript
-async expectFlashMessage(text: string): Promise<void> {
-  const flashMessage = this.page
-    .locator('[id^="flash-"][phx-hook="Flash"]')
-    .filter({ hasText: text });
+The match is a `hasText` filter, so pass text that really appears — read it off the
+`put_flash` call in the LiveView rather than guessing.
 
-  await expect(flashMessage).toBeVisible();
-}
-```
+Most feedback inside the React collaborative editor is a toast, not a LiveView flash, so
+`expectFlashMessage` is usually the wrong assertion there. The hosting LiveView does push
+one flash — the authorization error at
+`lib/lightning_web/live/workflow_live/collaborate.ex:57`.
+
+`expectFlashMessage` is defined once, on the base class —
+`assets/test/e2e/pages/base/liveview.page.ts:41-46`. Read it there.
 
 ### Flash Message Lifecycle
 
@@ -285,157 +197,80 @@ test('flash message disappears', async ({ page }) => {
 
 ## LiveView Hooks
 
-### Testing JavaScript Hooks
+### Lightning hooks worth knowing
 
-LiveView hooks provide custom client-side behavior:
+**`Flash`** — flash message containers. This is the one the POM base class uses:
+`liveview.page.ts:11` selects `[id^="flash-"][phx-hook="Flash"]`, and
+`expectFlashMessage(text)` filters it by text.
 
-```typescript
-test('Monaco editor hook initializes', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
+**`ReactComponent`** and **`HeexReactComponent`** — the two React mount points.
+`ReactComponent` is set from Elixir in `layout_components.ex:374` and `:448`;
+`HeexReactComponent` from `react.ex:121`. They are generic: every React island in the app
+mounts through one of them, so `[phx-hook="ReactComponent"]` tells you React has mounted
+*something*, not which component. Address the component itself, usually via a
+`data-testid` it renders.
 
-  await page.goto('/workflows/123/edit');
-  await liveViewPage.waitForConnected();
-
-  // Element with phx-hook="Monaco"
-  const editorElement = page.locator('[phx-hook="Monaco"]');
-
-  // Wait for hook to mount and initialize
-  await expect(editorElement).toBeVisible();
-
-  // Wait for Monaco editor to be ready
-  await page.waitForFunction(() => {
-    const element = document.querySelector('[phx-hook="Monaco"]');
-    return element && (element as any).monacoEditor !== undefined;
-  });
-
-  // Now safe to interact with editor
-  await page.keyboard.type('console.log("Hello");');
-});
-```
-
-### Common Lightning Hooks
-
-**Flash Hook**: Auto-dismissing notifications
-```typescript
-// Located on flash message elements
-const flash = page.locator('[phx-hook="Flash"]');
-```
-
-**Monaco Hook**: Code editor initialization
-```typescript
-// Located on code editor containers
-const editor = page.locator('[phx-hook="Monaco"]');
-```
-
-**ReactHook**: React component mounting points
-```typescript
-// Located where React components mount
-const reactComponent = page.locator('[phx-hook="ReactHook"]');
-```
+There is no `Monaco` hook and no `ReactHook` hook. Monaco is mounted from React
+(`assets/js/collaborative-editor/components/CollaborativeMonaco.tsx`), not from a
+LiveView hook, so there is no `phx-hook` to wait on and no Monaco-specific testid — wait
+on `.monaco-editor` instead.
 
 ## WebSocket Monitoring
 
 ### Listening to WebSocket Events
 
+Register the listener **before** `goto` — a LiveView opens its socket during mount, so a
+listener attached afterwards misses the join frames.
+
 ```typescript
 test('monitor LiveView messages', async ({ page }) => {
-  const messages: string[] = [];
+  const received: string[] = [];
 
-  // Listen to WebSocket
   page.on('websocket', ws => {
-    console.log(`WebSocket connected: ${ws.url()}`);
-
-    ws.on('framereceived', frame => {
-      const payload = frame.payload;
-      console.log('Received:', payload);
-      messages.push(payload);
-    });
-
-    ws.on('framesent', frame => {
-      console.log('Sent:', frame.payload);
-    });
+    ws.on('framereceived', frame => received.push(frame.payload as string));
   });
 
-  await page.goto('/workflows/123/edit');
+  const workflowsPage = new WorkflowsPage(page);
+  await page.goto(`/projects/${projectId}/w`);
+  await workflowsPage.waitForConnected();
 
-  // Make changes that trigger WebSocket messages
-  await page.getByLabel('Workflow name').fill('Updated');
-
-  // Wait for messages
-  await page.waitForTimeout(1000);
-
-  // Verify messages were sent/received
-  expect(messages.length).toBeGreaterThan(0);
+  await expect
+    .poll(() => received.length, { timeout: 5000 })
+    .toBeGreaterThan(0);
 });
 ```
 
-### Verifying Specific Messages
+This is the only WebSocket-frame example in the guidelines. `collaborative-testing.md`
+points here rather than keeping a second copy.
 
-```typescript
-test('verify LiveView diff message', async ({ page }) => {
-  const diffReceived = new Promise<boolean>((resolve) => {
-    page.on('websocket', ws => {
-      ws.on('framereceived', frame => {
-        const payload = frame.payload;
-        // LiveView diffs contain "d" (diff) key
-        if (payload.includes('"d":[')) {
-          resolve(true);
-        }
-      });
-    });
-  });
+### Identifying a LiveView diff frame
 
-  await page.goto('/workflows');
-
-  // Trigger action that causes server diff
-  await page.getByRole('button', { name: 'Refresh' }).click();
-
-  // Verify diff was received
-  expect(await Promise.race([
-    diffReceived,
-    new Promise(resolve => setTimeout(() => resolve(false), 5000))
-  ])).toBe(true);
-});
-```
+A server-to-client diff carries a `"d"` key in its payload, so `payload.includes('"d":[')`
+is enough to tell a diff from a heartbeat or an event reply when you are reading frames.
 
 ## Lightning-Specific Patterns
 
-### Workflow Editor (LiveView)
-
-```typescript
-import { WorkflowEditPage } from '../pages';
-
-test('interact with workflow editor', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-
-  await page.goto('/w/123');
-  await workflowEdit.waitForConnected();
-  await page.waitForLoadState('networkidle');
-
-  // Use workflow-specific methods
-  await workflowEdit.setWorkflowName('Updated');
-  await workflowEdit.diagram.clickNode('Job 1');
-  await workflowEdit.clickSaveWorkflow();
-
-  await workflowEdit.expectFlashMessage('Workflow saved');
-});
-```
-
 ### Sidebar Navigation
 
+`clickMenuItem(text)` is real (`liveview.page.ts:16-21`): it scopes a `getByRole('link')`
+to `#side-menu`. It lives on the abstract base, so reach it through a concrete page
+object — `ProjectsPage` or `WorkflowsPage`, both of which extend `LiveViewPage`.
+
 ```typescript
+import { ProjectsPage, WorkflowsPage } from '../pages';
+
 test('navigate sidebar menu', async ({ page }) => {
-  const liveViewPage = new LiveViewPage(page);
+  const workflowsPage = new WorkflowsPage(page);
 
-  await page.goto('/projects/123/w');
-  await liveViewPage.waitForConnected();
+  await page.goto(`/projects/${projectId}/w`);
+  await workflowsPage.waitForConnected();
 
-  // Sidebar menu items
-  await liveViewPage.clickMenuItem('Workflows');
-  await liveViewPage.waitForConnected();
-
-  await liveViewPage.clickMenuItem('Settings');
-  await liveViewPage.waitForConnected();
+  // Each sidebar click crosses LiveViews, so re-wait every time
+  await workflowsPage.clickMenuItem('Workflows');
+  await workflowsPage.waitForConnected();
 });
 ```
+
+`ProjectsPage.navigateToProjects()` (`projects.page.ts:34-37`) already wraps the
+click-plus-re-wait pair for that one destination.
 
