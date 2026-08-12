@@ -63,6 +63,14 @@ and this project adheres to
   workflow being edited, so its own name isn't treated as a clash.
   [#5009](https://github.com/OpenFn/lightning/pull/5009)
 
+### Security
+
+- Bumped `postgrex` to 0.22.4 to clear the advisory `mix deps.audit` raises
+  against 0.22.3
+  ([EEF-CVE-2026-66838](https://osv.dev/vulnerability/EEF-CVE-2026-66838)). The
+  affected `Postgrex.stream/4` option isn't something Lightning uses directly;
+  the failing audit was blocking CI's lint job on every branch.
+
 ## [2.18.0-pre] - 2026-07-31
 
 ### Added
