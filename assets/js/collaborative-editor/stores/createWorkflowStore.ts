@@ -1287,7 +1287,8 @@ export const createWorkflowStore = (
         // Type assertion needed because Y.Map.get returns unknown
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         const typedEntityErrors = entityErrors as
-          Record<string, Record<string, string[]>> | undefined;
+          | Record<string, Record<string, string[]>>
+          | undefined;
 
         const updatedEntityErrors = {
           ...(typedEntityErrors ?? {}),
@@ -1388,7 +1389,8 @@ export const createWorkflowStore = (
           // Type assertion needed because Y.Map.get returns unknown
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           const typedEntityErrors = entityErrors as
-            Record<string, Record<string, string[]>> | undefined;
+            | Record<string, Record<string, string[]>>
+            | undefined;
 
           return typedEntityErrors?.[entityId] ?? {};
         }
