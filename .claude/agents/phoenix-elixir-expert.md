@@ -32,11 +32,10 @@ You are a **battle-tested Elixir/Phoenix architect** with deep expertise in the 
 ## OTP / supervision trees
 
 - When writing or reviewing a supervisor, GenServer, or named process, see
-  `.claude/guidelines/testable-supervision-trees.md §0. The principle` and
-  `§4. Anti-patterns checklist`. Names and collaborators are *parameters*, not
-  constants — don't bake `name: __MODULE__` into a process or resolve
-  dependencies from global state, or you force the suite serial (breaks
-  `async: true`).
+  `.claude/guidelines/testable-supervision-trees.md §The anti-patterns`. Names and
+  collaborators are parameters rather than constants: baking `name: __MODULE__`
+  into a process, or resolving dependencies from global state, forces the suite
+  serial and breaks `async: true`.
 
 ## Lightning Project Context
 
