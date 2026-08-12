@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-BD8E59D7.js"></script>
+    <script defer src="dist/sidebar_items-ED23FD83.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -133,7 +133,7 @@ the SharedDoc process for proper cleanup and lifecycle management.</p><p>The wri
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#add_update/2" data-no-tooltip="" translate="no">add_update(document_name, update)</a>
+        <a href="#add_update/3" data-no-tooltip="" translate="no">add_update(registry \\ Registry, document_name, update)</a>
 
       </div>
 
@@ -153,7 +153,7 @@ the SharedDoc process for proper cleanup and lifecycle management.</p><p>The wri
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#flush_and_stop/1" data-no-tooltip="" translate="no">flush_and_stop(document_name)</a>
+        <a href="#flush_and_stop/2" data-no-tooltip="" translate="no">flush_and_stop(registry \\ Registry, document_name)</a>
 
       </div>
 
@@ -185,17 +185,19 @@ the SharedDoc process for proper cleanup and lifecycle management.</p><p>The wri
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="add_update/2">
+<section class="detail" id="add_update/3">
+
+    <span id="add_update/2"></span>
 
   <div class="detail-header">
-    <a href="#add_update/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#add_update/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">add_update(document_name, update)</h1>
+      <h1 class="signature" translate="no">add_update(registry \\ Registry, document_name, update)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/persistence_writer.ex#L65" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/persistence_writer.ex#L69" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -204,7 +206,8 @@ the SharedDoc process for proper cleanup and lifecycle management.</p><p>The wri
 
   <section class="docstring">
 
-<p>Adds a Yjs update to the pending batch for persistence.</p>
+<p>Adds a Yjs update to the pending batch for persistence.</p><p>The writer is located through <code class="inline">registry</code> (defaulting to the global
+collaboration Registry), so an isolated instance finds its own writer.</p>
   </section>
 </section>
 <section class="detail" id="child_spec/1">
@@ -229,17 +232,19 @@ the SharedDoc process for proper cleanup and lifecycle management.</p><p>The wri
 <p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
   </section>
 </section>
-<section class="detail" id="flush_and_stop/1">
+<section class="detail" id="flush_and_stop/2">
+
+    <span id="flush_and_stop/1"></span>
 
   <div class="detail-header">
-    <a href="#flush_and_stop/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#flush_and_stop/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">flush_and_stop(document_name)</h1>
+      <h1 class="signature" translate="no">flush_and_stop(registry \\ Registry, document_name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/persistence_writer.ex#L80" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/persistence_writer.ex#L85" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -262,7 +267,7 @@ updates are persisted before cleanup.</p>
       <h1 class="signature" translate="no">start_link(opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/persistence_writer.ex#L56" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/persistence_writer.ex#L57" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

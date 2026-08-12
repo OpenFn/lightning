@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-BD8E59D7.js"></script>
+    <script defer src="dist/sidebar_items-ED23FD83.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -114,19 +114,19 @@ Lightning
 <p>Public API for starting collaborative workflow editing sessions.</p><p>This module serves as the main entry point for collaborative editing,
 coordinating the creation and management of document and session processes
 for workflow collaboration.</p><p>All collaborative sessions require a workflow struct.</p><h2 id="module-example" class="section-heading"><a href="#module-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Existing workflow</span><span class="w">
-</span><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_workflow</span><span class="p" data-group-id="4081512926-1">(</span><span class="n">workflow_id</span><span class="p" data-group-id="4081512926-1">)</span><span class="w">
+</span><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="n">get_workflow</span><span class="p" data-group-id="6807492202-1">(</span><span class="n">workflow_id</span><span class="p" data-group-id="6807492202-1">)</span><span class="w">
 
-</span><span class="nc">Collaborate</span><span class="o">.</span><span class="n">start</span><span class="p" data-group-id="4081512926-2">(</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p" data-group-id="4081512926-2">)</span><span class="w">
+</span><span class="nc">Collaborate</span><span class="o">.</span><span class="n">start</span><span class="p" data-group-id="6807492202-2">(</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p" data-group-id="6807492202-2">)</span><span class="w">
 
 </span><span class="c1"># New workflow</span><span class="w">
-</span><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="4081512926-3">%</span><span class="nc" data-group-id="4081512926-3">Lightning.Workflows.Workflow</span><span class="p" data-group-id="4081512926-3">{</span><span class="w">
+</span><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="6807492202-3">%</span><span class="nc" data-group-id="6807492202-3">Lightning.Workflows.Workflow</span><span class="p" data-group-id="6807492202-3">{</span><span class="w">
   </span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="n">workflow_id</span><span class="p">,</span><span class="w">
   </span><span class="ss">project_id</span><span class="p">:</span><span class="w"> </span><span class="n">project_id</span><span class="p">,</span><span class="w">
   </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">positions</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4081512926-4">%{</span><span class="p" data-group-id="4081512926-4">}</span><span class="w">
-</span><span class="p" data-group-id="4081512926-3">}</span><span class="w">
+  </span><span class="ss">positions</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6807492202-4">%{</span><span class="p" data-group-id="6807492202-4">}</span><span class="w">
+</span><span class="p" data-group-id="6807492202-3">}</span><span class="w">
 
-</span><span class="nc">Collaborate</span><span class="o">.</span><span class="n">start</span><span class="p" data-group-id="4081512926-5">(</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p" data-group-id="4081512926-5">)</span></code></pre>
+</span><span class="nc">Collaborate</span><span class="o">.</span><span class="n">start</span><span class="p" data-group-id="6807492202-5">(</span><span class="ss">user</span><span class="p">:</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="ss">workflow</span><span class="p">:</span><span class="w"> </span><span class="n">workflow</span><span class="p" data-group-id="6807492202-5">)</span></code></pre>
     </section>
 
 </div>
@@ -155,7 +155,7 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start/1" data-no-tooltip="" translate="no">start(opts)</a>
+        <a href="#start/2" data-no-tooltip="" translate="no">start(instance \\ Instance.default(), opts)</a>
 
       </div>
 
@@ -166,6 +166,34 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
         <a href="#start_document/2" data-no-tooltip="" translate="no">start_document(workflow, document_name)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Starts the collaborative document tree for <code class="inline">document_name</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#start_document/3" data-no-tooltip="" translate="no">start_document(instance, workflow, document_name)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#start_document/4" data-no-tooltip="" translate="no">start_document(instance, workflow, document_name, opts)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#stop_document/2" data-no-tooltip="" translate="no">stop_document(instance \\ Instance.default(), document_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Deterministically stops the collaborative document for <code class="inline">document_name</code>.</p></div>
 
     </div>
 
@@ -203,7 +231,7 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
       <h1 class="signature" translate="no">lookup(key)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L116" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L269" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -215,17 +243,19 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
 <p>See <a href="Lightning.Collaboration.Registry.html#lookup/1"><code class="inline">Lightning.Collaboration.Registry.lookup/1</code></a>.</p>
   </section>
 </section>
-<section class="detail" id="start/1">
+<section class="detail" id="start/2">
+
+    <span id="start/1"></span>
 
   <div class="detail-header">
-    <a href="#start/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#start/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">start(opts)</h1>
+      <h1 class="signature" translate="no">start(instance \\ Instance.default(), opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L38" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L39" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -236,7 +266,8 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> start(opts :: <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) :: <a href="https://hexdocs.pm/elixir/GenServer.html#t:on_start/0">GenServer.on_start</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> start(instance :: <a href="Lightning.Collaboration.Instance.html#t:t/0">Lightning.Collaboration.Instance.t</a>(), opts :: <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
+  <a href="https://hexdocs.pm/elixir/GenServer.html#t:on_start/0">GenServer.on_start</a>()</pre>
 
       </div>
 
@@ -253,7 +284,7 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
       <h1 class="signature" translate="no">start_document(workflow, document_name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L77" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L182" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -262,7 +293,129 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
 
   <section class="docstring">
 
+      <div class="specs">
 
+          <pre translate="no"><span class="attribute">@spec</span> start_document(
+  workflow :: <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(),
+  document_name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Starts the collaborative document tree for <code class="inline">document_name</code>.</p><p><code class="inline">document_name</code> is a positional payload (domain identity); the registered name
+and the optional <code class="inline">owner</code> are process configuration and live in trailing <code class="inline">opts</code>,
+per <code class="inline">.claude/guidelines/testable-supervision-trees.md</code> §1.</p><h2 id="start_document/2-options" class="section-heading"><a href="#start_document/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:owner</code> — a pid the document tree monitors. When that pid goes <code class="inline">:DOWN</code>, the
+tree stops <code class="inline">:normal</code> (running its flush via <code class="inline">terminate/2</code>; <code class="inline">:transient</code> means
+no restart). Lets any caller — a test, a request — get deterministic cleanup
+by passing <code class="inline">owner: self()</code>, with no wrapper. Defaults to <code class="inline">nil</code> (no monitor),
+so production documents outlive the LiveView that starts them.</li></ul>
+  </section>
+</section>
+<section class="detail" id="start_document/3">
+
+  <div class="detail-header">
+    <a href="#start_document/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">start_document(instance, workflow, document_name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L186" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> start_document(
+  workflow :: <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(),
+  document_name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  opts :: <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+          <pre translate="no"><span class="attribute">@spec</span> start_document(
+  instance :: <a href="Lightning.Collaboration.Instance.html#t:t/0">Lightning.Collaboration.Instance.t</a>(),
+  workflow :: <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(),
+  document_name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="start_document/4">
+
+  <div class="detail-header">
+    <a href="#start_document/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">start_document(instance, workflow, document_name, opts)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L199" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> start_document(
+  instance :: <a href="Lightning.Collaboration.Instance.html#t:t/0">Lightning.Collaboration.Instance.t</a>(),
+  workflow :: <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>(),
+  document_name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  opts :: <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="stop_document/2">
+
+    <span id="stop_document/1"></span>
+
+  <div class="detail-header">
+    <a href="#stop_document/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">stop_document(instance \\ Instance.default(), document_name)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L132" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> stop_document(
+  instance :: <a href="Lightning.Collaboration.Instance.html#t:t/0">Lightning.Collaboration.Instance.t</a>(),
+  document_name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+) ::
+  :ok</pre>
+
+      </div>
+
+<p>Deterministically stops the collaborative document for <code class="inline">document_name</code>.</p><p>Tears down its DocumentSupervisor, SharedDoc and PersistenceWriter (with a
+final flush). Synchronous and idempotent: returns <code class="inline">:ok</code> whether or not a
+document is running. The symmetric partner to <a href="#start_document/2"><code class="inline">start_document/2</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="whereis/1">
@@ -275,7 +428,7 @@ for workflow collaboration.</p><p>All collaborative sessions require a workflow 
       <h1 class="signature" translate="no">whereis(key)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L117" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration.ex#L270" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

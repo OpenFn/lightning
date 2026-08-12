@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-BD8E59D7.js"></script>
+    <script defer src="dist/sidebar_items-ED23FD83.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -142,7 +142,7 @@ themselves during startup.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_child/1" data-no-tooltip="" translate="no">start_child(child_spec)</a>
+        <a href="#start_child/2" data-no-tooltip="" translate="no">start_child(dynamic_supervisor \\ __MODULE__.DocSupervisor, child_spec)</a>
 
       </div>
 
@@ -150,15 +150,17 @@ themselves during startup.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#start_link/1" data-no-tooltip="" translate="no">start_link(init_arg)</a>
+        <a href="#start_link/1" data-no-tooltip="" translate="no">start_link(opts)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Starts the collaboration supervisor.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#terminate_child/1" data-no-tooltip="" translate="no">terminate_child(pid)</a>
+        <a href="#terminate_child/2" data-no-tooltip="" translate="no">terminate_child(dynamic_supervisor \\ __MODULE__.DocSupervisor, pid)</a>
 
       </div>
 
@@ -200,17 +202,19 @@ themselves during startup.</p>
 <p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
   </section>
 </section>
-<section class="detail" id="start_child/1">
+<section class="detail" id="start_child/2">
+
+    <span id="start_child/1"></span>
 
   <div class="detail-header">
-    <a href="#start_child/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#start_child/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">start_child(child_spec)</h1>
+      <h1 class="signature" translate="no">start_child(dynamic_supervisor \\ __MODULE__.DocSupervisor, child_spec)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/supervisor.ex#L46" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/supervisor.ex#L60" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -229,10 +233,10 @@ themselves during startup.</p>
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">start_link(init_arg)</h1>
+      <h1 class="signature" translate="no">start_link(opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/supervisor.ex#L13" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/supervisor.ex#L23" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -241,20 +245,25 @@ themselves during startup.</p>
 
   <section class="docstring">
 
-
+<p>Starts the collaboration supervisor.</p><p>The registered name is taken from the <code class="inline">:name</code> option (defaulting to
+<code class="inline">__MODULE__</code>). That name is the base from which <code class="inline">init/1</code> derives the
+instance's Registry, <code class="inline">:pg</code> scope, and DynamicSupervisor names, so a test can
+start a fully isolated tree by passing a unique <code class="inline">:name</code>.</p>
   </section>
 </section>
-<section class="detail" id="terminate_child/1">
+<section class="detail" id="terminate_child/2">
+
+    <span id="terminate_child/1"></span>
 
   <div class="detail-header">
-    <a href="#terminate_child/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#terminate_child/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">terminate_child(pid)</h1>
+      <h1 class="signature" translate="no">terminate_child(dynamic_supervisor \\ __MODULE__.DocSupervisor, pid)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/supervisor.ex#L50" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/supervisor.ex#L64" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

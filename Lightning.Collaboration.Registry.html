@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-BD8E59D7.js"></script>
+    <script defer src="dist/sidebar_items-ED23FD83.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -119,13 +119,13 @@ for the same workflow and the same user.</p><h2 id="module-registry-vs-process-g
 Registry provides faster local lookups and better integration with supervision
 trees.</p><h2 id="module-usage" class="section-heading"><a href="#module-usage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage</span></h2><p>Processes can register themselves either in their init callback or using via tuples
 in their child_spec:</p><pre><code class="makeup elixir" translate="no"><span class="c1"># Session registration in init callback</span><span class="w">
-</span><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">register</span><span class="p" data-group-id="8176031889-1">(</span><span class="p" data-group-id="8176031889-2">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow_123&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;user_456&quot;</span><span class="p" data-group-id="8176031889-2">}</span><span class="p" data-group-id="8176031889-1">)</span><span class="w">
+</span><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">register</span><span class="p" data-group-id="5139213011-1">(</span><span class="p" data-group-id="5139213011-2">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow_123&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;user_456&quot;</span><span class="p" data-group-id="5139213011-2">}</span><span class="p" data-group-id="5139213011-1">)</span><span class="w">
 
 </span><span class="c1"># SharedDoc registration via child_spec</span><span class="w">
-</span><span class="p" data-group-id="8176031889-3">{</span><span class="nc">SharedDoc</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8176031889-4">[</span><span class="w">
+</span><span class="p" data-group-id="5139213011-3">{</span><span class="nc">SharedDoc</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5139213011-4">[</span><span class="w">
   </span><span class="ss">doc_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;workflow:workflow_123&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8176031889-5">{</span><span class="ss">:via</span><span class="p">,</span><span class="w"> </span><span class="nc">Registry</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8176031889-6">{</span><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">registry_name</span><span class="p" data-group-id="8176031889-7">(</span><span class="p" data-group-id="8176031889-7">)</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8176031889-8">{</span><span class="ss">:shared_doc</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow:workflow_123&quot;</span><span class="p" data-group-id="8176031889-8">}</span><span class="p" data-group-id="8176031889-6">}</span><span class="p" data-group-id="8176031889-5">}</span><span class="w">
-</span><span class="p" data-group-id="8176031889-4">]</span><span class="p" data-group-id="8176031889-3">}</span></code></pre>
+  </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5139213011-5">{</span><span class="ss">:via</span><span class="p">,</span><span class="w"> </span><span class="nc">Registry</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5139213011-6">{</span><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">registry_name</span><span class="p" data-group-id="5139213011-7">(</span><span class="p" data-group-id="5139213011-7">)</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5139213011-8">{</span><span class="ss">:shared_doc</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow:workflow_123&quot;</span><span class="p" data-group-id="5139213011-8">}</span><span class="p" data-group-id="5139213011-6">}</span><span class="p" data-group-id="5139213011-5">}</span><span class="w">
+</span><span class="p" data-group-id="5139213011-4">]</span><span class="p" data-group-id="5139213011-3">}</span></code></pre>
     </section>
 
 </div>
@@ -154,7 +154,17 @@ in their child_spec:</p><pre><code class="makeup elixir" translate="no"><span cl
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#count/1" data-no-tooltip="" translate="no">count(key \\ nil)</a>
+        <a href="#count/2" data-no-tooltip="" translate="no">count(registry \\ __MODULE__, key)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Count registered processes, optionally restricted to a key prefix.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#get_group/2" data-no-tooltip="" translate="no">get_group(registry \\ __MODULE__, key)</a>
 
       </div>
 
@@ -162,15 +172,7 @@ in their child_spec:</p><pre><code class="makeup elixir" translate="no"><span cl
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_group/1" data-no-tooltip="" translate="no">get_group(key)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#lookup/1" data-no-tooltip="" translate="no">lookup(key)</a>
+        <a href="#lookup/2" data-no-tooltip="" translate="no">lookup(registry \\ __MODULE__, key)</a>
 
       </div>
 
@@ -180,7 +182,7 @@ in their child_spec:</p><pre><code class="makeup elixir" translate="no"><span cl
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#register/1" data-no-tooltip="" translate="no">register(key)</a>
+        <a href="#register/2" data-no-tooltip="" translate="no">register(registry \\ __MODULE__, key)</a>
 
       </div>
 
@@ -190,7 +192,7 @@ in their child_spec:</p><pre><code class="makeup elixir" translate="no"><span cl
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#select/1" data-no-tooltip="" translate="no">select(key)</a>
+        <a href="#select/2" data-no-tooltip="" translate="no">select(registry \\ __MODULE__, key)</a>
 
       </div>
 
@@ -200,7 +202,7 @@ in their child_spec:</p><pre><code class="makeup elixir" translate="no"><span cl
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#via/1" data-no-tooltip="" translate="no">via(key)</a>
+        <a href="#via/2" data-no-tooltip="" translate="no">via(registry \\ __MODULE__, key)</a>
 
       </div>
 
@@ -208,7 +210,7 @@ in their child_spec:</p><pre><code class="makeup elixir" translate="no"><span cl
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#whereis/1" data-no-tooltip="" translate="no">whereis(key)</a>
+        <a href="#whereis/2" data-no-tooltip="" translate="no">whereis(registry \\ __MODULE__, key)</a>
 
       </div>
 
@@ -240,7 +242,7 @@ in their child_spec:</p><pre><code class="makeup elixir" translate="no"><span cl
       <h1 class="signature" translate="no">child_spec(opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L43" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L46" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -249,22 +251,49 @@ in their child_spec:</p><pre><code class="makeup elixir" translate="no"><span cl
 
   <section class="docstring">
 
-<p>Child specification for starting the Registry.</p>
+<p>Child specification for starting the Registry.</p><p>The registered name is injectable via the <code class="inline">:name</code> option (defaulting to
+<code class="inline">__MODULE__</code>) so a supervisor instance can run its own Registry.</p>
   </section>
 </section>
-<section class="detail" id="count/1">
+<section class="detail" id="count/2">
 
-    <span id="count/0"></span>
+    <span id="count/1"></span>
 
   <div class="detail-header">
-    <a href="#count/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#count/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">count(key \\ nil)</h1>
+      <h1 class="signature" translate="no">count(registry \\ __MODULE__, key)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L123" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L136" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Count registered processes, optionally restricted to a key prefix.</p><p>A <code class="inline">nil</code> key counts every entry in the registry; any other key counts entries
+whose key starts with it. The one-argument form takes the key, not the
+registry — <code class="inline">count(&quot;workflow:x&quot;)</code> uses the default registry.</p>
+  </section>
+</section>
+<section class="detail" id="get_group/2">
+
+    <span id="get_group/1"></span>
+
+  <div class="detail-header">
+    <a href="#get_group/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">get_group(registry \\ __MODULE__, key)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L166" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -276,39 +305,19 @@ in their child_spec:</p><pre><code class="makeup elixir" translate="no"><span cl
 
   </section>
 </section>
-<section class="detail" id="get_group/1">
+<section class="detail" id="lookup/2">
+
+    <span id="lookup/1"></span>
 
   <div class="detail-header">
-    <a href="#get_group/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#lookup/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">get_group(key)</h1>
+      <h1 class="signature" translate="no">lookup(registry \\ __MODULE__, key)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L153" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="lookup/1">
-
-  <div class="detail-header">
-    <a href="#lookup/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">lookup(key)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L96" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L102" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -319,29 +328,31 @@ in their child_spec:</p><pre><code class="makeup elixir" translate="no"><span cl
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> lookup(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) :: [{<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}]</pre>
+          <pre translate="no"><span class="attribute">@spec</span> lookup(registry :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) :: [{<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}]</pre>
 
       </div>
 
 <p>Look up all processes registered with the given key.</p><p>Returns a list of {pid, value} tuples. Since we use unique keys,
-this will typically return a single-item list or an empty list.</p><h2 id="lookup/1-examples" class="section-heading"><a href="#lookup/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">lookup</span><span class="p" data-group-id="4524528230-1">(</span><span class="p" data-group-id="4524528230-2">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow_123&quot;</span><span class="p" data-group-id="4524528230-2">}</span><span class="p" data-group-id="4524528230-1">)</span><span class="w">
+this will typically return a single-item list or an empty list.</p><h2 id="lookup/2-examples" class="section-heading"><a href="#lookup/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">lookup</span><span class="p" data-group-id="4774362111-1">(</span><span class="p" data-group-id="4774362111-2">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow_123&quot;</span><span class="p" data-group-id="4774362111-2">}</span><span class="p" data-group-id="4774362111-1">)</span><span class="w">
 </span><span class="c1"># =&gt; [{#PID&lt;0.123.0&gt;, nil}]</span><span class="w">
 
-</span><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">lookup</span><span class="p" data-group-id="4524528230-3">(</span><span class="p" data-group-id="4524528230-4">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;nonexistent&quot;</span><span class="p" data-group-id="4524528230-4">}</span><span class="p" data-group-id="4524528230-3">)</span><span class="w">
+</span><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">lookup</span><span class="p" data-group-id="4774362111-3">(</span><span class="p" data-group-id="4774362111-4">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;nonexistent&quot;</span><span class="p" data-group-id="4774362111-4">}</span><span class="p" data-group-id="4774362111-3">)</span><span class="w">
 </span><span class="c1"># =&gt; []</span></code></pre>
   </section>
 </section>
-<section class="detail" id="register/1">
+<section class="detail" id="register/2">
+
+    <span id="register/1"></span>
 
   <div class="detail-header">
-    <a href="#register/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#register/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">register(key)</h1>
+      <h1 class="signature" translate="no">register(registry \\ __MODULE__, key)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L69" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L75" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -352,29 +363,32 @@ this will typically return a single-item list or an empty list.</p><h2 id="looku
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> register(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>()} | {:error, {:already_registered, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>()}}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> register(registry :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) ::
+  {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>()} | {:error, {:already_registered, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>()}}</pre>
 
       </div>
 
-<p>Register the current process with the given key.</p><h2 id="register/1-examples" class="section-heading"><a href="#register/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">register</span><span class="p" data-group-id="2585500370-1">(</span><span class="p" data-group-id="2585500370-2">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow_123&quot;</span><span class="p" data-group-id="2585500370-2">}</span><span class="p" data-group-id="2585500370-1">)</span><span class="w">
+<p>Register the current process with the given key.</p><h2 id="register/2-examples" class="section-heading"><a href="#register/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">register</span><span class="p" data-group-id="9887333421-1">(</span><span class="p" data-group-id="9887333421-2">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow_123&quot;</span><span class="p" data-group-id="9887333421-2">}</span><span class="p" data-group-id="9887333421-1">)</span><span class="w">
 </span><span class="c1"># =&gt; {:ok, #PID&lt;0.123.0&gt;}</span><span class="w">
 
-</span><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">register</span><span class="p" data-group-id="2585500370-3">(</span><span class="p" data-group-id="2585500370-4">{</span><span class="ss">:shared_doc</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow:workflow_123&quot;</span><span class="p" data-group-id="2585500370-4">}</span><span class="p" data-group-id="2585500370-3">)</span><span class="w">
-</span><span class="c1"># =&gt; {:ok, #PID&lt;0.123.0&gt;}</span></code></pre><h2 id="register/1-error-cases" class="section-heading"><a href="#register/1-error-cases" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Error Cases</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">register</span><span class="p" data-group-id="8708025896-1">(</span><span class="p" data-group-id="8708025896-2">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow_123&quot;</span><span class="p" data-group-id="8708025896-2">}</span><span class="p" data-group-id="8708025896-1">)</span><span class="w">
+</span><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">register</span><span class="p" data-group-id="9887333421-3">(</span><span class="p" data-group-id="9887333421-4">{</span><span class="ss">:shared_doc</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow:workflow_123&quot;</span><span class="p" data-group-id="9887333421-4">}</span><span class="p" data-group-id="9887333421-3">)</span><span class="w">
+</span><span class="c1"># =&gt; {:ok, #PID&lt;0.123.0&gt;}</span></code></pre><h2 id="register/2-error-cases" class="section-heading"><a href="#register/2-error-cases" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Error Cases</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">register</span><span class="p" data-group-id="6486460909-1">(</span><span class="p" data-group-id="6486460909-2">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow_123&quot;</span><span class="p" data-group-id="6486460909-2">}</span><span class="p" data-group-id="6486460909-1">)</span><span class="w">
 </span><span class="c1"># =&gt; {:error, {:already_registered, #PID&lt;0.456.0&gt;}}</span></code></pre>
   </section>
 </section>
-<section class="detail" id="select/1">
+<section class="detail" id="select/2">
+
+    <span id="select/1"></span>
 
   <div class="detail-header">
-    <a href="#select/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#select/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">select(key)</h1>
+      <h1 class="signature" translate="no">select(registry \\ __MODULE__, key)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L143" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L156" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -385,24 +399,26 @@ this will typically return a single-item list or an empty list.</p><h2 id="looku
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> select(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: [{<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>()}]</pre>
+          <pre translate="no"><span class="attribute">@spec</span> select(registry :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: [{<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>()}]</pre>
 
       </div>
 
 <p>Select processes registered with the given key (prefix).</p><p>The key pattern expected is:</p><ul><li><code class="inline">{:type, key}</code></li><li><code class="inline">{:type, key, any()}</code>.</li></ul><p>We do a select with any key that <em>starts with</em> the given key.</p>
   </section>
 </section>
-<section class="detail" id="via/1">
+<section class="detail" id="via/2">
+
+    <span id="via/1"></span>
 
   <div class="detail-header">
-    <a href="#via/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#via/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">via(key)</h1>
+      <h1 class="signature" translate="no">via(registry \\ __MODULE__, key)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L76" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L82" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -414,17 +430,19 @@ this will typically return a single-item list or an empty list.</p><h2 id="looku
 
   </section>
 </section>
-<section class="detail" id="whereis/1">
+<section class="detail" id="whereis/2">
+
+    <span id="whereis/1"></span>
 
   <div class="detail-header">
-    <a href="#whereis/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#whereis/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">whereis(key)</h1>
+      <h1 class="signature" translate="no">whereis(registry \\ __MODULE__, key)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L116" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/registry.ex#L122" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -435,15 +453,15 @@ this will typically return a single-item list or an empty list.</p><h2 id="looku
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> whereis(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>() | nil</pre>
+          <pre translate="no"><span class="attribute">@spec</span> whereis(registry :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>() | nil</pre>
 
       </div>
 
 <p>Find the pid registered with the given key.</p><p>This is a convenience function that returns just the pid, or nil
-if no process is registered.</p><h2 id="whereis/1-examples" class="section-heading"><a href="#whereis/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">whereis</span><span class="p" data-group-id="4641108935-1">(</span><span class="p" data-group-id="4641108935-2">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow_123&quot;</span><span class="p" data-group-id="4641108935-2">}</span><span class="p" data-group-id="4641108935-1">)</span><span class="w">
+if no process is registered.</p><h2 id="whereis/2-examples" class="section-heading"><a href="#whereis/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">whereis</span><span class="p" data-group-id="0296009920-1">(</span><span class="p" data-group-id="0296009920-2">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;workflow_123&quot;</span><span class="p" data-group-id="0296009920-2">}</span><span class="p" data-group-id="0296009920-1">)</span><span class="w">
 </span><span class="c1"># =&gt; #PID&lt;0.123.0&gt;</span><span class="w">
 
-</span><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">whereis</span><span class="p" data-group-id="4641108935-3">(</span><span class="p" data-group-id="4641108935-4">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;nonexistent&quot;</span><span class="p" data-group-id="4641108935-4">}</span><span class="p" data-group-id="4641108935-3">)</span><span class="w">
+</span><span class="nc">Lightning.Collaboration.Registry</span><span class="o">.</span><span class="n">whereis</span><span class="p" data-group-id="0296009920-3">(</span><span class="p" data-group-id="0296009920-4">{</span><span class="ss">:session</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;nonexistent&quot;</span><span class="p" data-group-id="0296009920-4">}</span><span class="p" data-group-id="0296009920-3">)</span><span class="w">
 </span><span class="c1"># =&gt; nil</span></code></pre>
   </section>
 </section>

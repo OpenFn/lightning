@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-BD8E59D7.js"></script>
+    <script defer src="dist/sidebar_items-ED23FD83.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -117,7 +117,20 @@ any run-viewing context, landing on the bare canvas.
 <a href="https://github.com/OpenFn/lightning/issues/5046">#5046</a></p></li><li><p>The global chat now starts streaming Apollo's response earlier, so users wait
 less before seeing output. Lightning handles the several streaming event types
 Apollo sends, including status updates.
-<a href="https://github.com/OpenFn/lightning/pull/4969">#4969</a></p></li></ul><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li><p><code class="inline">APOLLO_TIMEOUT</code> now governs every request to Apollo, including the streaming
+<a href="https://github.com/OpenFn/lightning/pull/4969">#4969</a></p></li><li><p>The collaboration supervision tree is no longer tied to a single set of global
+process names. The registry, dynamic supervisor and <code class="inline">:pg</code> scope a tree owns
+are described by a <a href="Lightning.Collaboration.Instance.html"><code class="inline">Lightning.Collaboration.Instance</code></a> struct whose defaults
+are the existing production atoms, so several independent trees can run
+alongside each other and the collaboration test suite runs async rather than
+serially.</p></li><li><p>Collaborative editing documents now shut down deterministically. A document
+tree can be handed an <code class="inline">owner</code> process to monitor, and when that owner exits it
+stops cleanly with a final persistence flush; <a href="Lightning.Collaborate.html"><code class="inline">Lightning.Collaborate</code></a> gains a
+synchronous, idempotent <code class="inline">stop_document/1</code>. Production behaviour is unchanged
+(documents started by a LiveView still outlive it), but tests can now bind a
+document's lifetime to the test that starts it, fixing intermittent failures
+caused by document processes leaking between runs.</p></li><li><p><a href="Lightning.Collaborate.html#start/2"><code class="inline">Lightning.Collaborate.start/2</code></a> now only tears down a collaboration document
+when that call created it. A caller that raced another's start could
+previously stop a document other sessions were using.</p></li></ul><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li><p><code class="inline">APOLLO_TIMEOUT</code> now governs every request to Apollo, including the streaming
 requests all AI chats use. Streaming previously read an internal timeout key
 that no environment could set, so it was always 120s regardless of
 configuration; that dead key is removed.
@@ -1462,20 +1475,20 @@ existing snapshots could be incorrect (e.g. missing steps, missing edges).
 In order to fix this, you will need to manually create new snapshots for
 each of your workflows. This can be done either by modifying the workflow in
 the UI and saving it. Or running a command on the running instance:</p><pre><code class="makeup elixir" translate="no"><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Repo</span><span class="w">
-</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="2610593606-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="2610593606-1">}</span><span class="w">
+</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="0338687599-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="0338687599-1">}</span><span class="w">
 
-</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="2610593606-2">(</span><span class="k" data-group-id="2610593606-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="0338687599-2">(</span><span class="k" data-group-id="0338687599-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
   </span><span class="n">snapshots</span><span class="w"> </span><span class="o">=</span><span class="w">
-    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="2610593606-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="2610593606-4">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="2610593606-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="2610593606-5">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="2610593606-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="2610593606-6">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="2610593606-7">(</span><span class="k" data-group-id="2610593606-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-      </span><span class="p" data-group-id="2610593606-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="2610593606-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="2610593606-10">(</span><span class="n">workflow</span><span class="p" data-group-id="2610593606-10">)</span><span class="w">
+    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="0338687599-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="0338687599-4">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0338687599-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="0338687599-5">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0338687599-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="0338687599-6">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0338687599-7">(</span><span class="k" data-group-id="0338687599-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+      </span><span class="p" data-group-id="0338687599-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="0338687599-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="0338687599-10">(</span><span class="n">workflow</span><span class="p" data-group-id="0338687599-10">)</span><span class="w">
       </span><span class="n">snapshot</span><span class="w">
-    </span><span class="k" data-group-id="2610593606-8">end</span><span class="p" data-group-id="2610593606-7">)</span><span class="w">
+    </span><span class="k" data-group-id="0338687599-8">end</span><span class="p" data-group-id="0338687599-7">)</span><span class="w">
 
- </span><span class="p" data-group-id="2610593606-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="2610593606-11">}</span><span class="w">
-</span><span class="k" data-group-id="2610593606-3">end</span><span class="p" data-group-id="2610593606-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-79" class="section-heading"><a href="#added-79" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
+ </span><span class="p" data-group-id="0338687599-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="0338687599-11">}</span><span class="w">
+</span><span class="k" data-group-id="0338687599-3">end</span><span class="p" data-group-id="0338687599-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-79" class="section-heading"><a href="#added-79" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
 <a href="https://github.com/OpenFn/lightning/pull/2438">#2438</a></li><li>Persist AI Assistant conversations and enable it for all users
 <a href="https://github.com/OpenFn/lightning/issues/2296">#2296</a></li></ul><h3 id="changed-90" class="section-heading"><a href="#changed-90" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Rename <code class="inline">new_table</code> component to <code class="inline">table</code>.
 <a href="https://github.com/OpenFn/lightning/pull/2448">#2448</a></li></ul><h3 id="fixed-121" class="section-heading"><a href="#fixed-121" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix <code class="inline">workflow_id</code> presence in state.json during Github sync
@@ -1924,7 +1937,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="6834682543-1">(</span><span class="p" data-group-id="6834682543-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="8120223657-1">(</span><span class="p" data-group-id="8120223657-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-117" class="section-heading"><a href="#added-117" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Fix flaky job name input behavior on error

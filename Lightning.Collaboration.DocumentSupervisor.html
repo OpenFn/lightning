@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-BD8E59D7.js"></script>
+    <script defer src="dist/sidebar_items-ED23FD83.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -117,7 +117,13 @@ dependencies, registers the SharedDoc with the <code class="inline">:pg</code> p
 cluster-wide coordination, and handles graceful shutdown by ensuring
 the SharedDoc flushes data to the PersistenceWriter before termination.</p><p>Uses a transient restart strategy, only restarting if the supervisor
 itself crashes, not when child processes exit normally. Monitors both
-child processes and stops itself if either child crashes.</p>
+child processes and stops itself if either child crashes.</p><p>Optionally monitors an <code class="inline">:owner</code> pid (passed through the child spec). When that
+owner goes <code class="inline">:DOWN</code>, the supervisor stops <code class="inline">:normal</code> — running <code class="inline">terminate/2</code>'s
+flush, and not restarting (transient). This is the owner-monitored
+self-cleanup seam from
+<code class="inline">.claude/guidelines/testable-supervision-trees.md</code> §3: any caller gets
+deterministic teardown by passing <code class="inline">owner: self()</code>. With no owner (the
+production default) the document outlives its starter as before.</p>
     </section>
 
 </div>
@@ -152,6 +158,16 @@ child processes and stops itself if either child crashes.</p>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#stop/2" data-no-tooltip="" translate="no">stop(pid, timeout \\ 15000)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Gracefully stops the DocumentSupervisor and its children.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -176,7 +192,7 @@ child processes and stops itself if either child crashes.</p>
       <h1 class="signature" translate="no">child_spec(init_arg)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_supervisor.ex#L74" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_supervisor.ex#L130" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -200,7 +216,7 @@ child processes and stops itself if either child crashes.</p>
       <h1 class="signature" translate="no">start_link(args, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_supervisor.ex#L26" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_supervisor.ex#L31" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -210,6 +226,37 @@ child processes and stops itself if either child crashes.</p>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="stop/2">
+
+    <span id="stop/1"></span>
+
+  <div class="detail-header">
+    <a href="#stop/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">stop(pid, timeout \\ 15000)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/collaboration/document_supervisor.ex#L49" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Gracefully stops the DocumentSupervisor and its children.</p><p>Synchronous: returns only once <code class="inline">terminate/2</code> has run, which flushes the
+PersistenceWriter (via the SharedDoc) and stops both children. Because the
+child spec uses <code class="inline">restart: :transient</code>, a <code class="inline">:normal</code> stop is not restarted by
+the DynamicSupervisor.</p><p>The default timeout must stay above what <code class="inline">terminate/2</code> can take, or a slow
+flush makes this exit <code class="inline">:timeout</code> while the tree is still running and
+unflushed — and <code class="inline">Collaborate.stop_document/2</code> reports that as <code class="inline">:ok</code>.
+<code class="inline">terminate/2</code> bounds each child stop at 5s, so 15s leaves headroom over the
+10s worst case.</p>
   </section>
 </section>
 
