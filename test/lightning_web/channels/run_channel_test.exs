@@ -172,6 +172,11 @@ defmodule LightningWeb.RunChannelTest do
                "options" => %{
                  output_dataclips: true,
                  run_timeout_ms: 1000
+               },
+               "meta" => %{
+                 "work_order_id" => run.work_order_id,
+                 "workflow_id" => workflow.id,
+                 "project_id" => workflow.project_id
                }
              }
     end
@@ -231,6 +236,11 @@ defmodule LightningWeb.RunChannelTest do
                "options" => %{
                  output_dataclips: false,
                  run_timeout_ms: run.options.run_timeout_ms
+               },
+               "meta" => %{
+                 "work_order_id" => run.work_order_id,
+                 "workflow_id" => workflow.id,
+                 "project_id" => workflow.project_id
                }
              }
     end
