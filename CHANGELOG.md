@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Added
 
+- The run plan sent to workers now includes a `meta` object with the run's
+  `work_order_id`, `workflow_id`, and `project_id`.
+  [#5062](https://github.com/OpenFn/lightning/pull/5062)
+
 ### Changed
 
 - The collaboration supervision tree is no longer tied to a single set of global
