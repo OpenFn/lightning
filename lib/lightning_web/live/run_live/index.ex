@@ -838,20 +838,51 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  defp format_date_range(date_after, date_before) do
-    case {date_after, date_before} do
-      {nil, nil} ->
-        "any time"
+  attr :id, :string, required: true
+  attr :after_date, :any, default: nil
+  attr :before_date, :any, default: nil
 
-      {after_date, nil} ->
-        "after #{maybe_humanize_date(after_date)}"
+  defp date_range_label(%{after_date: nil, before_date: nil} = assigns) do
+    ~H"""
+    <span id={@id}>any time</span>
+    """
+  end
 
-      {nil, before_date} ->
-        "before #{maybe_humanize_date(before_date)}"
+  defp date_range_label(%{before_date: nil} = assigns) do
+    ~H"""
+    after <.local_date id={"#{@id}-after"} datetime={@after_date} />
+    """
+  end
 
-      {after_date, before_date} ->
-        "#{maybe_humanize_date(after_date)} to #{maybe_humanize_date(before_date)}"
-    end
+  defp date_range_label(%{after_date: nil} = assigns) do
+    ~H"""
+    before <.local_date id={"#{@id}-before"} datetime={@before_date} />
+    """
+  end
+
+  defp date_range_label(assigns) do
+    ~H"""
+    <.local_date id={"#{@id}-after"} datetime={@after_date} />
+    to <.local_date id={"#{@id}-before"} datetime={@before_date} />
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :datetime, DateTime, required: true
+
+  # The filters are held in UTC; the browser rewrites the date in its own
+  # timezone so the chip agrees with the picker and the listed timestamps.
+  defp local_date(assigns) do
+    ~H"""
+    <span
+      id={@id}
+      phx-hook="LocalTimeConverter"
+      data-format="date_short"
+      data-iso-timestamp={DateTime.to_iso8601(@datetime)}
+    >
+      <span class="datetime-text">{maybe_humanize_date(@datetime)}</span>
+    </span>
+    """
   end
 
   defp append_to_page(socket, workorder) do

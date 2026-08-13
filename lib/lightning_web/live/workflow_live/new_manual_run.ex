@@ -55,8 +55,10 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     Ecto.Changeset.cast(
       {%{},
        %{
-         before: :naive_datetime,
-         after: :naive_datetime,
+         # The client sends these as UTC ISO 8601; a value without an offset is
+         # taken as UTC, which is what older clients sent.
+         before: :utc_datetime,
+         after: :utc_datetime,
          type:
            Ecto.ParameterizedType.init(Ecto.Enum,
              values: Dataclip.source_types()

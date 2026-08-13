@@ -52,6 +52,13 @@ and this project adheres to
 
 ### Fixed
 
+- Date filters now mean what they show. The pickers on the history page and on
+  the "Existing" input selector read as the browser's local time, but the picked
+  wall clock was filtered on as if it were UTC, so outside UTC the results were
+  offset by the timezone. The picked time is now converted to the instant it
+  stands for before filtering.
+  [#4983](https://github.com/OpenFn/lightning/issues/4983)
+
 - `APOLLO_TIMEOUT` now governs every request to Apollo, including the streaming
   requests all AI chats use. Streaming previously read an internal timeout key
   that no environment could set, so it was always 120s regardless of

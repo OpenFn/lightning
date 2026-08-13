@@ -342,6 +342,12 @@ defmodule LightningWeb.Components.NewInputs do
 
     * `type="tag"` renders a tag input with comma-separated values
 
+    * `type="local-datetime"` renders a `datetime-local` input that displays the
+      browser's local time while submitting a UTC timestamp, so that filtering
+      on a picked time agrees with the times rendered on the page. Use it
+      instead of a bare `datetime-local` whenever the value is a timestamp the
+      server compares against stored (UTC) data.
+
     * For live file uploads, see `Phoenix.Component.live_file_input/1`
 
   See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
@@ -362,9 +368,9 @@ defmodule LightningWeb.Components.NewInputs do
   attr :type, :string,
     default: "text",
     values:
-      ~w(checkbox color date datetime-local email file hidden month number password
-               range radio search select custom-select tag tel text textarea codearea
-               time url week toggle integer-toggle)
+      ~w(checkbox color date datetime-local local-datetime email file hidden
+               month number password range radio search select custom-select tag
+               tel text textarea codearea time url week toggle integer-toggle)
 
   attr :field, Phoenix.HTML.FormField,
     doc:
@@ -958,6 +964,51 @@ defmodule LightningWeb.Components.NewInputs do
     """
   end
 
+  def input(%{type: "local-datetime"} = assigns) do
+    assigns =
+      assigns
+      |> assign(:id, assigns.id || assigns.name)
+      |> assign(:utc_value, utc_iso8601(assigns[:value]))
+
+    ~H"""
+    <div
+      id={"#{@id}-container"}
+      phx-hook="LocalDateTimeInput"
+      data-hidden-el={@id}
+      data-local-el={"#{@id}_local"}
+    >
+      <.label :if={@label} for={"#{@id}_local"} class="mb-2">
+        {@label}<span :if={Map.get(@rest, :required, false)} class="text-red-500"> *</span>
+        <.tooltip_for_label :if={@tooltip} id={"#{@id}-tooltip"} tooltip={@tooltip} />
+      </.label>
+      <small :if={@sublabel} class="mb-2 block text-xs text-gray-600">
+        {@sublabel}
+      </small>
+      <%!-- The visible input speaks the browser's timezone; the hook keeps this --%>
+      <%!-- hidden input - the one the form submits - in UTC. --%>
+      <input type="hidden" name={@name} id={@id} value={@utc_value} />
+      <input
+        type="datetime-local"
+        id={"#{@id}_local"}
+        autocomplete={@autocomplete}
+        class={[
+          "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
+          "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
+          @errors == [] &&
+            "border-slate-300 focus:border-slate-400 focus:outline-primary-600",
+          @errors != [] &&
+            "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
+          @class
+        ]}
+        {@rest}
+      />
+      <div :if={Enum.any?(@errors) and @display_errors} class="error-space">
+        <.error :for={msg <- @errors}>{msg}</.error>
+      </div>
+    </div>
+    """
+  end
+
   def input(%{type: "hidden"} = assigns) do
     ~H"""
     <input
@@ -1001,6 +1052,16 @@ defmodule LightningWeb.Components.NewInputs do
     </div>
     """
   end
+
+  # The value a `local-datetime` input hands to the browser: an unambiguous UTC
+  # timestamp the client can render in - and read back from - local time.
+  defp utc_iso8601(%DateTime{} = value), do: DateTime.to_iso8601(value)
+
+  defp utc_iso8601(%NaiveDateTime{} = value),
+    do: value |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
+
+  defp utc_iso8601(value) when is_binary(value), do: value
+  defp utc_iso8601(_value), do: nil
 
   defp select_option_label({label, _value}), do: label
   defp select_option_label(value), do: value

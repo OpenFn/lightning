@@ -7,15 +7,31 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
   test "get_dataclips_filters/1" do
     assert {:ok, %{}} = NewManualRun.get_dataclips_filters("query=+")
 
-    assert {:ok, %{before: ~N[2025-05-14 14:35:00]}} =
+    assert {:ok, %{before: ~U[2025-05-14 14:35:00Z]}} =
              NewManualRun.get_dataclips_filters(
                "query=+&before=2025-05-14T14%3A35"
-             )
+             ),
+           "a bare timestamp is read as UTC"
 
     assert {:ok,
-            %{before: ~N[2025-05-14 14:35:00], after: ~N[2025-05-14 14:55:00]}} =
+            %{
+              before: ~U[2025-05-14 14:35:00Z],
+              after: ~U[2025-05-14 14:55:00Z]
+            }} =
              NewManualRun.get_dataclips_filters(
                "query=+&before=2025-05-14T14%3A35&after=2025-05-14T14%3A55"
+             )
+
+    # The date pickers show the user's local time, so the client sends the
+    # instant it stands for rather than the wall clock reading.
+    assert {:ok, %{before: ~U[2025-05-14 14:35:00Z]}} =
+             NewManualRun.get_dataclips_filters(
+               "query=+&before=2025-05-14T15%3A35%3A00%2B01%3A00"
+             )
+
+    assert {:ok, %{after: ~U[2025-05-14 14:55:00Z]}} =
+             NewManualRun.get_dataclips_filters(
+               "query=+&after=2025-05-14T14%3A55%3A00.000Z"
              )
 
     assert {:ok, %{name_or_id_part: "1f"}} =

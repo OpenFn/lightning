@@ -5,6 +5,7 @@ import tippy, {
   type Placement,
 } from 'tippy.js';
 
+import { localInputToUTC, utcToLocalInput } from '../utils/localDateTime';
 import TemplateToWorkflow from '../yaml/TemplateToWorkflow';
 import WorkflowToYAML from '../yaml/WorkflowToYAML';
 import YAMLToWorkflow from '../yaml/YAMLToWorkflow';
@@ -517,6 +518,94 @@ export const TagInput = {
   },
 };
 
+/**
+ * Drives a `local-datetime` input (see `LightningWeb.Components.NewInputs`).
+ *
+ * A `datetime-local` input speaks wall-clock time in the browser's timezone,
+ * but the server stores and filters in UTC. This hook pairs the visible picker
+ * with a hidden input - the one the form actually submits - and converts
+ * between the two, so a time picked in local time filters on the matching UTC
+ * instant. See https://github.com/OpenFn/lightning/issues/4983.
+ */
+export const LocalDateTimeInput = {
+  mounted() {
+    this.hiddenInput = document.getElementById(
+      this.el.dataset['hiddenEl'] ?? ''
+    ) as HTMLInputElement | null;
+
+    this.localInput = document.getElementById(
+      this.el.dataset['localEl'] ?? ''
+    ) as HTMLInputElement | null;
+
+    if (!this.hiddenInput || !this.localInput) {
+      console.error('LocalDateTimeInput: inputs not found.', {
+        hiddenEl: this.el.dataset['hiddenEl'],
+        localEl: this.el.dataset['localEl'],
+      });
+      return;
+    }
+
+    const hiddenInput = this.hiddenInput;
+    const localInput = this.localInput;
+
+    // The picker carries no name and is not part of the form data. Keep its own
+    // events off the form so a half-entered date can't trigger phx-change with
+    // the previous value; the hidden input below announces the real change.
+    this.onLocalInput = (event: Event) => {
+      event.stopPropagation();
+    };
+
+    this.onLocalChange = (event: Event) => {
+      event.stopPropagation();
+      hiddenInput.value = localInputToUTC(localInput.value) ?? '';
+      hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    localInput.addEventListener('input', this.onLocalInput);
+    localInput.addEventListener('change', this.onLocalChange);
+    this.showLocalTime();
+  },
+
+  updated() {
+    this.showLocalTime();
+  },
+
+  destroyed() {
+    if (!this.localInput) return;
+
+    if (this.onLocalInput) {
+      this.localInput.removeEventListener('input', this.onLocalInput);
+    }
+
+    if (this.onLocalChange) {
+      this.localInput.removeEventListener('change', this.onLocalChange);
+    }
+  },
+
+  showLocalTime() {
+    if (!this.hiddenInput || !this.localInput) return;
+
+    // Leave a picker the user is working in alone, the way LiveView leaves a
+    // focused input alone during a patch.
+    if (document.activeElement === this.localInput) return;
+
+    // Read the attribute rather than the property: once this hook has written
+    // to the hidden input, the browser stops syncing server-rendered value
+    // attributes into the property, so the property can be stale (e.g. after
+    // the filter is cleared server-side).
+    const utc = this.hiddenInput.getAttribute('value') ?? '';
+
+    this.hiddenInput.value = utc;
+    this.localInput.value = utcToLocalInput(utc);
+  },
+} as PhoenixHook<{
+  hiddenInput: HTMLInputElement | null;
+  localInput: HTMLInputElement | null;
+  onLocalInput: ((event: Event) => void) | null;
+  onLocalChange: ((event: Event) => void) | null;
+  showLocalTime: () => void;
+}>;
+
 export const ClearInput = {
   mounted() {
     this.handleEvent('clear_input', () => {
@@ -1028,6 +1117,15 @@ export const LocalTimeConverter = {
 
         case 'time_only':
           displayTime = format(date, 'h:mm:ss a');
+          break;
+
+        // Mirrors the server-rendered fallback: "17-Jul", with the year
+        // appended when it isn't the current one.
+        case 'date_short':
+          displayTime = format(
+            date,
+            date.getFullYear() === now.getFullYear() ? 'd-MMM' : 'd-MMM-yyyy'
+          );
           break;
 
         // case 'relative':

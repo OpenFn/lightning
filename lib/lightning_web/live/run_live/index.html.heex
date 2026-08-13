@@ -170,14 +170,11 @@
                 phx-click={show_dropdown("wo_date_received_filter")}
               >
                 Received
-                <%= if has_received do %>
-                  {format_date_range(
-                    get_change(@filters_changeset, :wo_date_after),
-                    get_change(@filters_changeset, :wo_date_before)
-                  )}
-                <% else %>
-                  any time
-                <% end %>
+                <.date_range_label
+                  id="received-filter-range"
+                  after_date={get_change(@filters_changeset, :wo_date_after)}
+                  before_date={get_change(@filters_changeset, :wo_date_before)}
+                />
               </.filter_chip>
 
               <%!-- Received date dropdown --%>
@@ -192,11 +189,11 @@
                   </div>
                   <div class="px-4 py-1 text-gray-700 text-sm">
                     <label>Received After</label>
-                    <.input type="datetime-local" field={f[:wo_date_after]} />
+                    <.input type="local-datetime" field={f[:wo_date_after]} />
                   </div>
                   <div class="px-4 py-1 text-gray-700 text-sm">
                     <label>Received Before</label>
-                    <.input type="datetime-local" field={f[:wo_date_before]} />
+                    <.input type="local-datetime" field={f[:wo_date_before]} />
                   </div>
                 </div>
               </div>
@@ -214,14 +211,11 @@
                 phx-click={show_dropdown("wo_last_activity_filter")}
               >
                 Last activity
-                <%= if has_activity do %>
-                  {format_date_range(
-                    get_change(@filters_changeset, :date_after),
-                    get_change(@filters_changeset, :date_before)
-                  )}
-                <% else %>
-                  any time
-                <% end %>
+                <.date_range_label
+                  id="activity-filter-range"
+                  after_date={get_change(@filters_changeset, :date_after)}
+                  before_date={get_change(@filters_changeset, :date_before)}
+                />
               </.filter_chip>
 
               <%!-- Last activity dropdown --%>
@@ -236,11 +230,11 @@
                   </div>
                   <div class="px-4 py-1 text-gray-700 text-sm">
                     <label>Activity After</label>
-                    <.input type="datetime-local" field={f[:date_after]} />
+                    <.input type="local-datetime" field={f[:date_after]} />
                   </div>
                   <div class="px-4 py-1 text-gray-700 text-sm">
                     <label>Activity Before</label>
-                    <.input type="datetime-local" field={f[:date_before]} />
+                    <.input type="local-datetime" field={f[:date_before]} />
                   </div>
                 </div>
               </div>

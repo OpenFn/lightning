@@ -140,6 +140,52 @@ defmodule LightningWeb.Components.NewInputsTest do
     end
   end
 
+  # Renders a `local-datetime` filter field the way the history page does, from
+  # the params that page keeps in the URL.
+  defp render_local_datetime(params) do
+    types = %{date_after: :utc_datetime}
+
+    form =
+      {%{}, types}
+      |> Ecto.Changeset.cast(params, [:date_after])
+      |> Phoenix.Component.to_form(as: :filters)
+
+    (&NewInputs.input/1)
+    |> render_component(%{field: form[:date_after], type: "local-datetime"})
+    |> Floki.parse_fragment!()
+  end
+
+  describe "input/1 with type local-datetime" do
+    test "submits UTC while the picker shows the browser's local time" do
+      # 15:40 UTC is what a user an hour ahead picks as 16:40.
+      doc = render_local_datetime(%{"date_after" => "2026-07-17T15:40:00Z"})
+
+      assert [hidden] = Floki.find(doc, ~s(input[type="hidden"]))
+      assert Floki.attribute(hidden, "name") == ["filters[date_after]"]
+      assert Floki.attribute(hidden, "value") == ["2026-07-17T15:40:00Z"]
+
+      assert [picker] = Floki.find(doc, ~s(input[type="datetime-local"]))
+
+      assert Floki.attribute(picker, "name") == [],
+             "the picker holds wall-clock time and must not be submitted"
+
+      assert [container] = Floki.find(doc, ~s([phx-hook="LocalDateTimeInput"]))
+
+      assert Floki.attribute(container, "data-hidden-el") ==
+               Floki.attribute(hidden, "id")
+
+      assert Floki.attribute(container, "data-local-el") ==
+               Floki.attribute(picker, "id")
+    end
+
+    test "renders no value when the filter is unset" do
+      doc = render_local_datetime(%{})
+
+      assert [hidden] = Floki.find(doc, ~s(input[type="hidden"]))
+      assert Floki.attribute(hidden, "value") == []
+    end
+  end
+
   # ---- old_error/1 (CoreComponents) -----------------------------------------
 
   describe "old_error/1 used_input? gating" do

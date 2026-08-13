@@ -928,6 +928,31 @@ defmodule LightningWeb.RunLive.IndexTest do
       assert html =~ "after"
     end
 
+    test "date filters are submitted and rendered as UTC instants", %{
+      conn: conn,
+      project: project
+    } do
+      # The picker shows this to a user in UTC+1 as 09:30, and the filter has to
+      # keep meaning 08:30 UTC. See github.com/OpenFn/lightning/issues/4983.
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{wo_date_after: "2025-01-01T08:30:00Z"}
+          )
+        )
+
+      html = render(view)
+
+      assert html =~ ~s(phx-hook="LocalDateTimeInput")
+
+      assert html =~ ~s(value="2025-01-01T08:30:00Z"),
+             "the filter is handed to the browser as an instant, not a wall clock"
+
+      chip_date = render(element(view, "#received-filter-range-after"))
+      assert chip_date =~ ~s(data-iso-timestamp="2025-01-01T08:30:00Z")
+    end
+
     test "clearing date filter resets chip", %{
       conn: conn,
       project: project

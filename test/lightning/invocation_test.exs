@@ -643,6 +643,32 @@ defmodule Lightning.InvocationTest do
 
       assert length(all_results) == 4
     end
+
+    test "filters dataclips by the instant they were created" do
+      %{jobs: [job1 | _rest]} = insert(:complex_workflow)
+
+      # 15:40 UTC is 16:40 for a user an hour ahead; the boundary they pick is
+      # sent as an instant, so the same dataclips are in and out either way.
+      before_boundary =
+        insert(:dataclip, inserted_at: ~U[2026-07-17 15:39:59.000000Z])
+        |> tap(&insert(:step, input_dataclip: &1, job: job1))
+
+      after_boundary =
+        insert(:dataclip, inserted_at: ~U[2026-07-17 15:40:01.000000Z])
+        |> tap(&insert(:step, input_dataclip: &1, job: job1))
+
+      boundary = ~U[2026-07-17 15:40:00Z]
+
+      assert_dataclips_list(
+        [before_boundary],
+        Invocation.list_dataclips_for_job(job1, %{before: boundary}, limit: 10)
+      )
+
+      assert_dataclips_list(
+        [after_boundary],
+        Invocation.list_dataclips_for_job(job1, %{after: boundary}, limit: 10)
+      )
+    end
   end
 
   describe "get_next_cron_run_dataclip/1" do

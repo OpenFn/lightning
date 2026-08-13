@@ -11,11 +11,19 @@
  * - Permission checks for running workflows
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type React from 'react';
 import { act } from 'react';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from 'vitest';
 import * as dataclipApi from '../../../js/collaborative-editor/api/dataclips';
 import { ManualRunPanel } from '../../../js/collaborative-editor/components/ManualRunPanel';
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
@@ -719,6 +727,58 @@ describe('ManualRunPanel', () => {
       await waitFor(
         () => {
           expect(dataclipApi.searchDataclips).toHaveBeenCalledTimes(2);
+        },
+        { timeout: 1000 }
+      );
+    });
+  });
+
+  describe('date filters', () => {
+    // The pickers show the browser's local time while dataclips are stored in
+    // UTC. See https://github.com/OpenFn/lightning/issues/4983.
+    const originalTZ = process.env['TZ'];
+
+    beforeAll(() => {
+      process.env['TZ'] = 'Europe/Berlin';
+    });
+
+    afterAll(() => {
+      process.env['TZ'] = originalTZ;
+    });
+
+    test.each([
+      ['Created Before', 'before'],
+      ['Created After', 'after'],
+    ])('sends the %s time as a UTC instant', async (label, filter) => {
+      const user = userEvent.setup();
+
+      renderManualRunPanel({
+        workflow: mockWorkflow,
+        projectId: 'project-1',
+        workflowId: 'workflow-1',
+        jobId: 'job-1',
+        onClose: () => {},
+      });
+
+      await waitFor(() => {
+        expect(dataclipApi.searchDataclips).toHaveBeenCalledTimes(1);
+      });
+
+      await user.click(screen.getByText('Existing'));
+
+      // 16:40 in a UTC+2 (summer) timezone is 14:40 UTC.
+      fireEvent.change(screen.getByLabelText(label), {
+        target: { value: '2026-07-17T16:40' },
+      });
+
+      await waitFor(
+        () => {
+          expect(dataclipApi.searchDataclips).toHaveBeenLastCalledWith(
+            'project-1',
+            'job-1',
+            '',
+            { [filter]: '2026-07-17T14:40:00.000Z' }
+          );
         },
         { timeout: 1000 }
       );

@@ -7,6 +7,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+import { localInputToUTC } from '#/utils/localDateTime';
 import _logger from '#/utils/logger';
 
 import { FilterTypes } from '../../manual-run-panel/types';
@@ -333,11 +334,18 @@ export function ManualRunPanel({
     void fetchDataclips();
   }, [projectId, dataclipJobId, followedRunId]);
 
+  // The date pickers hold wall-clock time in the browser's timezone; the server
+  // filters on UTC timestamps, so convert before querying.
   const buildFilters = useCallback(() => {
     const filters: Record<string, string> = {};
     if (selectedClipType) filters['type'] = selectedClipType;
-    if (selectedDates.before) filters['before'] = selectedDates.before;
-    if (selectedDates.after) filters['after'] = selectedDates.after;
+
+    const before = localInputToUTC(selectedDates.before);
+    if (before) filters['before'] = before;
+
+    const after = localInputToUTC(selectedDates.after);
+    if (after) filters['after'] = after;
+
     if (namedOnly) filters['named_only'] = 'true';
     return filters;
   }, [selectedClipType, selectedDates.before, selectedDates.after, namedOnly]);
@@ -392,14 +400,8 @@ export function ManualRunPanel({
     if (!dataclipJobId) return;
 
     const timeoutId = setTimeout(() => {
-      const filters: Record<string, string> = {};
-      if (selectedClipType) filters['type'] = selectedClipType;
-      if (selectedDates.before) filters['before'] = selectedDates.before;
-      if (selectedDates.after) filters['after'] = selectedDates.after;
-      if (namedOnly) filters['named_only'] = 'true';
-
       void dataclipApi
-        .searchDataclips(projectId, dataclipJobId, searchQuery, filters)
+        .searchDataclips(projectId, dataclipJobId, searchQuery, buildFilters())
         .then(response => {
           setDataclips(response.data);
           return response;
@@ -410,16 +412,7 @@ export function ManualRunPanel({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [
-    selectedClipType,
-    selectedDates.before,
-    selectedDates.after,
-    namedOnly,
-    searchQuery,
-    selectedTab,
-    projectId,
-    dataclipJobId,
-  ]);
+  }, [buildFilters, searchQuery, selectedTab, projectId, dataclipJobId]);
 
   const handleCustomBodyChange = useCallback((value: string) => {
     setCustomBody(value);
