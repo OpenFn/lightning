@@ -65,6 +65,10 @@ and this project adheres to
 
 ### Security
 
+- Bumped `phoenix_live_view` to 1.0.19 to clear the advisory `mix deps.audit`
+  raises against 1.0.18
+  ([EEF-CVE-2026-64941](https://osv.dev/vulnerability/EEF-CVE-2026-64941)). The
+  failing audit was blocking CI's lint job on every branch.
 - Bumped `postgrex` to 0.22.4 to clear the advisory `mix deps.audit` raises
   against 0.22.3
   ([EEF-CVE-2026-66838](https://osv.dev/vulnerability/EEF-CVE-2026-66838)). The
