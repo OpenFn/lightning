@@ -17,9 +17,11 @@ and this project adheres to
 
 ### Added
 
-- The run plan sent to workers now includes a `meta` object with the run's
-  `work_order_id`, `workflow_id`, and `project_id`.
-  [#5062](https://github.com/OpenFn/lightning/pull/5062)
+- Job code can now read the work order, workflow and project a run belongs to
+  from the `meta` global, alongside the run id it already had:
+  `meta.workOrderId`, `meta.workflowId` and `meta.projectId`. Needs a worker on
+  1.29.1 or later. [#5062](https://github.com/OpenFn/lightning/pull/5062)
+
 
 ### Changed
 
