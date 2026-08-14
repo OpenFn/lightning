@@ -19,6 +19,7 @@ and this project adheres to
 
 ### Changed
 
+- Bumped bundled worker to version 1.29.1
 - The collaboration supervision tree is no longer tied to a single set of global
   process names. The registry, dynamic supervisor and `:pg` scope a tree owns
   are described by a `Lightning.Collaboration.Instance` struct whose defaults
