@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Added
 
+- Job code can now read the work order, workflow and project a run belongs to
+  from the `meta` global, alongside the run id it already had:
+  `meta.workOrderId`, `meta.workflowId` and `meta.projectId`. Needs a worker on
+  1.29.1 or later. [#5062](https://github.com/OpenFn/lightning/pull/5062)
+
+
 ### Changed
 
 - The collaboration supervision tree is no longer tied to a single set of global
