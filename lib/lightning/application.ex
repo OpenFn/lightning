@@ -62,12 +62,19 @@ defmodule Lightning.Application do
       )
 
     :telemetry.attach_many(
-      "oban-errors",
-      [
-        [:oban, :circuit, :open],
-        [:oban, :circuit, :trip],
-        [:oban, :job, :exception]
-      ],
+      "oban-job-exception",
+      [[:oban, :job, :exception]],
+      &Lightning.ObanManager.handle_event/4,
+      nil
+    )
+
+    # Separate handler id from the exception one. :telemetry detaches a handler
+    # from every event in its attach_many the first time it raises, so sharing an
+    # id would let one bad :stop take exception reporting down with it until the
+    # next restart.
+    :telemetry.attach_many(
+      "oban-job-stop",
+      [[:oban, :job, :stop]],
       &Lightning.ObanManager.handle_event/4,
       nil
     )
@@ -165,10 +172,30 @@ defmodule Lightning.Application do
       ]
       |> Enum.reject(&is_nil/1)
 
+    warn_if_ai_jobs_outlive_the_drain_window()
+
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Lightning.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # Oban stops its producer once the grace period expires and only then kills
+  # whatever is still running, so a job that outlives the window is killed with
+  # nothing left to report it. Its AI message would stay :processing until the
+  # reaper picks it up, and no telemetry would fire.
+  defp warn_if_ai_jobs_outlive_the_drain_window do
+    grace = Application.get_env(:lightning, Oban)[:shutdown_grace_period]
+    ceiling = Lightning.AiAssistant.MessageProcessor.job_timeout()
+
+    if is_integer(grace) and is_integer(ceiling) and ceiling >= grace do
+      Logger.warning("""
+      [AI Assistant] An AI job may run for #{ceiling}ms but Oban stops draining \
+      after #{grace}ms. A deploy landing on a running job will kill it without \
+      emitting telemetry, leaving its message :processing until the reaper runs.
+      Lower APOLLO_TIMEOUT or raise Oban's shutdown_grace_period.
+      """)
+    end
   end
 
   # Tell Phoenix to update the endpoint configuration

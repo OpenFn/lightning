@@ -62,13 +62,19 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   """
   @impl Oban.Worker
   @spec timeout(Oban.Job.t()) :: pos_integer()
-  def timeout(_job) do
-    # The Finch receive_timeout on the streaming client is the primary
-    # timeout mechanism. The Oban worker timeout is a safety net that
-    # should be slightly longer.
-    timeout_ms = Lightning.Config.apollo(:timeout)
+  def timeout(_job), do: job_timeout()
 
-    timeout_ms + 10_000
+  @doc """
+  The same ceiling as `timeout/1`, for callers that have no job in hand.
+  """
+  @spec job_timeout() :: pos_integer()
+  def job_timeout do
+    # This is the only bound on a run's total duration. The Finch timeout is
+    # per-chunk, so a stream that keeps sending never trips it - which is why
+    # this must stay below Oban's shutdown_grace_period. If it doesn't, an
+    # interrupted job is killed after its producer has already stopped, and no
+    # telemetry fires at all.
+    Lightning.Config.apollo(:timeout) + 10_000
   end
 
   @doc false
@@ -379,7 +385,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     error = meta.error
     timeout? = is_map(error) and Map.get(error, :reason) == :timeout
 
-    Logger.error(~s"""
+    # A timeout is an upstream condition, not a fault of ours, and the Sentry
+    # capture below already treats it as a warning. Logging it at :error would
+    # raise a second, louder Sentry event for the same thing - see
+    # .claude/rules/logging.md.
+    Logger.log(if(timeout?, do: :warning, else: :error), ~s"""
     AI Assistant exception:
     Worker: #{job.worker}
     Type: #{if timeout?, do: "Timeout", else: "Error"}
@@ -388,8 +398,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     Duration: #{measure.duration / 1_000_000}ms
     """)
 
+    # get/2 rather than get!/2: a session deleted while its job was running would
+    # raise here, and a raise in a telemetry handler detaches it, silently ending
+    # Oban error reporting for the rest of the node's life.
     ChatMessage
-    |> Repo.get!(job.args["message_id"])
+    |> Repo.get(job.args["message_id"])
     |> case do
       %ChatMessage{id: message_id, status: status} = message
       when status in [:pending, :processing] ->
@@ -403,6 +416,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       %ChatMessage{id: message_id, status: status} ->
         Logger.debug(
           "[AI Assistant] Message #{message_id} already has status: #{status}, skipping cleanup"
+        )
+
+      nil ->
+        Logger.debug(
+          "[AI Assistant] Message #{job.args["message_id"]} no longer exists, skipping cleanup"
         )
     end
 
@@ -457,7 +475,10 @@ defmodule Lightning.AiAssistant.MessageProcessor do
         :ok
 
       other ->
-        Logger.error("""
+        # Cancelled or discarded, most often because a deploy interrupted the
+        # job. Expected rather than faulty, and the Sentry capture below is
+        # already a warning.
+        Logger.warning("""
         AI Assistant stop (non-success):
         Worker: #{meta.job.worker}
         State: #{inspect(other)}
@@ -466,7 +487,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
         """)
 
         ChatMessage
-        |> Repo.get!(meta.job.args["message_id"])
+        |> Repo.get(meta.job.args["message_id"])
         |> case do
           %ChatMessage{id: message_id, status: status} = message
           when status in [:pending, :processing] ->
