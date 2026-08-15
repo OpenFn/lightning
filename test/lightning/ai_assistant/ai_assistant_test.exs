@@ -2359,8 +2359,14 @@ defmodule Lightning.AiAssistantTest do
 
       assert {:ok, _} = AiAssistant.query_stream(session, "test")
 
+      # Apollo's own words do not reach the panel: it wraps any unhandled
+      # exception as str(e), which can carry hostnames and paths. The text goes
+      # to the log and the user gets the generic sentence.
       assert_received {:ai_assistant, :streaming_error,
-                       %{error: "rate limited", session_id: _}}
+                       %{error: error_text, session_id: _}}
+
+      assert error_text == "Something went wrong. Please try again."
+      refute error_text =~ "rate limited"
     end
 
     test "handles error event with non-message JSON", %{
@@ -2404,11 +2410,13 @@ defmodule Lightning.AiAssistantTest do
 
       assert {:ok, _} = AiAssistant.query_stream(session, "test")
 
-      # Non-message error JSON gets inspected
+      # An error payload we cannot read is not shown verbatim: it is Apollo's
+      # internal shape, not a sentence for the user.
       assert_received {:ai_assistant, :streaming_error,
                        %{error: error_text, session_id: _}}
 
-      assert error_text =~ "500"
+      assert error_text == "Something went wrong. Please try again."
+      refute error_text =~ "500"
     end
 
     test "handles error event with non-JSON data", %{
@@ -2452,8 +2460,12 @@ defmodule Lightning.AiAssistantTest do
 
       assert {:ok, _} = AiAssistant.query_stream(session, "test")
 
+      # Undecodable data is not passed through to the panel either.
       assert_received {:ai_assistant, :streaming_error,
-                       %{error: "raw error text", session_id: _}}
+                       %{
+                         error: "Something went wrong. Please try again.",
+                         session_id: _
+                       }}
     end
 
     test "returns error when stream has no complete event", %{
@@ -2516,6 +2528,102 @@ defmodule Lightning.AiAssistantTest do
 
       assert {:error, "Stream ended without complete response"} =
                AiAssistant.query_stream(session, "test")
+    end
+
+    test "keeps the text that arrived when the stream dies before completing",
+         %{user: user, workflow: %{jobs: [job_1 | _]}} do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      # Text the user has already watched appear, then nothing - no complete
+      # event ever arrives.
+      sse_stream = [
+        %{
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{"type" => "text_delta", "text" => "Here is "}
+            })
+        },
+        %{
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{"type" => "text_delta", "text" => "the answer"}
+            })
+        }
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:error, message} = AiAssistant.query_stream(session, "test")
+      assert message =~ "cut off"
+
+      saved =
+        Lightning.Repo.all(Lightning.AiAssistant.ChatMessage)
+        |> Enum.find(&(&1.role == :assistant))
+
+      assert saved.content == "Here is the answer"
+      assert saved.status == :error
+      assert saved.failure_category == :incomplete_response
+    end
+
+    test "keeps the workflow yaml when the stream dies after sending it", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      # Workflow and global chat put the yaml on the wire ahead of the text.
+      sse_stream = [
+        %{event: "changes", data: Jason.encode!(%{"yaml" => "name: my-flow"})},
+        %{
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{"type" => "text_delta", "text" => "Built it"}
+            })
+        }
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_stream(session, "test")
+
+      saved =
+        Lightning.Repo.all(Lightning.AiAssistant.ChatMessage)
+        |> Enum.find(&(&1.role == :assistant))
+
+      assert saved.code == "name: my-flow"
     end
 
     test "skips log events and unknown events", %{

@@ -288,6 +288,11 @@ defmodule LightningWeb.AiAssistantChannel do
           end
 
         :error ->
+          # A stream that died partway through still saves what arrived. Send
+          # it before the error, or the client clears its buffer and the reply
+          # the user watched appear vanishes until they reload.
+          broadcast_partial_answer(socket, updated_session)
+
           # Broadcast error state so all users can see and retry
           failed_message = failed_message(updated_session, failed_id)
 
@@ -873,6 +878,34 @@ defmodule LightningWeb.AiAssistantChannel do
       from_global: from_global
     }
     |> put_failure(message)
+  end
+
+  # Only an assistant message kept from a cut-off stream: a failed user message
+  # is already on screen, and a session whose newest assistant reply succeeded
+  # has nothing partial to send.
+  defp broadcast_partial_answer(socket, session) do
+    # Picked by role rather than by taking the last message. Messages are
+    # ordered by inserted_at and that is stored to the second, so a turn that
+    # dies quickly ties with the question that started it and can come back
+    # either way round. Taking the last one then finds the question, matches
+    # nothing here, and the answer the user watched appear is never sent - the
+    # loss this whole path exists to prevent.
+    #
+    # Re-sending is the safe direction: the client keys messages by id and
+    # ignores one it already has, so a partial kept from an earlier turn is
+    # dropped there rather than shown twice.
+    partial =
+      session.messages
+      |> Enum.filter(&(&1.role == :assistant))
+      |> List.last()
+
+    case partial do
+      %{failure_category: :incomplete_response} = partial ->
+        broadcast(socket, "new_message", %{message: format_message(partial)})
+
+      _ ->
+        :ok
+    end
   end
 
   # The broadcaster says which message it is reporting on. Falling back to the
