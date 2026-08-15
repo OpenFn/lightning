@@ -136,7 +136,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           ChatMessage.t()
         ) ::
           {:ok, AiAssistant.ChatSession.t()}
-          | {:error, String.t() | Ecto.Changeset.t()}
+          | {:error, AiAssistant.stream_error()}
   defp dispatch_message_processing(session, message) do
     if global_chat?(session) do
       process_global_message(session, message)
@@ -156,7 +156,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @spec process_global_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
           {:ok, AiAssistant.ChatSession.t()}
-          | {:error, String.t() | Ecto.Changeset.t()}
+          | {:error, AiAssistant.stream_error()}
   defp process_global_message(session, message) do
     workflow_yaml = message.code
     page = get_in(session.meta, ["message_options", "page"])
@@ -188,7 +188,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @spec handle_processing_result(
           ChatMessage.t(),
           {:ok, AiAssistant.ChatSession.t()}
-          | {:error, String.t() | Ecto.Changeset.t()}
+          | {:error, AiAssistant.stream_error()}
         ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp handle_processing_result(message, result) do
     case result do
@@ -200,7 +200,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:ok, _updated_session, _updated_message} =
-          update_message_status(message, :error)
+          update_message_status(
+            message,
+            :error,
+            {:internal, "Something went wrong. Please try again."}
+          )
 
         Logger.error(
           "[MessageProcessor] Failed to save assistant response for message " <>
@@ -209,9 +213,29 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
         {:error, "Failed to save assistant response"}
 
-      {:error, error_message} ->
+      # Something raised on our side. The text describes our internals, so the
+      # user gets the generic sentence instead. It is not logged again here:
+      # whoever raised it already logged the exception, and each extra
+      # Logger.error is a second Sentry event for one failure.
+      {:error, {:internal, raw}} ->
         {:ok, _updated_session, _updated_message} =
-          update_message_status(message, :error)
+          update_message_status(
+            message,
+            :error,
+            {:internal, "Something went wrong. Please try again."}
+          )
+
+        {:error, raw}
+
+      {:error, error_message} ->
+        # The strings built by handle_error_response are already written for a
+        # user to read.
+        {:ok, _updated_session, _updated_message} =
+          update_message_status(
+            message,
+            :error,
+            {:upstream_error, error_message}
+          )
 
         {:error, error_message}
     end
@@ -220,7 +244,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @doc false
   @spec process_job_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
           {:ok, AiAssistant.ChatSession.t()}
-          | {:error, String.t() | Ecto.Changeset.t()}
+          | {:error, AiAssistant.stream_error()}
   defp process_job_message(session, message) do
     enriched_session = AiAssistant.enrich_session_with_job_context(session)
 
@@ -278,7 +302,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @doc false
   @spec process_workflow_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
           {:ok, AiAssistant.ChatSession.t()}
-          | {:error, String.t() | Ecto.Changeset.t()}
+          | {:error, AiAssistant.stream_error()}
   defp process_workflow_message(session, message) do
     code = message.code || workflow_code_from_session(session)
 
@@ -320,11 +344,12 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   """
   @spec update_message_status(
           ChatMessage.t(),
-          atom()
+          atom(),
+          {atom(), String.t()} | nil
         ) ::
           {:ok, ChatSession.t(), ChatMessage.t()}
-  def update_message_status(message, status) do
-    changes = build_status_changes(status)
+  def update_message_status(message, status, failure \\ nil) do
+    changes = status |> build_status_changes() |> put_failure(failure)
 
     updated_message =
       message
@@ -359,6 +384,20 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       status: :error,
       processing_completed_at: DateTime.utc_now()
     }
+  end
+
+  defp put_failure(changes, nil), do: changes
+
+  # Clamped here rather than in the changeset, because this writes through
+  # Ecto.Changeset.change/2, which applies no validation at all. The column is
+  # read back and re-sent on every channel join, so an unbounded string would
+  # be paid for on each one.
+  defp put_failure(changes, {category, message}) do
+    Map.merge(changes, %{
+      failure_category: category,
+      failure_message:
+        String.slice(message, 0, ChatMessage.max_failure_message_length())
+    })
   end
 
   @doc false
@@ -410,8 +449,16 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           "[AI Assistant] Updating message #{message_id} to error status after exception"
         )
 
+        failure =
+          if timeout? do
+            {:timeout,
+             "The assistant took too long to respond. Please try again."}
+          else
+            {:internal, "Something went wrong. Please try again."}
+          end
+
         {:ok, _updated_session, _updated_message} =
-          update_message_status(message, :error)
+          update_message_status(message, :error, failure)
 
       %ChatMessage{id: message_id, status: status} ->
         Logger.debug(
@@ -495,7 +542,13 @@ defmodule Lightning.AiAssistant.MessageProcessor do
               "[AI Assistant] Updating message #{message_id} to error status after stop=#{other}"
             )
 
-            {:ok, _sess, _msg} = update_message_status(message, :error)
+            {:ok, _sess, _msg} =
+              update_message_status(
+                message,
+                :error,
+                {:interrupted,
+                 "The assistant was interrupted before it finished. Please try again."}
+              )
 
           _ ->
             :ok

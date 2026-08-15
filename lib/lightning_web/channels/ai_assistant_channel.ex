@@ -293,10 +293,12 @@ defmodule LightningWeb.AiAssistantChannel do
             |> Enum.find(fn msg -> msg.role == :user end)
 
           if user_message do
-            broadcast(socket, "message_error", %{
-              message_id: user_message.id,
-              status: "error"
-            })
+            broadcast(
+              socket,
+              "message_error",
+              %{message_id: user_message.id, status: "error"}
+              |> put_failure(user_message)
+            )
           end
 
         :failed ->
@@ -874,6 +876,18 @@ defmodule LightningWeb.AiAssistantChannel do
       job_id: job_id,
       from_global: from_global
     }
+    |> put_failure(message)
+  end
+
+  # Only present on a failed message, so a reconnecting client sees the same
+  # reason as one that was watching when it happened.
+  defp put_failure(payload, %{failure_category: nil}), do: payload
+
+  defp put_failure(payload, message) do
+    Map.merge(payload, %{
+      failure_category: to_string(message.failure_category),
+      failure_message: message.failure_message
+    })
   end
 
   defp format_user(nil), do: nil

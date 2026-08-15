@@ -2628,11 +2628,15 @@ defmodule Lightning.AiAssistantTest do
         {:ok, %Tesla.Env{status: 200, body: raising_stream}}
       end)
 
-      assert {:error, "boom"} =
+      # Tagged, so the caller knows this text is ours and not for the user.
+      assert {:error, {:internal, "boom"}} =
                AiAssistant.query_stream(session, "test")
 
       assert_received {:ai_assistant, :streaming_error,
-                       %{error: "Streaming failed: boom", session_id: _}}
+                       %{
+                         error: "Something went wrong. Please try again.",
+                         session_id: _
+                       }}
     end
 
     test "handles exit signals during stream processing (e.g. Mint transport errors)",

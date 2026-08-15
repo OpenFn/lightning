@@ -399,7 +399,14 @@ defmodule Lightning.ObanManagerTest do
         )
       end)
 
-      assert Repo.get!(ChatMessage, message.id).status == :error
+      reloaded = Repo.get!(ChatMessage, message.id)
+
+      assert reloaded.status == :error
+
+      # Recorded on the row rather than only broadcast: a deploy is the common
+      # cause, and that is exactly when the browser reconnects somewhere else.
+      assert reloaded.failure_category == :interrupted
+      assert reloaded.failure_message =~ "interrupted"
     end
 
     test "ignores stop for non-AI queues" do
