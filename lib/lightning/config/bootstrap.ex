@@ -131,6 +131,33 @@ defmodule Lightning.Config.Bootstrap do
           end
         end)
 
+    # How long to wait to reach Apollo at all.
+    apollo_connect_timeout =
+      env!(
+        "APOLLO_CONNECT_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :connect_timeout])
+      )
+
+    # Longest acceptable silence part-way through an answer. Apollo sends a
+    # keepalive every 15s from v3.1.1, so half a minute of nothing means the
+    # path is broken rather than that a model is thinking. Raise it if you run
+    # an older Apollo that has no keepalive.
+    apollo_idle_timeout =
+      env!(
+        "APOLLO_IDLE_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :idle_timeout])
+      )
+
+    # Longest one whole request may take, however steadily it is streaming.
+    apollo_request_timeout =
+      env!(
+        "APOLLO_REQUEST_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :request_timeout])
+      )
+
     config :lightning, :apollo,
       endpoint:
         env!(
@@ -138,18 +165,9 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, :apollo, :endpoint])
         ),
-      # APOLLO_TIMEOUT (ms) bounds every request to Apollo. For streaming
-      # (all AI chat) it is the time-to-headers and the max gap between SSE
-      # chunks — and because the AI job's total-runtime ceiling is derived
-      # from the same value, it effectively bounds the whole run too, so
-      # size it above the longest expected AI run. Unset, it falls back to
-      # the per-env compiled config.
-      timeout:
-        env!(
-          "APOLLO_TIMEOUT",
-          :integer,
-          Utils.get_env([:lightning, :apollo, :timeout])
-        ),
+      connect_timeout: apollo_connect_timeout,
+      idle_timeout: apollo_idle_timeout,
+      request_timeout: apollo_request_timeout,
       ai_assistant_api_key: env!("AI_ASSISTANT_API_KEY", :string, nil)
 
     config :lightning, Lightning.Runtime.RuntimeManager,

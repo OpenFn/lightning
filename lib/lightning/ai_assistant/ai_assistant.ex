@@ -1134,8 +1134,10 @@ defmodule Lightning.AiAssistant do
   # The stream is the only place some of this exists. Apollo rebuilds the whole
   # reply in its `complete` payload, but if the stream dies before that arrives
   # the text the user just watched appear is gone unless we keep it here.
-  defp save_partial_response(_session, %{text: [], code: nil}) do
-    {:error, "Stream ended without complete response"}
+  # Nothing arrived that a reader could use. Status updates alone are not worth
+  # a message: they describe work that did not produce anything.
+  defp save_partial_response(_session, %{text: [], code: nil} = acc) do
+    {:error, acc.apollo_error || stream_failure_message()}
   end
 
   defp save_partial_response(session, %{text: text, code: code} = acc) do
@@ -1148,9 +1150,8 @@ defmodule Lightning.AiAssistant do
       |> String.trim()
       |> String.slice(0, ChatMessage.max_content_length())
 
-    message =
-      acc.apollo_error ||
-        "The assistant was cut off before it finished. Please try again."
+    # Apollo telling us beats anything we can infer from how the socket died.
+    message = acc.apollo_error || stream_failure_message()
 
     case save_message(
            session,
@@ -1176,6 +1177,45 @@ defmodule Lightning.AiAssistant do
 
         {:error, message}
     end
+  end
+
+  # The adapter records why a stream stopped; without it we only know that it
+  # did, which is how a hung Apollo, a severed connection and a short answer
+  # all came to report the same thing.
+  defp stream_failure_message do
+    case Lightning.Tesla.Adapter.Finch.take_stream_error() do
+      nil ->
+        "The assistant stopped before it finished. Please try again."
+
+      # Our own receive_timeout in the adapter, which reports a bare atom.
+      :timeout ->
+        transport_failure_message(:timeout)
+
+      # Anything Finch reports. It wraps Mint's error in a struct of its own,
+      # and both carry :reason, so the reason is taken out before it is matched
+      # on rather than matching one struct and missing the other.
+      %s{reason: reason}
+      when s in [Finch.TransportError, Mint.TransportError] ->
+        transport_failure_message(reason)
+
+      other ->
+        Logger.warning("[AI Assistant] Stream failed: #{inspect(other)}")
+        "The assistant stopped before it finished. Please try again."
+    end
+  end
+
+  # A silence long enough to give up on reaches us two ways, from our own
+  # adapter and from Finch, and both have to read the same to the user.
+  defp transport_failure_message(:timeout) do
+    "The assistant stopped responding partway through. Please try again."
+  end
+
+  defp transport_failure_message(reason) do
+    # inspect/1, not interpolation: a reason is not always an atom, and a
+    # tuple like {:tls_alert, _} has no String.Chars.
+    Logger.warning("[AI Assistant] Stream lost mid-response: #{inspect(reason)}")
+
+    "The connection to the assistant was lost. Please try again."
   end
 
   # Bridge event: complete — final payload (same shape as sync response)

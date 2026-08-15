@@ -316,7 +316,9 @@ defmodule Lightning.ApolloClientTest do
       case key do
         :endpoint -> endpoint
         :ai_assistant_api_key -> api_key
-        :timeout -> 5_000
+        :connect_timeout -> 1_000
+        :idle_timeout -> 5_000
+        :request_timeout -> 5_000
       end
     end)
   end

@@ -69,12 +69,15 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   """
   @spec job_timeout() :: pos_integer()
   def job_timeout do
-    # This is the only bound on a run's total duration. The Finch timeout is
-    # per-chunk, so a stream that keeps sending never trips it - which is why
-    # this must stay below Oban's shutdown_grace_period. If it doesn't, an
-    # interrupted job is killed after its producer has already stopped, and no
-    # telemetry fires at all.
-    Lightning.Config.apollo(:timeout) + 10_000
+    # Sits just outside the transport's own worst case, so the HTTP layer gets
+    # to fail first and say why. request_timeout is only checked between reads,
+    # so it can overrun by up to one idle_timeout - hence adding both rather
+    # than a flat margin. Must stay below Oban's shutdown_grace_period: if it
+    # doesn't, an interrupted job is killed after its producer has stopped and
+    # no telemetry fires at all.
+    Lightning.Config.apollo(:connect_timeout) +
+      Lightning.Config.apollo(:request_timeout) +
+      Lightning.Config.apollo(:idle_timeout) + 10_000
   end
 
   @doc false
