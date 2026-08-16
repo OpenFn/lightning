@@ -141,6 +141,7 @@ defmodule LightningWeb.RunLive.Index do
        show_export_modal: false,
        can_edit_data_retention: can_edit_data_retention,
        can_run_workflow: can_run_workflow,
+       browser_tz_offset_minutes: browser_tz_offset_minutes(socket),
        pagination_path: &pagination_path(socket, project, &1),
        filters: params["filters"],
        channel_logs_params: %{}
@@ -503,6 +504,9 @@ defmodule LightningWeb.RunLive.Index do
 
     filters =
       Map.merge(prev_filters, new_filters)
+      |> normalize_history_datetime_filters(
+        socket.assigns.browser_tz_offset_minutes
+      )
       |> Map.reject(fn {_k, v} -> Enum.member?(["false", ""], v) end)
 
     {:noreply,
@@ -893,6 +897,70 @@ defmodule LightningWeb.RunLive.Index do
     end)
     |> Enum.reverse()
   end
+
+  @history_datetime_filter_keys ~w(
+    date_after
+    date_before
+    wo_date_after
+    wo_date_before
+  )
+
+  defp browser_tz_offset_minutes(socket) do
+    if connected?(socket) do
+      case socket
+           |> get_connect_params()
+           |> Kernel.||(%{})
+           |> Map.get("tz_offset_minutes") do
+        value when is_binary(value) ->
+          case Integer.parse(value) do
+            {parsed, ""} -> parsed
+            _ -> nil
+          end
+
+        _ ->
+          nil
+      end
+    end
+  end
+
+  defp normalize_history_datetime_filters(filters, nil), do: filters
+
+  defp normalize_history_datetime_filters(filters, offset_minutes)
+       when is_integer(offset_minutes) do
+    Enum.reduce(@history_datetime_filter_keys, filters, fn key, acc ->
+      Map.update(
+        acc,
+        key,
+        nil,
+        &normalize_datetime_filter_value(&1, offset_minutes)
+      )
+    end)
+  end
+
+  defp normalize_datetime_filter_value(value, _offset_minutes)
+       when value in [nil, ""],
+       do: value
+
+  # Convert browser-local wall time to UTC using the browser offset from connect params.
+  defp normalize_datetime_filter_value(value, offset_minutes)
+       when is_binary(value) and is_integer(offset_minutes) do
+    case DateTime.from_iso8601(value) do
+      {:ok, _dt, _offset} ->
+        value
+
+      {:error, _} ->
+        with {:ok, naive} <- NaiveDateTime.from_iso8601(value) do
+          naive
+          |> DateTime.from_naive!("Etc/UTC")
+          |> DateTime.add(offset_minutes * 60, :second)
+          |> DateTime.to_iso8601()
+        else
+          _ -> value
+        end
+    end
+  end
+
+  defp normalize_datetime_filter_value(value, _offset_minutes), do: value
 
   defp pagination_path(socket, project, route_params, filters \\ %{}) do
     Routes.project_run_index_path(
