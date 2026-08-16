@@ -115,9 +115,13 @@ config :lightning,
 # Print only warnings and errors during test
 config :logger, level: :warning
 
+config :tzdata, :autoupdate, :disabled
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 config :phoenix, :logger, true
+
+config :philter, allowed_hosts: ["localhost"]
 
 config :junit_formatter,
   report_file: "elixir_test_report.xml",
@@ -166,3 +170,22 @@ config :lightning, :github_app,
 config :lightning, LightningWeb.CollectionsController,
   default_stream_limit: 25,
   max_database_limit: 15
+
+# The OIDC test suite serves discovery/JWKS/userinfo/token over http on
+# localhost via Bypass; allow those loopback endpoints to skip TLS verification.
+config :lightning, :auth_providers_allow_insecure_loopback, true
+
+# Under test, collaboration document children are spawned by an internal
+# GenServer rather than the test process. When a test owns the database
+# connection (and any per-test mocks), those children need to be granted access
+# explicitly. This callback runs synchronously as each document tree starts up,
+# so the children can talk to the database and resolve mocks via the owning test
+# process. Outside the test environment this config is absent and the supervisor
+# falls back to a no-op.
+config :lightning,
+       :collaboration_process_allow,
+       fn owner, pid ->
+         Ecto.Adapters.SQL.Sandbox.allow(Lightning.Repo, owner, pid)
+         Mox.allow(LightningMock, owner, pid)
+         :ok
+       end

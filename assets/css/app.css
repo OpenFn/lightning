@@ -95,6 +95,20 @@
   --color-warning-800: var(--color-yellow-800);
   --color-warning-900: var(--color-yellow-900);
   --color-warning-950: var(--color-yellow-950);
+
+  /* NEW DESIGN SYSTEM - to be extended later */
+  --gray-light-200: #eae9e8;
+  --gray-light-300: #d6d5d4;
+  --gray-light-400: #cccbca;
+
+  --color-border-strong: var(--gray-light-400);
+  --color-border-subtle: var(--gray-light-200);
+
+  /* Surface tokens */
+  --color-surface-subtle: #EBF5F2;
+
+  /* Semantic tokens */
+  --color-semantic-success: #006840;
 }
 
 @layer base {

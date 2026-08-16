@@ -23,11 +23,9 @@ mix verify                   # Run all code quality checks before committing
 ### Elixir Testing
 
 ```bash
-MIX_ENV=test mix ecto.create           # First time test DB setup only
 mix test                               # Run all tests (don't use -v flag)
 mix test path/to/test.exs              # Run single file
 mix test path/to/test.exs:42           # Run test at specific line
-mix test --only focus                  # Run tests tagged with @tag :focus
 ```
 
 ### Frontend (always cd into assets/ first)
@@ -66,13 +64,6 @@ mix ecto.gen.migration short_descriptive_name # Generate migration
 - Never commit the `.context` directory (symlink to shared folder)
 
 ## Architecture Overview
-
-### Directory Structure
-
-- **`lib/lightning/`** - Core business logic, contexts, schemas
-- **`lib/lightning_web/`** - LiveViews, controllers, API, channels
-- **`assets/js/`** - React components, TypeScript
-- **`test/`** - Mirrors source structure
 
 ### Key Contexts (lib/lightning/)
 
@@ -122,7 +113,9 @@ in development.
 
 - PostgreSQL with Ecto ORM
 - Dev: `postgres://postgres:postgres@localhost:5432/lightning_dev`
-- Test: `lightning_test` (auto-created by mix test)
+- Test: `lightning_test`, no manual setup step; the `test` alias at
+  `mix.exs:227` runs `ecto.create --quiet` and `ecto.migrate --quiet` before the
+  suite
 - Schemas alongside contexts in `lib/lightning/`
 
 ## Development Guidelines
@@ -132,9 +125,15 @@ in development.
 - Use `{}` brace syntax in HEEx templates
 - `warnings_as_errors: true` - code must compile without warnings
 
+> Before writing or reviewing any supervisor, GenServer, or named process, see
+> `.claude/guidelines/testable-supervision-trees.md`. Don't bake `name:
+> __MODULE__` into a process or resolve collaborators from global state — it
+> forces the test suite serial.
+
 ### React/TypeScript
 
-- Props from LiveView are **underscore_cased** (not camelCase)
+- On the `ReactComponent` hook, props arrive as the element's raw attribute
+  names: `data-`prefixed **kebab-case**, not camelCase
 - Use `cn()` utility from `#/utils/cn` for conditional CSS classes
 - Use heroicons via Tailwind: `className="hero-check-micro h-4 w-4"`
 - See `.claude/guidelines/toast-notifications.md` for notification patterns
@@ -144,8 +143,8 @@ in development.
 - **Backend**: ExUnit with ExMachina factories
 - **Frontend**: Vitest (see `.claude/guidelines/testing-essentials.md`)
 - **E2E**: Playwright (see `.claude/guidelines/e2e-testing.md`)
-- Group related assertions; avoid micro-tests (one assertion per test)
-- Target test file sizes: < 400 lines (see `.claude/guidelines/testing-essentials.md §Test file length`)
+- Assertion grouping and test file length: see
+  `.claude/guidelines/testing-essentials.md`
 
 ## Worker System
 
@@ -156,59 +155,41 @@ External Node.js workers (@openfn/ws-worker) execute JavaScript jobs:
 - Required ENVs: `WORKER_RUNS_PRIVATE_KEY`, `WORKER_SECRET`,
   `WORKER_LIGHTNING_PUBLIC_KEY`
 
-## Key Dependencies
-
-### Backend
-- Phoenix 1.7 + LiveView, Ecto 3.13+, Oban (background jobs)
-- Bodyguard (authorization), Cloak (encryption), Y_ex (Yjs bindings)
-
-### Frontend
-- React 18, @xyflow/react (DAG visualization), Monaco Editor
-- Yjs + y-phoenix-channel (collaboration), Zustand + Immer (state)
-- Tailwind CSS, Vitest, Playwright
-
-## Custom Mix Tasks
-
-```bash
-mix lightning.gen_worker_keys      # Generate worker authentication keys
-mix lightning.gen_encryption_key   # Generate credential encryption key
-mix lightning.install_runtime      # Install JavaScript runtime dependencies
-mix lightning.install_schemas      # Install JSON schemas for validation
-mix lightning.install_adaptor_icons # Install adaptor icons
-```
-
-## Troubleshooting
-
-### Switching Branches
-Run `./bin/bootstrap` to sync dependencies and migrations.
-
-### Rambo Errors (Apple Silicon)
-Install Rust: `brew install rust`
-
 ## Available Agents
 
-Canonical roster. Command files (`create-plan.md`, `implement-plan.md`,
+Claude Code injects every agent's name and description each session, so the
+roster is not restated here; the agent files themselves are in
+`.claude/agents/`. Command files (`create-plan.md`, `implement-plan.md`,
 `research-codebase.md`) cross-ref this section rather than repeating it.
 
-- **codebase-locator** - Find WHERE files and components live.
-- **codebase-analyzer** - Document HOW specific code works (no critique).
-- **codebase-pattern-finder** - Surface examples of existing patterns.
-- **context-locator** - Discover `.context/` documents about a topic.
-- **context-analyzer** - Extract key insights from a specific context doc.
-- **web-search-researcher** - External documentation and references (on request).
-- **phoenix-elixir-expert** - Elixir/Phoenix backend, Ecto, LiveView, Channels, OTP, ExUnit.
-- **react-collab-editor** - `assets/js/collaborative-editor/`, Y.Doc sync, Immer/useSyncExternalStore, TanStack Form, @xyflow/react.
-- **react-test-specialist** - React unit tests with Vitest; test quality and de-duplication.
-- **security-reviewer** - Security review of pending changes.
-- **idea-machine** - Brainstorming and framing shorthand.
+One convention that no agent file carries: dispatch `web-search-researcher` on
+request, not by default.
 
 ## Guidelines Reference
 
-Detailed guidelines in `.claude/guidelines/`:
-- `store-structure.md` - Collaborative editor store architecture
-- `testing-essentials.md` - Unit testing patterns and anti-patterns
-- `e2e-testing.md` - Playwright E2E testing
-- `yex-guidelines.md` - Critical Yex (Yjs/Elixir) usage rules
-- `toast-notifications.md` - Notification patterns
-- `logging.md` - Logger level conventions and Sentry noise (info/warning vs error)
-- `ui-patterns.md` - Button variants, disabled states, Tailwind conventions
+These files cite implementation as `file:line` rather than copying it, so read the
+source at the citation instead of trusting a transcription.
+
+- `.claude/guidelines/store-structure.md` - store responsibilities in the
+  collaborative editor; where new state belongs
+- `.claude/guidelines/yex-guidelines.md` - Yex (Yjs/Elixir) usage rules
+- `.claude/guidelines/testable-supervision-trees.md` - naming and wiring OTP
+  processes so tests can address them and still run `async: true`
+- `.claude/guidelines/toast-notifications.md` - notification patterns
+- `.claude/guidelines/testing-essentials.md` - Vitest unit testing, and the
+  entry point for:
+  - `.claude/guidelines/testing/react-patterns.md` - React Testing Library
+  - `.claude/guidelines/testing/vitest-advanced.md` - fixtures and test data
+  - `.claude/guidelines/testing/collaborative-editor.md` - Y.Doc and Phoenix
+    channel mocks
+- `.claude/guidelines/e2e-testing.md` - Playwright E2E, and the entry point for:
+  - `.claude/guidelines/e2e/phoenix-liveview.md` - driving LiveView pages; the
+    canonical wait patterns
+  - `.claude/guidelines/e2e/page-objects.md` - Page Object Model structure
+  - `.claude/guidelines/e2e/collaborative-testing.md` - multi-user collaborative
+    features
+
+`.claude/rules/logging.md` (Logger levels, Sentry noise) and
+`.claude/rules/ui-patterns.md` (button variants, Tailwind conventions) are not in
+that list because they are not read on request: each declares a `paths:` glob and
+loads by itself when you work on a file it matches.

@@ -286,7 +286,7 @@ defmodule Lightning.OauthClientsTest do
       Repo.delete_all(Lightning.Auditing.Audit)
 
       {:ok, client} =
-        OauthClients.update_client(client, %{global: true})
+        OauthClients.update_client(client, %{global: true}, allow_global: true)
 
       associations = Repo.all(ProjectOauthClient)
 
@@ -311,16 +311,19 @@ defmodule Lightning.OauthClientsTest do
       _project_2 = insert(:project, name: "Project 2")
 
       {:ok, client} =
-        OauthClients.create_client(%{
-          name: "Global Client",
-          client_id: "client_id",
-          client_secret: "client_secret",
-          authorization_endpoint: "https://www.example.com",
-          revocation_endpoint: "https://www.example.com/revoke",
-          token_endpoint: "https://www.example.com",
-          user_id: user.id,
-          global: true
-        })
+        OauthClients.create_client(
+          %{
+            name: "Global Client",
+            client_id: "client_id",
+            client_secret: "client_secret",
+            authorization_endpoint: "https://www.example.com",
+            revocation_endpoint: "https://www.example.com/revoke",
+            token_endpoint: "https://www.example.com",
+            user_id: user.id,
+            global: true
+          },
+          allow_global: true
+        )
 
       client = Repo.preload(client, :project_oauth_clients)
 
@@ -337,15 +340,19 @@ defmodule Lightning.OauthClientsTest do
       project_3 = insert(:project, name: "Project 3")
 
       {:ok, client} =
-        OauthClients.update_client(client, %{
-          global: false,
-          project_oauth_clients:
-            associations
-            |> Enum.map(fn poc ->
-              %{id: poc.id, project_id: poc.project_id, delete: poc.delete}
-            end)
-            |> Enum.concat([%{project_id: project_3.id}])
-        })
+        OauthClients.update_client(
+          client,
+          %{
+            global: false,
+            project_oauth_clients:
+              associations
+              |> Enum.map(fn poc ->
+                %{id: poc.id, project_id: poc.project_id, delete: poc.delete}
+              end)
+              |> Enum.concat([%{project_id: project_3.id}])
+          },
+          allow_global: true
+        )
 
       associations = Repo.all(ProjectOauthClient)
 
@@ -356,6 +363,39 @@ defmodule Lightning.OauthClientsTest do
 
       assert list_audits(client, "added_to_project")
              |> Enum.count() === 1
+    end
+
+    @client_attrs %{
+      name: "Client",
+      client_id: "client_id",
+      client_secret: "client_secret",
+      authorization_endpoint: "https://www.example.com",
+      token_endpoint: "https://www.example.com"
+    }
+
+    test "create_client drops :global unless allow_global is set" do
+      user = insert(:user)
+      attrs = Map.merge(@client_attrs, %{user_id: user.id, global: true})
+
+      {:ok, client} = OauthClients.create_client(attrs)
+      refute client.global
+
+      {:ok, global_client} =
+        OauthClients.create_client(attrs, allow_global: true)
+
+      assert global_client.global
+    end
+
+    test "update_client cannot set :global unless allow_global is set" do
+      client = insert(:oauth_client, global: false)
+
+      {:ok, unchanged} = OauthClients.update_client(client, %{global: true})
+      refute unchanged.global
+
+      {:ok, promoted} =
+        OauthClients.update_client(client, %{global: true}, allow_global: true)
+
+      assert promoted.global
     end
   end
 end

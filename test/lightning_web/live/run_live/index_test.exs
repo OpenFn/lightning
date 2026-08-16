@@ -188,6 +188,11 @@ defmodule LightningWeb.RunLive.IndexTest do
 
       assert render_click(view, "bulk-rerun", %{type: "all", job: job_a.id}) =~
                "You are not authorized to perform this action."
+
+      assert render_click(view, "rerun", %{
+               "run_id" => Ecto.UUID.generate(),
+               "step_id" => Ecto.UUID.generate()
+             }) =~ "You are not authorized to perform this action."
     end
 
     @tag role: :editor
@@ -248,6 +253,78 @@ defmodule LightningWeb.RunLive.IndexTest do
 
       # this is zero because the previous retried run has no steps
       assert html =~ "New run enqueued for 0 workorder"
+    end
+
+    @tag role: :editor
+    test "an editor cannot rerun a run that belongs to another project", %{
+      conn: conn,
+      project: project
+    } do
+      # A run living in a project unrelated to the one being viewed.
+      other_project = insert(:project)
+
+      %{jobs: [other_job], triggers: [other_trigger]} =
+        other_workflow = insert(:simple_workflow, project: other_project)
+
+      other_dataclip = insert(:dataclip, project: other_project)
+
+      other_wo =
+        insert(:workorder,
+          workflow: other_workflow,
+          trigger: other_trigger,
+          dataclip: other_dataclip,
+          state: :failed
+        )
+        |> with_run(
+          state: :failed,
+          dataclip: other_dataclip,
+          starting_trigger: other_trigger,
+          steps: [
+            build(:step,
+              job: other_job,
+              input_dataclip: other_dataclip,
+              exit_reason: "fail"
+            )
+          ]
+        )
+
+      [other_run] = other_wo.runs
+      [other_step] = Lightning.Repo.preload(other_run, :steps).steps
+
+      {:ok, view, _html} =
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      html =
+        render_click(view, "rerun", %{
+          "run_id" => other_run.id,
+          "step_id" => other_step.id
+        })
+
+      assert html =~ "Run not found"
+
+      # the foreign run was not retried: no new run inserted for its work order
+      assert Lightning.Repo.aggregate(Ecto.assoc(other_wo, :runs), :count) == 1
+    end
+
+    @tag role: :editor
+    test "rerun with a malformed or mismatched id returns not-found, not a crash",
+         %{conn: conn, project: project, work_order_1: work_order_1} do
+      {:ok, view, _html} =
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      # a non-UUID run id must not reach (and crash) the query
+      assert render_click(view, "rerun", %{
+               "run_id" => "not-a-uuid",
+               "step_id" => Ecto.UUID.generate()
+             }) =~ "Run not found."
+
+      # a valid in-project run, but a step that is not one of its steps
+      [run] = work_order_1.runs
+
+      assert render_click(view, "rerun", %{
+               "run_id" => run.id,
+               "step_id" => Ecto.UUID.generate()
+             }) =~ "Run not found."
     end
 
     test "jobs on the modal are updated every time the selected workflow is changed",
@@ -1076,10 +1153,16 @@ defmodule LightningWeb.RunLive.IndexTest do
           )
         )
 
-      html =
-        render_click(view, "bulk-cancel", %{type: "selected"})
+      assert render_click(view, "bulk-cancel", %{type: "selected"}) =~
+               "You are not authorized to perform this action."
 
-      assert html =~ "You are not authorized to perform this action."
+      assert render_click(view, "cancel", %{
+               "workorder_id" => Ecto.UUID.generate()
+             }) =~ "You are not authorized to perform this action."
+
+      assert render_click(view, "cancel-run", %{
+               "run_id" => Ecto.UUID.generate()
+             }) =~ "You are not authorized to perform this action."
     end
 
     @tag role: :editor
@@ -1322,6 +1405,49 @@ defmodule LightningWeb.RunLive.IndexTest do
         )
 
       assert has_element?(view, "button#export-history-button")
+    end
+
+    @tag role: :viewer
+    test "a viewer cannot start a history export", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      refute has_element?(view, "button#export-history-button")
+
+      assert render_click(view, "show-export-modal", %{}) =~ "not authorized"
+
+      html = render_click(view, "confirm-export", %{})
+
+      assert html =~ "not authorized"
+
+      refute Enum.any?(
+               Lightning.Repo.all(Lightning.Projects.File),
+               &(&1.type == :export)
+             )
+    end
+
+    @tag role: :editor
+    test "an editor can start a history export", %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      html = render_click(view, "confirm-export", %{})
+
+      assert html =~ "started successfully"
+
+      assert Enum.any?(
+               Lightning.Repo.all(Lightning.Projects.File),
+               &(&1.type == :export)
+             )
     end
   end
 end

@@ -1,6 +1,36 @@
 defmodule Lightning.WorkOrders.ManualTest do
   use Lightning.DataCase, async: true
+  import Lightning.Factories
   alias Lightning.WorkOrders.Manual
+
+  defp manual_attrs(project) do
+    [
+      project: project,
+      job: insert(:job),
+      created_by: insert(:user),
+      workflow: insert(:workflow, project: project)
+    ]
+  end
+
+  test "rejects a dataclip_id that belongs to another project" do
+    project = insert(:project)
+    foreign_dataclip = insert(:dataclip, project: insert(:project))
+
+    changeset =
+      Manual.new(%{dataclip_id: foreign_dataclip.id}, manual_attrs(project))
+
+    assert "does not belong to this project" in errors_on(changeset).dataclip_id
+  end
+
+  test "accepts a dataclip_id from the run's own project" do
+    project = insert(:project)
+    dataclip = insert(:dataclip, project: project)
+
+    changeset =
+      Manual.new(%{dataclip_id: dataclip.id}, manual_attrs(project))
+
+    refute Map.has_key?(errors_on(changeset), :dataclip_id)
+  end
 
   test "new/2 validates required fields" do
     params = %{}

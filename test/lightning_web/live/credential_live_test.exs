@@ -221,6 +221,35 @@ defmodule LightningWeb.CredentialLiveTest do
       refute has_element?(view, "#delete-credential-#{credential.id}-modal")
     end
 
+    test "rejects deleting another user's credential via a tampered id", %{
+      conn: conn,
+      credential: credential
+    } do
+      # a credential owned by a different user
+      other = insert(:credential, user: insert(:user), name: "someone-elses")
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      # open the delete modal for the current user's own credential
+      open_delete_credential_modal(index_live, credential.id)
+
+      # confirm deletion, but with a foreign credential's id (tampered phx-value-id)
+      {:ok, _index_live, html} =
+        index_live
+        |> element(
+          "#delete-credential-#{credential.id}-modal button",
+          "Delete credential"
+        )
+        |> render_click(%{"id" => other.id})
+        |> follow_redirect(conn)
+
+      # the request is rejected, and nothing is scheduled for deletion: not the
+      # foreign credential, and not the one the modal was opened for
+      assert html =~ "You can&#39;t perform this action"
+      assert Lightning.Repo.reload!(other).scheduled_deletion == nil
+      assert Lightning.Repo.reload!(credential).scheduled_deletion == nil
+    end
+
     test "can schedule for deletion a credential that is associated to activities",
          %{
            conn: conn,
@@ -413,6 +442,84 @@ defmodule LightningWeb.CredentialLiveTest do
         Lightning.Repo.get(Lightning.Credentials.Credential, credential.id)
 
       refute credential.scheduled_deletion
+    end
+
+    test "cannot cancel the scheduled deletion of another user's credential", %{
+      conn: conn
+    } do
+      other_credential =
+        insert(:credential,
+          user: insert(:user),
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      refute has_element?(
+               index_live,
+               "#credential-actions-#{other_credential.id}-cancel-deletion"
+             )
+
+      # send the event anyway
+      index_live
+      |> with_target("#credentials-index-component")
+      |> render_click("cancel_credential_deletion", %{id: other_credential.id})
+
+      assert_patched(index_live, ~p"/credentials")
+
+      assert render(index_live) =~
+               "You are not authorized to perform this action"
+
+      assert Lightning.Repo.reload(other_credential).scheduled_deletion
+    end
+
+    test "non credential owner cannot cancel a scheduled deletion in project settings page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      credential_owner = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: user, role: :owner},
+            %{user: credential_owner, role: :admin}
+          ]
+        )
+
+      # Set scheduled_deletion directly rather than via
+      # schedule_credential_deletion/1, which detaches the project associations
+      # the credential needs to stay visible on this page.
+      credential =
+        insert(:credential,
+          user: credential_owner,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          project_credentials: [%{project: project}]
+        )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ credential.name
+
+      refute has_element?(
+               view,
+               "#credential-actions-#{credential.id}-cancel-deletion"
+             )
+
+      # send the event anyway
+      view
+      |> with_target("#credentials-index-component")
+      |> render_click("cancel_credential_deletion", %{id: credential.id})
+
+      assert_patched(view, ~p"/projects/#{project}/settings")
+
+      assert render(view) =~ "You are not authorized to perform this action"
+
+      assert Lightning.Repo.reload(credential).scheduled_deletion
     end
 
     test "delete credentials in project settings page", %{
@@ -2398,10 +2505,7 @@ defmodule LightningWeb.CredentialLiveTest do
         subject: "Transfer #{credential.name} to #{receiver.first_name}"
       )
 
-      assert Repo.get_by(Lightning.Accounts.UserToken,
-               context: "credential_transfer",
-               user_id: credential.user_id
-             )
+      assert Repo.reload(credential).transfer_status == :pending
     end
 
     test "closes modal", %{view: view, credential: credential} do
@@ -2576,12 +2680,6 @@ defmodule LightningWeb.CredentialLiveTest do
         Repo.get(Lightning.Credentials.Credential, credential.id)
 
       assert is_nil(updated_credential.transfer_status)
-
-      # Verify token was deleted
-      refute Repo.get_by(Lightning.Accounts.UserToken,
-               context: "credential_transfer",
-               user_id: credential.user_id
-             )
     end
 
     test "closes modal after canceling revoke", %{

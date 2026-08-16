@@ -39,12 +39,12 @@ defmodule Lightning.Collaboration.Session do
     :document_name
   ]
 
-  @pg_scope :workflow_collaboration
-
   @type start_opts :: [
           workflow: Lightning.Workflows.Workflow.t(),
           user: User.t(),
-          parent_pid: pid()
+          document_name: String.t(),
+          parent_pid: pid(),
+          pg_scope: atom()
         ]
 
   @doc """
@@ -96,6 +96,7 @@ defmodule Lightning.Collaboration.Session do
     user = Keyword.fetch!(opts, :user)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
     document_name = Keyword.fetch!(opts, :document_name)
+    pg_scope = Keyword.get(opts, :pg_scope, :workflow_collaboration)
 
     Logger.info("Starting session for document #{document_name}")
 
@@ -110,7 +111,7 @@ defmodule Lightning.Collaboration.Session do
       document_name: document_name
     }
 
-    lookup_shared_doc(document_name)
+    lookup_shared_doc(pg_scope, document_name)
     |> case do
       nil ->
         {:stop, {:error, :shared_doc_not_found}}
@@ -166,8 +167,8 @@ defmodule Lightning.Collaboration.Session do
       :ok
   end
 
-  def lookup_shared_doc(document_name) do
-    case :pg.get_members(@pg_scope, document_name) do
+  def lookup_shared_doc(pg_scope \\ :workflow_collaboration, document_name) do
+    case :pg.get_members(pg_scope, document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end
@@ -215,6 +216,8 @@ defmodule Lightning.Collaboration.Session do
   ## Returns
   - `{:ok, workflow}` - Successfully saved
   - `{:error, :workflow_deleted}` - Workflow has been deleted
+  - `{:error, :snapshot_failed}` - Snapshot creation failed; it shares the
+    save's transaction, so the whole save rolled back and nothing persisted
   - `{:error, changeset}` - Validation or persistence error
 
   ## Examples
@@ -229,6 +232,7 @@ defmodule Lightning.Collaboration.Session do
           {:ok, Lightning.Workflows.Workflow.t()}
           | {:error,
              :workflow_deleted
+             | :snapshot_failed
              | :deserialization_failed
              | :internal_error
              | Ecto.Changeset.t()}
@@ -375,6 +379,13 @@ defmodule Lightning.Collaboration.Session do
         )
 
         {:reply, {:error, :workflow_deleted}, state}
+
+      {:error, :snapshot_failed} ->
+        Logger.warning(
+          "Failed to save snapshot for workflow #{state.workflow.id}"
+        )
+
+        {:reply, {:error, :snapshot_failed}, state}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         all_errors =

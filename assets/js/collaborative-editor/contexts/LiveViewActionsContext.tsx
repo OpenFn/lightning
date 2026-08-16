@@ -11,7 +11,7 @@ interface LiveViewActions {
     name: string,
     callback: (payload: unknown) => void
   ) => () => void;
-  navigate: (path: string) => void;
+  navigate: (path: string, options?: { replace?: boolean }) => void;
 }
 
 const LiveViewActionsContext = createContext<LiveViewActions | null>(null);

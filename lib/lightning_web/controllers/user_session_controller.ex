@@ -8,61 +8,47 @@ defmodule LightningWeb.UserSessionController do
   def new(conn, _params) do
     render(conn, "new.html",
       error_message: nil,
-      providers: provider_buttons()
+      auth_handler_url: auth_handler_url()
     )
   end
 
   def create(conn, %{"user" => user_params}) do
     %{"email" => email, "password" => password} = user_params
 
-    Accounts.get_user_by_email_and_password(email, password)
-    |> case do
-      %User{disabled: true} ->
-        conn
-        |> put_flash(:error, "This user account is disabled")
-        |> render("new.html",
-          providers: provider_buttons()
-        )
+    case Accounts.get_user_by_email_and_password(email, password) do
+      %User{} = user ->
+        log_in_with_password(conn, user, user_params)
 
-      %User{scheduled_deletion: x} when x != nil ->
+      _ ->
         conn
-        |> put_flash(
-          :error,
-          "This user account is scheduled for deletion"
-        )
-        |> render("new.html",
-          providers: provider_buttons()
-        )
+        |> put_flash(:error, "Invalid email or password")
+        |> render("new.html", auth_handler_url: auth_handler_url())
+    end
+  end
 
-      %User{mfa_enabled: true} = user ->
+  # Shares the account-state gate (Accounts.login_blocked?/1) with the SSO login
+  # path, keeping this path's own re-render responses.
+  defp log_in_with_password(conn, user, user_params) do
+    if Accounts.login_blocked?(user) do
+      conn
+      |> put_flash(
+        :error,
+        UserAuth.login_blocked_message(Accounts.login_blocked_reason(user))
+      )
+      |> render("new.html", auth_handler_url: auth_handler_url())
+    else
+      if user.mfa_enabled do
         totp_params = Map.take(user_params, ["remember_me"])
 
         conn
         |> UserAuth.log_in_user(user)
         |> UserAuth.mark_totp_pending()
         |> redirect(to: Routes.user_totp_path(conn, :new, user: totp_params))
-
-      %User{} = user ->
+      else
         conn
         |> UserAuth.log_in_user(user)
         |> UserAuth.redirect_with_return_to(user_params)
-
-      {:error, :sso_account} ->
-        conn
-        |> put_flash(
-          :error,
-          "This account uses single sign-on. Please log in with your SSO provider."
-        )
-        |> render("new.html",
-          providers: provider_buttons()
-        )
-
-      _ ->
-        conn
-        |> put_flash(:error, "Invalid email or password")
-        |> render("new.html",
-          providers: provider_buttons()
-        )
+      end
     end
   end
 
@@ -86,46 +72,16 @@ defmodule LightningWeb.UserSessionController do
     |> UserAuth.log_out_user()
   end
 
-  @doc """
-  Returns the two independent kinds of SSO buttons for the login page:
-
-    * `social` — the built-in GitHub/Google buttons, shown when their `SSO_*`
-      envs are set (derived straight from the env-based handler builders).
-    * `external_url` — the generic "via external provider" button, shown when a
-      provider is configured in the admin portal (an `AuthConfig` row).
-
-  Each is driven solely by its own source, so one never suppresses the other.
-  """
-  def provider_buttons do
-    %{
-      social: social_providers(),
-      external_url: external_provider_url()
-    }
-  end
-
-  defp social_providers do
-    [
-      Lightning.AuthProviders.GithubHandler,
-      Lightning.AuthProviders.GoogleHandler
-    ]
-    |> Enum.flat_map(fn handler_module ->
-      case handler_module.build() do
-        {:ok, handler} ->
-          [%{name: handler.name, url: ~p"/authenticate/#{handler.name}"}]
-
-        _ ->
-          []
-      end
-    end)
-  end
-
-  defp external_provider_url do
-    case Lightning.AuthProviders.get_existing() do
-      %Lightning.AuthProviders.AuthConfig{name: name} ->
-        ~p"/authenticate/#{name}"
-
-      _ ->
+  def auth_handler_url do
+    case Lightning.AuthProviders.get_handlers() do
+      {:ok, []} ->
         nil
+
+      {:ok, [handler | _rest]} ->
+        # Route through OidcController.show so it can mint and store the CSRF
+        # `state` and OIDC `nonce` before redirecting to the provider, rather
+        # than linking straight to the provider's authorize URL.
+        ~p"/authenticate/#{handler.name}"
     end
   end
 end

@@ -1,6 +1,6 @@
 # React Testing Patterns
 
-Lightning-specific React Testing Library patterns. For general RTL, `act()`, `waitFor`, `renderHook`, and `userEvent` usage see the [React Testing Library docs](https://testing-library.com/react).
+Lightning-specific React Testing Library patterns. React Testing Library is pinned at **16.3.0** on React **18.3.1**. For general RTL, `act()`, `waitFor`, `renderHook`, and `userEvent` usage see the [React Testing Library docs](https://testing-library.com/react).
 
 ## Cross-references
 
@@ -35,25 +35,9 @@ test('channel emission drives hook state', async () => {
 });
 ```
 
-## Testing store-backed custom hooks
-
-Subscriptions created inside a hook must be cleaned up on unmount. For Lightning stores that expose a subscriber count for diagnostics:
-
-```typescript
-test('hook cleans up store subscriptions', () => {
-  const { unmount } = renderHook(() => useSession(), {
-    wrapper: createWrapper(),
-  });
-
-  const before = sessionStore._getSubscriberCount?.();
-  unmount();
-  expect(sessionStore._getSubscriberCount?.()).toBeLessThan(before);
-});
-```
-
 ## Context-provider tests
 
-Lightning uses a provider per top-level store (SessionProvider, AdaptorProvider, etc.). When asserting "outside provider" behavior, run the hook without a wrapper and assert the thrown error message — the error text is part of the provider contract and is project-specific.
+Lightning has two store providers, `SessionProvider` and `StoreProvider`. When asserting "outside provider" behavior, run the hook without a wrapper and assert the thrown error message — the error text is part of the provider contract and is project-specific.
 
 ```typescript
 test('useSession throws outside provider', () => {
