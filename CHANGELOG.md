@@ -188,6 +188,10 @@ and this project adheres to
 ### Fixed
 
 - Check ownership before acting on credential deletion cancellation event
+- Input datetime filters in the History page and Dataclips page are now
+  normalised to UTC datetimes based on the browser's local timezone, instead of
+  assuming UTC timezones.
+  [#4983](https://github.com/OpenFn/lightning/issues/4983)
 
 ## [2.17.0] - 2026-07-21
 
