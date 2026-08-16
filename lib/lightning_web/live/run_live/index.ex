@@ -186,6 +186,8 @@ defmodule LightningWeb.RunLive.Index do
         socket.assigns.browser_tz_offset_minutes
       )
 
+    normalized_params = Map.put(params, "filters", filters)
+
     {:noreply,
      socket
      |> assign(
@@ -200,7 +202,7 @@ defmodule LightningWeb.RunLive.Index do
        async_page: AsyncResult.loading()
      )
      |> start_async(:load_workorders, fn ->
-       perform_search(project, params)
+       perform_search(project, normalized_params)
      end)}
   end
 
