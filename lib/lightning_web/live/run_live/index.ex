@@ -174,7 +174,13 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_params(params, _url, socket) do
     %{project: project} = socket.assigns
-    filters = Map.get(params, "filters", init_filters())
+
+    filters =
+      params
+      |> Map.get("filters", init_filters())
+      |> normalize_history_datetime_filters(
+        socket.assigns.browser_tz_offset_minutes
+      )
 
     {:noreply,
      socket
