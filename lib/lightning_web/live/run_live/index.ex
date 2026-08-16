@@ -128,6 +128,7 @@ defmodule LightningWeb.RunLive.Index do
     ]
 
     params = Map.put_new(params, "filters", init_filters())
+    tz_offset_minutes = browser_tz_offset_minutes(socket)
 
     {:ok,
      socket
@@ -147,7 +148,8 @@ defmodule LightningWeb.RunLive.Index do
        can_run_workflow: can_run_workflow,
        pagination_path: &pagination_path(socket, project, &1),
        filters: params["filters"],
-       channel_logs_params: %{}
+       channel_logs_params: %{},
+       tz_offset_minutes: tz_offset_minutes
      )}
   end
 
@@ -177,12 +179,9 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_params(params, _url, socket) do
     %{project: project} = socket.assigns
-    tz_offset_minutes = browser_tz_offset_minutes(socket)
+    tz_offset_minutes = socket.assigns.tz_offset_minutes
 
-    filters =
-      params
-      |> Map.get("filters", init_filters())
-      |> normalize_history_datetime_filters(tz_offset_minutes)
+    filters = Map.get(params, "filters", init_filters())
 
     normalized_params =
       params
@@ -321,10 +320,12 @@ defmodule LightningWeb.RunLive.Index do
         %Events.WorkOrderCreated{work_order: work_order},
         %{assigns: %{live_action: :index}} = socket
       ) do
-    %{project: project, filters: filters} = socket.assigns
+    %{project: project, filters: filters, tz_offset_minutes: tz_offset_minutes} =
+      socket.assigns
 
     params =
       filters
+      |> normalize_history_datetime_filters(tz_offset_minutes)
       |> Map.merge(%{"workorder_id" => work_order.id})
       |> SearchParams.new()
 
@@ -523,11 +524,9 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("apply_filters", %{"filters" => new_filters}, socket) do
     %{filters: prev_filters, project: project} = socket.assigns
-    tz_offset_minutes = browser_tz_offset_minutes(socket)
 
     filters =
       Map.merge(prev_filters, new_filters)
-      |> normalize_history_datetime_filters(tz_offset_minutes)
       |> Map.reject(fn {_k, v} -> Enum.member?(["false", ""], v) end)
 
     {:noreply,
@@ -679,7 +678,10 @@ defmodule LightningWeb.RunLive.Index do
       %{filters: filters, project: project, current_user: current_user} =
         socket.assigns
 
-      search_params = SearchParams.new(filters)
+      search_params =
+        filters
+        |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+        |> SearchParams.new()
 
       case Invocation.export_workorders(project, current_user, search_params) do
         {:ok, _} ->
@@ -732,7 +734,10 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all", "job" => job_id}) do
-    filter = SearchParams.new(socket.assigns.filters)
+    filter =
+      socket.assigns.filters
+      |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+      |> SearchParams.new()
 
     socket.assigns.project
     |> Invocation.search_workorders_for_retry(filter)
@@ -765,7 +770,10 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all"}) do
-    filter = SearchParams.new(socket.assigns.filters)
+    filter =
+      socket.assigns.filters
+      |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+      |> SearchParams.new()
 
     socket.assigns.project
     |> Invocation.search_workorders_for_retry(filter)
@@ -781,7 +789,10 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp handle_bulk_cancel(socket, %{"type" => "all"}) do
-    filter = SearchParams.new(socket.assigns.filters)
+    filter =
+      socket.assigns.filters
+      |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+      |> SearchParams.new()
 
     work_orders =
       socket.assigns.project
