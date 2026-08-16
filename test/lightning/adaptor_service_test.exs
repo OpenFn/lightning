@@ -96,6 +96,171 @@ defmodule Lightning.AdaptorServiceTest do
     end
   end
 
+  describe "AdaptorService.install/2 overlapping installs (#5059)" do
+    defmodule SlowCountingStubRepo do
+      @moduledoc """
+      Like `StubRepo`, but starts with nothing on disk, counts real
+      `install/2` invocations (via the named `:install_call_counter` Agent
+      each test starts), and sleeps briefly so two overlapping `install/2`
+      calls reliably land inside the same in-flight window.
+      """
+      alias Lightning.AdaptorService.Adaptor
+
+      def list_local(_path), do: present()
+      def list_local(_path, _depth), do: present()
+
+      def install(_aliased_name, _dir) do
+        Agent.update(:install_call_counter, &(&1 + 1))
+        Process.sleep(200)
+        Agent.update(:installed_flag, fn _ -> true end)
+        {"", 0}
+      end
+
+      defp present do
+        if Agent.get(:installed_flag, & &1) do
+          [
+            %Adaptor{
+              name: "@openfn/language-adaptor-service-test",
+              # Matches the pinned version the concurrency tests below
+              # request, and also satisfies the "> 0.0.0" requirement the
+              # @latest test resolves to — one fixture, both tests.
+              version: "7.3.2",
+              path: "/fake/path",
+              local_name: "@openfn/language-adaptor-service-test",
+              status: :present
+            }
+          ]
+        else
+          []
+        end
+      end
+    end
+
+    setup do
+      Agent.start_link(fn -> 0 end, name: :install_call_counter)
+      Agent.start_link(fn -> false end, name: :installed_flag)
+
+      on_exit(fn ->
+        for name <- [:install_call_counter, :installed_flag] do
+          if pid = Process.whereis(name), do: Agent.stop(pid)
+        end
+      end)
+
+      cache =
+        Briefly.create!(extname: ".json")
+        |> tap(fn path ->
+          File.write!(
+            path,
+            Jason.encode!([
+              %{
+                name: @permitted,
+                latest: "7.3.2",
+                repo: "git+https://example.com/test.git",
+                versions: []
+              }
+            ])
+          )
+        end)
+
+      start_supervised!(
+        {AdaptorRegistry, name: :overlap_registry, use_cache: cache}
+      )
+
+      start_supervised!(
+        {AdaptorService,
+         name: :overlap_service,
+         adaptors_path: "/tmp/fake_overlap",
+         repo: SlowCountingStubRepo,
+         adaptor_registry: :overlap_registry}
+      )
+
+      :ok
+    end
+
+    test "two overlapping installs of the same pinned version collapse into one real install" do
+      spec = "#{@permitted}@7.3.2"
+
+      task =
+        Task.async(fn -> AdaptorService.install(:overlap_service, spec) end)
+
+      Process.sleep(50)
+      second_result = AdaptorService.install(:overlap_service, spec)
+      first_result = Task.await(task, 2000)
+
+      assert {:ok, %Adaptor{name: @permitted, path: path}} = first_result
+      refute is_nil(path)
+      assert first_result == second_result
+      assert Agent.get(:install_call_counter, & &1) == 1
+    end
+
+    test "two overlapping installs of @latest resolve cleanly, without raising" do
+      spec = "#{@permitted}@latest"
+
+      task =
+        Task.async(fn -> AdaptorService.install(:overlap_service, spec) end)
+
+      Process.sleep(50)
+      second_result = AdaptorService.install(:overlap_service, spec)
+      first_result = Task.await(task, 2000)
+
+      assert {:ok, %Adaptor{name: @permitted, path: path}} = first_result
+      refute is_nil(path)
+      assert first_result == second_result
+      assert Agent.get(:install_call_counter, & &1) == 1
+    end
+  end
+
+  describe "version parsing never raises (#5059)" do
+    setup do
+      cache =
+        Briefly.create!(extname: ".json")
+        |> tap(fn path ->
+          File.write!(
+            path,
+            Jason.encode!([
+              %{
+                name: @permitted,
+                latest: "1.0.0",
+                repo: "git+https://example.com/test.git",
+                versions: []
+              }
+            ])
+          )
+        end)
+
+      start_supervised!(
+        {AdaptorRegistry, name: :version_registry, use_cache: cache}
+      )
+
+      start_supervised!(
+        {AdaptorService,
+         name: :version_service,
+         adaptors_path: "/tmp/fake_version",
+         repo: StubRepo,
+         adaptor_registry: :version_registry}
+      )
+
+      :ok
+    end
+
+    test "find_adaptor/2 doesn't raise for local, arbitrary, or empty versions" do
+      for version <- ["local", "next", ""] do
+        assert AdaptorService.find_adaptor(
+                 :version_service,
+                 {@permitted, version}
+               ) ==
+                 nil,
+               "expected version #{inspect(version)} to simply not match, not raise"
+      end
+    end
+
+    test "installed?/2 doesn't raise for local, arbitrary, or empty versions" do
+      for version <- ["local", "next", ""] do
+        refute AdaptorService.installed?(:version_service, {@permitted, version})
+      end
+    end
+  end
+
   describe "resolve_package_name/1" do
     test "splits a well-formed package string" do
       assert AdaptorService.resolve_package_name("@openfn/language-http@1.2.3") ==

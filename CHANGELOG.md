@@ -52,6 +52,17 @@ and this project adheres to
 
 ### Fixed
 
+- Fetching job metadata (autocomplete and docs in the editor) no longer breaks
+  while an adaptor is still installing, or when its version can't be parsed. A
+  second request for an adaptor already being installed used to see a half-built
+  entry with no path, or crash outright for an unpinned job, since the
+  in-progress placeholder was stored with the literal word `latest` as its
+  version. Installs are now coalesced instead of duplicated, an adaptor is never
+  visible to a lookup until it's actually present, and no unparseable version
+  can raise while looking one up. The editor also resolves `latest` to a
+  concrete version before requesting metadata, matching how the worker run
+  payload already does. [#5059](https://github.com/OpenFn/lightning/issues/5059)
+
 - `APOLLO_TIMEOUT` now governs every request to Apollo, including the streaming
   requests all AI chats use. Streaming previously read an internal timeout key
   that no environment could set, so it was always 120s regardless of
