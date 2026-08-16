@@ -124,47 +124,34 @@ defmodule LightningWeb.DataclipController do
       if valid_uuid?(job_id) do
         case parse_limit(params["limit"]) do
           {:ok, limit} ->
-            # Build query string from params
-            query_params =
-              %{
-                "query" => params["query"],
-                "type" => params["type"],
-                "before" => params["before"],
-                "after" => params["after"],
-                "named_only" => params["named_only"]
-              }
-              |> Enum.reject(fn {_, v} -> is_nil(v) end)
-              |> Enum.into(%{})
+            with {:ok, filters} <- NewManualRun.get_dataclips_filters(params),
+                 {:ok,
+                  %{
+                    dataclips: dataclips,
+                    next_cron_run_dataclip_id: next_cron_run_dataclip_id
+                  }} <-
+                   NewManualRun.search_selectable_dataclips(
+                     job_id,
+                     project,
+                     filters,
+                     limit,
+                     0
+                   ) do
+              # Check if user can edit dataclips
+              can_edit_dataclip =
+                Permissions.can?(
+                  :project_users,
+                  :edit_workflow,
+                  conn.assigns.current_user,
+                  project
+                )
 
-            query_string = URI.encode_query(query_params)
-
-            case NewManualRun.search_selectable_dataclips(
-                   job_id,
-                   project,
-                   query_string,
-                   limit,
-                   0
-                 ) do
-              {:ok,
-               %{
-                 dataclips: dataclips,
-                 next_cron_run_dataclip_id: next_cron_run_dataclip_id
-               }} ->
-                # Check if user can edit dataclips
-                can_edit_dataclip =
-                  Permissions.can?(
-                    :project_users,
-                    :edit_workflow,
-                    conn.assigns.current_user,
-                    project
-                  )
-
-                json(conn, %{
-                  data: dataclips,
-                  next_cron_run_dataclip_id: next_cron_run_dataclip_id,
-                  can_edit_dataclip: can_edit_dataclip
-                })
-
+              json(conn, %{
+                data: dataclips,
+                next_cron_run_dataclip_id: next_cron_run_dataclip_id,
+                can_edit_dataclip: can_edit_dataclip
+              })
+            else
               {:error, changeset} ->
                 {:error, changeset}
             end

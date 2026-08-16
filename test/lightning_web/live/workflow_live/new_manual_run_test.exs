@@ -7,13 +7,13 @@ defmodule LightningWeb.WorkflowLive.NewManualRunTest do
   test "get_dataclips_filters/1" do
     assert {:ok, %{}} = NewManualRun.get_dataclips_filters("query=+")
 
-    assert {:ok, %{before: ~N[2025-05-14 14:35:00]}} =
+    assert {:ok, %{before: ~U[2025-05-14 14:35:00Z]}} =
              NewManualRun.get_dataclips_filters(
                "query=+&before=2025-05-14T14%3A35"
              )
 
     assert {:ok,
-            %{before: ~N[2025-05-14 14:35:00], after: ~N[2025-05-14 14:55:00]}} =
+            %{before: ~U[2025-05-14 14:35:00Z], after: ~U[2025-05-14 14:55:00Z]}} =
              NewManualRun.get_dataclips_filters(
                "query=+&before=2025-05-14T14%3A35&after=2025-05-14T14%3A55"
              )

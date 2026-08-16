@@ -12,7 +12,7 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
   @spec search_selectable_dataclips(
           job_id :: Ecto.UUID.t(),
           project :: Project.t(),
-          search_text :: String.t(),
+          search_filters :: String.t() | map(),
           limit :: integer(),
           offset :: integer()
         ) ::
@@ -22,12 +22,12 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
              next_cron_run_dataclip_id: Ecto.UUID.t() | nil
            }}
           | {:error, Ecto.Changeset.t()}
-  def search_selectable_dataclips(job_id, project, search_text, limit, offset) do
+  def search_selectable_dataclips(job_id, project, search_filters, limit, offset) do
     # A job outside the caller's project (or missing/malformed) yields an empty
     # result, never another project's dataclips and never an error the client
     # can distinguish from "no dataclips".
     if Jobs.job_in_project?(job_id, project) do
-      with {:ok, filters} <- get_dataclips_filters(search_text) do
+      with {:ok, filters} <- normalize_filters(search_filters) do
         {dataclips, next_cron_run_dataclip_id} =
           Invocation.list_dataclips_for_job_with_cron_state(
             %Job{id: job_id},
@@ -47,11 +47,21 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     end
   end
 
-  @spec get_dataclips_filters(String.t()) ::
-          {:ok, map()} | {:error, Ecto.Changeset.t()}
-  def get_dataclips_filters(query_string) do
-    params = URI.query_decoder(query_string) |> Enum.into(%{})
+  defp normalize_filters(filters) when is_map(filters), do: {:ok, filters}
 
+  defp normalize_filters(search_text) when is_binary(search_text),
+    do: get_dataclips_filters(search_text)
+
+  @spec get_dataclips_filters(String.t() | map()) ::
+          {:ok, map()} | {:error, Ecto.Changeset.t()}
+  def get_dataclips_filters(query_string) when is_binary(query_string) do
+    query_string
+    |> URI.query_decoder()
+    |> Enum.into(%{})
+    |> get_dataclips_filters()
+  end
+
+  def get_dataclips_filters(params) when is_map(params) do
     Ecto.Changeset.cast(
       {%{},
        %{
