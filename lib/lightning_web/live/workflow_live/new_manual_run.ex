@@ -55,8 +55,8 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
     Ecto.Changeset.cast(
       {%{},
        %{
-         before: :naive_datetime,
-         after: :naive_datetime,
+         before: :utc_datetime,
+         after: :utc_datetime,
          type:
            Ecto.ParameterizedType.init(Ecto.Enum,
              values: Dataclip.source_types()
