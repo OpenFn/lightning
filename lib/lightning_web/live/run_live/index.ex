@@ -141,7 +141,6 @@ defmodule LightningWeb.RunLive.Index do
        show_export_modal: false,
        can_edit_data_retention: can_edit_data_retention,
        can_run_workflow: can_run_workflow,
-       browser_tz_offset_minutes: browser_tz_offset_minutes(socket),
        pagination_path: &pagination_path(socket, project, &1),
        filters: params["filters"],
        channel_logs_params: %{}
@@ -174,15 +173,17 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_params(params, _url, socket) do
     %{project: project} = socket.assigns
+    tz_offset_minutes = browser_tz_offset_minutes(socket)
 
     filters =
       params
       |> Map.get("filters", init_filters())
-      |> normalize_history_datetime_filters(
-        socket.assigns.browser_tz_offset_minutes
-      )
+      |> normalize_history_datetime_filters(tz_offset_minutes)
 
-    normalized_params = Map.put(params, "filters", filters)
+    normalized_params =
+      params
+      |> Map.put("filters", filters)
+      |> Map.put("__tz_offset_minutes", tz_offset_minutes)
 
     {:noreply,
      socket
@@ -209,9 +210,16 @@ defmodule LightningWeb.RunLive.Index do
         provided_filters: Map.get(page_params, "filters", %{})
       },
       fn ->
-        search_params =
-          Map.get(page_params, "filters", init_filters())
-          |> SearchParams.new()
+        tz_offset_minutes = Map.get(page_params, "__tz_offset_minutes")
+        raw_filters = Map.get(page_params, "filters", init_filters())
+
+        normalized_filters =
+          normalize_history_datetime_filters(
+            raw_filters,
+            tz_offset_minutes
+          )
+
+        search_params = SearchParams.new(normalized_filters)
 
         Invocation.search_workorders(
           project,
@@ -509,12 +517,11 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("apply_filters", %{"filters" => new_filters}, socket) do
     %{filters: prev_filters, project: project} = socket.assigns
+    tz_offset_minutes = browser_tz_offset_minutes(socket)
 
     filters =
       Map.merge(prev_filters, new_filters)
-      |> normalize_history_datetime_filters(
-        socket.assigns.browser_tz_offset_minutes
-      )
+      |> normalize_history_datetime_filters(tz_offset_minutes)
       |> Map.reject(fn {_k, v} -> Enum.member?(["false", ""], v) end)
 
     {:noreply,
@@ -952,23 +959,36 @@ defmodule LightningWeb.RunLive.Index do
   # Convert browser-local wall time to UTC using the browser offset from connect params.
   defp normalize_datetime_filter_value(value, offset_minutes)
        when is_binary(value) and is_integer(offset_minutes) do
-    case DateTime.from_iso8601(value) do
-      {:ok, _dt, _offset} ->
-        value
-
-      {:error, _} ->
-        with {:ok, naive} <- NaiveDateTime.from_iso8601(value) do
-          naive
-          |> DateTime.from_naive!("Etc/UTC")
-          |> DateTime.add(offset_minutes * 60, :second)
-          |> DateTime.to_iso8601()
-        else
-          _ -> value
-        end
+    if String.match?(value, ~r/(Z|[+-]\d{2}:?\d{2})$/) do
+      value
+    else
+      with {:ok, naive} <- parse_local_naive_datetime(value) do
+        naive
+        |> DateTime.from_naive!("Etc/UTC")
+        |> DateTime.add(offset_minutes * 60, :second)
+        |> DateTime.to_iso8601()
+      else
+        _ -> value
+      end
     end
   end
 
   defp normalize_datetime_filter_value(value, _offset_minutes), do: value
+
+  # Append seconds before parsing, if the value is in the format "YYYY-MM-DDTHH:MM".
+  defp parse_local_naive_datetime(value) when is_binary(value) do
+    case NaiveDateTime.from_iso8601(value) do
+      {:ok, naive} ->
+        {:ok, naive}
+
+      {:error, _} ->
+        if Regex.match?(~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, value) do
+          NaiveDateTime.from_iso8601(value <> ":00")
+        else
+          {:error, :invalid_format}
+        end
+    end
+  end
 
   defp pagination_path(socket, project, route_params, filters \\ %{}) do
     Routes.project_run_index_path(
