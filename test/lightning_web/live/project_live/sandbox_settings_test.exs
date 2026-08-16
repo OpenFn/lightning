@@ -124,7 +124,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       refute html =~ "Delete project"
     end
 
-    test "delete sandbox flow calls delete_sandbox and redirects to root project",
+    test "delete sandbox flow calls schedule_sandbox_deletion and redirects to root project",
          %{conn: conn, sandbox: sandbox, parent: parent} do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{sandbox.id}/settings/delete")
@@ -136,8 +136,25 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       |> render_submit()
 
       flash = assert_redirected(view, ~p"/projects/#{parent.id}/w")
-      assert flash["info"] =~ "and all its associated descendants deleted"
-      assert is_nil(Lightning.Projects.get_project(sandbox.id))
+      assert flash["info"] =~ "scheduled for deletion"
+
+      reloaded = Lightning.Projects.get_project(sandbox.id)
+      assert reloaded
+      assert reloaded.scheduled_deletion
+    end
+
+    test "delete modal shows descendant warning when the sandbox has children",
+         %{conn: conn, sandbox: sandbox, user: user} do
+      insert(:project,
+        name: "child-sandbox",
+        parent: sandbox,
+        project_users: [%{user: user, role: :owner}]
+      )
+
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{sandbox.id}/settings/delete")
+
+      assert html =~ "Its child sandbox will also be deleted."
     end
 
     test "confirm-delete-validate marks the form invalid for a wrong name",
@@ -189,9 +206,13 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       # Simulate an authorization mismatch by stubbing the sandbox delete call
       # to return :unauthorized while the settings page's own can_delete_project
       # gate allowed us through.
-      Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn _, _ ->
-        {:error, :unauthorized}
-      end)
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        fn _, _ ->
+          {:error, :unauthorized}
+        end
+      )
 
       view
       |> form("#confirm-delete-sandbox form",
@@ -209,9 +230,13 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{sandbox.id}/settings/delete")
 
-      Mimic.expect(Lightning.Projects.Sandboxes, :delete_sandbox, fn _, _ ->
-        {:error, :boom}
-      end)
+      Mimic.expect(
+        Lightning.Projects.Sandboxes,
+        :schedule_sandbox_deletion,
+        fn _, _ ->
+          {:error, :boom}
+        end
+      )
 
       view
       |> form("#confirm-delete-sandbox form",
