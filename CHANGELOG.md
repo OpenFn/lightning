@@ -25,6 +25,18 @@ and this project adheres to
 
 ### Changed
 
+- **Breaking:** `APOLLO_TIMEOUT` is no longer read, and is replaced by
+  `APOLLO_CONNECT_TIMEOUT_MS`, `APOLLO_IDLE_TIMEOUT_MS` and
+  `APOLLO_REQUEST_TIMEOUT_MS`. One setting was being used for how long to wait
+  for a connection, how long to wait between chunks of a streamed answer, and
+  how long a whole request may take, and no single value suits all three. All
+  three have defaults (5s, 30s and 300s), so a deployment need not set any of
+  them; one that was setting `APOLLO_TIMEOUT` should set
+  `APOLLO_REQUEST_TIMEOUT_MS` in its place. Streaming, which is every AI chat,
+  previously read an internal key that no environment could set and so ignored
+  configuration entirely at 120s; that key is gone.
+  [#5043](https://github.com/OpenFn/lightning/pull/5043)
+  [#5073](https://github.com/OpenFn/lightning/pull/5073)
 - Bumped bundled worker to version 1.29.0
 - Remove the unreachable, non-streaming code in the AI assistant
   [#5046](https://github.com/OpenFn/lightning/issues/5046)
@@ -52,12 +64,22 @@ and this project adheres to
 
 ### Fixed
 
-- `APOLLO_TIMEOUT` now governs every request to Apollo, including the streaming
-  requests all AI chats use. Streaming previously read an internal timeout key
-  that no environment could set, so it was always 120s regardless of
-  configuration; that dead key is removed.
-  [#5043](https://github.com/OpenFn/lightning/pull/5043)
-
+- AI chat messages no longer sit in "processing" forever when the job running
+  them is interrupted. Oban's job-stop event now has a handler, the shutdown
+  grace period is longer than the longest an AI job can run so a deploy waits
+  for an answer rather than severing it, and a cron sweep clears anything still
+  stranded. [#5069](https://github.com/OpenFn/lightning/pull/5069)
+  [#5071](https://github.com/OpenFn/lightning/pull/5071)
+- Why an AI chat failed is now recorded on the message and sent to the client:
+  a hung Apollo, a lost connection and a rate limit are no longer the same
+  event to us. The panel still renders one generic error, so this is the
+  groundwork for telling them apart rather than the change a user will see.
+  [#5070](https://github.com/OpenFn/lightning/pull/5070)
+- An AI answer that is cut off partway through is kept rather than discarded.
+  The text and any workflow YAML the user already watched appear are saved,
+  along with the status updates, in the order they were shown.
+  [#5072](https://github.com/OpenFn/lightning/pull/5072)
+  [#5074](https://github.com/OpenFn/lightning/pull/5074)
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
