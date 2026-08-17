@@ -2293,13 +2293,14 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert "new-col" in parent_names
     end
 
-    test "collections deleted from sandbox are removed from parent on merge", %{
-      conn: conn,
-      root: root,
-      sandbox: sandbox
-    } do
+    test "collections missing from the sandbox are always kept in the parent",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
       # Parent has a collection, sandbox does not
-      insert(:collection, project: root, name: "to-delete")
+      insert(:collection, project: root, name: "parent-only")
 
       {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
       mock_provisioner_ok(root)
@@ -2319,7 +2320,314 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         Lightning.Collections.list_project_collections(root)
         |> Enum.map(& &1.name)
 
-      refute "to-delete" in parent_names
+      assert "parent-only" in parent_names
+    end
+
+    test "unchecking a collection to add leaves it out of the merge", %{
+      conn: conn,
+      root: root,
+      sandbox: sandbox
+    } do
+      insert(:collection, project: sandbox, name: "col-a")
+      insert(:collection, project: sandbox, name: "col-b")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Both rows start selected; deselect one.
+      assert view |> element("#merge-collections-to-add") |> render() =~
+               "2 of 2 selected"
+
+      view
+      |> element("#merge-collections-to-add li[phx-value-name='col-b']")
+      |> render_click()
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      assert "col-a" in parent_names
+      refute "col-b" in parent_names
+    end
+
+    test "collection selections survive other checkbox toggles in the same form",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      insert(:collection, project: sandbox, name: "col-a")
+      insert(:collection, project: sandbox, name: "col-b")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> element("#merge-collections-to-add li[phx-value-name='col-b']")
+      |> render_click()
+
+      # Toggling any other checkbox in the merge form fires its change event
+      # with an unchanged target; the selection must survive that.
+      view |> form("#merge-sandbox-modal form") |> render_change()
+
+      assert view |> element("#merge-collections-to-add") |> render() =~
+               "1 of 2 selected"
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      assert "col-a" in parent_names
+      refute "col-b" in parent_names
+    end
+
+    test "a collection created in the sandbox after the modal opens is still created on merge",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      insert(:collection, project: sandbox, name: "col-a")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Someone adds a collection to the sandbox while the modal is open.
+      # The sandbox is deleted after the merge, so missing this collection
+      # would lose it for good; the merge must still create it.
+      insert(:collection, project: sandbox, name: "added-later")
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      assert "col-a" in parent_names
+      assert "added-later" in parent_names
+    end
+
+    test "changing the target recomputes the preview and resets the selections",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox,
+           user: user
+         } do
+      insert(:collection, project: sandbox, name: "col-a")
+      insert(:collection, project: sandbox, name: "col-b")
+
+      # The root already has col-a, so only col-b is new for it; the sibling
+      # target has neither.
+      insert(:collection, project: root, name: "col-a")
+
+      other =
+        insert(:project,
+          name: "other-target",
+          parent: root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      view
+      |> element("#merge-collections-to-add li[phx-value-name='col-b']")
+      |> render_click()
+
+      assert view |> element("#merge-collections-to-add") |> render() =~
+               "0 of 1 selected"
+
+      view
+      |> form("#merge-sandbox-modal form")
+      |> render_change(%{"merge" => %{"target_id" => other.id}})
+
+      panel_html = view |> element("#merge-collections-to-add") |> render()
+
+      assert panel_html =~ "col-a"
+      assert panel_html =~ "col-b"
+      assert panel_html =~ "2 of 2 selected"
+    end
+
+    test "collection selections are ignored when the submitted target differs from the previewed one",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox,
+           user: user
+         } do
+      insert(:collection, project: sandbox, name: "col-a")
+      insert(:collection, project: sandbox, name: "col-b")
+
+      other =
+        insert(:project,
+          name: "other-target",
+          parent: root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      insert(:collection, project: other, name: "other-only")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Deselect a creation while the preview is for the default target
+      # (root)...
+      view
+      |> element("#merge-collections-to-add li[phx-value-name='col-b']")
+      |> render_click()
+
+      # ...then submit a crafted event pointing at a different target. The
+      # stale selection is dropped: the merge falls back to creating all
+      # source-only collections and, as always, deletes nothing.
+      render_submit(view, "confirm-merge", %{
+        "merge" => %{"target_id" => other.id}
+      })
+
+      other_names =
+        Lightning.Collections.list_project_collections(other)
+        |> Enum.map(& &1.name)
+
+      assert "other-only" in other_names
+      assert "col-a" in other_names
+      assert "col-b" in other_names
+    end
+
+    test "merge modal lists collections to add and never mentions target-only ones",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      insert(:collection, project: sandbox, name: "sandbox-only-col")
+
+      insert(:collection,
+        project: root,
+        name: "parent-only-col",
+        items: [%{key: "k1", value: "v1"}, %{key: "k2", value: "v2"}]
+      )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # Sandbox-only collections list in their own panel, all preselected.
+      to_add_html = view |> element("#merge-collections-to-add") |> render()
+
+      assert to_add_html =~ "Collections to add"
+      assert to_add_html =~ "sandbox-only-col"
+      assert to_add_html =~ "1 of 1 selected"
+      assert has_element?(view, "#merge-select-all-collections-to-add")
+
+      # Target-only collections are not part of a merge, so the modal says
+      # nothing about them.
+      modal_html = view |> element("#merge-sandbox-modal") |> render()
+      refute modal_html =~ "parent-only-col"
+      refute has_element?(view, "#merge-collections-to-delete")
+      refute has_element?(view, "#merge-collections-target-only")
+    end
+
+    test "merge modal hides the collection panels when there is nothing to show",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      insert(:collection, project: root, name: "shared")
+      insert(:collection, project: sandbox, name: "shared")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      refute has_element?(view, "#merge-collections-to-add")
+      refute has_element?(view, "#merge-collections-to-delete")
+      refute has_element?(view, "#merge-collections-target-only")
+    end
+
+    test "an editor merge keeps the target's own collections too",
+         %{
+           conn: conn,
+           root: root,
+           sandbox: sandbox
+         } do
+      editor = insert(:user)
+      insert(:project_user, project: root, user: editor, role: :editor)
+      insert(:project_user, project: sandbox, user: editor, role: :admin)
+
+      insert(:collection, project: root, name: "parent-only")
+
+      conn = log_in_user(conn, editor)
+      {:ok, view, _} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+      mock_provisioner_ok(root)
+
+      Mimic.allow(Lightning.Projects.MergeProjects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Provisioner, self(), view.pid)
+      Mimic.allow(Lightning.Projects, self(), view.pid)
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      # The modal says nothing about target-only collections.
+      modal_html = view |> element("#merge-sandbox-modal") |> render()
+      refute modal_html =~ "parent-only"
+
+      view |> form("#merge-sandbox-modal form") |> render_submit()
+
+      parent_names =
+        Lightning.Collections.list_project_collections(root)
+        |> Enum.map(& &1.name)
+
+      assert "parent-only" in parent_names
     end
 
     test "collections present in both are unchanged after merge", %{

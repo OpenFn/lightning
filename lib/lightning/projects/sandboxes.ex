@@ -54,7 +54,6 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Projects.Provisioner
   alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
-  alias Lightning.Services.CollectionHook
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -167,7 +166,19 @@ defmodule Lightning.Projects.Sandboxes do
   * `target` - The project receiving the merge
   * `actor` - The user performing the merge
   * `opts` - Merge options (`:selected_workflow_ids`,
-    `:deleted_target_workflow_ids`, `:selected_credential_ids`)
+    `:deleted_target_workflow_ids`, `:selected_credential_ids`,
+    `:skip_collections`)
+
+  ## Collections
+
+  A merge always creates, empty, the collections the target is missing,
+  computed at merge time - so a collection added to the sandbox while a
+  merge screen was open is still carried over. Pass `:skip_collections`
+  (a list of names the user explicitly unchecked in the merge screen) to
+  leave those out; anything else raises `ArgumentError`. A merge never
+  deletes collections: ones that exist only in the target are always kept,
+  and any deletion-shaped option a caller passes is ignored. Removing a
+  collection is a project-settings action, not part of a merge.
 
   ## Credential attachment
 
@@ -208,10 +219,13 @@ defmodule Lightning.Projects.Sandboxes do
       ) do
     selected_credential_ids = Map.get(opts, :selected_credential_ids, [])
 
-    # `:merge_sandbox` allows editors, but deleting collections needs owner/admin.
-    # Gate only the destructive half so an editor can merge without pruning data.
-    allow_collection_deletions? =
-      Permissions.can?(:collections, :manage_collection, actor, target)
+    # The merge creates every collection the target is missing except the
+    # names the caller explicitly skipped. A malformed skip list raises
+    # rather than silently changing what gets created. There is no deletion
+    # half: a merge never deletes target collections, whatever options a
+    # caller passes.
+    skip_collection_names =
+      validate_skip_collections!(Map.get(opts, :skip_collections, []))
 
     Repo.transact(fn ->
       # Preload once so both attach_sandbox_keychains and merge_project derive
@@ -238,9 +252,7 @@ defmodule Lightning.Projects.Sandboxes do
              ),
            :ok <- reject_out_of_project_credentials(target),
            {:ok, _} <-
-             sync_collections(source, target,
-               allow_deletions: allow_collection_deletions?
-             ) do
+             sync_collections(source, target, skip_names: skip_collection_names) do
         {:ok, updated_target}
       end
     end)
@@ -1094,58 +1106,87 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
-  Synchronises collection names from a sandbox to its merge target.
+  Computes the collections a merge from `source` into `target` would create,
+  without applying anything.
 
-  Names only in the source are created empty in the target; names only in
-  the target are deleted along with their items. Collection data is never
-  copied. The combined byte-size of deleted collections is reported via
-  `CollectionHook.handle_delete/2` for usage accounting.
+  Returns a map with:
 
-  Runs inside a single transaction.
+  * `:to_create` - sorted names that exist only in the source and would be
+    created empty in the target
+
+  Used by the merge screen to show what a merge would change before the
+  user commits to it. Callers pass the names the user explicitly unchecked
+  back as `:skip_collections`; the merge recomputes the missing names at
+  merge time, so a collection added to the source after the preview is
+  still created. A merge never deletes collections, so there is nothing
+  else to preview.
+  """
+  @spec preview_collections(Project.t(), Project.t()) :: %{
+          to_create: [String.t()]
+        }
+  def preview_collections(%Project{} = source, %Project{} = target) do
+    %{
+      to_create:
+        source
+        |> source_only_collection_names(target)
+        |> MapSet.to_list()
+        |> Enum.sort()
+    }
+  end
+
+  @doc """
+  Creates the source's collections in its merge target.
+
+  Names only in the source are created empty in the target; collection data
+  is never copied. Collections that exist only in the target are never
+  touched - a merge cannot delete a collection.
 
   ## Options
 
-    * `:allow_deletions` - when `true`, target-only collections (and their items)
-      are deleted so the target matches the source. Defaults to `false`: callers
-      must opt in. The merge path opts in only when the actor holds
-      `:manage_collection`, so an editor merge never prunes target collections.
+    * `:skip_names` - collection names not to create even though the target
+      lacks them; everything else missing is created. Defaults to `[]`.
+      The merge passes the names the user explicitly unchecked, so any
+      collection added to the source since the preview is still created.
   """
   @spec sync_collections(Project.t(), Project.t(), keyword()) ::
-          {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
-          | {:error, term()}
+          {:ok, %{created: non_neg_integer()}}
   def sync_collections(%Project{} = source, %Project{} = target, opts \\ []) do
-    allow_deletions? = Keyword.get(opts, :allow_deletions, false)
+    skip_names = Keyword.get(opts, :skip_names, [])
 
+    to_create =
+      source
+      |> source_only_collection_names(target)
+      |> MapSet.difference(MapSet.new(skip_names))
+
+    {created, _} = insert_empty_collections(target.id, to_create)
+
+    {:ok, %{created: created}}
+  end
+
+  defp validate_skip_collections!(names) when is_list(names) do
+    if Enum.all?(names, &is_binary/1) do
+      names
+    else
+      raise ArgumentError,
+            ":skip_collections must be a list of collection names, " <>
+              "got: #{inspect(names)}"
+    end
+  end
+
+  defp validate_skip_collections!(other) do
+    raise ArgumentError,
+          ":skip_collections must be a list of collection names, " <>
+            "got: #{inspect(other)}"
+  end
+
+  # Names that exist in the source but not the target. The single source of
+  # truth for both the merge-time sync and the preview the merge screen
+  # shows.
+  defp source_only_collection_names(source, target) do
     source_names = source |> Collections.list_project_collections() |> names()
+    target_names = target |> Collections.list_project_collections() |> names()
 
-    target_collections = Collections.list_project_collections(target)
-    target_names = names(target_collections)
-
-    to_create = MapSet.difference(source_names, target_names)
-
-    collections_to_delete =
-      if allow_deletions? do
-        names_to_delete = MapSet.difference(target_names, source_names)
-        Enum.filter(target_collections, &(&1.name in names_to_delete))
-      else
-        []
-      end
-
-    to_delete_ids = Enum.map(collections_to_delete, & &1.id)
-
-    deleted_byte_size =
-      Enum.reduce(collections_to_delete, 0, &(&1.byte_size_sum + &2))
-
-    Repo.transaction(fn ->
-      {created, _} = insert_empty_collections(target.id, to_create)
-      {deleted, _} = delete_collections(to_delete_ids)
-
-      if deleted_byte_size > 0 do
-        :ok = CollectionHook.handle_delete(target.id, deleted_byte_size)
-      end
-
-      %{created: created, deleted: deleted}
-    end)
+    MapSet.difference(source_names, target_names)
   end
 
   defp names(collections), do: MapSet.new(collections, & &1.name)
@@ -1171,12 +1212,6 @@ defmodule Lightning.Projects.Sandboxes do
       # Concurrent merges may race to create the same collection.
       Repo.insert_all(Collection, rows, on_conflict: :nothing)
     end
-  end
-
-  defp delete_collections([]), do: {0, nil}
-
-  defp delete_collections(ids) do
-    Repo.delete_all(from c in Collection, where: c.id in ^ids)
   end
 
   defp copy_workflow_version_history(sandbox, workflow_id_mapping) do
