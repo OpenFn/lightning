@@ -299,6 +299,7 @@
               sandbox={Map.put(@project, :is_current, true)}
               changeset={@confirm_delete_changeset}
               root_project={@root_project}
+              descendants={@confirm_delete_descendants}
             />
           <% end %>
           <%= if @live_action == :delete and @can_delete_project and not @sandbox? do %>

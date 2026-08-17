@@ -274,10 +274,20 @@ defmodule LightningWeb.ProjectLive.Settings do
           sandbox_confirm_changeset(socket.assigns.project)
         )
         |> assign(:confirm_delete_input, "")
+        |> assign(
+          :confirm_delete_descendants,
+          active_descendants(socket.assigns.project.id)
+        )
 
       true ->
         assign(socket, :page_title, "Project settings")
     end
+  end
+
+  defp active_descendants(sandbox_id) do
+    sandbox_id
+    |> Projects.list_descendants()
+    |> Enum.filter(&is_nil(&1.scheduled_deletion))
   end
 
   defp sandbox_confirm_changeset(sandbox, params \\ %{}) do
@@ -487,7 +497,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       |> Map.put(:action, :validate)
 
     if changeset.valid? do
-      case Lightning.Projects.Sandboxes.delete_sandbox(
+      case Lightning.Projects.Sandboxes.schedule_sandbox_deletion(
              socket.assigns.project,
              socket.assigns.current_user
            ) do
@@ -495,7 +505,7 @@ defmodule LightningWeb.ProjectLive.Settings do
           socket
           |> put_flash(
             :info,
-            "Sandbox #{deleted.name} and all its associated descendants deleted"
+            "Sandbox #{deleted.name} scheduled for deletion."
           )
           |> push_navigate(to: ~p"/projects/#{socket.assigns.root_project.id}/w")
           |> noreply()

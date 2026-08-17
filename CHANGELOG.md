@@ -52,6 +52,13 @@ and this project adheres to
 
 ### Fixed
 
+- Deleting a sandbox from its Settings page now schedules it for deletion with
+  the same 7-day grace period as deleting it from the sandbox list, instead of
+  destroying it immediately. The confirmation dialog also now warns about child
+  sandboxes being deleted too when deleting from Settings, matching the sandbox
+  list's existing warning.
+  [#5058](https://github.com/OpenFn/lightning/issues/5058)/[#4667](https://github.com/OpenFn/lightning/issues/4667)
+
 - `APOLLO_TIMEOUT` now governs every request to Apollo, including the streaming
   requests all AI chats use. Streaming previously read an internal timeout key
   that no environment could set, so it was always 120s regardless of
