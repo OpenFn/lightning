@@ -148,6 +148,10 @@ and this project adheres to
 
 ### Fixed
 
+- The workflows REST API now returns a 422 validation error instead of a 500
+  when a create request omits `edges`, `jobs`, or `triggers` from the body
+  rather than sending them as empty lists.
+  [#4982](https://github.com/OpenFn/lightning/issues/4982)
 - The workflow version dropdown stayed empty after creating and saving a new
   workflow, until the page was refreshed.
   [#4973](https://github.com/OpenFn/lightning/issues/4973)
