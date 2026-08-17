@@ -749,7 +749,7 @@ defmodule Lightning.AiAssistantTest do
           code: workflow_yaml
         )
 
-      saved_message = List.last(updated_session.messages)
+      saved_message = user_message(updated_session)
       assert saved_message.code == workflow_yaml
       assert saved_message.role == :user
     end
@@ -773,7 +773,7 @@ defmodule Lightning.AiAssistantTest do
           meta: %{"from_global" => true}
         })
 
-      saved_message = List.last(updated_session.messages)
+      saved_message = assistant_message(updated_session)
 
       assert %{
                role: :assistant,
@@ -802,7 +802,7 @@ defmodule Lightning.AiAssistantTest do
           content: "Job chat response"
         })
 
-      saved_message = List.last(updated_session.messages)
+      saved_message = assistant_message(updated_session)
 
       assert %{role: :assistant, job_id: ^job_id} = saved_message
       assert saved_message.meta["from_unsaved_job"] == unsaved_job_id
@@ -2138,7 +2138,7 @@ defmodule Lightning.AiAssistantTest do
                AiAssistant.query_stream(session, "help me")
 
       assert length(updated_session.messages) == 2
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "Here is help"
       assert assistant_msg.role == :assistant
 
@@ -2744,7 +2744,7 @@ defmodule Lightning.AiAssistantTest do
                )
 
       assert length(updated_session.messages) == 2
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "Here is your workflow"
       assert assistant_msg.code == "workflow:\n  name: test"
     end
@@ -2922,7 +2922,7 @@ defmodule Lightning.AiAssistantTest do
                )
 
       assert length(updated_session.messages) == 2
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "Here is your updated workflow"
       assert assistant_msg.code == "workflow:\n  name: updated"
       assert assistant_msg.role == :assistant
@@ -2994,7 +2994,7 @@ defmodule Lightning.AiAssistantTest do
       assert {:ok, updated_session} =
                AiAssistant.query_global_stream(session, "fix this job")
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "Fixed the job"
       # Global responses always use workflow_yaml; job_code is ignored
       assert assistant_msg.code == "workflow:\n  name: full"
@@ -3051,7 +3051,7 @@ defmodule Lightning.AiAssistantTest do
       assert {:ok, updated_session} =
                AiAssistant.query_global_stream(session, "overview")
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.code == "workflow:\n  name: overview"
       assert is_nil(assistant_msg.job_id)
     end
@@ -3134,7 +3134,7 @@ defmodule Lightning.AiAssistantTest do
       assert {:ok, updated_session} =
                AiAssistant.query_global_stream(session, "hello")
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "General answer"
       assert is_nil(assistant_msg.code)
     end
@@ -3191,7 +3191,7 @@ defmodule Lightning.AiAssistantTest do
           page: "workflows/My Workflow"
         )
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       # On overview, should use workflow_yaml not job_code
       assert assistant_msg.code == "name: My Workflow\njobs: []"
       assert is_nil(assistant_msg.job_id)
@@ -3249,7 +3249,7 @@ defmodule Lightning.AiAssistantTest do
           page: "workflows/test/Some-job"
         )
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       # job_code attachments are ignored; only workflow_yaml is stored
       assert is_nil(assistant_msg.code)
       assert assistant_msg.meta == %{"from_global" => true}
@@ -3296,7 +3296,7 @@ defmodule Lightning.AiAssistantTest do
           workflow_yaml: "name: test"
         )
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "No artifacts"
       assert is_nil(assistant_msg.code)
     end
@@ -3315,5 +3315,18 @@ defmodule Lightning.AiAssistantTest do
       })
 
     [%{event: "complete", data: complete_payload}]
+  end
+
+  # Picked by role rather than with List.last/1. Messages come back ordered by
+  # inserted_at alone, and the schema stores that to the second, so a question
+  # and the answer to it saved inside the same second tie and come back in
+  # either order. That is rare against a real model and constant here, where
+  # both writes land in the same millisecond.
+  defp assistant_message(session) do
+    session.messages |> Enum.filter(&(&1.role == :assistant)) |> List.last()
+  end
+
+  defp user_message(session) do
+    session.messages |> Enum.filter(&(&1.role == :user)) |> List.last()
   end
 end
