@@ -421,6 +421,67 @@ defmodule LightningWeb.WorkflowChannelTest do
         metadata: %{error: "job_not_found"}
       }
     end
+
+    test "resolves an unpinned (@latest) adaptor before fetching metadata (#5059)",
+         %{socket: socket, workflow: workflow, test: test_name} do
+      # Regression test: the channel used to pass `job.adaptor` straight
+      # through, so a job left on the default `@openfn/language-common@latest`
+      # would hand the literal word "latest" to AdaptorService, which can't
+      # parse it as a version. Confirms the channel resolves it to a real
+      # concrete version *before* calling MetadataService, same as
+      # `RunWithOptions`/`AiAssistant` already do — asserted by stubbing
+      # `MetadataService.fetch/2` itself and inspecting what it was called
+      # with, rather than exercising the real CLI subprocess (flaky here:
+      # `FakeRambo`'s stub is a single global cache, not test-scoped, and
+      # this is the only test in the suite that reaches it through two
+      # nested async hops instead of one).
+      credential =
+        insert(:credential)
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "username" => "user",
+            "password" => "pass",
+            "host" => "https://example.com"
+          }
+        })
+
+      project_credential =
+        insert(:project_credential,
+          project: workflow.project,
+          credential: credential
+        )
+
+      job =
+        insert(:job,
+          workflow: workflow,
+          adaptor: "@openfn/language-common@latest",
+          project_credential: project_credential
+        )
+
+      test_pid = self()
+
+      Mimic.expect(Lightning.MetadataService, :fetch, fn adaptor, _credential ->
+        send(test_pid, {test_name, :fetch_called_with, adaptor})
+        {:ok, %{"foo" => "bar"}}
+      end)
+
+      ref = push(socket, "request_metadata", %{"job_id" => job.id})
+
+      assert_receive {^test_name, :fetch_called_with, adaptor}, 5000
+      # Resolved to a real, concrete version, not the literal, unparseable
+      # "latest" — computed from the registry rather than hardcoded, so this
+      # doesn't drift if the test fixture's cached "latest" ever changes.
+      assert adaptor ==
+               Lightning.AdaptorRegistry.resolve_adaptor(
+                 "@openfn/language-common@latest"
+               )
+
+      refute adaptor == "@openfn/language-common@latest"
+
+      assert_reply ref, :ok, %{job_id: job_id, metadata: %{"foo" => "bar"}}
+      assert job_id == job.id
+    end
   end
 
   describe "get_context" do

@@ -9,6 +9,7 @@ defmodule LightningWeb.WorkflowChannel do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Lightning.AdaptorRegistry
   alias Lightning.Collaborate
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
@@ -165,8 +166,15 @@ defmodule LightningWeb.WorkflowChannel do
           }
 
         job ->
+          # Resolve `@latest` (and `@local`) to a concrete version before it
+          # reaches AdaptorService — same convention already used to build
+          # the worker run payload (`RunWithOptions`) and the AI assistant
+          # context. Left `nil` alone so a job with no adaptor set still
+          # hits MetadataService's own "no_adaptor" error, not a resolved "".
+          adaptor = job.adaptor && AdaptorRegistry.resolve_adaptor(job.adaptor)
+
           metadata =
-            Lightning.MetadataService.fetch(job.adaptor, job.credential)
+            Lightning.MetadataService.fetch(adaptor, job.credential)
             |> case do
               {:error, %{type: error_type}} ->
                 %{error: error_type}

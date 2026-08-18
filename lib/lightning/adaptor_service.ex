@@ -18,9 +18,13 @@ defmodule Lightning.AdaptorService do
   Using the `install/2` function an adaptor can be installed, which will also
   add it to the list of available adaptors.
 
-  The adaptor is marked as `:installing`, to allow for conditional behaviour
-  elsewhere such as delaying or rejecting processing until the adaptor becomes
-  available.
+  Installing happens out-of-band via a supervised task; the caller's `install/2`
+  call blocks until it completes. If a second call for the same package/version
+  comes in while an install is already in flight, it's queued behind the first
+  rather than starting a second, redundant install — both callers get the same
+  result once it finishes. An adaptor never appears in the list, and is never
+  returned from a lookup, until it's actually present on disk; there's no
+  half-installed entry visible in between.
 
   ## Looking up adaptors
 
@@ -49,10 +53,15 @@ defmodule Lightning.AdaptorService do
   > Generally the tuple style is preferred when using range specifications as
   > the npm style strings have a simplistic regex splitter.
 
+  A version that isn't valid semver (and isn't `latest`) never raises here —
+  it's simply treated as not matching anything, since neither a stored nor a
+  requested version can be trusted to be well-formed (locally-linked adaptors
+  in particular can report a non-semver version like `local`).
+
   See [Version](https://hexdocs.pm/elixir/Version.html) for more details on
   matching versions.
   """
-  use Agent
+  use GenServer
 
   alias Lightning.AdaptorRegistry
 
@@ -60,7 +69,7 @@ defmodule Lightning.AdaptorService do
 
   defmodule Adaptor do
     @moduledoc false
-    @type install_status :: :present | :installing
+    @type install_status :: :present
 
     @type t :: %__MODULE__{
             name: binary(),
@@ -72,10 +81,6 @@ defmodule Lightning.AdaptorService do
 
     @enforce_keys [:name, :version]
     defstruct @enforce_keys ++ [:status, :path, :local_name]
-
-    def set_present(adaptor) do
-      %{adaptor | status: :present}
-    end
   end
 
   defmodule Repo do
@@ -188,6 +193,12 @@ defmodule Lightning.AdaptorService do
   @type package_spec ::
           {name :: String.t() | Regex.t(), version :: String.t() | nil}
 
+  # No `install/2` call is expected to wait longer than this for an in-flight
+  # (its own, or someone else's overlapping) install to finish. Generous on
+  # purpose: this mirrors the previous implementation, where the actual `npm
+  # install` ran unbounded in the caller's own process with no timeout at all.
+  @install_timeout :timer.minutes(5)
+
   defmodule State do
     @moduledoc false
 
@@ -196,94 +207,68 @@ defmodule Lightning.AdaptorService do
             adaptors: [Adaptor.t()],
             adaptors_path: binary(),
             repo: module(),
-            adaptor_registry: GenServer.server()
+            adaptor_registry: GenServer.server(),
+            task_sup: pid() | nil,
+            # package_spec => [GenServer.from()] — callers waiting on an
+            # in-flight install for that exact spec.
+            pending: %{Lightning.AdaptorService.package_spec() => list()},
+            # Task ref => package_spec, so a completed/crashed install can be
+            # matched back to who's waiting on it.
+            installs: %{reference() => Lightning.AdaptorService.package_spec()}
           }
 
     @enforce_keys [:adaptors_path]
     defstruct @enforce_keys ++
                 [
                   :name,
+                  :task_sup,
                   adaptors: [],
                   repo: Repo,
-                  adaptor_registry: Lightning.AdaptorRegistry
+                  adaptor_registry: Lightning.AdaptorRegistry,
+                  pending: %{},
+                  installs: %{}
                 ]
-
-    def find_adaptor(%{adaptors: adaptors}, fun) when is_function(fun) do
-      Enum.find(adaptors, fun)
-    end
 
     def refresh_list(state) do
       %{state | adaptors: state.repo.list_local(state.adaptors_path)}
     end
-
-    def add_adaptor(state, adaptor) do
-      %{state | adaptors: state.adaptors ++ [adaptor]}
-    end
-
-    def remove_adaptor(state, fun) do
-      %{state | adaptors: Enum.reject(state.adaptors, fun)}
-    end
   end
 
   def start_link(opts) do
-    state = struct!(State, opts) |> State.refresh_list()
+    {:ok, task_sup} = Task.Supervisor.start_link()
 
-    Agent.start_link(fn -> state end, name: state.name || __MODULE__)
+    state =
+      opts
+      |> Keyword.put(:task_sup, task_sup)
+      |> then(&struct!(State, &1))
+      |> State.refresh_list()
+
+    GenServer.start_link(__MODULE__, state, name: state.name || __MODULE__)
   end
+
+  @impl true
+  def init(state), do: {:ok, state}
 
   def get_adaptors(agent) do
-    Agent.get(agent, fn state -> state.adaptors end)
+    GenServer.call(agent, :get_adaptors)
   end
 
-  @spec find_adaptor(Agent.agent(), package :: String.t()) :: Adaptor.t() | nil
+  @spec find_adaptor(GenServer.server(), package :: String.t()) ::
+          Adaptor.t() | nil
   def find_adaptor(agent, package) when is_binary(package) do
     find_adaptor(agent, resolve_package_name(package))
   end
 
-  @spec find_adaptor(Agent.agent(), package_spec()) :: Adaptor.t() | nil
-  def find_adaptor(agent, {package_name, version}) do
-    requirement = version_to_requirement(version)
-
-    get_adaptors(agent)
-    |> Enum.filter(&by_name_and_requirement(&1, package_name, requirement))
-    |> Enum.max_by(
-      fn %{version: version} ->
-        Version.parse!(version)
-      end,
-      Version,
-      fn -> nil end
-    )
-  end
-
-  defp by_name_and_requirement(adaptor, %Regex{} = matcher, requirement) do
-    !!(Regex.match?(matcher, adaptor.name) &&
-         Version.match?(adaptor.version, requirement, allow_pre: false))
-  end
-
-  defp by_name_and_requirement(adaptor, name, requirement) do
-    !!(match?(%{name: ^name}, adaptor) &&
-         Version.match?(adaptor.version, requirement, allow_pre: false))
-  end
-
-  defp version_to_requirement(version) do
-    cond do
-      version in ["latest", nil] ->
-        "> 0.0.0"
-
-      String.match?(version, ~r/[<=>]/) ->
-        raise ArgumentError, message: "Version specs not implemented yet."
-
-      true ->
-        "== #{version}"
-    end
-    |> Version.parse_requirement!()
+  @spec find_adaptor(GenServer.server(), package_spec()) :: Adaptor.t() | nil
+  def find_adaptor(agent, {_package_name, _version} = package_spec) do
+    GenServer.call(agent, {:find_adaptor, package_spec})
   end
 
   def installed?(agent, package_spec) do
     !!find_adaptor(agent, package_spec)
   end
 
-  @spec install(Agent.agent(), binary()) ::
+  @spec install(GenServer.server(), binary()) ::
           {:ok, Adaptor.t()}
           | {:error, :adaptor_not_permitted}
           | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
@@ -291,62 +276,182 @@ defmodule Lightning.AdaptorService do
     install(agent, resolve_package_name(package))
   end
 
-  @spec install(Agent.agent(), package_spec()) ::
+  @spec install(GenServer.server(), package_spec()) ::
           {:ok, Adaptor.t()}
           | {:error, :adaptor_not_permitted}
           | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
-  def install(agent, {package_name, _version} = package_spec) do
-    registry = Agent.get(agent, fn state -> state.adaptor_registry end)
+  def install(agent, {_package_name, _version} = package_spec) do
+    GenServer.call(agent, {:install, package_spec}, @install_timeout)
+  end
 
-    if AdaptorRegistry.exists?(registry, package_name) do
-      agent
-      |> find_adaptor(package_spec)
-      |> case do
-        nil -> install!(agent, package_spec)
-        existing -> {:ok, existing}
-      end
+  @impl true
+  def handle_call(:get_adaptors, _from, state) do
+    {:reply, state.adaptors, state}
+  end
+
+  def handle_call({:find_adaptor, package_spec}, _from, state) do
+    {:reply, find_in(state.adaptors, package_spec), state}
+  end
+
+  def handle_call(
+        {:install, {package_name, _version} = package_spec},
+        from,
+        state
+      ) do
+    if AdaptorRegistry.exists?(state.adaptor_registry, package_name) do
+      do_install(package_spec, from, state)
     else
       Logger.warning(
         "Refusing to install non-permitted adaptor: #{inspect(package_name)}"
       )
 
-      {:error, :adaptor_not_permitted}
+      {:reply, {:error, :adaptor_not_permitted}, state}
     end
   end
 
-  @spec install!(Agent.agent(), package_spec()) ::
-          {:ok, Adaptor.t()}
-          | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
-  defp install!(agent, {package_name, version} = package_spec) do
-    new_adaptor = %Adaptor{
-      name: package_name,
-      version: version,
-      status: :installing
-    }
+  # Already on disk — reply immediately, nothing to install.
+  defp do_install(package_spec, from, state) do
+    case find_in(state.adaptors, package_spec) do
+      %Adaptor{} = existing ->
+        {:reply, {:ok, existing}, state}
 
-    agent |> Agent.update(&State.add_adaptor(&1, new_adaptor))
+      nil ->
+        already_installing? = Map.has_key?(state.pending, package_spec)
 
-    {repo, adaptors_path} =
-      agent
-      |> Agent.get(fn state ->
-        {state.repo, state.adaptors_path}
+        state =
+          update_in(state.pending[package_spec], fn
+            nil -> [from]
+            froms -> [from | froms]
+          end)
+
+        state =
+          if already_installing?,
+            do: state,
+            else: start_install(state, package_spec)
+
+        {:noreply, state}
+    end
+  end
+
+  defp start_install(state, package_spec) do
+    %Task{ref: ref} =
+      Task.Supervisor.async_nolink(state.task_sup, fn ->
+        state.repo.install(build_aliased_name(package_spec), state.adaptors_path)
       end)
 
-    repo.install(build_aliased_name(package_spec), adaptors_path)
-    |> case do
-      {_stdout, 0} ->
-        Logger.info("Refreshing Adaptor list")
-        adaptors = repo.list_local(adaptors_path)
-        agent |> Agent.update(fn state -> %{state | adaptors: adaptors} end)
-        {:ok, find_adaptor(agent, {package_name, version})}
+    put_in(state.installs[ref], package_spec)
+  end
 
-      {stdout, code} ->
-        agent
-        |> Agent.update(fn state ->
-          State.remove_adaptor(state, &match?(^new_adaptor, &1))
-        end)
+  @impl true
+  def handle_info({ref, result}, %{installs: installs} = state)
+      when is_reference(ref) do
+    case Map.pop(installs, ref) do
+      {nil, _installs} ->
+        # Not one of ours (or already handled) — ignore.
+        {:noreply, state}
 
-        {:error, {stdout, code}}
+      {package_spec, installs} ->
+        Process.demonitor(ref, [:flush])
+        {froms, pending} = Map.pop(state.pending, package_spec, [])
+
+        {reply, adaptors} =
+          case result do
+            {_stdout, 0} ->
+              Logger.info("Refreshing Adaptor list")
+              adaptors = state.repo.list_local(state.adaptors_path)
+              {{:ok, find_in(adaptors, package_spec)}, adaptors}
+
+            {stdout, code} ->
+              {{:error, {stdout, code}}, state.adaptors}
+          end
+
+        Enum.each(froms, &GenServer.reply(&1, reply))
+
+        {:noreply,
+         %{state | installs: installs, pending: pending, adaptors: adaptors}}
+    end
+  end
+
+  def handle_info(
+        {:DOWN, ref, :process, _pid, reason},
+        %{installs: installs} = state
+      ) do
+    case Map.pop(installs, ref) do
+      {nil, _installs} ->
+        {:noreply, state}
+
+      {package_spec, installs} ->
+        {froms, pending} = Map.pop(state.pending, package_spec, [])
+
+        Enum.each(
+          froms,
+          &GenServer.reply(&1, {:error, {:install_crashed, reason}})
+        )
+
+        {:noreply, %{state | installs: installs, pending: pending}}
+    end
+  end
+
+  # Every entry ever added to `state.adaptors` is `:present` (there's no
+  # half-installed placeholder anymore, see `do_install/3`), so a version
+  # that survives `by_name_and_requirement/3`'s filter below is always valid
+  # semver, and `Version.parse!/1` here can't raise.
+  defp find_in(adaptors, {package_name, version}) do
+    case version_to_requirement(version) do
+      :no_match ->
+        nil
+
+      requirement ->
+        adaptors
+        |> Enum.filter(&by_name_and_requirement(&1, package_name, requirement))
+        |> Enum.max_by(
+          fn %{version: version} -> Version.parse!(version) end,
+          Version,
+          fn -> nil end
+        )
+    end
+  end
+
+  defp by_name_and_requirement(adaptor, %Regex{} = matcher, requirement) do
+    Regex.match?(matcher, adaptor.name) &&
+      version_matches?(adaptor.version, requirement)
+  end
+
+  defp by_name_and_requirement(adaptor, name, requirement) do
+    match?(%{name: ^name}, adaptor) &&
+      version_matches?(adaptor.version, requirement)
+  end
+
+  # A stored adaptor version is data, not something we control (it comes from
+  # `npm list`'s output, and a locally-linked adaptor in particular can report
+  # a non-semver version like "local"). Never let a version we can't parse
+  # raise here — it simply doesn't match anything.
+  defp version_matches?(version, requirement) do
+    case Version.parse(version) do
+      {:ok, parsed} -> Version.match?(parsed, requirement, allow_pre: false)
+      :error -> false
+    end
+  end
+
+  # A requested version is also not guaranteed to be well-formed — same
+  # non-raising treatment as `version_matches?/2` above, just on the
+  # requirement side instead of the stored side.
+  defp version_to_requirement(version) do
+    spec =
+      cond do
+        version in ["latest", nil] ->
+          "> 0.0.0"
+
+        String.match?(version, ~r/[<=>]/) ->
+          raise ArgumentError, message: "Version specs not implemented yet."
+
+        true ->
+          "== #{version}"
+      end
+
+    case Version.parse_requirement(spec) do
+      {:ok, requirement} -> requirement
+      :error -> :no_match
     end
   end
 
