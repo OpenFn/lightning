@@ -129,7 +129,12 @@ config :lightning, :is_resettable_demo, true
 
 config :lightning, :auth_providers_allow_insecure_loopback, true
 
-config :lightning, :apollo, endpoint: "http://localhost:3000", timeout: 300_000
+config :lightning, :apollo,
+  endpoint: "http://localhost:3000",
+  # Generous locally: a dev Apollo may predate the keepalive, and a cold python
+  # start is slower than anything staging sees.
+  idle_timeout: 120_000,
+  request_timeout: 300_000
 
 # Philter's egress guard blocks private/loopback ranges by default; allow
 # localhost so channel proxies can reach services running on the dev machine.

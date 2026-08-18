@@ -26,7 +26,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -98,7 +100,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -282,7 +286,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -362,7 +368,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -1367,7 +1375,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -1379,7 +1389,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> nil
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -1391,7 +1403,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> nil
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -1403,7 +1417,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> nil
           :ai_assistant_api_key -> nil
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -1415,7 +1431,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> 123
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -1427,7 +1445,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> 123
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -2070,7 +2090,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -2495,7 +2517,7 @@ defmodule Lightning.AiAssistantTest do
         {:ok, %Tesla.Env{status: 200, body: sse_stream}}
       end)
 
-      assert {:error, "Stream ended without complete response"} =
+      assert {:error, "The assistant stopped before it finished." <> _} =
                AiAssistant.query_stream(session, "test")
     end
 
@@ -2526,8 +2548,91 @@ defmodule Lightning.AiAssistantTest do
         {:ok, %Tesla.Env{status: 200, body: sse_stream}}
       end)
 
-      assert {:error, "Stream ended without complete response"} =
+      assert {:error, "The assistant stopped before it finished." <> _} =
                AiAssistant.query_stream(session, "test")
+    end
+
+    # The other end of keeping a partial: there has to be something worth
+    # keeping. A reply that produced nothing leaves no message behind, or the
+    # panel shows an empty one where the answer should be.
+    test "saves nothing when the stream dies before producing anything", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: []}}
+      end)
+
+      assert {:error, message} = AiAssistant.query_stream(session, "test")
+      assert message =~ "stopped before it finished"
+
+      refute Lightning.Repo.all(Lightning.AiAssistant.ChatMessage)
+             |> Enum.any?(&(&1.role == :assistant))
+    end
+
+    # The point of keeping the reason at all: a hung Apollo and a severed
+    # connection have to read differently, or there is nothing to act on.
+    #
+    # The reason is seeded straight into the process dictionary because that is
+    # where the adapter leaves it and where stream_failure_message/0 reads it.
+    # The adapter's own tests cover putting it there over a real socket; these
+    # cover what each value turns into for the person reading the panel.
+    for {name, reason, expected} <- [
+          {"our own receive_timeout", :timeout,
+           "stopped responding partway through"},
+          {"a timeout raised by Finch", %Finch.TransportError{reason: :timeout},
+           "stopped responding partway through"},
+          {"a dropped connection", %Finch.TransportError{reason: :closed},
+           "connection to the assistant was lost"},
+          {"a reason we do not recognise", {:something, :unexpected},
+           "stopped before it finished"}
+        ] do
+      test "#{name} is reported as \"#{expected}\"", %{
+        user: user,
+        workflow: %{jobs: [job_1 | _]}
+      } do
+        session =
+          insert(:chat_session,
+            user: user,
+            job: job_1,
+            messages: [
+              %{
+                role: :user,
+                content: "test",
+                user: user,
+                status: :pending,
+                inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+              }
+            ]
+          )
+
+        Process.put(
+          {Lightning.Tesla.Adapter.Finch, :stream_error},
+          unquote(Macro.escape(reason))
+        )
+
+        expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+          {:ok, %Tesla.Env{status: 200, body: []}}
+        end)
+
+        assert {:error, message} = AiAssistant.query_stream(session, "test")
+        assert message =~ unquote(expected)
+      end
     end
 
     test "keeps the text that arrived when the stream dies before completing",
@@ -2571,7 +2676,7 @@ defmodule Lightning.AiAssistantTest do
       end)
 
       assert {:error, message} = AiAssistant.query_stream(session, "test")
-      assert message =~ "cut off"
+      assert message =~ "stopped before it finished"
 
       saved =
         Lightning.Repo.all(Lightning.AiAssistant.ChatMessage)
@@ -2793,7 +2898,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -2961,7 +3068,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 

@@ -182,11 +182,6 @@ defmodule Lightning.ApolloClient do
   end
 
   defp stream_client do
-    # receive_timeout bounds time-to-headers and each gap between SSE
-    # chunks, not total stream duration — the MessageProcessor job timeout
-    # bounds that.
-    timeout = Lightning.Config.apollo(:timeout)
-
     client_params = [
       {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
       Tesla.Middleware.SSE,
@@ -196,7 +191,17 @@ defmodule Lightning.ApolloClient do
     if match?({Tesla.Adapter.Finch, _}, Application.get_env(:tesla, :adapter)) do
       Tesla.client(
         client_params,
-        {Tesla.Adapter.Finch, name: Lightning.Finch, receive_timeout: timeout}
+        # Our copy of Tesla's adapter, which keeps the reason a stream stopped
+        # instead of discarding it. See Lightning.Tesla.Adapter.Finch.
+        {
+          Lightning.Tesla.Adapter.Finch,
+          # The gap between chunks, not the length of the whole answer. A reply
+          # that keeps arriving never trips this - MessageProcessor's job
+          # timeout is what bounds total duration.
+          name: Lightning.Finch,
+          receive_timeout: Lightning.Config.apollo(:idle_timeout),
+          request_timeout: Lightning.Config.apollo(:request_timeout)
+        }
       )
     else
       Tesla.client(client_params)

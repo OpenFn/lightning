@@ -152,7 +152,7 @@ defmodule Lightning.Application do
         LightningWeb.Telemetry,
         # Start the PubSub system
         {Phoenix.PubSub, name: Lightning.PubSub},
-        {Finch, name: Lightning.Finch},
+        {Finch, name: Lightning.Finch, pools: apollo_pools()},
         auth_providers_cache_childspec,
         auth_provider_jwks_cache_childspec,
         {Lightning.Collaboration.Supervisor, []},
@@ -180,6 +180,51 @@ defmodule Lightning.Application do
     Supervisor.start_link(children, opts)
   end
 
+  # Finch already keys pools by {scheme, host, port}, so Apollo has its own
+  # either way. The only setting here that changes behaviour is the connect
+  # timeout; size and count restate Finch's defaults rather than shrink them,
+  # since an AI stream holds its connection for as long as the answer takes.
+  #
+  # http1 is Finch's default too, and is written out because this pool depends
+  # on it: :request_timeout is HTTP/1-only, and on http2 receive_timeout
+  # becomes a deadline for the whole request rather than the gap between
+  # chunks, which would silently cap the length of an answer. Pinned so a
+  # change to that default cannot quietly take both settings with it.
+  defp apollo_pools do
+    base = %{default: [size: 50, count: 1]}
+
+    endpoint = Lightning.Config.apollo(:endpoint)
+
+    if poolable_url?(endpoint) do
+      Map.put(base, endpoint,
+        protocols: [:http1],
+        size: 50,
+        count: 1,
+        conn_opts: [
+          transport_opts: [timeout: Lightning.Config.apollo(:connect_timeout)]
+        ]
+      )
+    else
+      base
+    end
+  end
+
+  # Finch raises on a key it cannot parse, which would take the node down at
+  # boot over a misconfigured endpoint. Everywhere else treats one of those as
+  # the assistant simply being switched off, so match that.
+  defp poolable_url?(endpoint) when is_binary(endpoint) do
+    case URI.parse(endpoint) do
+      %URI{scheme: scheme, host: host}
+      when scheme in ["http", "https"] and is_binary(host) and host != "" ->
+        true
+
+      _ ->
+        false
+    end
+  end
+
+  defp poolable_url?(_endpoint), do: false
+
   # Oban stops its producer once the grace period expires and only then kills
   # whatever is still running, so a job that outlives the window is killed with
   # nothing left to report it. Its AI message would stay :processing until the
@@ -193,7 +238,7 @@ defmodule Lightning.Application do
       [AI Assistant] An AI job may run for #{ceiling}ms but Oban stops draining \
       after #{grace}ms. A deploy landing on a running job will kill it without \
       emitting telemetry, leaving its message :processing until the reaper runs.
-      Lower APOLLO_TIMEOUT or raise Oban's shutdown_grace_period.
+      Lower APOLLO_REQUEST_TIMEOUT_MS or raise Oban's shutdown_grace_period.
       """)
     end
   end
