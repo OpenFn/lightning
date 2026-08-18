@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.18.0-pre2] - 2026-08-18
+
+### Added
+
 - Job code can now read the work order, workflow and project a run belongs to
   from the `meta` global, alongside the run id it already had:
   `meta.workOrderId`, `meta.workflowId` and `meta.projectId`. Needs a worker on
