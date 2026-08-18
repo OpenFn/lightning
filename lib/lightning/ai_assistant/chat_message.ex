@@ -67,6 +67,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
   # rows that get re-serialized on every channel join.
   @max_response_segments 200
 
+  @max_content_length 10_000
+
   # A sentence, not a story. Bounded because the column is read back and
   # re-sent on every channel join.
   @max_failure_message_length 500
@@ -174,7 +176,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     |> cast_embed(:response_segments)
     |> validate_length(:response_segments, max: @max_response_segments)
     |> validate_required([:content, :role])
-    |> validate_length(:content, min: 1, max: 10_000)
+    |> validate_length(:content, min: 1, max: @max_content_length)
     |> validate_length(:failure_message, max: @max_failure_message_length)
     |> maybe_put_user_assoc(attrs[:user] || attrs["user"])
     |> maybe_put_job_assoc(attrs[:job] || attrs["job"])
@@ -184,6 +186,9 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   @doc "Maximum number of segments accepted on a message."
   def max_response_segments, do: @max_response_segments
+
+  @doc "Maximum length of a message's `content`."
+  def max_content_length, do: @max_content_length
 
   @doc "Maximum length of a message's `failure_message`."
   def max_failure_message_length, do: @max_failure_message_length

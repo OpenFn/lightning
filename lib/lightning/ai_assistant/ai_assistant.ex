@@ -1090,17 +1090,20 @@ defmodule Lightning.AiAssistant do
   # the full response payload.
 
   defp process_stream(session, body_stream, message_builder) do
-    complete_payload =
+    acc =
       body_stream
-      |> Enum.reduce(nil, fn sse_event, acc ->
-        handle_sse_event(session.id, sse_event, acc)
-      end)
+      |> Enum.reduce(
+        %{complete: nil, text: [], code: nil, apollo_error: nil},
+        fn sse_event, acc -> handle_sse_event(session.id, sse_event, acc) end
+      )
 
-    if complete_payload do
-      {message_attrs, opts} = message_builder.(complete_payload)
-      save_message(session, message_attrs, opts)
-    else
-      {:error, "Stream ended without complete response"}
+    case acc do
+      %{complete: payload} when is_map(payload) ->
+        {message_attrs, opts} = message_builder.(payload)
+        save_message(session, message_attrs, opts)
+
+      _ ->
+        save_partial_response(session, acc)
     end
   rescue
     e ->
@@ -1128,28 +1131,84 @@ defmodule Lightning.AiAssistant do
       {:error, message}
   end
 
+  # The stream is the only place some of this exists. Apollo rebuilds the whole
+  # reply in its `complete` payload, but if the stream dies before that arrives
+  # the text the user just watched appear is gone unless we keep it here.
+  defp save_partial_response(_session, %{text: [], code: nil}) do
+    {:error, "Stream ended without complete response"}
+  end
+
+  defp save_partial_response(session, %{text: text, code: code} = acc) do
+    # Clamped, because the whole point is to keep what arrived: a reply that
+    # ran past the column's limit would fail the changeset and lose the lot.
+    content =
+      text
+      |> Enum.reverse()
+      |> IO.iodata_to_binary()
+      |> String.trim()
+      |> String.slice(0, ChatMessage.max_content_length())
+
+    message =
+      acc.apollo_error ||
+        "The assistant was cut off before it finished. Please try again."
+
+    case save_message(
+           session,
+           %{
+             role: :assistant,
+             content: if(content == "", do: "(no response)", else: content),
+             status: :error,
+             failure_category: :incomplete_response,
+             failure_message: message
+           },
+           code: code
+         ) do
+      {:ok, _session} ->
+        {:error, message}
+
+      {:error, changeset} ->
+        # Losing the partial silently is the failure this function exists to
+        # prevent, so make it visible rather than reporting a plain stall.
+        Logger.error(
+          "[AI Assistant] Could not save partial response for session " <>
+            "#{session.id}: #{inspect(changeset.errors)}"
+        )
+
+        {:error, message}
+    end
+  end
+
   # Bridge event: complete — final payload (same shape as sync response)
-  defp handle_sse_event(_session_id, %{event: "complete", data: data}, _acc) do
+  defp handle_sse_event(_session_id, %{event: "complete", data: data}, acc) do
     case Jason.decode(data) do
-      {:ok, payload} when is_map(payload) -> payload
-      _ -> nil
+      {:ok, payload} when is_map(payload) -> %{acc | complete: payload}
+      _ -> acc
     end
   end
 
   # Bridge event: error
+  # Apollo having said it failed is worth recording, because it distinguishes a
+  # service that gave up from a socket that went quiet. Its text is not: Apollo
+  # wraps any unhandled exception as `str(e)`, which carries internal hostnames,
+  # upstream URLs and container paths. So the fact is kept and the words are
+  # not - they go to the log.
   defp handle_sse_event(session_id, %{event: "error", data: data}, acc) do
     case Jason.decode(data) do
-      {:ok, %{"message" => message}} ->
-        broadcast_streaming_error(session_id, message)
+      {:ok, %{"message" => message}} when is_binary(message) ->
+        Logger.warning(
+          "[AI Assistant] Apollo reported an error for session #{session_id}: " <>
+            message
+        )
 
-      {:ok, error} ->
-        broadcast_streaming_error(session_id, inspect(error))
-
-      _ ->
-        broadcast_streaming_error(session_id, data)
+      other ->
+        Logger.warning(
+          "[AI Assistant] Unreadable error event for session #{session_id}: " <>
+            inspect(other)
+        )
     end
 
-    acc
+    broadcast_streaming_error(session_id, @internal_failure)
+    %{acc | apollo_error: @internal_failure}
   end
 
   # Bridge event: changes — structured data (code edits or workflow YAML)
@@ -1158,12 +1217,14 @@ defmodule Lightning.AiAssistant do
     case Jason.decode(data) do
       {:ok, changes} when is_map(changes) ->
         broadcast_streaming_changes(session_id, changes)
+        # Workflow and global chat send the generated YAML here, ahead of the
+        # text. Keep it so a stream that dies late doesn't discard a workflow
+        # the user already watched appear.
+        %{acc | code: changes["yaml"] || acc.code}
 
       _ ->
-        :ok
+        acc
     end
-
-    acc
   end
 
   # Bridge event: status — a persistent, completed-action status, the same
@@ -1199,42 +1260,57 @@ defmodule Lightning.AiAssistant do
   defp handle_sse_event(session_id, %{data: data}, acc) do
     case Jason.decode(data) do
       {:ok, %{"type" => _} = event} ->
-        handle_stream_event(session_id, event)
+        handle_stream_event(session_id, event, acc)
 
       _ ->
-        :ok
+        acc
     end
-
-    acc
   end
 
   # Catch-all for anything unexpected
   defp handle_sse_event(_session_id, _event, acc), do: acc
 
-  defp handle_stream_event(session_id, %{
-         "type" => "content_block_delta",
-         "delta" => %{"type" => "text_delta", "text" => text}
-       }) do
+  defp handle_stream_event(
+         session_id,
+         %{
+           "type" => "content_block_delta",
+           "delta" => %{"type" => "text_delta", "text" => text}
+         },
+         acc
+       ) do
     broadcast_streaming_chunk(session_id, text)
+    # Prepended and reversed on save - cheaper than repeatedly appending to a
+    # binary for a reply that can run to thousands of chunks.
+    %{acc | text: [text | acc.text]}
   end
 
-  defp handle_stream_event(session_id, %{
-         "type" => "content_block_start",
-         "content_block" => %{"type" => "thinking"}
-       }) do
+  defp handle_stream_event(
+         session_id,
+         %{
+           "type" => "content_block_start",
+           "content_block" => %{"type" => "thinking"}
+         },
+         acc
+       ) do
     broadcast_streaming_status(session_id, "Thinking...")
+    acc
   end
 
   # Apollo sends discrete thinking blocks as progress updates
   # (e.g. "Searching documentation...", "Loading adaptor documentation...")
-  defp handle_stream_event(session_id, %{
-         "type" => "content_block_delta",
-         "delta" => %{"type" => "thinking_delta", "thinking" => text}
-       }) do
+  defp handle_stream_event(
+         session_id,
+         %{
+           "type" => "content_block_delta",
+           "delta" => %{"type" => "thinking_delta", "thinking" => text}
+         },
+         acc
+       ) do
     broadcast_streaming_status(session_id, text)
+    acc
   end
 
-  defp handle_stream_event(_session_id, _event), do: :ok
+  defp handle_stream_event(_session_id, _event, acc), do: acc
 
   defp broadcast_streaming_chunk(session_id, content) do
     Lightning.broadcast(
