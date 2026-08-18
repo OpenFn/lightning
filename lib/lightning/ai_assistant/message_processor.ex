@@ -312,17 +312,47 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @doc false
   @spec broadcast_status(
           String.t(),
-          atom() | {atom(), AiAssistant.ChatSession.t()}
+          atom() | {atom(), AiAssistant.ChatSession.t()},
+          Ecto.UUID.t() | nil
         ) :: :ok
-  defp broadcast_status(session_id, status) do
+  # message_id is carried so a listener does not have to guess which message
+  # this is about. It guessed by taking the newest, which is wrong the moment
+  # anything reports on an older one - the reaper clearing a message stranded
+  # several exchanges back would have marked the newest as failed instead.
+  defp broadcast_status(session_id, status, message_id) do
     Lightning.broadcast(
       "ai_session:#{session_id}",
       {:ai_assistant, :message_status_changed,
        %{
          status: status,
-         session_id: session_id
+         session_id: session_id,
+         message_id: message_id
        }}
     )
+  end
+
+  @doc """
+  Tells a session one of its messages has failed.
+
+  For callers that write the status themselves - the reaper uses a guarded
+  update rather than a read-modify-write - and so cannot go through
+  `update_message_status/3`.
+  """
+  @spec broadcast_message_error(Ecto.UUID.t(), Ecto.UUID.t()) :: :ok
+  def broadcast_message_error(session_id, message_id) do
+    # get/1 rather than get!/1: the reaper calls this per message inside an
+    # Enum.each, so a session deleted since it selected its candidates would
+    # raise and abandon the rest of the sweep. Nobody is listening to a
+    # deleted session anyway.
+    case AiAssistant.get_session(session_id) do
+      {:ok, session} ->
+        broadcast_status(session_id, {:error, session}, message_id)
+
+      {:error, :not_found} ->
+        :ok
+    end
+
+    :ok
   end
 
   @doc """
@@ -358,7 +388,11 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
     updated_session = AiAssistant.get_session!(updated_message.chat_session_id)
 
-    broadcast_status(updated_session.id, {status, updated_session})
+    broadcast_status(
+      updated_session.id,
+      {status, updated_session},
+      updated_message.id
+    )
 
     {:ok, updated_session, updated_message}
   end

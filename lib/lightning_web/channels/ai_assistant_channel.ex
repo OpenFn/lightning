@@ -262,9 +262,11 @@ defmodule LightningWeb.AiAssistantChannel do
   @impl true
   def handle_info(
         {:ai_assistant, :message_status_changed,
-         %{status: {status, updated_session}, session_id: session_id}},
+         %{status: {status, updated_session}, session_id: session_id} = payload},
         socket
       ) do
+    failed_id = Map.get(payload, :message_id)
+
     if socket.assigns.session_id == session_id do
       case status do
         :processing ->
@@ -287,30 +289,24 @@ defmodule LightningWeb.AiAssistantChannel do
 
         :error ->
           # Broadcast error state so all users can see and retry
-          user_message =
-            updated_session.messages
-            |> Enum.reverse()
-            |> Enum.find(fn msg -> msg.role == :user end)
+          failed_message = failed_message(updated_session, failed_id)
 
-          if user_message do
+          if failed_message do
             broadcast(
               socket,
               "message_error",
-              %{message_id: user_message.id, status: "error"}
-              |> put_failure(user_message)
+              %{message_id: failed_message.id, status: "error"}
+              |> put_failure(failed_message)
             )
           end
 
         :failed ->
           # Handle failed status (similar to error)
-          user_message =
-            updated_session.messages
-            |> Enum.reverse()
-            |> Enum.find(fn msg -> msg.role == :user end)
+          failed_message = failed_message(updated_session, failed_id)
 
-          if user_message do
+          if failed_message do
             broadcast(socket, "message_error", %{
-              message_id: user_message.id,
+              message_id: failed_message.id,
               status: "failed"
             })
           end
@@ -877,6 +873,21 @@ defmodule LightningWeb.AiAssistantChannel do
       from_global: from_global
     }
     |> put_failure(message)
+  end
+
+  # The broadcaster says which message it is reporting on. Falling back to the
+  # newest user message is only right when nothing said - anything reporting on
+  # an older one, like the reaper clearing something stranded several exchanges
+  # back, would otherwise mark the wrong message failed.
+  defp failed_message(session, nil) do
+    session.messages
+    |> Enum.reverse()
+    |> Enum.find(fn msg -> msg.role == :user end)
+  end
+
+  defp failed_message(session, message_id) do
+    Enum.find(session.messages, fn msg -> msg.id == message_id end) ||
+      failed_message(session, nil)
   end
 
   # Only present on a failed message, so a reconnecting client sees the same
