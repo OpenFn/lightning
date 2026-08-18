@@ -32,7 +32,19 @@ defmodule Lightning.AiAssistant do
   @title_max_length 40
   @success_status_range 200..299
 
+  # What a user sees when the reason is ours and not fit to show them.
+  @internal_failure "Something went wrong. Please try again."
+
   @type opts :: keyword()
+
+  @typedoc """
+  Why a streamed query failed.
+
+  A bare string is already written for a user to read. `{:internal, text}` is
+  ours and is not: the caller logs it and shows something else.
+  """
+  @type stream_error ::
+          String.t() | {:internal, String.t()} | Ecto.Changeset.t()
 
   @doc """
   Checks if the AI assistant feature is enabled via application configuration.
@@ -782,7 +794,7 @@ defmodule Lightning.AiAssistant do
   - `{:error, reason}` - Query failed, reason is either a string error message or changeset
   """
   @spec query_stream(ChatSession.t(), String.t(), opts()) ::
-          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+          {:ok, ChatSession.t()} | {:error, stream_error()}
   def query_stream(session, content, opts \\ []) do
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
@@ -871,7 +883,7 @@ defmodule Lightning.AiAssistant do
   - `{:error, reason}` - Generation failed, reason is either a string error message or changeset
   """
   @spec query_workflow_stream(ChatSession.t(), String.t(), opts()) ::
-          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+          {:ok, ChatSession.t()} | {:error, stream_error()}
   def query_workflow_stream(session, content, opts \\ []) do
     code = Keyword.get(opts, :code)
     errors = Keyword.get(opts, :errors)
@@ -903,7 +915,7 @@ defmodule Lightning.AiAssistant do
   Uses the same streaming pipeline as job_chat and workflow_chat.
   """
   @spec query_global_stream(ChatSession.t(), String.t(), opts()) ::
-          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+          {:ok, ChatSession.t()} | {:error, stream_error()}
   def query_global_stream(session, content, opts \\ []) do
     workflow_yaml = Keyword.get(opts, :workflow_yaml)
     page = Keyword.get(opts, :page)
@@ -1092,12 +1104,17 @@ defmodule Lightning.AiAssistant do
     end
   rescue
     e ->
-      broadcast_streaming_error(
-        session.id,
-        "Streaming failed: #{Exception.message(e)}"
+      # Exception text belongs in the log, not the panel. It can carry module
+      # and function names, SQL detail, or a whole inspected payload, and the
+      # caller persists what it is handed.
+      Logger.error(
+        "[AI Assistant] Stream failed for session #{session.id}: " <>
+          Exception.message(e)
       )
 
-      {:error, Exception.message(e)}
+      broadcast_streaming_error(session.id, @internal_failure)
+
+      {:error, {:internal, Exception.message(e)}}
   catch
     :exit, reason ->
       message = "Streaming connection lost"

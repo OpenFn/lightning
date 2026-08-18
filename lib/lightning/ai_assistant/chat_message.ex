@@ -67,6 +67,10 @@ defmodule Lightning.AiAssistant.ChatMessage do
   # rows that get re-serialized on every channel join.
   @max_response_segments 200
 
+  # A sentence, not a story. Bounded because the column is read back and
+  # re-sent on every channel join.
+  @max_failure_message_length 500
+
   @type role() :: :user | :assistant
   @type status() :: :pending | :processing | :success | :error | :cancelled
 
@@ -98,6 +102,26 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
     field :status, Ecto.Enum,
       values: [:pending, :processing, :success, :error, :cancelled]
+
+    # Why a message failed, kept alongside the status rather than broadcast.
+    # The failure people care about most is a deploy interrupting a run, and
+    # that is exactly when the browser reconnects to a different node - a
+    # PubSub-only signal is gone by then. It is also often written by a
+    # different process than the one that failed.
+    field :failure_category, Ecto.Enum,
+      values: [
+        :upstream_unavailable,
+        :upstream_error,
+        :timeout,
+        :interrupted,
+        :abandoned,
+        :incomplete_response,
+        :internal
+      ]
+
+    # User-facing prose only. Raw error terms and upstream response bodies go
+    # to the log, never here - they can carry internal hostnames or stack traces.
+    field :failure_message, :string
 
     field :is_deleted, :boolean, default: false
     field :is_public, :boolean, default: true
@@ -138,6 +162,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
       :code,
       :role,
       :status,
+      :failure_category,
+      :failure_message,
       :is_deleted,
       :is_public,
       :meta,
@@ -149,6 +175,7 @@ defmodule Lightning.AiAssistant.ChatMessage do
     |> validate_length(:response_segments, max: @max_response_segments)
     |> validate_required([:content, :role])
     |> validate_length(:content, min: 1, max: 10_000)
+    |> validate_length(:failure_message, max: @max_failure_message_length)
     |> maybe_put_user_assoc(attrs[:user] || attrs["user"])
     |> maybe_put_job_assoc(attrs[:job] || attrs["job"])
     |> maybe_require_user()
@@ -157,6 +184,9 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   @doc "Maximum number of segments accepted on a message."
   def max_response_segments, do: @max_response_segments
+
+  @doc "Maximum length of a message's `failure_message`."
+  def max_failure_message_length, do: @max_failure_message_length
 
   @doc """
   Creates a changeset for updating message status.

@@ -333,6 +333,46 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_msg.response_segments == []
     end
 
+    # A raise on our side is the one failure whose text must not reach the
+    # panel: it carries module names, SQL detail and inspected payloads.
+    test "an exception mid-stream is recorded without its text", %{
+      user: user,
+      project: project
+    } do
+      session = insert(:chat_session, user: user, project: project)
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "help",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        raising =
+          Stream.map([:boom], fn _ ->
+            raise "postgrex disconnected on internal-host-7"
+          end)
+
+        {:ok, %Tesla.Env{status: 200, body: raising}}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      reloaded = Repo.get!(ChatMessage, user_message.id)
+
+      assert reloaded.status == :error
+      assert reloaded.failure_category == :internal
+
+      assert reloaded.failure_message ==
+               "Something went wrong. Please try again."
+
+      refute reloaded.failure_message =~ "internal-host-7"
+    end
+
     test "persists the segments timeline alongside the flat response",
          %{user: user, project: project} do
       workflow = insert(:workflow, project: project)
