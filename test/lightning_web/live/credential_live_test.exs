@@ -108,6 +108,37 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ credential.name
     end
 
+    test "excludes sandbox projects from the projects with access list", %{
+      conn: conn,
+      user: user,
+      project: parent_project
+    } do
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent_project, user, %{
+          name: "sandbox-project",
+          env: "staging"
+        })
+
+      credential =
+        insert(:credential,
+          user: user,
+          project_credentials: [%{project_id: parent_project.id}]
+        )
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      table_text =
+        index_live
+        |> element("#credentials-table")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.text()
+
+      assert table_text =~ credential.name
+      assert table_text =~ parent_project.name
+      refute table_text =~ sandbox.name
+    end
+
     test "ensure support user only sees credentials they own on /credentials", %{
       conn: conn,
       user: user,

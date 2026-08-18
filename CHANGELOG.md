@@ -52,6 +52,12 @@ and this project adheres to
 
 ### Fixed
 
+- A credential's "Projects with access" list no longer includes sandbox
+  projects. Credentials propagate to descendant sandboxes automatically so runs
+  there keep working, but showing every sandbox in this list was redundant and
+  included ones already merged and deleted.
+  [#4014](https://github.com/OpenFn/lightning/issues/4014)
+
 - `APOLLO_TIMEOUT` now governs every request to Apollo, including the streaming
   requests all AI chats use. Streaming previously read an internal timeout key
   that no environment could set, so it was always 120s regardless of

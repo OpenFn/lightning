@@ -409,7 +409,9 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     |> Credentials.list_credentials()
     |> Enum.map(fn credential ->
       project_names =
-        Map.get(credential, :projects, []) |> Enum.map(fn p -> p.name end)
+        Map.get(credential, :projects, [])
+        |> Enum.reject(&Lightning.Projects.Project.sandbox?/1)
+        |> Enum.map(fn p -> p.name end)
 
       environment_names =
         credential
