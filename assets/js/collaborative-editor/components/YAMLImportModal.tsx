@@ -68,9 +68,12 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
   const [validatedState, setValidatedState] =
     useState<YAMLWorkflowState | null>(null);
   const [mode, setMode] = useState<'upload' | 'paste'>('upload');
+  const validationVersion = useRef(0);
 
   const debouncedValidate = useRef(
-    pDebounce((content: string) => {
+    pDebounce((content: string, version: number) => {
+      if (version !== validationVersion.current) return;
+
       if (!content.trim()) {
         setImportState('initial');
         setErrors([]);
@@ -99,18 +102,30 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
   );
 
   const validateYAML = useCallback((content: string) => {
-    void debouncedValidate.current(content);
+    const version = ++validationVersion.current;
+    void debouncedValidate.current(content, version);
   }, []);
 
   const handleYAMLChange = (content: string) => {
     setYamlContent(content);
+    setImportState(content.trim() ? 'parsing' : 'initial');
+    setErrors([]);
+    setValidatedState(null);
     void validateYAML(content);
   };
 
   const handleFileUpload = (content: string) => {
     setMode('paste');
-    setYamlContent(content);
-    void validateYAML(content);
+    handleYAMLChange(content);
+  };
+
+  const handleModeToggle = () => {
+    setMode(mode === 'upload' ? 'paste' : 'upload');
+    setYamlContent('');
+    setImportState('initial');
+    setErrors([]);
+    setValidatedState(null);
+    validationVersion.current += 1;
   };
 
   const handleSave = async () => {
@@ -158,7 +173,7 @@ function YAMLImportContent({ onClose, onSuccess }: YAMLImportContentProps) {
         <h2 className="text-xl font-medium text-gray-900">Import a workflow</h2>
         <button
           type="button"
-          onClick={() => setMode(mode === 'upload' ? 'paste' : 'upload')}
+          onClick={handleModeToggle}
           className="rounded-full border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
         >
           {mode === 'upload' ? 'Paste text' : 'Upload a file'}

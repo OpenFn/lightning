@@ -67,7 +67,7 @@ vi.mock('../../../../js/collaborative-editor/lib/notifications', () => ({
 
 const mockCloseYAMLImportModal = vi.fn();
 const mockDismissLandingScreen = vi.fn();
-const mockShowYAMLImportModal = vi.fn();
+const mockShowYAMLImportModal = vi.fn<() => boolean>();
 
 vi.mock('../../../../js/collaborative-editor/hooks/useUI', () => ({
   useUICommands: () => ({
@@ -203,6 +203,26 @@ describe('YAMLImportModal', () => {
       );
     });
 
+    test('disables Create immediately when YAML changes', async () => {
+      renderModal();
+      switchToPasteMode();
+      enterYAML(validYAML);
+
+      await waitFor(
+        () =>
+          expect(
+            screen.getByRole('button', { name: /Create/i })
+          ).not.toBeDisabled(),
+        { timeout: 500 }
+      );
+
+      enterYAML(validYAML.replace('Test Workflow', 'Updated Workflow'));
+
+      expect(
+        screen.getByRole('button', { name: /Validating/i })
+      ).toBeDisabled();
+    });
+
     test('keeps Create disabled for invalid YAML', async () => {
       renderModal();
       switchToPasteMode();
@@ -215,6 +235,25 @@ describe('YAMLImportModal', () => {
           ).toBeDisabled(),
         { timeout: 500 }
       );
+    });
+
+    test('clears validation state and errors when switching input modes', async () => {
+      renderModal();
+      switchToPasteMode();
+      enterYAML('invalid: [syntax');
+
+      await waitFor(
+        () => expect(screen.getByText(/Validation Error/i)).toBeInTheDocument(),
+        { timeout: 500 }
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /Upload a file/i }));
+
+      expect(screen.getByRole('button', { name: /Create/i })).toBeDisabled();
+      expect(
+        screen.queryByPlaceholderText(/Paste your YAML content here/i)
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/Validation Error/i)).not.toBeInTheDocument();
     });
   });
 
