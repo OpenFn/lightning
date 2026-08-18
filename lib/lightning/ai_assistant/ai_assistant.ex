@@ -1093,7 +1093,14 @@ defmodule Lightning.AiAssistant do
     acc =
       body_stream
       |> Enum.reduce(
-        %{complete: nil, text: [], code: nil, apollo_error: nil},
+        %{
+          complete: nil,
+          text: [],
+          code: nil,
+          apollo_error: nil,
+          segments: [],
+          pending: []
+        },
         fn sse_event, acc -> handle_sse_event(session.id, sse_event, acc) end
       )
 
@@ -1134,12 +1141,6 @@ defmodule Lightning.AiAssistant do
   # The stream is the only place some of this exists. Apollo rebuilds the whole
   # reply in its `complete` payload, but if the stream dies before that arrives
   # the text the user just watched appear is gone unless we keep it here.
-  # Nothing arrived that a reader could use. Status updates alone are not worth
-  # a message: they describe work that did not produce anything.
-  defp save_partial_response(_session, %{text: [], code: nil} = acc) do
-    {:error, acc.apollo_error || stream_failure_message()}
-  end
-
   defp save_partial_response(session, %{text: text, code: code} = acc) do
     # Clamped, because the whole point is to keep what arrived: a reply that
     # ran past the column's limit would fail the changeset and lose the lot.
@@ -1150,20 +1151,37 @@ defmodule Lightning.AiAssistant do
       |> String.trim()
       |> String.slice(0, ChatMessage.max_content_length())
 
+    save_partial_response(session, content, code, acc)
+  end
+
+  # Nothing arrived that a reader could use, so there is nothing to keep. Status
+  # updates alone are not worth a message: they describe work that did not
+  # produce anything. Decided on the trimmed text rather than on whether any
+  # chunks arrived at all, because a reply that sent only whitespace before
+  # dying would otherwise be saved as a message reading "(no response)".
+  defp save_partial_response(_session, "", nil, acc) do
+    {:error, acc.apollo_error || stream_failure_message()}
+  end
+
+  defp save_partial_response(session, content, code, acc) do
     # Apollo telling us beats anything we can infer from how the socket died.
     message = acc.apollo_error || stream_failure_message()
 
-    case save_message(
-           session,
-           %{
-             role: :assistant,
-             content: if(content == "", do: "(no response)", else: content),
-             status: :error,
-             failure_category: :incomplete_response,
-             failure_message: message
-           },
-           code: code
-         ) do
+    attrs =
+      %{
+        role: :assistant,
+        # Only reachable with code and no text, since no text and no code is
+        # handled above. `content` is required, and yaml on its own is still
+        # worth keeping.
+        content: if(content == "", do: "(no response)", else: content),
+        status: :error,
+        failure_category: :incomplete_response,
+        failure_message: message
+      }
+      |> Map.merge(partial_meta(session))
+      |> put_partial_segments(acc)
+
+    case save_message(session, attrs, code: code) do
       {:ok, _session} ->
         {:error, message}
 
@@ -1177,6 +1195,77 @@ defmodule Lightning.AiAssistant do
 
         {:error, message}
     end
+  end
+
+  # A global chat's reply carries workflow YAML and never a job, and the flag
+  # is what says so. Without it the partial is treated as job code and has the
+  # session's job attached, so the YAML the user watched appear comes back
+  # rendered as a code suggestion.
+  defp partial_meta(session) do
+    if get_in(session.meta, ["message_options", "use_global_assistant"]) do
+      %{meta: %{"from_global" => true}}
+    else
+      %{}
+    end
+  end
+
+  defp flush_pending_text(%{pending: []} = acc), do: acc
+
+  defp flush_pending_text(%{pending: pending} = acc) do
+    content =
+      pending
+      |> Enum.reverse()
+      |> IO.iodata_to_binary()
+      |> String.trim()
+
+    acc = %{acc | pending: []}
+
+    if content == "" do
+      acc
+    else
+      append_segment(acc, %{type: :text, content: content})
+    end
+  end
+
+  defp append_segment(acc, segment),
+    do: %{acc | segments: [segment | acc.segments]}
+
+  # Only worth persisting when the reply actually had a shape to it. A stream
+  # of plain text renders the same from `content` alone, and writing a
+  # one-segment timeline for it would change how every job chat failure looks.
+  #
+  # Bounded the way the complete path bounds Apollo's own segments: an
+  # over-long, empty or over-numerous timeline would make the changeset
+  # invalid, and a partial save that fails saves nothing at all.
+  defp put_partial_segments(attrs, acc) do
+    segments =
+      acc
+      |> flush_pending_text()
+      |> Map.fetch!(:segments)
+      |> Enum.reverse()
+      |> Enum.map(&clamp_segment/1)
+      # Dropped rather than carried, matching what the complete path does with
+      # Apollo's own segments: an empty content fails the embed's
+      # validate_required, which would invalidate the whole changeset and lose
+      # the text as well - the loss this function exists to prevent. Trimmed,
+      # because validate_required trims before it checks, so whitespace alone
+      # fails it too.
+      |> Enum.reject(&(String.trim(&1.content) == ""))
+      |> Enum.take(ChatMessage.max_response_segments())
+
+    if Enum.any?(segments, &(&1.type == :status)) do
+      Map.put(attrs, :response_segments, segments)
+    else
+      attrs
+    end
+  end
+
+  defp clamp_segment(%{content: content} = segment) do
+    %{
+      segment
+      | content:
+          String.slice(content, 0, ChatMessage.Segment.max_content_length())
+    }
   end
 
   # The adapter records why a stream stopped; without it we only know that it
@@ -1283,13 +1372,19 @@ defmodule Lightning.AiAssistant do
           Map.take(segment, ["type", "content"])
         )
 
+        # Close off the text that came before it, so a partial save keeps the
+        # same order the user watched.
+        acc
+        |> flush_pending_text()
+        |> append_segment(%{type: :status, content: content})
+
       _ ->
         Logger.warning(
           "Dropping malformed status event for session #{session_id}"
         )
-    end
 
-    acc
+        acc
+    end
   end
 
   # Bridge event: log — skip Python stdout
@@ -1321,7 +1416,7 @@ defmodule Lightning.AiAssistant do
     broadcast_streaming_chunk(session_id, text)
     # Prepended and reversed on save - cheaper than repeatedly appending to a
     # binary for a reply that can run to thousands of chunks.
-    %{acc | text: [text | acc.text]}
+    %{acc | text: [text | acc.text], pending: [text | acc.pending]}
   end
 
   defp handle_stream_event(
