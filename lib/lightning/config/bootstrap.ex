@@ -306,7 +306,19 @@ defmodule Lightning.Config.Bootstrap do
       plugins: [
         {Oban.Plugins.Cron, crontab: all_cron}
       ],
-      shutdown_grace_period: :timer.minutes(2),
+      # Should exceed MessageProcessor.timeout/1: below it, an AI job interrupted
+      # by a deploy is killed after Oban's producer has stopped, so no telemetry
+      # fires and nothing reports the failure. Application start warns if that
+      # inverts.
+      #
+      # It only has that effect if the platform lets the node live that long.
+      # Kubernetes force-kills after terminationGracePeriodSeconds, which is
+      # unset in our manifests and so defaults to 30s - well short of this.
+      # Until that is raised a deploy landing on a running AI job still severs
+      # it, and StuckMessageReaper is what recovers the message rather than the
+      # :stop handler. Raising it trades slower rolling restarts for users
+      # keeping an in-flight answer.
+      shutdown_grace_period: :timer.minutes(6),
       dispatch_cooldown: 100,
       queues: [
         scheduler: 1,

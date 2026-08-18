@@ -157,6 +157,33 @@ defmodule Lightning.ObanManagerTest do
       updated_message = Repo.get!(ChatMessage, message.id)
       assert updated_message.status == :success
     end
+
+    # A raise here detaches the handler from every event it registered for, so
+    # a message deleted mid-run would silently end Oban error reporting for the
+    # rest of the node's life.
+    test "survives a message deleted while its job was running", %{
+      message: message,
+      oban_job: oban_job
+    } do
+      Repo.delete!(message)
+
+      error = %Oban.TimeoutError{reason: :timeout}
+      meta = %{job: oban_job, error: error, stacktrace: []}
+      measure = %{duration: 1_000, memory: 1_000, reductions: 1_000}
+
+      expect(Lightning.MockSentry, :capture_message, fn _, _ -> :ok end)
+
+      # Without the nil clause this raises CaseClauseError, so returning at all
+      # is the assertion.
+      capture_log(fn ->
+        assert ObanManager.handle_event(
+                 [:oban, :job, :exception],
+                 measure,
+                 meta,
+                 self()
+               )
+      end)
+    end
   end
 
   describe "handle_event/4 for other queues" do
@@ -292,6 +319,26 @@ defmodule Lightning.ObanManagerTest do
       assert reloaded.status == message.status
     end
 
+    # :stop fires for every successful job in every queue, so this is the
+    # busiest path we have. A raise here takes Oban reporting down with it.
+    test "survives a message deleted while its job was running", %{
+      message: message,
+      oban_job: oban_job
+    } do
+      Repo.delete!(message)
+
+      expect(Lightning.MockSentry, :capture_message, fn _, _ -> :ok end)
+
+      capture_log(fn ->
+        assert ObanManager.handle_event(
+                 [:oban, :job, :stop],
+                 %{duration: 1_000, memory: 1_000, reductions: 1_000},
+                 %{job: oban_job, state: :cancelled},
+                 self()
+               )
+      end)
+    end
+
     test "marks message error on non-success stop and broadcasts", %{
       message: message,
       oban_job: oban_job
@@ -330,6 +377,29 @@ defmodule Lightning.ObanManagerTest do
       updated = Repo.get!(ChatMessage, message.id)
       assert updated.status == :error
       assert updated.processing_completed_at != nil
+    end
+
+    # Every other test here calls handle_event/4 directly, which passes whether
+    # or not the event is attached in Lightning.Application. This one emits the
+    # event instead.
+    test "runs when a :stop event is emitted, not only when called directly", %{
+      message: message,
+      oban_job: oban_job
+    } do
+      {:ok, _} =
+        Repo.update(Ecto.Changeset.change(message, %{status: :processing}))
+
+      expect(Lightning.MockSentry, :capture_message, fn _msg, _opts -> :ok end)
+
+      capture_log([level: :warning], fn ->
+        :telemetry.execute(
+          [:oban, :job, :stop],
+          %{duration: 2_000, memory: 2_000, reductions: 2_000},
+          %{job: oban_job, state: :cancelled}
+        )
+      end)
+
+      assert Repo.get!(ChatMessage, message.id).status == :error
     end
 
     test "ignores stop for non-AI queues" do
