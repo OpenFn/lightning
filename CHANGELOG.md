@@ -21,6 +21,8 @@ and this project adheres to
 
 ### Fixed
 
+## [2.18.0] - 2026-08-20
+
 ## [2.18.0-pre2] - 2026-08-18
 
 ### Added
@@ -29,7 +31,6 @@ and this project adheres to
   from the `meta` global, alongside the run id it already had:
   `meta.workOrderId`, `meta.workflowId` and `meta.projectId`. Needs a worker on
   1.29.1 or later. [#5062](https://github.com/OpenFn/lightning/pull/5062)
-
 
 ### Changed
 
