@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.18.0-pre",
+      version: "2.18.0",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -114,7 +114,6 @@ defmodule Lightning.MixProject do
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.26"},
       {:git_hooks, "~> 0.9.0", only: [:dev], runtime: false},
-      {:google_api_storage, "~> 0.46.0"},
       # Overridden because phoenix_swoosh 1.2.1 (latest) still declares
       # hackney ~> 1.10. It never actually calls hackney, so the constraint is
       # dead weight, but it has to be overridden to resolve.

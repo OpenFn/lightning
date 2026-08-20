@@ -1,15 +1,18 @@
 /**
- * Read-only diagram preview of a template, rendered straight from its YAML.
+ * Read-only diagram of a workflow state, drawn without the editor.
  *
  * This deliberately does NOT go through WorkflowStore, the Y.Doc, or the
  * Phoenix channel. It reuses only the pure parts of the diagram stack —
  * `fromWorkflow`, the Dagre `layout`, and the node/edge components — so a
- * template can be looked at without a workflow existing anywhere. Browsing
- * templates therefore has no side effects: nothing is created until the user
- * explicitly asks for it.
+ * workflow can be looked at before one exists anywhere. Showing a preview
+ * therefore has no side effects: nothing is created until the user explicitly
+ * asks for it.
+ *
+ * It takes a parsed `WorkflowState` rather than anything template-shaped, so
+ * whoever renders it owns the parse and can report a failure in its own words.
  *
  * The preview draws shape only — node names, adaptors and how they connect.
- * Job bodies are parsed and discarded.
+ * Job bodies are carried in the state and never displayed.
  */
 
 import {
@@ -20,7 +23,7 @@ import {
   ReactFlowProvider,
   useReactFlow,
 } from '@xyflow/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 
 import { FIT_PADDING } from '#/workflow-diagram/constants';
 import edgeTypes from '#/workflow-diagram/edges';
@@ -29,43 +32,52 @@ import nodeTypes from '#/workflow-diagram/nodes';
 import type { Flow, Lightning } from '#/workflow-diagram/types';
 import fromWorkflow from '#/workflow-diagram/util/from-workflow';
 
-import type { Template } from '../types/template';
+import type { WorkflowState } from '../../yaml/types';
 import { createEmptyRunInfo } from '../utils/runStepsTransformer';
-import { tryTemplateToWorkflowState } from '../utils/templateWorkflowState';
 
 import { ErrorBoundary } from './common/ErrorBoundary';
 
 const EMPTY_MODEL: Flow.Model = { nodes: [], edges: [] };
 
-export interface TemplatePreviewProps {
-  template: Template;
+export interface WorkflowPreviewProps {
+  state: WorkflowState;
 }
 
-export function TemplatePreview({ template }: TemplatePreviewProps) {
+// Memoised because hosts re-render for reasons that have nothing to do with the
+// diagram — scrolling a list beside it, say — and re-running a ReactFlow tree
+// is not cheap. `state` is the only prop, so a host that keeps it stable, as
+// one parsing under useMemo does, redraws only when the workflow itself
+// changes.
+export const WorkflowPreview = memo(function WorkflowPreview({
+  state,
+}: WorkflowPreviewProps) {
   // The boundary is the outermost layer on purpose: the preview is a nicety,
-  // and it must never be able to take the template browser — or the workflow
-  // creation path behind it — down with it. Callers key this component by
-  // template id, so switching template also resets a tripped boundary.
+  // and it must never be able to take its host — or the workflow creation path
+  // behind it — down with it. Callers key this component by whatever they are
+  // previewing, so switching also resets a tripped boundary.
   //
   // Each preview gets its own ReactFlowProvider so it cannot share viewport or
   // node state with the real canvas.
   return (
     <ErrorBoundary
-      label="Template preview"
-      // No retry: re-rendering the same template would fail the same way, and
-      // the user's way out is simply to pick another one.
-      fallback={() => (
-        <PreviewFallback message="This template can't be previewed." />
-      )}
+      label="WorkflowPreview"
+      // No retry: re-rendering the same state would fail the same way, and the
+      // user's way out is simply to pick something else.
+      fallback={() => <PreviewMessage message="This can't be previewed." />}
     >
       <ReactFlowProvider>
-        <TemplatePreviewFlow template={template} />
+        <WorkflowPreviewFlow state={state} />
       </ReactFlowProvider>
     </ErrorBoundary>
   );
-}
+});
 
-function PreviewFallback({
+/**
+ * The preview pane's text state — "nothing selected", "can't be read", and the
+ * boundary's fallback all look the same, so they share one component rather
+ * than three copies of the same centred paragraph.
+ */
+export function PreviewMessage({
   message,
   detail,
 }: {
@@ -87,33 +99,27 @@ function PreviewFallback({
   );
 }
 
-function TemplatePreviewFlow({ template }: TemplatePreviewProps) {
+function WorkflowPreviewFlow({ state }: WorkflowPreviewProps) {
   const flow = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
   const [model, setModel] = useState<Flow.Model>(EMPTY_MODEL);
 
-  // A user-published template can contain YAML we can't parse. That must not
-  // take the modal down with it. The modal parses the same template to decide
-  // whether Create is offered at all, so both land on the same verdict.
-  const parsed = useMemo(
-    () => tryTemplateToWorkflowState(template),
-    [template]
-  );
-
   useEffect(() => {
-    if (!parsed.state) {
-      setModel(EMPTY_MODEL);
-      return;
-    }
+    const { jobs, triggers, edges, positions } = state;
 
-    const { jobs, triggers, edges } = parsed.state;
+    // Authored positions are the ones that get applied when this state is
+    // turned into a real workflow, so draw those rather than laying out fresh.
+    // Otherwise the preview shows a tidy Dagre graph and the created workflow
+    // opens in whatever arrangement its author left behind.
+    //
+    // A partial set is treated as none: every node needs a position, and
+    // falling back to a full layout beats inventing the missing ones.
+    const placed =
+      positions && [...jobs, ...triggers].every(node => positions[node.id])
+        ? positions
+        : null;
 
     // `disabled: true` suppresses the placeholder "+" affordances on nodes.
-    // Positions are passed empty so Dagre always lays the preview out fresh: a
-    // template's own `pos` values were authored against a full-size canvas, and
-    // reusing them here would push nodes out of this much smaller pane. The
-    // preview therefore shows the shape of the workflow, not the exact layout
-    // the user will land on after creating it.
     // The cast is pre-existing type debt shared with WorkflowDiagram.tsx: the
     // YAML state types and the diagram's Lightning.* types describe the same
     // data but are declared separately.
@@ -124,11 +130,21 @@ function TemplatePreviewFlow({ template }: TemplatePreviewProps) {
         edges,
         disabled: true,
       } as unknown as Lightning.Workflow,
-      {},
+      placed ?? {},
       EMPTY_MODEL,
       createEmptyRunInfo(),
       null
     );
+
+    if (placed) {
+      // `layout` runs Dagre unconditionally, so authored positions only survive
+      // if it is skipped entirely. Framing is still ReactFlow's job: `fitView`
+      // below fits whatever bounds these positions produce, down to the
+      // `minZoom` floor — an arrangement spread wider than that shows its
+      // middle only, and panning and zooming are off.
+      setModel(initial);
+      return;
+    }
 
     const rect = containerRef.current?.getBoundingClientRect();
     void layout(
@@ -142,24 +158,21 @@ function TemplatePreviewFlow({ template }: TemplatePreviewProps) {
       // Deliberately no `forceFit`: framing the graph is left to ReactFlow's
       // own `fitView` prop below. `forceFit` would fit on a fixed 20ms timer,
       // which both races node measurement and outlives this component when the
-      // user switches template — ReactFlow instead holds the fit until the
-      // nodes are measured, then runs it once.
+      // caller switches to another workflow — ReactFlow instead holds the fit
+      // until the nodes are measured, then runs it once.
       { duration: false }
     );
-  }, [parsed, flow]);
-
-  if (parsed.error) {
-    return (
-      <PreviewFallback
-        message="This template can't be previewed."
-        detail={parsed.error}
-      />
-    );
-  }
+  }, [state, flow]);
 
   return (
     <div ref={containerRef} className="h-full w-full">
       <ReactFlow
+        // Without this the diagram is an unlabelled graphics region. The name
+        // comes from the state rather than the caller so every host gets one;
+        // it can be blank, since the blank-workflow YAML ships without a name.
+        aria-label={
+          state.name ? `Preview of ${state.name}` : 'Workflow preview'
+        }
         nodes={model.nodes}
         edges={model.edges}
         nodeTypes={nodeTypes as unknown as NodeTypes}

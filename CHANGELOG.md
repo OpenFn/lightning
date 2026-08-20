@@ -25,14 +25,34 @@ and this project adheres to
 
 ### Changed
 
-- Bumped bundled worker to version 1.29.0
 - Remove the unreachable, non-streaming code in the AI assistant
   [#5046](https://github.com/OpenFn/lightning/issues/5046)
-
 - The global chat now starts streaming Apollo's response earlier, so users wait
   less before seeing output. Lightning handles the several streaming event types
   Apollo sends, including status updates.
   [#4969](https://github.com/OpenFn/lightning/pull/4969)
+
+### Fixed
+
+- The AI assistant no longer appends " 1" to a workflow's name each time it
+  edits an already-saved workflow. Name-uniqueness validation now excludes the
+  workflow being edited, so its own name isn't treated as a clash.
+  [#5009](https://github.com/OpenFn/lightning/pull/5009)
+
+## [2.18.0] - 2026-08-20
+
+## [2.18.0-pre2] - 2026-08-18
+
+### Added
+
+- Job code can now read the work order, workflow and project a run belongs to
+  from the `meta` global, alongside the run id it already had:
+  `meta.workOrderId`, `meta.workflowId` and `meta.projectId`. Needs a worker on
+  1.29.1 or later. [#5062](https://github.com/OpenFn/lightning/pull/5062)
+
+### Changed
+
+- Bumped bundled worker to version 1.29.1
 - The collaboration supervision tree is no longer tied to a single set of global
   process names. The registry, dynamic supervisor and `:pg` scope a tree owns
   are described by a `Lightning.Collaboration.Instance` struct whose defaults
@@ -49,19 +69,13 @@ and this project adheres to
 - `Lightning.Collaborate.start/2` now only tears down a collaboration document
   when that call created it. A caller that raced another's start could
   previously stop a document other sessions were using.
-
-### Fixed
-
 - `APOLLO_TIMEOUT` now governs every request to Apollo, including the streaming
   requests all AI chats use. Streaming previously read an internal timeout key
   that no environment could set, so it was always 120s regardless of
   configuration; that dead key is removed.
   [#5043](https://github.com/OpenFn/lightning/pull/5043)
 
-- The AI assistant no longer appends " 1" to a workflow's name each time it
-  edits an already-saved workflow. Name-uniqueness validation now excludes the
-  workflow being edited, so its own name isn't treated as a clash.
-  [#5009](https://github.com/OpenFn/lightning/pull/5009)
+### Fixed
 
 ### Security
 
@@ -74,6 +88,20 @@ and this project adheres to
   ([EEF-CVE-2026-66838](https://osv.dev/vulnerability/EEF-CVE-2026-66838)). The
   affected `Postgrex.stream/4` option isn't something Lightning uses directly;
   the failing audit was blocking CI's lint job on every branch.
+
+## [2.18.0-pre1] - 2026-08-06
+
+### Changed
+
+- Template modal preview UI improvements.
+  [#4848](https://github.com/OpenFn/lightning/issues/4848)
+
+### Fixed
+
+- History exports to Google Cloud Storage crashed after the Tesla 1.18.3
+  security update, which no longer accepts the atom-labelled multipart parts
+  that `google_gax` builds.
+  [#5049](https://github.com/OpenFn/lightning/issues/5049)
 
 ## [2.18.0-pre] - 2026-07-31
 

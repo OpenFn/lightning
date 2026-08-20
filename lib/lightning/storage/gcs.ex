@@ -4,9 +4,14 @@ defmodule Lightning.Storage.GCS do
 
   It implements the `Lightning.Storage.Backend` behaviour to manage file storage operations in Google Cloud Storage. This includes storing files to GCS buckets and generating signed URLs for secure access to the stored files.
 
+  Requests are made against the GCS JSON API directly, with a bearer token from
+  `Lightning.Storage.GCS.TokenSource`. All object paths are prefixed with the
+  configured `STORAGE_PATH` before they reach the API.
+
   ## Responsibilities
 
   - **Storing Files**: The `store/2` function uploads files from a local source path to a specified destination path within a GCS bucket.
+  - **Deleting Files**: The `delete/1` function removes an object from the bucket.
   - **Generating Signed URLs**: The `get_url/1` function generates a signed URL for accessing a file stored in GCS. This signed URL is valid for a limited time (default 1 hour).
   - **Configuration**: The module relies on application configuration to determine the GCS bucket and Google API connection settings.
 
@@ -22,31 +27,33 @@ defmodule Lightning.Storage.GCS do
   """
   @behaviour Lightning.Storage.Backend
 
-  alias GoogleApi.Storage.V1.Api.Objects
-  alias GoogleApi.Storage.V1.Model.Object
+  alias Lightning.Storage.GCS.TokenSource
+
+  @host "https://storage.googleapis.com"
 
   @impl true
   def store(source_path, destination_path) do
-    {:ok, destination_path} = prefix_storage_path(destination_path)
-
-    object = %Object{name: destination_path, bucket: bucket!()}
-
-    Objects.storage_objects_insert_simple(
-      conn(),
-      bucket!(),
-      "multipart",
-      object,
-      source_path
-    )
+    with {:ok, destination_path} <- prefix_storage_path(destination_path) do
+      conn()
+      |> Tesla.post(
+        "#{@host}/upload/storage/v1/b/#{encode(bucket!())}/o",
+        stream_file(source_path),
+        query: [uploadType: "media", name: destination_path],
+        headers: [{"content-type", "application/octet-stream"}]
+      )
+      |> handle_response()
+    end
   end
 
   @impl true
   def delete(object_path) do
-    Objects.storage_objects_delete(
-      conn(),
-      bucket!(),
-      object_path
-    )
+    with {:ok, object_path} <- prefix_storage_path(object_path) do
+      conn()
+      |> Tesla.delete(
+        "#{@host}/storage/v1/b/#{encode(bucket!())}/o/#{encode(object_path)}"
+      )
+      |> handle_response()
+    end
   end
 
   @impl true
@@ -67,19 +74,44 @@ defmodule Lightning.Storage.GCS do
      )}
   end
 
+  defp handle_response({:ok, %Tesla.Env{status: status} = env})
+       when status in 200..299,
+       do: {:ok, env}
+
+  defp handle_response({:ok, %Tesla.Env{} = env}), do: {:error, env}
+  defp handle_response({:error, reason}), do: {:error, reason}
+
+  # Wrapped in Stream.map/2 so it is a %Stream{}, which is what the Tesla
+  # adapters match on to send a chunked body. A bare %File.Stream{} isn't.
+  defp stream_file(source_path) do
+    source_path
+    |> File.stream!(64 * 1024)
+    |> Stream.map(& &1)
+  end
+
+  # Object paths are a single path segment in the JSON API, so "/" has to be
+  # escaped to %2F rather than left as a separator.
+  defp encode(segment), do: URI.encode(segment, &URI.char_unreserved?/1)
+
   defp bucket! do
-    Application.get_env(:lightning, Lightning.Storage, [])
-    |> Keyword.fetch!(:bucket)
+    Lightning.Config.storage(:bucket) ||
+      raise "No GCS bucket configured. Set GCS_BUCKET when STORAGE_BACKEND=gcs."
   end
 
   defp conn do
-    {:ok, token} = Goth.fetch(Lightning.Google)
-    GoogleApi.Storage.V1.Connection.new(token.token)
+    {:ok, token} = TokenSource.fetch()
+
+    Tesla.client([
+      {Tesla.Middleware.Headers, [{"authorization", "Bearer #{token.token}"}]}
+    ])
   end
 
   defp prefix_storage_path(destination_path) do
-    Path.safe_relative(
-      Path.join(Lightning.Config.storage(:path), destination_path)
-    )
+    path = Path.join(Lightning.Config.storage(:path), destination_path)
+
+    case Path.safe_relative(path) do
+      {:ok, safe_path} -> {:ok, safe_path}
+      :error -> {:error, {:unsafe_storage_path, path}}
+    end
   end
 end
