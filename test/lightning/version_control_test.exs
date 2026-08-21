@@ -709,7 +709,7 @@ defmodule Lightning.VersionControlTest do
 
       Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
         assert env.url == "https://api.github.com/user/installations"
-        assert {"authorization", "Bearer access-token"} in env.headers
+        assert {"Authorization", "Bearer access-token"} in env.headers
         {:ok, %Tesla.Env{status: 401, body: %{"message" => "Bad credentials"}}}
       end)
 
@@ -720,7 +720,7 @@ defmodule Lightning.VersionControlTest do
 
       Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
         assert env.url == "https://api.github.com/user/installations"
-        assert {"authorization", "Bearer refreshed-access-token"} in env.headers
+        assert {"Authorization", "Bearer refreshed-access-token"} in env.headers
         {:ok, %Tesla.Env{status: 200, body: installations}}
       end)
 
@@ -743,8 +743,7 @@ defmodule Lightning.VersionControlTest do
             "access_token" => "expired-access-token",
             "refresh_token" => "refresh-0",
             "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
-            "refresh_token_expires_at" =>
-              DateTime.utc_now() |> DateTime.add(500)
+            "refresh_token_expires_at" => DateTime.utc_now() |> DateTime.add(500)
           }
         )
         |> Repo.reload!()
@@ -777,7 +776,7 @@ defmodule Lightning.VersionControlTest do
 
       Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
         assert env.url == "https://api.github.com/user/installations"
-        assert {"authorization", "Bearer access-1"} in env.headers
+        assert {"Authorization", "Bearer access-1"} in env.headers
         {:ok, %Tesla.Env{status: 401, body: %{"message" => "Bad credentials"}}}
       end)
 
@@ -789,7 +788,7 @@ defmodule Lightning.VersionControlTest do
 
       Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
         assert env.url == "https://api.github.com/user/installations"
-        assert {"authorization", "Bearer access-2"} in env.headers
+        assert {"Authorization", "Bearer access-2"} in env.headers
         {:ok, %Tesla.Env{status: 200, body: installations}}
       end)
 
