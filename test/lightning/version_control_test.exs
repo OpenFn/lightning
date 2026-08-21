@@ -8,6 +8,7 @@ defmodule Lightning.VersionControlTest do
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Repo
   alias Lightning.VersionControl
+  alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.Workflows.Snapshot
 
@@ -686,6 +687,183 @@ defmodule Lightning.VersionControlTest do
     defp path_to_config(repo_connection) do
       ProjectRepoConnection.config_path(repo_connection)
       |> Path.relative_to(".")
+    end
+  end
+
+  describe "fetch_user_installations/1" do
+    test "refreshes a rejected access token, persists it, and retries once" do
+      user = user_with_valid_github_oauth()
+
+      refreshed_token = %{
+        "access_token" => "refreshed-access-token",
+        "refresh_token" => "refreshed-refresh-token",
+        "expires_in" => 3600,
+        "refresh_token_expires_in" => 7200
+      }
+
+      installations = %{
+        "installations" => [
+          %{"id" => 1234, "account" => %{"type" => "User", "login" => "user"}}
+        ]
+      }
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://api.github.com/user/installations"
+        assert {"authorization", "Bearer access-token"} in env.headers
+        {:ok, %Tesla.Env{status: 401, body: %{"message" => "Bad credentials"}}}
+      end)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://github.com/login/oauth/access_token"
+        {:ok, %Tesla.Env{status: 200, body: refreshed_token}}
+      end)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://api.github.com/user/installations"
+        assert {"authorization", "Bearer refreshed-access-token"} in env.headers
+        {:ok, %Tesla.Env{status: 200, body: installations}}
+      end)
+
+      assert {:ok, ^installations} =
+               VersionControl.fetch_user_installations(user)
+
+      updated_user = Repo.reload!(user)
+
+      assert updated_user.github_oauth_token["access_token"] ==
+               "refreshed-access-token"
+
+      assert updated_user.github_oauth_token["refresh_token"] ==
+               "refreshed-refresh-token"
+    end
+
+    test "uses the rotated refresh token after a proactive token refresh" do
+      user =
+        insert(:user,
+          github_oauth_token: %{
+            "access_token" => "expired-access-token",
+            "refresh_token" => "refresh-0",
+            "expires_at" => DateTime.utc_now() |> DateTime.add(-20),
+            "refresh_token_expires_at" =>
+              DateTime.utc_now() |> DateTime.add(500)
+          }
+        )
+        |> Repo.reload!()
+
+      proactively_refreshed_token = %{
+        "access_token" => "access-1",
+        "refresh_token" => "refresh-1",
+        "expires_in" => 3600,
+        "refresh_token_expires_in" => 7200
+      }
+
+      recovered_token = %{
+        "access_token" => "access-2",
+        "refresh_token" => "refresh-2",
+        "expires_in" => 3600,
+        "refresh_token_expires_in" => 7200
+      }
+
+      installations = %{
+        "installations" => [
+          %{"id" => 1234, "account" => %{"type" => "User", "login" => "user"}}
+        ]
+      }
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://github.com/login/oauth/access_token"
+        assert env.query[:refresh_token] == "refresh-0"
+        {:ok, %Tesla.Env{status: 200, body: proactively_refreshed_token}}
+      end)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://api.github.com/user/installations"
+        assert {"authorization", "Bearer access-1"} in env.headers
+        {:ok, %Tesla.Env{status: 401, body: %{"message" => "Bad credentials"}}}
+      end)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://github.com/login/oauth/access_token"
+        assert env.query[:refresh_token] == "refresh-1"
+        {:ok, %Tesla.Env{status: 200, body: recovered_token}}
+      end)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://api.github.com/user/installations"
+        assert {"authorization", "Bearer access-2"} in env.headers
+        {:ok, %Tesla.Env{status: 200, body: installations}}
+      end)
+
+      assert {:ok, ^installations} =
+               VersionControl.fetch_user_installations(user)
+
+      updated_user = Repo.reload!(user)
+
+      assert updated_user.github_oauth_token["access_token"] == "access-2"
+      assert updated_user.github_oauth_token["refresh_token"] == "refresh-2"
+    end
+
+    test "returns invalid oauth token when the grant cannot be refreshed" do
+      user =
+        insert(:user,
+          github_oauth_token: %{"access_token" => "access-token"}
+        )
+
+      expect_get_user_installations(401, %{"message" => "Bad credentials"})
+
+      assert {:error, %GithubError{code: :invalid_oauth_token}} =
+               VersionControl.fetch_user_installations(user)
+    end
+
+    test "returns invalid oauth token when GitHub rejects the refresh" do
+      user = user_with_valid_github_oauth()
+
+      expect_get_user_installations(401, %{"message" => "Bad credentials"})
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://github.com/login/oauth/access_token"
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{"error" => "bad_refresh_token"}
+         }}
+      end)
+
+      assert {:error, %GithubError{code: :invalid_oauth_token}} =
+               VersionControl.fetch_user_installations(user)
+    end
+
+    test "stops after the retried installations request is unauthorized" do
+      user = user_with_valid_github_oauth()
+
+      expect_get_user_installations(401, %{"message" => "Bad credentials"})
+
+      refreshed_token = %{
+        "access_token" => "refreshed-access-token",
+        "refresh_token" => "refreshed-refresh-token",
+        "expires_in" => 3600,
+        "refresh_token_expires_in" => 7200
+      }
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://github.com/login/oauth/access_token"
+        {:ok, %Tesla.Env{status: 200, body: refreshed_token}}
+      end)
+
+      expect_get_user_installations(401, %{"message" => "Still unauthorized"})
+
+      assert {:error, %GithubError{code: :invalid_oauth_token}} =
+               VersionControl.fetch_user_installations(user)
+    end
+
+    test "returns non-authentication errors without refreshing" do
+      user = user_with_valid_github_oauth()
+      error_body = %{"message" => "Internal Server Error"}
+
+      expect_get_user_installations(500, error_body)
+
+      assert {:error, ^error_body} =
+               VersionControl.fetch_user_installations(user)
     end
   end
 

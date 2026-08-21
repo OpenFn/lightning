@@ -34,6 +34,9 @@ and this project adheres to
 
 ### Fixed
 
+- GitHub Sync now refreshes and retries a rejected OAuth token once when loading
+  app installations, and directs users to reconnect their account when recovery
+  is not possible. [#4972](https://github.com/OpenFn/lightning/issues/4972)
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.

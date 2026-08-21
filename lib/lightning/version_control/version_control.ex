@@ -196,14 +196,80 @@ defmodule Lightning.VersionControl do
   def fetch_user_installations(user) do
     with {:ok, access_token} <- fetch_user_access_token(user),
          {:ok, client} <- GithubClient.build_bearer_client(access_token) do
-      case GithubClient.get_installations(client) do
-        {:ok, %{body: body}} ->
-          {:ok, body}
+      case request_user_installations(client) do
+        {:unauthorized, body} ->
+          refresh_and_retry_user_installations(user, body)
 
-        {:error, %{body: body}} ->
-          {:error, body}
+        result ->
+          result
       end
     end
+  end
+
+  defp request_user_installations(client) do
+    case GithubClient.get_installations(client) do
+      {:ok, %{body: body}} ->
+        {:ok, body}
+
+      {:error, %{status: 401, body: body}} ->
+        {:unauthorized, body}
+
+      {:error, %{body: body}} ->
+        {:error, body}
+    end
+  end
+
+  defp refresh_and_retry_user_installations(user, unauthorized_body) do
+    with %User{} = user <- Repo.reload(user),
+         {:ok, refresh_token} <- usable_refresh_token(user.github_oauth_token),
+         {:ok, refreshed_token} <- refresh_oauth_token(refresh_token),
+         {:ok, _user} <- save_oauth_token(user, refreshed_token, notify: false),
+         {:ok, client} <-
+           GithubClient.build_bearer_client(refreshed_token["access_token"]) do
+      case request_user_installations(client) do
+        {:unauthorized, body} -> {:error, invalid_oauth_token(body)}
+        result -> result
+      end
+    else
+      _error -> {:error, invalid_oauth_token(unauthorized_body)}
+    end
+  end
+
+  defp usable_refresh_token(%{"refresh_token" => refresh_token} = token)
+       when is_binary(refresh_token) and refresh_token != "" do
+    case token["refresh_token_expires_at"] do
+      nil ->
+        {:ok, refresh_token}
+
+      expiry ->
+        if oauth_expiry_valid?(expiry),
+          do: {:ok, refresh_token},
+          else: {:error, :expired_refresh_token}
+    end
+  end
+
+  defp usable_refresh_token(_token), do: {:error, :missing_refresh_token}
+
+  defp oauth_expiry_valid?(%DateTime{} = expiry) do
+    DateTime.after?(expiry, DateTime.utc_now())
+  end
+
+  defp oauth_expiry_valid?(expiry) when is_binary(expiry) do
+    case DateTime.from_iso8601(expiry) do
+      {:ok, expiry, _offset} -> oauth_expiry_valid?(expiry)
+      {:error, _reason} -> false
+    end
+  end
+
+  defp oauth_expiry_valid?(_expiry), do: false
+
+  defp invalid_oauth_token(body) do
+    meta = if is_map(body), do: body, else: %{response: body}
+
+    GithubError.invalid_oauth_token(
+      "GitHub rejected the OAuth access token",
+      meta
+    )
   end
 
   def fetch_installation_repos(installation_id) do
