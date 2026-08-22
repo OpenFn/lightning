@@ -21,3 +21,6 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
   disconnect() {}
 };
+
+// jsdom does not implement Element.scrollIntoView
+Element.prototype.scrollIntoView = () => {};

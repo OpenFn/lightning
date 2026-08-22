@@ -4,7 +4,6 @@
     "lib/lightning/release.ex",
     "lib/lightning/sentry_event_filter.ex",
     "lib/mix/tasks/install_runtime.ex",
-    "test/support/*",
-    "storybook/*"
+    "test/support/*"
   ]
 }

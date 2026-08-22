@@ -213,7 +213,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         error_message(body)
 
       _error ->
-        "Oops! An error occured while connecting to GitHub. Please try again later"
+        "Oops! An error occurred while connecting to GitHub. Please try again later"
     end
   end
 
@@ -283,7 +283,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   end
 
   defp maybe_fetch_branches(
-         %{assigns: %{changeset: changeset, branches: branches}} = socket
+         %{assigns: %{changeset: changeset, branches: branches, user: user}} =
+           socket
        ) do
     installation = Ecto.Changeset.get_field(changeset, :github_installation_id)
     repo = Ecto.Changeset.get_field(changeset, :repo)
@@ -297,7 +298,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           socket,
           :branches,
           fn ->
-            branches = fetch_branches(installation, repo)
+            branches = fetch_branches(user, installation, repo)
             {:ok, %{branches: %{repo => branches}}}
           end,
           reset: true
@@ -326,9 +327,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
       repos =
         installations
-        |> Task.async_stream(fn installation ->
-          {installation["id"], fetch_repos(installation["id"])}
-        end)
+        |> Task.async_stream(
+          fn installation ->
+            {installation["id"], fetch_repos(installation["id"])}
+          end,
+          timeout: 30_000,
+          on_timeout: :kill_task
+        )
         |> Stream.filter(&match?({:ok, _}, &1))
         |> Map.new(fn {:ok, val} -> val end)
 
@@ -350,8 +355,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
-  defp fetch_branches(installation_id, repo_name) do
-    case VersionControl.fetch_repo_branches(installation_id, repo_name) do
+  defp fetch_branches(user, installation_id, repo_name) do
+    case VersionControl.fetch_repo_branches(user, installation_id, repo_name) do
       {:ok, body} ->
         body
         |> Enum.map(fn branch -> Map.take(branch, ["name"]) end)
@@ -408,6 +413,51 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   defp github_config do
     Application.get_env(:lightning, :github_app, [])
+  end
+
+  defp show_invalid_oauth_error?(installations) do
+    !installations.ok? && installations.failed &&
+      match?(
+        {:error,
+         %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}},
+        installations.failed
+      )
+  end
+
+  defp show_no_installations_warning?(installations) do
+    installations.ok? && installations.result == []
+  end
+
+  defp show_api_error?(installations) do
+    !installations.ok? && installations.failed &&
+      !match?(
+        {:error,
+         %Lightning.VersionControl.GithubError{code: :invalid_oauth_token}},
+        installations.failed
+      )
+  end
+
+  attr :title, :string, required: true
+  slot :inner_block, required: true
+
+  defp error_banner(assigns) do
+    ~H"""
+    <div class="rounded-md bg-yellow-50 p-4 mb-4" role="alert" aria-live="polite">
+      <div class="flex">
+        <div class="shrink-0">
+          <Heroicons.exclamation_triangle class="h-5 w-5 text-yellow-400" />
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">
+            {@title}
+          </h3>
+          <div class="mt-2 text-sm text-yellow-700">
+            {render_slot(@inner_block)}
+          </div>
+        </div>
+      </div>
+    </div>
+    """
   end
 
   attr :id, :string, required: true
@@ -639,6 +689,49 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   end
 
   attr :form, :map, required: true
+  attr :project_id, :string, required: true
+
+  defp config_format_toggle(assigns) do
+    ~H"""
+    <div class="mt-4">
+      <button
+        type="button"
+        class="cursor-pointer text-sm text-gray-500 hover:text-gray-700 select-none flex items-center gap-1"
+        phx-click={
+          JS.toggle(to: "#sync-version-content")
+          |> JS.toggle_class("rotate-90", to: "#sync-version-chevron")
+        }
+      >
+        <.icon
+          id="sync-version-chevron"
+          name="hero-chevron-right-mini"
+          class="h-4 w-4 transition-transform"
+        /> Advanced: use new YAML config format
+      </button>
+      <div
+        id="sync-version-content"
+        class="hidden mt-2 ml-5 p-3 bg-gray-50 rounded-md border border-gray-200"
+      >
+        <label class="flex items-center gap-3 cursor-pointer">
+          <.input type="checkbox" field={@form[:sync_version]} hidden_input={false} />
+          <span class="text-sm text-gray-700">
+            Use new <code>openfn.yaml</code> format
+          </span>
+        </label>
+        <p class="mt-1 ml-6 text-xs text-gray-500">
+          Only enable this if you want to use the new <code>openfn.yaml</code>
+          format instead of the legacy JSON config.
+        </p>
+      </div>
+    </div>
+    """
+  end
+
+  defp sync_version?(form) do
+    form[:sync_version].value in [true, "true"]
+  end
+
+  attr :form, :map, required: true
 
   defp sync_order_radio(assigns) do
     ~H"""
@@ -693,9 +786,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
                 Import from GitHub (overwrite this project)
               </label>
               <p id="deploy_first_sync_option_description" class="text-gray-500">
-                If you already have <code>config.json</code>
-                and <code>project.yaml</code>
-                files tracked on GitHub and you want to <b>overwrite</b>
+                If you already have an <code>openfn.yaml</code>
+                (or legacy <code>config.json</code>)
+                tracked on GitHub and you want to <b>overwrite</b>
                 this project on OpenFn, you can choose this advanced option.
               </p>
             </div>
@@ -749,9 +842,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
             <li>
               <.icon name="hero-document-plus" class="h-4 w-4" />
               <code>
-                ./openfn-{@project.id}-config.json -> {@form[
-                  :branch
-                ].value}
+                {config_filename(@form, @project.id)} -> {@form[:branch].value}
               </code>
             </li>
           <% end %>
@@ -760,5 +851,13 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       </span>
     </div>
     """
+  end
+
+  defp config_filename(form, project_id) do
+    if sync_version?(form) do
+      ProjectRepoConnection.path_to_openfn_yaml()
+    else
+      "openfn-#{project_id}-config.json"
+    end
   end
 end

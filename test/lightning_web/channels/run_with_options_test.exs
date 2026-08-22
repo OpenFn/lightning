@@ -17,7 +17,7 @@ defmodule LightningWeb.RunWithOptionsTest do
         |> Workflow.touch()
         |> Workflows.save_workflow(user)
 
-      %{runs: [run]} =
+      %{id: work_order_id, runs: [run]} =
         work_order_for(trigger,
           workflow: workflow,
           dataclip: dataclip = insert(:dataclip)
@@ -38,6 +38,7 @@ defmodule LightningWeb.RunWithOptionsTest do
             }
           ],
           "id" => run.id,
+          "project_id" => workflow.project_id,
           "jobs" => [
             %{
               "adaptor" => "@openfn/language-common@1.6.2",
@@ -49,7 +50,12 @@ defmodule LightningWeb.RunWithOptionsTest do
           ],
           "starting_node_id" => trigger.id,
           "triggers" => [%{"id" => trigger.id}],
-          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 300_000}
+          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 300_000},
+          "meta" => %{
+            "work_order_id" => work_order_id,
+            "workflow_id" => workflow.id,
+            "project_id" => workflow.project_id
+          }
         }
 
       run = Runs.get_for_worker(run.id)
@@ -64,7 +70,7 @@ defmodule LightningWeb.RunWithOptionsTest do
         |> Workflows.change_workflow(%{jobs: [%{id: job.id, body: "foo()"}]})
         |> Workflows.save_workflow(user)
 
-      %{runs: [run]} =
+      %{id: work_order_id, runs: [run]} =
         work_order_for(trigger,
           workflow: workflow,
           dataclip: dataclip = insert(:dataclip)
@@ -87,6 +93,7 @@ defmodule LightningWeb.RunWithOptionsTest do
             }
           ],
           "id" => run.id,
+          "project_id" => workflow.project_id,
           "jobs" => [
             %{
               "adaptor" => "@openfn/language-common@1.6.2",
@@ -98,7 +105,12 @@ defmodule LightningWeb.RunWithOptionsTest do
           ],
           "starting_node_id" => trigger.id,
           "triggers" => [%{"id" => trigger.id}],
-          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 300_000}
+          "options" => %{"output_dataclips" => true, "run_timeout_ms" => 300_000},
+          "meta" => %{
+            "work_order_id" => work_order_id,
+            "workflow_id" => workflow.id,
+            "project_id" => workflow.project_id
+          }
         }
 
       assert RunWithOptions.render(run)
@@ -112,7 +124,7 @@ defmodule LightningWeb.RunWithOptionsTest do
       tmp_dir: tmp_dir
     } do
       Mox.stub(Lightning.MockConfig, :adaptor_registry, fn ->
-        [local_adaptors_repo: tmp_dir]
+        [local_adaptors_repos: [tmp_dir]]
       end)
 
       user = insert(:user)

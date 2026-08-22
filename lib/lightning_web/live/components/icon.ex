@@ -37,6 +37,8 @@ defmodule LightningWeb.Components.Icon do
 
   def sandboxes(assigns), do: Heroicons.beaker(assigns)
 
+  def channels(assigns), do: Heroicons.arrows_right_left(assigns)
+
   def branches(assigns) do
     ~H"""
     <svg

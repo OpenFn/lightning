@@ -1,6 +1,8 @@
 defmodule Lightning.AiAssistant.UnsavedJobTest do
   use Lightning.DataCase, async: true
 
+  @moduletag :capture_log
+
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.ChatSession
 

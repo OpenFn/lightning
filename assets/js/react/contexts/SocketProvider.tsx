@@ -15,7 +15,10 @@ interface SocketContextValue {
   disconnect: () => void;
 }
 
-const SocketContext = createContext<SocketContextValue | null>(null);
+// Exported for tests that need to supply a connected socket context directly
+// (e.g. integration tests that render the real SessionProvider without
+// standing up a real PhoenixSocket).
+export const SocketContext = createContext<SocketContextValue | null>(null);
 
 export const useSocket = () => {
   const context = useContext(SocketContext);

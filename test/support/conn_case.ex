@@ -37,12 +37,20 @@ defmodule LightningWeb.ConnCase do
       import Lightning.ModelHelpers
       import Plug.HTML
 
+      use Oban.Testing, repo: Lightning.Repo
+
       setup :stub_usage_limiter_ok
     end
   end
 
   setup tags do
     Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
+
+    Mox.stub(Lightning.MockConfig, :storage, fn
+      :backend -> Lightning.Storage.Local
+      :path -> "."
+      key -> Lightning.Config.API.storage(key)
+    end)
 
     Mox.stub_with(LightningMock, Lightning.API)
 

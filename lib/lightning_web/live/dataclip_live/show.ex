@@ -18,11 +18,20 @@ defmodule LightningWeb.DataclipLive.Show do
 
   @impl true
   def handle_params(%{"id" => id}, _url, socket) do
-    {:noreply,
-     socket
-     |> assign(:id, id)
-     |> assign(:page_title, "Dataclip")
-     |> assign(:dataclip, Invocation.get_dataclip!(id))}
+    %{project: project} = socket.assigns
+
+    if Invocation.dataclip_in_project?(id, project.id) do
+      {:noreply,
+       socket
+       |> assign(:id, id)
+       |> assign(:page_title, "Dataclip")
+       |> assign(:dataclip, Invocation.get_dataclip!(id))}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "Dataclip not found")
+       |> push_navigate(to: ~p"/projects/#{project}/history")}
+    end
   end
 
   @impl true
@@ -40,7 +49,10 @@ defmodule LightningWeb.DataclipLive.Show do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker label={@project.name} />
+              <LayoutComponents.breadcrumb_project_picker
+                project={@project}
+                label={@project_label}
+              />
               <LayoutComponents.breadcrumb>
                 <:label>
                   {@page_title}

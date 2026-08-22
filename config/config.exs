@@ -10,6 +10,10 @@ import Config
 config :lightning,
   ecto_repos: [Lightning.Repo]
 
+# Apollo (AI assistant service) — see Config.Bootstrap for what the
+# timeout governs and how APOLLO_TIMEOUT overrides it.
+config :lightning, :apollo, timeout: 120_000
+
 config :lightning, Lightning.Repo,
   types: Lightning.PostgrexTypes,
   log: :debug
@@ -80,6 +84,14 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 # Set OAuth2 to use Hackney for HTTP calls
 config :oauth2, adapter: Tesla.Adapter.Hackney
 
+# hackney 4 negotiates HTTP/2 via ALPN by default, where 1.x was HTTP/1.1 only.
+# Concurrent requests to one host then multiplex onto a single connection, so
+# retiring that connection fails every in-flight request at once -- around a
+# quarter of the fetches in `mix lightning.install_schemas`. Pinned to HTTP/1.1
+# to keep the transport hackney 1.25 used; revisit as a deliberate change if we
+# want h2 multiplexing.
+config :hackney, default_protocols: [:http1]
+
 # Configure esbuild (the version is required)
 # TODO: work out how to _NOT_ have this set of entry points try and build
 # monaco-editor, since we already have a separate esbuild task for that.
@@ -102,16 +114,11 @@ config :esbuild,
          --external:/fonts/*
          --external:/images/*
          js/app.js
-         js/storybook.js
-         js/editor/Editor.tsx
          js/react/components/DataclipViewer.tsx
-         js/job-editor/JobEditor.tsx
-         js/workflow-editor/WorkflowEditor.tsx
-         js/workflow-store/WorkflowStore.tsx
-         js/manual-run-panel/ManualRunPanel.tsx
-         js/panel/panels/WorkflowRunPanel.tsx
+         js/react/components/CollectionPreviewViewer.tsx
          js/collaborative-editor/CollaborativeEditor.tsx
-         js/project-picker/ProjectPicker.tsx
+         js/picker/Picker.tsx
+         js/picker/PickerButton.tsx
          editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
          json.worker=monaco-editor/esm/vs/language/json/json.worker.js
          css.worker=monaco-editor/esm/vs/language/css/css.worker.js
@@ -143,13 +150,6 @@ config :tailwind,
       --output=priv/static/assets/app.css
     ),
     cd: Path.expand("..", __DIR__)
-  ],
-  storybook: [
-    args: ~w(
-      --input=assets/css/storybook.css
-      --output=priv/static/assets/storybook.css
-    ),
-    cd: Path.expand("..", __DIR__)
   ]
 
 # Configures Elixir's Logger
@@ -179,9 +179,29 @@ config :lightning, LightningWeb, allow_credential_transfer: false
 
 config :tesla, adapter: {Tesla.Adapter.Finch, name: Lightning.Finch}
 
+# Route server-side OAuth provider requests through the rebinding-proof egress
+# adapter, which pins the connection to a validated IP address.
+config :tesla, Lightning.AuthProviders.OauthHTTPClient,
+  adapter: {Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter, []}
+
+config :lightning, Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter,
+  block_private_networks: true,
+  allowed_hosts: []
+
+# Egress guard for the channel reverse proxy. Secure by default: block all
+# private/reserved ranges and allowlist nothing. Overridable at runtime via
+# CHANNEL_BLOCK_PRIVATE_NETWORKS and CHANNEL_ALLOWED_HOSTS (see config/bootstrap).
+config :philter,
+  block_private_networks: true,
+  allowed_hosts: []
+
 config :lightning, :is_resettable_demo, false
 config :lightning, :default_retention_period, nil
 config :lightning, :claim_work_mem, nil
+
+config :lightning, :log_lines_search_indexing, batch_size: 2_500, max_batches: 10
+
+config :lightning, :dataclip_search_indexing, batch_size: 250, max_batches: 10
 
 config :lightning, Lightning.Runtime.RuntimeManager, start: false
 

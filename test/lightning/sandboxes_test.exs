@@ -1,21 +1,28 @@
 defmodule Lightning.Projects.SandboxesTest do
   use Lightning.DataCase, async: true
+  use Mimic
 
   import Ecto.Query
   import Lightning.Factories
-  alias Lightning.Repo
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials.KeychainCredential
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Projects.Sandboxes
-  alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.WorkflowVersion
+  alias Lightning.Repo
+  alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Edge
-  alias Lightning.Invocation.Dataclip
+  alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowVersion
+
+  setup_all do
+    Mimic.copy(Lightning.Collections)
+    Mimic.copy(Lightning.Projects.Provisioner)
+    :ok
+  end
 
   defp ensure_member!(%Project{} = project, %User{} = user, role) do
     insert(:project_user, %{project: project, user: user, role: role})
@@ -303,8 +310,7 @@ defmodule Lightning.Projects.SandboxesTest do
         Sandboxes.provision(parent, actor, %{
           name: "sandbox-x",
           color: "#abcdef",
-          env: "staging",
-          collaborators: [%{user_id: actor.id, role: :owner}]
+          env: "staging"
         })
 
       sandbox = Repo.preload(sandbox, [:project_users, :project_credentials])
@@ -547,6 +553,692 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
+  describe "collections provisioning" do
+    test "clones empty collection records from parent into sandbox" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:collection, project: parent, name: "col-a")
+
+      insert(:collection,
+        project: parent,
+        name: "col-b",
+        items: [%{key: "k", value: "v"}]
+      )
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      sandbox_collections =
+        Lightning.Collections.list_project_collections(sandbox)
+
+      assert Enum.map(sandbox_collections, & &1.name) |> Enum.sort() == [
+               "col-a",
+               "col-b"
+             ]
+
+      Enum.each(sandbox_collections, fn col ->
+        assert Lightning.Collections.get_all(
+                 col,
+                 %{cursor: nil, limit: 100},
+                 nil
+               ) ==
+                 []
+      end)
+    end
+
+    test "provisioning a parent with no collections creates no sandbox collections" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      assert Lightning.Collections.list_project_collections(sandbox) == []
+    end
+
+    test "each sandbox gets its own copy of parent collections" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:collection, project: parent, name: "col-a")
+
+      {:ok, sandbox_1} = Sandboxes.provision(parent, actor, %{name: "sandbox-1"})
+      {:ok, sandbox_2} = Sandboxes.provision(parent, actor, %{name: "sandbox-2"})
+
+      assert length(Lightning.Collections.list_project_collections(sandbox_1)) ==
+               1
+
+      assert length(Lightning.Collections.list_project_collections(sandbox_2)) ==
+               1
+    end
+  end
+
+  describe "sync_collections/3" do
+    test "creates collections in target that exist in source but not target" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "shared")
+      insert(:collection, project: source, name: "only-in-source")
+      insert(:collection, project: target, name: "shared")
+
+      assert {:ok, %{created: 1, deleted: 0}} =
+               Sandboxes.sync_collections(source, target)
+
+      target_names =
+        target
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+        |> Enum.sort()
+
+      assert target_names == ["only-in-source", "shared"]
+    end
+
+    test "deletes collections in target that are missing from source, including items" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "shared")
+      insert(:collection, project: target, name: "shared")
+
+      dropped =
+        insert(:collection,
+          project: target,
+          name: "only-in-target",
+          items: [%{key: "k", value: "v"}]
+        )
+
+      assert {:ok, %{created: 0, deleted: 1}} =
+               Sandboxes.sync_collections(source, target, allow_deletions: true)
+
+      refute Lightning.Repo.get(Lightning.Collections.Collection, dropped.id)
+
+      assert Lightning.Repo.all(
+               from i in Lightning.Collections.Item,
+                 where: i.collection_id == ^dropped.id
+             ) == []
+    end
+
+    test "is a no-op when both projects have the same collections" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "a")
+      insert(:collection, project: target, name: "a")
+
+      assert {:ok, %{created: 0, deleted: 0}} =
+               Sandboxes.sync_collections(source, target)
+    end
+
+    test "fires the collection-delete hook with the combined byte size" do
+      Mox.verify_on_exit!()
+
+      source = insert(:project)
+      %{id: target_id} = target = insert(:project)
+
+      insert(:collection, project: source, name: "keep")
+      insert(:collection, project: target, name: "keep")
+
+      insert(:collection,
+        project: target,
+        name: "drop-a",
+        byte_size_sum: 120
+      )
+
+      insert(:collection,
+        project: target,
+        name: "drop-b",
+        byte_size_sum: 45
+      )
+
+      Mox.expect(
+        Lightning.Extensions.MockCollectionHook,
+        :handle_delete,
+        fn ^target_id, 165 -> :ok end
+      )
+
+      assert {:ok, %{created: 0, deleted: 2}} =
+               Sandboxes.sync_collections(source, target, allow_deletions: true)
+    end
+
+    test "does not copy collection data across" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection,
+        project: source,
+        name: "with-data",
+        items: [%{key: "k", value: "v"}]
+      )
+
+      assert {:ok, %{created: 1, deleted: 0}} =
+               Sandboxes.sync_collections(source, target)
+
+      [new_collection] = Lightning.Collections.list_project_collections(target)
+
+      assert Lightning.Collections.get_all(
+               new_collection,
+               %{cursor: nil, limit: 100},
+               nil
+             ) == []
+    end
+
+    test "runs in a single transaction -- either everything or nothing" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "to-create")
+      insert(:collection, project: target, name: "to-delete")
+
+      result =
+        Lightning.Repo.transaction(fn ->
+          {:ok, _summary} =
+            Sandboxes.sync_collections(source, target, allow_deletions: true)
+
+          Lightning.Repo.rollback(:simulated_failure)
+        end)
+
+      assert result == {:error, :simulated_failure}
+
+      target_names =
+        target
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+
+      assert target_names == ["to-delete"]
+    end
+
+    test "leaves target-only collections intact by default (fail-safe)" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "shared")
+      insert(:collection, project: target, name: "shared")
+
+      kept =
+        insert(:collection,
+          project: target,
+          name: "only-in-target",
+          items: [%{key: "k", value: "v"}]
+        )
+
+      assert {:ok, %{created: 0, deleted: 0}} =
+               Sandboxes.sync_collections(source, target)
+
+      assert Lightning.Repo.get(Lightning.Collections.Collection, kept.id)
+
+      assert Lightning.Repo.all(
+               from i in Lightning.Collections.Item,
+                 where: i.collection_id == ^kept.id
+             ) != []
+    end
+
+    test "creates source-only collections but leaves target-only intact when :allow_deletions is false" do
+      source = insert(:project)
+      target = insert(:project)
+
+      insert(:collection, project: source, name: "new-in-source")
+
+      insert(:collection,
+        project: target,
+        name: "keep-me",
+        items: [%{key: "k", value: "v"}]
+      )
+
+      assert {:ok, %{created: 1, deleted: 0}} =
+               Sandboxes.sync_collections(source, target, allow_deletions: false)
+
+      target_names =
+        target
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+
+      assert "new-in-source" in target_names
+      assert "keep-me" in target_names
+    end
+  end
+
+  defp merge_target_only_collection(actor_role) do
+    actor = insert(:user)
+    parent = insert(:project)
+    ensure_member!(parent, actor, actor_role)
+
+    insert(:simple_workflow, project: parent)
+
+    # Exists only on the target, so a merge would otherwise delete it.
+    insert(:collection,
+      project: parent,
+      name: "target-only",
+      items: [%{key: "k", value: "v"}]
+    )
+
+    sandbox =
+      insert(:project,
+        parent: parent,
+        project_users: [%{user: actor, role: :owner}]
+      )
+
+    insert(:simple_workflow, project: sandbox)
+
+    assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+    parent
+    |> Lightning.Collections.list_project_collections()
+    |> Enum.map(& &1.name)
+  end
+
+  describe "merge/4" do
+    test "imports the merge document and syncs collections" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:simple_workflow, project: parent)
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      insert(:collection, project: sandbox, name: "new-col")
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      parent_names =
+        parent
+        |> Lightning.Collections.list_project_collections()
+        |> Enum.map(& &1.name)
+
+      assert "new-col" in parent_names
+    end
+
+    test "defaults opts to empty map" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      insert(:simple_workflow, project: parent)
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+    end
+
+    test "rolls back DB changes from import_document when collection sync fails" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :owner)
+
+      sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      marker_name = "atomicity-marker-#{System.unique_integer([:positive])}"
+
+      Mimic.stub(Lightning.Projects.Provisioner, :import_document, fn target,
+                                                                      _actor,
+                                                                      _doc,
+                                                                      _opts ->
+        %Project{name: marker_name}
+        |> Ecto.Changeset.change()
+        |> Repo.insert!()
+
+        {:ok, target}
+      end)
+
+      Mimic.stub(Lightning.Collections, :list_project_collections, fn _ ->
+        raise "simulated sync failure"
+      end)
+
+      assert_raise RuntimeError, ~r/simulated sync failure/, fn ->
+        Sandboxes.merge(sandbox, parent, actor)
+      end
+
+      refute Repo.exists?(from p in Project, where: p.name == ^marker_name)
+    end
+
+    test "collection deletion during merge is gated on owner/admin" do
+      # An editor merge must not prune target-only collections, an owner merge
+      # still does.
+      assert "target-only" in merge_target_only_collection(:editor)
+      refute "target-only" in merge_target_only_collection(:owner)
+    end
+  end
+
+  # These tests document that the merge pipeline does not propagate
+  # project-level Local or Inherited fields from sandbox to parent. They
+  # guard against future changes to MergeProjects or Provisioner that
+  # could accidentally start syncing these fields.
+  describe "merge/4 does not propagate Local/Inherited fields" do
+    setup do
+      actor = insert(:user)
+
+      parent =
+        insert(:project,
+          name: "parent",
+          description: "parent description",
+          requires_mfa: false,
+          concurrency: 5,
+          retention_policy: :retain_all,
+          history_retention_period: 30,
+          dataclip_retention_period: 30
+        )
+
+      ensure_member!(parent, actor, :owner)
+      insert(:simple_workflow, project: parent)
+
+      sandbox =
+        insert(:project,
+          name: "sandbox",
+          description: "sandbox description",
+          parent: parent,
+          requires_mfa: true,
+          concurrency: 1,
+          retention_policy: :erase_all,
+          history_retention_period: 7,
+          dataclip_retention_period: nil,
+          project_users: [%{user: actor, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+      {:ok, actor: actor, parent: parent, sandbox: sandbox}
+    end
+
+    test "requires_mfa stays at parent's value", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+      assert Repo.reload(parent).requires_mfa == false
+    end
+
+    test "concurrency stays at parent's value", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+      assert Repo.reload(parent).concurrency == 5
+    end
+
+    test "retention settings stay at parent's values", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+      reloaded = Repo.reload(parent)
+      assert reloaded.retention_policy == :retain_all
+      assert reloaded.history_retention_period == 30
+      assert reloaded.dataclip_retention_period == 30
+    end
+
+    test "name and description stay at parent's values", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+      reloaded = Repo.reload(parent)
+      assert reloaded.name == "parent"
+      assert reloaded.description == "parent description"
+    end
+
+    test "collaborators are not synced from sandbox to parent", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      sandbox_only_user = insert(:user)
+
+      insert(:project_user,
+        project: sandbox,
+        user: sandbox_only_user,
+        role: :editor
+      )
+
+      parent_user_ids_before =
+        parent.id
+        |> Lightning.Projects.get_project_users!()
+        |> Enum.map(& &1.user_id)
+
+      {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+
+      parent_user_ids_after =
+        parent.id
+        |> Lightning.Projects.get_project_users!()
+        |> Enum.map(& &1.user_id)
+
+      refute sandbox_only_user.id in parent_user_ids_after
+
+      assert Enum.sort(parent_user_ids_before) ==
+               Enum.sort(parent_user_ids_after)
+    end
+  end
+
+  describe "merge/4 workflows and credentials" do
+    test "merges a new workflow from a sandbox into the parent" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      # Add a brand-new workflow to the sandbox only.
+      insert(:simple_workflow, project: sandbox, name: "NewFlow")
+
+      refute Repo.exists?(
+               from(w in Workflow,
+                 where: w.project_id == ^parent.id and w.name == "NewFlow"
+               )
+             )
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      new_workflow =
+        Workflow
+        |> Repo.get_by!(project_id: parent.id, name: "NewFlow")
+        |> Repo.preload([:jobs, :triggers, :edges])
+
+      assert length(new_workflow.jobs) == 1
+      assert length(new_workflow.triggers) == 1
+      assert length(new_workflow.edges) == 1
+    end
+
+    test "merges a credential added to an existing step in the sandbox" do
+      %{actor: actor, parent: parent, pc: pc, nodes: %{j2: parent_a2}} =
+        build_parent_fixture!(:owner)
+
+      # Start with A2 (an existing parent step) having no credential.
+      Repo.update!(Ecto.Changeset.change(parent_a2, project_credential_id: nil))
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      # The sandbox clones the parent's credential as its own project_credential
+      # referencing the same underlying credential.
+      sandbox_pc =
+        Repo.get_by!(ProjectCredential,
+          project_id: sandbox.id,
+          credential_id: pc.credential_id
+        )
+
+      # In the sandbox, add that credential to the previously-uncredentialed
+      # step.
+      sandbox
+      |> find_sandbox_job!("Alpha", "A2")
+      |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
+      |> Repo.update!()
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      # The credential added in the sandbox propagates to the parent, mapped to
+      # the parent's project_credential for the same underlying credential.
+      assert Repo.reload!(parent_a2).project_credential_id == pc.id
+    end
+
+    test "merges a new workflow in the sandbox with a step that references a credential" do
+      %{actor: actor, parent: parent, pc: pc} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      sandbox_pc =
+        Repo.get_by!(ProjectCredential,
+          project_id: sandbox.id,
+          credential_id: pc.credential_id
+        )
+
+      # Add a brand-new workflow to the sandbox whose step references the
+      # (sandbox-scoped) credential.
+      new_wf = insert(:simple_workflow, project: sandbox, name: "NewFlow")
+      [new_job] = Repo.preload(new_wf, :jobs).jobs
+
+      new_job
+      |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
+      |> Repo.update!()
+
+      # The new workflow merges into the parent, mapping the (sandbox-scoped)
+      # credential to the parent's project_credential for the same underlying
+      # credential. Without remapping, import would reject the new job's
+      # sandbox-scoped project_credential_id ("credential doesnt exist or isn't
+      # available in this project").
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      parent_new_wf =
+        Repo.get_by!(Workflow, project_id: parent.id, name: "NewFlow")
+
+      merged_job =
+        Repo.get_by!(Job, workflow_id: parent_new_wf.id, name: new_job.name)
+
+      assert merged_job.project_credential_id == pc.id
+    end
+
+    test "merges a credential removed from an existing step in the sandbox" do
+      # A1 references the credential in the parent (per build_parent_fixture!).
+      %{actor: actor, parent: parent, pc: pc, nodes: %{j1: parent_a1}} =
+        build_parent_fixture!(:owner)
+
+      assert parent_a1.project_credential_id == pc.id
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      # In the sandbox, remove the credential from the step.
+      sandbox
+      |> find_sandbox_job!("Alpha", "A1")
+      |> Ecto.Changeset.change(project_credential_id: nil)
+      |> Repo.update!()
+
+      assert {:ok, _updated} = Sandboxes.merge(sandbox, parent, actor)
+
+      # The removal propagates to the parent: the step no longer references a
+      # credential.
+      assert Repo.reload!(parent_a1).project_credential_id == nil
+    end
+  end
+
+  describe "merge/4 sandbox-only credentials" do
+    # Adds a credential that exists only in the sandbox (the target has no
+    # project_credential for its underlying credential) and wires the sandbox's
+    # A1 step to reference it. Returns the sandbox project_credential so the
+    # test can choose whether to select it for attachment.
+    defp add_sandbox_only_credential!(sandbox, actor) do
+      cred =
+        insert(:credential,
+          name: "sandbox-only",
+          body: %{"token" => "only-here"},
+          user: actor
+        )
+
+      sandbox_pc =
+        insert(:project_credential, project: sandbox, credential: cred)
+
+      sandbox
+      |> find_sandbox_job!("Alpha", "A1")
+      |> Ecto.Changeset.change(project_credential_id: sandbox_pc.id)
+      |> Repo.update!()
+
+      {cred, sandbox_pc}
+    end
+
+    test "attaches a selected sandbox-only credential to the target and the merged job references it" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      {cred, sandbox_pc} = add_sandbox_only_credential!(sandbox, actor)
+
+      refute Repo.exists?(
+               from(pc in ProjectCredential,
+                 where:
+                   pc.project_id == ^parent.id and
+                     pc.credential_id == ^cred.id
+               )
+             )
+
+      assert {:ok, _updated} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_credential_ids: [sandbox_pc.id]
+               })
+
+      parent_pc =
+        Repo.get_by!(ProjectCredential,
+          project_id: parent.id,
+          credential_id: cred.id
+        )
+
+      merged_a1 =
+        Repo.get_by!(Job,
+          workflow_id:
+            Repo.get_by!(Workflow, project_id: parent.id, name: "Alpha").id,
+          name: "A1"
+        )
+
+      assert merged_a1.project_credential_id == parent_pc.id
+    end
+
+    test "does not attach a deselected sandbox-only credential" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
+
+      {:ok, sandbox} = Sandboxes.provision(parent, actor, %{name: "sandbox-x"})
+
+      {cred, _sandbox_pc} = add_sandbox_only_credential!(sandbox, actor)
+
+      assert {:ok, _updated} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_credential_ids: []
+               })
+
+      refute Repo.exists?(
+               from(pc in ProjectCredential,
+                 where:
+                   pc.project_id == ^parent.id and
+                     pc.credential_id == ^cred.id
+               )
+             )
+
+      # The merged step drops the credential it could not map.
+      merged_a1 =
+        Repo.get_by!(Job,
+          workflow_id:
+            Repo.get_by!(Workflow, project_id: parent.id, name: "Alpha").id,
+          name: "A1"
+        )
+
+      assert merged_a1.project_credential_id == nil
+    end
+  end
+
   describe "keychains" do
     test "clones only used keychains and rewires jobs to cloned keychains" do
       %{
@@ -779,16 +1471,58 @@ defmodule Lightning.Projects.SandboxesTest do
       assert %{name: [_error_msg]} = errors_on(changeset)
     end
 
-    test "handles foreign key constraint violations in collaborators" do
-      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
-      non_existent_user_id = Ecto.UUID.generate()
+    test "rejects when the parent is already at the configured nesting depth" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
 
-      assert_raise Ecto.ConstraintError, ~r/foreign_key_constraint/, fn ->
-        Sandboxes.provision(parent, actor, %{
-          name: "test-fk-error",
-          collaborators: [%{user_id: non_existent_user_id, role: :editor}]
-        })
-      end
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+      l1 = insert(:project, parent: root)
+      ensure_member!(l1, actor, :owner)
+      l2 = insert(:project, parent: l1)
+      ensure_member!(l2, actor, :owner)
+
+      assert {:error, :nesting_too_deep} =
+               Sandboxes.provision(l2, actor, %{name: "too-deep"})
+
+      assert Repo.aggregate(
+               from(p in Project, where: p.parent_id == ^l2.id),
+               :count,
+               :id
+             ) == 0
+    end
+
+    test "succeeds when the parent is one level below the nesting cap" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 2 end)
+
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+
+      l1 = insert(:project, parent: root)
+      ensure_member!(l1, actor, :owner)
+
+      assert {:ok, %Project{} = sandbox} =
+               Sandboxes.provision(l1, actor, %{name: "just-below"})
+
+      assert sandbox.parent_id == l1.id
+    end
+
+    test "rejects every sandbox creation when the cap is set to 0" do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 0 end)
+
+      actor = insert(:user)
+      root = insert(:project)
+      ensure_member!(root, actor, :owner)
+
+      assert {:error, :nesting_too_deep} =
+               Sandboxes.provision(root, actor, %{name: "no-sandboxes"})
+
+      assert Repo.aggregate(
+               from(p in Project, where: p.parent_id == ^root.id),
+               :count,
+               :id
+             ) == 0
     end
 
     test "rolls back transaction on keychain validation failure" do
@@ -928,25 +1662,145 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
-  describe "collaborators" do
-    test "adds non-owner collaborators" do
-      %{actor: actor, parent: parent} = build_parent_fixture!(:owner)
-      other = insert(:user)
+  describe "project_users derivation from parent" do
+    test "copies every parent user with their role preserved, actor stays owner" do
+      %{actor: actor, other: other, parent: parent} =
+        build_parent_fixture!(:owner)
 
       {:ok, sandbox} =
-        Sandboxes.provision(parent, actor, %{
-          name: "sb-with-collab",
-          collaborators: [
-            %{user_id: other.id, role: :editor},
-            %{user_id: actor.id, role: :owner}
-          ]
-        })
+        Sandboxes.provision(parent, actor, %{name: "sb-derived"})
 
       sandbox = Repo.preload(sandbox, :project_users)
 
       assert Enum.any?(
                sandbox.project_users,
                &(&1.user_id == other.id and &1.role == :editor)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
+    end
+
+    test "preserves the :viewer role" do
+      actor = insert(:user)
+      viewer = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, actor, :owner)
+      ensure_member!(parent, viewer, :viewer)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-viewer"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == viewer.id and &1.role == :viewer)
+             )
+    end
+
+    test "demotes the parent owner to :admin on the sandbox" do
+      actor = insert(:user)
+      parent_owner = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, actor, :editor)
+      ensure_member!(parent, parent_owner, :owner)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-demote-owner"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == parent_owner.id and &1.role == :admin)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
+    end
+
+    test "actor is sandbox owner even if they had a non-owner role on parent" do
+      actor = insert(:user)
+      parent = insert(:project)
+      ensure_member!(parent, actor, :editor)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "sb-actor-owner"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.count(
+               sandbox.project_users,
+               &(&1.user_id == actor.id)
+             ) == 1
+    end
+
+    test "superuser actor who is not on the parent cannot provision a sandbox" do
+      superuser = insert(:user, role: :superuser)
+      parent_owner = insert(:user)
+      parent = insert(:project)
+
+      ensure_member!(parent, parent_owner, :owner)
+
+      assert {:error, :unauthorized} =
+               Sandboxes.provision(parent, superuser, %{name: "sb-superuser"})
+    end
+
+    test "still provisions cleanly when the parent has only the actor on it" do
+      actor = insert(:user)
+      parent = insert(:project, name: "solo-parent")
+
+      ensure_member!(parent, actor, :owner)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "solo-sb"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert [%{user_id: user_id, role: :owner}] = sandbox.project_users
+      assert user_id == actor.id
+    end
+
+    test "still provisions cleanly when the parent has no :owner row" do
+      # `Projects.delete_project_user!/1` and direct repo deletions bypass
+      # the Project changeset's single-owner guarantee, so the ownerless
+      # state is reachable in practice.
+      actor = insert(:user)
+      editor = insert(:user)
+      parent = insert(:project, name: "ownerless-parent")
+
+      ensure_member!(parent, actor, :admin)
+      ensure_member!(parent, editor, :editor)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{name: "ownerless-sb"})
+
+      sandbox = Repo.preload(sandbox, :project_users)
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == actor.id and &1.role == :owner)
+             )
+
+      assert Enum.any?(
+               sandbox.project_users,
+               &(&1.user_id == editor.id and &1.role == :editor)
              )
 
       assert Enum.count(sandbox.project_users, &(&1.role == :owner)) == 1
@@ -1512,6 +2366,361 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert {:error, :unauthorized} =
                Sandboxes.delete_sandbox(sandbox.id, actor)
+    end
+  end
+
+  describe "schedule_sandbox_deletion/2" do
+    test "sets scheduled_deletion on the target sandbox" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      assert {:ok, scheduled} =
+               Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      assert %DateTime{} = scheduled.scheduled_deletion
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion != nil
+    end
+
+    test "uses PURGE_DELETED_AFTER_DAYS to compute the grace period" do
+      previous = Application.get_env(:lightning, :purge_deleted_after_days)
+      Application.put_env(:lightning, :purge_deleted_after_days, 7)
+
+      on_exit(fn ->
+        Application.put_env(:lightning, :purge_deleted_after_days, previous)
+      end)
+
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      before = DateTime.utc_now()
+      {:ok, scheduled} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      diff_seconds = DateTime.diff(scheduled.scheduled_deletion, before)
+      assert diff_seconds in (7 * 86_400 - 5)..(7 * 86_400 + 5)
+    end
+
+    test "schedules at now when PURGE_DELETED_AFTER_DAYS is nil" do
+      previous = Application.get_env(:lightning, :purge_deleted_after_days)
+      Application.put_env(:lightning, :purge_deleted_after_days, nil)
+
+      on_exit(fn ->
+        Application.put_env(:lightning, :purge_deleted_after_days, previous)
+      end)
+
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      before = DateTime.utc_now()
+      {:ok, scheduled} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      diff_seconds = DateTime.diff(scheduled.scheduled_deletion, before)
+      assert abs(diff_seconds) <= 5
+    end
+
+    test "cascades scheduled_deletion to descendants" do
+      actor = insert(:user)
+      grandparent = insert(:project, name: "gp")
+      parent = insert(:project, name: "p", parent: grandparent)
+      child = insert(:project, name: "c", parent: parent)
+
+      for project <- [grandparent, parent, child] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(grandparent, actor)
+
+      for project <- [grandparent, parent, child] do
+        assert Repo.get!(Project, project.id).scheduled_deletion != nil
+      end
+    end
+
+    test "disables enabled triggers across the subtree" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      child = insert(:project, name: "child", parent: parent)
+
+      for project <- [parent, child] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      parent_workflow = insert(:workflow, project: parent)
+      child_workflow = insert(:workflow, project: child)
+
+      parent_trigger =
+        insert(:trigger,
+          workflow: parent_workflow,
+          type: :webhook,
+          enabled: true
+        )
+
+      child_trigger =
+        insert(:trigger, workflow: child_workflow, type: :webhook, enabled: true)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(parent, actor)
+
+      refute Repo.get!(Trigger, parent_trigger.id).enabled
+      refute Repo.get!(Trigger, child_trigger.id).enabled
+    end
+
+    test "leaves projects outside the subtree untouched" do
+      actor = insert(:user)
+      sibling_root = insert(:project, name: "sibling_root")
+      target = insert(:project, name: "target")
+
+      ensure_member!(target, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(target, actor)
+
+      assert Repo.get!(Project, sibling_root.id).scheduled_deletion == nil
+    end
+
+    test "scheduling a parent overwrites a child's earlier scheduled_deletion" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      child = insert(:project, name: "child", parent: parent)
+
+      for project <- [parent, child] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(child, actor)
+      child_first_scheduled = Repo.get!(Project, child.id).scheduled_deletion
+      assert %DateTime{} = child_first_scheduled
+
+      :timer.sleep(1100)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(parent, actor)
+      child_second_scheduled = Repo.get!(Project, child.id).scheduled_deletion
+
+      assert DateTime.compare(child_second_scheduled, child_first_scheduled) ==
+               :gt
+    end
+
+    test "emits the sandbox scheduled-for-deletion telemetry event" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      event = [:lightning, :sandbox, :scheduled_for_deletion]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      assert_received {^event, ^ref, %{}, %{}}
+    end
+
+    test "does not emit the deleted event at schedule time" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      event = [:lightning, :sandbox, :deleted]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      refute_received {^event, ^ref, %{}, %{}}
+    end
+
+    test "returns :unauthorized when actor lacks delete_sandbox permission" do
+      actor = insert(:user)
+      sandbox = insert(:project, name: "no-perm")
+
+      event = [:lightning, :sandbox, :scheduled_for_deletion]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      assert {:error, :unauthorized} =
+               Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion == nil
+      refute_received {^event, ^ref, %{}, %{}}
+    end
+
+    test "accepts a string ID" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      assert {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox.id, actor)
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion != nil
+    end
+
+    test "returns :not_found for an unknown string ID" do
+      actor = insert(:user)
+      non_existent_id = Ecto.UUID.generate()
+
+      assert {:error, :not_found} =
+               Sandboxes.schedule_sandbox_deletion(non_existent_id, actor)
+    end
+  end
+
+  describe "cancel_scheduled_sandbox_deletion/2" do
+    test "clears scheduled_deletion on the target sandbox" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion != nil
+
+      assert {:ok, restored} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+
+      assert restored.scheduled_deletion == nil
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion == nil
+    end
+
+    test "cascades the cancel through descendants" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      child = insert(:project, name: "child", parent: parent)
+      grandchild = insert(:project, name: "grandchild", parent: child)
+
+      for project <- [parent, child, grandchild] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(parent, actor)
+      {:ok, _} = Sandboxes.cancel_scheduled_sandbox_deletion(parent, actor)
+
+      for project <- [parent, child, grandchild] do
+        assert Repo.get!(Project, project.id).scheduled_deletion == nil
+      end
+    end
+
+    test "is a no-op for sandboxes that aren't scheduled" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      assert {:ok, _} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion == nil
+    end
+
+    test "emits the deletion-cancelled telemetry event" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      event = [:lightning, :sandbox, :deletion_cancelled]
+      ref = :telemetry_test.attach_event_handlers(self(), [event])
+
+      {:ok, _} = Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+
+      assert_received {^event, ^ref, %{}, %{}}
+    end
+
+    test "leaves un-scheduled siblings untouched when cancelling" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      scheduled_child = insert(:project, name: "scheduled", parent: parent)
+      active_sibling = insert(:project, name: "active", parent: parent)
+
+      for project <- [parent, scheduled_child, active_sibling] do
+        ensure_member!(project, actor, :owner)
+      end
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(scheduled_child, actor)
+
+      assert Repo.get!(Project, scheduled_child.id).scheduled_deletion != nil
+      assert Repo.get!(Project, active_sibling.id).scheduled_deletion == nil
+
+      {:ok, _} = Sandboxes.cancel_scheduled_sandbox_deletion(parent, actor)
+
+      assert Repo.get!(Project, scheduled_child.id).scheduled_deletion == nil
+      assert Repo.get!(Project, active_sibling.id).scheduled_deletion == nil
+    end
+
+    test "returns :unauthorized when actor lacks delete_sandbox permission" do
+      actor = insert(:user)
+      sandbox = insert(:project, name: "no-perm")
+
+      assert {:error, :unauthorized} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+    end
+
+    test "accepts a string ID" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      assert {:ok, _} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox.id, actor)
+
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion == nil
+    end
+
+    test "returns :not_found for an unknown string ID" do
+      actor = insert(:user)
+      non_existent_id = Ecto.UUID.generate()
+
+      assert {:error, :not_found} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(
+                 non_existent_id,
+                 actor
+               )
+    end
+
+    test "refuses to restore when the active sandbox limit is reached" do
+      actor = insert(:user)
+      parent = insert(:project, name: "parent")
+      sandbox = insert(:project, name: "sandbox", parent: parent)
+      ensure_member!(sandbox, actor, :owner)
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(sandbox, actor)
+
+      message = %Lightning.Extensions.Message{
+        text: "Sandbox limit reached"
+      }
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_sandbox}, _ctx ->
+          {:error, :too_many_sandboxes, message}
+        end
+      )
+
+      assert {:error, :too_many_sandboxes, ^message} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
+
+      assert Repo.get!(Project, sandbox.id).scheduled_deletion != nil
+    end
+
+    test "permission check runs before the limit check" do
+      actor = insert(:user)
+      sandbox = insert(:project, name: "no-perm")
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :new_sandbox}, _ctx ->
+          {:error, :too_many_sandboxes,
+           %Lightning.Extensions.Message{text: "limit reached"}}
+        end
+      )
+
+      assert {:error, :unauthorized} =
+               Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
     end
   end
 end

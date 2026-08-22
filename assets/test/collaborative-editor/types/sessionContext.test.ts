@@ -357,7 +357,7 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project_repo_connection: null,
       webhook_auth_methods: [],
       workflow_template: null,
-      has_read_ai_disclaimer: true,
+      experimental_features_enabled: false,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -388,7 +388,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project_repo_connection: null,
       webhook_auth_methods: [],
       workflow_template: null,
-      has_read_ai_disclaimer: true,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -424,7 +423,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project_repo_connection: null,
       webhook_auth_methods: [],
       workflow_template: null,
-      has_read_ai_disclaimer: true,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -452,7 +450,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project_repo_connection: null,
       webhook_auth_methods: [],
       workflow_template: null,
-      has_read_ai_disclaimer: true,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);

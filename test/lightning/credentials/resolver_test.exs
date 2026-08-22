@@ -3,7 +3,10 @@ defmodule ResolverTest do
 
   alias Lightning.Credentials.Resolver
 
+  require Logger
+
   import Lightning.Factories
+  import ExUnit.CaptureLog
 
   describe "resolve_credential/1 with regular credential" do
     test "returns ResolvedCredential with credential body" do
@@ -248,10 +251,14 @@ defmodule ResolverTest do
 
       credential = Repo.preload(credential, :oauth_client)
 
-      assert {:error, {:reauthorization_required, credential}} =
-               Resolver.resolve_credential(credential)
+      {result, log} =
+        capture_info_log(fn -> Resolver.resolve_credential(credential) end)
 
+      assert {:error, {:reauthorization_required, credential}} = result
       assert credential.name == "Test Googlesheets Credential"
+
+      assert log =~ "[info]"
+      assert log =~ "OAuth refresh token has expired"
     end
 
     test "when refresh fails with rate limit returns temporary_failure error", %{
@@ -282,8 +289,13 @@ defmodule ResolverTest do
 
       credential = Repo.preload(credential, :oauth_client)
 
-      assert {:error, {:temporary_failure, _credential}} =
-               Resolver.resolve_credential(credential)
+      {result, log} =
+        capture_info_log(fn -> Resolver.resolve_credential(credential) end)
+
+      assert {:error, {:temporary_failure, _credential}} = result
+
+      assert log =~ "[info]"
+      assert log =~ "Could not reach the OAuth provider"
     end
 
     test "when refresh fails with other error returns generic error", %{
@@ -724,6 +736,127 @@ defmodule ResolverTest do
 
       assert {:error, :not_found} =
                Resolver.resolve_credential(run, other_credential.id)
+    end
+
+    test "logs environment_mismatch at warning level when credential lacks the project environment body",
+         %{user: user} do
+      project =
+        insert(:project, env: "staging", project_users: [%{user: user}])
+
+      credential =
+        insert(:credential, user: user, name: "Mismatch Credential")
+        |> with_body(%{name: "main", body: %{"key" => "value"}})
+
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job(%{
+          project_credential: %{credential: credential, project: project}
+        })
+        |> insert()
+
+      dataclip = insert(:dataclip)
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{dataclip: dataclip, starting_job: job})
+
+      {result, log} =
+        with_log(fn -> Resolver.resolve_credential(run, credential.id) end)
+
+      assert {:error, {:environment_mismatch, _credential}} = result
+
+      assert log =~ "[warning]"
+      assert log =~ "Credential environment does not match project environment"
+    end
+
+    test "logs environment_not_configured at warning level for a non-root project with no env",
+         %{user: user} do
+      parent = insert(:project, env: "main")
+
+      project =
+        insert(:project,
+          parent_id: parent.id,
+          env: nil,
+          project_users: [%{user: user}]
+        )
+
+      credential =
+        insert(:credential, user: user, name: "Unconfigured Env Credential")
+        |> with_body(%{name: "main", body: %{"key" => "value"}})
+
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job(%{
+          project_credential: %{credential: credential, project: project}
+        })
+        |> insert()
+
+      dataclip = insert(:dataclip)
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{dataclip: dataclip, starting_job: job})
+
+      {result, log} =
+        with_log(fn -> Resolver.resolve_credential(run, credential.id) end)
+
+      assert {:error, {:environment_not_configured, nil}} = result
+
+      assert log =~ "[warning]"
+      assert log =~ "Project has no environment configured"
+    end
+
+    test "logs project_not_found at error level when the run's project is missing" do
+      # No project_users / project_credentials so the project can be removed
+      # without tripping restrict FKs; project lookup is what we exercise.
+      project = insert(:project)
+
+      %{jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_job()
+        |> insert()
+
+      dataclip = insert(:dataclip)
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{dataclip: dataclip, starting_job: job})
+
+      # Remove the project so the run's in-memory struct resolves to a
+      # missing project (workflow/workorder/run cascade-delete, but the
+      # struct still drives get_project_for_run/1 -> nil).
+      Repo.delete_all(
+        from(p in Lightning.Projects.Project, where: p.id == ^project.id)
+      )
+
+      fake_credential_id = Ecto.UUID.generate()
+
+      {result, log} =
+        with_log(fn -> Resolver.resolve_credential(run, fake_credential_id) end)
+
+      assert {:error, {:project_not_found, nil}} = result
+
+      assert log =~ "[error]"
+      assert log =~ "Project not found for run"
+    end
+  end
+
+  # The test logger level is :warning (see config/test.exs), which gates
+  # :info messages at the primary :logger level before any capture handler
+  # sees them. Per-process levels (Logger.put_process_level/2) can only
+  # restrict below the primary level, not lift above it, so the primary level
+  # must be lowered for the duration of the capture and restored afterwards.
+  defp capture_info_log(fun) do
+    previous_level = Logger.level()
+    Logger.configure(level: :info)
+
+    try do
+      with_log([level: :info], fun)
+    after
+      Logger.configure(level: previous_level)
     end
   end
 end

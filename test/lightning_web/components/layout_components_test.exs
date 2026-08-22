@@ -3,6 +3,7 @@ defmodule LightningWeb.LayoutComponentsTest do
   use LightningWeb.ConnCase
 
   import Phoenix.LiveViewTest
+  import Lightning.Factories
 
   alias LightningWeb.LayoutComponents
   alias LightningWeb.Components.Menu
@@ -61,14 +62,163 @@ defmodule LightningWeb.LayoutComponentsTest do
   end
 
   describe "breadcrumb_project_picker/1" do
-    test "renders project picker button with label" do
+    test "renders the ReactComponent mount point for a root project" do
+      project = %Lightning.Projects.Project{
+        id: Ecto.UUID.generate(),
+        name: "my-project",
+        parent_id: nil
+      }
+
       html =
         (&LayoutComponents.breadcrumb_project_picker/1)
-        |> render_component(%{label: "My Project"})
+        |> render_component(%{project: project, label: "my-project"})
 
       assert html =~ "breadcrumb-project-picker-trigger"
-      assert html =~ "My Project"
-      assert html =~ "open-project-picker"
+      assert html =~ ~s(data-react-name="PickerButton")
+      assert html =~ ~s(data-label="my-project")
+      assert html =~ ~s(data-is-sandbox="false")
+    end
+
+    test "renders the ReactComponent mount point for a sandbox" do
+      parent = %Lightning.Projects.Project{
+        id: Ecto.UUID.generate(),
+        name: "parent-project"
+      }
+
+      project = %Lightning.Projects.Project{
+        id: Ecto.UUID.generate(),
+        name: "my-sandbox",
+        parent_id: parent.id,
+        parent: parent,
+        color: "#E33D63"
+      }
+
+      html =
+        (&LayoutComponents.breadcrumb_project_picker/1)
+        |> render_component(%{
+          project: project,
+          label: "parent-project/my-sandbox"
+        })
+
+      assert html =~ "breadcrumb-project-picker-trigger"
+      assert html =~ ~s(data-react-name="PickerButton")
+      assert html =~ ~s(data-label="parent-project/my-sandbox")
+      assert html =~ ~s(data-is-sandbox="true")
+      assert html =~ ~s(data-color="#E33D63")
+    end
+  end
+
+  describe "global_project_picker/1" do
+    test "renders nothing when no current_user" do
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{})
+
+      refute html =~ "global-project-picker"
+    end
+
+    test "items nest a visible sandbox under its nearest visible ancestor when intermediates are hidden" do
+      user = insert(:user)
+
+      root =
+        insert(:project,
+          name: "root",
+          project_users: [%{user: user, role: :editor}]
+        )
+
+      hidden_middle =
+        insert(:project, name: "hidden-middle", parent: root)
+
+      nested_member =
+        insert(:project,
+          name: "nested-member",
+          parent: hidden_middle,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+      depth_by_id = Map.new(items, &{&1["id"], &1["depth"]})
+
+      assert root.id in ids
+      assert nested_member.id in ids
+      refute hidden_middle.id in ids
+
+      assert depth_by_id[root.id] == 0
+      assert depth_by_id[nested_member.id] == 1
+    end
+
+    test "items surface a sandbox the user is a direct member of when the user has no role on its root" do
+      user = insert(:user)
+      absolute_root = insert(:project)
+
+      sandbox =
+        insert(:project,
+          parent: absolute_root,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+      depth_by_id = Map.new(items, &{&1["id"], &1["depth"]})
+
+      assert ids == [sandbox.id]
+      assert depth_by_id[sandbox.id] == 0
+    end
+
+    test "items omit sandboxes the user has no access to" do
+      user = insert(:user)
+
+      parent =
+        insert(:project, project_users: [%{user: user, role: :editor}])
+
+      visible_sandbox =
+        insert(:project,
+          parent: parent,
+          project_users: [%{user: user, role: :viewer}]
+        )
+
+      hidden_sandbox = insert(:project, parent: parent)
+
+      html =
+        (&LayoutComponents.global_project_picker/1)
+        |> render_component(%{current_user: user, current_path: "/projects"})
+
+      items =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("#global-project-picker")
+        |> Floki.attribute("data-items")
+        |> List.first()
+        |> Jason.decode!()
+
+      ids = Enum.map(items, & &1["id"])
+
+      assert parent.id in ids
+      assert visible_sandbox.id in ids
+      refute hidden_sandbox.id in ids
     end
   end
 
@@ -98,6 +248,49 @@ defmodule LightningWeb.LayoutComponentsTest do
 
     assert element |> Floki.attribute("class") |> List.first() =~
              "menu-item-active"
+  end
+
+  describe "settings_menu_items_extension/1" do
+    test "renders nothing when no extension is configured" do
+      Application.delete_env(:lightning, :settings_menu_items_extension)
+
+      html =
+        (&LayoutComponents.settings_menu_items_extension/1)
+        |> render_component(%{
+          current_user: %Lightning.Accounts.User{},
+          active_menu_item: :projects
+        })
+
+      assert html |> String.trim() == ""
+    end
+
+    test "renders the configured extension component with whitelisted assigns" do
+      on_exit(fn ->
+        Application.delete_env(:lightning, :settings_menu_items_extension)
+      end)
+
+      Application.put_env(:lightning, :settings_menu_items_extension, %{
+        component: &Menu.profile_items/1,
+        assigns_keys: [:active_menu_item]
+      })
+
+      html =
+        (&LayoutComponents.settings_menu_items_extension/1)
+        |> render_component(%{
+          current_user: %Lightning.Accounts.User{},
+          active_menu_item: :credentials
+        })
+
+      element =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[href='/credentials']")
+
+      assert Floki.text(element) == "Credentials"
+
+      assert element |> Floki.attribute("class") |> List.first() =~
+               "menu-item-active"
+    end
   end
 
   describe "breadcrumb_items/1" do

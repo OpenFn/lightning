@@ -246,8 +246,20 @@ defmodule Lightning.VersionControl do
 
   defp maybe_fetch_remaining_repos(_client, initial_result), do: initial_result
 
-  def fetch_repo_branches(installation_id, repo_name) do
-    with {:ok, client} <- GithubClient.build_installation_client(installation_id) do
+  @doc """
+  Fetches a repository's branches for `user`.
+
+  The GitHub App private key can mint an installation token for **any**
+  installation of the shared App, so this verifies (using the user's own GitHub
+  OAuth grant, via `/user/installations`) that `installation_id` is one the user
+  can access before using the app credential. Without this check a user could
+  read branch names from a private repository in another tenant's installation
+  (a confused-deputy). GitHub's installation token then scopes repository access
+  to that installation.
+  """
+  def fetch_repo_branches(user, installation_id, repo_name) do
+    with :ok <- authorize_installation_access(user, installation_id),
+         {:ok, client} <- GithubClient.build_installation_client(installation_id) do
       case GithubClient.get_repo_branches(client, repo_name) do
         {:ok, %{body: body}} ->
           {:ok, body}
@@ -255,6 +267,25 @@ defmodule Lightning.VersionControl do
         {:error, %{body: body}} ->
           {:error, body}
       end
+    end
+  end
+
+  defp authorize_installation_access(user, installation_id) do
+    case fetch_user_installations(user) do
+      {:ok, %{"installations" => installations}} when is_list(installations) ->
+        if Enum.any?(installations, fn installation ->
+             to_string(installation["id"]) == to_string(installation_id)
+           end) do
+          :ok
+        else
+          {:error, :unauthorized_installation}
+        end
+
+      {:ok, _body} ->
+        {:error, :unauthorized_installation}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
@@ -572,8 +603,15 @@ defmodule Lightning.VersionControl do
 
   defp maybe_create_config_blob(tesla_client, repo_connection) do
     if is_nil(repo_connection.config_path) do
+      content =
+        if repo_connection.sync_version do
+          path_to_openfn_yaml(repo_connection)
+        else
+          config_json(repo_connection)
+        end
+
       GithubClient.create_blob(tesla_client, repo_connection.repo, %{
-        content: config_json(repo_connection)
+        content: content
       })
     else
       {:ok, nil}
@@ -623,6 +661,16 @@ defmodule Lightning.VersionControl do
       },
       pretty: true
     )
+  end
+
+  defp path_to_openfn_yaml(repo_connection) do
+    project_id = repo_connection.project_id
+
+    """
+    project:
+      uuid: #{project_id}
+      endpoint: #{LightningWeb.Endpoint.url()}
+    """
   end
 
   defp pull_yml_target_path do

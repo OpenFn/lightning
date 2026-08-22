@@ -1,5 +1,6 @@
 defmodule Lightning.WorkflowsTest do
   use Lightning.DataCase, async: false
+  use Mimic
 
   import ExUnit.CaptureLog
   import Lightning.Factories
@@ -38,6 +39,74 @@ defmodule Lightning.WorkflowsTest do
 
       assert Workflows.get_workflow(workflow.id) |> unload_relation(:project) ==
                workflow |> unload_relation(:project)
+    end
+
+    test "get_workflow_for_project/3 scopes the lookup to the project" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      # workflow belongs to the project
+      assert Workflows.get_workflow_for_project(project, workflow.id)
+             |> unload_relation(:project) ==
+               workflow |> unload_relation(:project)
+
+      # workflow belongs to a different project
+      other_project = insert(:project)
+
+      assert Workflows.get_workflow_for_project(other_project, workflow.id) ==
+               nil
+
+      # workflow does not exist
+      assert Workflows.get_workflow_for_project(project, Ecto.UUID.generate()) ==
+               nil
+
+      # malformed uuid returns nil instead of raising
+      assert Workflows.get_workflow_for_project(project, "not-a-uuid") == nil
+      assert Workflows.get_workflow_for_project(project, nil) == nil
+    end
+
+    test "get_workflow_for_project/3 preloads the requested associations" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      loaded =
+        Workflows.get_workflow_for_project(project, workflow.id,
+          include: [:triggers]
+        )
+
+      assert Enum.map(loaded.triggers, & &1.id) == [trigger.id]
+    end
+
+    test "workflow_exists_in_project?/2 checks project ownership of a workflow" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      # workflow belongs to the project
+      assert Workflows.workflow_exists_in_project?(project.id, workflow.id)
+
+      # workflow belongs to a different project
+      other_project = insert(:project)
+
+      refute Workflows.workflow_exists_in_project?(
+               other_project.id,
+               workflow.id
+             )
+
+      # workflow does not exist
+      refute Workflows.workflow_exists_in_project?(
+               project.id,
+               Ecto.UUID.generate()
+             )
+
+      # deleted workflows are treated as not present
+      deleted_workflow =
+        insert(:workflow, project: project, deleted_at: DateTime.utc_now())
+
+      refute Workflows.workflow_exists_in_project?(
+               project.id,
+               deleted_workflow.id
+             )
     end
 
     test "save_workflow/1 with valid data creates a workflow" do
@@ -931,6 +1000,599 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "unique_workflow_name/2" do
+    test "returns the base name unchanged when it is free" do
+      project = insert(:project)
+
+      assert Workflows.unique_workflow_name("My Workflow", project.id) ==
+               "My Workflow"
+    end
+
+    test "defaults nil or blank names to Untitled workflow" do
+      project = insert(:project)
+
+      assert Workflows.unique_workflow_name(nil, project.id) ==
+               "Untitled workflow"
+
+      assert Workflows.unique_workflow_name("", project.id) ==
+               "Untitled workflow"
+
+      assert Workflows.unique_workflow_name("   ", project.id) ==
+               "Untitled workflow"
+    end
+
+    test "trims surrounding whitespace" do
+      project = insert(:project)
+
+      assert Workflows.unique_workflow_name("  My Workflow  ", project.id) ==
+               "My Workflow"
+    end
+
+    test "appends an incrementing suffix on collision" do
+      project = insert(:project)
+      insert(:workflow, project: project, name: "My Workflow")
+
+      assert Workflows.unique_workflow_name("My Workflow", project.id) ==
+               "My Workflow 1"
+
+      insert(:workflow, project: project, name: "My Workflow 1")
+
+      assert Workflows.unique_workflow_name("My Workflow", project.id) ==
+               "My Workflow 2"
+    end
+
+    test "ignores workflows in other projects" do
+      project = insert(:project)
+      other_project = insert(:project)
+      insert(:workflow, project: other_project, name: "My Workflow")
+
+      assert Workflows.unique_workflow_name("My Workflow", project.id) ==
+               "My Workflow"
+    end
+
+    # Real delete paths rename to "<name>_del" (freeing the name), but the
+    # unique index is not partial, so any row still occupying a name — even
+    # a soft-deleted one — must be counted as a collision.
+    test "includes soft-deleted rows in the collision check" do
+      project = insert(:project)
+
+      insert(:workflow,
+        project: project,
+        name: "My Workflow",
+        deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
+
+      assert Workflows.unique_workflow_name("My Workflow", project.id) ==
+               "My Workflow 1"
+    end
+
+    test "does not treat the excluded workflow's own name as a clash" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project, name: "My Workflow")
+
+      # Re-saving the same workflow under its own name keeps the name...
+      assert Workflows.unique_workflow_name("My Workflow", project.id,
+               exclude_workflow_id: workflow.id
+             ) == "My Workflow"
+
+      # ...but another workflow's name still counts as a collision.
+      insert(:workflow, project: project, name: "Other Workflow")
+
+      assert Workflows.unique_workflow_name("Other Workflow", project.id,
+               exclude_workflow_id: workflow.id
+             ) == "Other Workflow 1"
+    end
+  end
+
+  describe "save_workflow/3 rescue" do
+    setup do
+      Mimic.copy(Lightning.WorkflowVersions)
+      :ok
+    end
+
+    @tag :capture_log
+    test "duplicate primary key is rescued as a changeset error, not a raise (subsumes #4830)" do
+      user = insert(:user)
+      existing = insert(:simple_workflow)
+
+      # A fresh (unpersisted) Workflow struct carrying an already-used id forces
+      # an INSERT that violates workflows_pkey. Workflow declares NO
+      # unique_constraint(:id), so Ecto raises Ecto.ConstraintError (undeclared
+      # constraint) inside the transaction — the exact crash class #4830 left
+      # deferred. The rescue must catch it. This is a STABLE rescue test: no
+      # validate_uuid path intercepts it, so it exercises the rescue regardless
+      # of which other PRs have landed.
+      built = %Lightning.Workflows.Workflow{id: existing.id}
+      assert built.__meta__.state == :built
+
+      changeset =
+        built
+        |> Lightning.Workflows.Workflow.changeset(%{
+          name: "dup",
+          project_id: existing.project_id
+        })
+
+      assert {:error, %Ecto.Changeset{} = cs} =
+               Workflows.save_workflow(changeset, user)
+
+      refute cs.valid?
+      assert cs.errors[:base]
+
+      # workflows_pkey is allow-listed (#3) → friendly :base message, warning log.
+      assert {"could not be saved due to a conflicting or missing reference", _} =
+               cs.errors[:base]
+    end
+
+    @tag :capture_log
+    test "rescued changeset reports :insert on the new-workflow path and :update on the existing-workflow path (#4)" do
+      user = insert(:user)
+      existing = insert(:simple_workflow)
+
+      # INSERT PATH (:built → :insert). A fresh (unpersisted) Workflow struct
+      # carrying an already-used id forces a workflows_pkey duplicate INSERT →
+      # rescue. This is the #4830 new-workflow path (the attrs path builds the
+      # same :built changeset; :id is not castable from attrs, so we set it on
+      # the struct as the attrs path's changeset effectively does). The rescued
+      # changeset must report action: :insert (derive_action/1), not the old
+      # hard-coded :update.
+      built = %Lightning.Workflows.Workflow{id: existing.id}
+      assert built.__meta__.state == :built
+
+      insert_changeset =
+        Lightning.Workflows.Workflow.changeset(built, %{
+          name: "dup-insert-#{System.unique_integer([:positive])}",
+          project_id: existing.project_id
+        })
+
+      assert {:error, %Ecto.Changeset{action: :insert} = insert_cs} =
+               Workflows.save_workflow(insert_changeset, user)
+
+      assert insert_cs.errors[:base]
+
+      # UPDATE PATH (:loaded → :update). A changeset built from a persisted
+      # (:loaded) workflow that rescues must report action: :update. A loaded
+      # workflow never re-INSERTs, so we drive the rescue via a malformed
+      # :binary_id smuggled directly into the changes — it passes cast but raises
+      # Ecto.ChangeError at dump time on the workflow's own :binary_id project_id
+      # column during the UPDATE (caught by the first rescue clause). Both clauses
+      # route through derive_action/1, so this still validates :update derivation.
+      loaded = Repo.get!(Lightning.Workflows.Workflow, existing.id)
+      assert loaded.__meta__.state == :loaded
+
+      bad_changeset =
+        loaded
+        |> Ecto.Changeset.change(%{name: "renamed"})
+        |> Map.update!(:changes, &Map.put(&1, :project_id, "not-a-binary-id"))
+
+      assert {:error, %Ecto.Changeset{action: :update} = update_cs} =
+               Workflows.save_workflow(bad_changeset, user)
+
+      assert update_cs.errors[:base]
+    end
+
+    @tag :capture_log
+    test "non-workflow constraint logs at :error and is still converted to a changeset (#3, Option A)" do
+      # A NON-allow-listed Ecto.ConstraintError raised inside the transaction
+      # (here a workflow_snapshots_pkey, a side-table constraint not in
+      # @workflow_constraints) must be:
+      #   - converted to a {:error, %Ecto.Changeset{}} (never crash — #4816), AND
+      #   - logged at :error so a snapshot/audit/version bug is triageable rather
+      #     than mislabelled as a quiet workflow warning.
+      #
+      # SEAM: there is no production seam to deterministically force a
+      # non-workflow constraint through the transaction (snapshot ids are
+      # DB-autogenerated; record_version swallows its own errors in a nested
+      # transaction). We stub WorkflowVersions.record_version/2 — invoked inside
+      # the outer Multi (workflows.ex Multi.run(:workflow_version, ...)) — to
+      # raise an undeclared, non-workflow Ecto.ConstraintError, which propagates
+      # out of Repo.transaction into save_workflow/3's ConstraintError rescue and
+      # through constraint_error_changeset/2's non-workflow branch.
+      user = insert(:user)
+      workflow = insert(:simple_workflow)
+
+      changeset =
+        workflow
+        |> Repo.preload([:jobs, :triggers, :edges])
+        |> Workflows.change_workflow(%{name: "#{workflow.name}-side-table"})
+
+      Mimic.stub(Lightning.WorkflowVersions, :record_version, fn _wf, _hash ->
+        raise %Ecto.ConstraintError{
+          type: :unique,
+          constraint: "workflow_snapshots_pkey",
+          message: "side-table pkey collision"
+        }
+      end)
+
+      log =
+        capture_log([level: :error], fn ->
+          assert {:error, %Ecto.Changeset{} = cs} =
+                   Workflows.save_workflow(changeset, user)
+
+          refute cs.valid?
+          assert cs.errors[:base]
+
+          # Still mislabelled to the user as a generic workflow reference error
+          # (Option A converts rather than re-raises).
+          assert {"could not be saved due to a conflicting or missing reference",
+                  _} = cs.errors[:base]
+        end)
+
+      assert log =~ "NON-workflow Ecto.ConstraintError"
+      assert log =~ "workflow_snapshots_pkey"
+    end
+
+    @tag :capture_log
+    test "Ecto.Query.CastError raised in the transaction is rescued as an invalid-value changeset" do
+      user = insert(:user)
+      workflow = insert(:simple_workflow)
+
+      changeset =
+        workflow
+        |> Repo.preload([:jobs, :triggers, :edges])
+        |> Workflows.change_workflow(%{name: "#{workflow.name}-casterror"})
+
+      # No production seam raises Query.CastError on the workflow's own columns
+      # (a malformed declared value raises ChangeError). Stub a transaction step
+      # to raise it so the second rescue clause is genuinely exercised.
+      Mimic.stub(Lightning.WorkflowVersions, :record_version, fn _wf, _hash ->
+        raise Ecto.Query.CastError,
+          type: :binary_id,
+          value: "not-a-binary-id",
+          message: "malformed binary_id reached a query"
+      end)
+
+      assert {:error, %Ecto.Changeset{} = cs} =
+               Workflows.save_workflow(changeset, user)
+
+      refute cs.valid?
+      assert {"contains an invalid value", _} = cs.errors[:base]
+    end
+
+    test "stale lock still raises Ecto.StaleEntryError (not rescued)" do
+      # Guards that the rescue does NOT swallow optimistic-lock conflicts
+      # (mirrors the "saving with locks" test above).
+      user = insert(:user)
+      valid_attrs = params_with_assocs(:workflow, jobs: [params_for(:job)])
+
+      {:ok, workflow} = Workflows.save_workflow(valid_attrs, insert(:user))
+
+      {:ok, _} =
+        Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
+        |> Workflows.save_workflow(user)
+
+      assert_raise Ecto.StaleEntryError, fn ->
+        Workflows.change_workflow(workflow, %{jobs: [params_for(:job)]})
+        |> Workflows.save_workflow(user)
+      end
+    end
+  end
+
+  describe "save_workflow/3 credential project scoping" do
+    test "rejects a new workflow whose job references another project's project_credential" do
+      user = insert(:user)
+      project = insert(:project)
+      other_project = insert(:project)
+      project_credential = insert(:project_credential, project: other_project)
+
+      valid_attrs = %{
+        name: "cross-project-pc-new",
+        project_id: project.id,
+        jobs: [
+          %{
+            id: Ecto.UUID.generate(),
+            name: "some-job",
+            body: "fn(state)",
+            project_credential_id: project_credential.id
+          }
+        ]
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Workflows.save_workflow(valid_attrs, user)
+
+      assert %{jobs: [%{project_credential_id: [msg]}]} = errors_on(changeset)
+      assert msg =~ "isn't available in this project"
+    end
+
+    test "rejects editing an existing workflow to reference another project's project_credential" do
+      user = insert(:user)
+      project = insert(:project)
+      other_project = insert(:project)
+      project_credential = insert(:project_credential, project: other_project)
+
+      job_id = Ecto.UUID.generate()
+
+      {:ok, workflow} =
+        Workflows.save_workflow(
+          %{
+            name: "existing-pc-edit",
+            project_id: project.id,
+            jobs: [%{id: job_id, name: "some-job", body: "fn(state)"}]
+          },
+          user
+        )
+
+      update_attrs = %{
+        jobs: [%{id: job_id, project_credential_id: project_credential.id}]
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Workflows.change_workflow(workflow, update_attrs)
+               |> Workflows.save_workflow(user)
+
+      assert %{jobs: [%{project_credential_id: [msg]}]} = errors_on(changeset)
+      assert msg =~ "isn't available in this project"
+    end
+
+    test "rejects a new workflow whose job references another project's keychain_credential" do
+      user = insert(:user)
+      project = insert(:project)
+      other_project = insert(:project)
+      keychain_credential = insert(:keychain_credential, project: other_project)
+
+      valid_attrs = %{
+        name: "cross-project-keychain-new",
+        project_id: project.id,
+        jobs: [
+          %{
+            id: Ecto.UUID.generate(),
+            name: "some-job",
+            body: "fn(state)",
+            keychain_credential_id: keychain_credential.id
+          }
+        ]
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Workflows.save_workflow(valid_attrs, user)
+
+      assert %{jobs: [%{keychain_credential_id: [msg]}]} = errors_on(changeset)
+      assert msg =~ "must belong to the same project"
+    end
+
+    test "rejects editing an existing workflow to reference another project's keychain_credential" do
+      user = insert(:user)
+      project = insert(:project)
+      other_project = insert(:project)
+      keychain_credential = insert(:keychain_credential, project: other_project)
+
+      job_id = Ecto.UUID.generate()
+
+      {:ok, workflow} =
+        Workflows.save_workflow(
+          %{
+            name: "existing-keychain-edit",
+            project_id: project.id,
+            jobs: [%{id: job_id, name: "some-job", body: "fn(state)"}]
+          },
+          user
+        )
+
+      update_attrs = %{
+        jobs: [%{id: job_id, keychain_credential_id: keychain_credential.id}]
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Workflows.change_workflow(workflow, update_attrs)
+               |> Workflows.save_workflow(user)
+
+      assert %{jobs: [%{keychain_credential_id: [msg]}]} = errors_on(changeset)
+      assert msg =~ "must belong to the same project"
+    end
+
+    test "rejects a save that never touches a persisted job holding a cross-project credential" do
+      user = insert(:user)
+      project = insert(:project)
+      other_project = insert(:project)
+      project_credential = insert(:project_credential, project: other_project)
+
+      job_id = Ecto.UUID.generate()
+
+      {:ok, workflow} =
+        Workflows.save_workflow(
+          %{
+            name: "legacy-poisoned",
+            project_id: project.id,
+            jobs: [%{id: job_id, name: "poisoned-job", body: "fn(state)"}]
+          },
+          user
+        )
+
+      # Legacy data predating the scoping guard: repoint the persisted job
+      # directly, bypassing save_workflow.
+      Repo.get!(Workflows.Job, job_id)
+      |> Ecto.Changeset.change(project_credential_id: project_credential.id)
+      |> Repo.update!()
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Workflows.change_workflow(workflow, %{name: "renamed"})
+               |> Workflows.save_workflow(user)
+
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ ~s(job "poisoned-job")
+      assert msg =~ "project_credential_id"
+      refute Map.has_key?(changeset.changes, :jobs)
+
+      assert Repo.get!(Lightning.Workflows.Workflow, workflow.id).name ==
+               "legacy-poisoned"
+    end
+
+    test "allows a job to reference a credential owned by its own project" do
+      user = insert(:user)
+      project = insert(:project)
+      project_credential = insert(:project_credential, project: project)
+
+      valid_attrs = %{
+        name: "same-project-pc",
+        project_id: project.id,
+        jobs: [
+          %{
+            id: Ecto.UUID.generate(),
+            name: "some-job",
+            body: "fn(state)",
+            project_credential_id: project_credential.id
+          }
+        ]
+      }
+
+      assert {:ok, %Lightning.Workflows.Workflow{}} =
+               Workflows.save_workflow(valid_attrs, user)
+    end
+
+    test "rolls back the whole save when a job references another project's credential" do
+      user = insert(:user)
+      project = insert(:project)
+      other_project = insert(:project)
+      project_credential = insert(:project_credential, project: other_project)
+
+      workflows_before = Repo.aggregate(Lightning.Workflows.Workflow, :count)
+      jobs_before = Repo.aggregate(Workflows.Job, :count)
+
+      valid_attrs = %{
+        name: "rollback-cross-project",
+        project_id: project.id,
+        jobs: [
+          %{
+            id: Ecto.UUID.generate(),
+            name: "some-job",
+            body: "fn(state)",
+            project_credential_id: project_credential.id
+          }
+        ]
+      }
+
+      assert {:error, %Ecto.Changeset{}} =
+               Workflows.save_workflow(valid_attrs, user)
+
+      assert Repo.aggregate(Lightning.Workflows.Workflow, :count) ==
+               workflows_before
+
+      assert Repo.aggregate(Workflows.Job, :count) == jobs_before
+    end
+  end
+
+  describe "save_workflow/3 cron cursor reconciliation" do
+    @tag :capture_log
+    test "rejects a cron cursor pointing at a job in another workflow" do
+      # PRIMARY guard — genuinely red on plain main, unambiguously PR-C-dependent.
+      #
+      # A cron trigger in workflow A is driven through save_workflow/3 carrying a
+      # cron_cursor_job_id that points at a job in a DIFFERENT workflow (B). The
+      # trigger row IS in the changeset's `changes` (it is UPDATEd), so the FK is
+      # actually exercised on write — unlike the same-workflow `jobs: []` delete,
+      # which never UPDATEs the trigger and is therefore driven purely by the DB
+      # cascade.
+      #
+      # On plain main the cursor FK is the ORIGINAL single-column FK
+      # (REFERENCES jobs(id)). The foreign job row exists, so that FK ACCEPTS the
+      # cross-workflow cursor → {:ok, _} with the corrupt cursor persisted. This
+      # test asserts the opposite, so it is RED on main.
+      #
+      # With PR-C the FK is compound and same-workflow
+      # (REFERENCES jobs(id, workflow_id)), so the cross-workflow cursor violates
+      # it. Trigger declares foreign_key_constraint(:cron_cursor_job_id), so Ecto
+      # maps the violation to a nested changeset error and the Multi returns
+      # {:error, :workflow, changeset, _} → save_workflow/3 returns
+      # {:error, %Ecto.Changeset{}} via the NORMAL Multi path (the declared
+      # constraint means it does not need PR-A's rescue). Either way: no crash,
+      # the cursor is never persisted cross-workflow.
+      user = insert(:user)
+
+      workflow_a = insert(:workflow)
+      workflow_b = insert(:workflow)
+      foreign_job = insert(:job, workflow: workflow_b)
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow_a,
+          type: :cron,
+          cron_expression: "* * * * *"
+        )
+
+      changeset =
+        workflow_a
+        |> Repo.preload([:jobs, :triggers, :edges])
+        |> Workflows.change_workflow(%{
+          triggers: [
+            %{
+              id: trigger.id,
+              type: :cron,
+              cron_expression: "* * * * *",
+              cron_cursor_job_id: foreign_job.id
+            }
+          ]
+        })
+
+      # The trigger UPDATE is genuinely in the changeset (not the cascade path).
+      assert :triggers in Map.keys(changeset.changes)
+
+      result = Workflows.save_workflow(changeset, user)
+
+      # Rejected cleanly with a field-targeted changeset error — never a crash,
+      # never {:ok, _} (which is what plain main does).
+      assert {:error, %Ecto.Changeset{valid?: false} = error_changeset} = result
+
+      assert %{
+               triggers: [
+                 %{
+                   cron_cursor_job_id: [
+                     "cursor job doesn't exist, or is not in the same workflow"
+                   ]
+                 }
+               ]
+             } =
+               Ecto.Changeset.traverse_errors(error_changeset, fn {msg, _opts} ->
+                 msg
+               end)
+
+      # The corrupt cross-workflow cursor was never persisted.
+      assert Repo.reload!(trigger).cron_cursor_job_id == nil
+    end
+
+    @tag :capture_log
+    test "same-workflow cursor is nulled by the DB cascade when its job is deleted" do
+      # Secondary, complementary guard for the same-workflow delete path.
+      #
+      # NOTE: this case is NOT red on plain main. The ORIGINAL single-column FK
+      # was already created with ON DELETE SET NULL (migration
+      # 20260314161323_add_cron_cursor_job_id_to_triggers.exs), so a same-workflow
+      # cursor was ALWAYS nulled when its job was deleted, even before PR-C. And
+      # change_workflow(%{jobs: []}) produces a changeset whose `changes` contains
+      # only `:jobs` — the trigger row is NEVER UPDATEd here, so no FK-violation
+      # write path fires. This test documents that the same-workflow delete
+      # resolves the cursor deterministically via the cascade with no crash; it is
+      # NOT the regression guard for PR-C (the cross-workflow test above is).
+      user = insert(:user)
+
+      workflow = insert(:workflow)
+      job = insert(:job, workflow: workflow)
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :cron,
+          cron_expression: "* * * * *"
+        )
+        |> Trigger.changeset(%{cron_cursor_job_id: job.id})
+        |> Repo.update!()
+
+      assert trigger.cron_cursor_job_id == job.id
+
+      # Only `:jobs` is in the changeset's changes — the trigger is not UPDATEd.
+      changeset =
+        workflow
+        |> Repo.preload([:jobs, :triggers, :edges])
+        |> Workflows.change_workflow(%{jobs: []})
+
+      assert Map.keys(changeset.changes) == [:jobs]
+
+      assert {:ok, _workflow} = Workflows.save_workflow(changeset, user)
+
+      # The DB cascade nulled the now-dangling cursor as part of the job DELETE.
+      assert Repo.reload!(trigger).cron_cursor_job_id == nil
+    end
+  end
+
   describe "finders" do
     test "get_webhook_trigger/1 returns the trigger for a path" do
       %{triggers: [trigger]} =
@@ -1270,6 +1932,21 @@ defmodule Lightning.WorkflowsTest do
       assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
     end
 
+    test "soft_delete_changeset/1 marks deleted and frees the name in one step" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project, name: "Shared Transition")
+
+      changeset =
+        workflow
+        |> Ecto.Changeset.change()
+        |> Workflows.soft_delete_changeset()
+
+      assert %DateTime{} = Ecto.Changeset.get_change(changeset, :deleted_at)
+
+      assert Ecto.Changeset.get_change(changeset, :name) ==
+               "Shared Transition_del"
+    end
+
     test "mark_for_deletion/3 renames workflow with _del suffix" do
       # Use a separate project to avoid pollution from setup
       project = insert(:project)
@@ -1449,6 +2126,66 @@ defmodule Lightning.WorkflowsTest do
     test "ignores empty search term", %{project: project} do
       workflows = Workflows.get_workflows_for(project, search: "")
       assert length(workflows) == 3
+    end
+  end
+
+  describe "project_workflows_using_credentials/1" do
+    test "returns each project's workflow names sorted alphabetically" do
+      project = insert(:project)
+
+      project_credential =
+        insert(:project_credential,
+          project: project,
+          credential: insert(:credential)
+        )
+
+      # inserted in reverse-alphabetical order so a query that dropped its
+      # ordering would return them out of order
+      for name <- ["ccc-workflow", "bbb-workflow", "aaa-workflow"] do
+        insert(:simple_workflow, project: project, name: name)
+        |> then(fn %{jobs: [job | _]} ->
+          job
+          |> Ecto.Changeset.change(%{
+            project_credential_id: project_credential.id
+          })
+          |> Repo.update!()
+        end)
+      end
+
+      assert Workflows.project_workflows_using_credentials([
+               project_credential.id
+             ]) ==
+               %{project.id => ["aaa-workflow", "bbb-workflow", "ccc-workflow"]}
+    end
+
+    test "only returns workflows whose jobs use the given credentials" do
+      project = insert(:project)
+
+      used =
+        insert(:project_credential,
+          project: project,
+          credential: insert(:credential)
+        )
+
+      unused =
+        insert(:project_credential,
+          project: project,
+          credential: insert(:credential)
+        )
+
+      insert(:simple_workflow, project: project, name: "uses-credential")
+      |> then(fn %{jobs: [job | _]} ->
+        job
+        |> Ecto.Changeset.change(%{project_credential_id: used.id})
+        |> Repo.update!()
+      end)
+
+      insert(:simple_workflow, project: project, name: "no-credential")
+
+      result = Workflows.project_workflows_using_credentials([used.id])
+
+      assert result == %{project.id => ["uses-credential"]}
+      assert Workflows.project_workflows_using_credentials([unused.id]) == %{}
     end
   end
 

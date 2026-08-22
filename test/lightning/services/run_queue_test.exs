@@ -5,9 +5,10 @@ defmodule Lightning.Services.RunQueueTest do
   alias Lightning.Services.RunQueue
   alias Lightning.WorkOrders
 
-  describe "claim/2" do
+  describe "claim/3" do
     test "persists the worker name when claiming a run" do
       worker_name = "my.worker.name"
+      queues = ["manual", "*"]
 
       project1 = insert(:project)
 
@@ -27,7 +28,7 @@ defmodule Lightning.Services.RunQueueTest do
           dataclip: params_with_assocs(:dataclip)
         )
 
-      RunQueue.claim(2, worker_name)
+      RunQueue.claim(2, worker_name, queues)
 
       assert %{worker_name: ^worker_name} = Repo.reload!(run1)
       assert %{worker_name: ^worker_name} = Repo.reload!(run2)

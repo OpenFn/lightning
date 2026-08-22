@@ -8,7 +8,6 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
   setup_all do
     Mimic.copy(Lightning.Projects)
     Mimic.copy(Lightning.Projects.Sandboxes)
-    Mimic.copy(LightningWeb.Live.Helpers.ProjectTheme)
     :ok
   end
 
@@ -107,7 +106,7 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       assert html =~ "Sandbox name already exists"
     end
 
-    test "creating sandbox with blank name disables submit and shows error",
+    test "creating sandbox with blank name disables submit and shows error only once",
          %{
            conn: conn,
            parent: parent
@@ -123,6 +122,9 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       html = render(view)
       assert html =~ ~s(<button disabled="disabled" type="submit")
       assert html =~ "can&#39;t be blank"
+
+      # Verify the validation error only appears once (fixes #4490)
+      assert Regex.scan(~r/can&#39;t be blank/, html) |> length() == 1
     end
 
     test "creating sandbox fails when limiter returns error", %{
@@ -175,17 +177,28 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
         {:error, changeset}
       end)
 
+      # Simulate race condition: name now exists when rebuilding changeset
+      Mimic.expect(Lightning.Projects, :sandbox_name_exists?, fn _parent_id,
+                                                                 _name,
+                                                                 _id ->
+        true
+      end)
+
       Mimic.allow(Lightning.Projects, self(), view.pid)
 
       html =
         view
         |> element("#sandbox-form-new")
         |> render_submit(%{
-          "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
+          "project" => %{
+            "raw_name" => "Test Sandbox",
+            "name" => "test-sandbox",
+            "color" => "#abcdef"
+          }
         })
 
       # Should stay on the form with inline error, not redirect
-      assert html =~ "This value should be unique."
+      assert html =~ "Sandbox name already exists"
       refute_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
     end
 
@@ -217,7 +230,11 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
       view
       |> element("#sandbox-form-new")
       |> render_submit(%{
-        "project" => %{"raw_name" => "Test Sandbox", "color" => "#abcdef"}
+        "project" => %{
+          "raw_name" => "Test Sandbox",
+          "name" => "test-sandbox",
+          "color" => "#abcdef"
+        }
       })
 
       flash = assert_redirected(view, ~p"/projects/#{parent.id}/sandboxes")
@@ -257,7 +274,13 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
   describe "edit modal" do
     setup %{conn: conn, user: user} do
       parent = insert(:project, project_users: [%{user: user, role: :owner}])
-      sb = insert(:sandbox, parent: parent, name: "sb-1")
+
+      sb =
+        insert(:sandbox,
+          parent: parent,
+          name: "sb-1",
+          project_users: [%{user: user, role: :owner}]
+        )
 
       Mimic.stub(
         Lightning.Projects,
@@ -328,7 +351,9 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       view
       |> element("#sandbox-form-#{sb.id}")
-      |> render_submit(%{"project" => %{"raw_name" => ""}})
+      |> render_submit(%{
+        "project" => %{"raw_name" => "", "name" => "", "color" => sb.color}
+      })
 
       html = render(view)
       assert html =~ "can&#39;t be blank"
@@ -336,9 +361,16 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
     test "color input displays existing sandbox color", %{
       conn: conn,
-      parent: parent
+      parent: parent,
+      user: user
     } do
-      sb = insert(:sandbox, parent: parent, name: "sb-colored", color: "#ff0000")
+      sb =
+        insert(:sandbox,
+          parent: parent,
+          name: "sb-colored",
+          color: "#ff0000",
+          project_users: [%{user: user, role: :owner}]
+        )
 
       {:ok, view, _} =
         live(conn, ~p"/projects/#{parent.id}/sandboxes/#{sb.id}/edit")
@@ -396,56 +428,6 @@ defmodule LightningWeb.SandboxLive.FormComponentTest do
 
       # Should NOT show validation error
       refute html =~ "Sandbox name already exists"
-    end
-  end
-
-  describe "theme preview edge cases" do
-    setup %{user: user} do
-      parent = insert(:project, project_users: [%{user: user, role: :owner}])
-
-      Mimic.stub(
-        LightningWeb.Live.Helpers.ProjectTheme,
-        :inline_primary_scale,
-        fn _project ->
-          nil
-        end
-      )
-
-      {:ok, parent: parent}
-    end
-
-    test "generate_theme_preview returns nil when inline_primary_scale returns nil",
-         %{
-           conn: conn,
-           parent: parent
-         } do
-      Mimic.allow(
-        LightningWeb.Live.Helpers.ProjectTheme,
-        self(),
-        spawn(fn -> :ok end)
-      )
-
-      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes/new")
-
-      view
-      |> element("#sandbox-form-new")
-      |> render_change(%{"project" => %{"color" => "#ff0000"}})
-
-      html = render(view)
-
-      assert html =~ "Create a new sandbox"
-
-      assert html =~ ~s(#ff0000)
-
-      assert html =~ ~s(name="project[color]")
-      assert html =~ ~s(Selected: #ff0000)
-
-      view
-      |> element("#sandbox-form-new")
-      |> render_change(%{"project" => %{"color" => "#00ff00"}})
-
-      updated_html = render(view)
-      assert updated_html =~ ~s(#00ff00)
     end
   end
 

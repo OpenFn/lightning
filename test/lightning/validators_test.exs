@@ -24,6 +24,68 @@ defmodule ValidatorsTest do
     |> Validators.validate_url(:url)
   end
 
+  def email_changeset(attrs \\ %{}) do
+    {%{}, %{email: :string}}
+    |> Ecto.Changeset.cast(attrs, [:email])
+    |> Validators.validate_email_format()
+  end
+
+  describe "validate_email_format/1" do
+    test "accepts a standard email address" do
+      assert email_changeset(%{email: "user@example.com"}).valid?
+    end
+
+    test "accepts plus-addressing" do
+      assert email_changeset(%{email: "user+tag@example.com"}).valid?
+    end
+
+    test "accepts a single quote in the local part" do
+      assert email_changeset(%{email: "o'reilly@example.com"}).valid?
+    end
+
+    test "accepts a minimal valid address" do
+      assert email_changeset(%{email: "a@b.co"}).valid?
+    end
+
+    test "rejects email with no TLD (no dot in domain)" do
+      changeset = email_changeset(%{email: "alice@local"})
+      refute changeset.valid?
+      assert ["must be a valid email address"] == errors_on(changeset).email
+    end
+
+    test "rejects email starting with a dot" do
+      changeset = email_changeset(%{email: ".leading@example.com"})
+      refute changeset.valid?
+      assert ["must be a valid email address"] == errors_on(changeset).email
+    end
+
+    test "rejects email with consecutive dots" do
+      changeset = email_changeset(%{email: "double..dot@example.com"})
+      refute changeset.valid?
+      assert ["must be a valid email address"] == errors_on(changeset).email
+    end
+
+    test "rejects blank email" do
+      changeset = email_changeset(%{email: ""})
+      refute changeset.valid?
+      assert ["can't be blank"] == errors_on(changeset).email
+    end
+
+    test "rejects email longer than 160 characters" do
+      changeset =
+        email_changeset(%{email: String.duplicate("a", 156) <> "@b.co"})
+
+      refute changeset.valid?
+      assert ["should be at most 160 character(s)"] == errors_on(changeset).email
+    end
+
+    test "lowercases the email value" do
+      changeset = email_changeset(%{email: "User@Example.COM"})
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :email) == "user@example.com"
+    end
+  end
+
   describe "validate_url/2" do
     test "validates http URLs" do
       assert changeset(%{url: @valid_http_url}).valid?

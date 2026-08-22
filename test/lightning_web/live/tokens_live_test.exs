@@ -39,10 +39,9 @@ defmodule LightningWeb.TokensLiveTest do
              |> element("div[data-entity='new_token']")
              |> has_element?()
 
-      assert token_live |> element("button#copy") |> has_element?()
-
-      assert token_live |> element("button#copy") |> render_click() =~
-               "Token copied successfully"
+      assert token_live
+             |> element("button#copy[phx-hook='Copy']")
+             |> has_element?()
 
       assert token_live
              |> element("input#new_token")
@@ -123,6 +122,32 @@ defmodule LightningWeb.TokensLiveTest do
         |> follow_redirect(conn)
 
       assert html =~ "You can&#39;t perform this action"
+    end
+
+    test "rejects deleting another user's token via a tampered event id", %{
+      conn: conn,
+      api_token: api_token
+    } do
+      # a token owned by a different user
+      other_token = api_token_fixture(user_fixture())
+
+      # open the delete modal for the current user's own token (this passes the
+      # :delete action's ownership policy)
+      {:ok, tokens_live, _html} =
+        live(conn, ~p"/profile/tokens/#{api_token.id}/delete", on_error: :raise)
+
+      # fire delete but with the foreign token's id (tampered phx-value-id)
+      {:ok, _live, html} =
+        tokens_live
+        |> element("button[phx-click=delete_token]")
+        |> render_click(%{"id" => other_token.id})
+        |> follow_redirect(conn)
+
+      assert html =~ "You can&#39;t perform this action"
+
+      # the request is rejected: neither token is deleted (no silent substitution)
+      assert Lightning.Repo.get(Lightning.Accounts.UserToken, other_token.id)
+      assert Lightning.Repo.get(Lightning.Accounts.UserToken, api_token.id)
     end
   end
 end

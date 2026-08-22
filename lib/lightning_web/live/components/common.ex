@@ -123,9 +123,9 @@ defmodule LightningWeb.Components.Common do
 
     ~H"""
     <div id={@id} class={"rounded-md bg-#{@color}-50 p-4 text-wrap #{@class}"}>
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <.icon name={@icon} class={"align-top h-5 w-5 text-#{@color}-400"} />
+      <div class={["flex", if(@header, do: "items-start", else: "items-center")]}>
+        <div class="shrink-0">
+          <.icon name={@icon} class={"block h-5 w-5 text-#{@color}-400"} />
         </div>
         <div class={[
           "ml-3 min-w-0 flex-1",
@@ -310,13 +310,7 @@ defmodule LightningWeb.Components.Common do
         ]}
         title={@message}
       >
-        <%= for {part, index} <- Enum.with_index(String.split(@display, " ")) do %>
-          <%= if index > 0 do %>
-            <br /><span class="text-[0.45rem]">{part}</span>
-          <% else %>
-            {part}
-          <% end %>
-        <% end %>
+        {@display}
       </code>
     </div>
     """
@@ -428,7 +422,9 @@ defmodule LightningWeb.Components.Common do
               phx-hook="Copy"
               data-content={@copy_value}
             >
-              <span class="datetime-text">{@datetime}</span>
+              <span class="datetime-text inline-block w-[20ch] h-[1em] rounded bg-gray-200/60 text-transparent align-bottom">
+                {@datetime}
+              </span>
             </span>
           </span>
         </Common.wrapper_tooltip>

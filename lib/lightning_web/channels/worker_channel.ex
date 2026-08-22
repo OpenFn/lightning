@@ -39,12 +39,11 @@ defmodule LightningWeb.WorkerChannel do
   end
 
   @impl true
-  def handle_in(
-        "claim",
-        %{"demand" => demand, "worker_name" => worker_name},
-        socket
-      ) do
-    case Runs.claim(demand, sanitise_worker_name(worker_name)) do
+  def handle_in("claim", payload, socket) do
+    %{"demand" => demand, "worker_name" => worker_name} = payload
+    queues = sanitise_queues(payload)
+
+    case Runs.claim(demand, sanitise_worker_name(worker_name), queues) do
       {:ok, runs} ->
         runs =
           runs
@@ -122,6 +121,14 @@ defmodule LightningWeb.WorkerChannel do
   defp sanitise_worker_name(""), do: nil
 
   defp sanitise_worker_name(worker_name), do: worker_name
+
+  defp sanitise_queues(%{"queues" => [_ | _] = queues}) when is_list(queues) do
+    if Enum.all?(queues, &is_binary/1), do: queues, else: default_queues()
+  end
+
+  defp sanitise_queues(_), do: default_queues()
+
+  defp default_queues, do: ["manual", "*"]
 
   defp run_options(run) do
     Ecto.assoc(run, :workflow)

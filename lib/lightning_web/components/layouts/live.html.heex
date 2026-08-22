@@ -1,4 +1,4 @@
-<main class="h-screen" style={@theme_style}>
+<main class="h-screen">
   <!-- Sidebar toggle keyboard shortcut -->
   <span
     id="sidebar-toggle-shortcut"
@@ -20,7 +20,6 @@
       data-collapsed={to_string(assigns[:sidebar_collapsed] || false)}
       phx-hook="SidebarHoverDelay"
       class="flex flex-col h-full z-[100] group transition-[width] duration-200 fixed"
-      style={@theme_style}
     >
       <%!-- Header --%>
       <div class={[
@@ -66,9 +65,17 @@
                   <.icon name="hero-user-group-mini" class="h-5 w-5 shrink-0" />
                   <span class="menu-item-text truncate">Community</span>
                 </Menu.menu_item>
-                <Menu.menu_item href={"mailto:" <> Lightning.Config.instance_admin_email()}>
+                <Menu.menu_item
+                  href={"mailto:" <> Lightning.Config.instance_admin_email()}
+                  target="_self"
+                >
                   <.icon name="hero-lifebuoy-mini" class="h-5 w-5 shrink-0" />
-                  <span class="menu-item-text truncate">Support</span>
+                  <span
+                    class="menu-item-text truncate"
+                    title={Lightning.Config.instance_admin_email()}
+                  >
+                    Support
+                  </span>
                 </Menu.menu_item>
               <% end %>
             <% end %>
@@ -107,25 +114,9 @@
       />
     </div>
   </div>
-  <%!-- Global project picker (React component) --%>
-  <%= if assigns[:current_user] && !assigns[:is_first_setup] do %>
-    <div
-      id="global-project-picker"
-      phx-hook="ReactComponent"
-      phx-update="ignore"
-      data-react-name="ProjectPicker"
-      data-react-file={~p"/assets/js/project-picker/ProjectPicker.js"}
-      data-projects={
-        Jason.encode!(
-          Enum.map(assigns[:projects] || [], fn p ->
-            %{id: p.id, name: p.name}
-          end)
-        )
-      }
-      data-current-project-id={
-        if assigns[:project], do: assigns[:project].id, else: nil
-      }
-    >
-    </div>
+  <%= if !assigns[:is_first_setup] do %>
+    {(assigns[:global_picker] || (&LayoutComponents.global_project_picker/1)).(
+      assigns
+    )}
   <% end %>
 </main>

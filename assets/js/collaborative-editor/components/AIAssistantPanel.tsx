@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 
 import { cn } from '#/utils/cn';
 
+import { Tooltip } from '../../components/Tooltip';
 import {
   useAIStorageKey,
   useAISessionType,
@@ -11,15 +12,14 @@ import {
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
 import { useSelectedStepId, useSelectedRunId } from '../hooks/useHistory';
+import { useIsNewWorkflow } from '../hooks/useSessionContext';
 
 import { ChatInput } from './ChatInput';
-import { DisclaimerScreen } from './DisclaimerScreen';
 import { SessionList } from './SessionList';
-import { Tooltip } from './Tooltip';
 
 interface AIAssistantPanelProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   onNewConversation?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   onShowSessions?: () => void;
@@ -47,14 +47,6 @@ interface AIAssistantPanelProps {
    */
   focusTrigger?: number;
   /**
-   * Whether to show the disclaimer screen overlay
-   */
-  showDisclaimer?: boolean;
-  /**
-   * Handler for when user accepts the disclaimer
-   */
-  onAcceptDisclaimer?: () => void;
-  /**
    * Connection state for showing loading screen
    */
   connectionState?: 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -62,6 +54,12 @@ interface AIAssistantPanelProps {
    * AI assistant limit information
    */
   aiLimit?: { allowed: boolean; message: string | null } | null;
+  /** Show the experimental global assistant toggle */
+  showGlobalAssistantOption?: boolean;
+  /** Whether the global assistant checkbox is currently checked */
+  isGlobalAssistantActive?: boolean;
+  /** Callback when global assistant checkbox changes */
+  onGlobalAssistantChange?: (active: boolean) => void;
 }
 
 interface MessageOptions {
@@ -69,6 +67,7 @@ interface MessageOptions {
   attach_logs?: boolean;
   attach_io_data?: boolean;
   step_id?: string;
+  use_global_assistant?: boolean;
 }
 
 /**
@@ -99,10 +98,11 @@ export function AIAssistantPanel({
   page = null,
   loadSessions: _loadSessions,
   focusTrigger,
-  showDisclaimer = false,
-  onAcceptDisclaimer,
   connectionState = 'connected',
   aiLimit = null,
+  showGlobalAssistantOption = false,
+  isGlobalAssistantActive = false,
+  onGlobalAssistantChange,
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
@@ -122,6 +122,7 @@ export function AIAssistantPanel({
   const { loadSessionList } = useAISessionListCommands();
   const selectedStepId = useSelectedStepId();
   const selectedRunId = useSelectedRunId();
+  const isNewWorkflow = useIsNewWorkflow();
 
   useEffect(() => {
     if (prevViewRef.current !== view) {
@@ -154,6 +155,11 @@ export function AIAssistantPanel({
           ? 'Connecting...'
           : undefined;
 
+  const selectedContextJobId =
+    workflowTemplateContext && 'job_id' in workflowTemplateContext
+      ? workflowTemplateContext.job_id
+      : undefined;
+
   // Load session list when viewing sessions
   useEffect(() => {
     if (!isOpen || view !== 'sessions' || !storeSessionType) return;
@@ -167,7 +173,7 @@ export function AIAssistantPanel({
     isOpen,
     view,
     storeSessionType,
-    workflowTemplateContext?.job_id,
+    selectedContextJobId,
     hasSessionContext,
     loadSessionList,
   ]);
@@ -218,7 +224,7 @@ export function AIAssistantPanel({
       if (onShowSessions) {
         onShowSessions();
       }
-    } else {
+    } else if (onClose) {
       onClose();
     }
   };
@@ -267,12 +273,18 @@ export function AIAssistantPanel({
                   <span
                     className={cn(
                       'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-                      page === 'job_code'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-purple-100 text-purple-800'
+                      isGlobalAssistantActive
+                        ? 'bg-amber-100 text-amber-800'
+                        : page === 'job_code'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-purple-100 text-purple-800'
                     )}
                   >
-                    {page === 'job_code' ? 'Job' : 'Workflow'}
+                    {isGlobalAssistantActive
+                      ? 'Global (experimental)'
+                      : page === 'job_code'
+                        ? 'Job'
+                        : 'Workflow'}
                   </span>
                 )}
               </div>
@@ -309,33 +321,36 @@ export function AIAssistantPanel({
                     'animate-in fade-in-0 zoom-in-95 duration-100'
                   )}
                 >
-                  <div className="py-1.5">
-                    <button
-                      type="button"
-                      data-testid="sessions-button"
-                      onClick={handleShowSessions}
-                      className={cn(
-                        'group flex items-center w-full',
-                        'px-4 py-2.5 text-sm font-medium',
-                        'text-gray-700 hover:bg-gray-50',
-                        'transition-colors duration-150',
-                        view === 'sessions' && 'bg-primary-50 text-primary-700'
-                      )}
-                    >
-                      <span
+                  {!isNewWorkflow && (
+                    <div className="py-1.5">
+                      <button
+                        type="button"
+                        data-testid="sessions-button"
+                        onClick={handleShowSessions}
                         className={cn(
-                          'hero-chat-bubble-left-right h-5 w-5 mr-3',
-                          view === 'sessions'
-                            ? 'text-primary-600'
-                            : 'text-gray-400 group-hover:text-gray-500'
+                          'group flex items-center w-full',
+                          'px-4 py-2.5 text-sm font-medium',
+                          'text-gray-700 hover:bg-gray-50',
+                          'transition-colors duration-150',
+                          view === 'sessions' &&
+                            'bg-primary-50 text-primary-700'
                         )}
-                      />
-                      <span className="flex-1 text-left">Conversations</span>
-                      {view === 'sessions' && (
-                        <span className="hero-check h-4 w-4 text-primary-600 ml-2" />
-                      )}
-                    </button>
-                  </div>
+                      >
+                        <span
+                          className={cn(
+                            'hero-chat-bubble-left-right h-5 w-5 mr-3',
+                            view === 'sessions'
+                              ? 'text-primary-600'
+                              : 'text-gray-400 group-hover:text-gray-500'
+                          )}
+                        />
+                        <span className="flex-1 text-left">Conversations</span>
+                        {view === 'sessions' && (
+                          <span className="hero-check h-4 w-4 text-primary-600 ml-2" />
+                        )}
+                      </button>
+                    </div>
+                  )}
                   <div className="py-1.5">
                     <button
                       type="button"
@@ -369,27 +384,31 @@ export function AIAssistantPanel({
                 </div>
               )}
             </div>
-            <Tooltip
-              content={sessionId ? 'Close current session' : 'Close assistant'}
-            >
-              <button
-                type="button"
-                onClick={handleClose}
-                className={cn(
-                  'inline-flex items-center justify-center',
-                  'h-8 w-8 rounded-md',
-                  'text-gray-400 hover:text-gray-600 hover:bg-gray-100',
-                  'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
-                  'transition-all duration-150',
-                  'flex-shrink-0'
-                )}
-                aria-label={
+            {onClose && (
+              <Tooltip
+                content={
                   sessionId ? 'Close current session' : 'Close assistant'
                 }
               >
-                <span className="hero-x-mark h-5 w-5" />
-              </button>
-            </Tooltip>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className={cn(
+                    'inline-flex items-center justify-center',
+                    'h-8 w-8 rounded-md',
+                    'text-gray-400 hover:text-gray-600 hover:bg-gray-100',
+                    'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500',
+                    'transition-all duration-150',
+                    'shrink-0'
+                  )}
+                  aria-label={
+                    sessionId ? 'Close current session' : 'Close assistant'
+                  }
+                >
+                  <span className="hero-x-mark h-5 w-5" />
+                </button>
+              </Tooltip>
+            )}
           </div>
         </div>
       </div>
@@ -433,6 +452,8 @@ export function AIAssistantPanel({
             (!hasSessionContext || !hasCompletedSessionLoad))
         }
         showJobControls={page === 'job_code'}
+        showGlobalAssistantOption={showGlobalAssistantOption}
+        onGlobalAssistantChange={onGlobalAssistantChange}
         storageKey={storageKey}
         enableAutoFocus={
           isOpen &&
@@ -444,7 +465,7 @@ export function AIAssistantPanel({
         disabledMessage={disabledMessage}
         selectedStepId={selectedStepId}
         selectedRunId={selectedRunId}
-        selectedJobId={workflowTemplateContext?.job_id ?? null}
+        selectedJobId={selectedContextJobId ?? null}
       />
 
       {/* About AI Assistant Modal */}
@@ -634,20 +655,6 @@ export function AIAssistantPanel({
               {sessionId ? 'Loading messages...' : 'Loading conversations...'}
             </span>
           </div>
-        </div>
-      )}
-
-      {showDisclaimer && (
-        <div
-          className="absolute inset-0 z-50 bg-white"
-          role="dialog"
-          aria-modal="true"
-          aria-label="AI Assistant Terms"
-        >
-          <DisclaimerScreen
-            onAccept={onAcceptDisclaimer || (() => {})}
-            disabled={!onAcceptDisclaimer}
-          />
         </div>
       )}
     </aside>

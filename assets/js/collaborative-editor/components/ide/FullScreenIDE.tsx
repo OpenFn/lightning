@@ -41,6 +41,7 @@ import {
   useJobMatchesRun,
 } from '../../hooks/useHistory';
 import { useRunRetry } from '../../hooks/useRunRetry';
+import { useMetadata } from '../../hooks/useMetadata';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
 import { useProject } from '../../hooks/useSessionContext';
@@ -57,7 +58,7 @@ import {
 import { isFinalState } from '../../types/history';
 import { edgesToAdjList, getJobOrdinals } from '../../utils/workflowGraph';
 import { AdaptorDisplay } from '../AdaptorDisplay';
-import { AdaptorSelectionModal } from '../AdaptorSelectionModal';
+import { AdaptorSelector } from '../AdaptorSelector';
 import { CollaborativeMonaco, type MonacoHandle } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
@@ -73,7 +74,7 @@ import { RunRetryButton } from '../RunRetryButton';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { ShortcutKeys } from '../ShortcutKeys';
 import { Tabs } from '../Tabs';
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -129,6 +130,7 @@ export function FullScreenIDE({
   const { selectJob, saveWorkflow } = useWorkflowActions();
   const { selectStep } = useHistoryCommands();
   const { job: currentJob, ytext: currentJobYText } = useCurrentJob();
+  const { metadata, isLoading: isMetadataLoading } = useMetadata();
   const awareness = useSession(selectAwareness);
   const { canSave } = useCanSave();
 
@@ -596,24 +598,6 @@ export function FullScreenIDE({
     [openCredentialModal]
   );
 
-  const handleAdaptorSelect = useCallback(
-    (adaptorName: string) => {
-      if (!currentJob) return;
-
-      const packageMatch = adaptorName.match(/(.+?)(@|$)/);
-      const newPackage = packageMatch ? packageMatch[1] : adaptorName;
-      const fullAdaptor = `${newPackage}@latest`;
-
-      updateJob(currentJob.id, { adaptor: fullAdaptor });
-
-      setIsAdaptorPickerOpen(false);
-      setAdaptorPickerFromConfigure(false);
-      // Always open configure modal after selecting an adaptor
-      setIsConfigureModalOpen(true);
-    },
-    [currentJob, updateJob]
-  );
-
   // Handler for adaptor changes - immediately syncs to Y.Doc
   const handleAdaptorChange = useCallback(
     (adaptorPackage: string) => {
@@ -1014,6 +998,7 @@ export function FullScreenIDE({
                             ytext={currentJobYText}
                             awareness={awareness}
                             adaptor={currentJob.adaptor || 'common'}
+                            metadata={metadata}
                             disabled={!canSave}
                             className="h-full w-full"
                             options={{
@@ -1113,7 +1098,7 @@ export function FullScreenIDE({
                           {selectedDocsTab === 'metadata' && (
                             <Metadata
                               adaptor={currJobAdaptor}
-                              metadata={null}
+                              metadata={isMetadataLoading ? true : metadata}
                             />
                           )}
                         </div>
@@ -1317,7 +1302,7 @@ export function FullScreenIDE({
                           selectedTab={selectedTab}
                           selectedDataclip={selectedDataclipState}
                           customBody={customBody}
-                          disableAutoSelection
+                          disableAutoSelection={manuallyUnselectedDataclip}
                         />
                       </ManualRunPanelErrorBoundary>
                     ) : null}
@@ -1358,17 +1343,19 @@ export function FullScreenIDE({
             allAdaptors={allAdaptors}
           />
 
-          <AdaptorSelectionModal
+          <AdaptorSelector
             isOpen={isAdaptorPickerOpen}
+            setIsOpen={setIsAdaptorPickerOpen}
             onClose={() => {
-              setIsAdaptorPickerOpen(false);
               // Only return to configure modal if opened from there
               if (adaptorPickerFromConfigure) {
                 setIsConfigureModalOpen(true);
               }
               setAdaptorPickerFromConfigure(false);
             }}
-            onSelect={handleAdaptorSelect}
+            job={currentJob}
+            updateJob={updateJob}
+            setIsConfigureModalOpen={setIsConfigureModalOpen}
             projectAdaptors={projectAdaptors}
           />
         </>

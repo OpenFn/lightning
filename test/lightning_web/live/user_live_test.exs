@@ -372,10 +372,11 @@ defmodule LightningWeb.UserLiveTest do
     end
 
     test "retains a cancel deletion button for superusers pending deletion", %{
-      conn: conn,
-      user: user
+      conn: conn
     } do
-      user
+      superuser = superuser_fixture()
+
+      superuser
       |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2024-12-28 01:02:03Z]})
       |> Repo.update!()
 
@@ -383,7 +384,7 @@ defmodule LightningWeb.UserLiveTest do
 
       assert index_live
              |> has_element?(
-               "a#cancel-deletion-#{user.id}",
+               "a#cancel-deletion-#{superuser.id}",
                "Cancel deletion"
              )
     end
@@ -417,11 +418,62 @@ defmodule LightningWeb.UserLiveTest do
       refute index_live |> element("user-#{user.id}") |> has_element?()
     end
 
+    test "delete now shows an error when purge fails due to associated runs",
+         %{conn: conn} do
+      user =
+        user_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, form_live, _html} =
+        index_live
+        |> element("#user-#{user.id} a", "Delete now")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
+
+      # Simulate TOCTOU race: a run is created after the modal opens
+      # but before the admin clicks delete. The has_activity_in_projects?
+      # assign is now stale, so the delete path fires.
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      insert(:run,
+        created_by: user,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: dataclip
+      )
+
+      {:ok, _index_live, html} =
+        form_live
+        |> form("#scheduled_deletion_form",
+          user: %{
+            "scheduled_deletion_email" => user.email
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+
+      # The UI should not claim the user was deleted when they weren't
+      refute html =~ "User deleted"
+      assert html =~ "Cannot delete user with associated activity"
+      assert Repo.get(User, user.id), "User should still exist in the database"
+    end
+
     test "does not enable the `Delete now` button for a superuser", %{
-      conn: conn,
-      user: user
+      conn: conn
     } do
-      user
+      superuser = superuser_fixture()
+
+      superuser
       |> Ecto.Changeset.change(%{scheduled_deletion: ~U[2024-12-28 01:02:03Z]})
       |> Repo.update!()
 
@@ -430,7 +482,7 @@ defmodule LightningWeb.UserLiveTest do
       assert(
         index_live
         |> has_element?(
-          "span#delete-now-#{user.id}.cursor-not-allowed",
+          "span#delete-now-#{superuser.id}.cursor-not-allowed",
           "Delete now"
         )
       )
@@ -438,7 +490,7 @@ defmodule LightningWeb.UserLiveTest do
       refute(
         index_live
         |> has_element?(
-          "a#delete-now-#{user.id}",
+          "a#delete-now-#{superuser.id}",
           "Delete now"
         )
       )
@@ -626,22 +678,22 @@ defmodule LightningWeb.UserLiveTest do
       conn: conn,
       user: _user
     } do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, Routes.user_index_path(conn, :index))
         |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
 
     test "a regular user cannot access a user edit page", %{
       conn: conn,
       user: user
     } do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, Routes.user_edit_path(conn, :edit, user.id))
         |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
   end
 

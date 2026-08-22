@@ -1,6 +1,8 @@
 defmodule LightningWeb.AiAssistant.PaginationTest do
   use ExUnit.Case, async: true
 
+  @moduletag :capture_log
+
   alias LightningWeb.Live.AiAssistant.PaginationMeta
 
   describe "new/3" do

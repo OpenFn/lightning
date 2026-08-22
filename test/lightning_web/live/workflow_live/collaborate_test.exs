@@ -6,11 +6,15 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
   import Phoenix.LiveViewTest
 
   describe "sandbox indicator banner data attributes" do
-    test "sets root project data attributes when in sandbox project", %{
-      conn: conn
-    } do
+    test "sets root project data attributes to the user's access root in a sandbox project",
+         %{conn: conn} do
       user = insert(:user)
-      parent_project = insert(:project, name: "Production Project")
+
+      parent_project =
+        insert(:project,
+          name: "Production Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
 
       sandbox =
         insert(:sandbox,
@@ -31,6 +35,33 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
 
       assert html =~ "data-root-project-id=\"#{parent_project.id}\""
       assert html =~ "data-root-project-name=\"#{parent_project.name}\""
+    end
+
+    test "falls back to the sandbox itself when the user has no access to ancestors",
+         %{conn: conn} do
+      user = insert(:user)
+      parent_project = insert(:project, name: "Production Project")
+
+      sandbox =
+        insert(:sandbox,
+          parent: parent_project,
+          name: "test-sandbox",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: sandbox.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{sandbox.id}/w/#{workflow.id}"
+        )
+
+      refute html =~ parent_project.name
+      assert html =~ "data-root-project-id=\"#{sandbox.id}\""
+      assert html =~ "data-root-project-name=\"#{sandbox.name}\""
     end
 
     test "sets null root project data attributes when in root project", %{
@@ -60,12 +91,18 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
 
     test "sets correct root project in deeply nested sandbox", %{conn: conn} do
       user = insert(:user)
-      root_project = insert(:project, name: "Root Project")
+
+      root_project =
+        insert(:project,
+          name: "Root Project",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
 
       sandbox_a =
         insert(:sandbox,
           parent: root_project,
-          name: "sandbox-a"
+          name: "sandbox-a",
+          project_users: [%{user_id: user.id, role: :owner}]
         )
 
       sandbox_b =
@@ -87,8 +124,115 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
 
       assert html =~ "data-root-project-id=\"#{root_project.id}\""
       assert html =~ "data-root-project-name=\"#{root_project.name}\""
-      refute html =~ sandbox_a.name
+
+      assert html =~
+               "data-project-display-name=\"#{root_project.name}/#{sandbox_a.name}/#{sandbox_b.name}\""
     end
+
+    test "deeply nested sandbox truncates display name at the user's access root",
+         %{conn: conn} do
+      user = insert(:user)
+      root_project = insert(:project, name: "Root Project")
+
+      sandbox_a =
+        insert(:sandbox,
+          parent: root_project,
+          name: "sandbox-a",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      sandbox_b =
+        insert(:sandbox,
+          parent: sandbox_a,
+          name: "sandbox-b",
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: sandbox_b.id)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{sandbox_b.id}/w/#{workflow.id}"
+        )
+
+      refute html =~ root_project.name
+      assert html =~ "data-root-project-id=\"#{sandbox_a.id}\""
+      assert html =~ "data-root-project-name=\"#{sandbox_a.name}\""
+
+      assert html =~
+               "data-project-display-name=\"#{sandbox_a.name}/#{sandbox_b.name}\""
+    end
+  end
+
+  describe "cross-project access" do
+    test "redirects to the project workflows when the workflow belongs to another project",
+         %{conn: conn} do
+      user = insert(:user)
+
+      user_project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      other_project = insert(:project)
+      other_workflow = workflow_fixture(project_id: other_project.id)
+
+      conn = log_in_user(conn, user)
+
+      assert {:error, {:redirect, %{to: to, flash: flash}}} =
+               live(
+                 conn,
+                 ~p"/projects/#{user_project.id}/w/#{other_workflow.id}"
+               )
+
+      assert to == ~p"/projects/#{user_project.id}/w"
+      assert flash["error"] == "Workflow not found"
+    end
+
+    test "the ?run= param loads a run scoped to the mounted project", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      user_project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      own_workflow = workflow_fixture(project_id: user_project.id)
+      foreign_run = run_in_project(insert(:project))
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{user_project.id}/w/#{own_workflow.id}")
+
+      render_patch(
+        view,
+        ~p"/projects/#{user_project.id}/w/#{own_workflow.id}?run=#{foreign_run.id}"
+      )
+
+      %{socket: socket} = :sys.get_state(view.pid)
+
+      assert socket.assigns[:initial_run_data] == nil
+    end
+  end
+
+  defp run_in_project(project) do
+    %{triggers: [trigger]} =
+      workflow = insert(:simple_workflow, project: project)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: insert(:dataclip)
+      )
+
+    insert(:run,
+      work_order: work_order,
+      starting_trigger: trigger,
+      dataclip: insert(:dataclip)
+    )
   end
 
   describe "credential creation and broadcasting" do
@@ -646,6 +790,243 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
     end
   end
 
+  describe "OAuth credential creation resilience" do
+    test "OAuth flow works end-to-end after parent re-render",
+         %{conn: conn} do
+      Mox.stub(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn env,
+                                                                       _opts ->
+        case env.url do
+          "http://example.com/oauth2/token" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "access_token" => "new_token",
+                   "refresh_token" => "new_refresh",
+                   "token_type" => "bearer",
+                   "expires_in" => 3600,
+                   "scope" => "scope_1 scope_2"
+                 })
+             }}
+
+          "http://example.com/oauth2/userinfo" ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body:
+                 Jason.encode!(%{
+                   "picture" => "image.png",
+                   "name" => "Test User"
+                 })
+             }}
+        end
+      end)
+
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      oauth_client = insert(:oauth_client, name: "Google Sheets")
+      insert(:project_oauth_client, project: project, oauth_client: oauth_client)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      # Navigate to advanced picker, select OAuth, continue
+      view
+      |> element("#collaborative-editor-react")
+      |> render_hook("open_credential_modal", %{"schema" => "raw"})
+
+      view |> element("button", "Advanced") |> render_click()
+
+      view
+      |> element("button[phx-value-key='#{oauth_client.id}']")
+      |> render_click()
+
+      view |> element("button", "Continue") |> render_click()
+
+      # Trigger a parent re-render (this previously clobbered the client)
+      send(view.pid, {:update_credential_schema, "oauth"})
+      _ = render(view)
+
+      # Verify the GenericOauthComponent still has the correct client
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "generic-oauth-component-new-main"
+        )
+
+      assert assigns.selected_client.id == oauth_client.id
+
+      # Simulate OAuth code callback — this should succeed, not crash
+      LightningWeb.OauthCredentialHelper.broadcast_forward(
+        view.id,
+        LightningWeb.CredentialLive.GenericOauthComponent,
+        id: "generic-oauth-component-new-main",
+        code: "authcode123",
+        current_tab: "main"
+      )
+
+      Lightning.ApplicationHelpers.dynamically_absorb_delay(fn ->
+        {_, assigns} =
+          Lightning.LiveViewHelpers.get_component_assigns_by(view,
+            id: "generic-oauth-component-new-main"
+          )
+
+        assigns[:oauth_progress] not in [:idle, :authenticating]
+      end)
+
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "generic-oauth-component-new-main"
+        )
+
+      assert assigns.oauth_progress in [:fetching_userinfo, :complete]
+    end
+
+    test "editing OAuth credential preserves client on parent re-render",
+         %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      oauth_client = insert(:oauth_client, user: user, name: "Salesforce")
+      insert(:project_oauth_client, project: project, oauth_client: oauth_client)
+
+      credential =
+        insert(:credential,
+          name: "My Salesforce",
+          schema: "oauth",
+          oauth_client: oauth_client,
+          user: user
+        )
+        |> with_body(%{
+          name: "main",
+          body: %{
+            "access_token" => "test_token",
+            "refresh_token" => "test_refresh",
+            "token_type" => "bearer",
+            "expires_in" => 3600
+          }
+        })
+
+      insert(:project_credential, project: project, credential: credential)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      # Open credential for editing
+      view
+      |> element("#collaborative-editor-react")
+      |> render_hook("open_credential_modal", %{
+        "schema" => "oauth",
+        "credential_id" => credential.id
+      })
+
+      # Verify no warning
+      refute view |> has_element?("h3", "OAuth client not found")
+
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "new-credential-modal"
+        )
+
+      assert assigns.selected_oauth_client.id == oauth_client.id
+
+      # Simulate parent re-render
+      send(view.pid, {:update_credential_schema, "oauth"})
+      _ = render(view)
+
+      # Verify client is preserved
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "new-credential-modal"
+        )
+
+      assert assigns.selected_oauth_client.id == oauth_client.id
+      refute view |> has_element?("h3", "OAuth client not found")
+    end
+
+    test "does not open the edit modal for a credential owned by another user",
+         %{conn: conn} do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      # a credential owned by a DIFFERENT user, shared into the project
+      foreign_credential =
+        insert(:credential,
+          name: "Victim Secret",
+          schema: "raw",
+          user: insert(:user)
+        )
+
+      insert(:project_credential,
+        project: project,
+        credential: foreign_credential
+      )
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      html =
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_credential_modal", %{
+          "schema" => "raw",
+          "credential_id" => foreign_credential.id
+        })
+
+      # rejected: the edit modal is not opened, and the foreign credential's
+      # name/data is not disclosed
+      refute html =~ "Victim Secret"
+      refute view |> has_element?("#new-credential-modal")
+
+      # and the client is told the open failed, so its optimistically-opened
+      # modal state is reset rather than left hanging
+      assert_push_event(view, "credential_modal_closed", %{})
+
+      # a valid-but-unknown id and a malformed id are also rejected the same
+      # way (guards the nil and non-UUID branches, no crash, no stuck modal)
+      for bad_id <- [Ecto.UUID.generate(), "not-a-uuid"] do
+        view
+        |> element("#collaborative-editor-react")
+        |> render_hook("open_credential_modal", %{
+          "schema" => "raw",
+          "credential_id" => bad_id
+        })
+
+        refute view |> has_element?("#new-credential-modal")
+        assert_push_event(view, "credential_modal_closed", %{})
+      end
+    end
+  end
+
   describe "credential modal interactions" do
     test "opens credential modal with schema via handle_event", %{conn: conn} do
       user = insert(:user)
@@ -1132,9 +1513,119 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
       |> element("button", "Continue")
       |> render_click()
 
-      # Verify OAuth form appears
-      # The form should transition to page: :second with OAuth schema
-      assert render(view)
+      # Verify OAuth form appears without the false "OAuth client not found" warning
+      refute view |> has_element?("h3", "OAuth client not found")
+      assert render(view) =~ "Credential Name"
+    end
+
+    test "OAuth client selection survives parent re-renders", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      oauth_client = insert(:oauth_client, name: "Salesforce")
+      insert(:project_oauth_client, project: project, oauth_client: oauth_client)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      # Navigate to advanced picker and select OAuth client
+      view
+      |> element("#collaborative-editor-react")
+      |> render_hook("open_credential_modal", %{"schema" => "raw"})
+
+      view |> element("button", "Advanced") |> render_click()
+
+      view
+      |> element("button[phx-value-key='#{oauth_client.id}']")
+      |> render_click()
+
+      view |> element("button", "Continue") |> render_click()
+
+      # Verify component has the correct selected_oauth_client
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "new-credential-modal"
+        )
+
+      assert assigns.selected_oauth_client.id == oauth_client.id
+
+      # Simulate a parent re-render by sending the same message the component
+      # sends internally — this previously clobbered selected_oauth_client
+      send(view.pid, {:update_credential_schema, "oauth"})
+
+      # Allow the message to be processed
+      _ = render(view)
+
+      # Verify selected_oauth_client is preserved
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "new-credential-modal"
+        )
+
+      assert assigns.selected_oauth_client.id == oauth_client.id
+      refute view |> has_element?("h3", "OAuth client not found")
+    end
+
+    test "back from OAuth form clears stale OAuth client state", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      workflow = workflow_fixture(project_id: project.id)
+
+      oauth_client = insert(:oauth_client, name: "Salesforce")
+      insert(:project_oauth_client, project: project, oauth_client: oauth_client)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      # Navigate to advanced picker, select OAuth, continue
+      view
+      |> element("#collaborative-editor-react")
+      |> render_hook("open_credential_modal", %{"schema" => "raw"})
+
+      view |> element("button", "Advanced") |> render_click()
+
+      view
+      |> element("button[phx-value-key='#{oauth_client.id}']")
+      |> render_click()
+
+      view |> element("button", "Continue") |> render_click()
+
+      # Go back to advanced picker
+      view |> element("button", "Back") |> render_click()
+
+      # Verify OAuth state was cleared
+      {_, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(view,
+          id: "new-credential-modal"
+        )
+
+      assert is_nil(assigns.selected_oauth_client)
+      assert is_nil(assigns.oauth_client)
     end
 
     test "selects raw JSON from advanced picker and continues", %{
@@ -2192,171 +2683,6 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
 
       # New workflows never have initial run data
       refute html =~ "data-initial-run-data="
-    end
-  end
-
-  describe "legacy editor preference redirect" do
-    test "redirects to legacy editor when user prefers legacy editor", %{
-      conn: conn
-    } do
-      user = insert(:user)
-
-      project =
-        insert(:project,
-          name: "Test Project",
-          project_users: [%{user_id: user.id, role: :owner}]
-        )
-
-      workflow = workflow_fixture(project_id: project.id)
-
-      # Set user preference to prefer legacy editor
-      user_with_prefs =
-        user
-        |> Ecto.Changeset.change(%{
-          preferences: %{
-            "prefer_legacy_editor" => true
-          }
-        })
-        |> Lightning.Repo.update!()
-
-      # Try to navigate to collaborative editor
-      {:error, {:live_redirect, %{to: redirect_path}}} =
-        conn
-        |> log_in_user(user_with_prefs)
-        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
-
-      # Should redirect to legacy editor
-      assert redirect_path == "/projects/#{project.id}/w/#{workflow.id}/legacy"
-    end
-
-    test "redirects to legacy editor for new workflow when user prefers legacy editor",
-         %{conn: conn} do
-      user = insert(:user)
-
-      project =
-        insert(:project,
-          name: "Test Project",
-          project_users: [%{user_id: user.id, role: :owner}]
-        )
-
-      # Set user preference to prefer legacy editor
-      user_with_prefs =
-        user
-        |> Ecto.Changeset.change(%{
-          preferences: %{
-            "prefer_legacy_editor" => true
-          }
-        })
-        |> Lightning.Repo.update!()
-
-      # Try to navigate to collaborative editor for new workflow
-      {:error, {:live_redirect, %{to: redirect_path}}} =
-        conn
-        |> log_in_user(user_with_prefs)
-        |> live(~p"/projects/#{project.id}/w/new")
-
-      # Should redirect to legacy editor with method=template
-      assert redirect_path ==
-               "/projects/#{project.id}/w/new/legacy?method=template"
-    end
-
-    test "redirects to legacy editor with query params transformed", %{
-      conn: conn
-    } do
-      user = insert(:user)
-
-      project =
-        insert(:project,
-          name: "Test Project",
-          project_users: [%{user_id: user.id, role: :owner}]
-        )
-
-      workflow = workflow_fixture(project_id: project.id)
-      job = insert(:job, workflow: workflow)
-
-      user_with_prefs =
-        user
-        |> Ecto.Changeset.change(%{
-          preferences: %{
-            "prefer_legacy_editor" => true
-          }
-        })
-        |> Lightning.Repo.update!()
-
-      # Try to navigate to collaborative editor with query params
-      {:error, {:live_redirect, %{to: redirect_path}}} =
-        conn
-        |> log_in_user(user_with_prefs)
-        |> live(
-          ~p"/projects/#{project.id}/w/#{workflow.id}?job=#{job.id}&panel=editor"
-        )
-
-      # Should redirect to legacy editor with query params transformed
-      assert String.starts_with?(
-               redirect_path,
-               "/projects/#{project.id}/w/#{workflow.id}/legacy"
-             )
-
-      assert redirect_path =~ "s=#{job.id}"
-      assert redirect_path =~ "m=expand"
-    end
-
-    test "does not redirect when user does not prefer legacy editor", %{
-      conn: conn
-    } do
-      user = insert(:user)
-
-      project =
-        insert(:project,
-          name: "Test Project",
-          project_users: [%{user_id: user.id, role: :owner}]
-        )
-
-      workflow = workflow_fixture(project_id: project.id)
-
-      # Set user preference to NOT prefer legacy editor
-      user_with_prefs =
-        user
-        |> Ecto.Changeset.change(%{
-          preferences: %{
-            "prefer_legacy_editor" => false
-          }
-        })
-        |> Lightning.Repo.update!()
-
-      # Navigate to collaborative editor
-      {:ok, _view, html} =
-        conn
-        |> log_in_user(user_with_prefs)
-        |> live(~p"/projects/#{project.id}/w/#{workflow.id}")
-
-      # Should stay on collaborative editor (no redirect)
-      assert html =~ "collaborative-editor-react"
-    end
-
-    test "does not redirect when preference is not set", %{conn: conn} do
-      user = insert(:user)
-
-      project =
-        insert(:project,
-          name: "Test Project",
-          project_users: [%{user_id: user.id, role: :owner}]
-        )
-
-      workflow = workflow_fixture(project_id: project.id)
-
-      # No preference set (default behavior)
-      conn = log_in_user(conn, user)
-
-      # Navigate to collaborative editor
-      {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w/#{workflow.id}"
-        )
-
-      # Should stay on collaborative editor (no redirect)
-      assert html =~ "collaborative-editor-react"
     end
   end
 end

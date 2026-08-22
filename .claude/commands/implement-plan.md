@@ -17,59 +17,20 @@ When `$ARGUMENTS` contains a plan path:
 - Read the plan at `$ARGUMENTS` completely and check for any existing checkmarks (- [x])
 - **Identify the agent assignment** for each phase (marked as `**Implementation Agent**: ...`)
 - Read the original ticket and all files mentioned in the plan
-- **Read files fully** - never use limit/offset parameters, you need complete context
-- Think deeply about how the pieces fit together
+- Read files fully (no limit/offset).
 - Create a todo list to track your progress across all phases
-- **CRITICAL**: You will coordinate implementation, spawning a FRESH specialized agent for each phase
 
 If `$ARGUMENTS` is empty, ask for one.
 
 ## Available Agent Types
 
-When implementing phases, use these specialized agents based on the work type:
-
-- **phoenix-elixir-expert**:
-  - Elixir/Phoenix backend development
-  - Ecto schemas, migrations, and queries
-  - Phoenix LiveView backend
-  - Phoenix Channels and WebSocket implementations
-  - OTP, GenServers, supervision trees
-  - Performance optimization
-  - Backend testing with ExUnit
-
-- **react-collaborative-architect**:
-  - React/TypeScript frontend development
-  - Collaborative editing features with YJS
-  - Modern React patterns (hooks, context, etc.)
-  - Lightning workflow editor frontend
-  - Testing collaborative features
-
-- **react-collab-editor**:
-  - Collaborative editor in `assets/js/collaborative-editor/`
-  - Y.Doc synchronization and debugging
-  - Immer and useSyncExternalStore patterns
-  - TanStack Form and Zod validation
-  - @xyflow/react diagram components
-  - TypeScript type fixes in editor codebase
-
-- **react-test-specialist**:
-  - React component unit tests with Vitest
-  - Reviewing and improving test quality
-  - Removing redundant tests
-  - Test refactoring for maintainability
-  - Following project test guidelines
-
-- **general-purpose**:
-  - Mixed work spanning frontend and backend
-  - Coordination tasks
-  - Work that doesn't fit specialized categories
-  - Simple changes not requiring specialized expertise
+See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the canonical roster and scopes. Pick the agent whose scope matches the phase's work type.
 
 ## Agent-Based Phase Implementation
 
 **This is the core of the implementation process**:
 
-1. **For each phase**, spawn a FRESH agent of the type specified in the plan
+1. **For each phase**, spawn a FRESH agent of the type specified in the plan. This is the default for any plan with more than one phase; a single-phase plan may be implemented directly.
 
 2. **Each agent gets a focused task**:
    ```
@@ -89,26 +50,18 @@ When implementing phases, use these specialized agents based on the work type:
    ```
 
 3. **Wait for each phase to complete** before spawning the next agent
-   - This ensures each phase gets a fresh context window
-   - Prevents context overflow on complex implementations
+   - A fresh agent isolates each phase: a later phase cannot be misled by an earlier phase's abandoned attempts
    - Each agent focuses solely on their phase
 
-4. **After each phase completes**:
-   - Read the updated plan to see what was checked off
-   - Review any issues or notes from the agent
-   - Perform or coordinate manual verification if needed
-   - Move to the next phase with a new fresh agent
+4. **Between phases**: verify the previous phase's work (check the plan, review agent output, coordinate manual verification), then move on with a new fresh agent.
 
 ## Your Role as Coordinator
 
 As the main agent running this command, you are the **coordinator**, not the implementer:
 - You read the plan and understand the full scope
-- You spawn specialized agents for each phase
 - You track overall progress across all phases
 - You handle issues and communicate with the user
 - You coordinate manual verification between phases
-
-**You do NOT implement the phases yourself** - you delegate to fresh specialized agents.
 
 ## Implementation Philosophy
 
@@ -137,7 +90,7 @@ If an agent encounters a mismatch:
 ## Verification Approach
 
 Each phase agent is responsible for:
-- Running all automated verification steps in the success criteria
+- Running all automated verification steps in the success criteria (see [CLAUDE.md §Common Commands](../../CLAUDE.md#common-commands) for the project's quality gates)
 - Fixing any issues before reporting completion
 - Updating checkboxes in the plan file using Edit
 - Reporting what manual verification steps remain
@@ -146,6 +99,10 @@ As coordinator, you should:
 - Verify the agent completed their automated checks
 - Coordinate any manual verification with the user
 - Ensure quality before moving to the next phase
+- Review the CHANGELOG entry against the final implementation. Lightning uses
+  Keep-a-Changelog; a user-visible change merging to `main` needs an accurate entry with
+  an issue or PR link. Prefer broadening an existing entry over adding a second one.
+  "No change needed" is a fine outcome — the review is what matters.
 
 ## If an Agent Gets Stuck
 
@@ -155,7 +112,7 @@ When an agent reports something isn't working as expected:
 - Present the mismatch clearly to the user
 - Get guidance before spawning a new agent with updated instructions
 
-**Key insight**: If an agent is stuck, don't try to fix it yourself - either:
+If an agent is stuck, don't try to fix it yourself - either:
 1. Guide the user to help resolve the issue, then spawn a new agent
 2. Spawn a debugging/research agent to understand the issue
 3. Update the plan and spawn a new implementation agent
@@ -174,7 +131,7 @@ If the plan has existing checkmarks:
 You (coordinator): Reading plan... I see 3 phases:
   - Phase 1: Database Schema (phoenix-elixir-expert) ✅ Done
   - Phase 2: API Endpoints (phoenix-elixir-expert) ⬜ Next
-  - Phase 3: React Components (react-collaborative-architect) ⬜ Pending
+  - Phase 3: React Components (react-collab-editor) ⬜ Pending
 
 I'll spawn a fresh phoenix-elixir-expert agent for Phase 2...
 
@@ -185,7 +142,5 @@ Manual verification needed: Test the API endpoints with curl.
 
 [Wait for user to verify or proceed]
 
-Now spawning a fresh react-collaborative-architect agent for Phase 3...
+Now spawning a fresh react-collab-editor agent for Phase 3...
 ```
-
-Remember: You're coordinating a solution, not implementing it. Each phase gets a fresh agent with a focused mission. This prevents context overflow and ensures quality.

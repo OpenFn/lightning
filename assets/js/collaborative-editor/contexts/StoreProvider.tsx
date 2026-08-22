@@ -67,6 +67,10 @@ import {
 } from '../stores/createHistoryStore';
 import type { RunStepsData } from '../types/history';
 import {
+  createMetadataStore,
+  type MetadataStoreInstance,
+} from '../stores/createMetadataStore';
+import {
   createSessionContextStore,
   type SessionContextStoreInstance,
 } from '../stores/createSessionContextStore';
@@ -81,6 +85,7 @@ import { generateUserColor } from '../utils/userColor';
 export interface StoreContextValue {
   adaptorStore: AdaptorStoreInstance;
   credentialStore: CredentialStoreInstance;
+  metadataStore: MetadataStoreInstance;
   awarenessStore: AwarenessStoreInstance;
   workflowStore: WorkflowStoreInstance;
   sessionContextStore: SessionContextStoreInstance;
@@ -123,20 +128,49 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       }
     }
 
+    // Create the SessionContextStore first so the WorkflowStore can read the
+    // current user's `can_edit_workflow` permission lazily.
+    const sessionContextStore = createSessionContextStore(isNewWorkflow);
+
     return {
       adaptorStore: createAdaptorStore(),
       credentialStore: createCredentialStore(),
+      metadataStore: createMetadataStore(),
       awarenessStore: createAwarenessStore(),
-      workflowStore: createWorkflowStore(),
-      sessionContextStore: createSessionContextStore(isNewWorkflow),
+      workflowStore: createWorkflowStore({
+        getCanEdit: () =>
+          sessionContextStore.getSnapshot().permissions?.can_edit_workflow ??
+          false,
+      }),
+      sessionContextStore,
       historyStore: createHistoryStore({
         initialRunData: parsedInitialRunData,
       }),
-      uiStore: createUIStore(),
+      uiStore: createUIStore(isNewWorkflow),
       editorPreferencesStore: createEditorPreferencesStore(),
       aiAssistantStore: createAIAssistantStore(),
     };
   });
+
+  // Bridge the SessionContextStore's `isNewWorkflow` flag up to SessionProvider
+  // so the channel-join `action` stays honest across in-place reconnects.
+  //
+  // SessionProvider owns the join params but sits ABOVE this provider, so it
+  // cannot read the SessionContextStore directly. The store is the source of
+  // truth: it is seeded from the same `isNewWorkflow` prop and is cleared by
+  // `clearIsNewWorkflow()` after the first successful save. We forward every
+  // change up via the SessionContext setter (a ref write, no re-render).
+  const setIsNewWorkflow = sessionContext?.setIsNewWorkflow;
+  useEffect(() => {
+    if (!setIsNewWorkflow) return undefined;
+
+    const store = stores.sessionContextStore;
+    // Sync the current value immediately, then on every change.
+    setIsNewWorkflow(store.getSnapshot().isNewWorkflow);
+    return store.subscribe(() => {
+      setIsNewWorkflow(store.getSnapshot().isNewWorkflow);
+    });
+  }, [setIsNewWorkflow, stores.sessionContextStore]);
 
   // Subscribe to sessionContextStore user changes
   // Note: We use useSyncExternalStore directly here (not useUser hook) because
@@ -189,25 +223,17 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Connect stores when provider is ready
   useEffect(() => {
     if (session.provider && session.isConnected) {
-      const cleanup1 = stores.adaptorStore._connectChannel(session.provider);
-      const cleanup2 = stores.credentialStore._connectChannel(session.provider);
-      const cleanup3 = stores.sessionContextStore._connectChannel(
-        session.provider
-      );
-      const cleanup4 = stores.historyStore._connectChannel(session.provider);
-      const cleanup5 = stores.aiAssistantStore._connectChannel(
-        session.provider
-      );
+      const connections = [
+        stores.adaptorStore,
+        stores.credentialStore,
+        stores.metadataStore,
+        stores.sessionContextStore,
+        stores.historyStore,
+        stores.aiAssistantStore,
+      ].map(store => store._connectChannel(session.provider!));
 
-      return () => {
-        cleanup1();
-        cleanup2();
-        cleanup3();
-        cleanup4();
-        cleanup5();
-      };
+      return () => connections.forEach(cleanup => cleanup());
     }
-    return undefined;
   }, [session.provider, session.isConnected, stores]);
 
   // Connect/disconnect workflowStore Y.Doc when session changes

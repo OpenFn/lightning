@@ -20,6 +20,7 @@ import { createAwarenessStore } from '../../../js/collaborative-editor/stores/cr
 import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
 import { createEditorPreferencesStore } from '../../../js/collaborative-editor/stores/createEditorPreferencesStore';
 import { createHistoryStore } from '../../../js/collaborative-editor/stores/createHistoryStore';
+import { createMetadataStore } from '../../../js/collaborative-editor/stores/createMetadataStore';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 import type { SessionStoreInstance } from '../../../js/collaborative-editor/stores/createSessionStore';
 import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
@@ -94,6 +95,7 @@ export function createStores(): StoreContextValue {
   return {
     adaptorStore: createAdaptorStore(),
     credentialStore: createCredentialStore(),
+    metadataStore: createMetadataStore(),
     awarenessStore: createAwarenessStore(),
     workflowStore: createWorkflowStore(),
     sessionContextStore: createSessionContextStore(),
@@ -132,16 +134,18 @@ export function simulateChannelConnection(
   if (session.provider && session.isConnected) {
     const cleanup1 = stores.adaptorStore._connectChannel(session.provider);
     const cleanup2 = stores.credentialStore._connectChannel(session.provider);
-    const cleanup3 = stores.sessionContextStore._connectChannel(
+    const cleanup3 = stores.metadataStore._connectChannel(session.provider);
+    const cleanup4 = stores.sessionContextStore._connectChannel(
       session.provider
     );
-    const cleanup4 = stores.historyStore._connectChannel(session.provider);
+    const cleanup5 = stores.historyStore._connectChannel(session.provider);
 
     return () => {
       cleanup1();
       cleanup2();
       cleanup3();
       cleanup4();
+      cleanup5();
     };
   }
 
@@ -308,6 +312,7 @@ export async function simulateStoreProviderWithConnection(
 export function verifyAllStoresPresent(stores: StoreContextValue): void {
   expect(stores.adaptorStore).toBeDefined();
   expect(stores.credentialStore).toBeDefined();
+  expect(stores.metadataStore).toBeDefined();
   expect(stores.awarenessStore).toBeDefined();
   expect(stores.workflowStore).toBeDefined();
   expect(stores.sessionContextStore).toBeDefined();
@@ -320,6 +325,7 @@ export function verifyAllStoresPresent(stores: StoreContextValue): void {
   [
     stores.adaptorStore,
     stores.credentialStore,
+    stores.metadataStore,
     stores.sessionContextStore,
     stores.historyStore,
     stores.uiStore,

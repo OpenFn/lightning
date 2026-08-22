@@ -124,7 +124,7 @@ defmodule Mix.Tasks.Lightning.MergeProjects do
     MergeProjects.merge_project(
       atomize(source_data),
       atomize(target_data),
-      uuid_map
+      %{new_uuid_map: uuid_map}
     )
   rescue
     ArgumentError ->

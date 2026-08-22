@@ -139,7 +139,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     edges: state.edges,
   }));
 
-  const { isReadOnly } = useWorkflowReadOnly();
+  const { isReadOnly, tooltipMessage: readOnlyTooltip } = useWorkflowReadOnly();
 
   const workflow = React.useMemo(() => {
     // Entities already have errors denormalized from store
@@ -756,13 +756,22 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         fallback: 'Unknown',
       });
 
+      // Generate a unique job name by appending an incrementing number if needed
+      const existingNames = new Set(jobs.map(j => j.name));
+      let uniqueName = adaptorDisplayName;
+      let counter = 1;
+      while (existingNames.has(uniqueName)) {
+        uniqueName = `${adaptorDisplayName} ${counter}`;
+        counter++;
+      }
+
       // Generate job ID
       const jobId = randomUUID();
 
       // Create job directly in Y.Doc (this will trigger animation)
       const newJob = {
         id: jobId,
-        name: adaptorDisplayName,
+        name: uniqueName,
         body: '',
         adaptor: adaptorSpec,
       };
@@ -910,7 +919,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
         onNodesChange={onNodesChange}
         onNodeDragStart={flowhandlers.ondragstart()}
         onNodeDragStop={flowhandlers.ondragstop(onNodeDragStop)}
-        nodesDraggable={isManualLayout}
+        nodesDraggable={isManualLayout && !isReadOnly}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodeClick={handleNodeClick}
@@ -937,10 +946,13 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
 
             <ControlButton
               onClick={() => switchLayout()}
+              disabled={isReadOnly}
               data-tooltip={
-                isManualLayout
-                  ? 'Switch to auto layout mode'
-                  : 'Switch to manual layout mode'
+                isReadOnly
+                  ? readOnlyTooltip
+                  : isManualLayout
+                    ? 'Switch to auto layout mode'
+                    : 'Switch to manual layout mode'
               }
             >
               {isManualLayout ? (

@@ -450,13 +450,18 @@ defmodule Lightning.WorkflowLive.Helpers do
 
   def job_form_has_error(view, job, field, error) do
     idx = get_index_of_job(view, job)
+    name = "workflow[jobs][#{idx}][#{field}]"
 
     view
-    |> element(
-      ~s{div[phx-feedback-for="workflow[jobs][#{idx}][#{field}]"] .error-space [data-tag="error_message"]},
-      error
-    )
-    |> has_element?()
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.find("div")
+    |> Enum.any?(fn node ->
+      Floki.find(node, ~s{[name="#{name}"]}) != [] and
+        node
+        |> Floki.find(~s{[data-tag="error_message"]})
+        |> Enum.any?(&(Floki.text(&1) =~ error))
+    end)
   end
 
   def has_pending_changes(view) do

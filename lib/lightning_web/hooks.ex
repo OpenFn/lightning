@@ -11,11 +11,38 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Policies.Users
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
-  alias LightningWeb.Live.Helpers.ProjectTheme
   alias LightningWeb.LiveHelpers
+
+  # Gates the admin space. Halts the mount and redirects when the user can't
+  # access it, so admin-only LiveViews can't be mounted (and their per-event
+  # handlers can't be invoked) by a non-admin socket.
+  def on_mount(
+        :ensure_admin,
+        _params,
+        _session,
+        %{assigns: %{current_user: nil}} = socket
+      ) do
+    {:halt, redirect(socket, to: ~p"/users/log_in")}
+  end
+
+  def on_mount(:ensure_admin, _params, _session, socket) do
+    can_access_admin_space =
+      Users
+      |> Permissions.can?(:access_admin_space, socket.assigns.current_user, {})
+
+    if can_access_admin_space do
+      {:cont, socket}
+    else
+      {:halt,
+       socket
+       |> put_flash(:nav, :no_access)
+       |> redirect(to: ~p"/projects")}
+    end
+  end
 
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access
@@ -56,20 +83,23 @@ defmodule LightningWeb.Hooks do
         {:halt, redirect(socket, to: ~p"/mfa_required")}
 
       can_access_project ->
-        scale = ProjectTheme.inline_primary_scale(project)
+        access_root =
+          Lightning.Projects.access_root_for_user(project, current_user)
 
-        theme_style =
-          [scale, ProjectTheme.inline_sidebar_vars()]
-          |> Enum.reject(&is_nil/1)
-          |> Enum.join(" ")
+        project_label =
+          Lightning.Projects.display_name_within_access_root(
+            project,
+            access_root
+          )
 
         {:cont,
          socket
          |> assign(:side_menu_theme, "primary-theme")
-         |> assign(:theme_style, theme_style)
-         |> assign_new(:project_user, fn -> project_user end)
-         |> assign_new(:project, fn -> project end)
-         |> assign_new(:projects, fn -> projects end)}
+         |> assign(:project_user, project_user)
+         |> assign(:project, project)
+         |> assign(:access_root, access_root)
+         |> assign(:project_label, project_label)
+         |> assign(:projects, projects)}
 
       true ->
         {:halt, redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
@@ -77,7 +107,60 @@ defmodule LightningWeb.Hooks do
   end
 
   def on_mount(:project_scope, _, _session, socket) do
-    {:cont, assign_new(socket, :theme_style, fn -> nil end)}
+    {:cont, socket}
+  end
+
+  def on_mount(
+        :ensure_workflow_belongs_to_project,
+        %{"id" => workflow_id},
+        _session,
+        %{assigns: %{project: project}} = socket
+      ) do
+    workflow_exists? =
+      Lightning.Workflows.workflow_exists_in_project?(project.id, workflow_id)
+
+    if workflow_exists? do
+      {:cont, socket}
+    else
+      {:halt,
+       socket
+       |> put_flash(:error, "Workflow not found")
+       |> redirect(to: ~p"/projects/#{project}/w")}
+    end
+  end
+
+  def on_mount(
+        :ensure_workflow_belongs_to_project,
+        _params,
+        _session,
+        socket
+      ) do
+    {:cont, socket}
+  end
+
+  def on_mount(
+        :ensure_run_belongs_to_project,
+        %{"id" => run_id},
+        _session,
+        %{assigns: %{project: project}} = socket
+      ) do
+    if Lightning.Runs.get_for_project(run_id, project.id) do
+      {:cont, socket}
+    else
+      {:halt,
+       socket
+       |> put_flash(:error, "Run not found")
+       |> redirect(to: ~p"/projects/#{project}/history")}
+    end
+  end
+
+  def on_mount(
+        :ensure_run_belongs_to_project,
+        _params,
+        _session,
+        socket
+      ) do
+    {:cont, socket}
   end
 
   def on_mount(:assign_projects, _, _session, socket) do
@@ -131,30 +214,6 @@ defmodule LightningWeb.Hooks do
     case socket.assigns do
       %{current_user: _user, project: %{id: project_id}} ->
         {:cont, LiveHelpers.check_limits(socket, project_id)}
-
-      _ ->
-        {:cont, socket}
-    end
-  end
-
-  def on_mount(:check_legacy_preference, params, _session, socket) do
-    case socket.assigns do
-      %{current_user: user, live_action: live_action}
-      when live_action in [:edit, :new] ->
-        prefer_legacy_editor =
-          Lightning.Accounts.get_preference(user, "prefer_legacy_editor")
-
-        if prefer_legacy_editor do
-          path =
-            LightningWeb.WorkflowLive.Helpers.legacy_editor_url(
-              params,
-              live_action
-            )
-
-          {:halt, push_navigate(socket, to: path)}
-        else
-          {:cont, socket}
-        end
 
       _ ->
         {:cont, socket}

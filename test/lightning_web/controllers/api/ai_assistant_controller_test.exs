@@ -1,6 +1,8 @@
 defmodule LightningWeb.API.AiAssistantControllerTest do
   use LightningWeb.ConnCase, async: true
 
+  @moduletag :capture_log
+
   import Mox
   import Lightning.Factories
 
@@ -21,19 +23,20 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
     end)
 
     # Mock Tesla HTTP client to prevent real HTTP calls
-    Mox.stub(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-      {:ok,
-       %Tesla.Env{
-         status: 200,
-         body: %{
-           "response" => "This is a test AI response.",
-           "history" => [
-             %{"role" => "user", "content" => "test message"},
-             %{"role" => "assistant", "content" => "This is a test AI response."}
-           ]
-         }
-       }}
-    end)
+    Mox.stub(
+      Lightning.Tesla.Mock,
+      :call,
+      Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+        "response" => "This is a test AI response.",
+        "history" => [
+          %{"role" => "user", "content" => "test message"},
+          %{
+            "role" => "assistant",
+            "content" => "This is a test AI response."
+          }
+        ]
+      })
+    )
 
     :ok
   end
@@ -326,6 +329,63 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
         )
 
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
+    end
+
+    test "returns 403 for a non-owner on a matching session with no workflow_id",
+         %{conn: _conn} do
+      # Matching session with no workflow to authorise against.
+      owner = insert(:user)
+      unsaved_job_id = Ecto.UUID.generate()
+
+      _session =
+        insert(:chat_session,
+          user: owner,
+          session_type: "job_code",
+          job_id: nil,
+          title: "No-workflow unsaved session",
+          meta: %{"unsaved_job" => %{"id" => unsaved_job_id, "name" => "X"}}
+        )
+
+      requester = insert(:user)
+
+      conn =
+        build_conn()
+        |> put_req_header("accept", "application/json")
+        |> log_in_user(requester)
+
+      conn =
+        get(
+          conn,
+          ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{unsaved_job_id}"
+        )
+
+      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+    end
+
+    test "owner can list a matching session with no workflow_id", %{
+      conn: conn,
+      user: user
+    } do
+      unsaved_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          title: "No-workflow unsaved session",
+          meta: %{"unsaved_job" => %{"id" => unsaved_job_id, "name" => "X"}}
+        )
+
+      conn =
+        get(
+          conn,
+          ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{unsaved_job_id}"
+        )
+
+      response = json_response(conn, 200)
+      assert %{"sessions" => sessions} = response
+      assert Enum.any?(sessions, &(&1["id"] == session.id))
     end
   end
 

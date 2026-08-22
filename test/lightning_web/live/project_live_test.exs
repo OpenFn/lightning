@@ -18,10 +18,10 @@ defmodule LightningWeb.ProjectLiveTest do
   import Mox
 
   alias Lightning.Auditing.Audit
-  alias Lightning.Name
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias LightningWeb.ProjectLive.Settings
 
   setup :stub_usage_limiter_ok
   setup :verify_on_exit!
@@ -33,18 +33,18 @@ defmodule LightningWeb.ProjectLiveTest do
     setup :register_and_log_in_user
 
     test "cannot access the index page", %{conn: conn} do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, ~p"/settings/projects") |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
 
     test "cannot access the new page", %{conn: conn} do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, ~p"/settings/projects/new")
         |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
   end
 
@@ -867,30 +867,29 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project_1}/w", on_error: :raise)
 
-      # Current project shown in breadcrumb project picker button
+      # Current project shown in breadcrumb project picker button (React mount point)
       assert view
              |> element(
-               "#breadcrumb-project-picker-trigger",
-               ~r/project-1/
+               "#breadcrumb-project-picker-trigger[data-label='project-1']"
              )
              |> has_element?()
 
       # Project picker is a React component - check data attributes contain correct projects
       html = render(view)
       assert html =~ project_1.name
-      assert html =~ ~s(data-current-project-id="#{project_1.id}")
+      assert html =~ ~s(data-current-id="#{project_1.id}")
 
-      # Projects data is passed as JSON to React component
-      # User's projects (project_1, project_2) should be in data-projects
+      # Projects data is passed as JSON via data-items on the picker mount
+      # User's projects (project_1, project_2) should be in data-items
       assert html =~ project_2.id
-      # Other user's project (project_3) should NOT be in data-projects
+      # Other user's project (project_3) should NOT be in data-items
       refute html =~ project_3.id
 
       {:ok, _view, html} =
         live(conn, ~p"/projects/#{project_2}/w", on_error: :raise)
 
       assert html =~ project_2.name
-      assert html =~ ~s(data-current-project-id="#{project_2.id}")
+      assert html =~ ~s(data-current-id="#{project_2.id}")
       assert html =~ project_1.id
       refute html =~ project_3.id
 
@@ -1013,7 +1012,7 @@ defmodule LightningWeb.ProjectLiveTest do
             on_error: :raise
           )
 
-        credential_name = Lightning.Name.generate()
+        credential_name = build(:credential).name
 
         refute html =~ credential_name
 
@@ -1044,6 +1043,50 @@ defmodule LightningWeb.ProjectLiveTest do
       end)
     end
 
+    test "new credential in a sandbox pre-selects only the active sandbox",
+         %{conn: conn, user: user} do
+      root =
+        insert(:project,
+          name: "root-project",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      intermediate = insert(:project, name: "intermediate", parent_id: root.id)
+
+      sandbox =
+        insert(:project,
+          name: "sandbox-project",
+          parent_id: intermediate.id,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/settings#credentials",
+          on_error: :raise
+        )
+
+      view |> element("#new-credential-option-menu-item") |> render_click()
+      view |> select_credential_type("http")
+      view |> click_continue()
+
+      # Only the active sandbox is pre-selected. Ancestors are attached at
+      # merge time, not speculatively at credential creation.
+      assert has_element?(
+               view,
+               "#remove-project-credential-button-new-#{sandbox.id}"
+             )
+
+      refute has_element?(
+               view,
+               "#remove-project-credential-button-new-#{intermediate.id}"
+             )
+
+      refute has_element?(
+               view,
+               "#remove-project-credential-button-new-#{root.id}"
+             )
+    end
+
     test "support users can create new credentials in the project credentials page",
          %{
            conn: conn,
@@ -1063,7 +1106,7 @@ defmodule LightningWeb.ProjectLiveTest do
           on_error: :raise
         )
 
-      credential_name = Lightning.Name.generate()
+      credential_name = build(:credential).name
 
       refute html =~ credential_name
 
@@ -1177,6 +1220,33 @@ defmodule LightningWeb.ProjectLiveTest do
                "#new-keychain-credential-option-menu-item",
                "Keychain"
              )
+    end
+
+    test "excluded credential types do not appear in the type picker grid",
+         %{
+           conn: conn,
+           user: user
+         } do
+      excluded_types = ["keychain"]
+
+      project =
+        insert(:project,
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      view |> element("#new-credential-option-menu-item") |> render_click()
+      assert has_element?(view, "#new-credential-modal")
+
+      for type <- excluded_types do
+        refute has_element?(view, "button[phx-value-key='#{type}']"),
+               "#{type} should not appear in the credential type picker"
+      end
     end
 
     test "project admin can view keychain credentials table", %{
@@ -1791,6 +1861,44 @@ defmodule LightningWeb.ProjectLiveTest do
       assert %{name: "project-1"} = Repo.get!(Project, project.id)
     end
 
+    test "generic save cannot mass-assign privileged fields past their gates",
+         %{conn: conn, user: user} do
+      other_project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      project =
+        insert(:project,
+          name: "project-1",
+          requires_mfa: false,
+          allow_support_access: false,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      view
+      |> form("#project-settings-form", project: %{raw_name: "renamed"})
+      |> render_submit(%{
+        "project" => %{
+          "requires_mfa" => "true",
+          "scheduled_deletion" => "2038-01-01T00:00:00Z",
+          "allow_support_access" => "true",
+          "parent_id" => other_project.id
+        }
+      })
+
+      reloaded = Repo.get!(Project, project.id)
+
+      # The ordinary field is applied...
+      assert reloaded.name == "renamed"
+      # ...but none of the privileged fields ride along.
+      refute reloaded.requires_mfa
+      assert reloaded.scheduled_deletion == nil
+      refute reloaded.allow_support_access
+      assert reloaded.parent_id == nil
+    end
+
     test "project admin can edit project concurrency with valid data",
          %{
            conn: conn,
@@ -2170,6 +2278,48 @@ defmodule LightningWeb.ProjectLiveTest do
     end
   end
 
+  describe "view-extension slot wrappers" do
+    test "concurrency_input_slot/1 forwards project, field, and disabled" do
+      project = insert(:project)
+      changeset = Lightning.Projects.Project.changeset(project, %{})
+      form = Phoenix.HTML.FormData.to_form(changeset, [])
+      field = form[:concurrency]
+
+      echo =
+        render_component(
+          &Settings.concurrency_input_slot/1,
+          component: LightningWeb.SlotEchoComponent,
+          field: field,
+          project: project,
+          disabled: true
+        )
+        |> Floki.parse_fragment!()
+        |> Floki.find("[data-slot-echo]")
+
+      assert Floki.attribute(echo, "data-project-id") == [project.id]
+      assert Floki.attribute(echo, "data-field-id") == [field.id]
+      assert Floki.attribute(echo, "data-disabled") == ["true"]
+    end
+
+    test "usage_caps_input_slot/1 forwards project and current_user" do
+      project = insert(:project)
+      user = insert(:user)
+
+      echo =
+        render_component(
+          &Settings.usage_caps_input_slot/1,
+          component: LightningWeb.SlotEchoComponent,
+          project: project,
+          current_user: user
+        )
+        |> Floki.parse_fragment!()
+        |> Floki.find("[data-slot-echo]")
+
+      assert Floki.attribute(echo, "data-project-id") == [project.id]
+      assert Floki.attribute(echo, "data-current-user-id") == [user.id]
+    end
+  end
+
   describe "webhook-security" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
@@ -2268,7 +2418,7 @@ defmodule LightningWeb.ProjectLiveTest do
         refute html =~ "Basic HTTP Authentication"
         refute html =~ "API Key Authentication"
 
-        credential_name = Name.generate()
+        credential_name = build(:credential).name
 
         refute html =~ credential_name
 
@@ -2382,7 +2532,7 @@ defmodule LightningWeb.ProjectLiveTest do
         # modal exists
         assert view |> element("##{modal_id}") |> has_element?()
 
-        credential_name = Name.generate()
+        credential_name = build(:credential).name
 
         refute render(view) =~ credential_name
 
@@ -2425,6 +2575,49 @@ defmodule LightningWeb.ProjectLiveTest do
 
         # modal doesn't exist
         refute view |> element("##{modal_id}") |> has_element?()
+      end
+    end
+
+    test "owners/admins cannot open another project's webhook auth method by id" do
+      project = insert(:project)
+
+      # A webhook auth method that belongs to a DIFFERENT project.
+      foreign_auth_method =
+        insert(:webhook_auth_method,
+          project: insert(:project),
+          auth_type: :basic,
+          name: "someone-elses-auth"
+        )
+
+      modal_id = "webhook_auth_method_modal"
+
+      for conn <- build_project_user_conns(project, [:owner, :admin]) do
+        {:ok, view, _html} =
+          live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+        # edit and delete both reject the cross-project id and never open the
+        # modal on the foreign method
+        for target <- ["edit_webhook_auth_method", "delete_webhook_auth_method"] do
+          html =
+            render_click(view, "show_modal", %{
+              target: target,
+              id: foreign_auth_method.id
+            })
+
+          assert html =~ "Webhook auth method not found"
+          refute html =~ "someone-elses-auth"
+          refute view |> element("##{modal_id}") |> has_element?()
+        end
+
+        # the linked-triggers view (a read with no write gate) is scoped too
+        html =
+          render_click(view, "show_modal", %{
+            target: "linked_triggers_for_webhook_auth_method",
+            id: foreign_auth_method.id
+          })
+
+        assert html =~ "Webhook auth method not found"
+        refute html =~ "someone-elses-auth"
       end
     end
 
@@ -2748,7 +2941,9 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert html =~ "Input/Output Data Storage Policy"
-      assert html =~ "Should OpenFn store input/output data for workflow runs?"
+
+      assert html =~
+               "The input and output data associated with workflow runs and channel requests is useful for debugging. However it can contain sensitive PII. Should OpenFn store this data?"
 
       # retain_all is the default
       assert ["checked"] ==
@@ -2777,7 +2972,7 @@ defmodule LightningWeb.ProjectLiveTest do
       refute html =~ "heads-up-description"
 
       # 3 radio buttons descriptions
-      assert "Retain input/output data for all workflow runs" =
+      assert "Retain all input/output data" =
                view
                |> element(~s{label#[for="retain_all"]})
                |> render()
@@ -2844,7 +3039,7 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Floki.parse_fragment!()
                |> Floki.attribute("input", "checked")
 
-      assert "When enabled, you will no longer be able to retry workflow runs as no data will be stored." =
+      assert "When enabled, you will no longer be able to retry workflow runs, and channel request/response payloads will not be stored." =
                view
                |> element("#heads-up-description")
                |> render()
@@ -3383,6 +3578,105 @@ defmodule LightningWeb.ProjectLiveTest do
         assert Floki.find(html, "button[name$='[collaborators_drop][]']")
                |> Enum.count() == 0
       end
+    end
+
+    test "validate event with invalid email shows error in modal", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, _user} = setup_project_user(conn, project, :owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      view |> element("#show_collaborators_modal_button") |> render_click()
+
+      modal = element(view, "#add_collaborators_modal")
+
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "not-an-email", "role" => "editor"}
+          }
+        }
+      )
+      |> render_change()
+
+      assert render(modal) =~ "Email address not valid."
+
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "valid@example.com", "role" => "editor"}
+          }
+        }
+      )
+      |> render_change()
+
+      refute render(modal) =~ "Email address not valid."
+    end
+
+    test "validate event with invalid email shows error in invite modal", %{
+      conn: conn
+    } do
+      project = insert(:project, name: "my-project")
+      {conn, _user} = setup_project_user(conn, project, :owner)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      view |> element("#show_collaborators_modal_button") |> render_click()
+
+      # Submit with a non-existent email to open the invite form
+      view
+      |> form("#add_collaborators_modal_form",
+        project: %{
+          "collaborators" => %{
+            "0" => %{"email" => "newuser@example.com", "role" => "editor"}
+          }
+        }
+      )
+      |> render_submit()
+
+      assert has_element?(view, "#invite_collaborators_modal_form")
+
+      invite_modal = element(view, "#invite_collaborators_modal")
+
+      view
+      |> form("#invite_collaborators_modal_form",
+        project: %{
+          "invited_collaborators" => %{
+            "0" => %{
+              "email" => "not-an-email",
+              "role" => "editor",
+              "first_name" => "Test",
+              "last_name" => "User"
+            }
+          }
+        }
+      )
+      |> render_change()
+
+      assert render(invite_modal) =~ "Email address not valid."
+
+      view
+      |> form("#invite_collaborators_modal_form",
+        project: %{
+          "invited_collaborators" => %{
+            "0" => %{
+              "email" => "valid@example.com",
+              "role" => "editor",
+              "first_name" => "Test",
+              "last_name" => "User"
+            }
+          }
+        }
+      )
+      |> render_change()
+
+      refute render(invite_modal) =~ "Email address not valid."
     end
 
     test "adding a non existent user triggers the invite users process", %{
@@ -3956,6 +4250,166 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "cannot remove a collaborator belonging to another project (H-2)", %{
+      conn: conn
+    } do
+      project_a = insert(:project)
+      {conn, _admin} = setup_project_user(conn, project_a, :admin)
+
+      project_b = insert(:project)
+
+      victim =
+        insert(:project_user,
+          project: project_b,
+          user: build(:user),
+          role: :editor
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project_a.id}/settings#collaboration")
+
+      html =
+        render_click(view, "remove_project_user", %{
+          "project_user_id" => victim.id
+        })
+
+      assert html =~ "You are not authorized to perform this action"
+      assert Repo.get(Lightning.Projects.ProjectUser, victim.id)
+    end
+
+    test "cannot toggle failure alert for a collaborator in another project (H-2)",
+         %{conn: conn} do
+      assert_cross_project_pref_blocked(
+        conn,
+        "set_failure_alert",
+        :failure_alert,
+        "false",
+        true
+      )
+    end
+
+    test "cannot set digest for a collaborator in another project (H-2)", %{
+      conn: conn
+    } do
+      assert_cross_project_pref_blocked(
+        conn,
+        "set_digest",
+        :digest,
+        "daily",
+        :never
+      )
+    end
+
+    test "cannot toggle failure alert for another member of the same project", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, _admin} = setup_project_user(conn, project, :admin)
+
+      other =
+        insert(:project_user,
+          project: project,
+          user: build(:user),
+          failure_alert: true
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      html =
+        render_click(view, "set_failure_alert", %{
+          "project_user_id" => other.id,
+          "failure_alert" => "false"
+        })
+
+      assert html =~ "You are not authorized to perform this action"
+      assert Repo.reload(other).failure_alert == true
+    end
+
+    test "cannot set digest for another member of the same project", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, _admin} = setup_project_user(conn, project, :admin)
+
+      other =
+        insert(:project_user,
+          project: project,
+          user: build(:user),
+          digest: :never
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      html =
+        render_click(view, "set_digest", %{
+          "project_user_id" => other.id,
+          "digest" => "daily"
+        })
+
+      assert html =~ "You are not authorized to perform this action"
+      assert Repo.reload(other).digest == :never
+    end
+
+    test "a member can still toggle their own failure alert", %{conn: conn} do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :editor)
+
+      pu =
+        Repo.get_by(Lightning.Projects.ProjectUser,
+          user_id: user.id,
+          project_id: project.id
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      target = !pu.failure_alert
+
+      render_click(view, "set_failure_alert", %{
+        "project_user_id" => pu.id,
+        "failure_alert" => to_string(target)
+      })
+
+      assert Repo.reload(pu).failure_alert == target
+    end
+
+    test "a member can still set their own digest", %{conn: conn} do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :editor)
+
+      pu =
+        Repo.get_by(Lightning.Projects.ProjectUser,
+          user_id: user.id,
+          project_id: project.id
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      render_click(view, "set_digest", %{
+        "project_user_id" => pu.id,
+        "digest" => "weekly"
+      })
+
+      assert Repo.reload(pu).digest == :weekly
+    end
+
+    # Exercises the shared cast-guarded getter that all three project_user_id
+    # handlers route through, so one malformed-id case covers the guard for all.
+    test "a non-binary project_user_id does not crash the view", %{conn: conn} do
+      project = insert(:project)
+      {conn, _admin} = setup_project_user(conn, project, :admin)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collaboration")
+
+      render_click(view, "remove_project_user", %{"project_user_id" => ["x"]})
+
+      assert Process.alive?(view.pid)
+    end
+
     test "users cant see form to toggle failure alerts if limiter returns error",
          %{conn: conn} do
       %{id: project_id} = project = insert(:project)
@@ -4322,6 +4776,102 @@ defmodule LightningWeb.ProjectLiveTest do
         "#{expected_installation["account"]["type"]}: #{expected_installation["account"]["login"]}"
     end
 
+    test "does not show error banner when installations load successfully", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{
+        "installations" => [
+          %{
+            "id" => 1234,
+            "account" => %{"type" => "User", "login" => "username"}
+          }
+        ]
+      })
+
+      expect_create_installation_token(1234)
+      expect_get_installation_repos(200)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      html = render_async(view)
+
+      refute html =~ "Unable to load GitHub installations"
+      refute html =~ "No GitHub installations found"
+    end
+
+    test "shows warning banner when user has no GitHub installations", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(200, %{"installations" => []})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      html = render_async(view)
+
+      assert html =~ "No GitHub installations found"
+      assert html =~ "You haven&#39;t installed the OpenFn GitHub App yet"
+    end
+
+    test "shows reconnect link when user has expired OAuth token", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_expired_github_oauth_token!(user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      html = render(view)
+
+      # When token is expired, component doesn't render
+      # Instead shows the connect section with "Reconnect" link
+      assert html =~ "Connect your OpenFn account to GitHub"
+      assert html =~ "Reconnect your GitHub Account"
+      assert has_element?(view, "#connect-github-link")
+      refute html =~ "Unable to load GitHub installations"
+    end
+
+    test "shows error banner when GitHub API returns an error", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(500, %{"error" => "Internal Server Error"})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      html = render_async(view)
+
+      assert html =~ "Unable to load GitHub installations"
+      assert html =~ "There was a problem connecting to GitHub"
+    end
+
     test "branches list can be refreshed successfully", %{
       conn: conn
     } do
@@ -4376,6 +4926,10 @@ defmodule LightningWeb.ProjectLiveTest do
       assert selected_installation =~ expected_installation["id"]
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -4434,6 +4988,10 @@ defmodule LightningWeb.ProjectLiveTest do
         connection: %{github_installation_id: expected_installation["id"]}
       )
 
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -4461,6 +5019,10 @@ defmodule LightningWeb.ProjectLiveTest do
       # now let us refresh the branches
       new_branch = %{"name" => "newbranch"}
 
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [
@@ -4480,6 +5042,95 @@ defmodule LightningWeb.ProjectLiveTest do
         |> Floki.find("#select-branches-input li")
 
       assert Enum.count(options) == 3
+    end
+
+    test "does not fetch branches from a github installation the user cannot access",
+         %{conn: conn} do
+      own_installation = %{
+        "id" => 1234,
+        "account" => %{
+          "type" => "User",
+          "login" => "username"
+        }
+      }
+
+      own_repo = %{
+        "full_name" => "someaccount/somerepo",
+        "default_branch" => "main"
+      }
+
+      # An installation belonging to another tenant. The shared GitHub App's
+      # private key can mint a token for it, so the branch fetch must refuse
+      # before reaching for the app credential.
+      foreign_installation_id = "9999"
+      foreign_repo = "otheraccount/private-repo"
+
+      project = insert(:project)
+
+      {conn, user} = setup_project_user(conn, project, :owner)
+      set_valid_github_oauth_token!(user)
+
+      # On mount the user only sees their own installation (1234) and its repos.
+      expect_get_user_installations(200, %{
+        "installations" => [own_installation]
+      })
+
+      expect_create_installation_token(own_installation["id"])
+      expect_get_installation_repos(200, %{"repositories" => [own_repo]})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      render_async(view)
+
+      # Attempt to list branches for the FOREIGN installation. The only GitHub
+      # call the happy path should make is the /user/installations membership
+      # check, which returns 1234 only. We deliberately set NO
+      # expect_create_installation_token/expect_get_repo_branches for the
+      # foreign id, so if the code tried to mint an app token or fetch branches
+      # the strict Mox adapter would raise.
+      expect_get_user_installations(200, %{
+        "installations" => [own_installation]
+      })
+
+      view
+      |> form("#project-repo-connection-form")
+      |> render_change(
+        connection: %{
+          github_installation_id: foreign_installation_id,
+          repo: foreign_repo
+        }
+      )
+
+      options =
+        view
+        |> element("#select-branches-input")
+        |> render_async()
+        |> Floki.parse_fragment!()
+        |> Floki.find("#select-branches-input li")
+
+      # Only the "Select a branch" prompt is present; no branches leaked.
+      assert Enum.count(options) == 1
+      refute find_selected_option(Floki.raw_html(options), "li")
+
+      # The same guarantee holds when explicitly refreshing branches.
+      expect_get_user_installations(200, %{
+        "installations" => [own_installation]
+      })
+
+      view |> element("#refresh-branches-button") |> render_click()
+
+      options =
+        view
+        |> element("#select-branches-input")
+        |> render_async()
+        |> Floki.parse_fragment!()
+        |> Floki.find("#select-branches-input li")
+
+      assert Enum.count(options) == 1
     end
 
     test "authorized users can save repo connection successfully without setting config path and initiate sync to github immediately",
@@ -4567,6 +5218,10 @@ defmodule LightningWeb.ProjectLiveTest do
       options |> hd() |> Floki.raw_html() =~ "Select a branch"
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -4707,6 +5362,10 @@ defmodule LightningWeb.ProjectLiveTest do
       render_async(view)
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -4827,6 +5486,10 @@ defmodule LightningWeb.ProjectLiveTest do
       render_async(view)
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -4917,6 +5580,10 @@ defmodule LightningWeb.ProjectLiveTest do
       render_async(view)
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -5009,6 +5676,10 @@ defmodule LightningWeb.ProjectLiveTest do
       render_async(view)
 
       # lets select the repo
+      expect_get_user_installations(200, %{
+        "installations" => [expected_installation]
+      })
+
       expect_create_installation_token(expected_installation["id"])
 
       expect_get_repo_branches(expected_repo["full_name"], 200, [expected_branch])
@@ -6571,6 +7242,320 @@ defmodule LightningWeb.ProjectLiveTest do
                )
       end
     end
+
+    test "preview button appears for each collection row", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project)
+      insert(:project_user, role: :owner, project: project, user: user)
+
+      collection_a = insert(:collection, project: project)
+      collection_b = insert(:collection, project: project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      assert has_element?(view, "#preview-collection-#{collection_a.id}-button")
+      assert has_element?(view, "#preview-collection-#{collection_b.id}-button")
+    end
+
+    test "clicking preview button opens modal with collection name and subtitle",
+         %{conn: conn, user: user} do
+      project = insert(:project)
+      insert(:project_user, role: :owner, project: project, user: user)
+      collection = insert(:collection, project: project)
+
+      insert(:collection_item,
+        collection: collection,
+        key: "preview-key",
+        value: "preview-value"
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      view
+      |> element("#preview-collection-#{collection.id}-button")
+      |> render_click()
+
+      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+
+      modal_html =
+        view
+        |> element("#preview-collection-#{collection.id}-modal")
+        |> render()
+
+      assert modal_html =~ "Collection Preview: #{collection.name}"
+      assert modal_html =~ "Showing first record"
+    end
+
+    test "preview modal shows item key and value", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project)
+      insert(:project_user, role: :owner, project: project, user: user)
+      collection = insert(:collection, project: project)
+
+      insert(:collection_item,
+        collection: collection,
+        key: "my-key",
+        value: "my-value"
+      )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      html =
+        view
+        |> with_target("#collections")
+        |> render_click("preview_collection", %{
+          "collection" => collection.name
+        })
+
+      assert html =~ "Collection Preview: #{collection.name}"
+      assert html =~ "my-key"
+      assert html =~ "my-value"
+      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+    end
+
+    test "preview modal shows empty state for empty collection", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project)
+      insert(:project_user, role: :owner, project: project, user: user)
+      collection = insert(:collection, project: project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      html =
+        view
+        |> with_target("#collections")
+        |> render_click("preview_collection", %{
+          "collection" => collection.name
+        })
+
+      assert html =~ "This collection is empty."
+      assert html =~ "Collection Preview: #{collection.name}"
+      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+    end
+
+    test "preview modal closes when reset_action is triggered", %{
+      conn: conn,
+      user: user
+    } do
+      project = insert(:project)
+      insert(:project_user, role: :owner, project: project, user: user)
+      collection = insert(:collection, project: project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      view
+      |> with_target("#collections")
+      |> render_click("preview_collection", %{
+        "collection" => collection.name
+      })
+
+      assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+
+      view
+      |> with_target("#collections")
+      |> render_click("reset_action", %{})
+
+      refute has_element?(view, "#preview-collection-#{collection.id}-modal")
+    end
+
+    test "all project members can preview a collection", %{conn: conn} do
+      project = insert(:project)
+
+      for {conn, _user} <-
+            setup_project_users(conn, project, [:viewer, :editor, :admin, :owner]) do
+        collection = insert(:collection, project: project)
+
+        {:ok, view, _html} =
+          live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+        view
+        |> with_target("#collections")
+        |> render_click("preview_collection", %{"collection" => collection.name})
+
+        assert has_element?(view, "#preview-collection-#{collection.id}-modal")
+      end
+    end
+
+    test "cannot preview a collection belonging to another project", %{
+      conn: conn,
+      user: user
+    } do
+      their_project = insert(:project)
+      insert(:project_user, role: :owner, project: their_project, user: user)
+
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+
+      view
+      |> with_target("#collections")
+      |> render_click("preview_collection", %{
+        "collection" => other_collection.name
+      })
+
+      flash =
+        assert_redirected(
+          view,
+          ~p"/projects/#{their_project.id}/settings#collections"
+        )
+
+      assert flash["error"] == "Collection not found"
+    end
+
+    test "cannot edit a collection belonging to another project", %{
+      conn: conn,
+      user: user
+    } do
+      their_project = insert(:project)
+      insert(:project_user, role: :owner, project: their_project, user: user)
+
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+
+      view
+      |> with_target("#collections")
+      |> render_click("toggle_action", %{
+        "action" => "edit",
+        "collection" => other_collection.name
+      })
+
+      flash =
+        assert_redirected(
+          view,
+          ~p"/projects/#{their_project.id}/settings#collections"
+        )
+
+      assert flash["error"] == "Collection not found"
+    end
+
+    test "cannot delete a collection belonging to another project", %{
+      conn: conn,
+      user: user
+    } do
+      their_project = insert(:project)
+      insert(:project_user, role: :owner, project: their_project, user: user)
+
+      other_project = insert(:project)
+      other_collection = insert(:collection, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{their_project.id}/settings#collections")
+
+      view
+      |> with_target("#collections")
+      |> render_click("toggle_action", %{
+        "action" => "delete",
+        "collection" => other_collection.name
+      })
+
+      flash =
+        assert_redirected(
+          view,
+          ~p"/projects/#{their_project.id}/settings#collections"
+        )
+
+      assert flash["error"] == "Collection not found"
+    end
+
+    test "collections can be sorted by name and used storage", %{conn: conn} do
+      project = insert(:project)
+      [{conn, _user} | _] = setup_project_users(conn, project, [:owner])
+
+      insert(:collection,
+        project: project,
+        name: "Charlie",
+        byte_size_sum: 100
+      )
+
+      insert(:collection,
+        project: project,
+        name: "Alpha",
+        byte_size_sum: 5_000_000_000
+      )
+
+      insert(:collection,
+        project: project,
+        name: "Bravo",
+        byte_size_sum: 2_500_000
+      )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project.id}/settings#collections")
+
+      assert html =~ "100 B"
+      assert html =~ "2.5 MB"
+      assert html =~ "5 GB"
+
+      assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='name']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Charlie", "Bravo", "Alpha"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='byte_size_sum']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Charlie", "Bravo", "Alpha"]
+
+      view
+      |> element("#collections-table-table a[phx-value-by='byte_size_sum']")
+      |> render_click()
+
+      assert collection_row_names(view) == ["Alpha", "Bravo", "Charlie"]
+    end
+  end
+
+  # Renders `event` against a project_user in a *different* project and asserts
+  # the targeted field is untouched and the deny flash is shown. Covers the H-2
+  # cross-project IDOR for both notification handlers.
+  defp assert_cross_project_pref_blocked(conn, event, field, submitted, seed) do
+    project_a = insert(:project)
+    {conn, _admin} = setup_project_user(conn, project_a, :admin)
+
+    victim =
+      insert(
+        :project_user,
+        [project: insert(:project), user: build(:user)] ++ [{field, seed}]
+      )
+
+    {:ok, view, _html} =
+      live(conn, ~p"/projects/#{project_a.id}/settings#collaboration")
+
+    html =
+      render_click(view, event, %{
+        "project_user_id" => victim.id,
+        to_string(field) => submitted
+      })
+
+    assert html =~ "You are not authorized to perform this action"
+    assert Map.fetch!(Repo.reload(victim), field) == seed
+  end
+
+  defp collection_row_names(view) do
+    view
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.find("#collections-table-table tbody tr td:first-child")
+    |> Enum.map(&(Floki.text(&1) |> String.trim()))
   end
 
   defp find_selected_option(html, selector) do

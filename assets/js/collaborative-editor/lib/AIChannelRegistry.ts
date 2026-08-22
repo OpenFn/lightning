@@ -88,7 +88,6 @@ interface JoinResponse {
   session_id: string;
   session_type: SessionType;
   messages: Message[];
-  has_read_disclaimer: boolean;
 }
 
 interface MessageResponse {
@@ -113,6 +112,11 @@ interface ChannelEntry {
     messageProcessing: ChannelCallback;
     messageError: ChannelCallback;
     messageStatusChanged: ChannelCallback;
+    streamingChunk: ChannelCallback;
+    streamingStatus: ChannelCallback;
+    streamingSegment: ChannelCallback;
+    streamingChanges: ChannelCallback;
+    streamingError: ChannelCallback;
   };
 }
 
@@ -129,9 +133,127 @@ export class AIChannelRegistry {
   // Short enough to not waste resources, long enough to handle accidental clicks
   private cleanupDelayMs = 2_000; // 2 seconds
 
+  // Word-by-word streaming buffer — smooths out bursty TCP chunks into
+  // a readable typing effect. Drains one word per tick at a fixed interval.
+  private streamingBuffer = '';
+  private streamingDrainPos = 0;
+  private streamingDrainTimer: ReturnType<typeof setInterval> | null = null;
+  // Status markers pinned to buffer positions. A status arriving over the
+  // wire is emitted into the store's streamingSegments timeline only once
+  // every character buffered before it has drained, preserving wire order
+  // (same guarantee drainThenRun provides for new_message).
+  private pendingStatusMarkers: Array<{ pos: number; text: string }> = [];
+  // Delay in ms between each letter. 15ms ≈ 65 chars/sec.
+  private static readonly LETTER_INTERVAL_MS = 15;
+  // Callback to run after the buffer finishes draining (e.g., finalize message)
+  private streamingDrainCallback: (() => void) | null = null;
+
   constructor(socket: PhoenixSocket, store: AIAssistantStore) {
     this.socket = socket;
     this.store = store;
+  }
+
+  /**
+   * Buffer a streaming text chunk and start draining word-by-word.
+   */
+  private bufferStreamingChunk(content: string): void {
+    // A text chunk arriving over the wire supersedes any active status
+    // (e.g. "Thinking...", "Writing code..."). Clearing here — at network
+    // arrival, not in the slow char-by-char drain — means a status Apollo
+    // streams *after* the text answer survives, while one followed by more
+    // text is correctly dismissed.
+    if (this.store.getSnapshot().streamingStatus) {
+      this.store.setStreamingStatus(null);
+    }
+    this.streamingBuffer += content;
+    this.startDraining();
+  }
+
+  /**
+   * Enqueue a status marker at the current end of the streaming buffer so it
+   * enters the store's streamingSegments timeline only after the text that
+   * preceded it on the wire has drained.
+   */
+  private bufferStreamingStatusSegment(text: string): void {
+    this.pendingStatusMarkers.push({
+      pos: this.streamingBuffer.length,
+      text,
+    });
+    this.startDraining();
+  }
+
+  /**
+   * Emit any status markers whose buffer position has been reached by the
+   * char drain (i.e. all text before them has already been appended).
+   */
+  private flushDueStatusMarkers(): void {
+    let next = this.pendingStatusMarkers.at(0);
+    while (next && next.pos <= this.streamingDrainPos) {
+      this.pendingStatusMarkers.shift();
+      this.store._appendStreamingSegment({
+        type: 'status',
+        content: next.text,
+      });
+      next = this.pendingStatusMarkers.at(0);
+    }
+  }
+
+  private startDraining(): void {
+    if (this.streamingDrainTimer !== null) return;
+
+    this.streamingDrainTimer = setInterval(() => {
+      this.flushDueStatusMarkers();
+
+      if (this.streamingDrainPos >= this.streamingBuffer.length) {
+        // Buffer fully drained — if a callback is waiting, run it now
+        if (this.streamingDrainCallback) {
+          this.stopDraining();
+          const cb = this.streamingDrainCallback;
+          this.streamingDrainCallback = null;
+          cb();
+        }
+        return;
+      }
+
+      const char = this.streamingBuffer[this.streamingDrainPos];
+      this.streamingDrainPos += 1;
+      this.store._appendStreamingChunk(char);
+    }, AIChannelRegistry.LETTER_INTERVAL_MS);
+  }
+
+  private stopDraining(): void {
+    if (this.streamingDrainTimer !== null) {
+      clearInterval(this.streamingDrainTimer);
+      this.streamingDrainTimer = null;
+    }
+    this.streamingBuffer = '';
+    this.streamingDrainPos = 0;
+    this.pendingStatusMarkers = [];
+  }
+
+  /**
+   * Let the buffer finish draining at normal pace, then run callback.
+   * If buffer is already empty, runs callback immediately.
+   */
+  private drainThenRun(callback: () => void): void {
+    if (this.streamingDrainPos >= this.streamingBuffer.length) {
+      // Nothing left to drain — emit any statuses already due before the
+      // stream finalizes, so the timeline matches wire order to the end.
+      this.flushDueStatusMarkers();
+      this.stopDraining();
+      callback();
+    } else {
+      // Wait for drain to finish
+      this.streamingDrainCallback = callback;
+    }
+  }
+
+  /**
+   * Discard buffer without flushing. Called on streaming error.
+   */
+  private discardStreamingBuffer(): void {
+    this.streamingDrainCallback = null;
+    this.stopDraining();
   }
 
   /**
@@ -407,30 +529,6 @@ export class AIChannelRegistry {
   }
 
   /**
-   * Mark disclaimer as read through the channel
-   *
-   * @param topic - Channel topic
-   */
-  markDisclaimerRead(topic: string): void {
-    const entry = this.channels.get(topic);
-
-    if (!entry) {
-      logger.error('Cannot mark disclaimer: channel not found', { topic });
-      return;
-    }
-
-    entry.channel
-      .push('mark_disclaimer_read', {})
-      .receive('ok', () => {
-        this.store.markDisclaimerRead();
-      })
-      .receive('error', (response: unknown) => {
-        const typedResponse = response as ChannelError;
-        logger.error('Failed to mark disclaimer', typedResponse);
-      });
-  }
-
-  /**
    * Load sessions list through the channel
    *
    * @param topic - Channel topic
@@ -533,6 +631,8 @@ export class AIChannelRegistry {
       count: this.channels.size,
     });
 
+    this.discardStreamingBuffer();
+
     for (const entry of this.channels.values()) {
       if (entry.cleanupTimer) {
         clearTimeout(entry.cleanupTimer);
@@ -546,6 +646,11 @@ export class AIChannelRegistry {
         'message_status_changed',
         entry.handlers.messageStatusChanged
       );
+      entry.channel.off('streaming_chunk', entry.handlers.streamingChunk);
+      entry.channel.off('streaming_status', entry.handlers.streamingStatus);
+      entry.channel.off('streaming_segment', entry.handlers.streamingSegment);
+      entry.channel.off('streaming_changes', entry.handlers.streamingChanges);
+      entry.channel.off('streaming_error', entry.handlers.streamingError);
       entry.channel.leave();
     }
 
@@ -563,7 +668,11 @@ export class AIChannelRegistry {
     const newMessageHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as { message: Message };
       if (typedPayload.message && typedPayload.message.id) {
-        this.store._addMessage(typedPayload.message);
+        // Let the word-by-word buffer finish draining at normal pace,
+        // then seamlessly replace the streaming message with the final one.
+        this.drainThenRun(() => {
+          this.store._addMessage(typedPayload.message);
+        });
       }
     };
 
@@ -601,11 +710,60 @@ export class AIChannelRegistry {
       );
     };
 
+    const streamingChunkHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as { content: string };
+      this.bufferStreamingChunk(typedPayload.content);
+    };
+
+    // Transient "thinking" updates: scalar only. They replace each other and
+    // are cleared by any subsequent event (text chunk or status segment).
+    // They never enter the persistent segments timeline.
+    const streamingStatusHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as { text: string };
+      this.store.setStreamingStatus(typedPayload.text);
+    };
+
+    // Persistent completed-action statuses (same shape as a
+    // response_segments entry): supersede any active thinking status at
+    // network arrival, and enter the woven timeline through the char drain
+    // so they land after the text that preceded them on the wire.
+    const streamingSegmentHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as {
+        segment?: { type?: string; content?: string };
+      };
+      // Only status segments exist on the wire today; anything else is a
+      // contract change and is ignored until the client learns about it.
+      if (typedPayload.segment?.type !== 'status') return;
+      if (typeof typedPayload.segment.content !== 'string') return;
+
+      if (this.store.getSnapshot().streamingStatus) {
+        this.store.setStreamingStatus(null);
+      }
+      this.bufferStreamingStatusSegment(typedPayload.segment.content);
+    };
+
+    const streamingChangesHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as {
+        changes: Record<string, unknown>;
+      };
+      this.store._setStreamingChanges(typedPayload.changes);
+    };
+
+    const streamingErrorHandler: ChannelCallback = (_payload: unknown) => {
+      this.discardStreamingBuffer();
+      this.store._clearStreaming();
+    };
+
     channel.on('new_message', newMessageHandler);
     channel.on('user_message', userMessageHandler);
     channel.on('message_processing', messageProcessingHandler);
     channel.on('message_error', messageErrorHandler);
     channel.on('message_status_changed', messageStatusChangedHandler);
+    channel.on('streaming_chunk', streamingChunkHandler);
+    channel.on('streaming_status', streamingStatusHandler);
+    channel.on('streaming_segment', streamingSegmentHandler);
+    channel.on('streaming_changes', streamingChangesHandler);
+    channel.on('streaming_error', streamingErrorHandler);
 
     return {
       newMessage: newMessageHandler,
@@ -613,6 +771,11 @@ export class AIChannelRegistry {
       messageProcessing: messageProcessingHandler,
       messageError: messageErrorHandler,
       messageStatusChanged: messageStatusChangedHandler,
+      streamingChunk: streamingChunkHandler,
+      streamingStatus: streamingStatusHandler,
+      streamingSegment: streamingSegmentHandler,
+      streamingChanges: streamingChangesHandler,
+      streamingError: streamingErrorHandler,
     };
   }
 
@@ -636,11 +799,6 @@ export class AIChannelRegistry {
             session_type: typedResponse.session_type,
             messages: typedResponse.messages || [],
           });
-        }
-
-        // Set disclaimer state from backend
-        if (typedResponse.has_read_disclaimer) {
-          this.store.markDisclaimerRead();
         }
 
         logger.debug('Channel joined successfully', { topic: entry.topic });
@@ -725,6 +883,10 @@ export class AIChannelRegistry {
       'message_status_changed',
       entry.handlers.messageStatusChanged
     );
+    entry.channel.off('streaming_chunk', entry.handlers.streamingChunk);
+    entry.channel.off('streaming_status', entry.handlers.streamingStatus);
+    entry.channel.off('streaming_segment', entry.handlers.streamingSegment);
+    entry.channel.off('streaming_changes', entry.handlers.streamingChanges);
 
     entry.channel.leave();
     this.channels.delete(topic);
@@ -789,12 +951,29 @@ export class AIChannelRegistry {
       if (context.workflow_id) {
         params['workflow_id'] = context.workflow_id;
       }
-      if (context.code) {
-        params['code'] = context.code;
-      }
       if (context.content) {
         params['content'] = context.content;
       }
+    }
+
+    // Workflow YAML (applicable to both session types). For global chat the
+    // `code` slot carries the FULL serialized workflow YAML (every step body
+    // embedded), not a single job's code. When a step is open the context is
+    // JobCodeContext-shaped and took the branch above, which does not forward
+    // `code`. Forwarding it here (outside the branch) ensures the YAML reaches
+    // Apollo on the *first* turn — the only message sent via the channel join.
+    // Later turns go through `new_message` and were never affected. Plain job
+    // chat never sets `context.code`, so this is a no-op there.
+    if ('code' in context && context.code) {
+      params['code'] = context.code;
+    }
+
+    // Global assistant flags (applicable to both session types)
+    if ('use_global_assistant' in context && context.use_global_assistant) {
+      params['use_global_assistant'] = true;
+    }
+    if ('page' in context && context.page) {
+      params['page'] = context.page as string;
     }
 
     return params;

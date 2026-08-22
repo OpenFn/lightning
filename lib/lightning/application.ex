@@ -28,6 +28,17 @@ defmodule Lightning.Application do
       })
     end
 
+    # :logger.add_handler(:file_log, :logger_std_h, %{
+    #   level: :warning,
+    #   config: %{
+    #     file: ~c"log/lightning.log",
+    #     max_no_bytes: 10_000_000,
+    #     max_no_files: 5,
+    #     compress_on_rotate: true
+    #   },
+    #   formatter: Logger.Formatter.new()
+    # })
+
     adaptor_registry_childspec =
       {Lightning.AdaptorRegistry,
        Application.get_env(:lightning, Lightning.AdaptorRegistry, [])}
@@ -43,6 +54,12 @@ defmodule Lightning.Application do
        warmers: [
          warmer(module: Lightning.AuthProviders.CacheWarmer)
        ]}
+
+    # Signing keys (JWKS) for OIDC login, cached off the per-login verify path.
+    auth_provider_jwks_cache_childspec =
+      Supervisor.child_spec({Cachex, name: :auth_provider_jwks},
+        id: :auth_provider_jwks_cache
+      )
 
     :telemetry.attach_many(
       "oban-errors",
@@ -130,6 +147,7 @@ defmodule Lightning.Application do
         {Phoenix.PubSub, name: Lightning.PubSub},
         {Finch, name: Lightning.Finch},
         auth_providers_cache_childspec,
+        auth_provider_jwks_cache_childspec,
         {Lightning.Collaboration.Supervisor, []},
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,

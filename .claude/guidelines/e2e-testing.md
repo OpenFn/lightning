@@ -1,18 +1,16 @@
 # E2E Testing with Playwright
 
-## Overview
+For generic Playwright behaviour — auto-waiting, web-first assertions, semantic locators
+(`getByRole` / `getByLabel` / `getByTestId`), network interception, file upload and download,
+accessibility snapshots — use the [upstream Playwright docs](https://playwright.dev/docs/intro).
+Those patterns are not re-documented here. What is documented here is Lightning-specific.
 
-End-to-end (E2E) tests validate complete user journeys through the Lightning
-application using Playwright. These tests run against a dedicated test server
-with an isolated database, ensuring tests don't interfere with development or
-production environments.
-
-**Testing Philosophy:**
-- Test complete user workflows, not individual actions
-- Use real backend systems (Phoenix, PostgreSQL) for integration confidence
-- Maintain fast, stable tests through proper isolation and fixtures
-- Leverage Page Object Model (POM) for maintainable test code
-- Focus on user-visible behavior over implementation details
+**Check the installed Playwright version before trusting recall on an API.** Read
+`assets/package.json` and `assets/node_modules/playwright-core/package.json` for what is actually
+installed, then verify the API against `assets/node_modules/playwright-core/types/types.d.ts`.
+`package.json` declares a caret range, so the installed version moves without the declaration
+changing. This is not hypothetical: three APIs taught in these guidelines had been superseded —
+`Locator.type` (use `pressSequentially`), `waitForSelector`, and `networkidle`.
 
 ## Quick Start
 
@@ -27,35 +25,21 @@ npm run test:e2e
 # Interactive debugging
 npm run test:e2e:ui
 
-# Debug specific test
-npm run test:e2e:debug workflow.spec.ts
+# Debug a specific test — note the `--`, npm needs it to forward arguments
+npm run test:e2e:debug -- specs/smoke/basic-navigation.spec.ts
 ```
 
 ## Architecture Overview
 
 ### Test Environment
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Playwright Test Runner                   │
-│  (Node.js process, port 4003 baseURL)                      │
-└────────────────┬────────────────────────────────────────────┘
-                 │
-                 ├──► Browser Contexts (isolated sessions)
-                 │    ├── User 1 Context (auth state)
-                 │    └── User 2 Context (different auth)
-                 │
-                 ├──► bin/e2e Helper Integration
-                 │    ├── Database reset (snapshot-based)
-                 │    ├── Test data fetching
-                 │    └── Server lifecycle management
-                 │
-                 └──► E2E Server (Phoenix)
-                      ├── Port: 4003
-                      ├── Database: lightning_test_e2e
-                      ├── LiveView WebSocket connections
-                      └── Real-time collaborative features
-```
+- The Playwright runner is a Node process; `baseURL` defaults to `http://localhost:4003`, driven by
+  `PORT`.
+- It starts and stops a Phoenix server on that port against the `lightning_test_e2e` database, via
+  the `webServer` entry in `playwright.config.ts`.
+- `bin/e2e` handles database reset from a snapshot, test-data fetching and server lifecycle;
+  `assets/test/e2e/e2e-helper.ts` is the TypeScript bridge to it.
+- Everything runs in a single browser context today. Nothing in the suite opens a second one.
 
 **Key Components:**
 - **playwright.config.ts**: Test configuration, server coordination
@@ -88,68 +72,21 @@ Lightning uses a **snapshot-based reset strategy** for fast test isolation:
 
 ### Directory Structure
 
-```
-assets/test/e2e/
-├── specs/                      # Test files organized by feature
-│   ├── smoke/                  # Critical path tests
-│   │   └── basic-navigation.spec.ts
-│   ├── workflows/              # Workflow-specific tests
-│   │   ├── workflow-creation.spec.ts
-│   │   └── workflow-editing.spec.ts
-│   └── collaborative/          # Collaborative editor tests
-│       └── multi-user-editing.spec.ts
-├── pages/                      # Page Object Models
-│   ├── base/                   # Base classes
-│   │   ├── index.ts
-│   │   └── liveview.page.ts   # LiveView-specific utilities
-│   ├── components/             # Reusable component POMs
-│   │   ├── job-form.page.ts
-│   │   └── workflow-diagram.page.ts
-│   ├── login.page.ts
-│   ├── projects.page.ts
-│   ├── workflow-edit.page.ts  # Current LiveView editor
-│   ├── workflow-collab.page.ts # NEW: Collaborative editor
-│   └── index.ts
-├── fixtures/                   # Custom fixtures (future)
-├── helpers/                    # Test utilities (future)
-├── e2e-helper.ts              # bin/e2e integration
-├── test-data.ts               # Test data fetching/caching
-└── global.setup.ts            # Global test setup
-```
-
-### Test File Naming
-
-```typescript
-// ✅ GOOD: Descriptive, feature-based names
-workflow-creation.spec.ts
-collaborative-editing.spec.ts
-credential-management.spec.ts
-
-// ❌ BAD: Generic or numbered names
-test1.spec.ts
-workflow.spec.ts
-e2e-test.spec.ts
-```
+`ls assets/test/e2e/` rather than trusting a tree in a doc. The layout: `specs/` grouped by area
+(`smoke/`, `collaborative/`), `pages/` for the Page Object Models (see
+`.claude/guidelines/e2e/page-objects.md`), and at the root `e2e-helper.ts` (the bridge to
+`bin/e2e`), `test-data.ts` and `global.setup.ts`.
 
 ### Test Grouping with Tags
 
 Use tags to organize and filter tests:
 
 ```typescript
-test('workflow creation @smoke @critical', async ({ page }) => {
-  // Critical smoke test - must pass before deployment
-});
-
-test('advanced workflow features @extended', async ({ page }) => {
-  // Extended test suite - optional for quick feedback
-});
-
-test('real-time collaboration @collaborative @websocket', async ({ page }) => {
-  // Tests requiring WebSocket/real-time features
-});
+test('workflow creation @smoke @critical', async ({ page }) => {});
+test('advanced workflow features @extended', async ({ page }) => {});
+test('real-time collaboration @collaborative @websocket', async ({ page }) => {});
 ```
 
-**Run specific tags:**
 ```bash
 npx playwright test --grep @smoke
 npx playwright test --grep "@critical|@smoke"
@@ -157,8 +94,6 @@ npx playwright test --grep-invert @extended
 ```
 
 ## Test Data Management
-
-### Using Test Data
 
 Lightning provides test data through `test-data.ts`:
 
@@ -169,145 +104,68 @@ test.describe('Workflow Tests', () => {
   let testData: Awaited<ReturnType<typeof getTestData>>;
 
   test.beforeAll(async () => {
-    // Load test data once per suite
     testData = await getTestData();
   });
 
   test('navigate to workflow', async ({ page }) => {
-    // Use real IDs from database
     await page.goto(`/projects/${testData.projects.openhie.id}/w`);
-
-    // Use known workflow name
     await page.getByText(testData.workflows.openhie.name).click();
   });
 });
 ```
 
-### Test Data Structure
+**Test data shape** (`test-data.ts:21-35`):
 
 ```typescript
 {
   users: {
-    editor: { id, email, password, firstName, lastName },
-    viewer: { id, email, password, firstName, lastName },
-    admin: { id, email, password, firstName, lastName },
+    admin: { email, password, id },   // demo@openfn.org
+    editor: { email, password, id },  // editor@openfn.org
+    viewer: { email, password, id },  // viewer@openfn.org
+    super?: { email, password, id },  // optional
   },
   projects: {
-    openhie: { id, name, description },
-    // ... other projects
+    openhie: { id, name },
+    dhis2: { id, name },
   },
   workflows: {
     openhie: { id, name, projectId },
-    // ... other workflows
+    dhis2: { id, name, projectId },
   }
 }
 ```
 
-### Test Data Best Practices
+No `firstName` / `lastName` on a user, and no `description` on a project. `super` is optional, so
+guard it before use.
 
-**✅ DO: Use test data for navigation and assertions**
-```typescript
-test('open workflow', async ({ page }) => {
-  const workflowId = testData.workflows.openhie.id;
-  await page.goto(`/w/${workflowId}`);
-  await expect(page).toHaveURL(new RegExp(`/w/${workflowId}`));
-});
-```
+**✅ DO: Use test data for navigation and assertions.**
+**✅ DO: Create new data for modification tests** — don't mutate seeded records.
+**❌ DON'T: Delete or modify existing test data** — other tests depend on it.
 
-**✅ DO: Create new data for modification tests**
-```typescript
-test('create new workflow', async ({ page }) => {
-  // Don't modify existing test data
-  await page.getByRole('button', { name: 'New Workflow' }).click();
-  await page.fill('[name="name"]', 'Test Workflow');
-  // New workflow won't interfere with other tests
-});
-```
+## Writing E2E Tests
 
-**❌ DON'T: Modify existing test data**
-```typescript
-test('delete workflow', async ({ page }) => {
-  // BAD: Deleting test data breaks other tests
-  await page.goto(`/w/${testData.workflows.openhie.id}`);
-  await page.click('text=Delete');
-});
-```
+### Prefer complete user journeys
 
-## Writing Effective E2E Tests
+Test a whole task the way a user performs it, not one click at a time. Break the journey into
+`test.step()` blocks so a failure points at the phase that broke.
 
-### Test Structure: Complete User Journeys
+`assets/test/e2e/specs/collaborative/edge-validation.spec.ts` is the worked example to copy from:
+it logs in, opens a workflow, and drags edges between nodes across several steps, all against real
+routes and real selectors.
 
-**✅ GOOD: Test complete workflows**
-```typescript
-test('user can create and configure workflow', async ({ page }) => {
-  // 1. Navigate to workflows
-  await page.goto('/projects/123/w');
+### Waiting for Phoenix LiveView
 
-  // 2. Create workflow
-  await page.getByRole('button', { name: 'New Workflow' }).click();
-  await page.fill('[name="name"]', 'Data Pipeline');
-  await page.click('text=Create');
+See `.claude/guidelines/e2e/phoenix-liveview.md §LiveView waits` for the wait primitives and
+worked examples.
 
-  // 3. Add job
-  await page.getByTestId('add-job').click();
-  await page.fill('[name="job_name"]', 'Fetch Data');
+### Using Page Object Models
 
-  // 4. Configure and save
-  await page.fill('[name="adaptor"]', '@openfn/language-http');
-  await page.click('text=Save');
-
-  // 5. Verify result
-  await expect(page.getByText('Workflow saved')).toBeVisible();
-  await expect(page.getByText('Fetch Data')).toBeVisible();
-});
-```
-
-**❌ BAD: Fragmented actions**
-```typescript
-test('navigate to workflows', async ({ page }) => { /* ... */ });
-test('click new workflow', async ({ page }) => { /* ... */ });
-test('fill workflow name', async ({ page }) => { /* ... */ });
-test('click create', async ({ page }) => { /* ... */ });
-// Tests are too granular and dependent
-```
-
-### Using test.step() for Clarity
-
-Break complex tests into logical steps:
-
-```typescript
-test('complete workflow lifecycle', async ({ page }) => {
-  await test.step('Create workflow', async () => {
-    await page.goto('/workflows/new');
-    await page.fill('[name="name"]', 'ETL Pipeline');
-    await page.click('text=Create');
-  });
-
-  await test.step('Add jobs', async () => {
-    await page.getByTestId('add-job').click();
-    await page.fill('[name="job_name"]', 'Extract');
-    await page.click('text=Add another');
-    await page.fill('[name="job_name"]', 'Transform');
-  });
-
-  await test.step('Execute workflow', async () => {
-    await page.click('text=Run');
-    await expect(page.getByText('Running')).toBeVisible();
-  });
-});
-```
-
-**Benefits:**
-- Clear test report structure
-- Easy to identify failing step
-- Better trace viewer organization
-- Self-documenting test logic
-
-## Common Patterns
+Use POMs for reusable interactions rather than inline CSS selectors scattered across tests. Read
+the existing POM before adding a method — `loginIfNeeded` is the sort of helper that gets written
+twice. See `.claude/guidelines/e2e/page-objects.md` for the class hierarchy and composition
+patterns.
 
 ### Authentication
-
-Use Page Object Models for login:
 
 ```typescript
 import { LoginPage } from '../pages';
@@ -321,453 +179,87 @@ test.beforeEach(async ({ page }) => {
 });
 ```
 
-For tests requiring multiple users, see
-`.claude/guidelines/e2e/collaborative-testing.md`.
+`loginIfNeeded` only fills the form when it is visible (`login.page.ts:59-63`), so it is safe to
+call from a `beforeEach` that may already be authenticated.
 
-### Waiting for Phoenix LiveView
-
-Use `LiveViewPage` utilities for LiveView-specific waits:
-
-```typescript
-import { WorkflowEditPage } from '../pages';
-
-test('workflow loads', async ({ page }) => {
-  const workflowPage = new WorkflowEditPage(page);
-
-  await page.goto('/w/123');
-
-  // Wait for LiveView connection
-  await workflowPage.waitForConnected();
-
-  // Wait for socket to settle before assertions
-  await workflowPage.waitForSocketSettled();
-
-  // Now safe to interact
-  await page.getByRole('button', { name: 'Add Job' }).click();
-});
-```
-
-See `.claude/guidelines/e2e/phoenix-liveview.md` for comprehensive LiveView
-testing patterns.
-
-### Using Page Object Models
-
-**✅ GOOD: Use POMs for reusable interactions**
-```typescript
-test('edit workflow', async ({ page }) => {
-  const workflowEdit = new WorkflowEditPage(page);
-
-  await page.goto('/w/123');
-  await workflowEdit.waitForConnected();
-
-  // Use POM methods
-  await workflowEdit.setWorkflowName('Updated Name');
-  await workflowEdit.diagram.clickNode('Job 1');
-  await workflowEdit.jobForm(0).nameInput.fill('Updated Job');
-  await workflowEdit.clickSaveWorkflow();
-
-  // Assert using POM locators
-  await expect(workflowEdit.unsavedChangesIndicator()).not.toBeVisible();
-});
-```
-
-**❌ BAD: Inline selectors in tests**
-```typescript
-test('edit workflow', async ({ page }) => {
-  await page.goto('/w/123');
-
-  // Brittle selectors scattered throughout test
-  await page.locator('.workflow-name input').fill('Updated Name');
-  await page.locator('.react-flow-node').first().click();
-  await page.locator('#job-form-0 input[name="name"]').fill('Updated Job');
-  await page.locator('button:has-text("Save")').click();
-});
-```
-
-See `.claude/guidelines/e2e/page-objects.md` for comprehensive POM patterns.
-
-### Before Modifying POMs: Read First!
-
-**Critical Rule**: Before adding or modifying any POM method, ALWAYS read the entire POM file first to understand what already exists.
-
-```typescript
-// ❌ BAD: Adding method without checking what exists
-test('refactor login', async ({ page }) => {
-  // Task: "Use LoginPage POM for login"
-  // Agent creates navigateAndLogin() without reading file first
-  // Duplicates existing loginIfNeeded() functionality
-});
-
-// ✅ GOOD: Check existing methods first
-test('refactor login', async ({ page }) => {
-  // 1. Read assets/test/e2e/pages/login.page.ts
-  // 2. Discover loginIfNeeded() already exists
-  // 3. Use existing method:
-  await page.goto("/");
-  const loginPage = new LoginPage(page);
-  await loginPage.loginIfNeeded(email, password);
-});
-```
-
-**Before adding POM methods, verify**:
-- [ ] Read the entire POM file
-- [ ] Understand all existing methods
-- [ ] Check if functionality already exists
-- [ ] Confirm new method is genuinely needed
-
-See "Before Creating or Modifying POMs" in `.claude/guidelines/e2e/page-objects.md` for detailed guidance.
-
-## Debugging E2E Tests
-
-### Interactive UI Mode
-
-Best for exploring and developing tests:
-
-```bash
-npm run test:e2e:ui
-```
-
-**Features:**
-- Visual test runner with browser preview
-- Step through tests with time travel
-- Inspect locators with pick mode
-- Watch mode for rapid iteration
-
-### Debug Mode
-
-Best for troubleshooting specific test failures:
-
-```bash
-npm run test:e2e:debug workflow.spec.ts
-```
-
-**Features:**
-- Chromium Inspector opens automatically
-- Set breakpoints in test code
-- Step through actions one at a time
-- Inspect page state at any point
-
-### Trace Viewer
-
-Automatically captured on first retry (configured in `playwright.config.ts`):
-
-```bash
-# After test failure with retry
-npx playwright show-trace test-results/.../trace.zip
-```
-
-**Features:**
-- Film strip view of test execution
-- Network activity waterfall
-- Console logs and errors
-- DOM snapshots at each action
-- Action timeline with precise timing
-
-### Common Debugging Techniques
-
-**1. Headed Mode (see browser)**:
-```bash
-npx playwright test --headed
-```
-
-**2. Pause execution in test**:
-```typescript
-test('debug test', async ({ page }) => {
-  await page.goto('/workflows');
-
-  // Pause and open inspector
-  await page.pause();
-
-  await page.click('text=New');
-});
-```
-
-**3. Screenshot on failure**:
-```typescript
-test.afterEach(async ({ page }, testInfo) => {
-  if (testInfo.status !== testInfo.expectedStatus) {
-    await page.screenshot({
-      path: `test-results/failure-${testInfo.title}.png`
-    });
-  }
-});
-```
-
-**4. Verbose logging**:
-```typescript
-test('debug test', async ({ page }) => {
-  // Log navigation
-  page.on('console', msg => console.log('Browser log:', msg.text()));
-
-  // Log requests
-  page.on('request', req => console.log('Request:', req.url()));
-
-  await page.goto('/workflows');
-});
-```
+**No spec runs more than one browser context yet** — `browser.newContext()` is 0 hits across
+`assets/test/e2e/specs/`. For the shape a multi-user test should take, and the per-user feature
+flag it needs, see `.claude/guidelines/e2e/collaborative-testing.md §Multi-user test template`.
 
 ## Configuration
 
 ### playwright.config.ts
 
-```typescript
-export default defineConfig({
-  testDir: './test/e2e',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: 'list',
+`assets/playwright.config.ts` is 40 lines. Read it rather than a copy of it.
 
-  use: {
-    baseURL: 'http://localhost:4003',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-  },
+**Lightning specifics:**
+- `workers: 1` in CI avoids database contention
+- `webServer` automatically starts/stops the e2e server via `bin/e2e start`
 
-  projects: [
-    {
-      name: 'setup',
-      testMatch: /global\.setup\.ts/,
-    },
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup'],
-    },
-  ],
+### Environment variables
 
-  webServer: {
-    command: 'bin/e2e start',
-    url: 'http://localhost:4003',
-    reuseExistingServer: !process.env.CI,
-    timeout: 60 * 1000,
-  },
-});
-```
-
-**Key Settings:**
-- `fullyParallel: true` - Tests run in parallel (fast feedback)
-- `workers: 1` in CI - Avoid database contention
-- `trace: 'on-first-retry'` - Capture traces only when needed
-- `webServer` - Automatically starts/stops e2e server
-
-### Environment Variables
+Both of these are defaulted by `bin/e2e.d/manager:6,9`, so you only set them to override:
 
 ```bash
-# E2E server port (default: 4003)
-PORT=4003
-
-# Database URL
-DATABASE_URL=postgres://postgres:postgres@localhost/lightning_test_e2e
-
-# Playwright specific
-PWDEBUG=1              # Enable inspector
-DEBUG=pw:api           # Verbose API logs
+PORT=4003                                                              # E2E server port
+DATABASE_URL=postgres://postgres:postgres@localhost/lightning_test_e2e # E2E database
 ```
 
-## Best Practices Summary
+`playwright.config.ts:17,36` reads `PORT` for both `baseURL` and the `webServer` health check,
+so changing it changes both.
 
-### ✅ DO
+## Lightning defaults worth remembering
 
-- **Test complete user workflows** from start to finish
-- **Use Page Object Models** for maintainable, reusable code
-- **Use test data** from `test-data.ts` for navigation and assertions
-- **Wait for LiveView connections** using `waitForConnected()`
-- **Use semantic locators** (role, label, text) over CSS selectors
-- **Use test.step()** to organize complex tests
-- **Reset database** between test runs (`bin/e2e reset`)
-- **Test from user perspective** - what they see and do
-- **Keep tests independent** - each test should run in isolation
-- **Use traces for debugging** - capture on failure, not always
-
-### ❌ DON'T
-
-- **Fragment user journeys** into micro-tests
-- **Hardcode selectors** in test files - use POMs
-- **Modify test data** that other tests depend on
-- **Use arbitrary timeouts** - use proper waiting strategies
-- **Test implementation details** - focus on user behavior
-- **Skip LiveView waits** - ensure handlers are attached
-- **Make tests depend on each other** - maintain independence
-- **Over-test trivial interactions** - focus on business value
-- **Use XPath selectors** - prefer semantic/test-id locators
-- **Run parallel tests in CI** without considering database isolation
+- **One workflow route form:** `/projects/:project_id/w/:id` (`router.ex:246`), with
+  `/projects/:project_id/w/new` for a new one and `/projects/:project_id/w` for the list. There is
+  no bare `/w/:id` and no `/collab/` prefix. The retired legacy editor URLs
+  `/projects/:project_id/w/:id/legacy` redirect (`router.ex:252-253`). Login is `/users/log_in`
+  (`router.ex:132`), not `/login`.
+- **Every LiveView navigation opens a new WebSocket** — re-call `waitForConnected()` after a link
+  click that crosses LiveViews.
+- **The workflow diagram has no fixed testids.** Address it by React Flow classes: `.react-flow`,
+  `.react-flow__viewport`, `.react-flow__node`, `.react-flow__node-job`,
+  `.react-flow__node-trigger`, `.react-flow__node-placeholder`. Nodes do carry a testid, but a
+  parameterised one — `job-node-${id}` / `trigger-node-${id}`
+  (`assets/js/workflow-diagram/nodes/Node.tsx:120`) — so `[data-testid="job-node"]` matches
+  nothing.
+- **Fixed testids in the collaborative editor**, five of them: `collaborative-editor`,
+  `job-inspector`, `save-workflow-button`, `undo-button`, `redo-button`. `workflow-canvas` and
+  `workflow-diagram` do not exist.
+- Prefer `getByTestId` only where `getByRole` or `getByLabel` cannot identify the target uniquely.
 
 ## Related Guidelines
 
-Depending on what task you are performing, you MUST read at least one of the following guideline documents:
-
-- **Modern Playwright patterns**: `.claude/guidelines/e2e/playwright-patterns.md`
-  - Auto-waiting and web-first assertions
-  - Locator strategies and best practices
-  - Network interception and mocking
-  - Performance measurement
-
-- **Phoenix LiveView testing**: `.claude/guidelines/e2e/phoenix-liveview.md`
-  - LiveView connection handling
-  - WebSocket message monitoring
-  - Handling phx-* attributes and hooks
-  - Race condition prevention
-
-- **Page Object Model**: `.claude/guidelines/e2e/page-objects.md`
-  - POM architecture and organization
-  - Component composition patterns
-  - Locator initialization strategies
-  - Handling dynamic content
-
-- **Collaborative testing**: `.claude/guidelines/e2e/collaborative-testing.md`
-  - Multi-user test scenarios
-  - WebSocket and presence testing
-  - Y.Doc state verification
-  - Real-time update validation
+| What you need | File |
+|---|---|
+| LiveView connection waits (`waitForConnected`, `waitForSocketSettled`, `waitForEventAttached`), flash messages, hooks, WebSocket frame monitoring | [`e2e/phoenix-liveview.md`](./e2e/phoenix-liveview.md) |
+| Page Object Model conventions — the `LiveViewPage` base, standalone component POMs, composition, getter factories | [`e2e/page-objects.md`](./e2e/page-objects.md) |
+| Multi-user setup, presence, cursor awareness, CRDT convergence, offline and reconnect | [`e2e/collaborative-testing.md`](./e2e/collaborative-testing.md) |
 
 ## Troubleshooting
 
-### Database Issues
+### Database issues
 
-**Symptom**: Tests fail with database connection errors
 ```bash
-# Solution: Verify PostgreSQL is running
-pg_isready
-
 # Reset database
 bin/e2e reset --full
-```
 
-**Symptom**: Test data doesn't match expectations
-```bash
-# Solution: Reset snapshot and test data cache
+# Rebuild snapshot and test data cache
 bin/e2e setup
 ```
 
-### Server Issues
+### Server issues
 
-**Symptom**: Tests timeout waiting for server
 ```bash
 # Check if port is in use
 lsof -i :4003
 
-# Manually start server to check for errors
-bin/e2e start
-```
-
-**Symptom**: Server starts but tests can't connect
-```bash
-# Verify server is accessible
-curl http://localhost:4003
-
-# Check firewall settings
-```
-
-### Test Flakiness
-
-**Symptom**: Tests pass locally but fail in CI
-
-1. **Check parallelization**: Set `workers: 1` in CI config
-2. **Add proper waits**: Use `waitForConnected()` for LiveView
-3. **Verify test isolation**: Each test should be independent
-4. **Check for timing issues**: Replace fixed timeouts with conditions
-
-**Symptom**: Tests fail intermittently
-
-1. **Enable trace**: Set `trace: 'on'` temporarily
-2. **Add debug logging**: Log key actions and state
-3. **Check for race conditions**: Especially with WebSocket/LiveView
-4. **Verify test data**: Ensure clean state before each test
-
-### Common Errors
-
-**Error**: "E2E infrastructure not available"
-```bash
-# Solution: Run setup
-bin/e2e setup
-```
-
-**Error**: "Port 4003 already in use"
-```bash
-# Solution: Stop existing server
+# Stop existing server
 bin/e2e stop
-
-# Or kill process
-lsof -ti:4003 | xargs kill -9
 ```
 
-**Error**: "Test data returned null"
-```bash
-# Solution: Database not seeded
-bin/e2e setup
-```
+### Common errors
 
-## Performance Optimization
-
-### Fast Feedback Strategies
-
-**1. Smoke Tests First**:
-```bash
-# Run critical tests first
-npx playwright test --grep @smoke
-```
-
-**2. Parallel Execution** (local development):
-```typescript
-// playwright.config.ts
-export default defineConfig({
-  workers: undefined, // Use all available cores
-  fullyParallel: true,
-});
-```
-
-**3. Test Sharding** (CI/CD):
-```bash
-# Split tests across multiple machines
-npx playwright test --shard=1/4
-npx playwright test --shard=2/4
-npx playwright test --shard=3/4
-npx playwright test --shard=4/4
-```
-
-### Reducing Test Duration
-
-**Avoid**: Unnecessary full-page navigation
-```typescript
-// ❌ SLOW: Navigate for every test
-test.beforeEach(async ({ page }) => {
-  await page.goto('/workflows');
-});
-```
-
-**Use**: API-based setup when possible
-```typescript
-// ✅ FASTER: Set up via API, only navigate when testing UI
-test('edit workflow', async ({ page, request }) => {
-  // Create workflow via API
-  const response = await request.post('/api/workflows', {
-    data: { name: 'Test Workflow' }
-  });
-  const workflow = await response.json();
-
-  // Navigate directly to edit page
-  await page.goto(`/w/${workflow.id}`);
-});
-```
-
-**Reuse**: Authentication state
-```typescript
-// global.setup.ts - authenticate once
-const context = await browser.newContext();
-// Login...
-await context.storageState({ path: 'auth.json' });
-
-// playwright.config.ts - reuse for all tests
-use: {
-  storageState: 'auth.json',
-}
-```
-
----
-
-**Remember**: E2E tests provide confidence in complete user workflows. Keep
-them focused on business-critical paths, maintain them with Page Object Models,
-and ensure they're fast and stable through proper isolation and waiting
-strategies.
+- **"E2E infrastructure not available"** → `bin/e2e setup`
+- **"Port 4003 already in use"** → `bin/e2e stop` or `lsof -ti:4003 | xargs kill -9`
+- **"Test data returned null"** → database not seeded, run `bin/e2e setup`

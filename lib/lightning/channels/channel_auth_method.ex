@@ -1,0 +1,100 @@
+defmodule Lightning.Channels.ChannelAuthMethod do
+  @moduledoc """
+  Join table connecting channels to auth method implementations.
+
+  Each record has a `role` (:client or :destination) and points to exactly one
+  of `webhook_auth_method` (for client/inbound auth) or
+  `project_credential` (for destination/outbound auth).
+  """
+  use Lightning.Schema
+
+  alias Lightning.Channels.Channel
+  alias Lightning.Credentials.Scoping
+  alias Lightning.Projects.ProjectCredential
+  alias Lightning.Validators
+  alias Lightning.Workflows.WebhookAuthMethod
+
+  @roles [:client, :destination]
+
+  schema "channel_auth_methods" do
+    field :role, Ecto.Enum, values: @roles
+    field :delete, :boolean, virtual: true
+
+    belongs_to :channel, Channel
+    belongs_to :webhook_auth_method, WebhookAuthMethod
+    belongs_to :project_credential, ProjectCredential
+
+    timestamps()
+  end
+
+  def changeset(struct, attrs) do
+    struct
+    |> cast(attrs, [
+      :role,
+      :webhook_auth_method_id,
+      :project_credential_id,
+      :delete
+    ])
+    |> validate_required([:role])
+    |> Validators.validate_exclusive(
+      [:webhook_auth_method_id, :project_credential_id],
+      "webhook_auth_method_id and project_credential_id are mutually exclusive"
+    )
+    |> Validators.validate_one_required(
+      [:webhook_auth_method_id, :project_credential_id],
+      "must reference either a webhook auth method or a project credential"
+    )
+    |> validate_role_target_consistency()
+    |> assoc_constraint(:channel)
+    |> foreign_key_constraint(:webhook_auth_method_id)
+    |> foreign_key_constraint(:project_credential_id,
+      message: Scoping.violation_message(:project_credential_id)
+    )
+    |> unique_constraint(:webhook_auth_method_id,
+      name: :channel_auth_methods_wam_unique
+    )
+    |> unique_constraint(:project_credential_id,
+      name: :channel_auth_methods_pc_unique
+    )
+    |> unique_constraint(:channel_id,
+      name: :channel_auth_methods_destination_unique,
+      message: "only one destination auth method is allowed per channel"
+    )
+    |> then(fn changeset ->
+      if get_change(changeset, :delete) do
+        %{changeset | action: :delete}
+      else
+        changeset
+      end
+    end)
+  end
+
+  defp validate_role_target_consistency(changeset) do
+    case get_field(changeset, :role) do
+      :client ->
+        if get_field(changeset, :project_credential_id) do
+          add_error(
+            changeset,
+            :project_credential_id,
+            "client auth must use a webhook auth method, not a project credential"
+          )
+        else
+          changeset
+        end
+
+      :destination ->
+        if get_field(changeset, :webhook_auth_method_id) do
+          add_error(
+            changeset,
+            :webhook_auth_method_id,
+            "destination auth must use a project credential, not a webhook auth method"
+          )
+        else
+          changeset
+        end
+
+      _ ->
+        changeset
+    end
+  end
+end

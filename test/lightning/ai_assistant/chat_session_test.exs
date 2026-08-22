@@ -1,6 +1,8 @@
 defmodule Lightning.AiAssistant.ChatSessionTest do
   use Lightning.DataCase, async: true
 
+  @moduletag :capture_log
+
   alias Lightning.AiAssistant.ChatSession
 
   describe "changeset/2" do

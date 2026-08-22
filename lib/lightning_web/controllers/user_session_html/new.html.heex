@@ -33,10 +33,16 @@
                   field={f[:email]}
                   required={true}
                   label="Email"
+                  autocomplete="email"
                 />
               </div>
               <div>
-                <.input type="password" field={f[:password]} label="Password" />
+                <.input
+                  type="password"
+                  field={f[:password]}
+                  label="Password"
+                  autocomplete="current-password"
+                />
               </div>
               <.check_box form={f} field={:remember_me}>
                 <br />

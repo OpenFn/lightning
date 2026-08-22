@@ -9,6 +9,53 @@
       phx-submit="save"
       phx-target={@myself}
     >
+      <%!-- Token is expired/invalid --%>
+      <.error_banner
+        :if={show_invalid_oauth_error?(@installations)}
+        title="Unable to load GitHub installations"
+      >
+        <p>
+          Your GitHub authentication has expired or is invalid.
+        </p>
+        <p class="mt-2">
+          Go to
+          <.link
+            href={~p"/profile"}
+            class="font-medium text-yellow-800 hover:text-yellow-900 underline"
+          >
+            Settings
+          </.link>
+          and reconnect your GitHub account.
+        </p>
+      </.error_banner>
+      <%!-- Token valid but no installations (app uninstalled/never installed) --%>
+      <.error_banner
+        :if={show_no_installations_warning?(@installations)}
+        title="No GitHub installations found"
+      >
+        <p>
+          You haven't installed the OpenFn GitHub App yet, or you may have uninstalled it.
+        </p>
+        <p class="mt-2">
+          <.link
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-medium text-yellow-800 hover:text-yellow-900 underline"
+            href={"https://github.com/apps/#{github_config()[:app_name]}"}
+          >
+            Install or manage GitHub app installations
+          </.link>
+        </p>
+      </.error_banner>
+      <%!-- GitHub API error (GitHub down or other issues) --%>
+      <.error_banner
+        :if={show_api_error?(@installations)}
+        title="Unable to load GitHub installations"
+      >
+        <p>
+          There was a problem connecting to GitHub. Refresh the page or contact support if the problem persists.
+        </p>
+      </.error_banner>
       <div class="">
         <.input
           id="select-installations-input"
@@ -19,7 +66,7 @@
           options={installations_select_options(@installations)}
           disabled={
             @actions_disabled ||
-              if(@installations.loading, do: true, else: false)
+              if(!@installations.ok?, do: true, else: false)
           }
           required="true"
           button_placement="right"
@@ -98,17 +145,22 @@
         </.input>
       </div>
       <div class="mt-4">
+        <.sync_order_radio form={f} />
+      </div>
+      <div :if={f[:sync_direction].value == :deploy} class="mt-4">
         <.input
           type="text"
           field={f[:config_path]}
-          label={"Path to config #{if f[:sync_direction].value == :deploy, do: "(required)", else: "(optional)"}"}
+          label="Path to config (required)"
           placeholder={"./openfn-#{@project.id}-config.json"}
           class="placeholder:italic placeholder:text-slate-400"
         />
       </div>
-      <div class="mt-4">
-        <.sync_order_radio form={f} />
-      </div>
+      <.config_format_toggle
+        :if={f[:sync_direction].value != :deploy}
+        form={f}
+        project_id={@project.id}
+      />
       <%= if f[:branch].value do %>
         <.accept_checkbox
           project={@project}
@@ -182,6 +234,15 @@
           Path to config:
           <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
             {ProjectRepoConnection.config_path(@project_repo_connection)}
+          </span>
+        </span>
+
+        <span>
+          Sync version:
+          <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+            {if @project_repo_connection.sync_version,
+              do: "v2 (new)",
+              else: "v1 (legacy)"}
           </span>
         </span>
 

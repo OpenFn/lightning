@@ -1,6 +1,8 @@
 defmodule Lightning.AiAssistant.LimiterTest do
   use ExUnit.Case, async: true
 
+  @moduletag :capture_log
+
   import Mox
 
   alias Lightning.AiAssistant.Limiter

@@ -25,18 +25,9 @@ defmodule LightningWeb.CollectionsController do
 
   @valid_params ["key", "cursor", "limit" | @timestamp_params]
 
-  defp authorize(conn, collection) do
-    Permissions.can(
-      Lightning.Policies.Collections,
-      :access_collection,
-      conn.assigns.subject,
-      collection
-    )
-  end
-
-  def put(conn, %{"name" => col_name, "key" => key, "value" => value}) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
-         :ok <- authorize(conn, collection),
+  def put(conn, %{"name" => name, "key" => key, "value" => value}) do
+    with {:ok, collection} <- resolve(conn, name),
+         :ok <- authorize(conn, :put_collection_item, collection),
          :ok <- Collections.put(collection, key, value) do
       json(conn, %{upserted: 1, error: nil})
     else
@@ -48,9 +39,11 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def put_all(conn, %{"name" => col_name, "items" => items}) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
-         :ok <- authorize(conn, collection),
+  def put(conn, %{"name" => _, "key" => _}), do: missing_body(conn, "value")
+
+  def put_all(conn, %{"name" => name, "items" => items}) do
+    with {:ok, collection} <- resolve(conn, name),
+         :ok <- authorize(conn, :put_collection_item, collection),
          {:ok, count} <- Collections.put_all(collection, items) do
       json(conn, %{upserted: count, error: nil})
     else
@@ -64,22 +57,21 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def get(conn, %{"name" => col_name, "key" => key}) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
-         :ok <- authorize(conn, collection) do
-      case Collections.get(collection, key) do
-        nil ->
-          resp(conn, :no_content, "")
+  def put_all(conn, %{"name" => _}), do: missing_body(conn, "items")
 
-        item ->
-          json(conn, item)
+  def get(conn, %{"name" => name, "key" => key}) do
+    with {:ok, collection} <- resolve(conn, name),
+         :ok <- authorize(conn, :access_collection, collection) do
+      case Collections.get(collection, key) do
+        nil -> resp(conn, :no_content, "")
+        item -> json(conn, item)
       end
     end
   end
 
-  def delete(conn, %{"name" => col_name, "key" => key}) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
-         :ok <- authorize(conn, collection) do
+  def delete(conn, %{"name" => name, "key" => key}) do
+    with {:ok, collection} <- resolve(conn, name),
+         :ok <- authorize(conn, :delete_collection_item, collection) do
       case Collections.delete(collection, key) do
         :ok ->
           json(conn, %{key: key, deleted: 1, error: nil})
@@ -90,21 +82,21 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  def delete_all(conn, %{"name" => col_name} = params) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
-         :ok <- authorize(conn, collection) do
+  def delete_all(conn, %{"name" => name} = params) do
+    with {:ok, collection} <- resolve(conn, name),
+         :ok <- authorize(conn, :delete_all_collection_items, collection) do
       key_param = params["key"]
-
       {:ok, n} = Collections.delete_all(collection, key_param)
-
       json(conn, %{key: key_param, deleted: n, error: nil})
     end
   end
 
-  def stream(conn, %{"name" => col_name} = params) do
-    with {:ok, collection, filters} <- validate_query(conn, col_name) do
-      key_pattern = Map.get(params, "key")
-
+  def stream(conn, %{"name" => name}) do
+    with {:ok, collection} <- resolve(conn, name),
+         :ok <- authorize(conn, :access_collection, collection),
+         {:ok, filters} <-
+           parse_query_params(Map.drop(conn.query_params, ["project_id"])) do
+      key_pattern = conn.query_params["key"]
       items_stream = stream_all_in_chunks(collection, filters, key_pattern)
       response_limit = Map.fetch!(filters, :limit)
 
@@ -113,6 +105,81 @@ defmodule LightningWeb.CollectionsController do
         {:ok, conn} -> conn
       end
     end
+  end
+
+  def download(conn, %{"project_id" => project_id, "name" => name}) do
+    with {:ok, uuid} <- cast_uuid(project_id),
+         {:ok, collection} <- Collections.get_collection(uuid, name),
+         :ok <- authorize(conn, :access_collection, collection) do
+      items_stream =
+        stream_all_in_chunks(
+          collection,
+          %{cursor: nil, limit: @max_database_limit + 1},
+          nil
+        )
+
+      conn
+      |> put_resp_content_type("application/json")
+      |> put_resp_header(
+        "content-disposition",
+        ~s(attachment; filename="#{name}.json")
+      )
+      |> stream_as_json_array(items_stream)
+    end
+  end
+
+  defp resolve(conn, name) do
+    case Map.get(conn.query_params, "project_id") do
+      nil ->
+        Collections.get_collection(name)
+
+      project_id ->
+        with {:ok, uuid} <- cast_uuid(project_id) do
+          Collections.get_collection(uuid, name)
+        end
+    end
+  end
+
+  defp cast_uuid(project_id) do
+    case Ecto.UUID.cast(project_id) do
+      {:ok, uuid} -> {:ok, uuid}
+      :error -> {:error, :bad_request}
+    end
+  end
+
+  defp authorize(conn, action, collection) do
+    subject = conn.assigns[:subject] || conn.assigns[:current_user]
+
+    Permissions.can(
+      Lightning.Policies.Collections,
+      action,
+      subject,
+      collection
+    )
+  end
+
+  defp missing_body(conn, field) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{error: "Missing required field: #{field}"})
+  end
+
+  defp stream_as_json_array(conn, items_stream) do
+    conn = send_chunked(conn, 200)
+    {:ok, conn} = Plug.Conn.chunk(conn, "[")
+
+    {conn, _first?} =
+      Enum.reduce_while(items_stream, {conn, true}, fn item, {conn, first?} ->
+        prefix = if first?, do: "", else: ","
+
+        case Plug.Conn.chunk(conn, prefix <> Jason.encode!(item)) do
+          {:ok, conn} -> {:cont, {conn, false}}
+          {:error, :closed} -> {:halt, {conn, false}}
+        end
+      end)
+
+    {:ok, conn} = Plug.Conn.chunk(conn, "]")
+    conn
   end
 
   # Streams records from database without depending on holding a transaction from database pool.
@@ -163,17 +230,13 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  defp validate_query(conn, col_name) do
-    with {:ok, collection} <- Collections.get_collection(col_name),
-         :ok <- authorize(conn, collection),
-         query_params <-
-           Enum.into(conn.query_params, %{
-             "cursor" => nil,
-             "limit" => "#{@default_stream_limit}"
-           }),
-         {:ok, filters} <- validate_query_params(query_params) do
-      {:ok, collection, filters}
-    end
+  defp parse_query_params(query_params) do
+    query_params
+    |> Enum.into(%{
+      "cursor" => nil,
+      "limit" => "#{@default_stream_limit}"
+    })
+    |> validate_query_params()
   end
 
   defp validate_query_params(

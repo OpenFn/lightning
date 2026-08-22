@@ -62,12 +62,22 @@ defmodule LightningWeb.Components.UserDeletionModal do
          |> push_navigate(to: ~p"/settings/users")}
 
       true ->
-        Accounts.purge_user(socket.assigns.user.id)
+        case Accounts.purge_user(socket.assigns.user.id) do
+          :ok ->
+            {:noreply,
+             socket
+             |> put_flash(:info, "User deleted")
+             |> push_navigate(to: ~p"/settings/users")}
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "User deleted")
-         |> push_navigate(to: ~p"/settings/users")}
+          {:error, _changeset} ->
+            {:noreply,
+             socket
+             |> put_flash(
+               :error,
+               "Cannot delete user with associated activity"
+             )
+             |> push_navigate(to: ~p"/settings/users")}
+        end
     end
   end
 

@@ -50,7 +50,7 @@ Ask questions like:
 
 ### 4. Requirements Document Structure
 
-Create a document at `.context/<username>/analysis/<issue-name>-requirements.md` with:
+Create a document at `.context/<username>/analysis/<issue-name>-requirements.md` (see `.claude/agents/context-locator.md` for the `.context/` directory layout) with:
 
 ```markdown
 # [Feature Name] Requirements Analysis
@@ -165,34 +165,7 @@ When decisions are made:
 
 ### 7. Final Validation
 
-Before completing:
-- Verify all core requirements have implementation approaches
-- Check that API contracts are complete
-- Ensure backend/frontend dependencies are clear
-- List actionable next steps
 - Update status to "Review Complete"
-
-## Key Principles
-
-**Be Thorough:**
-- Don't assume - ask questions and use agents to find answers
-- Document the "why" behind decisions
-- Include code examples from the codebase
-
-**Be Collaborative:**
-- Work iteratively with the user
-- Present options, don't dictate solutions
-- Track progress with TodoWrite
-
-**Be Practical:**
-- Reference existing patterns in the codebase
-- Note when to reuse vs create new
-- Identify dependencies and blockers early
-
-**Be Clear:**
-- Use consistent structure across requirements
-- Mark decisions and open questions clearly
-- Provide concrete next steps
 
 ## Usage
 
@@ -206,35 +179,9 @@ Before completing:
 ```
 /get-issue <issue-number>
 ```
-This creates an issue file at a specific path (e.g., `.context/stuart/issues/3635-workflow-save.md`)
+This creates an issue file at a specific path (e.g., `.context/shared/issues/issue-3635-save-button.md`)
 
 **Step 2:** User creates requirements spec with the file path:
 ```
-/create-spec .context/stuart/issues/3635-workflow-save.md
+/create-spec .context/shared/issues/issue-3635-save-button.md
 ```
-
-### Important
-
-- **Argument must be a file path**, not an issue number
-- If the user provides just a number, instruct them to run `/get-issue <number>` first to create the issue file
-- This keeps the command focused on its single purpose: converting an existing issue file into a requirements specification
-
-### Process
-
-Once you have the issue file path:
-1. Read the issue file to understand the requirements
-2. Create initial requirements document structure
-3. Guide user through reviewing each requirement
-4. Use agents to find implementation patterns
-5. Document all decisions
-6. Produce final comprehensive spec
-
-## Output
-
-Final deliverable is a complete requirements spec document that:
-- Breaks down the issue into implementable pieces
-- References existing codebase patterns
-- Documents all decisions and rationale
-- Provides clear API contracts
-- Lists actionable next steps
-- Can be used directly by developers to implement the feature

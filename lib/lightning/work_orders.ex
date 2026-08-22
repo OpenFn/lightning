@@ -52,6 +52,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
+  alias Lightning.WorkOrders.CancelManyWorkOrdersJob
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.Manual
   alias Lightning.WorkOrders.Query
@@ -135,7 +136,8 @@ defmodule Lightning.WorkOrders do
         workflow: manual.workflow,
         dataclip: dataclip,
         created_by: manual.created_by,
-        priority: :immediate
+        priority: :immediate,
+        queue: "manual"
       })
     end)
     |> Runs.enqueue()
@@ -223,11 +225,17 @@ defmodule Lightning.WorkOrders do
           snapshot = changeset |> get_change(:snapshot)
           run_options = get_run_options(snapshot, attrs[:dataclip])
 
+          queue =
+            if Trigger.synchronous?(trigger),
+              do: "fast_lane",
+              else: "default"
+
           changeset
           |> put_assoc(:runs, [
             Run.for(trigger, %{
               dataclip: attrs[:dataclip],
               snapshot: snapshot,
+              queue: queue,
               options: run_options
             })
           ])
@@ -254,6 +262,7 @@ defmodule Lightning.WorkOrders do
             dataclip: attrs[:dataclip],
             created_by: attrs[:created_by],
             priority: attrs[:priority],
+            queue: attrs[:queue],
             snapshot: snapshot,
             options: run_options
           })
@@ -339,10 +348,13 @@ defmodule Lightning.WorkOrders do
          )}
     end)
     |> Multi.run(:steps, &get_workflow_steps_from/2)
-    |> enqueue_retry(Keyword.fetch!(opts, :created_by))
+    |> enqueue_retry(
+      Keyword.fetch!(opts, :created_by),
+      Keyword.get(opts, :queue, "manual")
+    )
   end
 
-  defp enqueue_retry(multi, creating_user) do
+  defp enqueue_retry(multi, creating_user, queue) do
     multi
     |> Multi.run(:workflow, fn _repo, %{run: run} ->
       {:ok, run.work_order.workflow}
@@ -361,7 +373,8 @@ defmodule Lightning.WorkOrders do
         dataclip_id,
         step.job,
         steps,
-        creating_user
+        creating_user,
+        queue
       )
     end)
     |> Multi.update_all(
@@ -469,6 +482,8 @@ defmodule Lightning.WorkOrders do
   end
 
   def retry_many([%RunStep{} | _rest] = run_steps, opts) do
+    opts = Keyword.put_new(opts, :queue, "default")
+
     with project_id <- Keyword.fetch!(opts, :project_id),
          runs <- Enum.uniq_by(run_steps, & &1.run_id),
          :ok <- limit_run_creation(project_id, length(runs)) do
@@ -488,10 +503,67 @@ defmodule Lightning.WorkOrders do
     {:ok, 0, 0}
   end
 
+  @doc """
+  Cancels available runs for the given work orders.
+
+  For small batches, cancels synchronously via atomic UPDATE. Returns
+  `{:ok, count}` where count is the number of runs cancelled.
+  """
+  @spec cancel_many([WorkOrder.t()], keyword()) ::
+          {:ok, non_neg_integer()} | {:error, any()}
+  def cancel_many([], _opts), do: {:ok, 0}
+
+  def cancel_many([%WorkOrder{} | _rest] = work_orders, opts) do
+    project_id = Keyword.fetch!(opts, :project_id)
+    work_order_ids = Enum.map(work_orders, & &1.id)
+
+    case Runs.cancel_available_for_work_orders(work_order_ids, project_id) do
+      {:ok, %{runs: {n, _runs}}} ->
+        {:ok, n}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc """
+  Enqueues a single background job to cancel all available runs matching
+  the given work order IDs. Used for "cancel all matching" where the count
+  may be large.
+  """
+  @spec cancel_many_async([WorkOrder.t()], keyword()) ::
+          {:ok, Oban.Job.t()} | {:error, Ecto.Changeset.t()}
+  def cancel_many_async([%WorkOrder{} | _rest] = work_orders, opts) do
+    project_id = Keyword.fetch!(opts, :project_id)
+    work_order_ids = Enum.map(work_orders, & &1.id)
+
+    Oban.insert(
+      Lightning.Oban,
+      CancelManyWorkOrdersJob.new(%{
+        work_order_ids: work_order_ids,
+        project_id: project_id
+      })
+    )
+  end
+
   def get_workorders_with_runs(workflow_id, run_id) do
-    # First, get workorder IDs we want
+    # A run_id ensures that run's work order is in the returned history (even if
+    # it's older than the recent window), but only when the run belongs to this
+    # workflow. A missing, malformed, foreign, or unknown run_id resolves to nil
+    # and is dropped, so history can never surface another workflow's work order
+    # (and a bad id can't crash). Results are still ordered by last_activity.
+    specific_wo_id =
+      if valid_uuid?(run_id) do
+        from(r in Run,
+          join: wo in assoc(r, :work_order),
+          where: r.id == ^run_id and wo.workflow_id == ^workflow_id,
+          select: r.work_order_id
+        )
+        |> Repo.one()
+      end
+
     workorder_ids =
-      if is_nil(run_id) do
+      if is_nil(specific_wo_id) do
         # Just get top 20 workorders by last_activity
         from(wo in WorkOrder,
           join: r in assoc(wo, :runs),
@@ -503,15 +575,7 @@ defmodule Lightning.WorkOrders do
         )
         |> Repo.all()
       else
-        # Get the specific workorder for the run
-        specific_wo_id =
-          from(r in Run,
-            where: r.id == ^run_id,
-            select: r.work_order_id
-          )
-          |> Repo.one()
-
-        # Get top 20 workorders
+        # That run's workorder plus the next 19 recent ones for this workflow
         other_wo_ids =
           from(wo in WorkOrder,
             join: r in assoc(wo, :runs),
@@ -524,13 +588,13 @@ defmodule Lightning.WorkOrders do
           )
           |> Repo.all()
 
-        # Combine them
         [specific_wo_id | other_wo_ids] |> Enum.uniq()
       end
 
-    # Now fetch the full workorders with preloads
+    # Final fetch, re-scoped to the workflow so a stray id can never surface
+    # another workflow's work order.
     from(wo in WorkOrder,
-      where: wo.id in ^workorder_ids,
+      where: wo.id in ^workorder_ids and wo.workflow_id == ^workflow_id,
       order_by: [desc: wo.last_activity],
       preload: [:snapshot, runs: :snapshot]
     )
@@ -583,7 +647,11 @@ defmodule Lightning.WorkOrders do
   @doc """
   Enqueue multiple runs for retry in the same transaction.
   """
-  def enqueue_many_for_retry(workorders_ids, creating_user_id) do
+  def enqueue_many_for_retry(
+        workorders_ids,
+        creating_user_id,
+        queue \\ "default"
+      ) do
     workorders = workorders_with_first_runs(workorders_ids)
     creating_user = Repo.get!(User, creating_user_id)
 
@@ -606,7 +674,8 @@ defmodule Lightning.WorkOrders do
           dataclip_id,
           starting_job,
           [],
-          creating_user
+          creating_user,
+          queue
         )
       end)
       |> Multi.update_all(
@@ -687,12 +756,13 @@ defmodule Lightning.WorkOrders do
          dataclip_id,
          starting_job,
          steps,
-         creating_user
+         creating_user,
+         queue
        ) do
     run_options =
       Runs.get_run_options(workorder.workflow.id, workorder.workflow.project_id)
 
-    Run.new(%{priority: :immediate, dataclip_id: dataclip_id})
+    Run.new(%{priority: :immediate, queue: queue, dataclip_id: dataclip_id})
     |> put_assoc(:snapshot, snapshot)
     |> put_assoc(:work_order, workorder)
     |> put_assoc(:starting_job, starting_job)

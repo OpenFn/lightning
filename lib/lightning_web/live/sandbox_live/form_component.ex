@@ -6,7 +6,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
   alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectLimiter
-  alias LightningWeb.Live.Helpers.ProjectTheme
   alias LightningWeb.SandboxLive.Components
 
   require Logger
@@ -23,23 +22,15 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> form_changeset(initial_params(assigns), parent_id)
       |> Map.put(:action, :validate)
 
-    initial_color = Changeset.get_field(changeset, :color)
-
-    if should_preview_theme?(initial_color, nil) do
-      send_theme_preview(assigns.parent, initial_color)
-    end
-
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:last_preview_color, initial_color)
      |> assign(:changeset, changeset)
      |> assign(:name, Changeset.get_field(changeset, :name))}
   end
 
   @impl true
   def handle_event("close_modal", _params, socket) do
-    reset_theme_preview()
     {:noreply, push_navigate(socket, to: return_path(socket))}
   end
 
@@ -57,18 +48,10 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> form_changeset(params, parent_id)
       |> Map.put(:action, :validate)
 
-    new_color = params["color"]
-    last_color = socket.assigns[:last_preview_color]
-
-    if should_preview_theme?(new_color, last_color) do
-      send_theme_preview(assigns.parent, new_color)
-    end
-
     {:noreply,
      socket
      |> assign(:changeset, changeset)
-     |> assign(:name, Changeset.get_field(changeset, :name))
-     |> assign(:last_preview_color, new_color)}
+     |> assign(:name, Changeset.get_field(changeset, :name))}
   end
 
   @impl true
@@ -84,21 +67,10 @@ defmodule LightningWeb.SandboxLive.FormComponent do
           }
         } = socket
       ) do
-    parent_users = Projects.get_project_users!(parent.id)
-
-    collaborators =
-      parent_users
-      |> Enum.reject(fn pu -> pu.user_id == actor.id end)
-      |> Enum.map(fn pu ->
-        role = if pu.role == :owner, do: :admin, else: pu.role
-        %{user_id: pu.user_id, role: role}
-      end)
-
     attrs =
       params
       |> build_sandbox_attrs()
       |> Map.put(:env, "dev")
-      |> Map.put(:collaborators, collaborators)
 
     with :ok <- ProjectLimiter.limit_new_sandbox(parent.id),
          {:ok, sandbox} <- Projects.provision_sandbox(parent, actor, attrs) do
@@ -107,8 +79,12 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")
       |> noreply()
     else
-      {:error, %Ecto.Changeset{} = changeset} ->
-        changeset = Helpers.copy_error(changeset, :name, :raw_name)
+      {:error, %Ecto.Changeset{}} ->
+        changeset =
+          socket.assigns
+          |> base_struct()
+          |> form_changeset(params, parent.id)
+          |> Map.put(:action, :validate)
 
         if changeset.errors[:raw_name] do
           socket
@@ -159,8 +135,12 @@ defmodule LightningWeb.SandboxLive.FormComponent do
          |> put_flash(:info, "Sandbox updated")
          |> push_navigate(to: return_to || ~p"/projects/#{sandbox.id}/w")}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        changeset = Helpers.copy_error(changeset, :name, :raw_name)
+      {:error, %Ecto.Changeset{}} ->
+        changeset =
+          socket.assigns
+          |> base_struct()
+          |> form_changeset(params, get_parent_id(socket.assigns))
+          |> Map.put(:action, :validate)
 
         {:noreply,
          socket
@@ -233,7 +213,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
                 field={f[:raw_name]}
                 label="Name"
                 required
-                autocomplete="off"
                 placeholder="My Sandbox"
                 phx-debounce="300"
               />
@@ -339,40 +318,6 @@ defmodule LightningWeb.SandboxLive.FormComponent do
       name: params["name"],
       color: params["color"]
     }
-  end
-
-  defp generate_theme_preview(%Project{id: parent_id}, color)
-       when is_binary(parent_id) and is_binary(color) and color != "" do
-    temp_project = %Project{
-      id: Ecto.UUID.generate(),
-      color: String.trim(color),
-      parent_id: parent_id
-    }
-
-    case ProjectTheme.inline_primary_scale(temp_project) do
-      nil ->
-        nil
-
-      scale ->
-        [scale, ProjectTheme.inline_sidebar_vars()]
-        |> Enum.reject(&is_nil/1)
-        |> Enum.join(" ")
-    end
-  end
-
-  defp generate_theme_preview(_parent, _color), do: nil
-
-  defp should_preview_theme?(new_color, last_color) do
-    is_binary(new_color) and new_color != last_color
-  end
-
-  defp send_theme_preview(parent, color) do
-    theme = generate_theme_preview(parent, color)
-    send(self(), {:preview_theme, theme})
-  end
-
-  defp reset_theme_preview do
-    send(self(), {:preview_theme, nil})
   end
 
   defp get_random_color do

@@ -24,7 +24,7 @@ defmodule LightningWeb.ProfileLive.GithubComponent do
          socket
          |> put_flash(
            :error,
-           "Oops! An error occured while trying to remove the connection. Please try again"
+           "Oops! An error occurred while trying to remove the connection. Please try again"
          )}
     end
   end

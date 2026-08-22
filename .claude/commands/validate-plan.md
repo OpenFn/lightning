@@ -27,10 +27,9 @@ When invoked:
    # Check recent commits
    git log --oneline -n 20
    git diff HEAD~N..HEAD  # Where N covers implementation commits
-
-   # Run comprehensive checks
-   cd $(git rev-parse --show-toplevel) && make check test
    ```
+
+   Run `mix verify` (see [CLAUDE.md §Common Commands](../../CLAUDE.md#common-commands)).
 
 ## Validation Process
 
@@ -97,9 +96,9 @@ Create comprehensive validation summary:
 ⚠️ Phase 3: [Name] - Partially implemented (see issues)
 
 ### Automated Verification Results
-✓ Build passes: `make build`
-✓ Tests pass: `make test`
-✗ Linting issues: `make lint` (3 warnings)
+✓ Quality gate passes: `mix verify`
+✓ Tests pass: `mix test`
+✗ Lint warnings: 3 (see output)
 
 ### Code Review Findings
 
@@ -141,31 +140,20 @@ If you were part of the implementation:
 
 ## Important Guidelines
 
-1. **Be thorough but practical** - Focus on what matters
-2. **Run all automated checks** - Don't skip verification commands
-3. **Document everything** - Both successes and issues
-4. **Think critically** - Question if the implementation truly solves the problem
-5. **Consider maintenance** - Will this be maintainable long-term?
+1. **Report all deviations from the plan.** Flag severity where useful, but don't pre-filter — the reader triages what matters
 
 ## Validation Checklist
 
-Always verify:
-- [ ] All phases marked complete are actually done
-- [ ] Automated tests pass
 - [ ] Code follows existing patterns
 - [ ] No regressions introduced
 - [ ] Error handling is robust
 - [ ] Documentation updated if needed
-- [ ] Manual test steps are clear
 
 ## Relationship to Other Commands
 
 Recommended workflow:
-1. `/implement_plan` - Execute the implementation
+1. `/implement-plan` - Execute the implementation
 2. `/commit` - Create atomic commits for changes
-3. `/validate_plan` - Verify implementation correctness
-4. `/describe_pr` - Generate PR description
+3. `/validate-plan` - Verify implementation correctness
 
 The validation works best after commits are made, as it can analyze the git history to understand what was implemented.
-
-Remember: Good validation catches issues before they reach production. Be constructive but thorough in identifying gaps or improvements.

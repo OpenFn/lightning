@@ -126,6 +126,219 @@ defmodule Lightning.Config.BootstrapTest do
       # idle_timeout = max(60_000, 60_000 + 15_000) = 75_000
       assert endpoint_idle_timeout() == 75_000
     end
+
+    test "prod endpoint URL defaults" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :host]) == "example.com"
+      assert get_in(endpoint, [:url, :port]) == 443
+      assert get_in(endpoint, [:url, :scheme]) == "https"
+    end
+
+    test "prod endpoint URL env var overrides" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "URL_HOST" => "myapp.example.com",
+        "URL_PORT" => "8443",
+        "URL_SCHEME" => "http"
+      })
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :host]) == "myapp.example.com"
+      assert get_in(endpoint, [:url, :port]) == 8443
+      assert get_in(endpoint, [:url, :scheme]) == "http"
+    end
+
+    test "PORT vs URL_PORT in prod" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "PORT" => "8080",
+        "URL_PORT" => "443"
+      })
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:http, :port]) == 8080
+      assert get_in(endpoint, [:url, :port]) == 443
+    end
+
+    test "DISABLE_DB_SSL true, DISABLE_DB_SSL_CERT_VERIFY not set" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == false
+    end
+
+    test "DISABLE_DB_SSL true, DISABLE_DB_SSL_CERT_VERIFY true" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == false
+    end
+
+    test "DISABLE_DB_SSL true, DISABLE_DB_SSL_CERT_VERIFY false" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "true",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == false
+    end
+
+    test "DISABLE_DB_SSL not set, DISABLE_DB_SSL_CERT_VERIFY not set" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
+    end
+
+    test "DISABLE_DB_SSL false, DISABLE_DB_SSL_CERT_VERIFY not set" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
+    end
+
+    test "DISABLE_DB_SSL not set, `DISABLE_DB_SSL_CERT_VERIFY true" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == [verify: :verify_none]
+    end
+
+    test "DISABLE_DB_SSL false, DISABLE_DB_SSL_CERT_VERIFY true" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "false",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "true"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == [verify: :verify_none]
+    end
+
+    test "DISABLE_DB_SSL not set, DISABLE_DB_SSL_CERT_VERIFY false" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
+    end
+
+    test "DISABLE_DB_SSL false, DISABLE_DB_SSL_CERT_VERIFY false" do
+      reconfigure(%{
+        "SECRET_KEY_BASE" => "Foo",
+        "DATABASE_URL" => "ecto://USER:PASS@HOST/DATABASE",
+        "DISABLE_DB_SSL" => "false",
+        "DISABLE_DB_SSL_CERT_VERIFY" => "false"
+      })
+
+      repo_env = get_env(:lightning, Lightning.Repo)
+
+      assert get_in(repo_env, [:ssl]) == :tls_certificate_check.options("HOST")
+    end
+  end
+
+  describe "endpoint URL configuration (dev)" do
+    test "URL_HOST works in dev" do
+      Dotenvy.source([%{"URL_HOST" => "dev-elixir.local"}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :host]) == "dev-elixir.local"
+    end
+
+    test "URL_SCHEME works in dev" do
+      Dotenvy.source([%{"URL_SCHEME" => "https"}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :scheme]) == "https"
+    end
+
+    test "URL_PORT works in dev" do
+      Dotenvy.source([%{"URL_PORT" => "8080"}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :port]) == 8080
+    end
+
+    test "PORT sets both http and url port in dev" do
+      Dotenvy.source([%{"PORT" => "5000"}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:http, :port]) == 5000
+      assert get_in(endpoint, [:url, :port]) == 5000
+    end
+
+    test "PORT and URL_PORT can differ in dev" do
+      Dotenvy.source([%{"PORT" => "5000", "URL_PORT" => "443"}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:http, :port]) == 5000
+      assert get_in(endpoint, [:url, :port]) == 443
+    end
+
+    test "dev defaults" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      endpoint = get_env(:lightning, LightningWeb.Endpoint)
+
+      assert get_in(endpoint, [:url, :host]) == "localhost"
+      assert get_in(endpoint, [:url, :scheme]) == "http"
+    end
   end
 
   describe "storage" do
@@ -303,14 +516,23 @@ defmodule Lightning.Config.BootstrapTest do
 
       Bootstrap.configure()
 
-      assert get_env(:lightning, Lightning.Mailer) == [
+      config = get_env(:lightning, Lightning.Mailer)
+
+      assert config == [
                adapter: Swoosh.Adapters.SMTP,
                username: "foo",
                password: "bar",
                relay: "baz",
                tls: :always,
+               tls_options: :tls_certificate_check.options("baz"),
                port: 587
              ]
+
+      tls_options = Keyword.get(config, :tls_options)
+
+      assert {:verify, :verify_peer} in tls_options
+      assert is_list(Keyword.get(tls_options, :cacerts))
+      assert Keyword.has_key?(tls_options, :customize_hostname_check)
     end
   end
 
@@ -406,17 +628,16 @@ defmodule Lightning.Config.BootstrapTest do
                    end
     end
 
-    test "local_adaptors_repo is set to false when OPENFN_ADAPTORS_REPO is set but LOCAL_ADAPTORS is not set" do
+    test "local_adaptors_repos defaults to [] when OPENFN_ADAPTORS_REPO is set but LOCAL_ADAPTORS is not set" do
       Dotenvy.source([%{"OPENFN_ADAPTORS_REPO" => "/path"}])
       Bootstrap.configure()
 
       adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
 
-      assert adaptor_registry[:local_adaptors_repo] == false
+      assert adaptor_registry[:local_adaptors_repos] == []
     end
 
-    test "local_adaptors_repo is set when both OPENFN_ADAPTORS_REPO and LOCAL_ADAPTORS are set" do
-      # configure both
+    test "local_adaptors_repos is a one-element list when both OPENFN_ADAPTORS_REPO and LOCAL_ADAPTORS are set with a single path" do
       Dotenvy.source([
         %{"OPENFN_ADAPTORS_REPO" => "/path", "LOCAL_ADAPTORS" => "true"}
       ])
@@ -425,7 +646,40 @@ defmodule Lightning.Config.BootstrapTest do
 
       adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
 
-      assert adaptor_registry[:local_adaptors_repo] == "/path"
+      assert adaptor_registry[:local_adaptors_repos] == ["/path"]
+    end
+
+    test "local_adaptors_repos parses comma-separated OPENFN_ADAPTORS_REPO into an ordered list" do
+      Dotenvy.source([
+        %{
+          "OPENFN_ADAPTORS_REPO" => "/private/repo,/canonical/adaptors",
+          "LOCAL_ADAPTORS" => "true"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+
+      assert adaptor_registry[:local_adaptors_repos] == [
+               "/private/repo",
+               "/canonical/adaptors"
+             ]
+    end
+
+    test "local_adaptors_repos drops empty segments and trims whitespace" do
+      Dotenvy.source([
+        %{
+          "OPENFN_ADAPTORS_REPO" => "  /a  ,  ,/b ",
+          "LOCAL_ADAPTORS" => "true"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+
+      assert adaptor_registry[:local_adaptors_repos] == ["/a", "/b"]
     end
   end
 
@@ -460,6 +714,20 @@ defmodule Lightning.Config.BootstrapTest do
                    fn ->
                      Bootstrap.configure()
                    end
+    end
+  end
+
+  describe "max_sandbox_nesting_depth" do
+    test "defaults to 5" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :max_sandbox_nesting_depth) == 5
+    end
+
+    test "can be set to a different value via MAX_SANDBOX_NESTING_DEPTH" do
+      Dotenvy.source([%{"MAX_SANDBOX_NESTING_DEPTH" => "10"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :max_sandbox_nesting_depth) == 10
     end
   end
 
@@ -508,6 +776,26 @@ defmodule Lightning.Config.BootstrapTest do
                    fn ->
                      Bootstrap.configure()
                    end
+    end
+  end
+
+  describe "log_queue_queries" do
+    test "defaults to false" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :log_queue_queries) == false
+    end
+
+    test "can be enabled via env var" do
+      Dotenvy.source([%{"LOG_QUEUE_QUERIES" => "true"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :log_queue_queries) == true
+    end
+
+    test "can be explicitly disabled" do
+      Dotenvy.source([%{"LOG_QUEUE_QUERIES" => "false"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :log_queue_queries) == false
     end
   end
 
@@ -561,6 +849,62 @@ defmodule Lightning.Config.BootstrapTest do
       Dotenvy.source([%{"WEBHOOK_RETRY_JITTER" => "true"}])
       Bootstrap.configure()
       assert get_env(:lightning, :webhook_retry) == [jitter: true]
+    end
+  end
+
+  describe "channel proxy egress (philter) configuration" do
+    test "defaults to blocking private networks and does not override allowed_hosts" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      assert get_env(:philter, :block_private_networks) == true
+      # allowed_hosts left untouched so base/dev/test defaults survive
+      assert get_env(:philter, :allowed_hosts) == nil
+    end
+
+    test "CHANNEL_BLOCK_PRIVATE_NETWORKS toggles the flag" do
+      for {value, expected} <- [
+            {"false", false},
+            {"no", false},
+            {"true", true},
+            {"yes", true}
+          ] do
+        Dotenvy.source([%{"CHANNEL_BLOCK_PRIVATE_NETWORKS" => value}])
+        Bootstrap.configure()
+        assert get_env(:philter, :block_private_networks) == expected
+      end
+    end
+
+    test "CHANNEL_BLOCK_PRIVATE_NETWORKS rejects garbage input" do
+      Dotenvy.source([%{"CHANNEL_BLOCK_PRIVATE_NETWORKS" => "nope"}])
+
+      assert_raise ArgumentError, fn -> Bootstrap.configure() end
+    end
+
+    test "CHANNEL_ALLOWED_HOSTS sets a single normalised host" do
+      Dotenvy.source([%{"CHANNEL_ALLOWED_HOSTS" => "Internal.Svc."}])
+      Bootstrap.configure()
+
+      assert get_env(:philter, :allowed_hosts) == ["internal.svc"]
+    end
+
+    test "CHANNEL_ALLOWED_HOSTS parses a comma-separated list" do
+      Dotenvy.source([
+        %{"CHANNEL_ALLOWED_HOSTS" => "internal.svc, api.example.org"}
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:philter, :allowed_hosts) ==
+               ["internal.svc", "api.example.org"]
+    end
+
+    test "CHANNEL_ALLOWED_HOSTS rejects a malformed entry" do
+      Dotenvy.source([
+        %{"CHANNEL_ALLOWED_HOSTS" => "internal.svc,https://bad.one"}
+      ])
+
+      assert_raise ArgumentError, fn -> Bootstrap.configure() end
     end
   end
 
@@ -744,6 +1088,50 @@ defmodule Lightning.Config.BootstrapTest do
                "WORKER_RUNS_PRIVATE_KEY could not be parsed as a valid key"
 
       assert error.message =~ "mix lightning.gen_worker_keys"
+    end
+  end
+
+  describe "live debugger (dev)" do
+    test "does not set :ip or :external_url by default" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      assert get_env(:live_debugger, :ip) == nil
+      assert get_env(:live_debugger, :external_url) == nil
+    end
+
+    test "LIVE_DEBUGGER_IP is parsed into a tuple" do
+      Dotenvy.source([%{"LIVE_DEBUGGER_IP" => "0.0.0.0"}])
+      Bootstrap.configure()
+
+      assert get_env(:live_debugger, :ip) == {0, 0, 0, 0}
+    end
+
+    test "LIVE_DEBUGGER_EXTERNAL_URL is stored as a string" do
+      Dotenvy.source([
+        %{"LIVE_DEBUGGER_EXTERNAL_URL" => "http://dev-elixir.local:4007"}
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:live_debugger, :external_url) ==
+               "http://dev-elixir.local:4007"
+    end
+
+    test "both env vars can be set together" do
+      Dotenvy.source([
+        %{
+          "LIVE_DEBUGGER_IP" => "0.0.0.0",
+          "LIVE_DEBUGGER_EXTERNAL_URL" => "http://dev-elixir.local:4007"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:live_debugger, :ip) == {0, 0, 0, 0}
+
+      assert get_env(:live_debugger, :external_url) ==
+               "http://dev-elixir.local:4007"
     end
   end
 

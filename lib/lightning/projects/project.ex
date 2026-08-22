@@ -48,8 +48,12 @@ defmodule Lightning.Projects.Project do
     has_many :workflows, Workflow, where: [deleted_at: nil]
     has_many :jobs, through: [:workflows, :jobs]
 
+    has_many :channels, Lightning.Channels.Channel
+
     has_many :project_credentials, ProjectCredential
     has_many :credentials, through: [:project_credentials, :credential]
+
+    has_many :keychain_credentials, Lightning.Credentials.KeychainCredential
 
     has_many :collections, Lightning.Collections.Collection
 
@@ -185,6 +189,33 @@ defmodule Lightning.Projects.Project do
       nil -> changeset
       raw -> put_change(changeset, :name, Lightning.Helpers.url_safe_name(raw))
     end
+  end
+
+  @doc """
+  Returns a display name for the project.
+
+  Walks up the loaded parent chain to build the full path,
+  e.g. `"root:child:grandchild"`. Stops when parent is nil or not loaded.
+  """
+  @spec display_name(t()) :: String.t()
+  def display_name(%__MODULE__{} = project) do
+    names = ancestor_names(project, [])
+
+    case names do
+      [single] -> single
+      names -> Enum.join(names, "/")
+    end
+  end
+
+  defp ancestor_names(
+         %__MODULE__{parent: %__MODULE__{} = parent, name: name},
+         acc
+       ) do
+    ancestor_names(parent, [name | acc])
+  end
+
+  defp ancestor_names(%__MODULE__{name: name}, acc) do
+    [name | acc]
   end
 
   @doc """

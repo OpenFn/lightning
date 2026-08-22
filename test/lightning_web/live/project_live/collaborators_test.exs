@@ -88,6 +88,17 @@ defmodule LightningWeb.ProjectLive.CollaboratorsTest do
                "Expected #{email} to be invalid, but it was accepted"
       end
     end
+
+    test "accepts plus-addressing" do
+      changeset =
+        Collaborators.changeset(%Collaborators{}, %{
+          "collaborators" => %{
+            "0" => %{"email" => "user+tag@example.com", "role" => "editor"}
+          }
+        })
+
+      assert changeset.valid?
+    end
   end
 
   describe "InvitedCollaborators.changeset/2 email validation" do
@@ -138,6 +149,22 @@ defmodule LightningWeb.ProjectLive.CollaboratorsTest do
         refute changeset.valid?,
                "Expected #{email} to be invalid, but it was accepted"
       end
+    end
+
+    test "accepts plus-addressing" do
+      changeset =
+        InvitedCollaborators.changeset(%InvitedCollaborators{}, %{
+          "invited_collaborators" => %{
+            "0" => %{
+              "first_name" => "Test",
+              "last_name" => "User",
+              "email" => "user+tag@example.com",
+              "role" => "editor"
+            }
+          }
+        })
+
+      assert changeset.valid?
     end
   end
 end

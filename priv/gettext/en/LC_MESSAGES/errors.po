@@ -34,7 +34,7 @@ msgid_plural "should be at most %{count}s character(s)"
 msgstr[0] "Password maximum length is %{count} characters."
 msgstr[1] "Password maximum length is %{count} characters."
 
-msgid "must have the @ sign and no spaces"
+msgid "must be a valid email address"
 msgstr "Email address not valid."
 
 msgid "should be a 6 digit number"
@@ -72,7 +72,7 @@ msgstr "Please change your email"
 
 msgid "oauth_reauth_required"
 msgstr ""
-"Oauth token has expired. Reauthorize with your external system:"
+"OAuth token has expired. Reauthorize with your external system:"
 "  1. Go to %{credentials_url}"
 "  2. Find %{credential_name}"
 "  3. Click \"Edit\" and then \"Reauthorize\""

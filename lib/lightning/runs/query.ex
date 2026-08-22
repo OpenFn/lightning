@@ -210,7 +210,8 @@ defmodule Lightning.Runs.Query do
     |> where(
       [r, ipw],
       r.state == :available and
-        (is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
+        (r.queue == "fast_lane" or
+           is_nil(ipw.concurrency) or ipw.row_number <= ipw.concurrency)
     )
     |> select([r, ipw], %{id: r.id, project_id: ipw.project_id})
     |> order_by([r, ipw], asc: r.priority, asc: r.inserted_at)
@@ -230,7 +231,7 @@ defmodule Lightning.Runs.Query do
     # Step 1: Rank runs within each workflow by priority and insertion time
     ranked_runs_query =
       from(r in Run,
-        where: r.state in [:available, :claimed, :started],
+        where: r.state in ^Run.active_states(),
         join: wo in assoc(r, :work_order),
         join: w in assoc(wo, :workflow),
         join: p in assoc(w, :project)

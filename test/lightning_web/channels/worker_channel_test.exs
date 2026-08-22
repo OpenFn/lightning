@@ -179,5 +179,157 @@ defmodule LightningWeb.WorkerChannelTest do
 
       assert %{worker_name: nil} = Repo.reload!(run)
     end
+
+    test "claim with explicit queues parameter filters runs", %{
+      socket: socket
+    } do
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow) |> with_snapshot()
+
+      # Create a run with default queue via WorkOrders
+      {:ok, %{runs: [%{id: _default_run_id}]}} =
+        WorkOrders.create_for(trigger,
+          workflow: workflow,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      # Create a fast_lane run directly
+      dataclip = insert(:dataclip)
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      fast_lane_run =
+        insert(:run,
+          work_order: wo,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          queue: "fast_lane"
+        )
+
+      fast_lane_id = fast_lane_run.id
+
+      # Claim with filter mode for fast_lane only
+      ref =
+        push(socket, "claim", %{
+          "demand" => 10,
+          "worker_name" => "my.pod.name",
+          "queues" => ["fast_lane"]
+        })
+
+      assert_reply ref, :ok, %{runs: runs}, 1_000
+
+      assert [%{"id" => ^fast_lane_id}] = runs
+    end
+
+    test "claim without queues parameter uses default preference mode",
+         %{socket: socket} do
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow) |> with_snapshot()
+
+      # Create a default-queue run
+      {:ok, %{runs: [%{id: default_run_id}]}} =
+        WorkOrders.create_for(trigger,
+          workflow: workflow,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      # Create a manual-queue run
+      dataclip = insert(:dataclip)
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      manual_run =
+        insert(:run,
+          work_order: wo,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          queue: "manual"
+        )
+
+      manual_run_id = manual_run.id
+
+      # Claim without queues -- defaults to ["manual", "*"]
+      # This uses preference mode, so all runs should be returned
+      ref =
+        push(socket, "claim", %{
+          "demand" => 10,
+          "worker_name" => "my.pod.name"
+        })
+
+      assert_reply ref, :ok, %{runs: runs}, 1_000
+
+      run_ids = Enum.map(runs, & &1["id"])
+
+      # Both runs should be claimed (preference mode returns all)
+      assert manual_run_id in run_ids
+      assert default_run_id in run_ids
+    end
+
+    test "malformed queues parameter falls back to default", %{
+      socket: socket
+    } do
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow) |> with_snapshot()
+
+      {:ok, %{runs: [%{id: run_id}]}} =
+        WorkOrders.create_for(trigger,
+          workflow: workflow,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      # Non-list value
+      ref =
+        push(socket, "claim", %{
+          "demand" => 1,
+          "worker_name" => "my.pod.name",
+          "queues" => "fast_lane"
+        })
+
+      assert_reply ref, :ok, %{runs: [%{"id" => ^run_id}]}
+
+      # Re-create a new available run since the previous was claimed
+      {:ok, %{runs: [%{id: run_id2}]}} =
+        WorkOrders.create_for(trigger,
+          workflow: workflow,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      # Empty list
+      ref =
+        push(socket, "claim", %{
+          "demand" => 1,
+          "worker_name" => "my.pod.name",
+          "queues" => []
+        })
+
+      assert_reply ref, :ok, %{runs: [%{"id" => ^run_id2}]}
+
+      # Re-create a new available run
+      {:ok, %{runs: [%{id: run_id3}]}} =
+        WorkOrders.create_for(trigger,
+          workflow: workflow,
+          dataclip: params_with_assocs(:dataclip)
+        )
+
+      # List with non-strings
+      ref =
+        push(socket, "claim", %{
+          "demand" => 1,
+          "worker_name" => "my.pod.name",
+          "queues" => [1, 2]
+        })
+
+      assert_reply ref, :ok, %{runs: [%{"id" => ^run_id3}]}
+    end
   end
 end

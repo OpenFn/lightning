@@ -127,10 +127,25 @@ defmodule Lightning.ProjectsFixtures do
     collection =
       Factories.build(:collection, name: "cannonical-collection", project: nil)
 
+    channel =
+      Factories.build(:channel,
+        name: "cannonical-channel",
+        destination_url: "http://localhost",
+        enabled: true,
+        project: nil,
+        destination_auth_method:
+          Factories.build(:channel_auth_method,
+            role: :destination,
+            webhook_auth_method: nil,
+            project_credential_id: project_credential.id
+          )
+      )
+
     Factories.build(:project,
       name: "a-test-project",
       description: "This is only a test",
       collections: [collection],
+      channels: [channel],
       project_credentials: [project_credential],
       workflows: [workflow_1, workflow_2],
       project_users: [%{user: user}]

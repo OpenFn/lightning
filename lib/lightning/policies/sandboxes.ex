@@ -2,12 +2,23 @@ defmodule Lightning.Policies.Sandboxes do
   @moduledoc """
   The Bodyguard Policy module for sandbox project operations.
 
-  Sandboxes have different authorization rules than regular projects:
+  Sandbox authorization mirrors regular projects: access is decided by the
+  acting user's role on the project they're acting on (or the workspace
+  root, where the cascade applies). `User.role` (`:user` / `:superuser`)
+  is a user-type for global user-management screens; it is not a
+  project-access bypass and has no effect on sandbox policy decisions, in
+  line with `Lightning.Policies.ProjectUsers`.
+
   - Sandbox owners/admins can manage their own sandboxes
   - Root project owners/admins can manage any sandbox in their workspace
-  - Editors (and above) on the root project can merge sandboxes
   - Editors (and above) on the parent project can provision sandboxes
-  - Superusers can manage any sandbox anywhere
+
+  Destructive actions on a sandbox (delete, update, merge) are scoped to
+  admin/owner on the sandbox itself (or the root cascade above). This
+  matches the rest of Lightning, where destructive actions are admin/owner
+  scoped, and it keeps the merge button on the sandboxes list aligned with
+  the cleanup step that runs after merge submission (which calls
+  `:delete_sandbox` and so requires admin/owner on the source).
   """
   @behaviour Bodyguard.Policy
 
@@ -22,24 +33,27 @@ defmodule Lightning.Policies.Sandboxes do
           | :merge_sandbox
 
   @doc """
-  Authorize sandbox operations based on user role and project hierarchy.
+  Authorize sandbox operations based on the user's role on the project
+  involved.
 
   ## Authorization Rules
 
   ### `:delete_sandbox` and `:update_sandbox`
-  User can perform these actions if they are:
-  - Superuser (can manage any sandbox)
+  User must be one of:
   - Owner/admin of the sandbox itself
   - Owner/admin of the root project (workspace)
 
   ### `:provision_sandbox`
-  User can create sandboxes if they are:
-  - Editor/admin/owner of the parent project they're creating the sandbox under
+  User must be editor/admin/owner of the parent project they're creating
+  the sandbox under.
 
   ### `:merge_sandbox`
-  User can merge a sandbox into a target project if they are:
-  - Editor/admin/owner on the target project
-  - Superuser
+  This check authorises the **target side** of a merge: the user must be
+  editor/admin/owner on the target project (the project being merged
+  *into*). The merge flow also requires admin/owner on the **source
+  sandbox** itself, enforced by `check_manage_permissions/3` (button
+  gate) and by the post-merge cleanup, which calls `:delete_sandbox`
+  to retire the source and so requires admin/owner there.
 
   ## Parameters
   - `action` - The action being attempted
@@ -50,84 +64,60 @@ defmodule Lightning.Policies.Sandboxes do
   @spec authorize(actions(), User.t(), Project.t()) :: boolean
 
   def authorize(:provision_sandbox, %User{} = user, %Project{} = parent_project) do
-    case Projects.get_project_user_role(user, parent_project) do
-      role when role in [:owner, :admin, :editor] -> true
-      _ -> user.role == :superuser
-    end
+    Projects.get_project_user_role(user, parent_project) in [
+      :owner,
+      :admin,
+      :editor
+    ]
   end
 
   def authorize(:merge_sandbox, %User{} = user, %Project{} = target_project) do
-    case Projects.get_project_user_role(user, target_project) do
-      role when role in [:owner, :admin, :editor] -> true
-      _ -> user.role == :superuser
-    end
+    Projects.get_project_user_role(user, target_project) in [
+      :owner,
+      :admin,
+      :editor
+    ]
   end
 
   def authorize(action, %User{} = user, %Project{} = sandbox)
       when action in [:delete_sandbox, :update_sandbox] do
-    cond do
-      user.role == :superuser ->
-        true
-
-      Projects.get_project_user_role(user, sandbox) in [:owner, :admin] ->
-        true
-
-      has_root_project_permission?(sandbox, user) ->
-        true
-
-      true ->
-        false
-    end
+    Projects.get_project_user_role(user, sandbox) in [:owner, :admin] or
+      has_root_project_permission?(sandbox, user)
   end
 
   def authorize(_action, _user, _project), do: false
 
   @doc """
-  Bulk permission check for multiple sandboxes to avoid N+1 queries.
+  Bulk manage check for multiple sandboxes, avoiding N+1 queries.
 
-  Returns a map: sandbox_id => %{update: boolean, delete: boolean, merge: boolean}
+  Returns a map `sandbox_id => boolean()` where `true` means the user can
+  perform any of the destructive sandbox actions (update, delete, merge)
+  on that sandbox. The boolean is `true` when the user is an owner/admin
+  on the sandbox itself, or an owner/admin on the root project (cascade).
 
   Assumes `root_project.project_users` and each `sandbox.project_users`
   are preloaded (as ensured by `Projects.list_workspace_projects/2`).
   """
   @spec check_manage_permissions([Project.t()], User.t(), Project.t()) ::
-          %{
-            binary() => %{update: boolean(), delete: boolean(), merge: boolean()}
-          }
+          %{binary() => boolean()}
   def check_manage_permissions(sandboxes, %User{} = user, root_project) do
-    is_superuser = user.role == :superuser
-
     is_root_owner_or_admin =
       Enum.any?(
         root_project.project_users,
         &(&1.user_id == user.id and &1.role in [:owner, :admin])
       )
 
-    is_root_editor_plus =
-      is_root_owner_or_admin or
-        Enum.any?(
-          root_project.project_users,
-          &(&1.user_id == user.id and &1.role == :editor)
-        )
-
-    has_full_privileges = is_superuser or is_root_owner_or_admin
-
-    if has_full_privileges do
-      Map.new(sandboxes, &{&1.id, %{update: true, delete: true, merge: true}})
+    if is_root_owner_or_admin do
+      Map.new(sandboxes, &{&1.id, true})
     else
       Map.new(sandboxes, fn sandbox ->
-        is_owner_or_admin_here? =
+        can_manage? =
           Enum.any?(
             sandbox.project_users,
             &(&1.user_id == user.id and &1.role in [:owner, :admin])
           )
 
-        {sandbox.id,
-         %{
-           update: is_owner_or_admin_here?,
-           delete: is_owner_or_admin_here?,
-           merge: is_root_editor_plus
-         }}
+        {sandbox.id, can_manage?}
       end)
     end
   end

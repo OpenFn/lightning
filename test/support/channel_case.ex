@@ -29,11 +29,19 @@ defmodule LightningWeb.ChannelCase do
 
       # The default endpoint for testing
       @endpoint LightningWeb.Endpoint
+
+      use Oban.Testing, repo: Lightning.Repo
     end
   end
 
   setup tags do
     Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
+
+    Mox.stub(Lightning.MockConfig, :storage, fn
+      :backend -> Lightning.Storage.Local
+      :path -> "."
+      key -> Lightning.Config.API.storage(key)
+    end)
 
     Mox.stub_with(LightningMock, Lightning.API)
 

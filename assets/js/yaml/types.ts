@@ -21,12 +21,18 @@ export type StateCronTrigger = {
   type: 'cron';
   enabled: boolean;
   cron_expression: string;
+  cron_cursor_job_id: string | null;
 };
 
 export type StateWebhookTrigger = {
   id: string;
   enabled: boolean;
   type: 'webhook';
+  webhook_reply: 'before_start' | 'after_completion' | null | undefined;
+  webhook_response_config?: {
+    success_code?: number | null;
+    error_code?: number | null;
+  } | null;
 };
 
 export type StateKafkaTrigger = {
@@ -81,13 +87,21 @@ export type SpecCronTrigger = {
   type: 'cron';
   enabled: boolean;
   cron_expression: string;
+  cron_cursor_job: string | null;
   pos: Position | undefined;
+};
+
+export type WebhookResponseConfig = {
+  success_code?: number | null;
+  error_code?: number | null;
 };
 
 export type SpecWebhookTrigger = {
   id?: string;
   type: 'webhook';
   enabled: boolean;
+  webhook_reply: string | null;
+  webhook_response_config?: WebhookResponseConfig | null;
   pos: Position | undefined;
 };
 

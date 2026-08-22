@@ -336,6 +336,162 @@ describe('createAIAssistantStore', () => {
     });
   });
 
+  describe('Streaming Status', () => {
+    it('should not clear the status when content is appended', () => {
+      // Clearing on new text is the channel buffer's job (at network
+      // arrival), not the drain — so the store must leave status alone.
+      store.setStreamingStatus('Writing code...');
+      store._appendStreamingChunk('Here is the answer');
+
+      expect(store.getSnapshot().streamingStatus).toBe('Writing code...');
+      expect(store.getSnapshot().streamingContent).toBe('Here is the answer');
+    });
+
+    it('should clear the status when set to null', () => {
+      store.setStreamingStatus('Thinking...');
+      store.setStreamingStatus(null);
+
+      expect(store.getSnapshot().streamingStatus).toBeNull();
+    });
+
+    it('should clear the status once changes arrive', () => {
+      store._appendStreamingChunk('Answer');
+      store.setStreamingStatus('Writing code...');
+
+      store._setStreamingChanges({ code: 'fn(s => s)' });
+
+      expect(store.getSnapshot().streamingStatus).toBeNull();
+    });
+  });
+
+  describe('Streaming Segments', () => {
+    it('stacks status segments and opens a new text segment after a status', () => {
+      store._appendStreamingChunk('First ');
+      store._appendStreamingChunk('answer');
+      store._appendStreamingSegment({
+        type: 'status',
+        content: 'Edited workflow structure',
+      });
+      store._appendStreamingSegment({
+        type: 'status',
+        content: 'Added step send-to-gmail',
+      });
+      store._appendStreamingChunk('Done');
+
+      // Every status segment is a completed action from Apollo's dedicated
+      // status event — they all persist, in wire order, no collapsing.
+      expect(store.getSnapshot().streamingSegments).toEqual([
+        { type: 'text', content: 'First answer' },
+        { type: 'status', content: 'Edited workflow structure' },
+        { type: 'status', content: 'Added step send-to-gmail' },
+        { type: 'text', content: 'Done' },
+      ]);
+    });
+
+    it('keeps a leading status segment when text starts', () => {
+      store._appendStreamingSegment({
+        type: 'status',
+        content: 'Edited workflow structure',
+      });
+      store._appendStreamingChunk('Answer');
+
+      expect(store.getSnapshot().streamingSegments).toEqual([
+        { type: 'status', content: 'Edited workflow structure' },
+        { type: 'text', content: 'Answer' },
+      ]);
+    });
+
+    it('survives scalar-status clearing (setStreamingStatus and streaming changes)', () => {
+      store._appendStreamingChunk('Answer');
+      store._appendStreamingSegment({ type: 'status', content: 'Working...' });
+
+      store.setStreamingStatus(null);
+      store._setStreamingChanges({ code: 'fn(s => s)' });
+
+      expect(store.getSnapshot().streamingSegments).toEqual([
+        { type: 'text', content: 'Answer' },
+        { type: 'status', content: 'Working...' },
+      ]);
+    });
+
+    it('resets when the final assistant message lands', () => {
+      store._appendStreamingChunk('Answer');
+      store._appendStreamingSegment({ type: 'status', content: 'Working...' });
+
+      store._addMessage(
+        createMockAIMessage({ role: 'assistant', status: 'success' })
+      );
+
+      expect(store.getSnapshot().streamingSegments).toEqual([]);
+    });
+
+    it('resets on message error', () => {
+      const message = createMockAIMessage({
+        role: 'assistant',
+        status: 'processing',
+      });
+      store._addMessage(message);
+      store._appendStreamingChunk('Answer');
+      store._appendStreamingSegment({ type: 'status', content: 'Working...' });
+
+      store._updateMessageStatus(message.id, 'error');
+
+      expect(store.getSnapshot().streamingSegments).toEqual([]);
+    });
+
+    it('resets on clearSession and disconnect', () => {
+      store._appendStreamingChunk('Answer');
+      store.clearSession();
+      expect(store.getSnapshot().streamingSegments).toEqual([]);
+
+      store._appendStreamingChunk('Answer again');
+      store.disconnect();
+      expect(store.getSnapshot().streamingSegments).toEqual([]);
+    });
+  });
+
+  describe('Streaming Apply', () => {
+    it('records, flags, and clears the streaming apply lifecycle', () => {
+      store._setStreamingApply('name: Test');
+      expect(store.getSnapshot().streamingApply).toEqual({
+        yaml: 'name: Test',
+        saveFailed: false,
+      });
+
+      store._setStreamingApplySaveFailed(true);
+      expect(store.getSnapshot().streamingApply?.saveFailed).toBe(true);
+
+      store._setStreamingApplySaveFailed(false);
+      expect(store.getSnapshot().streamingApply?.saveFailed).toBe(false);
+
+      store._clearStreamingApply();
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+
+    it('ignores saveFailed updates when no streaming apply is pending', () => {
+      store._setStreamingApplySaveFailed(true);
+
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+
+    it('is cleared on session change but survives stream-end and disconnect', () => {
+      // The final new_message may arrive after the stream ends or after a
+      // reconnect — the record must survive both so the duplicate import
+      // can still be skipped.
+      store._setStreamingApply('name: Test');
+      store._clearStreaming();
+      store.disconnect();
+      expect(store.getSnapshot().streamingApply).not.toBeNull();
+
+      store.loadSession('session-2');
+      expect(store.getSnapshot().streamingApply).toBeNull();
+
+      store._setStreamingApply('name: Test 2');
+      store.clearSession();
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+  });
+
   describe('State Subscriptions', () => {
     it('should notify subscribers on state changes', () => {
       const subscriber = vi.fn();

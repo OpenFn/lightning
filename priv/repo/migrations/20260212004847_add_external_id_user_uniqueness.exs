@@ -1,5 +1,6 @@
 defmodule Lightning.Repo.Migrations.AddExternalIdUserUniqueness do
   use Ecto.Migration
+  require Logger
 
   def up do
     duplicates =
@@ -28,7 +29,7 @@ defmodule Lightning.Repo.Migrations.AddExternalIdUserUniqueness do
           [id]
         )
 
-        IO.puts(
+        Logger.info(
           "[migration] Cleared duplicate external_id for credential #{id} (user: #{user_id})"
         )
       end

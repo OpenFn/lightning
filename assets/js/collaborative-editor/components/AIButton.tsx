@@ -3,7 +3,7 @@ import { cn } from '#/utils/cn';
 import { useIsAIAssistantPanelOpen, useUICommands } from '../hooks/useUI';
 
 import { ShortcutKeys } from './ShortcutKeys';
-import { Tooltip } from './Tooltip';
+import { Tooltip } from '../../components/Tooltip';
 
 interface AIButtonProps {
   onClick?: () => void;
@@ -18,18 +18,13 @@ export function AIButton({
   disabledMessage,
   className = '',
 }: AIButtonProps) {
-  const { toggleAIAssistantPanel, collapseCreateWorkflowPanel } =
-    useUICommands();
+  const { toggleAIAssistantPanel } = useUICommands();
   const isOpen = useIsAIAssistantPanelOpen();
 
   const handleClick = () => {
     if (onClick) {
       onClick();
     } else {
-      // Close create workflow panel when opening AI Assistant
-      if (!isOpen) {
-        collapseCreateWorkflowPanel();
-      }
       toggleAIAssistantPanel();
     }
   };

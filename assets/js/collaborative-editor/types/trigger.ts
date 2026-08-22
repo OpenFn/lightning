@@ -18,11 +18,19 @@ const baseTriggerSchema = z.object({
 const webhookTriggerSchema = baseTriggerSchema.extend({
   type: z.literal('webhook'),
   cron_expression: z.null().default(null),
+  cron_cursor_job_id: z.null().default(null),
   kafka_configuration: z.null().default(null),
   webhook_reply: z
     .enum(['before_start', 'after_completion'])
     .nullable()
     .default('before_start'),
+  webhook_response_config: z
+    .object({
+      success_code: z.number().int().nullable().default(null),
+      error_code: z.number().int().nullable().default(null),
+    })
+    .nullable()
+    .default(null),
 });
 
 // Cron trigger schema with professional validation using cron-validator
@@ -46,7 +54,9 @@ const cronTriggerSchema = baseTriggerSchema.extend({
           'Invalid cron expression. Use format: minute hour day month weekday',
       }
     ),
+  cron_cursor_job_id: z.string().uuid().nullable().default(null),
   kafka_configuration: z.null().default(null),
+  webhook_response_config: z.null().default(null),
   webhook_reply: z.null().default(null).catch(null),
 });
 
@@ -99,7 +109,9 @@ const kafkaConfigSchema = z
 const kafkaTriggerSchema = baseTriggerSchema.extend({
   type: z.literal('kafka'),
   cron_expression: z.null().default(null),
+  cron_cursor_job_id: z.null().default(null),
   kafka_configuration: kafkaConfigSchema,
+  webhook_response_config: z.null().default(null),
   webhook_reply: z.null().default(null).catch(null),
 });
 
@@ -131,8 +143,10 @@ export const createDefaultTrigger = (
         ...base,
         type: 'webhook' as const,
         cron_expression: null,
+        cron_cursor_job_id: null,
         kafka_configuration: null,
         webhook_reply: 'before_start' as const,
+        webhook_response_config: null,
       };
 
     case 'cron':
@@ -140,6 +154,7 @@ export const createDefaultTrigger = (
         ...base,
         type: 'cron' as const,
         cron_expression: '0 0 * * *', // Daily at midnight default
+        cron_cursor_job_id: null,
         kafka_configuration: null,
         webhook_reply: null,
       };
@@ -149,6 +164,7 @@ export const createDefaultTrigger = (
         ...base,
         type: 'kafka' as const,
         cron_expression: null,
+        cron_cursor_job_id: null,
         kafka_configuration: {
           hosts_string: '',
           topics_string: '',

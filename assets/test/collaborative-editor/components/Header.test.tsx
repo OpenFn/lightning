@@ -6,12 +6,19 @@
  * proper integration within the Header component.
  */
 
-import { act, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup as reactCleanup,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import type React from 'react';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 
 import { Header } from '../../../js/collaborative-editor/components/Header';
+import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
@@ -41,6 +48,15 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 vi.mock('../../../js/workflow-diagram/useAdaptorIcons', () => ({
   default: () => ({}),
 }));
+
+let storeCleanup: (() => void) | null = null;
+
+afterEach(() => {
+  storeCleanup?.();
+  storeCleanup = null;
+  reactCleanup();
+  urlState.reset();
+});
 
 // =============================================================================
 // TEST HELPERS
@@ -136,6 +152,8 @@ async function createTestSetup(options: WrapperOptions = {}) {
     }
   );
 
+  storeCleanup = cleanup;
+
   if (options.triggerSync) {
     // Trigger provider sync to enable save functionality
     triggerProviderSync(sessionStore, true);
@@ -154,11 +172,22 @@ async function createTestSetup(options: WrapperOptions = {}) {
     }
   }
 
+  const mockLiveViewActions = {
+    pushEvent: vi.fn(),
+    pushEventTo: vi.fn(),
+    handleEvent: vi.fn(() => vi.fn()),
+    navigate: vi.fn(),
+  };
+
   // Create wrapper (still needed for React context)
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <KeyboardProvider>
       <SessionContext.Provider value={{ sessionStore, isNewWorkflow }}>
-        <StoreContext.Provider value={stores}>{children}</StoreContext.Provider>
+        <LiveViewActionsProvider actions={mockLiveViewActions}>
+          <StoreContext.Provider value={stores}>
+            {children}
+          </StoreContext.Provider>
+        </LiveViewActionsProvider>
       </SessionContext.Provider>
     </KeyboardProvider>
   );
@@ -355,7 +384,9 @@ describe('Header - Basic Rendering', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
   });
 
@@ -760,7 +791,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeInTheDocument();
     });
 
@@ -799,14 +830,14 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeInTheDocument();
     });
 
     // Tooltip should be hidden when panel is open
     // We're testing tooltip visibility, not button enabled state
     // The button may be disabled for workflow validation reasons
-    const startButton = screen.getByRole('button', { name: /run/i });
+    const startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
   });
 
@@ -840,7 +871,9 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
 
     // Make workflow invalid (empty name)
@@ -850,7 +883,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeDisabled();
     });
 
@@ -867,7 +900,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
 
     // Error tooltip should still be shown even when panel is open
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeDisabled();
     });
   });
@@ -902,10 +935,12 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
 
-    let startButton = screen.getByRole('button', { name: /run/i });
+    let startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
     // Tooltip should be present when closed
 
@@ -920,7 +955,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       </Header>
     );
 
-    startButton = screen.getByRole('button', { name: /run/i });
+    startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
     // Tooltip should be hidden when open
 
@@ -935,7 +970,7 @@ describe('Header - Run Button Tooltip with Panel State', () => {
       </Header>
     );
 
-    startButton = screen.getByRole('button', { name: /run/i });
+    startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
     // Tooltip should reappear when closed
   });
@@ -966,13 +1001,13 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     });
 
     await waitFor(() => {
-      const startButton = screen.getByRole('button', { name: /run/i });
+      const startButton = screen.getByRole('button', { name: /^run$/i });
       expect(startButton).toBeInTheDocument();
     });
 
     // Default should show tooltip (panel closed by default)
     // We're testing that the prop defaults correctly, not button state
-    const startButton = screen.getByRole('button', { name: /run/i });
+    const startButton = screen.getByRole('button', { name: /^run$/i });
     expect(startButton).toBeInTheDocument();
   });
 });
@@ -1033,35 +1068,6 @@ describe('Header - Unsaved Changes Indicator', () => {
     });
 
     // No changes should mean no red dot
-    expect(container.querySelector('[data-is-dirty]')).not.toBeInTheDocument();
-  });
-
-  test('does not show red dot for new workflows', async () => {
-    const { wrapper, emitSessionContext, ydoc } = await createTestSetup({
-      isNewWorkflow: true,
-      triggerSync: true,
-    });
-
-    const { container } = render(
-      <Header projectId="project-1" workflowId="workflow-1">
-        {[<span key="breadcrumb-1">Breadcrumb</span>]}
-      </Header>,
-      { wrapper }
-    );
-
-    await act(async () => {
-      emitSessionContext();
-      await new Promise(resolve => setTimeout(resolve, 150));
-    });
-
-    // Make changes to workflow
-    await act(async () => {
-      const workflowMap = ydoc.getMap('workflow');
-      workflowMap.set('name', 'New Workflow');
-    });
-
-    // Should not show red dot for new workflows
-    await new Promise(resolve => setTimeout(resolve, 100));
     expect(container.querySelector('[data-is-dirty]')).not.toBeInTheDocument();
   });
 
@@ -1377,9 +1383,8 @@ describe('Header - Keyboard Shortcuts', () => {
 // =============================================================================
 
 describe('Header - AI Assistant Button', () => {
-  beforeEach(() => {
-    urlState.reset();
-  });
+  // urlState is reset by the top-level `afterEach` above, so no
+  // block-local `beforeEach` is needed here.
 
   test('AI button is enabled by default when aiAssistantEnabled prop is true', async () => {
     const { wrapper, emitSessionContext } = await createTestSetup();

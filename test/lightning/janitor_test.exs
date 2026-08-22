@@ -161,7 +161,7 @@ defmodule Lightning.JanitorTest do
 
       unfinished_runs_with_unfinished_steps =
         Enum.map(
-          [:available, :claimed, :started],
+          Lightning.Run.active_states(),
           fn state ->
             insert(:run,
               work_order: work_order,

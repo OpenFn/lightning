@@ -3,6 +3,25 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
   import Lightning.Factories
 
+  # Sample curl requests:
+  #
+  #   # List your credentials
+  #   curl http://localhost:4000/api/credentials \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+  #
+  #   # List credentials for a project
+  #   curl http://localhost:4000/api/projects/$PROJECT_ID/credentials \
+  #     -H "Authorization: Bearer $TOKEN" -H "Accept: application/json"
+  #
+  #   # Create a credential
+  #   curl -X POST http://localhost:4000/api/credentials \
+  #     -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  #     -d '{"name":"My Cred","schema":"raw","credential_bodies":[{"name":"main","body":{"key":"val"}}]}'
+  #
+  #   # Delete a credential
+  #   curl -X DELETE http://localhost:4000/api/credentials/$CREDENTIAL_ID \
+  #     -H "Authorization: Bearer $TOKEN"
+
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
@@ -218,6 +237,84 @@ defmodule LightningWeb.API.CredentialControllerTest do
       Enum.each(credentials, fn credential ->
         refute Map.has_key?(credential, "body")
       end)
+    end
+
+    test "does not disclose sibling projects the caller is not a member of", %{
+      conn: conn,
+      user: user
+    } do
+      project_a =
+        insert(:project,
+          name: "project-a",
+          project_users: [%{user_id: user.id, role: :viewer}]
+        )
+
+      # A different tenant's project the caller has no membership in.
+      other_project = insert(:project, name: "other-tenant-secret")
+
+      owner = insert(:user)
+
+      _shared_credential =
+        insert(:credential,
+          user: owner,
+          name: "Shared Credential",
+          schema: "raw",
+          project_credentials: [
+            %{project_id: project_a.id},
+            %{project_id: other_project.id}
+          ]
+        )
+
+      conn = get(conn, ~p"/api/projects/#{project_a.id}/credentials")
+
+      assert %{"credentials" => [credential]} = json_response(conn, 200)
+
+      rendered_project_ids = Enum.map(credential["projects"], & &1["id"])
+      assert project_a.id in rendered_project_ids
+      refute other_project.id in rendered_project_ids
+
+      refute Enum.any?(
+               credential["projects"],
+               &(&1["name"] == "other-tenant-secret")
+             )
+
+      # The sibling project's UUID must not leak via project_credentials either.
+      pc_project_ids =
+        Enum.map(credential["project_credentials"], & &1["project_id"])
+
+      assert project_a.id in pc_project_ids
+      refute other_project.id in pc_project_ids
+    end
+
+    test "shows the caller's own association when the project is a sandbox", %{
+      conn: conn,
+      user: user
+    } do
+      root = insert(:project)
+
+      sandbox =
+        insert(:project,
+          parent: root,
+          project_users: [%{user_id: user.id, role: :viewer}]
+        )
+
+      owner = insert(:user)
+
+      _credential =
+        insert(:credential,
+          user: owner,
+          name: "Sandbox Credential",
+          schema: "raw",
+          project_credentials: [%{project_id: sandbox.id}]
+        )
+
+      conn = get(conn, ~p"/api/projects/#{sandbox.id}/credentials")
+
+      assert %{"credentials" => [credential]} = json_response(conn, 200)
+      assert Enum.map(credential["projects"], & &1["id"]) == [sandbox.id]
+
+      assert Enum.map(credential["project_credentials"], & &1["project_id"]) ==
+               [sandbox.id]
     end
 
     test "returns 403 when user lacks access to project", %{

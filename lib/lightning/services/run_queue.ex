@@ -17,13 +17,8 @@ defmodule Lightning.Services.RunQueue do
   end
 
   @impl true
-  def claim(demand, worker_name) do
-    adapter().claim(demand, worker_name)
-  end
-
-  @impl true
-  def dequeue(run) do
-    adapter().dequeue(run)
+  def claim(demand, worker_name, queues) do
+    adapter().claim(demand, worker_name, queues)
   end
 
   defp adapter, do: adapter(:run_queue)

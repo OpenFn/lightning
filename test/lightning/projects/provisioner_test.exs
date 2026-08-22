@@ -2,6 +2,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Auditing.Audit
+  alias Lightning.Credentials.Scoping
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
   alias Lightning.Workflows.Snapshot
@@ -121,6 +122,68 @@ defmodule Lightning.Projects.ProvisionerTest do
                      }
                    ]
                  }
+               ]
+             } = flatten_errors(changeset)
+    end
+
+    test "rejects a job with a malformed adaptor" do
+      %{body: body} = valid_document()
+
+      body =
+        body
+        |> Map.update!("workflows", fn workflows ->
+          workflows
+          |> Enum.map(fn workflow ->
+            workflow
+            |> Map.update!("jobs", fn [first_job | rest] ->
+              [
+                Map.put(
+                  first_job,
+                  "adaptor",
+                  "@openfn/language-http@7.3.2; touch /tmp/x"
+                )
+                | rest
+              ]
+            end)
+          end)
+        end)
+
+      changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, body)
+
+      refute changeset.valid?
+
+      assert %{
+               workflows: [
+                 %{jobs: [%{adaptor: ["adaptor has invalid format"]} | _]}
+               ]
+             } = flatten_errors(changeset)
+    end
+
+    test "rejects a job with an adaptor that is not in the registry" do
+      %{body: body} = valid_document()
+
+      body =
+        body
+        |> Map.update!("workflows", fn workflows ->
+          workflows
+          |> Enum.map(fn workflow ->
+            workflow
+            |> Map.update!("jobs", fn [first_job | rest] ->
+              [
+                Map.put(first_job, "adaptor", "@openfn/language-foo@1.0.0")
+                | rest
+              ]
+            end)
+          end)
+        end)
+
+      changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, body)
+
+      refute changeset.valid?
+
+      assert %{
+               workflows: [
+                 %{jobs: [%{adaptor: ["is not a recognised adaptor"]} | _]}
                ]
              } = flatten_errors(changeset)
     end
@@ -322,6 +385,223 @@ defmodule Lightning.Projects.ProvisionerTest do
                name: ^collection_name,
                project_id: ^project_id
              } = collection
+    end
+
+    test "creates channels" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: body, project_id: project_id} = valid_document()
+
+      channel_id = Ecto.UUID.generate()
+
+      body_with_channels =
+        Map.put(body, "channels", [
+          %{
+            id: channel_id,
+            name: "my-channel",
+            destination_url: "https://example.com/destination",
+            enabled: true
+          }
+        ])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body_with_channels
+        )
+
+      assert %{id: ^project_id, channels: [channel]} = project
+
+      assert %{
+               id: ^channel_id,
+               name: "my-channel",
+               destination_url: "https://example.com/destination",
+               enabled: true,
+               project_id: ^project_id
+             } = channel
+    end
+
+    test "creates a channel with a destination_credential_id" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      credential = insert(:credential, name: "Dest Cred", user: user)
+
+      %{body: body, project_id: project_id} = valid_document()
+
+      project_credential_id = Ecto.UUID.generate()
+      channel_id = Ecto.UUID.generate()
+
+      credentials_payload = [
+        %{
+          "id" => project_credential_id,
+          "name" => credential.name,
+          "owner" => user.email
+        }
+      ]
+
+      body_with_channels =
+        body
+        |> Map.put("project_credentials", credentials_payload)
+        |> Map.put("channels", [
+          %{
+            "id" => channel_id,
+            "name" => "my-channel",
+            "destination_url" => "https://example.com/destination",
+            "enabled" => true,
+            "destination_credential_id" => project_credential_id
+          }
+        ])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body_with_channels
+        )
+
+      assert %{id: ^project_id, channels: [channel]} = project
+      assert channel.id == channel_id
+
+      assert %Lightning.Channels.ChannelAuthMethod{
+               role: :destination,
+               project_credential_id: ^project_credential_id
+             } = channel.destination_auth_method
+    end
+
+    test "imports trigger with webhook_reply field" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: %{"workflows" => [workflow]} = body, project_id: project_id} =
+        valid_document()
+
+      updated_triggers =
+        Enum.map(workflow["triggers"], fn trigger ->
+          Map.merge(trigger, %{
+            "type" => "webhook",
+            "webhook_reply" => "after_completion"
+          })
+        end)
+
+      body =
+        Map.put(body, "workflows", [
+          Map.put(workflow, "triggers", updated_triggers)
+        ])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body
+        )
+
+      assert %{id: ^project_id, workflows: [%{triggers: [trigger]}]} = project
+      assert trigger.webhook_reply == :after_completion
+    end
+
+    test "imports trigger with webhook_response_config field" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: %{"workflows" => [workflow]} = body, project_id: project_id} =
+        valid_document()
+
+      updated_triggers =
+        Enum.map(workflow["triggers"], fn trigger ->
+          Map.merge(trigger, %{
+            "type" => "webhook",
+            "webhook_reply" => "after_completion",
+            "webhook_response_config" => %{
+              "success_code" => 200,
+              "error_code" => 500
+            }
+          })
+        end)
+
+      body =
+        Map.put(body, "workflows", [
+          Map.put(workflow, "triggers", updated_triggers)
+        ])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body
+        )
+
+      assert %{id: ^project_id, workflows: [%{triggers: [trigger]}]} = project
+      assert trigger.webhook_reply == :after_completion
+      assert trigger.webhook_response_config.success_code == 200
+      assert trigger.webhook_response_config.error_code == 500
+    end
+
+    test "imports cron trigger with cron_cursor_job_id field" do
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{
+        body: %{"workflows" => [workflow]} = body,
+        project_id: project_id,
+        workflows: [%{first_job_id: first_job_id, trigger_id: trigger_id}]
+      } = valid_document()
+
+      cron_triggers =
+        Enum.map(workflow["triggers"], fn trigger ->
+          Map.merge(trigger, %{
+            "type" => "cron",
+            "cron_expression" => "0 * * * *",
+            "cron_cursor_job_id" => first_job_id
+          })
+        end)
+
+      body =
+        Map.put(body, "workflows", [Map.put(workflow, "triggers", cron_triggers)])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(
+          %Lightning.Projects.Project{},
+          user,
+          body
+        )
+
+      assert %{id: ^project_id, workflows: [%{triggers: [trigger]}]} = project
+      assert trigger.id == trigger_id
+      assert trigger.type == :cron
+      assert trigger.cron_cursor_job_id == first_job_id
     end
 
     test "trigger->firstjob edge is enabled even if params says disabled" do
@@ -690,19 +970,153 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       changeset = Provisioner.parse_document(project, body)
 
-      assert %{action: :delete} =
+      assert %{action: :update, changes: %{deleted_at: deleted_at}} =
                changeset
                |> Ecto.Changeset.get_change(:workflows)
                |> Enum.find(fn workflow_changeset ->
                  workflow_changeset |> Ecto.Changeset.get_field(:id) ==
                    workflow_id
                end),
-             "The workflow should be marked for deletion"
+             "The workflow should be soft-deleted"
+
+      assert %DateTime{} = deleted_at
 
       {:ok, project} = Provisioner.import_document(project, user, body)
 
       assert project.workflows == [],
-             "The workflow should be removed from the project"
+             "The soft-deleted workflow should be excluded from the project"
+    end
+
+    test "soft-deleting a workflow frees its name for reuse", %{
+      project: project,
+      user: user
+    } do
+      %{
+        body: body,
+        workflows: [%{id: workflow_id}]
+      } = valid_document(project.id)
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      original_name =
+        Repo.get!(Lightning.Workflows.Workflow, workflow_id).name
+
+      {:ok, _} =
+        body
+        |> remove_workflow_from_document(workflow_id)
+        |> then(&Provisioner.import_document(project, user, &1))
+
+      deleted = Repo.get!(Lightning.Workflows.Workflow, workflow_id)
+
+      assert deleted.deleted_at
+
+      assert deleted.name == "#{original_name}_del",
+             "The soft-deleted workflow should release its original name"
+
+      # A fresh workflow can now reuse the freed name on a later import.
+      %{body: reuse_body} = valid_document(project.id)
+
+      reuse_body =
+        Map.update!(reuse_body, "workflows", fn [workflow] ->
+          [Map.put(workflow, "name", original_name)]
+        end)
+
+      assert {:ok, reimported} =
+               Provisioner.import_document(project, user, reuse_body)
+
+      assert Enum.any?(reimported.workflows, &(&1.name == original_name))
+    end
+
+    test "disables all triggers on a workflow that is soft-deleted via provisioner",
+         %{
+           project: project,
+           user: user
+         } do
+      extra_trigger_id = Ecto.UUID.generate()
+
+      %{
+        body: body,
+        workflows: [%{id: workflow_id, trigger_id: trigger_id}]
+      } = valid_document(project.id)
+
+      body =
+        add_entity_to_workflow(body, workflow_id, "triggers", %{
+          "id" => extra_trigger_id,
+          "type" => "cron",
+          "cron_expression" => "* * * * *",
+          "enabled" => true
+        })
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      body = remove_workflow_from_document(body, workflow_id)
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      assert %{deleted_at: %DateTime{}} =
+               Repo.get!(Lightning.Workflows.Workflow, workflow_id)
+
+      assert Repo.get!(Lightning.Workflows.Trigger, trigger_id).enabled == false
+
+      assert Repo.get!(Lightning.Workflows.Trigger, extra_trigger_id).enabled ==
+               false
+    end
+
+    test "does not disable triggers on workflows that are not soft-deleted",
+         %{
+           project: project,
+           user: user
+         } do
+      %{
+        body: body,
+        workflows: [%{trigger_id: wf1_trigger_id}, %{id: wf2_id}]
+      } = valid_document(project.id, 2)
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      body = remove_workflow_from_document(body, wf2_id)
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      assert Repo.get!(Lightning.Workflows.Trigger, wf1_trigger_id).enabled ==
+               true
+    end
+
+    test "fires kafka_trigger_updated for kafka triggers on a workflow soft-deleted via provisioner",
+         %{
+           project: project,
+           user: user
+         } do
+      alias Lightning.Workflows.Triggers.Events
+      alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
+
+      kafka_trigger_id = Ecto.UUID.generate()
+
+      %{
+        body: body,
+        workflows: [%{id: workflow_id, trigger_id: webhook_trigger_id}]
+      } = valid_document(project.id)
+
+      body =
+        add_entity_to_workflow(body, workflow_id, "triggers", %{
+          "id" => kafka_trigger_id,
+          "type" => "kafka",
+          "enabled" => true,
+          "kafka_configuration" => %{
+            "hosts" => [["localhost", "9092"]],
+            "topics" => ["topic"],
+            "initial_offset_reset_policy" => "earliest",
+            "connect_timeout" => 30
+          }
+        })
+
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      Events.subscribe_to_kafka_trigger_updated()
+
+      body = remove_workflow_from_document(body, workflow_id)
+      {:ok, _} = Provisioner.import_document(project, user, body)
+
+      assert_receive %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_id}
+      refute_received %KafkaTriggerUpdated{trigger_id: ^webhook_trigger_id}
     end
 
     test "marking a new/changed record for deletion", %{
@@ -928,6 +1342,445 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       assert Repo.reload(collection_to_delete) |> is_nil()
       assert remaining_collection.id == collection.id
+    end
+
+    test "updating a channel", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      channel = insert(:channel, project: project, name: "old-name")
+      channel_id = channel.id
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel_id,
+            "name" => "new-name",
+            "destination_url" => "https://example.com/new",
+            "enabled" => false
+          }
+        ]
+      }
+
+      assert {:ok, %{id: ^project_id, channels: [updated]}} =
+               Provisioner.import_document(project, user, body)
+
+      assert %{
+               id: ^channel_id,
+               name: "new-name",
+               destination_url: "https://example.com/new",
+               enabled: false
+             } = updated
+    end
+
+    test "audits channel create, update, and destination auth changes", %{
+      project: %{id: project_id} = project,
+      user: %{id: user_id} = user
+    } do
+      pc1 = insert(:project_credential, project: project)
+      pc2 = insert(:project_credential, project: project)
+
+      # 1. Create a channel with a destination credential
+      new_channel_id = Ecto.UUID.generate()
+
+      body_create = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => new_channel_id,
+            "name" => "audit-channel",
+            "destination_url" => "https://example.com/destination",
+            "enabled" => true,
+            "destination_credential_id" => pc1.id
+          }
+        ]
+      }
+
+      assert {:ok, _project} =
+               Provisioner.import_document(project, user, body_create)
+
+      assert created_audit =
+               Repo.one(
+                 from a in Audit,
+                   where:
+                     a.item_id == ^new_channel_id and a.item_type == "channel" and
+                       a.event == "created"
+               )
+
+      assert created_audit.actor_id == user_id
+
+      assert auth_added_audit =
+               Repo.one(
+                 from a in Audit,
+                   where:
+                     a.item_id == ^new_channel_id and a.item_type == "channel" and
+                       a.event == "auth_method_added"
+               )
+
+      assert auth_added_audit.actor_id == user_id
+
+      # 2. Update the channel and swap the credential
+      body_update = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => new_channel_id,
+            "name" => "audit-channel-renamed",
+            "destination_credential_id" => pc2.id
+          }
+        ]
+      }
+
+      assert {:ok, _project} =
+               Provisioner.import_document(project, user, body_update)
+
+      assert Repo.one(
+               from a in Audit,
+                 where:
+                   a.item_id == ^new_channel_id and a.item_type == "channel" and
+                     a.event == "updated"
+             )
+
+      assert Repo.one(
+               from a in Audit,
+                 where:
+                   a.item_id == ^new_channel_id and a.item_type == "channel" and
+                     a.event == "auth_method_changed"
+             )
+
+      # 3. Clear the credential
+      body_clear = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => new_channel_id,
+            "destination_credential_id" => nil
+          }
+        ]
+      }
+
+      assert {:ok, _project} =
+               Provisioner.import_document(project, user, body_clear)
+
+      assert Repo.one(
+               from a in Audit,
+                 where:
+                   a.item_id == ^new_channel_id and a.item_type == "channel" and
+                     a.event == "auth_method_removed"
+             )
+    end
+
+    test "audits multiple channels in one import without step-name collisions",
+         %{project: %{id: project_id} = project, user: %{id: user_id} = user} do
+      pc_a = insert(:project_credential, project: project)
+      pc_b = insert(:project_credential, project: project)
+
+      channel_a_id = Ecto.UUID.generate()
+      channel_b_id = Ecto.UUID.generate()
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel_a_id,
+            "name" => "channel-a",
+            "destination_url" => "https://example.com/a",
+            "enabled" => true,
+            "destination_credential_id" => pc_a.id
+          },
+          %{
+            "id" => channel_b_id,
+            "name" => "channel-b",
+            "destination_url" => "https://example.com/b",
+            "enabled" => true,
+            "destination_credential_id" => pc_b.id
+          }
+        ]
+      }
+
+      assert {:ok, _project} =
+               Provisioner.import_document(project, user, body)
+
+      # Both channels emit "created" and "auth_method_added" audits scoped
+      # to their own item_id — proves the batched single-Multi path doesn't
+      # collide on shared audit step keys.
+      for channel_id <- [channel_a_id, channel_b_id] do
+        assert created =
+                 Repo.one(
+                   from a in Audit,
+                     where:
+                       a.item_id == ^channel_id and
+                         a.item_type == "channel" and
+                         a.event == "created"
+                 )
+
+        assert created.actor_id == user_id
+
+        assert Repo.one(
+                 from a in Audit,
+                   where:
+                     a.item_id == ^channel_id and a.item_type == "channel" and
+                       a.event == "auth_method_added"
+               )
+      end
+    end
+
+    test "audits channel changes when the actor is a ProjectRepoConnection",
+         %{project: %{id: project_id} = project} do
+      repo_connection = insert(:project_repo_connection, project: project)
+      pc = insert(:project_credential, project: project)
+
+      channel_id = Ecto.UUID.generate()
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel_id,
+            "name" => "repo-sync-channel",
+            "destination_url" => "https://example.com/destination",
+            "enabled" => true,
+            "destination_credential_id" => pc.id
+          }
+        ]
+      }
+
+      assert {:ok, _project} =
+               Provisioner.import_document(project, repo_connection, body)
+
+      assert created_audit =
+               Repo.one(
+                 from a in Audit,
+                   where:
+                     a.item_id == ^channel_id and a.item_type == "channel" and
+                       a.event == "created"
+               )
+
+      assert created_audit.actor_id == repo_connection.id
+      assert created_audit.actor_type == :project_repo_connection
+
+      assert auth_audit =
+               Repo.one(
+                 from a in Audit,
+                   where:
+                     a.item_id == ^channel_id and a.item_type == "channel" and
+                       a.event == "auth_method_added"
+               )
+
+      assert auth_audit.actor_id == repo_connection.id
+      assert auth_audit.actor_type == :project_repo_connection
+    end
+
+    test "rejects channel deletion with a helpful error", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      channel = insert(:channel, project: project)
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{"id" => channel.id, "delete" => true}
+        ]
+      }
+
+      assert {:error, changeset} =
+               Provisioner.import_document(project, user, body)
+
+      assert %{channels: [%{delete: [msg]}]} = flatten_errors(changeset)
+      assert msg =~ "deletion is not supported"
+
+      # Channel is unchanged in the database
+      assert Repo.reload(channel)
+    end
+
+    test "rejects a destination_credential_id from another project", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      other_project = insert(:project)
+      foreign_pc = insert(:project_credential, project: other_project)
+
+      channel_id = Ecto.UUID.generate()
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel_id,
+            "name" => "leaky-channel",
+            "destination_url" => "https://example.com/destination",
+            "enabled" => true,
+            "destination_credential_id" => foreign_pc.id
+          }
+        ]
+      }
+
+      assert {:error, changeset} =
+               Provisioner.import_document(project, user, body)
+
+      assert %{
+               channels: [
+                 %{destination_auth_method: %{project_credential_id: [msg]}}
+               ]
+             } = flatten_errors(changeset)
+
+      assert msg =~ "isn't available in this project"
+
+      # Channel was not persisted
+      refute Repo.get(Lightning.Channels.Channel, channel_id)
+    end
+
+    test "rejects a nonexistent destination_credential_id with the shared wording",
+         %{
+           project: %{id: project_id} = project,
+           user: user
+         } do
+      channel_id = Ecto.UUID.generate()
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel_id,
+            "name" => "leaky-channel",
+            "destination_url" => "https://example.com/destination",
+            "enabled" => true,
+            "destination_credential_id" => Ecto.UUID.generate()
+          }
+        ]
+      }
+
+      assert {:error, changeset} =
+               Provisioner.import_document(project, user, body)
+
+      assert %{
+               channels: [
+                 %{destination_auth_method: %{project_credential_id: [msg]}}
+               ]
+             } = flatten_errors(changeset)
+
+      assert msg == Scoping.violation_message(:project_credential_id)
+
+      # Channel was not persisted
+      refute Repo.get(Lightning.Channels.Channel, channel_id)
+    end
+
+    test "rejects a job project_credential_id from another project", %{
+      project: %{id: project_id} = project,
+      user: user
+    } do
+      other_project = insert(:project)
+      foreign_pc = insert(:project_credential, project: other_project)
+
+      %{
+        body: %{"workflows" => [workflow]} = body,
+        workflows: [%{first_job_id: first_job_id}]
+      } =
+        valid_document(project_id)
+
+      tainted_jobs =
+        Enum.map(workflow["jobs"], fn job ->
+          if job["id"] == first_job_id do
+            Map.put(job, "project_credential_id", foreign_pc.id)
+          else
+            job
+          end
+        end)
+
+      body = Map.put(body, "workflows", [%{workflow | "jobs" => tainted_jobs}])
+
+      assert {:error, changeset} =
+               Provisioner.import_document(project, user, body)
+
+      assert %{
+               workflows: [%{jobs: job_errors}]
+             } = flatten_errors(changeset)
+
+      assert Enum.any?(job_errors, fn job_error ->
+               case job_error do
+                 %{project_credential_id: [msg]} ->
+                   msg =~ "isn't available in this project"
+
+                 _ ->
+                   false
+               end
+             end)
+    end
+
+    test "setting a channel's destination_credential_id replaces the existing auth method",
+         %{project: %{id: project_id} = project, user: user} do
+      pc_old = insert(:project_credential, project: project)
+      pc_new = insert(:project_credential, project: project)
+
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: pc_old
+      )
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel.id,
+            "destination_credential_id" => pc_new.id
+          }
+        ]
+      }
+
+      assert {:ok, %{channels: [updated]}} =
+               Provisioner.import_document(project, user, body)
+
+      assert %Lightning.Channels.ChannelAuthMethod{
+               role: :destination,
+               project_credential_id: new_pc_id
+             } = updated.destination_auth_method
+
+      assert new_pc_id == pc_new.id
+    end
+
+    test "setting destination_credential_id to nil clears the destination auth method",
+         %{project: %{id: project_id} = project, user: user} do
+      pc = insert(:project_credential, project: project)
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: pc
+      )
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel.id,
+            "destination_credential_id" => nil
+          }
+        ]
+      }
+
+      assert {:ok, %{channels: [updated]}} =
+               Provisioner.import_document(project, user, body)
+
+      assert updated.destination_auth_method == nil
     end
 
     test "usage limiter is called when creating collection", %{

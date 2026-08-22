@@ -354,7 +354,7 @@ defmodule Lightning.SetupUtils do
     {:ok, openhie_trigger} =
       Workflows.build_trigger(%{
         type: :webhook,
-        # Id is hard-coded to support external test scripts (e.g. benchmarking/script.js)
+        # Id is hard-coded to support external test scripts (e.g. tooling/benchmarking/script.js)
         id: "cae544ab-03dc-4ccc-a09c-fb4edb255d7a",
         workflow_id: openhie_workflow.id
       })
@@ -813,6 +813,9 @@ defmodule Lightning.SetupUtils do
       Lightning.Projects.File,
       Lightning.Projects.ProjectOauthClient,
       Lightning.Credentials.OauthClient,
+      Lightning.Channels.ChannelRequest,
+      Lightning.Channels.ChannelSnapshot,
+      Lightning.Channels.Channel,
       Lightning.Projects.Project,
       Lightning.Collaboration.DocumentState
     ])

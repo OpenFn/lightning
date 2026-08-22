@@ -21,7 +21,9 @@ defmodule Lightning.Collaboration.Session do
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
   alias Lightning.Accounts.User
+  alias Lightning.Collaboration.WorkflowResolver
   alias Lightning.Collaboration.WorkflowSerializer
+  alias Lightning.Projects.Project
   alias Lightning.Workflows.Presence
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Yex.Sync.SharedDoc
@@ -37,12 +39,12 @@ defmodule Lightning.Collaboration.Session do
     :document_name
   ]
 
-  @pg_scope :workflow_collaboration
-
   @type start_opts :: [
           workflow: Lightning.Workflows.Workflow.t(),
           user: User.t(),
-          parent_pid: pid()
+          document_name: String.t(),
+          parent_pid: pid(),
+          pg_scope: atom()
         ]
 
   @doc """
@@ -94,6 +96,7 @@ defmodule Lightning.Collaboration.Session do
     user = Keyword.fetch!(opts, :user)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
     document_name = Keyword.fetch!(opts, :document_name)
+    pg_scope = Keyword.get(opts, :pg_scope, :workflow_collaboration)
 
     Logger.info("Starting session for document #{document_name}")
 
@@ -108,7 +111,7 @@ defmodule Lightning.Collaboration.Session do
       document_name: document_name
     }
 
-    lookup_shared_doc(document_name)
+    lookup_shared_doc(pg_scope, document_name)
     |> case do
       nil ->
         {:stop, {:error, :shared_doc_not_found}}
@@ -117,8 +120,8 @@ defmodule Lightning.Collaboration.Session do
         SharedDoc.observe(shared_doc_pid)
         Logger.info("Joined SharedDoc for #{document_name}")
 
-        # We track the user presence here so the the original WorkflowLive.Edit
-        # can be stopped from editing the workflow when someone else is editing it.
+        # We track the user presence here so editors can see when someone else
+        # is editing the workflow.
         # Note: Presence tracking uses workflow.id, not document_name, because
         # presence is about showing who is editing the workflow, not which version
         Presence.track_user_presence(
@@ -137,11 +140,11 @@ defmodule Lightning.Collaboration.Session do
       Process.demonitor(state.parent_ref)
     end
 
-    # Don't check Process.alive? - it only works for local PIDs
-    # and shared_doc_pid can be on another node in a distributed cluster.
-    # Sending to a dead process is safe (message is discarded).
+    # Don't check Process.alive? - it only works for local PIDs and
+    # shared_doc_pid can be on another node in a distributed cluster.
+    # safe_unobserve/1 tolerates the remote being slow or gone (see #4817).
     if shared_doc_pid do
-      SharedDoc.unobserve(shared_doc_pid)
+      safe_unobserve(shared_doc_pid)
     end
 
     Presence.untrack_user_presence(
@@ -153,8 +156,19 @@ defmodule Lightning.Collaboration.Session do
     :ok
   end
 
-  def lookup_shared_doc(document_name) do
-    case :pg.get_members(@pg_scope, document_name) do
+  defp safe_unobserve(shared_doc_pid) do
+    SharedDoc.unobserve(shared_doc_pid)
+  catch
+    :exit, reason ->
+      Logger.warning(
+        "SharedDoc.unobserve skipped during session cleanup: #{inspect(reason)}"
+      )
+
+      :ok
+  end
+
+  def lookup_shared_doc(pg_scope \\ :workflow_collaboration, document_name) do
+    case :pg.get_members(pg_scope, document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end
@@ -202,6 +216,8 @@ defmodule Lightning.Collaboration.Session do
   ## Returns
   - `{:ok, workflow}` - Successfully saved
   - `{:error, :workflow_deleted}` - Workflow has been deleted
+  - `{:error, :snapshot_failed}` - Snapshot creation failed; it shares the
+    save's transaction, so the whole save rolled back and nothing persisted
   - `{:error, changeset}` - Validation or persistence error
 
   ## Examples
@@ -216,6 +232,7 @@ defmodule Lightning.Collaboration.Session do
           {:ok, Lightning.Workflows.Workflow.t()}
           | {:error,
              :workflow_deleted
+             | :snapshot_failed
              | :deserialization_failed
              | :internal_error
              | Ecto.Changeset.t()}
@@ -311,7 +328,10 @@ defmodule Lightning.Collaboration.Session do
 
     with {:ok, doc} <- get_document(state),
          {:ok, workflow_data} <- deserialize_workflow(doc, state.workflow.id),
-         {:ok, workflow} <- fetch_workflow(state.workflow),
+         {:ok, workflow, _kind} <-
+           WorkflowResolver.resolve(state.workflow.id, :new,
+             project: %Project{id: state.workflow.project_id}
+           ),
          changeset <-
            Lightning.Workflows.change_workflow(workflow, workflow_data),
          {:ok, changeset} <- maybe_disable_triggers_on_limit(changeset),
@@ -333,6 +353,16 @@ defmodule Lightning.Collaboration.Session do
         Logger.error("Cannot save workflow #{state.workflow.id}: no shared doc")
         {:reply, {:error, :internal_error}, state}
 
+      # Unreachable in practice (the persisted row always shares the seed's
+      # project_id), but the resolver can return :wrong_project given a :project
+      # opt, so guard against a WithClauseError.
+      {:error, :wrong_project} ->
+        Logger.error(
+          "Cannot save workflow #{state.workflow.id}: resolved to wrong project"
+        )
+
+        {:reply, {:error, :internal_error}, state}
+
       {:error, :deserialization_failed, reason} ->
         Logger.error(
           "Failed to deserialize workflow #{state.workflow.id}: #{inspect(reason)}"
@@ -349,6 +379,13 @@ defmodule Lightning.Collaboration.Session do
         )
 
         {:reply, {:error, :workflow_deleted}, state}
+
+      {:error, :snapshot_failed} ->
+        Logger.warning(
+          "Failed to save snapshot for workflow #{state.workflow.id}"
+        )
+
+        {:reply, {:error, :snapshot_failed}, state}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         all_errors =
@@ -379,11 +416,24 @@ defmodule Lightning.Collaboration.Session do
   def handle_call({:reset_workflow, user}, _from, state) do
     Logger.info("Resetting workflow #{state.workflow.id} for user #{user.id}")
 
-    with {:ok, workflow} <- fetch_workflow(state.workflow),
+    with {:ok, workflow, _kind} <-
+           WorkflowResolver.resolve(state.workflow.id, :new,
+             project: %Project{id: state.workflow.project_id}
+           ),
+         :ok <- ensure_not_deleted(workflow),
          :ok <- clear_and_reset_doc(state, workflow) do
       Logger.info("Successfully reset workflow #{state.workflow.id}")
       {:reply, {:ok, workflow}, state}
     else
+      # Unreachable in practice (see save_workflow), guarded against a
+      # WithClauseError since the resolver is supplied a :project opt.
+      {:error, :wrong_project} ->
+        Logger.error(
+          "Cannot reset workflow #{state.workflow.id}: resolved to wrong project"
+        )
+
+        {:reply, {:error, :internal_error}, state}
+
       {:error, :workflow_deleted} ->
         Logger.warning(
           "Cannot reset workflow #{state.workflow.id}: workflow deleted"
@@ -423,10 +473,11 @@ defmodule Lightning.Collaboration.Session do
     if ref == parent_ref do
       Process.demonitor(parent_ref)
 
-      # Don't check Process.alive? - it only works for local PIDs
-      # and shared_doc_pid can be on another node in a distributed cluster.
+      # Don't check Process.alive? - it only works for local PIDs and
+      # shared_doc_pid can be on another node in a distributed cluster.
+      # safe_unobserve/1 tolerates the remote being slow or gone (see #4817).
       if shared_doc_pid do
-        SharedDoc.unobserve(shared_doc_pid)
+        safe_unobserve(shared_doc_pid)
       end
 
       {:stop, :normal, %{state | parent_ref: nil, shared_doc_pid: nil}}
@@ -462,50 +513,6 @@ defmodule Lightning.Collaboration.Session do
   rescue
     e ->
       {:error, :deserialization_failed, Exception.message(e)}
-  end
-
-  # :built state with positive lock_version means it was saved before - reload from DB
-  defp fetch_workflow(
-         %{__meta__: %{state: :built}, lock_version: lock_version} = workflow
-       )
-       when is_integer(lock_version) and lock_version > 0 do
-    case Lightning.Workflows.get_workflow(workflow.id,
-           include: [:jobs, :edges, :triggers]
-         ) do
-      nil -> {:error, :workflow_deleted}
-      workflow -> {:ok, workflow}
-    end
-  end
-
-  defp fetch_workflow(%{__meta__: %{state: :built}} = workflow) do
-    workflow =
-      workflow
-      |> Map.put(:edges, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :edges,
-        __owner__: Lightning.Workflows.Workflow
-      })
-      |> Map.put(:jobs, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :jobs,
-        __owner__: Lightning.Workflows.Workflow
-      })
-      |> Map.put(:triggers, %Ecto.Association.NotLoaded{
-        __cardinality__: :many,
-        __field__: :triggers,
-        __owner__: Lightning.Workflows.Workflow
-      })
-
-    {:ok, workflow}
-  end
-
-  defp fetch_workflow(workflow) do
-    case Lightning.Workflows.get_workflow(workflow.id,
-           include: [:jobs, :edges, :triggers]
-         ) do
-      nil -> {:error, :workflow_deleted}
-      workflow -> {:ok, workflow}
-    end
   end
 
   defp merge_saved_workflow_into_ydoc(
@@ -552,6 +559,9 @@ defmodule Lightning.Collaboration.Session do
       end
     end)
   end
+
+  defp ensure_not_deleted(%{deleted_at: nil}), do: :ok
+  defp ensure_not_deleted(_workflow), do: {:error, :workflow_deleted}
 
   defp clear_and_reset_doc(%{shared_doc_pid: nil}, _workflow),
     do: {:error, :no_shared_doc}

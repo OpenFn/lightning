@@ -1,5 +1,7 @@
 defmodule Lightning.Factories do
   use ExMachina.Ecto, repo: Lightning.Repo
+  use Lightning.Factories.ChannelFactories
+
   alias Lightning.Workflows.Snapshot
 
   def webhook_auth_method_factory do
@@ -343,6 +345,10 @@ defmodule Lightning.Factories do
       submitted_at: now,
       report_date: DateTime.to_date(now)
     }
+  end
+
+  def webhook_response_config_factory do
+    %Lightning.Workflows.Triggers.WebhookResponseConfig{}
   end
 
   def triggers_kafka_configuration_factory do

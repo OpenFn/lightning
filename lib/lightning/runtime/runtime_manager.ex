@@ -37,7 +37,7 @@ defmodule Lightning.Runtime.RuntimeManager do
     @moduledoc false
 
     defstruct backoff: [min: 0.5, max: 5],
-              capacity: 5,
+              capacity: nil,
               cd: Path.expand("../../../assets", __DIR__),
               cmd: ~w(node ./node_modules/.bin/worker),
               env: [],
@@ -46,6 +46,7 @@ defmodule Lightning.Runtime.RuntimeManager do
               worker_secret: nil,
               endpoint: nil,
               log: nil,
+              workloops: nil,
               ws_url: "ws://localhost:4000/worker",
               col_url: "http://localhost:4000/collections"
 
@@ -89,33 +90,15 @@ defmodule Lightning.Runtime.RuntimeManager do
       end)
     end
 
-    defp to_arg({k, v}) do
-      case {k, v} do
-        {:backoff, v} ->
-          ~w(--backoff #{v[:min]}/#{v[:max]})
-
-        {:capacity, v} ->
-          ~w(--capacity #{v})
-
-        {:log, v} ->
-          ~w(--log #{v})
-
-        {:port, v} when is_integer(v) ->
-          ~w(--port #{v})
-
-        {:repo_dir, v} when is_binary(v) ->
-          ~w(--repo-dir #{v})
-
-        {:ws_url, v} ->
-          ~w(--lightning #{v})
-
-        {:col_url, v} ->
-          ~w(--collections-url  #{v})
-
-        _ ->
-          [nil]
-      end
-    end
+    defp to_arg({:backoff, v}), do: ~w(--backoff #{v[:min]}/#{v[:max]})
+    defp to_arg({:capacity, v}) when is_integer(v), do: ~w(--capacity #{v})
+    defp to_arg({:col_url, v}), do: ~w(--collections-url #{v})
+    defp to_arg({:log, v}), do: ~w(--log #{v})
+    defp to_arg({:port, v}) when is_integer(v), do: ~w(--port #{v})
+    defp to_arg({:repo_dir, v}) when is_binary(v), do: ~w(--repo-dir #{v})
+    defp to_arg({:workloops, v}) when is_binary(v), do: ["--workloops", v]
+    defp to_arg({:ws_url, v}), do: ~w(--lightning #{v})
+    defp to_arg(_), do: [nil]
 
     defp maybe_put_urls(config) do
       if config.endpoint do

@@ -2,7 +2,6 @@ defmodule Lightning.AiAssistantTest do
   use Lightning.DataCase, async: true
   import Mox
 
-  alias Lightning.Accounts
   alias Lightning.AiAssistant
 
   setup :verify_on_exit!
@@ -14,10 +13,15 @@ defmodule Lightning.AiAssistantTest do
     [user: user, project: project, workflow: workflow]
   end
 
+  setup do
+    Process.put(:oban_testing, :manual)
+    :ok
+  end
+
   @moduletag :capture_log
 
-  describe "endpoint_available?" do
-    test "availability" do
+  describe "query_global_stream/3 — langfuse metadata" do
+    setup do
       Mox.stub(Lightning.MockConfig, :apollo, fn key ->
         case key do
           :endpoint -> "http://localhost:3000"
@@ -26,106 +30,70 @@ defmodule Lightning.AiAssistantTest do
         end
       end)
 
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
-        {:ok, %Tesla.Env{status: 200}}
-      end)
-
-      assert Lightning.AiAssistant.endpoint_available?() == true
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
-        {:ok, %Tesla.Env{status: 404}}
-      end)
-
-      assert Lightning.AiAssistant.endpoint_available?() == false
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
-        {:ok, %Tesla.Env{status: 301}}
-      end)
-
-      assert Lightning.AiAssistant.endpoint_available?() == false
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :get}, _opts ->
-        {:error, "socket closed"}
-      end)
-
-      assert Lightning.AiAssistant.endpoint_available?() == false
+      :ok
     end
-  end
 
-  describe "query/3" do
-    test "queries and saves the response", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
+    test "forwards meta and metrics_opt_in to global_chat_stream", %{
+      project: project,
+      workflow: workflow
     } do
-      job_expression = "fn(state => state);\n"
-      adaptor = "@openfn/language-http@7.0.6"
-      message_content = "what?"
+      user = insert(:user, email: "alice@openfn.org")
 
       session =
         insert(:chat_session,
           user: user,
-          job: job_1,
-          expression: job_expression,
-          adaptor: adaptor,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{"rag" => %{"search_results" => ["y"]}},
           messages: [
             %{
               role: :user,
-              content: message_content,
+              content: "help",
               user: user,
               status: :pending,
-              # needed to avoid flaky sorting
               inserted_at: DateTime.utc_now() |> DateTime.add(-1)
             }
           ]
         )
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "ok",
+          "attachments" => [],
+          "usage" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      expect(Lightning.Tesla.Mock, :call, fn %{
+                                               method: :post,
+                                               url: url,
+                                               body: body
+                                             },
+                                             _opts ->
+        assert url =~ "/services/global_chat/stream"
+        decoded = Jason.decode!(body)
+
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"]["session_id"] == session.id
+        assert decoded["meta"]["rag"] == %{"search_results" => ["y"]}
+
+        assert decoded["meta"]["user"] == %{
+                 "id" => user.id,
+                 "persona" => "core-contributor"
+               }
+
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
       end)
 
-      reply =
-        """
-        {
-          "response": "Based on the provided guide and the API documentation for the OpenFn @openfn/language-common@1.14.0 adaptor, you can create jobs using the functions provided by the API to interact with different data sources and perform various operations.\\n\\nTo create a job using the HTTP adaptor, you can use functions like `get`, `post`, `put`, `patch`, `head`, and `options` to make HTTP requests. Here's an example job code using the HTTP adaptor:\\n\\n```javascript\\nconst { get, post, each, dataValue } = require('@openfn/language-common');\\n\\nexecute(\\n  get('/patients'),\\n  each('$.data.patients[*]', (item, index) => {\\n    item.id = `item-${index}`;\\n  }),\\n  post('/patients', dataValue('patients'))\\n);\\n```\\n\\nIn this example, the job first fetches patient data using a GET request, then iterates over each patient to modify their ID, and finally posts the modified patient data back.\\n\\nYou can similarly create jobs using the Salesforce adaptor or the ODK adaptor by utilizing functions like `upsert`, `create`, `fields`, `field`, etc., as shown in the provided examples.\\n\\nFeel free to ask if you have any specific questions or need help with",
-          "history": [
-            { "role": "user", "content": "what?" },
-            {
-              "role": "assistant",
-              "content": "Based on the provided guide and the API documentation for the OpenFn @openfn/language-common@1.14.0 adaptor, you can create jobs using the functions provided by the API to interact with different data sources and perform various operations.\\n\\nTo create a job using the HTTP adaptor, you can use functions like `get`, `post`, `put`, `patch`, `head`, and `options` to make HTTP requests. Here's an example job code using the HTTP adaptor:\\n\\n```javascript\\nconst { get, post, each, dataValue } = require('@openfn/language-common');\\n\\nexecute(\\n  get('/patients'),\\n  each('$.data.patients[*]', (item, index) => {\\n    item.id = `item-${index}`;\\n  }),\\n  post('/patients', dataValue('patients'))\\n);\\n```\\n\\nIn this example, the job first fetches patient data using a GET request, then iterates over each patient to modify their ID, and finally posts the modified patient data back.\\n\\nYou can similarly create jobs using the Salesforce adaptor or the ODK adaptor by utilizing functions like `upsert`, `create`, `fields`, `field`, etc., as shown in the provided examples.\\n\\nFeel free to ask if you have any specific questions or need help with"
-            }
-          ]
-        }
-        """
-        |> Jason.decode!()
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
-        assert url =~ "/services/job_chat"
-
-        {:ok, %Tesla.Env{status: 200, body: reply}}
-      end)
-
-      {:ok, updated_session} = AiAssistant.query(session, message_content)
-      assert updated_session.expression == job_expression
-      assert updated_session.adaptor == adaptor
-
-      assert Enum.count(updated_session.messages) == Enum.count(reply["history"])
-
-      reply_message = List.last(reply["history"])
-      saved_message = List.last(updated_session.messages)
-
-      assert reply_message["content"] == saved_message.content
-      assert reply_message["role"] == to_string(saved_message.role)
-
-      assert Lightning.Repo.reload!(saved_message)
+      assert {:ok, _updated_session} =
+               AiAssistant.query_global_stream(session, "help")
     end
+  end
 
-    test "handles timeout errors", %{user: user, workflow: %{jobs: [job_1 | _]}} do
-      session = insert(:chat_session, user: user, job: job_1)
-
+  describe "query_stream/3 — context options" do
+    setup do
       Mox.stub(Lightning.MockConfig, :apollo, fn key ->
         case key do
           :endpoint -> "http://localhost:3000"
@@ -134,84 +102,12 @@ defmodule Lightning.AiAssistantTest do
         end
       end)
 
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, :timeout}
-      end)
-
-      assert {:error, "Request timed out. Please try again."} =
-               AiAssistant.query(session, "test query")
-    end
-
-    test "handles connection refused errors", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]}
-    } do
-      session = insert(:chat_session, user: user, job: job_1)
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, :econnrefused}
-      end)
-
-      assert {:error, "Unable to reach the AI server. Please try again later."} =
-               AiAssistant.query(session, "test query")
-    end
-
-    test "handles HTTP error responses", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]}
-    } do
-      session = insert(:chat_session, user: user, job: job_1)
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:ok,
-         %Tesla.Env{status: 500, body: %{"message" => "Internal server error"}}}
-      end)
-
-      assert {:error, "Internal server error"} =
-               AiAssistant.query(session, "test query")
-    end
-
-    test "handles unexpected errors", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]}
-    } do
-      session = insert(:chat_session, user: user, job: job_1)
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, %{some: "unexpected error"}}
-      end)
-
-      assert {:error, "Oops! Something went wrong. Please try again."} =
-               AiAssistant.query(session, "test query")
+      :ok
     end
 
     test "job code is included in the context by default", %{
       user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
+      workflow: %{jobs: [job_1 | _]}
     } do
       job_expression = "fn(state => state);\n"
       adaptor = "@openfn/language-http@7.0.6"
@@ -226,42 +122,26 @@ defmodule Lightning.AiAssistantTest do
             %{role: :user, content: "ping", user: user, status: :pending}
           ]
         )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
 
       expect(
         Lightning.Tesla.Mock,
         :call,
-        fn %{method: :post, body: json_body}, _opts ->
+        fn %{method: :post, url: url, body: json_body}, _opts ->
+          assert url =~ "/services/job_chat/stream"
           body = Jason.decode!(json_body)
           assert body["context"]["expression"] == job_expression
           assert body["context"]["adaptor"] == adaptor
 
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "user", "content" => "Ping"},
-                 %{"role" => "assistant", "content" => "Pong"}
-               ]
-             }
-           }}
+          {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
         end
       )
 
-      {:ok, _updated_session} = AiAssistant.query(session, "Ping")
+      {:ok, _updated_session} = AiAssistant.query_stream(session, "Ping")
     end
 
     test "job code can be excluded from the context via options", %{
       user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
+      workflow: %{jobs: [job_1 | _]}
     } do
       job_expression = "fn(state => state);\n"
       adaptor = "@openfn/language-http@7.0.6"
@@ -276,14 +156,6 @@ defmodule Lightning.AiAssistantTest do
             %{role: :user, content: "ping", user: user, status: :pending}
           ]
         )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
 
       expect(
         Lightning.Tesla.Mock,
@@ -293,26 +165,17 @@ defmodule Lightning.AiAssistantTest do
           refute Map.has_key?(body["context"], "expression")
           assert body["context"]["adaptor"] == adaptor
 
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "user", "content" => "Ping"},
-                 %{"role" => "assistant", "content" => "Pong"}
-               ]
-             }
-           }}
+          {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
         end
       )
 
       {:ok, _updated_session} =
-        AiAssistant.query(session, "Ping", code: false)
+        AiAssistant.query_stream(session, "Ping", code: false)
     end
 
     test "logs can be excluded from the context via options", %{
       user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
+      workflow: %{jobs: [job_1 | _]}
     } do
       session =
         insert(:chat_session,
@@ -324,14 +187,6 @@ defmodule Lightning.AiAssistantTest do
           messages: []
         )
 
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
       expect(
         Lightning.Tesla.Mock,
         :call,
@@ -340,25 +195,17 @@ defmodule Lightning.AiAssistantTest do
           refute Map.has_key?(body["context"], "log")
           assert Map.has_key?(body["context"], "expression")
 
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "assistant", "content" => "Response"}
-               ]
-             }
-           }}
+          {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
         end
       )
 
       {:ok, _updated_session} =
-        AiAssistant.query(session, "Query", logs: false)
+        AiAssistant.query_stream(session, "Query", logs: false)
     end
 
     test "input and output options are included in context", %{
       user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
+      workflow: %{jobs: [job_1 | _]}
     } do
       session =
         insert(:chat_session,
@@ -368,14 +215,6 @@ defmodule Lightning.AiAssistantTest do
           adaptor: "@openfn/language-http",
           messages: []
         )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
 
       input_data = %{"user" => "john", "age" => 30}
       output_data = %{"status" => "success", "id" => "123"}
@@ -394,21 +233,12 @@ defmodule Lightning.AiAssistantTest do
           assert body["context"]["expression"] == "fn(state => state)"
           assert body["context"]["adaptor"] == "@openfn/language-http"
 
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "user", "content" => "Query"},
-                 %{"role" => "assistant", "content" => "Response"}
-               ]
-             }
-           }}
+          {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
         end
       )
 
       {:ok, _updated_session} =
-        AiAssistant.query(session, "Query",
+        AiAssistant.query_stream(session, "Query",
           input: input_data,
           output: output_data
         )
@@ -416,7 +246,7 @@ defmodule Lightning.AiAssistantTest do
 
     test "nil input and output options are not included in context", %{
       user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
+      workflow: %{jobs: [job_1 | _]}
     } do
       session =
         insert(:chat_session,
@@ -426,14 +256,6 @@ defmodule Lightning.AiAssistantTest do
           adaptor: "@openfn/language-http",
           messages: []
         )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
 
       expect(
         Lightning.Tesla.Mock,
@@ -445,21 +267,164 @@ defmodule Lightning.AiAssistantTest do
           refute Map.has_key?(body["context"], "input")
           refute Map.has_key?(body["context"], "output")
 
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "user", "content" => "Query"},
-                 %{"role" => "assistant", "content" => "Response"}
-               ]
-             }
-           }}
+          {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
         end
       )
 
       {:ok, _updated_session} =
-        AiAssistant.query(session, "Query", input: nil, output: nil)
+        AiAssistant.query_stream(session, "Query", input: nil, output: nil)
+    end
+  end
+
+  describe "query_stream/3 — langfuse metadata" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "core-contributor user sends metrics_opt_in true and persona core-contributor",
+         %{workflow: %{jobs: [job_1 | _]}} do
+      user = insert(:user, email: "alice@openfn.org")
+      session = insert(:chat_session, user: user, job: job_1, meta: %{})
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
+                                             _opts ->
+        decoded = Jason.decode!(body)
+
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"]["session_id"] == session.id
+
+        assert decoded["meta"]["user"] == %{
+                 "id" => user.id,
+                 "persona" => "core-contributor"
+               }
+
+        {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
+      end)
+
+      assert {:ok, _updated_session} = AiAssistant.query_stream(session, "hi")
+    end
+
+    test "non-openfn user sends metrics_opt_in false and persona user",
+         %{workflow: %{jobs: [job_1 | _]}} do
+      user = insert(:user, email: "ext@example.com")
+      session = insert(:chat_session, user: user, job: job_1, meta: %{})
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
+                                             _opts ->
+        decoded = Jason.decode!(body)
+
+        assert decoded["metrics_opt_in"] == false
+        assert decoded["meta"]["user"]["persona"] == "user"
+        assert decoded["meta"]["user"]["id"] == user.id
+
+        {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
+      end)
+
+      assert {:ok, _updated_session} = AiAssistant.query_stream(session, "hi")
+    end
+
+    test "preserves existing session.meta keys (rag echo regression guard)",
+         %{workflow: %{jobs: [job_1 | _]}} do
+      user = insert(:user, email: "alice@openfn.org")
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          meta: %{"rag" => %{"search_results" => ["x"]}}
+        )
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
+                                             _opts ->
+        decoded = Jason.decode!(body)
+
+        assert decoded["meta"]["rag"] == %{"search_results" => ["x"]}
+        assert decoded["meta"]["session_id"] == session.id
+
+        {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
+      end)
+
+      assert {:ok, _updated_session} = AiAssistant.query_stream(session, "hi")
+    end
+  end
+
+  describe "query_workflow_stream/3 — langfuse metadata" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "forwards meta and metrics_opt_in to workflow_chat_stream", %{
+      project: project,
+      workflow: workflow
+    } do
+      user = insert(:user, email: "alice@openfn.org")
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{"rag" => %{"search_results" => ["z"]}},
+          messages: [
+            %{
+              role: :user,
+              content: "make a workflow",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Here is your workflow",
+          "response_yaml" => "name: test",
+          "usage" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      expect(Lightning.Tesla.Mock, :call, fn %{
+                                               method: :post,
+                                               url: url,
+                                               body: body
+                                             },
+                                             _opts ->
+        assert url =~ "/services/workflow_chat/stream"
+        decoded = Jason.decode!(body)
+
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"]["session_id"] == session.id
+        assert decoded["meta"]["rag"] == %{"search_results" => ["z"]}
+
+        assert decoded["meta"]["user"] == %{
+                 "id" => user.id,
+                 "persona" => "core-contributor"
+               }
+
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _updated_session} =
+               AiAssistant.query_workflow_stream(session, "make a workflow")
     end
   end
 
@@ -468,394 +433,410 @@ defmodule Lightning.AiAssistantTest do
       user: user,
       workflow: %{jobs: [job_1 | _]} = _workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} = AiAssistant.create_session(job_1, user, "foo")
+      assert {:ok, session} = AiAssistant.create_session(job_1, user, "foo")
 
-        assert session.job_id == job_1.id
-        assert session.user_id == user.id
-        assert session.expression == job_1.body
+      assert session.job_id == job_1.id
+      assert session.user_id == user.id
+      assert session.expression == job_1.body
 
-        assert session.adaptor ==
-                 Lightning.AdaptorRegistry.resolve_adaptor(job_1.adaptor)
+      assert session.adaptor ==
+               Lightning.AdaptorRegistry.resolve_adaptor(job_1.adaptor)
 
-        assert length(session.messages) == 1
-        message = hd(session.messages)
-        assert message.role == :user
-        assert message.content == "foo"
-        assert message.user.id == user.id
-      end)
+      assert length(session.messages) == 1
+      message = hd(session.messages)
+      assert message.role == :user
+      assert message.content == "foo"
+      assert message.user.id == user.id
     end
 
     test "accepts optional parameters", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        meta = %{"key" => "value"}
-        code = "some code"
+      meta = %{"key" => "value"}
+      code = "some code"
 
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, "foo",
-                   meta: meta,
-                   code: code
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, "foo",
+                 meta: meta,
+                 code: code
+               )
 
-        assert session.meta == meta
-        [message] = session.messages
-        assert message.code == code
-      end)
+      assert session.meta == meta
+      [message] = session.messages
+      assert message.code == code
     end
 
     test "truncates long session titles", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        long_content =
-          "This is a very long content that should be truncated because it exceeds forty characters by quite a bit"
+      long_content =
+        "This is a very long content that should be truncated because it exceeds forty characters by quite a bit"
 
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, long_content)
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, long_content)
 
-        assert session.title == "This is a very long content that should"
-      end)
+      assert session.title == "This is a very long content that should"
     end
 
     test "handles single-word session titles", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        single_word =
-          "ThisIsOneVeryLongWordThatShouldDefinitelyBeTruncatedAtSomePoint"
+      single_word =
+        "ThisIsOneVeryLongWordThatShouldDefinitelyBeTruncatedAtSomePoint"
 
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, single_word)
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, single_word)
 
-        assert session.title == "ThisIsOneVeryLongWordThatShouldDefinitel"
-      end)
+      assert session.title == "ThisIsOneVeryLongWordThatShouldDefinitel"
     end
 
     test "removes trailing punctuation from session titles", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        content_with_punctuation = "How does this work?"
+      content_with_punctuation = "How does this work?"
 
-        assert {:ok, session} =
-                 AiAssistant.create_session(
-                   job_1,
-                   user,
-                   content_with_punctuation
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_session(
+                 job_1,
+                 user,
+                 content_with_punctuation
+               )
 
-        assert session.title == "How does this work"
-      end)
+      assert session.title == "How does this work"
     end
 
     test "preserves short content as session title", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        short_content = "Quick question"
+      short_content = "Quick question"
 
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, short_content)
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, short_content)
 
-        assert session.title == "Quick question"
-      end)
+      assert session.title == "Quick question"
     end
 
     test "generates a UUID for new session", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} = AiAssistant.create_session(job_1, user, "test")
+      assert {:ok, session} = AiAssistant.create_session(job_1, user, "test")
 
-        assert is_binary(session.id)
-        assert {:ok, _uuid} = Ecto.UUID.cast(session.id)
-      end)
+      assert is_binary(session.id)
+      assert {:ok, _uuid} = Ecto.UUID.cast(session.id)
     end
 
     test "creates session with initial user message", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, "test message")
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, "test message")
 
-        assert session.job_id == job_1.id
-        assert session.user_id == user.id
+      assert session.job_id == job_1.id
+      assert session.user_id == user.id
 
-        [initial_message] = session.messages
-        assert initial_message.role == :user
-        assert initial_message.content == "test message"
-        assert initial_message.user_id == user.id
+      [initial_message] = session.messages
+      assert initial_message.role == :user
+      assert initial_message.content == "test message"
+      assert initial_message.user_id == user.id
 
-        assert Repo.get!(Lightning.AiAssistant.ChatMessage, initial_message.id)
-      end)
+      assert Repo.get!(Lightning.AiAssistant.ChatMessage, initial_message.id)
     end
 
     test "enqueues message for processing when creating session", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_session(job_1, user, "test message")
+      assert {:ok, session} =
+               AiAssistant.create_session(job_1, user, "test message")
 
-        [message] = session.messages
+      [message] = session.messages
 
-        assert message.status == :pending
+      assert message.status == :pending
 
-        assert_enqueued(
-          worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{"message_id" => message.id}
-        )
-      end)
+      assert_enqueued(
+        worker: Lightning.AiAssistant.MessageProcessor,
+        args: %{"message_id" => message.id}
+      )
     end
 
     test "enqueues message for processing", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} = AiAssistant.create_session(job_1, user, "test")
+      assert {:ok, session} = AiAssistant.create_session(job_1, user, "test")
 
-        [message] = session.messages
+      [message] = session.messages
 
-        assert_enqueued(
-          worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{"message_id" => message.id}
-        )
-      end)
+      assert_enqueued(
+        worker: Lightning.AiAssistant.MessageProcessor,
+        args: %{"message_id" => message.id}
+      )
     end
   end
 
   describe "save_message/3" do
     test "calls limiter to increment ai queries when role is assistant" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
+      user = insert(:user)
 
-        %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
 
-        session = insert(:chat_session, job: job, user: user)
+      session = insert(:chat_session, job: job, user: user)
 
-        Mox.expect(
-          Lightning.Extensions.MockUsageLimiter,
-          :increment_ai_usage,
-          1,
-          fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
-        )
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_usage,
+        1,
+        fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
+      )
 
-        content1 = """
-        I am an assistant and I am here to help you with your questions.
-        """
+      content1 = """
+      I am an assistant and I am here to help you with your questions.
+      """
 
-        AiAssistant.save_message(session, %{
-          role: :assistant,
-          content: content1,
-          user: user
-        })
-      end)
+      AiAssistant.save_message(session, %{
+        role: :assistant,
+        content: content1,
+        user: user
+      })
     end
 
     test "does not call limiter to increment ai queries when role is user" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
+      user = insert(:user)
 
-        %{id: job_id} = job = insert(:job, workflow: build(:workflow))
-        session = insert(:chat_session, job: job, user: user)
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+      session = insert(:chat_session, job: job, user: user)
 
-        Mox.expect(
-          Lightning.Extensions.MockUsageLimiter,
-          :increment_ai_usage,
-          0,
-          fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
-        )
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_usage,
+        0,
+        fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
+      )
 
-        AiAssistant.save_message(session, %{
-          role: :user,
-          content: "What if I want to deduplicate the headers?",
-          user: user
-        })
-      end)
+      AiAssistant.save_message(session, %{
+        role: :user,
+        content: "What if I want to deduplicate the headers?",
+        user: user
+      })
     end
 
     test "calls limiter when role is string 'assistant'" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
-        %{id: job_id} = job = insert(:job, workflow: build(:workflow))
-        session = insert(:chat_session, job: job, user: user)
+      user = insert(:user)
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+      session = insert(:chat_session, job: job, user: user)
 
-        Mox.expect(
-          Lightning.Extensions.MockUsageLimiter,
-          :increment_ai_usage,
-          1,
-          fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
-        )
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :increment_ai_usage,
+        1,
+        fn %{job_id: ^job_id}, _usage -> Ecto.Multi.new() end
+      )
 
-        AiAssistant.save_message(session, %{
-          "role" => "assistant",
-          "content" => "AI response"
-        })
-      end)
+      AiAssistant.save_message(session, %{
+        "role" => "assistant",
+        "content" => "AI response"
+      })
     end
 
     test "updates session meta when provided" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
-        job = insert(:job, workflow: build(:workflow))
+      user = insert(:user)
+      job = insert(:job, workflow: build(:workflow))
 
-        session =
-          insert(:chat_session,
-            job: job,
-            user: user,
-            meta: %{"existing" => "data"}
-          )
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          meta: %{"existing" => "data"}
+        )
 
-        new_meta = %{"new" => "metadata", "updated" => true}
+      new_meta = %{"new" => "metadata", "updated" => true}
 
-        {:ok, updated_session} =
-          AiAssistant.save_message(
-            session,
-            %{
-              role: :user,
-              content: "test",
-              user: user
-            },
-            meta: new_meta,
-            usage: %{}
-          )
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "test",
+            user: user
+          },
+          meta: new_meta,
+          usage: %{}
+        )
 
-        # Meta should be merged with existing meta, preserving "existing" key
-        assert updated_session.meta == %{
-                 "existing" => "data",
-                 "new" => "metadata",
-                 "updated" => true
-               }
-      end)
+      # Meta should be merged with existing meta, preserving "existing" key
+      assert updated_session.meta == %{
+               "existing" => "data",
+               "new" => "metadata",
+               "updated" => true
+             }
     end
 
     test "preserves existing meta when meta is nil" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
-        job = insert(:job, workflow: build(:workflow))
-        existing_meta = %{"existing" => "data"}
+      user = insert(:user)
+      job = insert(:job, workflow: build(:workflow))
+      existing_meta = %{"existing" => "data"}
 
-        session =
-          insert(:chat_session, job: job, user: user, meta: existing_meta)
+      session =
+        insert(:chat_session, job: job, user: user, meta: existing_meta)
 
-        {:ok, updated_session} =
-          AiAssistant.save_message(
-            session,
-            %{
-              role: :user,
-              content: "test",
-              user: user
-            },
-            meta: nil,
-            usage: %{}
-          )
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "test",
+            user: user
+          },
+          meta: nil,
+          usage: %{}
+        )
 
-        assert updated_session.meta == existing_meta
-      end)
+      assert updated_session.meta == existing_meta
     end
 
     test "returns error when message validation fails" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
-        job = insert(:job, workflow: build(:workflow))
-        session = insert(:chat_session, job: job, user: user)
+      user = insert(:user)
+      job = insert(:job, workflow: build(:workflow))
+      session = insert(:chat_session, job: job, user: user)
 
-        {:error, changeset} =
-          AiAssistant.save_message(session, %{
-            role: :user,
-            user: user
-          })
+      {:error, changeset} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          user: user
+        })
 
-        assert %Ecto.Changeset{} = changeset
-      end)
+      assert %Ecto.Changeset{} = changeset
     end
 
     test "saves workflow code to message when provided" do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        user = insert(:user)
-        project = insert(:project)
-        workflow = insert(:workflow, project: project)
+      user = insert(:user)
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
 
-        session =
-          insert(:chat_session,
-            project: project,
-            workflow: workflow,
-            user: user,
-            session_type: "workflow_template"
-          )
+      session =
+        insert(:chat_session,
+          project: project,
+          workflow: workflow,
+          user: user,
+          session_type: "workflow_template"
+        )
 
-        workflow_yaml = """
-        workflow:
-          name: Test Workflow
-          jobs:
-            - id: job1
-              name: Fetch Data
-              adaptor: "@openfn/language-http@latest"
-              body: "fn(state => state)"
-        """
+      workflow_yaml = """
+      workflow:
+        name: Test Workflow
+        jobs:
+          - id: job1
+            name: Fetch Data
+            adaptor: "@openfn/language-http@latest"
+            body: "fn(state => state)"
+      """
 
-        {:ok, updated_session} =
-          AiAssistant.save_message(
-            session,
-            %{
-              role: :user,
-              content: "Please improve this workflow",
-              user: user
-            },
-            code: workflow_yaml
-          )
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "Please improve this workflow",
+            user: user
+          },
+          code: workflow_yaml
+        )
 
-        saved_message = List.last(updated_session.messages)
-        assert saved_message.code == workflow_yaml
-        assert saved_message.role == :user
-      end)
+      saved_message = List.last(updated_session.messages)
+      assert saved_message.code == workflow_yaml
+      assert saved_message.role == :user
+    end
+
+    test "global assistant message in a job session gets no job and no from_unsaved_job" do
+      user = insert(:user)
+      job = insert(:job, workflow: build(:workflow))
+      unsaved_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          meta: %{"unsaved_job" => %{"id" => unsaved_job_id}}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :assistant,
+          content: "Global response",
+          meta: %{"from_global" => true}
+        })
+
+      saved_message = List.last(updated_session.messages)
+
+      assert %{
+               role: :assistant,
+               job_id: nil,
+               meta: %{"from_global" => true}
+             } = saved_message
+
+      refute Map.has_key?(saved_message.meta, "from_unsaved_job")
+    end
+
+    test "non-global assistant message in a job session still gets job and from_unsaved_job" do
+      user = insert(:user)
+      %{id: job_id} = job = insert(:job, workflow: build(:workflow))
+      unsaved_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          meta: %{"unsaved_job" => %{"id" => unsaved_job_id}}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :assistant,
+          content: "Job chat response"
+        })
+
+      saved_message = List.last(updated_session.messages)
+
+      assert %{role: :assistant, job_id: ^job_id} = saved_message
+      assert saved_message.meta["from_unsaved_job"] == unsaved_job_id
     end
 
     test "enqueues user message for processing when pending", %{user: user} do
       job = insert(:job, workflow: build(:workflow))
       session = insert(:chat_session, job: job, user: user)
 
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        {:ok, updated_session} =
-          AiAssistant.save_message(session, %{
-            role: :user,
-            content: "test",
-            user: user
-          })
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "test",
+          user: user
+        })
 
-        [new_message] =
-          Enum.filter(updated_session.messages, &(&1.content == "test"))
+      [new_message] =
+        Enum.filter(updated_session.messages, &(&1.content == "test"))
 
-        assert_enqueued(
-          worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{"message_id" => new_message.id}
-        )
-      end)
+      assert_enqueued(
+        worker: Lightning.AiAssistant.MessageProcessor,
+        args: %{"message_id" => new_message.id}
+      )
     end
 
     test "does not enqueue assistant messages", %{user: user} do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        job = insert(:job, workflow: build(:workflow))
-        session = insert(:chat_session, job: job, user: user)
+      job = insert(:job, workflow: build(:workflow))
+      session = insert(:chat_session, job: job, user: user)
 
-        {:ok, _} =
-          AiAssistant.save_message(session, %{
-            role: :assistant,
-            content: "AI response"
-          })
-      end)
+      {:ok, _} =
+        AiAssistant.save_message(session, %{
+          role: :assistant,
+          content: "AI response"
+        })
     end
   end
 
@@ -1281,6 +1262,54 @@ defmodule Lightning.AiAssistantTest do
                  "@openfn/language-http@latest"
                )
     end
+
+    test "fetches logs when follow_run_id is added mid-session", %{
+      user: user,
+      workflow: %{jobs: [job | _]} = workflow
+    } do
+      # Simulate the bug scenario: session created without follow_run_id,
+      # then user selects a run later during the session
+      work_order = insert(:workorder, workflow: workflow)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          dataclip: build(:dataclip),
+          starting_job: job
+        )
+
+      step = insert(:step, job: job)
+      insert(:run_step, run: run, step: step)
+
+      insert(:log_line,
+        step: step,
+        run: run,
+        message: "Debug log from mid-session run",
+        timestamp: ~U[2024-01-01 10:00:00Z]
+      )
+
+      # Session initially created without follow_run_id
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job,
+          meta: %{}
+        )
+
+      # Verify no logs without follow_run_id
+      enriched_before = AiAssistant.enrich_session_with_job_context(session)
+      assert is_nil(enriched_before.logs)
+
+      # Now simulate follow_run_id being added via message processing
+      # (this is what the message processor does after the fix)
+      session_with_run = %{session | meta: %{"follow_run_id" => run.id}}
+
+      enriched_after =
+        AiAssistant.enrich_session_with_job_context(session_with_run)
+
+      # Logs should now be present
+      assert enriched_after.logs =~ "Debug log from mid-session run"
+    end
   end
 
   describe "retry_message/1" do
@@ -1406,155 +1435,69 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
-  describe "user_has_read_disclaimer?/1" do
-    test "returns true when user has read disclaimer within 24 hours", %{
-      user: user
-    } do
-      timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-      {:ok, user} =
-        Accounts.update_user_preference(
-          user,
-          "ai_assistant.disclaimer_read_at",
-          to_string(timestamp)
-        )
-
-      assert AiAssistant.user_has_read_disclaimer?(user) == true
-    end
-
-    test "returns false when user has not read disclaimer", %{user: user} do
-      assert AiAssistant.user_has_read_disclaimer?(user) == false
-    end
-
-    test "returns false when disclaimer was read more than 24 hours ago", %{
-      user: user
-    } do
-      old_timestamp =
-        DateTime.utc_now() |> DateTime.add(-25, :hour) |> DateTime.to_unix()
-
-      {:ok, user} =
-        Accounts.update_user_preference(
-          user,
-          "ai_assistant.disclaimer_read_at",
-          to_string(old_timestamp)
-        )
-
-      assert AiAssistant.user_has_read_disclaimer?(user) == false
-    end
-
-    test "handles integer timestamps", %{user: user} do
-      timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-      {:ok, user} =
-        Accounts.update_user_preference(
-          user,
-          "ai_assistant.disclaimer_read_at",
-          timestamp
-        )
-
-      assert AiAssistant.user_has_read_disclaimer?(user) == true
-    end
-
-    test "returns false when disclaimer was read exactly 24 hours ago", %{
-      user: user
-    } do
-      old_timestamp =
-        DateTime.utc_now() |> DateTime.add(-24, :hour) |> DateTime.to_unix()
-
-      {:ok, user} =
-        Accounts.update_user_preference(
-          user,
-          "ai_assistant.disclaimer_read_at",
-          to_string(old_timestamp)
-        )
-
-      assert AiAssistant.user_has_read_disclaimer?(user) == false
-    end
-  end
-
-  describe "mark_disclaimer_read/1" do
-    test "updates user preference with current timestamp", %{user: user} do
-      assert {:ok, updated_user} = AiAssistant.mark_disclaimer_read(user)
-
-      preference =
-        Accounts.get_preference(updated_user, "ai_assistant.disclaimer_read_at")
-
-      timestamp = String.to_integer(preference)
-      now = DateTime.utc_now() |> DateTime.to_unix()
-
-      assert abs(timestamp - now) < 2
-    end
-  end
-
   describe "create_workflow_session/5" do
     test "creates a new workflow session", %{
       user: user,
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        content = "Create a workflow for data sync"
+      content = "Create a workflow for data sync"
 
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   content
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 content
+               )
 
-        assert session.project_id == project.id
-        assert session.user_id == user.id
-        assert session.workflow_id == workflow.id
-        assert session.session_type == "workflow_template"
-        assert length(session.messages) == 1
-        assert hd(session.messages).content == content
-      end)
+      assert session.project_id == project.id
+      assert session.user_id == user.id
+      assert session.workflow_id == workflow.id
+      assert session.session_type == "workflow_template"
+      assert length(session.messages) == 1
+      assert hd(session.messages).content == content
     end
 
     test "creates session without workflow", %{
       user: user,
       project: project
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   nil,
-                   user,
-                   "Create new workflow"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 nil,
+                 user,
+                 "Create new workflow"
+               )
 
-        assert session.project_id == project.id
-        assert session.workflow_id == nil
-      end)
+      assert session.project_id == project.id
+      assert session.workflow_id == nil
     end
 
     test "accepts optional parameters", %{
       user: user,
       project: project
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        meta = %{"key" => "value"}
-        code = "workflow code"
+      meta = %{"key" => "value"}
+      code = "workflow code"
 
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   nil,
-                   user,
-                   "test",
-                   meta: meta,
-                   code: code
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 nil,
+                 user,
+                 "test",
+                 meta: meta,
+                 code: code
+               )
 
-        assert session.meta == meta
-        [message] = session.messages
-        assert message.code == code
-      end)
+      assert session.meta == meta
+      [message] = session.messages
+      assert message.code == code
     end
 
     test "generates a UUID for new workflow session", %{
@@ -1562,19 +1505,17 @@ defmodule Lightning.AiAssistantTest do
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   "test"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 "test"
+               )
 
-        assert is_binary(session.id)
-        assert {:ok, _uuid} = Ecto.UUID.cast(session.id)
-      end)
+      assert is_binary(session.id)
+      assert {:ok, _uuid} = Ecto.UUID.cast(session.id)
     end
 
     test "initializes meta as empty map when not provided", %{
@@ -1582,18 +1523,16 @@ defmodule Lightning.AiAssistantTest do
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   "test"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 "test"
+               )
 
-        assert session.meta == %{}
-      end)
+      assert session.meta == %{}
     end
 
     test "creates title from content", %{
@@ -1601,20 +1540,18 @@ defmodule Lightning.AiAssistantTest do
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        content = "Create a data processing workflow for customer data"
+      content = "Create a data processing workflow for customer data"
 
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   content
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 content
+               )
 
-        assert session.title == "Create a data processing workflow for"
-      end)
+      assert session.title == "Create a data processing workflow for"
     end
 
     test "creates workflow session with initial user message", %{
@@ -1622,29 +1559,27 @@ defmodule Lightning.AiAssistantTest do
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   "test message"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 "test message"
+               )
 
-        assert session.project_id == project.id
-        assert session.workflow_id == workflow.id
-        assert session.user_id == user.id
-        assert session.session_type == "workflow_template"
+      assert session.project_id == project.id
+      assert session.workflow_id == workflow.id
+      assert session.user_id == user.id
+      assert session.session_type == "workflow_template"
 
-        [initial_message] = session.messages
-        assert initial_message.role == :user
-        assert initial_message.content == "test message"
-        assert initial_message.user_id == user.id
-        assert initial_message.status == :pending
+      [initial_message] = session.messages
+      assert initial_message.role == :user
+      assert initial_message.content == "test message"
+      assert initial_message.user_id == user.id
+      assert initial_message.status == :pending
 
-        assert Repo.get!(Lightning.AiAssistant.ChatMessage, initial_message.id)
-      end)
+      assert Repo.get!(Lightning.AiAssistant.ChatMessage, initial_message.id)
     end
 
     test "enqueues message for processing when creating workflow session", %{
@@ -1652,23 +1587,21 @@ defmodule Lightning.AiAssistantTest do
       project: project,
       workflow: workflow
     } do
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   workflow,
-                   user,
-                   "test message"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 workflow,
+                 user,
+                 "test message"
+               )
 
-        [initial_message] = session.messages
+      [initial_message] = session.messages
 
-        assert_enqueued(
-          worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{"message_id" => initial_message.id}
-        )
-      end)
+      assert_enqueued(
+        worker: Lightning.AiAssistant.MessageProcessor,
+        args: %{"message_id" => initial_message.id}
+      )
     end
 
     test "enqueues message for processing", %{
@@ -1676,44 +1609,22 @@ defmodule Lightning.AiAssistantTest do
       project: project
     } do
       # Use Oban's manual testing mode to ensure jobs stay enqueued
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, session} =
-                 AiAssistant.create_workflow_session(
-                   project,
-                   nil,
-                   nil,
-                   user,
-                   "test"
-                 )
+      assert {:ok, session} =
+               AiAssistant.create_workflow_session(
+                 project,
+                 nil,
+                 nil,
+                 user,
+                 "test"
+               )
 
-        [message] = session.messages
+      [message] = session.messages
 
-        # Verify the job was enqueued
-        assert_enqueued(
-          worker: Lightning.AiAssistant.MessageProcessor,
-          args: %{"message_id" => message.id}
-        )
-      end)
-    end
-  end
-
-  describe "associate_workflow/2" do
-    test "associates workflow with session", %{
-      user: user,
-      project: project,
-      workflow: workflow
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      assert {:ok, updated_session} =
-               AiAssistant.associate_workflow(session, workflow)
-
-      assert updated_session.workflow_id == workflow.id
+      # Verify the job was enqueued
+      assert_enqueued(
+        worker: Lightning.AiAssistant.MessageProcessor,
+        args: %{"message_id" => message.id}
+      )
     end
   end
 
@@ -1935,251 +1846,6 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
-  describe "query_workflow/3" do
-    test "queries workflow chat service", %{user: user, project: project} do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
-        assert url =~ "/services/workflow_chat"
-
-        {:ok,
-         %Tesla.Env{
-           status: 200,
-           body: %{
-             "response" => "Workflow created",
-             "response_yaml" => "workflow: example",
-             "usage" => %{}
-           }
-         }}
-      end)
-
-      assert {:ok, updated_session} =
-               AiAssistant.query_workflow(session, "Create workflow")
-
-      assert length(updated_session.messages) == 1
-    end
-
-    test "handles errors from workflow chat service", %{
-      user: user,
-      project: project,
-      workflow: _workflow
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:ok,
-         %Tesla.Env{
-           status: 400,
-           body: %{"message" => "Invalid request"}
-         }}
-      end)
-
-      assert {:error, "Invalid request"} =
-               AiAssistant.query_workflow(session, "Create workflow")
-    end
-
-    test "handles timeout errors in workflow query", %{
-      user: user,
-      project: project,
-      workflow: _workflow
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, :timeout}
-      end)
-
-      assert {:error, "Request timed out. Please try again."} =
-               AiAssistant.query_workflow(session, "Create workflow")
-    end
-
-    test "handles connection refused errors in workflow query", %{
-      user: user,
-      project: project
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, :econnrefused}
-      end)
-
-      assert {:error, "Unable to reach the AI server. Please try again later."} =
-               AiAssistant.query_workflow(session, "Create workflow")
-    end
-
-    test "handles unexpected errors in workflow query", %{
-      user: user,
-      project: project
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, %{unexpected: "error"}}
-      end)
-
-      assert {:error, "Oops! Something went wrong. Please try again."} =
-               AiAssistant.query_workflow(session, "Create workflow")
-    end
-
-    test "passes options to workflow service", %{
-      user: user,
-      project: project
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      validation_errors = "Invalid cron expression: '0 0 * * 8'"
-      existing_code = "name: Test\njobs: []"
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
-                                             _opts ->
-        decoded = Jason.decode!(body)
-        assert decoded["errors"] == validation_errors
-        assert decoded["existing_yaml"] == existing_code
-
-        {:ok,
-         %Tesla.Env{
-           status: 200,
-           body: %{
-             "response" => "Fixed workflow",
-             "response_yaml" => "workflow: fixed"
-           }
-         }}
-      end)
-
-      {:ok, _} =
-        AiAssistant.query_workflow(session, "Fix the errors",
-          errors: validation_errors,
-          code: existing_code
-        )
-    end
-
-    test "passes workflow code as option to workflow service", %{
-      user: user,
-      project: project
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      workflow_yaml = """
-      name: Test Workflow
-      jobs: []
-      """
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
-                                             _opts ->
-        decoded = Jason.decode!(body)
-        assert decoded["existing_yaml"] == workflow_yaml
-
-        {:ok,
-         %Tesla.Env{
-           status: 200,
-           body: %{
-             "response" => "Updated workflow",
-             "response_yaml" => "workflow: updated"
-           }
-         }}
-      end)
-
-      # Pass the YAML as an option
-      {:ok, _} =
-        AiAssistant.query_workflow(
-          session,
-          "Update the workflow",
-          code: workflow_yaml
-        )
-    end
-  end
-
   describe "list_sessions/3" do
     test "lists project workflow sessions with pagination", %{
       user: user,
@@ -2398,131 +2064,1256 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
-  describe "has_more_sessions?/2" do
-    test "returns true when more sessions exist beyond current_count", %{
+  describe "query_stream/3" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "processes SSE stream and saves complete response", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http@7.0.6",
+          messages: [
+            %{
+              role: :user,
+              content: "help me",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "help me"},
+            %{"role" => "assistant", "content" => "Here is help"}
+          ],
+          "usage" => %{"tokens" => 100}
+        })
+
+      sse_stream = [
+        %{
+          event: "content_block_delta",
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{"type" => "text_delta", "text" => "Here"}
+            })
+        },
+        %{
+          event: "content_block_delta",
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{"type" => "text_delta", "text" => " is help"}
+            })
+        },
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
+        assert url =~ "/services/job_chat/stream"
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, updated_session} =
+               AiAssistant.query_stream(session, "help me")
+
+      assert length(updated_session.messages) == 2
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.content == "Here is help"
+      assert assistant_msg.role == :assistant
+
+      # Verify streaming chunks were broadcast
+      assert_received {:ai_assistant, :streaming_chunk,
+                       %{content: "Here", session_id: _}}
+
+      assert_received {:ai_assistant, :streaming_chunk,
+                       %{content: " is help", session_id: _}}
+    end
+
+    test "broadcasts thinking status events", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http@7.0.6",
+          messages: [
+            %{
+              role: :user,
+              content: "help",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "help"},
+            %{"role" => "assistant", "content" => "Done"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{
+          event: "content_block_start",
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_start",
+              "content_block" => %{"type" => "thinking"}
+            })
+        },
+        %{
+          event: "content_block_delta",
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{
+                "type" => "thinking_delta",
+                "thinking" => "Searching docs..."
+              }
+            })
+        },
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "help")
+
+      assert_received {:ai_assistant, :streaming_status,
+                       %{text: "Thinking...", session_id: _}}
+
+      assert_received {:ai_assistant, :streaming_status,
+                       %{text: "Searching docs...", session_id: _}}
+    end
+
+    test "broadcasts changes events", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http@7.0.6",
+          messages: [
+            %{
+              role: :user,
+              content: "fix it",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      changes = %{"code" => "fn(state) => state;"}
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "fix it"},
+            %{"role" => "assistant", "content" => "Fixed"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{event: "changes", data: Jason.encode!(changes)},
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "fix it")
+
+      assert_received {:ai_assistant, :streaming_changes,
+                       %{changes: ^changes, session_id: _}}
+    end
+
+    test "skips changes event with invalid JSON data", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http@7.0.6",
+          messages: [
+            %{
+              role: :user,
+              content: "fix it",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "fix it"},
+            %{"role" => "assistant", "content" => "Fixed"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{event: "changes", data: "not valid json"},
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "fix it")
+
+      refute_received {:ai_assistant, :streaming_changes, _}
+    end
+
+    test "broadcasts error events from SSE stream", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http@7.0.6",
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "test"},
+            %{"role" => "assistant", "content" => "ok"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{
+          event: "error",
+          data: Jason.encode!(%{"message" => "rate limited"})
+        },
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "test")
+
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: "rate limited", session_id: _}}
+    end
+
+    test "handles error event with non-message JSON", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "test"},
+            %{"role" => "assistant", "content" => "ok"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{event: "error", data: Jason.encode!(%{"code" => 500})},
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "test")
+
+      # Non-message error JSON gets inspected
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: error_text, session_id: _}}
+
+      assert error_text =~ "500"
+    end
+
+    test "handles error event with non-JSON data", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "test"},
+            %{"role" => "assistant", "content" => "ok"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{event: "error", data: "raw error text"},
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "test")
+
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: "raw error text", session_id: _}}
+    end
+
+    test "returns error when stream has no complete event", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      sse_stream = [
+        %{event: "log", data: "some log output"}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:error, "Stream ended without complete response"} =
+               AiAssistant.query_stream(session, "test")
+    end
+
+    test "returns error when complete event has invalid JSON", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      sse_stream = [
+        %{event: "complete", data: "not valid json"}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:error, "Stream ended without complete response"} =
+               AiAssistant.query_stream(session, "test")
+    end
+
+    test "skips log events and unknown events", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      complete_payload =
+        Jason.encode!(%{
+          "history" => [
+            %{"role" => "user", "content" => "test"},
+            %{"role" => "assistant", "content" => "ok"}
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [
+        %{event: "log", data: "python stdout"},
+        %{event: "unknown_event", data: "something"},
+        # Valid JSON with a "type" key that doesn't match any known stream event
+        %{
+          event: "content_block_delta",
+          data: Jason.encode!(%{"type" => "content_block_stop", "index" => 0})
+        },
+        :unexpected_format,
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} = AiAssistant.query_stream(session, "test")
+    end
+
+    test "handles HTTP error responses", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session = insert(:chat_session, user: user, job: job_1)
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 400,
+           body: %{"message" => "Bad request"}
+         }}
+      end)
+
+      assert {:error, "Bad request"} =
+               AiAssistant.query_stream(session, "test")
+    end
+
+    test "handles network errors", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session = insert(:chat_session, user: user, job: job_1)
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, :timeout}
+      end)
+
+      assert {:error, "Request timed out. Please try again."} =
+               AiAssistant.query_stream(session, "test")
+    end
+
+    test "handles exceptions during stream processing", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      # A stream that raises when enumerated
+      raising_stream =
+        Stream.map([1], fn _ ->
+          raise "boom"
+        end)
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: raising_stream}}
+      end)
+
+      assert {:error, "boom"} =
+               AiAssistant.query_stream(session, "test")
+
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: "Streaming failed: boom", session_id: _}}
+    end
+
+    test "handles exit signals during stream processing (e.g. Mint transport errors)",
+         %{
+           user: user,
+           workflow: %{jobs: [job_1 | _]}
+         } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      # A stream that exits when enumerated (simulates Mint.TransportError)
+      exiting_stream =
+        Stream.map([1], fn _ ->
+          exit({:error, %{reason: :closed}})
+        end)
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: exiting_stream}}
+      end)
+
+      assert {:error, "Streaming connection lost"} =
+               AiAssistant.query_stream(session, "test")
+
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: "Streaming connection lost", session_id: _}}
+    end
+  end
+
+  describe "query_workflow_stream/3" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "processes SSE stream and saves workflow response", %{
       user: user,
       project: project
     } do
-      for _i <- 1..3 do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          messages: [
+            %{
+              role: :user,
+              content: "create workflow",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Here is your workflow",
+          "response_yaml" => "workflow:\n  name: test",
+          "usage" => %{"tokens" => 50}
+        })
+
+      sse_stream = [
+        %{
+          event: "content_block_delta",
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{
+                "type" => "text_delta",
+                "text" => "Here is your workflow"
+              }
+            })
+        },
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
+        assert url =~ "/services/workflow_chat/stream"
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, updated_session} =
+               AiAssistant.query_workflow_stream(
+                 session,
+                 "create workflow"
+               )
+
+      assert length(updated_session.messages) == 2
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.content == "Here is your workflow"
+      assert assistant_msg.code == "workflow:\n  name: test"
+    end
+
+    test "handles HTTP error responses", %{
+      user: user,
+      project: project
+    } do
+      session =
         insert(:chat_session,
           user: user,
           project: project,
           session_type: "workflow_template"
         )
-      end
 
-      # has_more_sessions? logic:
-      # - calls list_sessions(offset: current_count, limit: 1)
-      # - if session found at offset, length(sessions) = 1
-      # - PaginationMeta.new(current_count + 1, 1, total_count)
-      # - has_next_page = (current_count + 1) < total_count
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 500,
+           body: %{"message" => "Internal error"}
+         }}
+      end)
 
-      # current_count = 0: (0 + 1) < 3 = true
-      assert AiAssistant.has_more_sessions?(project, 0) == true
-
-      # current_count = 1: (1 + 1) < 3 = true
-      assert AiAssistant.has_more_sessions?(project, 1) == true
-
-      # current_count = 2: (2 + 1) < 3 = false
-      assert AiAssistant.has_more_sessions?(project, 2) == false
-
-      # current_count = 3: no session at offset 3, length(sessions) = 0
-      # PaginationMeta.new(3 + 0, 1, 3) => (3 < 3) = false
-      assert AiAssistant.has_more_sessions?(project, 3) == false
+      assert {:error, "Internal error"} =
+               AiAssistant.query_workflow_stream(
+                 session,
+                 "create workflow"
+               )
     end
 
-    test "returns false when no sessions exist", %{user: _user, project: project} do
-      # No sessions created - total_count = 0
+    test "handles network errors", %{
+      user: user,
+      project: project
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template"
+        )
 
-      # current_count = 0: no sessions at offset 0, length(sessions) = 0
-      # PaginationMeta.new(0 + 0, 1, 0) => (0 < 0) = false
-      assert AiAssistant.has_more_sessions?(project, 0) == false
-      assert AiAssistant.has_more_sessions?(project, 1) == false
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, :econnrefused}
+      end)
+
+      assert {:error, "Unable to reach the AI server. Please try again later."} =
+               AiAssistant.query_workflow_stream(
+                 session,
+                 "create workflow"
+               )
     end
 
-    test "works with job sessions", %{user: user, workflow: %{jobs: [job | _]}} do
-      # Create 2 job sessions
-      for _i <- 1..2 do
-        insert(:chat_session, user: user, job: job)
-      end
+    test "passes code and errors options to Apollo", %{
+      user: user,
+      project: project
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          messages: [
+            %{
+              role: :user,
+              content: "fix it",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
 
-      # total_count = 2
-      # current_count = 0: (0 + 1) < 2 = true
-      assert AiAssistant.has_more_sessions?(job, 0) == true
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Fixed",
+          "response_yaml" => "workflow:\n  name: fixed",
+          "usage" => %{}
+        })
 
-      # current_count = 1: (1 + 1) < 2 = false
-      assert AiAssistant.has_more_sessions?(job, 1) == false
+      sse_stream = [
+        %{event: "complete", data: complete_payload}
+      ]
 
-      # current_count = 2: no session at offset 2, (2 + 0) < 2 = false
-      assert AiAssistant.has_more_sessions?(job, 2) == false
+      expect(Lightning.Tesla.Mock, :call, fn %{body: body}, _opts ->
+        decoded = Jason.decode!(body)
+        assert decoded["existing_yaml"] == "workflow: broken"
+        assert decoded["errors"] == "invalid cron"
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _} =
+               AiAssistant.query_workflow_stream(session, "fix it",
+                 code: "workflow: broken",
+                 errors: "invalid cron"
+               )
     end
   end
 
-  describe "find_pending_user_messages/1" do
-    test "returns pending user messages only", %{
+  describe "query_global_stream/3" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "processes SSE stream and saves global response", %{
       user: user,
-      workflow: %{jobs: [job | _]}
+      project: project,
+      workflow: workflow
     } do
-      pending_msg =
-        insert(:chat_message,
-          role: :user,
+      session =
+        insert(:chat_session,
           user: user,
-          status: :pending,
-          content: "Pending"
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{
+            "message_options" => %{
+              "use_global_assistant" => true,
+              "page" => "/projects/p1/workflows/w1"
+            }
+          },
+          messages: [
+            %{
+              role: :user,
+              content: "help with workflow",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
         )
 
-      success_msg =
-        insert(:chat_message,
-          role: :user,
-          user: user,
-          status: :success,
-          content: "Success"
-        )
+      Lightning.subscribe("ai_session:#{session.id}")
 
-      assistant_pending =
-        insert(:chat_message,
-          role: :assistant,
-          status: :pending,
-          content: "AI Pending"
-        )
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Here is your updated workflow",
+          "attachments" => [
+            %{
+              "type" => "workflow_yaml",
+              "content" => "workflow:\n  name: updated"
+            }
+          ],
+          "usage" => %{"tokens" => 75}
+        })
+
+      sse_stream = [
+        %{
+          event: "content_block_delta",
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{"type" => "text_delta", "text" => "Here is"}
+            })
+        },
+        %{event: "complete", data: complete_payload}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
+        assert url =~ "/services/global_chat/stream"
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, updated_session} =
+               AiAssistant.query_global_stream(session, "help with workflow",
+                 workflow_yaml: "workflow:\n  name: old",
+                 page: "/projects/p1/workflows/w1"
+               )
+
+      assert length(updated_session.messages) == 2
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.content == "Here is your updated workflow"
+      assert assistant_msg.code == "workflow:\n  name: updated"
+      assert assistant_msg.role == :assistant
+      assert assistant_msg.meta == %{"from_global" => true}
+      assert is_nil(assistant_msg.job_id)
+    end
+
+    test "uses workflow_yaml even on job step pages with a job_code attachment",
+         %{
+           user: user,
+           project: project,
+           workflow: workflow
+         } do
+      %{jobs: [job | _]} = workflow
 
       session =
         insert(:chat_session,
           user: user,
-          job: job,
-          messages: [pending_msg, success_msg, assistant_pending]
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{
+            "message_options" => %{
+              "use_global_assistant" => true,
+              "page" => "/projects/p1/workflows/w1/jobs/j1"
+            }
+          },
+          messages: [
+            %{
+              role: :user,
+              content: "fix this job",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
         )
 
-      pending_messages = AiAssistant.find_pending_user_messages(session)
+      # The job_key should match the job name after normalization
+      job_key =
+        job.name
+        |> String.downcase()
+        |> String.replace(~r/[^a-z0-9]+/, "-")
+        |> String.trim("-")
 
-      assert length(pending_messages) == 1
-      assert hd(pending_messages).content == "Pending"
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Fixed the job",
+          "attachments" => [
+            %{
+              "type" => "job_code",
+              "content" => "fn(state => state.data)",
+              "job_key" => job_key
+            },
+            %{
+              "type" => "workflow_yaml",
+              "content" => "workflow:\n  name: full"
+            }
+          ],
+          "usage" => %{"tokens" => 50}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, updated_session} =
+               AiAssistant.query_global_stream(session, "fix this job")
+
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.content == "Fixed the job"
+      # Global responses always use workflow_yaml; job_code is ignored
+      assert assistant_msg.code == "workflow:\n  name: full"
+      assert assistant_msg.meta == %{"from_global" => true}
+      assert is_nil(assistant_msg.job_id)
     end
 
-    test "returns empty list when no pending user messages", %{
+    test "uses workflow_yaml when no job_code attachment", %{
       user: user,
-      workflow: %{jobs: [job | _]}
+      project: project,
+      workflow: workflow
     } do
-      success_msg =
-        insert(:chat_message, role: :user, user: user, status: :success)
-
-      assistant_msg = insert(:chat_message, role: :assistant, status: :pending)
-
       session =
         insert(:chat_session,
           user: user,
-          job: job,
-          messages: [success_msg, assistant_msg]
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{
+            "message_options" => %{
+              "use_global_assistant" => true,
+              "page" => "/projects/p1/workflows/w1/jobs/j1"
+            }
+          },
+          messages: [
+            %{
+              role: :user,
+              content: "overview",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
         )
 
-      pending_messages = AiAssistant.find_pending_user_messages(session)
-      assert pending_messages == []
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Overview response",
+          "attachments" => [
+            %{
+              "type" => "workflow_yaml",
+              "content" => "workflow:\n  name: overview"
+            }
+          ],
+          "usage" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, updated_session} =
+               AiAssistant.query_global_stream(session, "overview")
+
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.code == "workflow:\n  name: overview"
+      assert is_nil(assistant_msg.job_id)
+    end
+
+    test "handles HTTP error responses", %{
+      user: user,
+      project: project
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template"
+        )
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 500,
+           body: %{"message" => "Internal error"}
+         }}
+      end)
+
+      assert {:error, "Internal error"} =
+               AiAssistant.query_global_stream(session, "test")
+    end
+
+    test "handles network errors", %{
+      user: user,
+      project: project
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template"
+        )
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, :econnrefused}
+      end)
+
+      assert {:error, "Unable to reach the AI server. Please try again later."} =
+               AiAssistant.query_global_stream(session, "test")
+    end
+
+    test "handles nil attachments gracefully", %{
+      user: user,
+      project: project
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          session_type: "workflow_template",
+          meta: %{"message_options" => %{"use_global_assistant" => true}},
+          messages: [
+            %{
+              role: :user,
+              content: "hello",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "General answer",
+          "usage" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, updated_session} =
+               AiAssistant.query_global_stream(session, "hello")
+
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.content == "General answer"
+      assert is_nil(assistant_msg.code)
+    end
+
+    test "uses workflow_yaml when on overview page with both attachment types",
+         %{user: user, project: project, workflow: workflow} do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{
+            "message_options" => %{
+              "use_global_assistant" => true,
+              "page" => "workflows/My Workflow"
+            }
+          }
+        )
+
+      {:ok, session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "modify workflow",
+          user: user,
+          # needed to avoid flaky sorting: same-second timestamps tie with
+          # the assistant reply saved below
+          inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+        })
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Updated workflow",
+          "attachments" => [
+            %{"type" => "job_code", "content" => "fn(state => state);"},
+            %{
+              "type" => "workflow_yaml",
+              "content" => "name: My Workflow\njobs: []"
+            }
+          ],
+          "usage" => %{},
+          "meta" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      {:ok, updated_session} =
+        AiAssistant.query_global_stream(session, "modify workflow",
+          workflow_yaml: "name: test",
+          page: "workflows/My Workflow"
+        )
+
+      assistant_msg = List.last(updated_session.messages)
+      # On overview, should use workflow_yaml not job_code
+      assert assistant_msg.code == "name: My Workflow\njobs: []"
+      assert is_nil(assistant_msg.job_id)
+    end
+
+    test "stores no code when only job_code attachments are present", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{
+            "message_options" => %{
+              "use_global_assistant" => true,
+              "page" => "workflows/test/Some-job"
+            }
+          }
+        )
+
+      {:ok, session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "fix code",
+          user: user
+        })
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Fixed",
+          "attachments" => [
+            %{
+              "type" => "job_code",
+              "content" => "fn(state => state);",
+              "job_key" => "Some-job"
+            }
+          ],
+          "usage" => %{},
+          "meta" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      {:ok, updated_session} =
+        AiAssistant.query_global_stream(session, "fix code",
+          workflow_yaml: "name: test",
+          page: "workflows/test/Some-job"
+        )
+
+      assistant_msg = List.last(updated_session.messages)
+      # job_code attachments are ignored; only workflow_yaml is stored
+      assert is_nil(assistant_msg.code)
+      assert assistant_msg.meta == %{"from_global" => true}
+      assert is_nil(assistant_msg.job_id)
+    end
+
+    test "handles non-list attachments", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{}
+        )
+
+      {:ok, session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "test",
+          user: user
+        })
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "No artifacts",
+          "attachments" => nil,
+          "usage" => %{},
+          "meta" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      {:ok, updated_session} =
+        AiAssistant.query_global_stream(session, "test",
+          workflow_yaml: "name: test"
+        )
+
+      assistant_msg = List.last(updated_session.messages)
+      assert assistant_msg.content == "No artifacts"
+      assert is_nil(assistant_msg.code)
     end
   end
 
-  describe "title_max_length/0" do
-    test "returns the configured maximum title length" do
-      assert AiAssistant.title_max_length() == 40
-    end
+  # Minimal job_chat SSE stream reply: a single `complete` event whose
+  # payload has the same shape as a synchronous job_chat response.
+  defp job_chat_stream_reply do
+    complete_payload =
+      Jason.encode!(%{
+        "history" => [
+          %{"role" => "user", "content" => "Query"},
+          %{"role" => "assistant", "content" => "Response"}
+        ],
+        "usage" => %{}
+      })
+
+    [%{event: "complete", data: complete_payload}]
   end
 end

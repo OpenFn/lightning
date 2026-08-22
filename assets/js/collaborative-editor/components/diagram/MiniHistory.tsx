@@ -40,7 +40,7 @@ import {
 } from '../../utils/navigation';
 import { RunBadge } from '../common/RunBadge';
 import { ShortcutKeys } from '../ShortcutKeys';
-import { Tooltip } from '../Tooltip';
+import { Tooltip } from '../../../components/Tooltip';
 
 import { VersionMismatchBanner } from './VersionMismatchBanner';
 

@@ -6,6 +6,7 @@ defmodule Lightning.Run do
   """
   use Lightning.Schema
 
+  import Lightning.ChangesetUtils
   import Lightning.Validators
 
   alias Lightning.Accounts.User
@@ -16,6 +17,8 @@ defmodule Lightning.Run do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.WorkOrder
+
+  @valid_queues ~w(default fast_lane manual)
 
   @derive {Jason.Encoder,
            only: [
@@ -28,13 +31,17 @@ defmodule Lightning.Run do
              :started_at,
              :finished_at,
              :priority,
+             :queue,
              :error_type,
              :created_by,
              :starting_trigger,
              :steps,
              :work_order,
-             :inserted_at
+             :inserted_at,
+             :final_dataclip_id
            ]}
+
+  @active_states [:available, :claimed, :started]
 
   @final_states [
     :success,
@@ -46,10 +53,24 @@ defmodule Lightning.Run do
     :lost
   ]
 
+  @states @active_states ++ @final_states
+
+  @doc """
+  Returns all possible states for a run.
+  """
+  def states, do: @states
+
   @doc """
   Returns the list of final states for a run.
   """
   def final_states, do: @final_states
+
+  @doc """
+  Returns the list of active (in-progress) states for a run.
+
+  These are all non-final states: available, claimed, and started.
+  """
+  def active_states, do: @active_states
 
   @doc """
   Returns the list of failure states for a run.
@@ -67,10 +88,18 @@ defmodule Lightning.Run do
   schema "runs" do
     belongs_to :work_order, WorkOrder
 
+    # starting_job and starting_trigger have NO database-level FK constraint.
+    # This is intentional: the snapshot system preserves the full job/trigger
+    # data (name, body, adaptor, config) for every run, so the live rows in
+    # the jobs/triggers tables can be freely deleted from workflows without
+    # affecting audit history. These columns are bare UUID pointers used for
+    # convenience lookups — the snapshot is the authoritative audit record.
+    # See issue #4538 and migration 20260319103734 for context.
     belongs_to :starting_job, Job
     belongs_to :starting_trigger, Trigger
     belongs_to :created_by, User
     belongs_to :dataclip, Lightning.Invocation.Dataclip
+    belongs_to :final_dataclip, Lightning.Invocation.Dataclip
 
     has_one :workflow, through: [:work_order, :workflow]
     belongs_to :snapshot, Snapshot
@@ -85,15 +114,7 @@ defmodule Lightning.Run do
     embeds_one :options, Lightning.Runs.RunOptions
 
     field :state, Ecto.Enum,
-      values:
-        Enum.concat(
-          [
-            :available,
-            :claimed,
-            :started
-          ],
-          @final_states
-        ),
+      values: @states,
       default: :available
 
     field :error_type, :string
@@ -106,6 +127,8 @@ defmodule Lightning.Run do
       values: [immediate: 0, normal: 1],
       default: :normal
 
+    field :queue, :string, default: "default"
+
     field :worker_name, :string
 
     timestamps(type: :utc_datetime_usec)
@@ -114,6 +137,7 @@ defmodule Lightning.Run do
   def for(%Trigger{} = trigger, attrs) do
     %__MODULE__{}
     |> change()
+    |> put_if_provided(:queue, attrs)
     |> put_assoc(:starting_trigger, trigger)
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:snapshot, attrs[:snapshot])
@@ -122,11 +146,13 @@ defmodule Lightning.Run do
     |> validate_required_assoc(:dataclip)
     |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:starting_trigger)
+    |> validate_inclusion(:queue, @valid_queues)
   end
 
   def for(%Job{} = job, attrs) do
     %__MODULE__{priority: attrs[:priority]}
     |> change()
+    |> put_if_provided(:queue, attrs)
     |> put_assoc(:created_by, attrs[:created_by])
     |> put_assoc(:dataclip, attrs[:dataclip])
     |> put_assoc(:snapshot, attrs[:snapshot])
@@ -137,6 +163,7 @@ defmodule Lightning.Run do
     |> validate_required_assoc(:dataclip)
     |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:starting_job)
+    |> validate_inclusion(:queue, @valid_queues)
   end
 
   def new(attrs \\ %{}) do
@@ -148,7 +175,7 @@ defmodule Lightning.Run do
   @doc false
   def changeset(run, attrs) do
     run
-    |> cast(attrs, [:work_order_id, :snapshot_id, :priority])
+    |> cast(attrs, [:work_order_id, :snapshot_id, :priority, :queue])
     |> cast_assoc(:steps, required: false)
     |> validate_required([:work_order_id, :snapshot_id])
     |> assoc_constraint(:work_order)
@@ -169,9 +196,10 @@ defmodule Lightning.Run do
     run
     |> change()
     |> put_change(:state, nil)
-    |> cast(params, [:state, :error_type, :finished_at])
+    |> cast(params, [:state, :error_type, :finished_at, :final_dataclip_id])
     |> validate_required([:state, :finished_at])
     |> validate_inclusion(:state, @final_states)
+    |> foreign_key_constraint(:final_dataclip_id)
     |> validate_state_change()
   end
 
@@ -180,6 +208,9 @@ defmodule Lightning.Run do
     {changeset.data |> Map.get(:state), get_field(changeset, :state)}
     |> case do
       {:available, :claimed} ->
+        changeset
+
+      {:available, :cancelled} ->
         changeset
 
       {:available, to} ->
@@ -211,5 +242,6 @@ defmodule Lightning.Run do
     |> assoc_constraint(:work_order)
     |> assoc_constraint(:snapshot)
     |> check_constraint(:job, name: "validate_job_or_trigger")
+    |> validate_inclusion(:queue, @valid_queues)
   end
 end

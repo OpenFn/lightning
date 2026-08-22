@@ -68,6 +68,7 @@ defmodule Lightning.PromExTest do
       },
       Lightning.PromExTestPlugin,
       Lightning.Projects.SandboxPromExPlugin,
+      Lightning.Channels.PromExPlugin,
       FooPlugin,
       BarPlugin
     ]

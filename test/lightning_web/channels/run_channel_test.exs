@@ -163,6 +163,7 @@ defmodule LightningWeb.RunChannelTest do
 
       assert payload == %{
                "id" => id,
+               "project_id" => workflow.project_id,
                "triggers" => triggers,
                "jobs" => jobs,
                "edges" => edges,
@@ -171,6 +172,11 @@ defmodule LightningWeb.RunChannelTest do
                "options" => %{
                  output_dataclips: true,
                  run_timeout_ms: 1000
+               },
+               "meta" => %{
+                 "work_order_id" => run.work_order_id,
+                 "workflow_id" => workflow.id,
+                 "project_id" => workflow.project_id
                }
              }
     end
@@ -221,6 +227,7 @@ defmodule LightningWeb.RunChannelTest do
 
       assert payload == %{
                "id" => id,
+               "project_id" => workflow.project_id,
                "triggers" => triggers,
                "jobs" => jobs,
                "edges" => edges,
@@ -229,6 +236,11 @@ defmodule LightningWeb.RunChannelTest do
                "options" => %{
                  output_dataclips: false,
                  run_timeout_ms: run.options.run_timeout_ms
+               },
+               "meta" => %{
+                 "work_order_id" => run.work_order_id,
+                 "workflow_id" => workflow.id,
+                 "project_id" => workflow.project_id
                }
              }
     end
@@ -352,6 +364,22 @@ defmodule LightningWeb.RunChannelTest do
       assert wiped_at == Lightning.current_time() |> DateTime.truncate(:second)
 
       refute body
+    end
+
+    @tag project_retention_policy: :erase_all
+    test "fetch:dataclip does not wipe :global dataclip body for projects with erase_all retention policy",
+         %{socket: socket, dataclip: dataclip} do
+      dataclip
+      |> Ecto.Changeset.change(type: :global, body: %{})
+      |> Repo.update!()
+
+      ref = push(socket, "fetch:dataclip", %{})
+
+      assert_reply ref, :ok, {:binary, "{}"}
+
+      %{wiped_at: wiped_at, body: body} = get_dataclip_with_body(dataclip.id)
+      assert is_nil(wiped_at)
+      assert body == %{}
     end
 
     @tag project_retention_policy: :retain_all
@@ -636,7 +664,33 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_reply ref,
                    :error,
-                   "Could not reach the oauth provider. Try again later"
+                   "Could not reach the OAuth provider. Try again later"
+    end
+
+    @tag capture_log: true
+    test "replies cleanly when the OAuth provider times out", %{
+      credential: credential,
+      user: user
+    } do
+      credential = Repo.preload(credential, :oauth_client)
+      endpoint = credential.oauth_client.token_endpoint
+
+      Lightning.AuthProviders.OauthHTTPClient.Mock
+      |> Mox.expect(:call, fn
+        %Tesla.Env{method: :post, url: ^endpoint}, _opts ->
+          {:error, :timeout}
+      end)
+
+      %{socket: socket} =
+        create_socket_and_run(%{credential: credential, user: user})
+
+      ref = push(socket, "fetch:credential", %{"id" => credential.id})
+
+      # The timeout is an untyped transport error; the channel must reply with
+      # an error rather than crashing with a FunctionClauseError.
+      assert_reply ref,
+                   :error,
+                   "Could not reach the OAuth provider. Try again later"
     end
   end
 
@@ -786,6 +840,61 @@ defmodule LightningWeb.RunChannelTest do
                input_dataclip_id: ^dataclip_id
              } =
                Repo.get!(Step, step_id)
+    end
+
+    test "step:start rejects an input_dataclip_id from another project", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      other_project = insert(:project)
+
+      other_dataclip =
+        insert(:dataclip, body: %{"foo" => "bar"}, project: other_project)
+
+      step_id = Ecto.UUID.generate()
+      [%{id: job_id}] = workflow.jobs
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id,
+          "job_id" => job_id,
+          "input_dataclip_id" => other_dataclip.id
+        })
+
+      assert_reply ref, :error, %{input_dataclip_id: ["does not exist"]}
+
+      refute Repo.get(Step, step_id)
+    end
+
+    test "step:start rejects a credential_id from another project", %{
+      socket: socket,
+      run: %{dataclip_id: dataclip_id},
+      workflow: workflow
+    } do
+      other_project = insert(:project)
+
+      other_credential =
+        insert(:credential, name: "Other", user: insert(:user))
+
+      insert(:project_credential,
+        credential: other_credential,
+        project: other_project
+      )
+
+      step_id = Ecto.UUID.generate()
+      [%{id: job_id}] = workflow.jobs
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id,
+          "job_id" => job_id,
+          "credential_id" => other_credential.id,
+          "input_dataclip_id" => dataclip_id
+        })
+
+      assert_reply ref, :error, %{credential_id: ["does not exist"]}
+
+      refute Repo.get(Step, step_id)
     end
 
     @tag project_retention_policy: :erase_all
@@ -980,7 +1089,7 @@ defmodule LightningWeb.RunChannelTest do
       assert is_nil(dataclip.body), "body is wiped"
       assert is_struct(dataclip.wiped_at, DateTime)
 
-      %{socket: socket} =
+      %{socket: socket, run: run} =
         context
         |> merge_setups([
           :create_run,
@@ -1004,6 +1113,33 @@ defmodule LightningWeb.RunChannelTest do
 
       assert %{output_dataclip_id: nil} = Repo.get(Step, step_id)
       refute get_dataclip_with_body(dataclip_id)
+    end
+
+    test "step:complete cannot complete a step belonging to another run/project",
+         %{socket: socket} do
+      foreign_step = insert_step(insert(:project))
+      output_dataclip_id = Ecto.UUID.generate()
+
+      ref =
+        push(socket, "step:complete", %{
+          "step_id" => foreign_step.id,
+          "output_dataclip_id" => output_dataclip_id,
+          "output_dataclip" => ~s({"leaked": "data"}),
+          "reason" => "fail"
+        })
+
+      assert_reply ref, :error, errors
+      assert errors == %{step_id: ["not found"]}
+
+      # The foreign step is left untouched.
+      assert %{
+               exit_reason: "success",
+               error_type: nil,
+               finished_at: nil,
+               output_dataclip_id: nil
+             } = Repo.get(Step, foreign_step.id)
+
+      refute Repo.get(Lightning.Invocation.Dataclip, output_dataclip_id)
     end
   end
 
@@ -1139,6 +1275,226 @@ defmodule LightningWeb.RunChannelTest do
 
       persisted_log_line = Lightning.Repo.one(Lightning.Invocation.LogLine)
       assert persisted_log_line.timestamp == ~U[2023-11-08 11:57:33.874083Z]
+    end
+
+    test "run:batch_logs inserts multiple log lines in a single operation", %{
+      socket: socket,
+      run: run
+    } do
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "level" => "info",
+              "message" => ["First log line"],
+              "source" => "R/T",
+              "timestamp" => "1699444653874083"
+            },
+            %{
+              "level" => "debug",
+              "message" => ["Second log line"],
+              "source" => "R/T",
+              "timestamp" => "1699444653874084"
+            },
+            %{
+              "level" => "error",
+              "message" => ["Third log line"],
+              "source" => "R/T",
+              "timestamp" => "1699444653874085"
+            }
+          ]
+        })
+
+      assert_reply ref, :ok, _
+
+      log_lines =
+        Lightning.Invocation.LogLine
+        |> where(run_id: ^run.id)
+        |> order_by(:timestamp)
+        |> Repo.all()
+
+      assert length(log_lines) == 3
+      assert Enum.at(log_lines, 0).message == "First log line"
+      assert Enum.at(log_lines, 1).message == "Second log line"
+      assert Enum.at(log_lines, 2).message == "Third log line"
+    end
+
+    test "run:batch_logs validates all messages", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "level" => "info",
+              "message" => ["Valid log"],
+              "source" => "R/T",
+              "timestamp" => "1699444653874083"
+            },
+            %{
+              "level" => "info",
+              "timestamp" => "1699444653874084"
+              # missing message
+            }
+          ]
+        })
+
+      assert_reply ref, :error, errors
+      assert errors == %{message: ["This field can't be blank."]}
+    end
+
+    test "run:batch_logs validates step_id association", %{
+      socket: socket,
+      run: run,
+      workflow: workflow
+    } do
+      [job] = workflow.jobs
+      step_id_1 = Ecto.UUID.generate()
+      step_id_2 = Ecto.UUID.generate()
+      invalid_step_id = Ecto.UUID.generate()
+
+      # Start two steps
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id_1,
+          "job_id" => job.id,
+          "input_dataclip_id" => run.dataclip_id
+        })
+
+      assert_reply ref, :ok, _
+
+      ref =
+        push(socket, "step:start", %{
+          "step_id" => step_id_2,
+          "job_id" => job.id,
+          "input_dataclip_id" => run.dataclip_id
+        })
+
+      assert_reply ref, :ok, _
+
+      # Send batch with valid step_ids
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "message" => ["Log for step 1"],
+              "timestamp" => "1699444653874083",
+              "step_id" => step_id_1
+            },
+            %{
+              "message" => ["Log for step 2"],
+              "timestamp" => "1699444653874084",
+              "step_id" => step_id_2
+            },
+            %{
+              "message" => ["Log without step"],
+              "timestamp" => "1699444653874085"
+            }
+          ]
+        })
+
+      assert_reply ref, :ok, _
+
+      log_lines =
+        Lightning.Invocation.LogLine
+        |> where(run_id: ^run.id)
+        |> order_by(:timestamp)
+        |> Repo.all()
+
+      assert length(log_lines) == 3
+      assert Enum.at(log_lines, 0).step_id == step_id_1
+      assert Enum.at(log_lines, 1).step_id == step_id_2
+      assert Enum.at(log_lines, 2).step_id == nil
+
+      # Send batch with invalid step_id
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "message" => ["Log with invalid step"],
+              "timestamp" => "1699444653874086",
+              "step_id" => invalid_step_id
+            }
+          ]
+        })
+
+      assert_reply ref, :error, errors
+      assert errors == %{step_id: ["must be associated with the run"]}
+    end
+
+    test "run:log rejects a step_id belonging to another run/project", %{
+      socket: socket
+    } do
+      foreign_step = insert_step(insert(:project))
+
+      ref =
+        push(socket, "run:log", %{
+          "message" => ["log for a foreign step"],
+          "timestamp" => "1699444653874083",
+          "step_id" => foreign_step.id
+        })
+
+      assert_reply ref, :error, errors
+      assert errors == %{step_id: ["must be associated with the run"]}
+    end
+
+    test "run:batch_logs rejects a step_id belonging to another run/project", %{
+      socket: socket
+    } do
+      foreign_step = insert_step(insert(:project))
+
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "message" => ["log for a foreign step"],
+              "timestamp" => "1699444653874083",
+              "step_id" => foreign_step.id
+            }
+          ]
+        })
+
+      assert_reply ref, :error, errors
+      assert errors == %{step_id: ["must be associated with the run"]}
+    end
+
+    test "run:batch_logs handles empty logs array", %{
+      socket: socket
+    } do
+      ref = push(socket, "run:batch_logs", %{"logs" => []})
+
+      assert_reply ref, :ok, _
+    end
+
+    test "run:batch_logs broadcasts events for each inserted log line", %{
+      socket: socket,
+      run: run
+    } do
+      # Subscribe to run events
+      Lightning.Runs.Events.subscribe(run)
+
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "message" => ["Log 1"],
+              "timestamp" => "1699444653874083"
+            },
+            %{
+              "message" => ["Log 2"],
+              "timestamp" => "1699444653874084"
+            }
+          ]
+        })
+
+      assert_reply ref, :ok, _
+
+      # Should receive 2 log_appended events
+      assert_receive %Lightning.Runs.Events.LogAppended{log_line: log_line_1}
+      assert log_line_1.message == "Log 1"
+
+      assert_receive %Lightning.Runs.Events.LogAppended{log_line: log_line_2}
+      assert log_line_2.message == "Log 2"
     end
   end
 
@@ -1400,7 +1756,708 @@ defmodule LightningWeb.RunChannelTest do
       assert %{state: :killed} = Lightning.Repo.reload!(run)
       assert %{state: :killed} = Lightning.Repo.reload!(work_order)
     end
+
+    @tag run_state: :started
+    test "run:complete with final_dataclip_id reuses existing dataclip", %{
+      socket: socket,
+      run: run
+    } do
+      existing_dataclip =
+        insert(:dataclip,
+          project: run.work_order.workflow.project,
+          body: %{"reused" => true},
+          type: :step_result
+        )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_dataclip_id" => existing_dataclip.id
+        })
+
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :success
+      assert run.final_dataclip_id == existing_dataclip.id
+    end
+
+    @tag run_state: :started
+    test "run:complete with both final_dataclip_id and final_state uses final_dataclip_id",
+         %{
+           socket: socket,
+           run: run
+         } do
+      existing_dataclip =
+        insert(:dataclip,
+          project: run.work_order.workflow.project,
+          body: %{"reused" => true},
+          type: :step_result
+        )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_dataclip_id" => existing_dataclip.id,
+          "final_state" => %{"should_be" => "ignored"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :success
+      assert run.final_dataclip_id == existing_dataclip.id
+    end
+
+    @tag run_state: :started
+    test "run:complete with non-existent final_dataclip_id returns error", %{
+      socket: socket,
+      run: run
+    } do
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_dataclip_id" => Ecto.UUID.generate()
+        })
+
+      assert_reply ref, :error, %{errors: %{final_dataclip_id: _}}
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :started
+      assert run.final_dataclip_id == nil
+    end
+
+    @tag run_state: :started
+    test "run:complete rejects a final_dataclip_id from another project", %{
+      socket: socket,
+      run: run
+    } do
+      other_project = insert(:project)
+
+      other_dataclip =
+        insert(:dataclip,
+          project: other_project,
+          body: %{"secret" => "from B"},
+          type: :step_result
+        )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_dataclip_id" => other_dataclip.id
+        })
+
+      assert_reply ref, :error, %{errors: %{final_dataclip_id: _}}
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :started
+      assert run.final_dataclip_id == nil
+    end
+
+    @tag run_state: :started
+    test "run:complete with final_state inserts a new dataclip", %{
+      socket: socket,
+      run: run
+    } do
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"merged" => "output"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+
+      assert run.state == :success
+      assert run.final_dataclip_id != nil
+
+      final_dataclip =
+        from(d in Dataclip, where: d.id == ^run.final_dataclip_id)
+        |> Lightning.Repo.one!()
+
+      assert final_dataclip.type == :step_result
+    end
+
+    @tag run_state: :started
+    test "run:complete with final_state respects save_dataclips: false" do
+      # Build a run with save_dataclips: false directly
+      project = insert(:project)
+      dataclip = insert(:http_request_dataclip, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run_options = %Lightning.Runs.RunOptions{
+        save_dataclips: false,
+        run_timeout_ms: 2
+      }
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :started,
+          options: run_options |> Map.from_struct()
+        )
+
+      {:ok, bearer, claims} =
+        Lightning.Workers.WorkerToken.generate_and_sign(
+          %{},
+          Lightning.Config.worker_token_signer()
+        )
+
+      socket =
+        LightningWeb.WorkerSocket
+        |> socket("socket_id", %{token: bearer, claims: claims})
+
+      {:ok, _, socket} =
+        socket
+        |> subscribe_and_join(
+          LightningWeb.RunChannel,
+          "run:#{run.id}",
+          %{
+            "token" => Lightning.Workers.generate_run_token(run, run_options)
+          }
+        )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"should_be" => "wiped"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+      assert run.final_dataclip_id != nil
+
+      final_dataclip =
+        from(d in Dataclip, where: d.id == ^run.final_dataclip_id)
+        |> Lightning.Repo.one!()
+
+      assert final_dataclip.wiped_at != nil
+    end
+
+    @tag run_state: :started
+    test "run:complete without final state fields is backward compatible", %{
+      socket: socket,
+      run: run
+    } do
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success"
+        })
+
+      assert_reply ref, :ok, nil
+
+      run = Lightning.Repo.reload!(run)
+      assert run.state == :success
+      assert run.final_dataclip_id == nil
+    end
   end
+
+  describe "webhook response broadcasting" do
+    setup [:create_user, :create_project]
+
+    setup %{project: project} do
+      dataclip = insert(:http_request_dataclip, project: project)
+
+      trigger =
+        build(:trigger,
+          type: :webhook,
+          enabled: true,
+          webhook_reply: :after_completion
+        )
+
+      job = build(:job)
+
+      %{triggers: [trigger], jobs: [job]} =
+        workflow =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, condition_type: :always)
+        |> insert()
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: :started,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Map.new()
+        )
+
+      %{run: run, work_order: work_order, trigger: trigger, job: job}
+    end
+
+    setup [:create_socket, :join_run_channel]
+
+    setup %{work_order: work_order} do
+      Phoenix.PubSub.subscribe(
+        Lightning.PubSub,
+        "work_order:#{work_order.id}:webhook_response"
+      )
+
+      :ok
+    end
+
+    test "does not broadcast when webhook_reply is not :after_completion", %{
+      socket: socket,
+      run: run,
+      job: job,
+      trigger: trigger
+    } do
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :before_start)
+      |> Repo.update!()
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200, "body" => %{"data" => "ok"}}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      refute_receive {:webhook_response, _, _}
+    end
+
+    test "broadcasts envelope with final state on success with no captured response",
+         %{
+           socket: socket,
+           run: run,
+           work_order: work_order
+         } do
+      final_state = %{"data" => %{"result" => "ok"}}
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => final_state
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 201, body}
+
+      assert %{data: ^final_state, meta: meta} = body
+      assert meta.run_id == run.id
+      assert meta.work_order_id == work_order.id
+      assert meta.state == :success
+    end
+
+    test "broadcasts security message on error with no captured response", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "fail",
+          "error_type" => "UserError",
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
+      assert message =~ "failed"
+      assert message =~ "security policy"
+    end
+
+    test "uses configured success_code on success", %{
+      socket: socket,
+      trigger: trigger
+    } do
+      put_webhook_config(trigger, success_code: 200)
+
+      final_state = %{"data" => "ok"}
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => final_state
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 200, %{data: ^final_state, meta: _meta}}
+    end
+
+    test "uses configured error_code on error", %{
+      socket: socket,
+      trigger: trigger
+    } do
+      put_webhook_config(trigger, error_code: 422)
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "fail",
+          "error_type" => "UserError",
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 422,
+                      %{data: %{message: _}, meta: _meta}}
+    end
+
+    test "uses 201 on success when only error_code is configured", %{
+      socket: socket,
+      trigger: trigger
+    } do
+      put_webhook_config(trigger, error_code: 422)
+
+      final_state = %{"data" => "ok"}
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => final_state
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 201, %{data: ^final_state, meta: _meta}}
+    end
+
+    test "does not broadcast for runs with no starting trigger", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      run
+      |> Ecto.Changeset.change(
+        starting_trigger_id: nil,
+        starting_job_id: job.id
+      )
+      |> Repo.update!()
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      refute_receive {:webhook_response, _, _}
+    end
+
+    test "captured webhook_response from step:complete overrides config", %{
+      socket: socket,
+      run: run,
+      job: job,
+      trigger: trigger
+    } do
+      put_webhook_config(trigger, success_code: 999)
+
+      override_body = %{"custom" => "response"}
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200, "body" => override_body}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 200,
+                      %{data: ^override_body, meta: _meta}}
+    end
+
+    test "last step:complete with a webhook_response wins (last-write-wins)",
+         %{
+           socket: socket,
+           run: run,
+           job: job
+         } do
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 201, "body" => %{"first" => true}}
+      )
+
+      last_body = %{"last" => true}
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 202, "body" => last_body}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 202, %{data: ^last_body, meta: _meta}}
+    end
+
+    test "step without webhook_response does not clear a previously captured one",
+         %{
+           socket: socket,
+           run: run,
+           job: job
+         } do
+      captured_body = %{"captured" => true}
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200, "body" => captured_body}
+      )
+
+      complete_step(socket, run, job, [])
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 200,
+                      %{data: ^captured_body, meta: _meta}}
+    end
+
+    test "float status in webhook_response is normalised to integer", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      override_body = %{"ok" => true}
+
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => 200.0, "body" => override_body}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 200,
+                      %{data: ^override_body, meta: _meta}}
+    end
+
+    test "webhook_response with only status uses default body envelope", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      final_state = %{"data" => "ok"}
+
+      complete_step(socket, run, job, webhook_response: %{"status" => 200})
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => final_state
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 200, %{data: ^final_state, meta: _meta}}
+    end
+
+    test "webhook_response with only body uses config status code", %{
+      socket: socket,
+      run: run,
+      job: job,
+      trigger: trigger
+    } do
+      put_webhook_config(trigger, success_code: 202)
+
+      custom_body = %{"data" => "ok"}
+
+      complete_step(socket, run, job, webhook_response: %{"body" => custom_body})
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 202, %{data: ^custom_body, meta: _meta}}
+    end
+
+    test "webhook_response with only body falls back to 201 when no config", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      custom_body = %{"data" => "ok"}
+
+      complete_step(socket, run, job, webhook_response: %{"body" => custom_body})
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+      assert_receive {:webhook_response, 201, %{data: ^custom_body, meta: _meta}}
+    end
+
+    test "malformed status in webhook_response yields 201 with explanation", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => "two hundred"}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
+      assert message =~ "webhook_response was malformed"
+      assert message =~ "status"
+    end
+
+    test "malformed body in webhook_response yields 201 with explanation", %{
+      socket: socket,
+      run: run,
+      job: job
+    } do
+      complete_step(socket, run, job,
+        webhook_response: %{"body" => "not a json object"}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "success",
+          "final_state" => %{"data" => "ok"}
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
+      assert message =~ "webhook_response was malformed"
+      assert message =~ "body"
+    end
+
+    test "malformed webhook_response on failed run uses default error status",
+         %{
+           socket: socket,
+           run: run,
+           job: job
+         } do
+      complete_step(socket, run, job,
+        webhook_response: %{"status" => "two hundred"}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "fail",
+          "error_type" => "UserError",
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 201,
+                      %{data: %{message: message}, meta: _meta}}
+
+      assert message =~ "webhook_response was malformed"
+    end
+
+    test "malformed webhook_response on failed run uses configured error_code",
+         %{
+           socket: socket,
+           run: run,
+           job: job,
+           trigger: trigger
+         } do
+      put_webhook_config(trigger, error_code: 422)
+
+      complete_step(socket, run, job,
+        webhook_response: %{"body" => "not a json object"}
+      )
+
+      ref =
+        push(socket, "run:complete", %{
+          "reason" => "fail",
+          "error_type" => "UserError",
+          "error_message" => nil
+        })
+
+      assert_reply ref, :ok, nil
+
+      assert_receive {:webhook_response, 422,
+                      %{data: %{message: message}, meta: _meta}}
+
+      assert message =~ "webhook_response was malformed"
+    end
+  end
+
+  defp put_webhook_config(trigger, attrs) do
+    alias Lightning.Workflows.Triggers.WebhookResponseConfig
+    config = struct(WebhookResponseConfig, attrs)
+
+    trigger
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_embed(:webhook_response_config, config)
+    |> Repo.update!()
+  end
+
+  defp complete_step(socket, run, job, opts) do
+    step = insert(:step, runs: [run], job: job)
+
+    payload =
+      %{
+        "step_id" => step.id,
+        "output_dataclip_id" => Ecto.UUID.generate(),
+        "output_dataclip" => ~s({"foo": "bar"}),
+        "reason" => "normal"
+      }
+      |> maybe_put("webhook_response", Keyword.get(opts, :webhook_response))
+
+    ref = push(socket, "step:complete", payload)
+    assert_reply ref, :ok, %{step_id: _}
+    step
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp create_socket_and_run(context) do
     merge_setups(context, [
@@ -1438,7 +2495,7 @@ defmodule LightningWeb.RunChannelTest do
     job =
       build(:job,
         body: ~s[fn(state => { return {...state, extra: "data"} })],
-        project_credential: %{credential: credential}
+        project_credential: %{credential: credential, project: project}
       )
 
     workflow =
@@ -1580,6 +2637,33 @@ defmodule LightningWeb.RunChannelTest do
     |> Repo.get(dataclip_id)
   end
 
+  # Inserts a completed step belonging to its own run in the given project.
+  defp insert_step(project) do
+    %{jobs: [job], triggers: [trigger]} =
+      workflow = insert(:simple_workflow, project: project)
+
+    {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+    dataclip = insert(:dataclip, project: project)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot
+      )
+
+    run =
+      insert(:run,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot
+      )
+
+    insert(:step, runs: [run], job: job, exit_reason: "success")
+  end
+
   # Browser client tests
   describe "joining the run:* channel as browser client" do
     setup do
@@ -1607,7 +2691,8 @@ defmodule LightningWeb.RunChannelTest do
           snapshot: snapshot
         )
 
-      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      session_token = Lightning.Accounts.generate_user_session_token(user)
+      token = Phoenix.Token.encrypt(@endpoint, "user socket", session_token)
       {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
 
       %{
@@ -1689,7 +2774,8 @@ defmodule LightningWeb.RunChannelTest do
 
       step = insert(:step, job: job, runs: [run])
 
-      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      session_token = Lightning.Accounts.generate_user_session_token(user)
+      token = Phoenix.Token.encrypt(@endpoint, "user socket", session_token)
       {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
 
       {:ok, _reply, socket} =
@@ -1754,7 +2840,8 @@ defmodule LightningWeb.RunChannelTest do
         timestamp: DateTime.utc_now()
       )
 
-      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      session_token = Lightning.Accounts.generate_user_session_token(user)
+      token = Phoenix.Token.encrypt(@endpoint, "user socket", session_token)
       {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
 
       {:ok, _reply, socket} =
@@ -1803,7 +2890,8 @@ defmodule LightningWeb.RunChannelTest do
           state: :started
         )
 
-      token = Phoenix.Token.sign(@endpoint, "user socket", user.id)
+      session_token = Lightning.Accounts.generate_user_session_token(user)
+      token = Phoenix.Token.encrypt(@endpoint, "user socket", session_token)
       {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
 
       {:ok, _reply, socket} =

@@ -11,6 +11,10 @@ defmodule Lightning.DashboardStats do
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
 
+  @wo_active WorkOrder.active_states()
+  @run_active Run.active_states()
+  @days_back 30
+
   defmodule WorkflowStats do
     @moduledoc """
     Stats for each workflow.
@@ -44,6 +48,59 @@ defmodule Lightning.DashboardStats do
                 success: 0,
                 success_rate: 0.0
               }
+  end
+
+  def get_workflows_stats(workflows) do
+    workflow_ids = Enum.map(workflows, & &1.id)
+    empty = %{success: 0, failed: 0, pending: 0}
+
+    batched_workorders = batch_count_workorders(workflow_ids)
+    batched_runs = batch_count_runs(workflow_ids)
+    batched_steps = batch_count_steps(workflow_ids)
+    last_workorders = batch_get_last_workorders(workflow_ids)
+
+    last_failed_workorders =
+      batch_get_last_workorders(workflow_ids, @wo_active ++ [:success])
+
+    Enum.map(workflows, fn workflow ->
+      wf_id = workflow.id
+
+      grouped_workorders_count = Map.get(batched_workorders, wf_id, empty)
+      grouped_runs_count = Map.get(batched_runs, wf_id, empty)
+      steps_count = Map.get(batched_steps, wf_id, empty)
+
+      workorders_count =
+        grouped_workorders_count
+        |> Enum.map(fn {_key, count} -> count end)
+        |> Enum.sum()
+
+      last_workorder =
+        Map.get(last_workorders, wf_id, %{state: nil, updated_at: nil})
+
+      last_failed_workorder =
+        if last_workorder.state == :success do
+          Map.get(last_failed_workorders, wf_id, %{
+            state: nil,
+            updated_at: nil
+          })
+        else
+          last_workorder
+        end
+
+      {step_count, step_success_rate} = step_stats(steps_count)
+
+      %WorkflowStats{
+        workflow: workflow,
+        last_workorder: last_workorder,
+        last_failed_workorder: last_failed_workorder,
+        failed_workorders_count: grouped_workorders_count.failed,
+        grouped_runs_count: grouped_runs_count,
+        grouped_workorders_count: grouped_workorders_count,
+        step_count: step_count,
+        step_success_rate: round(step_success_rate * 100) / 100,
+        workorders_count: workorders_count
+      }
+    end)
   end
 
   def get_workflow_stats(%Workflow{} = workflow) do
@@ -103,9 +160,18 @@ defmodule Lightning.DashboardStats do
     Enum.sort_by(workflow_stats, sorter, sort_direction)
   end
 
+  # `Enum.sort_by/3` with `:asc`/`:desc` does structural term comparison, which
+  # on `DateTime` structs orders by struct keys (day before month before year),
+  # not chronologically. Returning unix microseconds avoids that pitfall.
+  # The leading sentinel (`0` for nil, `1` for present) keeps nil rows
+  # cleanly separate from a hypothetical `~U[1970-01-01]` row, so the two
+  # can never tie at the comparator.
   defp get_sorter(:last_workorder_updated_at) do
     fn stats ->
-      stats.last_workorder.updated_at || ~U[1970-01-01 00:00:00Z]
+      case stats.last_workorder.updated_at do
+        nil -> {0, 0}
+        dt -> {1, DateTime.to_unix(dt, :microsecond)}
+      end
     end
   end
 
@@ -137,7 +203,7 @@ defmodule Lightning.DashboardStats do
   end
 
   defp get_last_failed_workorder(workflow, %{state: :success}) do
-    excluded_states = [:pending, :running, :success]
+    excluded_states = @wo_active ++ [:success]
     get_last_workorder(workflow, excluded_states)
   end
 
@@ -155,7 +221,7 @@ defmodule Lightning.DashboardStats do
       order_by: [desc: wo.inserted_at],
       select: %{state: wo.state, updated_at: wo.updated_at}
     )
-    |> filter_days_ago(30)
+    |> filter_days_ago(@days_back)
     |> limit(1)
     |> Repo.one() ||
       %{state: nil, updated_at: nil}
@@ -174,7 +240,7 @@ defmodule Lightning.DashboardStats do
       {:success, cnt}, acc ->
         %{acc | success: cnt}
 
-      {state, cnt}, acc when state in [:pending, :running] ->
+      {state, cnt}, acc when state in @wo_active ->
         Map.update!(acc, :pending, &(&1 + cnt))
 
       {_other, cnt}, acc ->
@@ -196,7 +262,7 @@ defmodule Lightning.DashboardStats do
       {:success, cnt}, acc ->
         %{acc | success: cnt}
 
-      {state, cnt}, acc when state in [:available, :claimed, :started] ->
+      {state, cnt}, acc when state in @run_active ->
         Map.update!(acc, :pending, &(&1 + cnt))
 
       {_other, cnt}, acc ->
@@ -258,9 +324,104 @@ defmodule Lightning.DashboardStats do
   end
 
   def filter_days_ago(query, days) do
-    days_ago = DateTime.utc_now() |> DateTime.add(-days * 24 * 60 * 60)
+    days_ago = DateTime.utc_now() |> DateTime.add(-days, :day)
 
     query
     |> where([r], r.inserted_at > ^days_ago)
+  end
+
+  defp batch_count_workorders(workflow_ids) do
+    from(wo in WorkOrder, where: wo.workflow_id in ^workflow_ids)
+    |> filter_days_ago(@days_back)
+    |> group_by([wo], [wo.workflow_id, wo.state])
+    |> select([wo], {wo.workflow_id, wo.state, count(wo.id)})
+    |> Repo.all()
+    |> Enum.reduce(%{}, fn {wf_id, state, cnt}, acc ->
+      current = Map.get(acc, wf_id, %{success: 0, failed: 0, pending: 0})
+
+      updated =
+        case state do
+          :success ->
+            %{current | success: cnt}
+
+          s when s in @wo_active ->
+            Map.update!(current, :pending, &(&1 + cnt))
+
+          _ ->
+            Map.update!(current, :failed, &(&1 + cnt))
+        end
+
+      Map.put(acc, wf_id, updated)
+    end)
+  end
+
+  defp batch_count_runs(workflow_ids) do
+    from(r in Run,
+      join: wo in assoc(r, :work_order),
+      where: wo.workflow_id in ^workflow_ids
+    )
+    |> filter_days_ago(@days_back)
+    |> group_by([r, wo], [wo.workflow_id, r.state])
+    |> select([r, wo], {wo.workflow_id, r.state, count(r.id)})
+    |> Repo.all()
+    |> Enum.reduce(%{}, fn {wf_id, state, cnt}, acc ->
+      current = Map.get(acc, wf_id, %{success: 0, failed: 0, pending: 0})
+
+      updated =
+        case state do
+          :success ->
+            %{current | success: cnt}
+
+          s when s in @run_active ->
+            Map.update!(current, :pending, &(&1 + cnt))
+
+          _ ->
+            Map.update!(current, :failed, &(&1 + cnt))
+        end
+
+      Map.put(acc, wf_id, updated)
+    end)
+  end
+
+  defp batch_count_steps(workflow_ids) do
+    from(s in Step,
+      join: j in assoc(s, :job),
+      where: j.workflow_id in ^workflow_ids
+    )
+    |> filter_days_ago(@days_back)
+    |> group_by([s, j], [j.workflow_id, s.exit_reason])
+    |> select([s, j], {j.workflow_id, s.exit_reason, count(s.id)})
+    |> Repo.all()
+    |> Enum.reduce(%{}, fn {wf_id, exit_reason, cnt}, acc ->
+      current = Map.get(acc, wf_id, %{success: 0, failed: 0, pending: 0})
+
+      updated =
+        case exit_reason do
+          "success" -> %{current | success: cnt}
+          nil -> %{current | pending: cnt}
+          _ -> Map.update!(current, :failed, &(&1 + cnt))
+        end
+
+      Map.put(acc, wf_id, updated)
+    end)
+  end
+
+  defp batch_get_last_workorders(workflow_ids, excluded_states \\ []) do
+    from(wo in WorkOrder,
+      where: wo.workflow_id in ^workflow_ids,
+      where: wo.state not in ^excluded_states
+    )
+    |> filter_days_ago(@days_back)
+    |> order_by([wo], asc: wo.workflow_id, desc: wo.inserted_at)
+    |> distinct([wo], [wo.workflow_id])
+    |> select([wo], %{
+      workflow_id: wo.workflow_id,
+      state: wo.state,
+      updated_at: wo.updated_at
+    })
+    |> Repo.all()
+    |> Map.new(fn %{workflow_id: wf_id} = wo ->
+      {wf_id, Map.delete(wo, :workflow_id)}
+    end)
   end
 end

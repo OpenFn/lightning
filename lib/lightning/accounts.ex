@@ -38,7 +38,7 @@ defmodule Lightning.Accounts do
     count > 0
   end
 
-  @spec purge_user(id :: Ecto.UUID.t()) :: :ok
+  @spec purge_user(id :: Ecto.UUID.t()) :: :ok | {:error, Ecto.Changeset.t()}
   def purge_user(id) do
     Logger.debug(fn ->
       # coveralls-ignore-start
@@ -54,15 +54,19 @@ defmodule Lightning.Accounts do
     Credentials.list_credentials(%User{id: id})
     |> Enum.each(&Credentials.delete_credential/1)
 
-    Repo.get(User, id) |> delete_user()
+    case Repo.get(User, id) |> delete_user() do
+      {:ok, _user} ->
+        Logger.debug(fn ->
+          # coveralls-ignore-start
+          "User ##{id} purged."
+          # coveralls-ignore-stop
+        end)
 
-    Logger.debug(fn ->
-      # coveralls-ignore-start
-      "User ##{id} purged."
-      # coveralls-ignore-stop
-    end)
+        :ok
 
-    :ok
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -91,7 +95,18 @@ defmodule Lightning.Accounts do
       )
       |> Repo.all()
 
-    :ok = Enum.each(users_to_delete, fn u -> purge_user(u.id) end)
+    :ok =
+      Enum.each(users_to_delete, fn u ->
+        case purge_user(u.id) do
+          :ok ->
+            :ok
+
+          {:error, changeset} ->
+            Logger.warning(fn ->
+              "Failed to purge user ##{u.id}: #{inspect(changeset.errors)}"
+            end)
+        end
+      end)
 
     {:ok, %{users_deleted: users_to_delete}}
   end
@@ -154,6 +169,31 @@ defmodule Lightning.Accounts do
   def get_user_by_email(email) when is_binary(email) do
     Repo.get_by(User, email: email)
   end
+
+  @doc """
+  Returns whether a user is barred from logging in.
+
+  Shared by every login path (password and SSO) so the account-state gate stays
+  consistent. Use `login_blocked_reason/1` for the specific reason.
+  """
+  @spec login_blocked?(User.t()) :: boolean()
+  def login_blocked?(%User{disabled: true}), do: true
+
+  def login_blocked?(%User{scheduled_deletion: scheduled}),
+    do: not is_nil(scheduled)
+
+  @doc """
+  Returns why a user is barred from logging in: `:disabled` for a disabled
+  account, `:scheduled_deletion` for one scheduled for deletion.
+
+  Only meaningful for a blocked user; gate the call with `login_blocked?/1`.
+  """
+  @spec login_blocked_reason(User.t()) :: :disabled | :scheduled_deletion
+  def login_blocked_reason(%User{disabled: true}), do: :disabled
+
+  def login_blocked_reason(%User{scheduled_deletion: scheduled})
+      when not is_nil(scheduled),
+      do: :scheduled_deletion
 
   @doc """
   Gets a user by email and password.
@@ -444,8 +484,45 @@ defmodule Lightning.Accounts do
   end
 
   def update_user_details(%User{} = user, attrs \\ %{}) do
-    User.details_changeset(user, attrs)
-    |> Repo.update()
+    changeset = User.details_changeset(user, attrs)
+
+    # A superuser can disable an account or schedule it for deletion from this
+    # form. Scheduling deletion purges every token (the account is leaving); a
+    # plain disable revokes only the sessions (it is reversible, so the user's
+    # personal access tokens stay and are gated at request time instead). Either
+    # way we tear down live sockets; the request-time gate in
+    # get_user_by_session_token covers whatever is still open until it reconnects.
+    revoke_contexts =
+      cond do
+        not is_nil(Changeset.get_change(changeset, :scheduled_deletion)) -> :all
+        Changeset.get_change(changeset, :disabled) == true -> ["session"]
+        true -> nil
+      end
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, changeset)
+    |> maybe_revoke_tokens(user, revoke_contexts)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} ->
+        if revoke_contexts,
+          do: LightningWeb.UserAuth.disconnect_user_sockets(user)
+
+        {:ok, user}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
+  defp maybe_revoke_tokens(multi, _user, nil), do: multi
+
+  defp maybe_revoke_tokens(multi, user, contexts) do
+    Ecto.Multi.delete_all(
+      multi,
+      :tokens,
+      UserToken.user_and_contexts_query(user, contexts)
+    )
   end
 
   def change_user_info(%User{} = user, attrs \\ %{}) do
@@ -662,7 +739,13 @@ defmodule Lightning.Accounts do
 
   """
   def delete_user(%User{} = user) do
-    Repo.delete(user)
+    user
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.foreign_key_constraint(:runs,
+      name: :runs_created_by_id_fkey,
+      message: "user has associated runs and cannot be deleted"
+    )
+    |> Repo.delete()
   end
 
   @doc """
@@ -708,8 +791,12 @@ defmodule Lightning.Accounts do
     )
     |> Repo.transaction()
     |> case do
-      {:ok, %{user: user}} -> {:ok, user}
-      {:error, :user, changeset, _} -> {:error, changeset}
+      {:ok, %{user: user}} ->
+        LightningWeb.UserAuth.disconnect_user_sockets(user)
+        {:ok, user}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
     end
   end
 
@@ -726,19 +813,27 @@ defmodule Lightning.Accounts do
         integer -> DateTime.utc_now() |> Timex.shift(days: integer)
       end
 
-    user
-    |> User.scheduled_deletion_changeset(%{
-      "scheduled_deletion" => date,
-      "disabled" => true,
-      "scheduled_deletion_email" => email
-    })
-    |> Repo.update()
+    changeset =
+      User.scheduled_deletion_changeset(user, %{
+        "scheduled_deletion" => date,
+        "disabled" => true,
+        "scheduled_deletion_email" => email
+      })
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, changeset)
+    |> Ecto.Multi.delete_all(
+      :tokens,
+      UserToken.user_and_contexts_query(user, :all)
+    )
+    |> Repo.transaction()
     |> case do
-      {:ok, user} ->
+      {:ok, %{user: user}} ->
+        LightningWeb.UserAuth.disconnect_user_sockets(user)
         UserNotifier.send_deletion_notification_email(user)
         {:ok, user}
 
-      {:error, changeset} ->
+      {:error, :user, changeset, _} ->
         {:error, changeset}
     end
   end
@@ -760,6 +855,17 @@ defmodule Lightning.Accounts do
   def get_user_by_session_token(token) do
     UserToken.verify_token_query(token, "session")
     |> Repo.one()
+    |> reject_blocked_user()
+  end
+
+  # A disabled or scheduled-for-deletion user must not keep authenticating
+  # through a session or API bearer token minted before the block. The user
+  # socket resolves through get_user_by_session_token/1, so this also refuses
+  # socket (re)connects.
+  defp reject_blocked_user(nil), do: nil
+
+  defp reject_blocked_user(%User{} = user) do
+    if login_blocked?(user), do: nil, else: user
   end
 
   @doc """
@@ -857,19 +963,10 @@ defmodule Lightning.Accounts do
   @doc """
   Gets the user with the given signed token.
   """
-  def get_user_by_api_token(claims) when is_map(claims) do
-    case claims do
-      %{sub: "user:" <> id} ->
-        Repo.get(User, id)
-
-      _ ->
-        nil
-    end
-  end
-
   def get_user_by_api_token(token) do
     UserToken.verify_token_query(token, "api")
     |> Repo.one()
+    |> reject_blocked_user()
   end
 
   @doc """
@@ -950,6 +1047,28 @@ defmodule Lightning.Accounts do
       user,
       build_email_token(user)
     )
+  end
+
+  @doc """
+  Gets the user by confirmation token.
+
+  ## Examples
+
+      iex> get_user_by_confirmation_token("validtoken")
+      %User{}
+
+      iex> get_user_by_confirmation_token("invalidtoken")
+      nil
+
+  """
+  def get_user_by_confirmation_token(token) do
+    with {:ok, query} <-
+           UserToken.verify_email_token_query(token, "confirm"),
+         %User{} = user <- Repo.one(query) do
+      user
+    else
+      _ -> nil
+    end
   end
 
   @doc """
@@ -1049,8 +1168,12 @@ defmodule Lightning.Accounts do
     )
     |> Repo.transaction()
     |> case do
-      {:ok, %{user: user}} -> {:ok, user}
-      {:error, :user, changeset, _} -> {:error, changeset}
+      {:ok, %{user: user}} ->
+        LightningWeb.UserAuth.disconnect_user_sockets(user)
+        {:ok, user}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
     end
   end
 

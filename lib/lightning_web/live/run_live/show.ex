@@ -10,9 +10,11 @@ defmodule LightningWeb.RunLive.Show do
   alias Lightning.Projects
   alias LightningWeb.Components.Tabbed
   alias LightningWeb.Components.Viewers
+  alias LightningWeb.RunLive.CancelHelper
   alias Phoenix.LiveView.AsyncResult
 
   on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount {LightningWeb.Hooks, :ensure_run_belongs_to_project}
   on_mount {LightningWeb.Hooks, :check_limits}
 
   attr :run, :map, required: true
@@ -63,7 +65,10 @@ defmodule LightningWeb.RunLive.Show do
         <LayoutComponents.header current_user={@current_user}>
           <:breadcrumbs>
             <LayoutComponents.breadcrumbs>
-              <LayoutComponents.breadcrumb_project_picker label={@project.name} />
+              <LayoutComponents.breadcrumb_project_picker
+                project={@project}
+                label={@project_label}
+              />
               <LayoutComponents.breadcrumb_items items={[
                 {"History", ~p"/projects/#{@project}/history"}
               ]} />
@@ -164,6 +169,21 @@ defmodule LightningWeb.RunLive.Show do
                   </:value>
                 </.list_item>
                 <.list_item>
+                  <:label>Final Output</:label>
+                  <:value>
+                    <%= if run.final_dataclip_id do %>
+                      <.link
+                        navigate={
+                          ~p"/projects/#{@project}/dataclips/#{run.final_dataclip_id}/show"
+                        }
+                        class="link font-mono"
+                      >
+                        {display_short_uuid(run.final_dataclip_id)}
+                      </.link>
+                    <% end %>
+                  </:value>
+                </.list_item>
+                <.list_item>
                   <:label>Duration</:label>
                   <:value>
                     <.elapsed_indicator item={run} context="show" />
@@ -172,6 +192,19 @@ defmodule LightningWeb.RunLive.Show do
                 <.list_item>
                   <:label>Status</:label>
                   <:value><.state_pill state={run.state} /></:value>
+                </.list_item>
+                <.list_item :if={run.state == :available and @can_run_workflow}>
+                  <:label>Action</:label>
+                  <:value>
+                    <.button
+                      size="sm"
+                      theme="secondary"
+                      phx-click="cancel-run"
+                      phx-value-run_id={run.id}
+                    >
+                      Cancel
+                    </.button>
+                  </:value>
                 </.list_item>
               </.detail_list>
 
@@ -279,6 +312,14 @@ defmodule LightningWeb.RunLive.Show do
     %{current_user: user, project_user: project_user, project: project} =
       socket.assigns
 
+    can_run_workflow =
+      ProjectUsers
+      |> Permissions.can?(
+        :run_workflow,
+        user,
+        project
+      )
+
     {:ok,
      socket
      |> assign(
@@ -302,8 +343,9 @@ defmodule LightningWeb.RunLive.Show do
            project_user
          )
      )
+     |> assign(can_run_workflow: can_run_workflow)
      |> assign(admin_contacts: Projects.list_project_admin_emails(project.id))
-     |> get_run_async(id)}
+     |> get_run_async(id, project.id)}
   end
 
   def handle_steps_change(socket) do
@@ -324,6 +366,43 @@ defmodule LightningWeb.RunLive.Show do
     selected_step_id = Map.get(params, "step")
 
     {:noreply, socket |> apply_selected_step_id(selected_step_id)}
+  end
+
+  @impl true
+  def handle_event("cancel-run", %{"run_id" => run_id}, socket) do
+    if socket.assigns.can_run_workflow do
+      case CancelHelper.cancel_run(run_id, socket.assigns.project.id) do
+        {:ok, _run} ->
+          {:noreply, put_flash(socket, :info, "Run cancelled.")}
+
+        {:error, :not_found} ->
+          {:noreply, put_flash(socket, :error, "Run not found.")}
+
+        {:error, :not_available} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :info,
+             "Run could not be cancelled — it has already been " <>
+               "claimed by a worker."
+           )}
+
+        {:error, _} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "An error occurred while cancelling."
+           )}
+      end
+    else
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         "You are not authorized to perform this action."
+       )}
+    end
   end
 
   @impl true

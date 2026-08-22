@@ -7,15 +7,19 @@ defmodule Lightning.WorkOrders.Query do
   alias Lightning.Run
 
   # Create a copy of the WorkOrder state enum to use in the query, or else
-  # we would need to unnecessarly join the workorders table just for casting.
+  # we would need to unnecessarily join the workorders table just for casting.
   # @workorder_state Ecto.ParameterizedType.init(Ecto.Enum,
   #                    values: Ecto.Enum.values(Lightning.WorkOrder, :state)
   #                  )
 
+  # Order matters: this is a priority list used with `WITH ORDINALITY` below,
+  # where lower ordinals win in ascending sort. Do not alphabetize.
+  # `started` and `claimed` both imply the workorder is `:running`, so they
+  # must outrank `available`, which implies `:pending`.
   @unfinished_state_order ~w[
     started
-    available
     claimed
+    available
   ]
 
   @doc """
@@ -29,9 +33,10 @@ defmodule Lightning.WorkOrders.Query do
   - The current Run is unioned onto the unfinished runs with a null
     ordinality.
   - The runs are ordered by state in the following order
-    `started > available > claimed > null`
-  - The run states are then mapped to the workorder state enum, so `available`
-    and `claimed` are both mapped to `pending` and `started` is mapped to `running`
+    `started > claimed > available > null`
+  - The run states are then mapped to the workorder state enum: `available`
+    is mapped to `pending` (the only run state Lightning can still cancel
+    atomically), while `claimed` and `started` are both mapped to `running`.
 
   > The `null` ordinality ensures that the current run is always last in the
   > ordering.
@@ -71,7 +76,7 @@ defmodule Lightning.WorkOrders.Query do
             """
             CASE ?
             WHEN 'available' THEN 'pending'
-            WHEN 'claimed' THEN 'pending'
+            WHEN 'claimed' THEN 'running'
             WHEN 'started' THEN 'running'
             ELSE ?
             END

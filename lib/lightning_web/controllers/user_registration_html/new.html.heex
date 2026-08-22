@@ -32,10 +32,16 @@
                   field={f[:first_name]}
                   label="First Name"
                   required={true}
+                  autocomplete="given-name"
                 />
               </div>
               <div>
-                <.input field={f[:last_name]} required={true} label="Last Name" />
+                <.input
+                  field={f[:last_name]}
+                  required={true}
+                  label="Last Name"
+                  autocomplete="family-name"
+                />
               </div>
               <div>
                 <.input
@@ -43,6 +49,7 @@
                   type="email"
                   label="Email"
                   required={true}
+                  autocomplete="email"
                 />
               </div>
               <div>
@@ -51,6 +58,7 @@
                   type="password"
                   label="Password"
                   required={true}
+                  autocomplete="new-password"
                 />
               </div>
 

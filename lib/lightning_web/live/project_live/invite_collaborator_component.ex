@@ -33,6 +33,7 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
       assign(socket,
         changeset:
           InvitedCollaborators.changeset(socket.assigns.collaborators, params)
+          |> Map.put(:action, :validate)
       )
 
     with :ok <- limit_adding_users(socket, params) do
@@ -72,11 +73,18 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
   end
 
   defp error_field(assigns) do
+    errors =
+      if Phoenix.Component.used_input?(assigns.field),
+        do: assigns.field.errors,
+        else: []
+
+    assigns = assign(assigns, :errors, errors)
+
     ~H"""
     <.error :for={
       msg <-
         Enum.map(
-          @field.errors,
+          @errors,
           &LightningWeb.CoreComponents.translate_error(&1)
         )
     }>

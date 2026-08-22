@@ -27,6 +27,10 @@ defmodule LightningWeb.SandboxLive.Components do
     @color_palette
   end
 
+  def random_color do
+    Enum.random(color_palette_hex_colors())
+  end
+
   attr :current_project, Project, required: true
   attr :enable_create_button, :boolean, required: true
   attr :disabled_button_tooltip, :string, default: nil
@@ -71,39 +75,60 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :disabled_button_tooltip, :string, default: nil
 
   def workspace_list(assigns) do
+    {scheduled, active} =
+      Enum.split_with(assigns.sandboxes, & &1.scheduled_for_deletion?)
+
+    assigns =
+      assigns
+      |> assign(:active_sandboxes, active)
+      |> assign(:scheduled_sandboxes, scheduled)
+
     ~H"""
-    <div class="space-y-3">
-      <div>
-        <.root_project_card
-          root_project={@root_project}
-          is_current={@current_project.id == @root_project.id}
-        />
-      </div>
-      <div>
-        <%= if Enum.empty?(@sandboxes) do %>
-          <div class="text-gray-500 text-center py-8 rounded-lg border-2 border-dashed border-gray-200">
-            <div class="space-y-3">
-              <div class="text-base font-medium">No sandboxes found</div>
-              <div class="text-sm">
-                <%= if @enable_create_button do %>
-                  <.link
-                    navigate={~p"/projects/#{@current_project.id}/sandboxes/new"}
-                    class="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Create your first sandbox
-                  </.link>
-                  to start experimenting.
-                <% else %>
-                  {@disabled_button_tooltip}
-                <% end %>
+    <div class="space-y-8">
+      <div class="space-y-3">
+        <%= if is_nil(@root_project.parent_id) do %>
+          <.root_project_card
+            root_project={@root_project}
+            is_current={@current_project.id == @root_project.id}
+          />
+        <% else %>
+          <.sandbox_card sandbox={@root_project} />
+        <% end %>
+        <div>
+          <%= if Enum.empty?(@active_sandboxes) and Enum.empty?(@scheduled_sandboxes) do %>
+            <div class="text-gray-500 text-center py-8 rounded-lg border-2 border-dashed border-gray-200">
+              <div class="space-y-3">
+                <div class="text-base font-medium">No sandboxes found</div>
+                <div class="text-sm">
+                  <%= if @enable_create_button do %>
+                    <.link
+                      navigate={~p"/projects/#{@current_project.id}/sandboxes/new"}
+                      class="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Create your first sandbox
+                    </.link>
+                    to start experimenting.
+                  <% else %>
+                    {@disabled_button_tooltip}
+                  <% end %>
+                </div>
               </div>
             </div>
-          </div>
-        <% else %>
-          <div class="space-y-3">
-            <.sandbox_card :for={sandbox <- @sandboxes} sandbox={sandbox} />
-          </div>
-        <% end %>
+          <% else %>
+            <div class="space-y-3">
+              <.sandbox_card :for={sandbox <- @active_sandboxes} sandbox={sandbox} />
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <div :if={@scheduled_sandboxes != []} id="scheduled-for-deletion-section">
+        <h2 class="text-2xl font-bold text-slate-900 mb-3">
+          Scheduled for deletion
+        </h2>
+        <div class="space-y-3">
+          <.sandbox_card :for={sandbox <- @scheduled_sandboxes} sandbox={sandbox} />
+        </div>
       </div>
     </div>
     """
@@ -113,10 +138,13 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :sandbox, Project, required: true
   attr :changeset, :any, required: true
   attr :root_project, Project, required: true
+  attr :descendants, :list, default: []
 
   def confirm_delete_modal(assigns) do
     assigns =
-      assign(assigns, :confirm_form, to_form(assigns.changeset, as: :confirm))
+      assigns
+      |> assign(:confirm_form, to_form(assigns.changeset, as: :confirm))
+      |> assign(:descendant_count, length(assigns.descendants))
 
     ~H"""
     <.modal
@@ -144,16 +172,32 @@ defmodule LightningWeb.SandboxLive.Components do
 
       <section class="space-y-4">
         <p class="text-gray-700">
-          Deleting a sandbox permanently removes its workflows, triggers, versions, keychain clones, and dataclips.
-          <%= if @sandbox.is_current do %>
-            You are currently viewing this project.
-            After deletion, you'll be redirected to <strong>{@root_project.name}</strong>.
-          <% end %>
+          Deleting a sandbox removes it from OpenFn.
+          <span :if={@descendant_count == 1}>
+            Its child sandbox will also be deleted.
+          </span>
+          <span :if={@descendant_count > 1}>
+            Its {@descendant_count} child sandboxes will also be deleted.
+          </span>
+        </p>
+
+        <p class="text-gray-700">
+          Workflows, triggers, versions, keychain clones, and dataclips will be permanently removed.
+        </p>
+
+        <p :if={@sandbox.is_current} class="text-gray-700">
+          You are currently viewing this project.
+          After deletion, you'll be redirected to <strong>{@root_project.name}</strong>.
+        </p>
+
+        <p class="text-gray-700">
           To confirm, type the sandbox name below.
         </p>
 
-        <div class="bg-red-50 border border-red-200 rounded-md p-3">
-          <p class="text-sm text-red-800">This action cannot be undone.</p>
+        <div class="bg-amber-50 border border-amber-200 rounded-md p-3">
+          <p class="text-sm text-amber-800">
+            This sandbox will be retained for {grace_period_label()} before being permanently removed. You can restore it from the sandbox list during that window.
+          </p>
         </div>
 
         <.form
@@ -167,10 +211,8 @@ defmodule LightningWeb.SandboxLive.Components do
             field={@confirm_form[:name]}
             label="Sandbox name"
             placeholder={@sandbox.name}
-            autocomplete="off"
             required
           />
-          <.errors field={@confirm_form[:name]} />
 
           <.modal_footer>
             <.button
@@ -179,7 +221,7 @@ defmodule LightningWeb.SandboxLive.Components do
               disabled={!@changeset.valid?}
               {if !@changeset.valid?, do: [tooltip: "Type the sandbox name to enable"], else: []}
             >
-              Delete Sandbox
+              Delete sandbox
             </.button>
             <.button
               theme="secondary"
@@ -195,18 +237,44 @@ defmodule LightningWeb.SandboxLive.Components do
     """
   end
 
+  defp grace_period_label do
+    case Lightning.Config.purge_deleted_after_days() do
+      nil -> "the configured grace period"
+      1 -> "1 day"
+      days when is_integer(days) -> "#{days} days"
+    end
+  end
+
   attr :open?, :boolean, required: true
   attr :sandbox, Project, required: true
   attr :target_options, :list, required: true
   attr :changeset, :any, required: true
   attr :descendants, :list, default: []
   attr :diverged_workflows, :list, default: []
+  attr :source_workflows, :list, required: true
+  attr :selected_workflow_ids, :any, required: true
+  attr :credentials, :list, default: []
+  attr :selected_credential_ids, :any, default: %MapSet{}
 
   def merge_modal(assigns) do
     assigns =
       assigns
       |> assign(:merge_form, to_form(assigns.changeset, as: :merge))
       |> assign(:descendant_count, length(assigns.descendants))
+      |> assign(
+        :select_all_state,
+        merge_select_all_state(
+          assigns.selected_workflow_ids,
+          assigns.source_workflows
+        )
+      )
+      |> assign(
+        :credentials_select_all_state,
+        merge_select_all_state(
+          assigns.selected_credential_ids,
+          assigns.credentials
+        )
+      )
 
     ~H"""
     <.modal
@@ -220,7 +288,7 @@ defmodule LightningWeb.SandboxLive.Components do
     >
       <:title>
         <div class="flex items-start justify-between">
-          <span class="font-bold">Merge</span>
+          <span class="font-bold">Merge sandbox</span>
           <button
             type="button"
             class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
@@ -237,114 +305,179 @@ defmodule LightningWeb.SandboxLive.Components do
         phx-change="select-merge-target"
         phx-submit="confirm-merge"
       >
-        <section class="space-y-4">
-          <div class="flex items-center gap-2 text-gray-700">
-            <span>Merge</span>
-            <span class="p-1 bg-gray-50 text-gray-800 rounded-md border border-slate-200 font-medium">
-              {@sandbox.name}
-            </span>
-            <span>into</span>
-            <div class="inline-block min-w-[200px]">
-              <.input
-                type="custom-select"
-                id="merge-target-select"
-                field={@merge_form[:target_id]}
-                options={
-                  Enum.map(@target_options, fn opt -> {opt.label, opt.value} end)
-                }
-                class="text-base"
-              />
+        <section class="space-y-5">
+          <div class="space-y-2">
+            <div class="flex items-center gap-2 text-sm text-gray-700">
+              <span>Merge</span>
+              <span class="px-2 py-0.5 bg-gray-100 text-sm font-medium text-gray-900 rounded-md">
+                {@sandbox.name}
+              </span>
+              <span>into</span>
+              <div class="flex-1 max-w-[260px]">
+                <.input
+                  type="custom-select"
+                  id="merge-target-select"
+                  field={@merge_form[:target_id]}
+                  options={
+                    Enum.map(@target_options, fn opt -> {opt.label, opt.value} end)
+                  }
+                  class="text-sm"
+                />
+              </div>
             </div>
+            <p class="text-sm text-gray-700" phx-no-format>
+              The workflows you select below will overwrite their counterparts in
+              <strong class="font-medium text-gray-900">{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>. Any conflicting changes in the target are lost.
+            </p>
           </div>
 
-          <p class="text-gray-700">
-            This will merge all workflows from <strong>{@sandbox.name}</strong>
-            into <strong>{get_selected_target_label(@target_options, @merge_form[:target_id].value)}</strong>,
-            then close <strong>{@sandbox.name}</strong>
-            <%= if @descendant_count == 1 do %>
-              and its child sandbox <strong>{List.first(@descendants).name}</strong>
-            <% end %>
-            <%= if @descendant_count > 1 do %>
-              and its {@descendant_count} child sandboxes
-            <% end %>. This action cannot be undone.
-          </p>
+          <div class="border border-gray-200 rounded-lg overflow-hidden bg-white">
+            <label class={[
+              "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
+              @select_all_state == :empty && "cursor-default",
+              @select_all_state != :empty && "cursor-pointer"
+            ]}>
+              <input
+                type="checkbox"
+                id="merge-select-all-workflows"
+                phx-hook="CheckboxIndeterminate"
+                phx-click="toggle-all-workflows"
+                disabled={@select_all_state == :empty}
+                checked={@select_all_state == :all}
+                class={[
+                  "h-4 w-4 rounded border-gray-300 text-indigo-600",
+                  @select_all_state == :partial && "indeterminate"
+                ]}
+              />
+              <span class="flex-1 text-sm font-medium text-gray-900">
+                Workflows to merge
+              </span>
+              <span class="text-xs text-gray-500">
+                {MapSet.size(@selected_workflow_ids)} of {length(@source_workflows)} selected
+              </span>
+            </label>
+            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+              <li
+                :for={wf <- @source_workflows}
+                class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                phx-click="toggle-workflow"
+                phx-value-id={wf.id}
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                  checked={MapSet.member?(@selected_workflow_ids, wf.id)}
+                  readonly
+                />
+                <span class="flex-1 text-sm text-gray-700 truncate">
+                  {wf.name}
+                </span>
+                <span
+                  :if={wf.is_changed && !wf.is_new && !wf.is_deleted}
+                  class="flex items-center gap-1 text-xs font-medium text-green-700"
+                  title="This workflow has been modified in the sandbox"
+                >
+                  Changed
+                </span>
+                <span
+                  :if={wf.is_diverged}
+                  class="flex items-center gap-1 text-xs font-medium text-amber-700"
+                  title="This workflow was modified in the target project - this change will be lost"
+                >
+                  <.icon name="hero-exclamation-triangle-mini" class="h-3.5 w-3.5" />
+                  Diverged
+                </span>
+                <span
+                  :if={wf.is_new}
+                  class="flex items-center gap-1 text-xs font-medium text-blue-700"
+                  title="This workflow doesn't exist in the target — it will be created"
+                >
+                  New
+                </span>
+                <span
+                  :if={wf.is_deleted}
+                  class="flex items-center gap-1 text-xs font-medium text-red-700"
+                  title="This workflow was deleted in the sandbox — selecting it will delete it from the target"
+                >
+                  Deleted in sandbox
+                </span>
+              </li>
+            </ul>
+          </div>
 
-          <%= if @descendant_count > 1 do %>
-            <Common.alert
-              id="merge-descendants-alert"
-              type="warning"
-              header="Child sandboxes will be closed"
-            >
-              <:message>
-                <p class="mb-2">
-                  The following {@descendant_count} sandboxes will be permanently closed:
-                </p>
-                <ul class="list-disc list-inside space-y-1 ml-2 mb-3">
-                  <li :for={descendant <- @descendants}>
-                    {descendant.name}
-                  </li>
-                </ul>
-                <p>
-                  Consider merging child sandboxes into
-                  <strong>{@sandbox.name}</strong>
-                  first to preserve their work before merging up.
-                </p>
-              </:message>
-            </Common.alert>
-          <% end %>
-
-          <%= if @descendant_count == 1 do %>
-            <Common.alert id="merge-single-descendant-alert" type="warning">
-              <:message>
-                <strong>{List.first(@descendants).name}</strong>
-                will also be closed. Consider merging it into
-                <strong>{@sandbox.name}</strong>
-                first to preserve its work.
-              </:message>
-            </Common.alert>
-          <% end %>
-
-          <%= if @diverged_workflows != [] do %>
-            <Common.alert
-              id="merge-divergence-alert"
-              type="danger"
-              header="Target project has diverged"
-            >
-              <:message>
-                <p class="mb-2">
-                  The following workflow(s) have been modified in
-                  <strong>
-                    {get_selected_target_label(
-                      @target_options,
-                      @merge_form[:target_id].value
-                    )}
-                  </strong>
-                  since this sandbox was created. Merging may result in lost changes to:
-                </p>
-                <ul class="list-disc list-inside space-y-1 ml-2 mb-3">
-                  <li :for={workflow_name <- @diverged_workflows}>
-                    {workflow_name}
-                  </li>
-                </ul>
-                <p>
-                  Are you sure you wish to proceed?
-                </p>
-              </:message>
-            </Common.alert>
-          <% end %>
+          <div
+            :if={@credentials != []}
+            class="border border-gray-200 rounded-lg overflow-hidden bg-white"
+          >
+            <label class={[
+              "flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200",
+              @credentials_select_all_state == :empty && "cursor-default",
+              @credentials_select_all_state != :empty && "cursor-pointer"
+            ]}>
+              <input
+                type="checkbox"
+                id="merge-select-all-credentials"
+                phx-hook="CheckboxIndeterminate"
+                phx-click="toggle-all-credentials"
+                disabled={@credentials_select_all_state == :empty}
+                checked={@credentials_select_all_state == :all}
+                class={[
+                  "h-4 w-4 rounded border-gray-300 text-indigo-600",
+                  @credentials_select_all_state == :partial && "indeterminate"
+                ]}
+              />
+              <span class="flex-1 text-sm font-medium text-gray-900">
+                Credentials to add
+              </span>
+              <span class="text-xs text-gray-500">
+                {MapSet.size(@selected_credential_ids)} of {length(@credentials)} selected
+              </span>
+            </label>
+            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+              <li
+                :for={credential <- @credentials}
+                class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                phx-click="toggle-credential"
+                phx-value-id={credential.id}
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                  checked={MapSet.member?(@selected_credential_ids, credential.id)}
+                  readonly
+                />
+                <span class="flex-1 text-sm text-gray-700 truncate">
+                  {credential.name}
+                </span>
+              </li>
+            </ul>
+          </div>
 
           <Common.alert
-            id="merge-beta-warning"
+            id="merge-deletion-warning"
             type="warning"
-            header="Beta feature warning"
+            header="This sandbox will be deleted after merging"
           >
             <:message>
-              Sandbox merging is in beta. For production projects, use the CLI to merge locally and preview changes first.
+              It can be restored from the sandbox list for {grace_period_label()}, then permanently removed.
+              <div :if={@descendant_count == 1} class="mt-2">
+                Its child sandbox will also be deleted.
+              </div>
+              <div :if={@descendant_count > 1} class="mt-2">
+                Its {@descendant_count} child sandboxes will also be deleted.
+              </div>
             </:message>
           </Common.alert>
 
           <.modal_footer>
-            <.button theme="primary" type="submit">
+            <.button
+              theme="primary"
+              type="submit"
+              disabled={MapSet.size(@selected_workflow_ids) == 0}
+              tooltip={
+                MapSet.size(@selected_workflow_ids) == 0 && "No workflows selected"
+              }
+            >
               Merge
             </.button>
             <.button
@@ -359,6 +492,16 @@ defmodule LightningWeb.SandboxLive.Components do
       </.form>
     </.modal>
     """
+  end
+
+  defp merge_select_all_state(_selected, []), do: :empty
+
+  defp merge_select_all_state(selected, workflows) do
+    case MapSet.size(selected) do
+      0 -> :none
+      n when n == length(workflows) -> :all
+      _ -> :partial
+    end
   end
 
   attr :id, :string, required: true
@@ -425,6 +568,10 @@ defmodule LightningWeb.SandboxLive.Components do
                 {@root_project.name}
               </h3>
               <.badge
+                :if={
+                  has_environment?(@root_project) or
+                    not Project.sandbox?(@root_project)
+                }
                 id={"env-badge-#{@root_project.id}"}
                 env={
                   if has_environment?(@root_project),
@@ -447,10 +594,56 @@ defmodule LightningWeb.SandboxLive.Components do
 
   attr :sandbox, :map, required: true
 
+  defp sandbox_card(%{sandbox: %{scheduled_for_deletion?: true}} = assigns) do
+    assigns =
+      assign(assigns, :deletion_tooltip, deletion_tooltip(assigns.sandbox))
+
+    ~H"""
+    <div
+      id={"sandbox-card-#{@sandbox.id}"}
+      class="group block rounded-xl border border-gray-200 bg-gray-50 opacity-75 overflow-hidden"
+      aria-disabled="true"
+    >
+      <div class="flex items-stretch">
+        <div
+          class="w-3 flex-shrink-0 opacity-60"
+          style={"background-color: #{@sandbox.color || "var(--color-primary-600)"};"}
+        >
+        </div>
+        <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
+          <div
+            id={"sandbox-card-info-#{@sandbox.id}"}
+            class="flex-1 min-w-0 cursor-not-allowed"
+            phx-hook="Tooltip"
+            aria-label={@deletion_tooltip}
+          >
+            <div class="flex items-center gap-3 mb-1">
+              <h3 class="font-semibold text-lg text-slate-500 line-through truncate">
+                {@sandbox.name}
+              </h3>
+              <.badge
+                :if={has_environment?(@sandbox)}
+                id={"env-badge-#{@sandbox.id}"}
+                env={@sandbox.env}
+              />
+              <.badge
+                :if={@sandbox.is_current}
+                id={"active-badge-#{@sandbox.id}"}
+                env="active"
+              />
+            </div>
+          </div>
+          <.sandbox_actions sandbox={@sandbox} />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   defp sandbox_card(assigns) do
     ~H"""
     <div
-      class="group block cursor-pointer rounded-xl bg-white border border-gray-200 bg-white hover:bg-gray-50 transition-all duration-200 overflow-hidden"
+      class="group block cursor-pointer rounded-xl bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 overflow-hidden"
       phx-click={JS.navigate(~p"/projects/#{@sandbox.id}/w")}
       role="button"
       tabindex="0"
@@ -458,7 +651,7 @@ defmodule LightningWeb.SandboxLive.Components do
       <div class="flex items-stretch">
         <div
           class="w-3 flex-shrink-0"
-          style={"background-color: #{@sandbox.color || "#4f39f6"};"}
+          style={"background-color: #{@sandbox.color || "var(--color-primary-600)"};"}
         >
         </div>
         <div class="flex-1 px-4 py-4 flex items-center justify-between min-w-0">
@@ -493,7 +686,7 @@ defmodule LightningWeb.SandboxLive.Components do
     ~H"""
     <span
       id={@id}
-      class="inline-block px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full truncate max-w-32"
+      class="inline-block px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded-full truncate max-w-32"
     >
       {@env}
     </span>
@@ -501,6 +694,44 @@ defmodule LightningWeb.SandboxLive.Components do
   end
 
   attr :sandbox, :map, required: true
+
+  defp sandbox_actions(%{sandbox: %{scheduled_for_deletion?: true}} = assigns) do
+    disabled? =
+      not assigns.sandbox.can_cancel_deletion or
+        assigns.sandbox.restore_blocked_by_limit?
+
+    tooltip =
+      cond do
+        not assigns.sandbox.can_cancel_deletion ->
+          "You are not authorized to cancel deletion of this sandbox"
+
+        assigns.sandbox.restore_blocked_by_limit? ->
+          assigns.sandbox.restore_blocked_message
+
+        true ->
+          false
+      end
+
+    assigns = assign(assigns, disabled?: disabled?, tooltip: tooltip)
+
+    ~H"""
+    <div id={"cancel-deletion-sandbox-#{@sandbox.id}"} class="flex-shrink-0 ml-4">
+      <.button
+        theme="secondary"
+        type="button"
+        disabled={@disabled?}
+        tooltip={@tooltip}
+        phx-click={
+          if @disabled?,
+            do: %JS{},
+            else: JS.push("cancel-sandbox-deletion", value: %{id: @sandbox.id})
+        }
+      >
+        Restore
+      </.button>
+    </div>
+    """
+  end
 
   defp sandbox_actions(assigns) do
     ~H"""
@@ -530,16 +761,6 @@ defmodule LightningWeb.SandboxLive.Components do
             do: "hover:bg-slate-100",
             else: "cursor-not-allowed"
         }
-      />
-
-      <.action_button
-        id={"duplicate-sandbox-#{@sandbox.id}"}
-        icon_type="heroicon"
-        icon_name="hero-clipboard-document"
-        label="Duplicate (coming soon)"
-        disabled={true}
-        icon_class="text-slate-300"
-        button_class="cursor-not-allowed"
       />
 
       <.action_button
@@ -683,6 +904,22 @@ defmodule LightningWeb.SandboxLive.Components do
   end
 
   defp has_environment?(_), do: false
+
+  defp deletion_tooltip(%{scheduled_deletion: %DateTime{} = at}) do
+    formatted = Calendar.strftime(at, "%d %b %Y")
+    suffix = relative_deletion_suffix(at)
+
+    "Scheduled for deletion on #{formatted}#{suffix}. Cancel the deletion to restore it."
+  end
+
+  defp relative_deletion_suffix(at) do
+    case DateTime.diff(at, DateTime.utc_now(), :day) do
+      n when n > 1 -> " (in #{n} days)"
+      1 -> " (in 1 day)"
+      0 -> " (today)"
+      _ -> ""
+    end
+  end
 
   defp get_selected_target_label(target_options, selected_target_id) do
     case Enum.find(target_options, &(&1.value == selected_target_id)) do

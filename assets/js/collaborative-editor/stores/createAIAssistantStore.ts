@@ -61,6 +61,7 @@ import type {
   JobCodeContext,
   Message,
   MessageStatus,
+  ResponseSegment,
   Session,
   SessionListResponse,
   SessionSummary,
@@ -86,12 +87,16 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       messages: [],
       isLoading: false,
       isSending: false,
+      streamingContent: null,
+      streamingStatus: null,
+      streamingChanges: null,
+      streamingSegments: [],
+      streamingApply: null,
       sessionList: [],
       sessionListLoading: false,
       sessionListPagination: null,
       jobCodeContext: null,
       workflowTemplateContext: null,
-      hasReadDisclaimer: false,
     } as AIAssistantState,
     draft => draft
   );
@@ -156,6 +161,10 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.connectionState = 'disconnected';
       draft.isLoading = false;
       draft.isSending = false;
+      draft.streamingContent = null;
+      draft.streamingStatus = null;
+      draft.streamingChanges = null;
+      draft.streamingSegments = [];
     });
 
     notify('disconnect');
@@ -191,17 +200,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
-   * Mark AI disclaimer as read
-   */
-  const markDisclaimerRead = () => {
-    state = produce(state, draft => {
-      draft.hasReadDisclaimer = true;
-    });
-
-    notify('markDisclaimerRead');
-  };
-
-  /**
    * Clear session and start fresh
    * Forces creation of a new session by clearing sessionId and messages
    */
@@ -211,6 +209,11 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.messages = [];
       draft.isLoading = false;
       draft.isSending = false;
+      draft.streamingContent = null;
+      draft.streamingStatus = null;
+      draft.streamingChanges = null;
+      draft.streamingSegments = [];
+      draft.streamingApply = null;
     });
 
     notify('clearSession');
@@ -226,6 +229,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.sessionId = sessionId;
       draft.messages = [];
       draft.isLoading = true;
+      draft.streamingApply = null;
     });
 
     notify('loadSession');
@@ -415,6 +419,10 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       if (message.role === 'assistant') {
         if (message.status === 'success' || message.status === 'error') {
           draft.isLoading = false;
+          draft.streamingContent = null;
+          draft.streamingStatus = null;
+          draft.streamingChanges = null;
+          draft.streamingSegments = [];
         } else if (message.status === 'processing') {
           draft.isLoading = true;
         }
@@ -440,7 +448,13 @@ export const createAIAssistantStore = (): AIAssistantStore => {
 
         if (status === 'success' || status === 'error') {
           draft.isLoading = false;
-        } else if (status === 'processing') {
+        }
+        if (status === 'error') {
+          draft.streamingContent = null;
+          draft.streamingStatus = null;
+          draft.streamingSegments = [];
+        }
+        if (status === 'processing') {
           draft.isLoading = true;
         }
       }
@@ -557,6 +571,110 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     notify('_setProcessingState');
   };
 
+  const _appendStreamingChunk = (content: string) => {
+    state = produce(state, draft => {
+      draft.streamingContent = (draft.streamingContent || '') + content;
+
+      // streamingContent stays the flat source of truth; the timeline is a
+      // parallel view of the same text, split by status segments.
+      const lastSegment = draft.streamingSegments.at(-1);
+      if (lastSegment && lastSegment.type === 'text') {
+        lastSegment.content += content;
+      } else {
+        draft.streamingSegments.push({ type: 'text', content });
+      }
+    });
+    notify('_appendStreamingChunk');
+  };
+
+  /**
+   * Append a status segment to the streaming timeline. Only the channel
+   * registry's char drain may call this — that is what keeps wire order.
+   * @internal
+   */
+  const _appendStreamingSegment = (segment: ResponseSegment) => {
+    state = produce(state, draft => {
+      draft.streamingSegments.push(segment);
+    });
+    notify('_appendStreamingSegment');
+  };
+
+  const setStreamingStatus = (text: string | null) => {
+    state = produce(state, draft => {
+      draft.streamingStatus = text;
+    });
+    notify('setStreamingStatus');
+  };
+
+  const _setStreamingChanges = (changes: Record<string, unknown>) => {
+    state = produce(state, draft => {
+      draft.streamingChanges = changes;
+      // Clear status once changes arrive
+      draft.streamingStatus = null;
+    });
+    notify('_setStreamingChanges');
+  };
+
+  const _clearStreaming = () => {
+    state = produce(state, draft => {
+      draft.streamingContent = null;
+      draft.streamingStatus = null;
+      draft.streamingChanges = null;
+      draft.streamingSegments = [];
+    });
+    notify('_clearStreaming');
+  };
+
+  /**
+   * Record that a workflow YAML was successfully imported to the canvas
+   * during streaming, so the auto-apply of the final new_message can skip
+   * the duplicate import when it carries the same YAML.
+   *
+   * Deliberately NOT cleared by _clearStreaming or disconnect: the final
+   * message may arrive after the stream ends (or after a reconnect), and
+   * the skip must still happen then. Cleared when the session changes or
+   * when the next final message with code is processed.
+   * @internal Called by useAIWorkflowApplications after a streaming import
+   */
+  const _setStreamingApply = (yaml: string) => {
+    state = produce(state, draft => {
+      draft.streamingApply = { yaml, saveFailed: false };
+    });
+    notify('_setStreamingApply');
+  };
+
+  /**
+   * Mark whether the post-import auto-save of a streaming apply failed
+   * (a save is still owed). No-op when no streaming apply is pending, so
+   * callers on shared save paths don't need to know whether the current
+   * apply came from streaming.
+   * @internal Called by useAIWorkflowApplications save/retry paths
+   */
+  const _setStreamingApplySaveFailed = (saveFailed: boolean) => {
+    if (!state.streamingApply) return;
+
+    state = produce(state, draft => {
+      if (draft.streamingApply) {
+        draft.streamingApply.saveFailed = saveFailed;
+      }
+    });
+    notify('_setStreamingApplySaveFailed');
+  };
+
+  /**
+   * Clear the pending streaming apply record.
+   * @internal Called by useAIWorkflowApplications on session load and when
+   * the next final message with code is processed
+   */
+  const _clearStreamingApply = () => {
+    if (!state.streamingApply) return;
+
+    state = produce(state, draft => {
+      draft.streamingApply = null;
+    });
+    notify('_clearStreamingApply');
+  };
+
   /**
    * Connect to workflow channel to listen for AI session creation events.
    * When another user creates an AI session, we receive the event and update
@@ -612,7 +730,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     disconnect,
     setMessageSending,
     retryMessage,
-    markDisclaimerRead,
     clearSession,
     loadSession,
     loadSessionList,
@@ -630,6 +747,14 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _appendSessionList,
     _initializeContext,
     _setProcessingState,
+    _appendStreamingChunk,
+    _appendStreamingSegment,
+    setStreamingStatus,
+    _setStreamingChanges,
+    _clearStreaming,
+    _setStreamingApply,
+    _setStreamingApplySaveFailed,
+    _clearStreamingApply,
     _connectChannel,
   };
 };

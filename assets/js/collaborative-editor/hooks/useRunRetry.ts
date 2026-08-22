@@ -19,6 +19,7 @@ import type { Workflow } from '../types/workflow';
 import { findFirstJobFromTrigger } from '../utils/workflowGraph';
 
 import { useActiveRun } from './useHistory';
+import type { SaveWorkflowOptions } from './useWorkflow';
 
 const logger = _logger.ns('useRunRetry').seal();
 
@@ -69,17 +70,18 @@ export interface UseRunRetryOptions {
   customBody: string;
   canRunWorkflow: boolean;
   workflowRunTooltipMessage: string;
-  saveWorkflow: (options?: {
-    silent?: boolean;
-  }) => Promise<{ saved_at?: string; lock_version?: number } | null>;
+  saveWorkflow: (
+    options?: SaveWorkflowOptions
+  ) => Promise<{ saved_at?: string; lock_version?: number }>;
   onRunSubmitted: ((runId: string, dataclip?: Dataclip) => void) | undefined;
   edgeId: string | null;
   workflowEdges?: Workflow.Edge[];
+  maxDataclipSizeBytes?: number;
 }
 
 export interface UseRunRetryReturn {
-  handleRun: () => Promise<void>;
-  handleRetry: () => Promise<void>;
+  handleRun: () => Promise<boolean>;
+  handleRetry: () => Promise<boolean>;
   isSubmitting: boolean;
   isRetryable: boolean;
   runIsProcessing: boolean;
@@ -119,6 +121,7 @@ export function useRunRetry({
   onRunSubmitted,
   edgeId,
   workflowEdges = [],
+  maxDataclipSizeBytes,
 }: UseRunRetryOptions): UseRunRetryReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRetryingRef = useRef(false);
@@ -134,7 +137,7 @@ export function useRunRetry({
   // Retry state tracking via HistoryStore (WebSocket updates)
   // Note: Connection management is handled by the parent component (FullScreenIDE or ManualRunPanel)
   // This hook only reads the current run state from HistoryStore
-  const { params } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const followedRunId = params.run ?? null; // 'run' param is run ID
   const currentRun = useActiveRun(); // Real-time from WebSocket
 
@@ -214,10 +217,17 @@ export function useRunRetry({
     }
   }, [customBody]);
 
+  const isCustomBodyTooLarge = useMemo(() => {
+    if (!maxDataclipSizeBytes || selectedTab !== 'custom' || !customBody) {
+      return false;
+    }
+    return new TextEncoder().encode(customBody).length > maxDataclipSizeBytes;
+  }, [customBody, maxDataclipSizeBytes, selectedTab]);
+
   const hasValidInput =
     selectedTab === 'empty' ||
     (selectedTab === 'existing' && !!selectedDataclip) ||
-    (selectedTab === 'custom' && isValidCustomBody);
+    (selectedTab === 'custom' && isValidCustomBody && !isCustomBodyTooLarge);
 
   const canRun = !edgeId && canRunWorkflow && hasValidInput;
 
@@ -228,7 +238,7 @@ export function useRunRetry({
     const contextId = runContext.id;
     if (!contextId) {
       logger.error('No context ID available');
-      return;
+      return false;
     }
 
     // Check workflow-level permissions before running
@@ -237,13 +247,14 @@ export function useRunRetry({
         title: 'Cannot run workflow',
         description: workflowRunTooltipMessage,
       });
-      return;
+      return false;
     }
 
     setIsSubmitting(true);
     try {
-      // Save workflow first (silently - user action is "run", not "save")
-      await saveWorkflow({ silent: true });
+      // Save workflow first; user action is run, not save; run outcome
+      // toast covers it
+      await saveWorkflow({ notify: 'none' });
 
       const params: dataclipApi.ManualRunParams = {
         workflowId,
@@ -284,10 +295,12 @@ export function useRunRetry({
         onRunSubmitted(response.data.run_id, response.data.dataclip);
         // Don't reset isSubmitting here - the effect will do it when WebSocket connects
       } else {
-        // Fallback: navigate away if no callback (for standalone mode)
-        // Don't reset isSubmitting - the page is redirecting and resetting would cause a flash
-        window.location.href = `/projects/${projectId}/runs/${response.data.run_id}`;
+        // No callback - stay on the current page and track the run in the URL
+        updateSearchParams({ run: response.data.run_id });
+        setIsSubmitting(false);
       }
+
+      return true;
     } catch (error) {
       logger.error('Failed to submit run:', error);
       notifications.alert({
@@ -296,6 +309,7 @@ export function useRunRetry({
           error instanceof Error ? error.message : 'An unknown error occurred',
       });
       setIsSubmitting(false);
+      return false;
     }
   }, [
     workflowId,
@@ -317,14 +331,14 @@ export function useRunRetry({
   const handleRetry = useCallback(async () => {
     // Guard against double-calls (e.g., from rapid keyboard shortcuts)
     if (isRetryingRef.current) {
-      return;
+      return false;
     }
     isRetryingRef.current = true;
 
     if (!followedRunId || !followedRunStep) {
       logger.error('Cannot retry: missing run or step data');
       isRetryingRef.current = false;
-      return;
+      return false;
     }
 
     if (!canRunWorkflow) {
@@ -333,13 +347,14 @@ export function useRunRetry({
         description: workflowRunTooltipMessage,
       });
       isRetryingRef.current = false;
-      return;
+      return false;
     }
 
     setIsSubmitting(true);
     try {
-      // Save workflow first (silently to avoid double notifications)
-      await saveWorkflow({ silent: true });
+      // Save workflow first; user action is run, not save; run outcome
+      // toast covers it
+      await saveWorkflow({ notify: 'none' });
 
       // Call retry endpoint
       const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;
@@ -382,10 +397,13 @@ export function useRunRetry({
         onRunSubmitted(result.data.run_id);
         // Don't reset isSubmitting here - the effect will do it when WebSocket connects
       } else {
-        // Fallback: navigate to new run (component will unmount)
-        // Don't reset isSubmitting - the page is redirecting and resetting would cause a flash
-        window.location.href = `/projects/${projectId}/runs/${result.data.run_id}`;
+        // No callback - stay on the current page and track the run in the URL
+        updateSearchParams({ run: result.data.run_id });
+        setIsSubmitting(false);
+        isRetryingRef.current = false;
       }
+
+      return true;
     } catch (error) {
       logger.error('Failed to retry run:', error);
       notifications.alert({
@@ -394,6 +412,7 @@ export function useRunRetry({
       });
       setIsSubmitting(false);
       isRetryingRef.current = false;
+      return false;
     }
   }, [
     followedRunId,

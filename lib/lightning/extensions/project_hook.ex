@@ -26,14 +26,24 @@ defmodule Lightning.Extensions.ProjectHook do
     end)
 
     Projects.delete_project_workorders(project)
+    Lightning.Channels.delete_channel_requests_for_project(project)
     Projects.project_jobs_query(project) |> Repo.delete_all()
     Projects.project_triggers_query(project) |> Repo.delete_all()
     Projects.project_workflows_query(project) |> Repo.delete_all()
     Projects.project_users_query(project) |> Repo.delete_all()
     Projects.project_credentials_query(project) |> Repo.delete_all()
+    Projects.project_oauth_clients_query(project) |> Repo.delete_all()
     Projects.delete_project_dataclips(project)
 
-    Repo.delete(project)
+    project
+    |> Repo.delete()
+    |> tap(fn
+      {:ok, %Project{parent_id: parent_id}} when not is_nil(parent_id) ->
+        Lightning.Projects.SandboxPromExPlugin.fire_sandbox_deleted_event()
+
+      _ ->
+        :ok
+    end)
   end
 
   @spec handle_project_validation(Changeset.t(Project.t())) ::

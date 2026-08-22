@@ -43,8 +43,11 @@ defmodule LightningWeb.CoreComponents do
   attr :errors, :any, required: false
 
   def old_error(%{field: field} = assigns) do
+    errors =
+      if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
     assigns =
-      assigns |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
+      assigns |> assign(:errors, Enum.map(errors, &translate_error(&1)))
 
     ~H"""
     <.error :for={msg <- @errors}>{msg}</.error>

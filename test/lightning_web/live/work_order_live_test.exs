@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.Factories
   import Lightning.ApplicationHelpers, only: [dynamically_absorb_delay: 1]
+  import Lightning.TestUtils, only: [flush_dataclip_search_index: 0]
 
   alias Lightning.Runs
   alias Lightning.WorkOrders.Events
@@ -723,7 +724,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
       job = insert(:job, workflow: workflow)
 
-      dataclip = insert(:dataclip)
+      dataclip = insert(:dataclip, project: project)
 
       {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
 
@@ -834,7 +835,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
       job = insert(:job, workflow: workflow)
 
-      dataclip = insert(:dataclip)
+      dataclip = insert(:dataclip, project: project)
 
       {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
 
@@ -1033,7 +1034,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
       dataclip =
         insert(:dataclip,
           type: :http_request,
-          body: %{"username" => "eliaswalyba"}
+          body: %{"username" => "eliaswalyba"},
+          project: project
         )
 
       %{runs: [run_one]} =
@@ -1069,7 +1071,11 @@ defmodule LightningWeb.WorkOrderLiveTest do
       {:ok, snapshot_two} = Workflows.Snapshot.create(workflow_two)
 
       dataclip =
-        insert(:dataclip, type: :http_request, body: %{"username" => "qassim"})
+        insert(:dataclip,
+          type: :http_request,
+          body: %{"username" => "qassim"},
+          project: project
+        )
 
       work_order_two =
         insert(:workorder,
@@ -1104,6 +1110,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
           ],
           "step_id" => Ecto.UUID.generate()
         })
+
+      flush_dataclip_search_index()
 
       {:ok, view, _html} =
         live_async(conn, Routes.project_run_index_path(conn, :index, project.id))
