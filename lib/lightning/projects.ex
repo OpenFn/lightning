@@ -641,7 +641,8 @@ defmodule Lightning.Projects do
   end
 
   defp retention_setting_updated?(changeset) do
-    Map.has_key?(changeset.changes, :history_retention_period) or
+    Map.has_key?(changeset.changes, :retention_policy) or
+      Map.has_key?(changeset.changes, :history_retention_period) or
       Map.has_key?(changeset.changes, :dataclip_retention_period)
   end
 

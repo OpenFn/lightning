@@ -62,6 +62,49 @@ defmodule Lightning.Accounts.UserNotifierTest do
       )
     end
 
+    test "send_data_retention_change_email/2" do
+      user =
+        Lightning.AccountsFixtures.user_fixture(
+          email: "user@openfn.org",
+          first_name: "User"
+        )
+
+      project = %Project{
+        id: Ecto.UUID.generate(),
+        name: "project-a",
+        history_retention_period: 14,
+        dataclip_retention_period: 7,
+        retention_policy: :retain_all
+      }
+
+      settings_url =
+        LightningWeb.Endpoint.url() <>
+          "/projects/#{project.id}/settings#data-storage"
+
+      UserNotifier.send_data_retention_change_email(user, project)
+
+      assert_email_sent(
+        subject: "The data retention policy for project-a has been modified",
+        to: Swoosh.Email.Recipient.format(user),
+        text_body: """
+        Hi User,\n\nThe data retention policy for your project, project-a, has been updated. Here are the new details:\n\n- 14 days history retention\n- input/output (I/O) data is saved for reprocessing\n- 7 days I/O data retention\n\nThis policy can be changed by owners and administrators. If you haven't approved this change, please reset the policy by visiting the URL below:\n\n#{settings_url}\n\nOpenFn
+        """
+      )
+
+      UserNotifier.send_data_retention_change_email(
+        user,
+        %{project | retention_policy: :erase_all}
+      )
+
+      assert_email_sent(
+        subject: "The data retention policy for project-a has been modified",
+        to: Swoosh.Email.Recipient.format(user),
+        text_body: """
+        Hi User,\n\nThe data retention policy for your project, project-a, has been updated. Here are the new details:\n\n- 14 days history retention\n- input/output (I/O) data is not saved for reprocessing\n- 7 days I/O data retention\n\nThis policy can be changed by owners and administrators. If you haven't approved this change, please reset the policy by visiting the URL below:\n\n#{settings_url}\n\nOpenFn
+        """
+      )
+    end
+
     test "remind_account_confirmation/2" do
       token = "sometoken"
 
