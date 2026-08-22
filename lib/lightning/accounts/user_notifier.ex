@@ -147,6 +147,21 @@ defmodule Lightning.Accounts.UserNotifier do
 
     io_data_saved = updated_project.retention_policy != :erase_all
 
+    # No I/O retention bullet under :erase_all — I/O data is never saved,
+    # so quoting a retention window for it would contradict the line above.
+    details =
+      [
+        "- #{history_retention_period} #{pluralize_with_s(history_retention_period, "day")} history retention",
+        "- input/output (I/O) data #{if io_data_saved, do: "is", else: "is not"} saved for reprocessing"
+      ] ++
+        if io_data_saved do
+          [
+            "- #{io_data_retention_period} #{pluralize_with_s(io_data_retention_period, "day")} I/O data retention"
+          ]
+        else
+          []
+        end
+
     deliver(
       user,
       "The data retention policy for #{updated_project.name} has been modified",
@@ -155,9 +170,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
       The data retention policy for your project, #{updated_project.name}, has been updated. Here are the new details:
 
-      - #{history_retention_period} #{pluralize_with_s(history_retention_period, "day")} history retention
-      - input/output (I/O) data #{if io_data_saved, do: "is", else: "is not"} saved for reprocessing
-      - #{io_data_retention_period} #{pluralize_with_s(io_data_retention_period, "day")} I/O data retention
+      #{Enum.join(details, "\n")}
 
       This policy can be changed by owners and administrators. If you haven't approved this change, please reset the policy by visiting the URL below:
 

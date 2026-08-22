@@ -91,16 +91,18 @@ defmodule Lightning.Accounts.UserNotifierTest do
         """
       )
 
+      # Under :erase_all the dataclip period is nil (the changeset clears it)
+      # and the email omits the I/O retention bullet entirely.
       UserNotifier.send_data_retention_change_email(
         user,
-        %{project | retention_policy: :erase_all}
+        %{project | retention_policy: :erase_all, dataclip_retention_period: nil}
       )
 
       assert_email_sent(
         subject: "The data retention policy for project-a has been modified",
         to: Swoosh.Email.Recipient.format(user),
         text_body: """
-        Hi User,\n\nThe data retention policy for your project, project-a, has been updated. Here are the new details:\n\n- 14 days history retention\n- input/output (I/O) data is not saved for reprocessing\n- 7 days I/O data retention\n\nThis policy can be changed by owners and administrators. If you haven't approved this change, please reset the policy by visiting the URL below:\n\n#{settings_url}\n\nOpenFn
+        Hi User,\n\nThe data retention policy for your project, project-a, has been updated. Here are the new details:\n\n- 14 days history retention\n- input/output (I/O) data is not saved for reprocessing\n\nThis policy can be changed by owners and administrators. If you haven't approved this change, please reset the policy by visiting the URL below:\n\n#{settings_url}\n\nOpenFn
         """
       )
     end

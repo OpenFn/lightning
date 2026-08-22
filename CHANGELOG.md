@@ -44,7 +44,8 @@ and this project adheres to
   trail. [#5090](https://github.com/OpenFn/lightning/issues/5090)
 - Switching the retention policy to "erase all" without touching the period
   fields now clears the stale dataclip retention period, instead of leaving the
-  old window active and quoted in the notification email.
+  old window active. The notification email also no longer quotes an I/O data
+  retention window when the policy says I/O data is never saved.
   [#5088](https://github.com/OpenFn/lightning/issues/5088)
 
 ## [2.18.0] - 2026-08-20
