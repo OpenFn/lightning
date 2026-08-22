@@ -95,12 +95,10 @@ defmodule Lightning.Projects.AdminSearchParams do
   defp ensure_page_size(changeset) do
     value = get_field(changeset, :page_size)
 
-    cond do
-      is_integer(value) and value > 0 ->
-        put_change(changeset, :page_size, min(value, @max_page_size))
-
-      true ->
-        put_change(changeset, :page_size, @default_page_size)
+    if is_integer(value) and value > 0 do
+      put_change(changeset, :page_size, min(value, @max_page_size))
+    else
+      put_change(changeset, :page_size, @default_page_size)
     end
   end
 end
