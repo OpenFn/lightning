@@ -38,6 +38,8 @@ and this project adheres to
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
   [#5009](https://github.com/OpenFn/lightning/pull/5009)
+- Project owner and admins are notified properly when the I/O data retention
+  policy is changed. [#5088](https://github.com/OpenFn/lightning/issues/5088)
 
 ## [2.18.0] - 2026-08-20
 
