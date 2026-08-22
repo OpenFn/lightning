@@ -228,7 +228,8 @@ defmodule Lightning.Projects.Project do
 
   defp maybe_validate_dataclip_retention_period(changeset) do
     if get_change(changeset, :history_retention_period) ||
-         get_change(changeset, :dataclip_retention_period) do
+         get_change(changeset, :dataclip_retention_period) ||
+         get_change(changeset, :retention_policy) do
       validate_dataclip_retention_period(changeset)
     else
       changeset
