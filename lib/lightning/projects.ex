@@ -193,19 +193,17 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Returns a paginated list of projects for the superuser admin table with
+  Returns a paginated list of projects for the superuser settings table with
   server-side filtering and sorting.
   """
-  @spec list_projects_for_admin(map()) :: Scrivener.Page.t()
-  def list_projects_for_admin(params \\ %{}) do
-    params = AdminSearchParams.new(params)
-
+  @spec list_all_projects(AdminSearchParams.t()) :: Scrivener.Page.t()
+  def list_all_projects(%AdminSearchParams{} = params) do
     Project
     |> join(:left, [p], pu in assoc(p, :project_users), on: pu.role == :owner)
     |> join(:left, [_p, pu], owner in assoc(pu, :user))
     |> preload([_p, _pu, _owner], project_users: :user)
-    |> filter_admin_projects(params.filter)
-    |> order_admin_projects(params.sort, params.dir)
+    |> search_projects_query(params.search_term)
+    |> sort_projects_query(params.sort_by, params.sort_direction)
     |> Repo.paginate(AdminSearchParams.pagination_opts(params))
   end
 
@@ -238,10 +236,10 @@ defmodule Lightning.Projects do
     end
   end
 
-  defp filter_admin_projects(query, ""), do: query
+  defp search_projects_query(query, ""), do: query
 
-  defp filter_admin_projects(query, filter) do
-    search = "%#{filter}%"
+  defp search_projects_query(query, search_term) do
+    search = "%#{search_term}%"
 
     where(
       query,
@@ -255,14 +253,14 @@ defmodule Lightning.Projects do
     )
   end
 
-  defp order_admin_projects(query, "scheduled_deletion", "asc"),
+  defp sort_projects_query(query, "scheduled_deletion", "asc"),
     do: order_by(query, [p, _pu, _owner], asc_nulls_last: p.scheduled_deletion)
 
-  defp order_admin_projects(query, "scheduled_deletion", "desc"),
-    do: order_by(query, [p, _pu, _owner], desc_nulls_first: p.scheduled_deletion)
+  defp sort_projects_query(query, "scheduled_deletion", "desc"),
+    do: order_by(query, [p, _pu, _owner], desc_nulls_last: p.scheduled_deletion)
 
-  defp order_admin_projects(query, "owner", dir) do
-    direction = project_dir_to_atom(dir)
+  defp sort_projects_query(query, "owner", sort_direction) do
+    direction = sort_direction_to_atom(sort_direction)
 
     order_by(
       query,
@@ -274,15 +272,15 @@ defmodule Lightning.Projects do
     )
   end
 
-  defp order_admin_projects(query, sort, dir) do
-    direction = project_dir_to_atom(dir)
-    sort_field = String.to_existing_atom(sort)
+  defp sort_projects_query(query, sort_by, sort_direction) do
+    direction = sort_direction_to_atom(sort_direction)
+    sort_field = String.to_existing_atom(sort_by)
 
     order_by(query, [p, _pu, _owner], [{^direction, field(p, ^sort_field)}])
   end
 
-  defp project_dir_to_atom("asc"), do: :asc
-  defp project_dir_to_atom("desc"), do: :desc
+  defp sort_direction_to_atom("asc"), do: :asc
+  defp sort_direction_to_atom("desc"), do: :desc
 
   @doc """
   Gets the project associated with a run.

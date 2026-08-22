@@ -1,6 +1,6 @@
 defmodule Lightning.Projects.AdminSearchParams do
   @moduledoc """
-  Normalized query params for the superuser projects table.
+  Query params for the superuser projects table.
   """
 
   use Lightning.Schema
@@ -14,17 +14,17 @@ defmodule Lightning.Projects.AdminSearchParams do
   @max_page_size 100
 
   @type t :: %__MODULE__{
-          filter: String.t(),
-          sort: String.t(),
-          dir: String.t(),
+          search_term: String.t(),
+          sort_by: String.t(),
+          sort_direction: String.t(),
           page: pos_integer(),
           page_size: pos_integer()
         }
 
   embedded_schema do
-    field :filter, :string, default: ""
-    field :sort, :string, default: @default_sort
-    field :dir, :string, default: "asc"
+    field :search_term, :string, default: ""
+    field :sort_by, :string, default: @default_sort
+    field :sort_direction, :string, default: "asc"
     field :page, :integer, default: @default_page
     field :page_size, :integer, default: @default_page_size
   end
@@ -34,22 +34,13 @@ defmodule Lightning.Projects.AdminSearchParams do
   def new(nil), do: new(%{})
 
   def new(params) when is_map(params) do
-    params = stringify_param_keys(params)
-
     %__MODULE__{}
-    |> cast(
-      %{
-        "filter" => normalize_filter(Map.get(params, "filter")),
-        "sort" => normalize_sort(Map.get(params, "sort")),
-        "dir" => normalize_dir(Map.get(params, "dir")),
-        "page" => parse_positive_int(Map.get(params, "page"), @default_page),
-        "page_size" =>
-          Map.get(params, "page_size")
-          |> parse_positive_int(@default_page_size)
-          |> min(@max_page_size)
-      },
-      [:filter, :sort, :dir, :page, :page_size]
-    )
+    |> cast(params, [:search_term, :sort_by, :sort_direction, :page, :page_size])
+    |> update_change(:search_term, &trim_search_term/1)
+    |> ensure_allowed(:sort_by, @allowed_sorts, @default_sort)
+    |> ensure_allowed(:sort_direction, ~w(asc desc), "asc")
+    |> ensure_positive_int(:page, @default_page)
+    |> ensure_page_size()
     |> apply_action!(:validate)
   end
 
@@ -64,9 +55,9 @@ defmodule Lightning.Projects.AdminSearchParams do
 
   def to_uri_params(%__MODULE__{} = params) do
     %{
-      "filter" => params.filter,
-      "sort" => params.sort,
-      "dir" => params.dir,
+      "search_term" => params.search_term,
+      "sort_by" => params.sort_by,
+      "sort_direction" => params.sort_direction,
       "page" => Integer.to_string(params.page),
       "page_size" => Integer.to_string(params.page_size)
     }
@@ -78,41 +69,38 @@ defmodule Lightning.Projects.AdminSearchParams do
     |> to_uri_params()
   end
 
-  defp normalize_sort(sort) when is_binary(sort) do
-    if sort in @allowed_sorts, do: sort, else: @default_sort
+  defp trim_search_term(nil), do: ""
+  defp trim_search_term(term), do: String.trim(term)
+
+  defp ensure_allowed(changeset, field, allowed, default) do
+    value = get_field(changeset, field)
+
+    if value in allowed do
+      changeset
+    else
+      put_change(changeset, field, default)
+    end
   end
 
-  defp normalize_sort(sort) when is_atom(sort) do
-    sort
-    |> Atom.to_string()
-    |> normalize_sort()
+  defp ensure_positive_int(changeset, field, default) do
+    value = get_field(changeset, field)
+
+    if is_integer(value) and value > 0 do
+      changeset
+    else
+      put_change(changeset, field, default)
+    end
   end
 
-  defp normalize_sort(_), do: @default_sort
+  defp ensure_page_size(changeset) do
+    value = get_field(changeset, :page_size)
 
-  defp normalize_dir(dir) when dir in ["asc", :asc], do: "asc"
-  defp normalize_dir(dir) when dir in ["desc", :desc], do: "desc"
-  defp normalize_dir(_), do: "asc"
+    cond do
+      is_integer(value) and value > 0 ->
+        put_change(changeset, :page_size, min(value, @max_page_size))
 
-  defp normalize_filter(nil), do: ""
-
-  defp normalize_filter(filter) do
-    filter
-    |> to_string()
-    |> String.trim()
-  end
-
-  defp stringify_param_keys(params) do
-    Map.new(params, fn {key, value} -> {to_string(key), value} end)
-  end
-
-  defp parse_positive_int(value, _default) when is_integer(value) and value > 0,
-    do: value
-
-  defp parse_positive_int(value, default) do
-    case Integer.parse(to_string(value || "")) do
-      {int, ""} when int > 0 -> int
-      _ -> default
+      true ->
+        put_change(changeset, :page_size, @default_page_size)
     end
   end
 end

@@ -41,12 +41,13 @@ defmodule LightningWeb.UserLive.TableComponent do
   @impl true
   def update(assigns, socket) do
     table_params = Map.get(assigns, :table_params, socket.assigns.table_params)
-    page = Accounts.list_users_for_admin(table_params)
+    search_params = AdminSearchParams.new(table_params)
+    page = Accounts.list_all_users(search_params)
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_table_state(table_params, page)}
+     |> assign_table_state(AdminSearchParams.to_uri_params(search_params), page)}
   end
 
   @impl true
@@ -60,8 +61,8 @@ defmodule LightningWeb.UserLive.TableComponent do
 
     params =
       socket.assigns.table_params
-      |> Map.put("sort", sort_key)
-      |> Map.put("dir", sort_direction)
+      |> Map.put("sort_by", sort_key)
+      |> Map.put("sort_direction", sort_direction)
       |> Map.put("page", "1")
 
     {:noreply,
@@ -71,7 +72,7 @@ defmodule LightningWeb.UserLive.TableComponent do
   def handle_event("filter", %{"value" => filter}, socket) do
     params =
       socket.assigns.table_params
-      |> Map.put("filter", String.trim(filter))
+      |> Map.put("search_term", String.trim(filter))
       |> Map.put("page", "1")
 
     {:noreply,
@@ -81,7 +82,7 @@ defmodule LightningWeb.UserLive.TableComponent do
   def handle_event("clear_filter", _params, socket) do
     params =
       socket.assigns.table_params
-      |> Map.put("filter", "")
+      |> Map.put("search_term", "")
       |> Map.put("page", "1")
 
     {:noreply,
@@ -91,9 +92,9 @@ defmodule LightningWeb.UserLive.TableComponent do
   defp assign_table_state(socket, table_params, page) do
     assign(socket,
       page: page,
-      filter: table_params["filter"],
-      sort_key: table_params["sort"],
-      sort_direction: table_params["dir"],
+      filter: table_params["search_term"],
+      sort_key: table_params["sort_by"],
+      sort_direction: table_params["sort_direction"],
       table_params: table_params,
       pagination_path: pagination_path(socket, table_params)
     )
@@ -117,7 +118,12 @@ defmodule LightningWeb.UserLive.TableComponent do
         route_params
         |> Enum.into(%{})
         |> Map.merge(
-          Map.take(table_params, ["filter", "sort", "dir", "page_size"])
+          Map.take(table_params, [
+            "search_term",
+            "sort_by",
+            "sort_direction",
+            "page_size"
+          ])
         )
         |> Enum.reject(fn {_key, value} -> value in [nil, ""] end)
         |> Map.new()

@@ -38,7 +38,8 @@ defmodule LightningWeb.ProjectLive.Index do
 
   defp apply_action(socket, :index, _params) do
     table_params = socket.assigns.table_params
-    page = Projects.list_projects_for_admin(table_params)
+    search_params = AdminSearchParams.new(table_params)
+    page = Projects.list_all_projects(search_params)
 
     socket
     |> assign(
@@ -46,9 +47,9 @@ defmodule LightningWeb.ProjectLive.Index do
       active_menu_item: :projects,
       page: page,
       pagination_path: pagination_path(socket, table_params),
-      sort_key: table_params["sort"],
-      sort_direction: table_params["dir"],
-      filter: table_params["filter"]
+      sort_key: table_params["sort_by"],
+      sort_direction: table_params["sort_direction"],
+      filter: table_params["search_term"]
     )
   end
 
@@ -61,9 +62,9 @@ defmodule LightningWeb.ProjectLive.Index do
       active_menu_item: :projects,
       project: Projects.get_project_with_users!(id),
       users: Accounts.list_users(),
-      sort_key: default_table_params["sort"],
-      sort_direction: default_table_params["dir"],
-      filter: default_table_params["filter"]
+      sort_key: default_table_params["sort_by"],
+      sort_direction: default_table_params["sort_direction"],
+      filter: default_table_params["search_term"]
     )
   end
 
@@ -76,15 +77,16 @@ defmodule LightningWeb.ProjectLive.Index do
       active_menu_item: :projects,
       project: %Lightning.Projects.Project{project_users: []},
       users: Accounts.list_users(),
-      sort_key: default_table_params["sort"],
-      sort_direction: default_table_params["dir"],
-      filter: default_table_params["filter"]
+      sort_key: default_table_params["sort_by"],
+      sort_direction: default_table_params["sort_direction"],
+      filter: default_table_params["search_term"]
     )
   end
 
   defp apply_action(socket, :delete, %{"id" => id}) do
     table_params = socket.assigns.table_params
-    page = Projects.list_projects_for_admin(table_params)
+    search_params = AdminSearchParams.new(table_params)
+    page = Projects.list_all_projects(search_params)
 
     socket
     |> assign(
@@ -93,9 +95,9 @@ defmodule LightningWeb.ProjectLive.Index do
       page: page,
       pagination_path: pagination_path(socket, table_params),
       project: Projects.get_project(id),
-      sort_key: table_params["sort"],
-      sort_direction: table_params["dir"],
-      filter: table_params["filter"]
+      sort_key: table_params["sort_by"],
+      sort_direction: table_params["sort_direction"],
+      filter: table_params["search_term"]
     )
   end
 
@@ -125,8 +127,8 @@ defmodule LightningWeb.ProjectLive.Index do
 
     params =
       socket.assigns.table_params
-      |> Map.put("sort", sort_key)
-      |> Map.put("dir", sort_direction)
+      |> Map.put("sort_by", sort_key)
+      |> Map.put("sort_direction", sort_direction)
       |> Map.put("page", "1")
 
     {:noreply,
@@ -136,7 +138,7 @@ defmodule LightningWeb.ProjectLive.Index do
   def handle_event("filter", %{"value" => filter}, socket) do
     params =
       socket.assigns.table_params
-      |> Map.put("filter", String.trim(filter))
+      |> Map.put("search_term", String.trim(filter))
       |> Map.put("page", "1")
 
     {:noreply,
@@ -146,7 +148,7 @@ defmodule LightningWeb.ProjectLive.Index do
   def handle_event("clear_filter", _params, socket) do
     params =
       socket.assigns.table_params
-      |> Map.put("filter", "")
+      |> Map.put("search_term", "")
       |> Map.put("page", "1")
 
     {:noreply,
@@ -192,7 +194,12 @@ defmodule LightningWeb.ProjectLive.Index do
         route_params
         |> Enum.into(%{})
         |> Map.merge(
-          Map.take(table_params, ["filter", "sort", "dir", "page_size"])
+          Map.take(table_params, [
+            "search_term",
+            "sort_by",
+            "sort_direction",
+            "page_size"
+          ])
         )
         |> Enum.reject(fn {_key, value} -> value in [nil, ""] end)
         |> Map.new()

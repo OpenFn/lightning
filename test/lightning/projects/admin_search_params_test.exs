@@ -5,26 +5,25 @@ defmodule Lightning.Projects.AdminSearchParamsTest do
 
   describe "new/1" do
     test "normalizes invalid values to safe defaults" do
-      loaded? = Code.ensure_loaded?(AdminSearchParams)
-      assert loaded?
-
       params =
-        if loaded? do
-          AdminSearchParams.new(%{
-            "filter" => "  alpha  ",
-            "sort" => "drop table projects",
-            "dir" => "sideways",
-            "page" => "0",
-            "page_size" => "1000"
-          })
-        else
-          %{}
-        end
+        AdminSearchParams.new(%{
+          "search_term" => "  alpha  ",
+          "sort_by" => "drop table projects",
+          "sort_direction" => "sideways",
+          "page" => "0",
+          "page_size" => "1000"
+        })
 
-      assert Map.take(params, [:filter, :sort, :dir, :page, :page_size]) == %{
-               filter: "alpha",
-               sort: "name",
-               dir: "asc",
+      assert Map.take(params, [
+               :search_term,
+               :sort_by,
+               :sort_direction,
+               :page,
+               :page_size
+             ]) == %{
+               search_term: "alpha",
+               sort_by: "name",
+               sort_direction: "asc",
                page: 1,
                page_size: 100
              }
@@ -33,28 +32,21 @@ defmodule Lightning.Projects.AdminSearchParamsTest do
 
   describe "to_uri_params/1" do
     test "serializes normalized params for liveview routes" do
-      loaded? = Code.ensure_loaded?(AdminSearchParams)
-      assert loaded?
-
       uri_params =
-        if loaded? do
-          %{
-            "filter" => "  jane  ",
-            "sort" => "owner",
-            "dir" => "desc",
-            "page" => "4",
-            "page_size" => "25"
-          }
-          |> AdminSearchParams.new()
-          |> AdminSearchParams.to_uri_params()
-        else
-          %{}
-        end
+        %{
+          "search_term" => "  jane  ",
+          "sort_by" => "owner",
+          "sort_direction" => "desc",
+          "page" => "4",
+          "page_size" => "25"
+        }
+        |> AdminSearchParams.new()
+        |> AdminSearchParams.to_uri_params()
 
       assert uri_params == %{
-               "filter" => "jane",
-               "sort" => "owner",
-               "dir" => "desc",
+               "search_term" => "jane",
+               "sort_by" => "owner",
+               "sort_direction" => "desc",
                "page" => "4",
                "page_size" => "25"
              }

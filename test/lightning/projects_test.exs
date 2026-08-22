@@ -13,6 +13,7 @@ defmodule Lightning.ProjectsTest do
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
   alias Lightning.Projects
+  alias Lightning.Projects.AdminSearchParams
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectOverviewRow
   alias Lightning.Projects.ProjectUser
@@ -33,7 +34,7 @@ defmodule Lightning.ProjectsTest do
       assert Projects.list_projects() == [project]
     end
 
-    test "list_projects_for_admin/1 supports search by project fields and owner name" do
+    test "list_all_projects/1 supports search by project fields and owner name" do
       owner = insert(:user, first_name: "Jane", last_name: "Owner")
 
       project =
@@ -45,29 +46,33 @@ defmodule Lightning.ProjectsTest do
         insert(:project, name: "beta-project", description: "second project")
 
       page =
-        Projects.list_projects_for_admin(%{
-          "filter" => "jane",
-          "sort" => "owner",
-          "dir" => "asc",
-          "page" => "1",
-          "page_size" => "10"
-        })
+        Projects.list_all_projects(
+          AdminSearchParams.new(%{
+            "search_term" => "jane",
+            "sort_by" => "owner",
+            "sort_direction" => "asc",
+            "page" => "1",
+            "page_size" => "10"
+          })
+        )
 
       assert page.page_number == 1
       assert page.page_size == 10
       assert Enum.map(page.entries, & &1.id) == [project.id]
     end
 
-    test "list_projects_for_admin/1 falls back to safe defaults for invalid params" do
+    test "list_all_projects/1 falls back to safe defaults for invalid params" do
       project = insert(:project, name: "safe-project")
 
       page =
-        Projects.list_projects_for_admin(%{
-          "sort" => "drop table projects",
-          "dir" => "sideways",
-          "page" => "0",
-          "page_size" => "1000"
-        })
+        Projects.list_all_projects(
+          AdminSearchParams.new(%{
+            "sort_by" => "drop table projects",
+            "sort_direction" => "sideways",
+            "page" => "0",
+            "page_size" => "1000"
+          })
+        )
 
       assert page.page_number == 1
       assert page.page_size <= 100

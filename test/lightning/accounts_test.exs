@@ -12,6 +12,7 @@ defmodule Lightning.AccountsTest do
   alias Lightning.CredentialsFixtures
   alias Lightning.Projects
   alias Lightning.Accounts
+  alias Lightning.Accounts.AdminSearchParams
   alias Lightning.Projects.ProjectUser
 
   import Lightning.AccountsFixtures
@@ -98,7 +99,7 @@ defmodule Lightning.AccountsTest do
     assert [%{id: ^user_id}] = Accounts.list_users()
   end
 
-  describe "list_users_for_admin/1" do
+  describe "list_all_users/1" do
     test "returns a paginated, searchable, sortable users page" do
       insert(:user,
         first_name: "Alice",
@@ -119,13 +120,15 @@ defmodule Lightning.AccountsTest do
       )
 
       page =
-        Accounts.list_users_for_admin(%{
-          "filter" => "bo",
-          "sort" => "email",
-          "dir" => "asc",
-          "page" => "1",
-          "page_size" => "10"
-        })
+        Accounts.list_all_users(
+          AdminSearchParams.new(%{
+            "search_term" => "bo",
+            "sort_by" => "email",
+            "sort_direction" => "asc",
+            "page" => "1",
+            "page_size" => "10"
+          })
+        )
 
       assert page.page_number == 1
       assert page.page_size == 10
@@ -136,12 +139,14 @@ defmodule Lightning.AccountsTest do
       insert(:user, email: "fallback.admin@example.com")
 
       page =
-        Accounts.list_users_for_admin(%{
-          "sort" => "not_a_column",
-          "dir" => "boom",
-          "page" => "-10",
-          "page_size" => "1000"
-        })
+        Accounts.list_all_users(
+          AdminSearchParams.new(%{
+            "sort_by" => "not_a_column",
+            "sort_direction" => "boom",
+            "page" => "-10",
+            "page_size" => "1000"
+          })
+        )
 
       assert page.page_number == 1
       assert page.page_size <= 100

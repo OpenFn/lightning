@@ -63,31 +63,13 @@ defmodule LightningWeb.UserLive.Components do
           >
             Email
           </.th>
-          <.th
-            sortable={true}
-            sort_by="role"
-            active={@sort_key == "role"}
-            sort_direction={@sort_direction}
-            {if @target, do: [phx_target: @target], else: []}
-          >
+          <.th>
             Role*
           </.th>
-          <.th
-            sortable={true}
-            sort_by="enabled"
-            active={@sort_key == "enabled"}
-            sort_direction={@sort_direction}
-            {if @target, do: [phx_target: @target], else: []}
-          >
+          <.th>
             Enabled?
           </.th>
-          <.th
-            sortable={true}
-            sort_by="support_user"
-            active={@sort_key == "support_user"}
-            sort_direction={@sort_direction}
-            {if @target, do: [phx_target: @target], else: []}
-          >
+          <.th>
             Support?
           </.th>
           <.th

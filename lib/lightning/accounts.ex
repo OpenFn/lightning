@@ -116,16 +116,14 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Returns a paginated list of users for the superuser admin table with
+  Returns a paginated list of users for the superuser settings table with
   server-side filtering and sorting.
   """
-  @spec list_users_for_admin(map()) :: Scrivener.Page.t()
-  def list_users_for_admin(params \\ %{}) do
-    params = AdminSearchParams.new(params)
-
+  @spec list_all_users(AdminSearchParams.t()) :: Scrivener.Page.t()
+  def list_all_users(%AdminSearchParams{} = params) do
     User
-    |> filter_admin_users(params.filter)
-    |> order_admin_users(params.sort, params.dir)
+    |> search_users_query(params.search_term)
+    |> sort_users_query(params.sort_by, params.sort_direction)
     |> Repo.paginate(AdminSearchParams.pagination_opts(params))
   end
 
@@ -175,10 +173,10 @@ defmodule Lightning.Accounts do
     if User.valid_password?(user, password), do: user
   end
 
-  defp filter_admin_users(query, ""), do: query
+  defp search_users_query(query, ""), do: query
 
-  defp filter_admin_users(query, filter) do
-    search = "%#{filter}%"
+  defp search_users_query(query, search_term) do
+    search = "%#{search_term}%"
 
     where(
       query,
@@ -190,32 +188,21 @@ defmodule Lightning.Accounts do
     )
   end
 
-  defp order_admin_users(query, "enabled", "asc"),
-    do: order_by(query, [u], desc: u.disabled)
-
-  defp order_admin_users(query, "enabled", "desc"),
-    do: order_by(query, [u], asc: u.disabled)
-
-  defp order_admin_users(query, "scheduled_deletion", "asc"),
+  defp sort_users_query(query, "scheduled_deletion", "asc"),
     do: order_by(query, [u], asc_nulls_last: u.scheduled_deletion)
 
-  defp order_admin_users(query, "scheduled_deletion", "desc"),
-    do: order_by(query, [u], desc_nulls_first: u.scheduled_deletion)
+  defp sort_users_query(query, "scheduled_deletion", "desc"),
+    do: order_by(query, [u], desc_nulls_last: u.scheduled_deletion)
 
-  defp order_admin_users(query, "role", dir) do
-    direction = dir_to_atom(dir)
-    order_by(query, [u], [{^direction, fragment("?::text", u.role)}])
-  end
-
-  defp order_admin_users(query, sort, dir) do
-    direction = dir_to_atom(dir)
-    sort_field = String.to_existing_atom(sort)
+  defp sort_users_query(query, sort_by, sort_direction) do
+    direction = sort_direction_to_atom(sort_direction)
+    sort_field = String.to_existing_atom(sort_by)
 
     order_by(query, [u], [{^direction, field(u, ^sort_field)}])
   end
 
-  defp dir_to_atom("asc"), do: :asc
-  defp dir_to_atom("desc"), do: :desc
+  defp sort_direction_to_atom("asc"), do: :asc
+  defp sort_direction_to_atom("desc"), do: :desc
 
   @doc """
   Gets a single user.
