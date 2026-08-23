@@ -37,6 +37,8 @@ defmodule Lightning.Accounts.AdminSearchParams do
     %__MODULE__{}
     |> cast(params, [:search_term, :sort_by, :sort_direction, :page, :page_size])
     |> update_change(:search_term, &trim_search_term/1)
+    |> drop_invalid_cast(:page)
+    |> drop_invalid_cast(:page_size)
     |> ensure_allowed(:sort_by, @allowed_sorts, @default_sort)
     |> ensure_allowed(:sort_direction, ~w(asc desc), "asc")
     |> ensure_positive_int(:page, @default_page)
@@ -71,6 +73,22 @@ defmodule Lightning.Accounts.AdminSearchParams do
 
   defp trim_search_term(nil), do: ""
   defp trim_search_term(term), do: String.trim(term)
+
+  # cast/3 records an "is invalid" error for values the field type rejects
+  # (e.g. page=abc). Dropping the change lets get_field/2 fall back to the
+  # schema default, so a hand-edited URL degrades to page 1 instead of raising
+  # through apply_action!/2.
+  defp drop_invalid_cast(changeset, field) do
+    if Keyword.has_key?(changeset.errors, field) do
+      %{
+        changeset
+        | errors: Keyword.delete(changeset.errors, field),
+          valid?: true
+      }
+    else
+      changeset
+    end
+  end
 
   defp ensure_allowed(changeset, field, allowed, default) do
     value = get_field(changeset, field)

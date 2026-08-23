@@ -79,6 +79,53 @@ defmodule Lightning.ProjectsTest do
       assert Enum.any?(page.entries, fn entry -> entry.id == project.id end)
     end
 
+    test "list_all_projects/1 treats LIKE wildcards in search_term literally" do
+      insert(:project, name: "percent%project")
+      insert(:project, name: "ordinary-project")
+
+      page =
+        Projects.list_all_projects(
+          AdminSearchParams.new(%{"search_term" => "percent%"})
+        )
+
+      assert Enum.map(page.entries, & &1.name) == ["percent%project"]
+    end
+
+    test "list_all_projects/1 paging is deterministic for tied sort keys" do
+      for i <- 1..12 do
+        padded = String.pad_leading(Integer.to_string(i), 2, "0")
+
+        insert(:project,
+          description: "tied description",
+          name: "tied-#{padded}"
+        )
+      end
+
+      first_page =
+        Projects.list_all_projects(
+          AdminSearchParams.new(%{
+            "sort_by" => "description",
+            "page_size" => "10"
+          })
+        )
+
+      second_page =
+        Projects.list_all_projects(
+          AdminSearchParams.new(%{
+            "sort_by" => "description",
+            "page" => "2",
+            "page_size" => "10"
+          })
+        )
+
+      first_ids = Enum.map(first_page.entries, & &1.id)
+      second_ids = Enum.map(second_page.entries, & &1.id)
+
+      assert length(first_ids) == 10
+      assert length(second_ids) == 2
+      refute Enum.any?(first_ids, &(&1 in second_ids))
+    end
+
     test "list_project_credentials/1 returns all project_credentials for a project" do
       user = insert(:user)
       project = insert(:project, project_users: [%{user_id: user.id}])

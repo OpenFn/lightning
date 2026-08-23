@@ -216,7 +216,7 @@ defmodule Lightning.Accounts do
   defp search_users_query(query, ""), do: query
 
   defp search_users_query(query, search_term) do
-    search = "%#{search_term}%"
+    search = "%#{escape_like_pattern(search_term)}%"
 
     where(
       query,
@@ -228,17 +228,21 @@ defmodule Lightning.Accounts do
     )
   end
 
+  # Postgres treats % _ and \ as LIKE metacharacters. Escape them so a term
+  # typed by a superuser matches literally, like the previous in-memory filter.
+  defp escape_like_pattern(term), do: String.replace(term, ~r{[\\%_]}, "\\\\\\0")
+
   defp sort_users_query(query, "scheduled_deletion", "asc"),
-    do: order_by(query, [u], asc_nulls_last: u.scheduled_deletion)
+    do: order_by(query, [u], asc_nulls_last: u.scheduled_deletion, asc: u.id)
 
   defp sort_users_query(query, "scheduled_deletion", "desc"),
-    do: order_by(query, [u], desc_nulls_last: u.scheduled_deletion)
+    do: order_by(query, [u], desc_nulls_last: u.scheduled_deletion, asc: u.id)
 
   defp sort_users_query(query, sort_by, sort_direction) do
     direction = sort_direction_to_atom(sort_direction)
     sort_field = String.to_existing_atom(sort_by)
 
-    order_by(query, [u], [{^direction, field(u, ^sort_field)}])
+    order_by(query, [u], [{^direction, field(u, ^sort_field)}, asc: u.id])
   end
 
   defp sort_direction_to_atom("asc"), do: :asc

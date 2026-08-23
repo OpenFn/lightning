@@ -300,7 +300,7 @@ defmodule Lightning.Projects do
   defp search_projects_query(query, ""), do: query
 
   defp search_projects_query(query, search_term) do
-    search = "%#{search_term}%"
+    search = "%#{escape_like_pattern(search_term)}%"
 
     where(
       query,
@@ -314,21 +314,34 @@ defmodule Lightning.Projects do
     )
   end
 
+  # Postgres treats % _ and \ as LIKE metacharacters. Escape them so a term
+  # typed by a superuser matches literally, like the previous in-memory filter.
+  defp escape_like_pattern(term), do: String.replace(term, ~r{[\\%_]}, "\\\\\\0")
+
   defp sort_projects_query(query, "scheduled_deletion", "asc"),
-    do: order_by(query, [p, _pu, _owner], asc_nulls_last: p.scheduled_deletion)
+    do:
+      order_by(query, [p, _pu, _owner],
+        asc_nulls_last: p.scheduled_deletion,
+        asc: p.id
+      )
 
   defp sort_projects_query(query, "scheduled_deletion", "desc"),
-    do: order_by(query, [p, _pu, _owner], desc_nulls_last: p.scheduled_deletion)
+    do:
+      order_by(query, [p, _pu, _owner],
+        desc_nulls_last: p.scheduled_deletion,
+        asc: p.id
+      )
 
   defp sort_projects_query(query, "owner", sort_direction) do
     direction = sort_direction_to_atom(sort_direction)
 
     order_by(
       query,
-      [_p, _pu, owner],
+      [p, _pu, owner],
       [
         {^direction,
-         fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name)}
+         fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name)},
+        asc: p.id
       ]
     )
   end
@@ -337,7 +350,10 @@ defmodule Lightning.Projects do
     direction = sort_direction_to_atom(sort_direction)
     sort_field = String.to_existing_atom(sort_by)
 
-    order_by(query, [p, _pu, _owner], [{^direction, field(p, ^sort_field)}])
+    order_by(query, [p, _pu, _owner], [
+      {^direction, field(p, ^sort_field)},
+      asc: p.id
+    ])
   end
 
   defp sort_direction_to_atom("asc"), do: :asc

@@ -152,6 +152,60 @@ defmodule Lightning.AccountsTest do
       assert page.page_size <= 100
       assert is_list(page.entries)
     end
+
+    test "treats LIKE wildcards in search_term literally" do
+      insert(:user, first_name: "Ulanda", email: "ulanda@example.com")
+      insert(:user, first_name: "Uma", email: "uma@example.com")
+      insert(:user, first_name: "U_a", email: "underscore@example.com")
+
+      # "_" is a single-character wildcard in SQL LIKE. Escaped, "u_a" must
+      # match only the user whose name literally contains "u_a", never
+      # "ulanda" or "uma".
+      page =
+        Accounts.list_all_users(AdminSearchParams.new(%{"search_term" => "u_a"}))
+
+      assert Enum.map(page.entries, & &1.email) == ["underscore@example.com"]
+
+      # A lone "%" would otherwise match every row.
+      page =
+        Accounts.list_all_users(AdminSearchParams.new(%{"search_term" => "%"}))
+
+      assert page.entries == []
+    end
+
+    test "paging is deterministic for tied sort keys" do
+      for i <- 1..12 do
+        insert(:user,
+          first_name: "Tied",
+          last_name: "Name",
+          email: "tied#{i}@example.com"
+        )
+      end
+
+      first_page =
+        Accounts.list_all_users(
+          AdminSearchParams.new(%{
+            "sort_by" => "first_name",
+            "page_size" => "10"
+          })
+        )
+
+      second_page =
+        Accounts.list_all_users(
+          AdminSearchParams.new(%{
+            "sort_by" => "first_name",
+            "page" => "2",
+            "page_size" => "10"
+          })
+        )
+
+      first_ids = Enum.map(first_page.entries, & &1.id)
+      second_ids = Enum.map(second_page.entries, & &1.id)
+
+      assert length(first_ids) == 10
+      assert length(second_ids) == 2
+      refute Enum.any?(first_ids, &(&1 in second_ids))
+    end
   end
 
   test "list_api_token/1 returns all user tokens" do
