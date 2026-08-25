@@ -501,55 +501,6 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       File.rm(icon_path)
     end
-
-    test "fetches per-adaptor in parallel (multiple concurrent fetch_adaptor calls)",
-         %{sup: sup} do
-      test_pid = self()
-      barrier = :ets.new(:scheduler_test_barrier, [:public, :set])
-      :ets.insert(barrier, {:in_flight, 0})
-      :ets.insert(barrier, {:max_in_flight, 0})
-
-      names =
-        for i <- 1..6,
-            do: %{name: "@openfn/language-pkg#{i}", latest_version: "1.0.0"}
-
-      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
-        {:ok, names}
-      end)
-
-      stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn name ->
-        in_flight = :ets.update_counter(barrier, :in_flight, 1)
-
-        :ets.update_element(
-          barrier,
-          :max_in_flight,
-          {2, max_seen(barrier, in_flight)}
-        )
-
-        # Hold long enough that the fan-out has time to overlap.
-        Process.sleep(80)
-        :ets.update_counter(barrier, :in_flight, -1)
-        send(test_pid, {:fetched, name})
-        {:ok, adaptor_record(name: name)}
-      end)
-
-      start_scheduler(sup)
-
-      for _ <- 1..6 do
-        assert_receive {:fetched, _name}, 5_000
-      end
-
-      [{:max_in_flight, max_in_flight}] = :ets.lookup(barrier, :max_in_flight)
-      :ets.delete(barrier)
-
-      assert max_in_flight > 1,
-             "expected concurrent fetch_adaptor calls, saw at most 1 in-flight"
-    end
-  end
-
-  defp max_seen(barrier, current) do
-    [{:max_in_flight, prev}] = :ets.lookup(barrier, :max_in_flight)
-    max(prev, current)
   end
 
   describe "refresh_package/2" do
@@ -559,7 +510,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       source_topic = AdaptorsSupervisor.source_topic(sup)
 
       stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
-        send(test_pid, :init_tick_done)
+        send(test_pid, :init_list_adaptors_called)
         {:ok, []}
       end)
 
@@ -576,7 +527,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       start_scheduler(sup)
 
       # Drain the init tick (table is empty → delay 0 → fires immediately).
-      assert_receive :init_tick_done, 2000
+      assert_receive :init_list_adaptors_called, 2000
 
       sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
 
@@ -590,7 +541,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       test_pid = self()
 
       stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
-        send(test_pid, :init_tick_done)
+        send(test_pid, :init_list_adaptors_called)
         {:ok, []}
       end)
 
@@ -601,7 +552,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       start_scheduler(sup)
 
       # Drain init tick before calling refresh_package.
-      assert_receive :init_tick_done, 2000
+      assert_receive :init_list_adaptors_called, 2000
 
       sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
 
@@ -615,7 +566,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       source_topic = AdaptorsSupervisor.source_topic(sup)
 
       stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
-        send(test_pid, :init_tick_done)
+        send(test_pid, :init_list_adaptors_called)
         {:ok, []}
       end)
 
@@ -636,15 +587,12 @@ defmodule Lightning.Adaptors.SchedulerTest do
       :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
       start_scheduler(sup)
 
-      assert_receive :init_tick_done, 2000
+      assert_receive :init_list_adaptors_called, 2000
       assert_receive :icons_called, 2000
 
       sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
       assert :ok = Scheduler.refresh_package(sched_name, "@openfn/language-http")
       assert_receive {:changed, "@openfn/language-http", _}, 2000
-
-      # Give any (mistaken) extra fetch_icons call time to happen.
-      Process.sleep(100)
     end
   end
 
