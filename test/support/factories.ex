@@ -4,6 +4,16 @@ defmodule Lightning.Factories do
 
   alias Lightning.Workflows.Snapshot
 
+  def adaptor_factory do
+    %Lightning.Adaptors.Repo.Adaptor{
+      name: sequence(:adaptor_name, &"@openfn/language-test-#{&1}"),
+      source: :npm,
+      latest_version: "1.0.0",
+      checked_at: DateTime.utc_now(),
+      schema_data: nil
+    }
+  end
+
   def webhook_auth_method_factory do
     %Lightning.Workflows.WebhookAuthMethod{
       project: build(:project),
