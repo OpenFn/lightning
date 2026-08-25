@@ -334,6 +334,14 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "create_credential/1" do
+    setup do
+      # `Credentials.create_credential/1` calls `get_schema/1` which is
+      # now routed through `Lightning.Adaptors.schema/1`. Seed the
+      # `postgresql` fixture (used by the body-casting test below).
+      Lightning.AdaptorTestHelpers.seed_credential_schema("postgresql")
+      :ok
+    end
+
     test "fails if another cred exists with the same name for the same user" do
       user = insert(:user)
 
@@ -491,6 +499,11 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "update_credential/2" do
+    setup do
+      Lightning.AdaptorTestHelpers.seed_credential_schema("postgresql")
+      :ok
+    end
+
     test "updates an OAuth credential with new scopes" do
       user = insert(:user)
       oauth_client = insert(:oauth_client)
