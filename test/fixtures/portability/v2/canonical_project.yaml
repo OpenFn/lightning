@@ -1,0 +1,72 @@
+id: a-test-project
+name: a-test-project
+schema_version: '4.0'
+description: |
+  This is only a test
+collections:
+  - cannonical-collection
+credentials:
+  - name: new credential
+    owner: cannonical-user@lightning.com
+workflows:
+  - id: workflow-1
+    name: workflow 1
+    start: webhook
+    steps:
+      - id: webhook
+        name: webhook
+        enabled: true
+        type: webhook
+        webhook_reply: after_completion
+        next:
+          webhook-job:
+            condition: always
+      - id: webhook-job
+        name: webhook job
+        adaptor: '@openfn/language-common@latest'
+        expression: |
+          console.log('webhook job')
+          fn(state => state)
+        configuration: cannonical-user@lightning.com|new credential
+        next:
+          on-fail:
+            condition: on_job_failure
+          on-success:
+            condition: on_job_success
+      - id: on-fail
+        name: on fail
+        adaptor: '@openfn/language-common@latest'
+        expression: |
+          console.log('on fail')
+          fn(state => state)
+      - id: on-success
+        name: on success
+        adaptor: '@openfn/language-common@latest'
+        expression: |
+          console.log('hello!');
+  - id: workflow-2
+    name: workflow 2
+    start: cron
+    steps:
+      - id: cron
+        name: cron
+        enabled: true
+        type: cron
+        cron_expression: '0 23 * * *'
+        cron_cursor: some-cronjob
+        next:
+          some-cronjob:
+            condition: always
+      - id: some-cronjob
+        name: some cronjob
+        adaptor: '@openfn/language-common@latest'
+        expression: |
+          console.log('hello!');
+        next:
+          on-cron-failure:
+            condition: on_job_success
+      - id: on-cron-failure
+        name: on cron failure
+        adaptor: '@openfn/language-common@latest'
+        expression: |
+          console.log('hello!');

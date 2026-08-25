@@ -17,7 +17,7 @@ defmodule LightningWeb.DownloadsController do
              conn.assigns.current_user,
              project
            ) do
-      {:ok, yaml} = Projects.export_project(:yaml, id)
+      {:ok, yaml} = Projects.export_project(:yaml, id, nil, :v2)
 
       conn
       |> put_resp_content_type("text/yaml")

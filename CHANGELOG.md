@@ -31,6 +31,8 @@ and this project adheres to
   less before seeing output. Lightning handles the several streaming event types
   Apollo sends, including status updates.
   [#4969](https://github.com/OpenFn/lightning/pull/4969)
+- Update Project and Workflow yaml exports to match the v4 portability spec
+  [#4718](https://github.com/OpenFn/lightning/issues/4718)
 
 ### Fixed
 
@@ -102,6 +104,10 @@ and this project adheres to
   security update, which no longer accepts the atom-labelled multipart parts
   that `google_gax` builds.
   [#5049](https://github.com/OpenFn/lightning/issues/5049)
+
+- GitHub sync now prevents two projects in the same project tree (root,
+  sandboxes, siblings, and cousins) from claiming the same `(repo, branch)`
+  pair. [#4727](https://github.com/OpenFn/lightning/issues/4727)
 
 ## [2.18.0-pre] - 2026-07-31
 

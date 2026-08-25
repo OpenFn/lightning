@@ -25,17 +25,26 @@ defmodule Lightning.VersionControl do
   defdelegate subscribe(user), to: Events
 
   @doc """
-  Creates a connection between a project and a github repo
+  Creates a connection between a project and a github repo.
+
+  The `(root_project_id, repo, branch)` uniqueness constraint on
+  `project_repo_connections` is the source of truth: two concurrent inserts
+  for the same project family + (repo, branch) cannot both succeed even at
+  READ COMMITTED isolation. The constraint violation is translated back into
+  `:branch_used_in_project_tree` for callers.
   """
   @spec create_github_connection(map(), User.t()) ::
           {:ok, ProjectRepoConnection.t()}
-          | {:error, Ecto.Changeset.t() | UsageLimiting.message()}
+          | {:error,
+             Ecto.Changeset.t()
+             | UsageLimiting.message()
+             | :branch_used_in_project_tree}
   def create_github_connection(attrs, user) do
     changeset =
       ProjectRepoConnection.create_changeset(%ProjectRepoConnection{}, attrs)
 
     Repo.transact(fn ->
-      with {:ok, repo_connection} <- Repo.insert(changeset),
+      with {:ok, repo_connection} <- insert_repo_connection(changeset),
            {:ok, _audit} <-
              repo_connection
              |> Audit.repo_connection(:created, user)
@@ -48,6 +57,20 @@ defmodule Lightning.VersionControl do
         {:ok, repo_connection}
       end
     end)
+  end
+
+  defp insert_repo_connection(changeset) do
+    case Repo.insert(changeset) do
+      {:ok, repo_connection} ->
+        {:ok, repo_connection}
+
+      {:error, %Ecto.Changeset{} = failed} ->
+        if ProjectRepoConnection.tree_unique_violation?(failed) do
+          {:error, :branch_used_in_project_tree}
+        else
+          {:error, failed}
+        end
+    end
   end
 
   @spec reconfigure_github_connection(ProjectRepoConnection.t(), map(), User.t()) ::
