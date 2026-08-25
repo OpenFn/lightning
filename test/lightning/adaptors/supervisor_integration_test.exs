@@ -1,10 +1,10 @@
 defmodule Lightning.Adaptors.SupervisorIntegrationTest do
   @moduledoc """
-  Integration-level tests for `Lightning.Adaptors.Supervisor`: prove all
-  Phase A children boot under a single `start_supervised!` call and that
-  the `:rest_for_one` cascade pins §6.5a (Invalidator subscribes at init;
-  if Cachex restarts without Invalidator restarting, the cache goes
-  stale).
+  Integration-level tests for `Lightning.Adaptors.Supervisor`: prove the full
+  child list boots under a single `start_supervised!` call, and that the
+  `:rest_for_one` cascade restarts Invalidator when Cachex restarts (§6.5a).
+  Invalidator subscribes at init, so without that restart the cache would go
+  stale.
   """
 
   use Lightning.DataCase, async: false

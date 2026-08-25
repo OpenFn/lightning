@@ -6,8 +6,7 @@ defmodule Lightning.Adaptors.Repo.AdaptorVersion do
   `deprecated`).
 
   Belongs to `Lightning.Adaptors.Repo.Adaptor` and cascade-deletes with
-  its parent. Mirrors `Lightning.Adaptors.Strategy.version_record` (see
-  §6.1 and §6.4 in `.context/lightning/adaptors/REWRITE-2026-05.md`).
+  its parent. Mirrors `Lightning.Adaptors.Strategy.version_record`.
   """
 
   use Ecto.Schema

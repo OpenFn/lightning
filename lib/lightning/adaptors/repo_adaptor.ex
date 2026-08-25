@@ -4,9 +4,8 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
   metadata projection used by the picker and Scheduler.
 
   Source-tagged via `:source` (`:npm | :local`) so the same package
-  name can coexist across sources; the unique index is `[:name, :source]`
-  (see §4.4 source-tagging invariant in
-  `.context/lightning/adaptors/REWRITE-2026-05.md`).
+  name can coexist across sources; the unique index is
+  `[:name, :source]`.
 
   Mirrors `Lightning.Adaptors.Strategy.adaptor_record` minus `:versions`,
   which lives on `Lightning.Adaptors.Repo.AdaptorVersion`.

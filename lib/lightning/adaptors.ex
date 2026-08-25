@@ -6,11 +6,12 @@ defmodule Lightning.Adaptors do
   `Lightning.Adaptors.Scheduler`, and version resolution to
   `Lightning.Adaptors.Repo`. No logic lives here.
 
-  All functions come in a dual-arity shape: the zero-/single-arg form
+  Most functions come in a dual-arity shape: the zero-/single-arg form
   passes the compile-time default supervisor name `@sup`; the extra-arity
   form accepts an explicit supervisor name for test isolation.
-  `resolve_version/2` is the single exception — it has no sup arity because
-  it reads the global Repo directly.
+  `resolve_version/2`, `catalogue/0`, and `catalogue_stamp/0` are
+  exceptions — they read the global Repo directly, not a running
+  supervisor process, so there is nothing to swap for test isolation.
   """
 
   alias Lightning.Adaptors.Config
@@ -50,6 +51,20 @@ defmodule Lightning.Adaptors do
   @spec icon(atom(), String.t(), :square | :rectangle) ::
           {:ok, Path.t()} | {:error, term()}
   def icon(sup, pkg, shape), do: Store.icon(sup, pkg, shape)
+
+  @doc """
+  Full catalogue for the active source: every adaptor's `name`,
+  `latest_version`, `repository`, icon fields, and full version list.
+  Reads `Repo` directly, like `resolve_version/2`.
+  """
+  @spec catalogue() :: [Repo.catalogue_entry()]
+  def catalogue, do: Repo.catalogue(AdaptorsSupervisor.source(@sup))
+
+  @doc """
+  ETag basis for `catalogue/0` — see `Repo.catalogue_stamp/1`.
+  """
+  @spec catalogue_stamp() :: {DateTime.t() | nil, non_neg_integer()}
+  def catalogue_stamp, do: Repo.catalogue_stamp(AdaptorsSupervisor.source(@sup))
 
   @spec resolve_version(String.t(), String.t()) ::
           {:ok, String.t()} | {:error, :not_found}

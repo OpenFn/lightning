@@ -73,14 +73,11 @@ Application.put_env(:lightning, Lightning.Extensions,
 )
 
 # Pin the `Lightning.Adaptors.IconCache` on-disk path to a per-OS-PID
-# directory and wipe it at startup so:
-#   1. Each `mix test` invocation begins with an empty icon cache —
-#      `System.unique_integer/1` resets per-VM and recycles, so without
-#      this, leftover files from a prior run can mask a Mox expectation
-#      by short-circuiting `IconCache.cached?/4`.
-#   2. Concurrent `mix test` invocations (different tmux panes, parallel
-#      CI shards) use distinct directories and never collide — each BEAM
-#      has its own OS PID.
+# directory and wipe it at startup. Without the wipe, leftover files
+# from a prior run can mask a Mox expectation by short-circuiting
+# `IconCache.cached?/4`, since `System.unique_integer/1` resets per-VM
+# and recycles. Keying by OS PID also keeps concurrent `mix test` runs
+# (parallel CI shards, separate tmux panes) from colliding.
 icon_dir =
   Path.join([
     System.tmp_dir!(),

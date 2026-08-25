@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppForm } from '#/collaborative-editor/components/form';
 import { useCredentialModal } from '#/collaborative-editor/contexts/CredentialModalContext';
-import { useProjectAdaptors } from '#/collaborative-editor/hooks/useAdaptors';
+import { useAdaptorsInUse } from '#/collaborative-editor/hooks/useAdaptors';
 import {
   useCredentials,
   useCredentialsCommands,
@@ -55,7 +55,7 @@ export function JobForm({ job }: JobFormProps) {
   const { updateJob } = useWorkflowActions();
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { requestCredentials } = useCredentialsCommands();
-  const { projectAdaptors, allAdaptors } = useProjectAdaptors();
+  const { adaptorsInUse, allAdaptors } = useAdaptorsInUse();
   const { isReadOnly } = useWorkflowReadOnly();
 
   // Modal state for adaptor configuration
@@ -395,7 +395,7 @@ export function JobForm({ job }: JobFormProps) {
         job={job}
         updateJob={updateJob}
         setIsConfigureModalOpen={setIsConfigureModalOpen}
-        projectAdaptors={projectAdaptors}
+        adaptorsInUse={adaptorsInUse}
         onAdaptorChangeStart={syncAdaptorToForm}
       />
     </div>

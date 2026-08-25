@@ -209,6 +209,34 @@ Remember to re-generate the production schemas when you've finished, or else
 your local app will use the local schema versions until `install_schemas` is
 next run!
 
+### Caching the adaptor upstreams
+
+Every adaptor registry refresh (background scheduler tick, or a manual
+`mix lightning.refresh_adaptors`) makes a handful of npm, jsDelivr and GitHub
+requests per changed package, which gets chatty fast if you're iterating on the
+subsystem or just running `refresh_adaptors` repeatedly by hand. A local caching
+reverse proxy under `tooling/adaptor_cache/` makes the second and every later
+run local, with no network needed at all.
+
+```sh
+bin/adaptor_cache up      # start the proxy (first time must be online)
+bin/adaptor_cache check   # prove all three upstreams cache correctly
+```
+
+Then point Lightning at it:
+
+```sh
+export ADAPTOR_REGISTRY_URL=http://localhost:4874/npm
+export ADAPTOR_JSDELIVR_URL=http://localhost:4874/jsdelivr
+export ADAPTOR_GITHUB_URL=http://localhost:4874/github
+```
+
+See `tooling/adaptor_cache/README.md` for the full command list, how to read the
+cache logs, and the caveats. **Never** put this URL in your global `~/.npmrc`:
+it proxies npm closely enough that `npm install` would appear to work, while
+resolving against a week-stale packument and writing `localhost:4874` into
+`package-lock.json`.
+
 ### Problems with Apple Silicon
 
 You might run into some errors when running the docker containers on Apple
