@@ -54,6 +54,13 @@ and this project adheres to
   warns which triggers and channels will lose authentication.
 - Deleting a webhook auth method now logs each trigger and channel it was
   detached from, in addition to the deletion itself.
+- Adaptors now come from Lightning's own registry instead of being fetched from
+  npm on demand. A background scheduler keeps package metadata, credential
+  schemas and adaptor icons in Postgres, and the collaborative editor receives
+  them over the workflow channel, so jobs show their real adaptor icons rather
+  than first-letter placeholders. Superusers can force a refresh from Settings →
+  Maintenance, or by running `mix lightning.refresh_adaptors`.
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
 
 ### Changed
 
@@ -116,6 +123,8 @@ and this project adheres to
         '[]'::jsonb)
   WHERE triggers::text LIKE '%kafka_configuration%';
   ```
+- Credential schemas are read from the adaptors registry rather than the on-disk
+  `schemas_path`. [#4801](https://github.com/OpenFn/lightning/pull/4801)
 
 ### Fixed
 

@@ -26,7 +26,7 @@ import * as dataclipApi from '../../api/dataclips';
 import { RENDER_MODES } from '../../constants/panel';
 import { useCredentialModal } from '../../contexts/CredentialModalContext';
 import { useMonacoRef } from '../../contexts/MonacoRefContext';
-import { useProjectAdaptors } from '../../hooks/useAdaptors';
+import { useAdaptorsInUse } from '../../hooks/useAdaptors';
 import {
   useCredentials,
   useCredentialsCommands,
@@ -395,7 +395,7 @@ export function FullScreenIDE({
 
   const { projectCredentials, keychainCredentials } = useCredentials();
   const { requestCredentials } = useCredentialsCommands();
-  const { projectAdaptors, allAdaptors } = useProjectAdaptors();
+  const { adaptorsInUse, allAdaptors } = useAdaptorsInUse();
   const { updateJob } = useWorkflowActions();
 
   // Credential modal is managed by the context
@@ -410,19 +410,19 @@ export function FullScreenIDE({
   // to be used by components that can't make use of 'latest'
   const currJobAdaptor = useMemo(() => {
     if (!currentJob?.adaptor) {
-      const latestCommon = projectAdaptors.find(
+      const latestCommon = adaptorsInUse.find(
         a => a.name === '@openfn/language-common'
       )?.versions?.[0]?.version;
       return `@openfn/language-common@${latestCommon || 'latest'}`;
     }
     const resolved = resolveAdaptor(currentJob.adaptor);
     if (resolved.version !== 'latest') return currentJob?.adaptor;
-    const latestVersion = projectAdaptors.find(a => a.name === resolved.package)
+    const latestVersion = adaptorsInUse.find(a => a.name === resolved.package)
       ?.versions?.[0]?.version;
     // If version not found, return original adaptor string
     if (!latestVersion) return currentJob.adaptor;
     return `${resolved.package}@${latestVersion}`;
-  }, [projectAdaptors, currentJob?.adaptor]);
+  }, [adaptorsInUse, currentJob?.adaptor]);
 
   // Run/Retry functionality for IDE Header
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
@@ -1356,7 +1356,7 @@ export function FullScreenIDE({
             job={currentJob}
             updateJob={updateJob}
             setIsConfigureModalOpen={setIsConfigureModalOpen}
-            projectAdaptors={projectAdaptors}
+            adaptorsInUse={adaptorsInUse}
           />
         </>
       )}

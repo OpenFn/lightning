@@ -22,11 +22,17 @@ export const AdaptorVersionSchema = z.object({
 /**
  * Single adaptor schema with all its versions
  */
+export const AdaptorIconUrlsSchema = z.object({
+  square: z.string().nullable(),
+  rectangle: z.string().nullable(),
+});
+
 export const AdaptorSchema = z.object({
   name: z.string(),
   versions: z.array(AdaptorVersionSchema),
   repo: z.string(),
   latest: z.string(),
+  icon_urls: AdaptorIconUrlsSchema,
 });
 
 /**
@@ -60,9 +66,6 @@ export interface AdaptorState {
   /** Current list of available adaptors */
   adaptors: AdaptorsList;
 
-  /** Project-specific adaptors used across workflows */
-  projectAdaptors: AdaptorsList;
-
   /** Loading state for initial fetch */
   isLoading: boolean;
 
@@ -79,9 +82,6 @@ export interface AdaptorState {
 export interface AdaptorCommands {
   /** Request adaptors list from server */
   requestAdaptors: () => Promise<void>;
-
-  /** Request project-specific adaptors from server */
-  requestProjectAdaptors: () => Promise<void>;
 
   /** Manually set adaptors (for testing/fallback) */
   setAdaptors: (adaptors: AdaptorsList) => void;
