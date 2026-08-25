@@ -123,6 +123,7 @@ defmodule Lightning.MixProject do
       # webtransport dep requires h2 ~> 0.10.4, so newer releases cannot resolve.
       {:hackney, "~> 4.6.0", override: true},
       {:heroicons, "~> 0.5.3"},
+      {:highlander_pg, "~> 1.0"},
       {:httpoison, "~> 3.0.0", override: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.6.0"},
@@ -149,7 +150,9 @@ defmodule Lightning.MixProject do
       {:phoenix_live_view, "~> 1.0.17"},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
-      {:postgrex, ">= 0.0.0"},
+      # highlander_pg 1.0.8 caps postgrex at ~> 0.21; it only issues advisory
+      # locks, so override rather than hold the rest of the app back.
+      {:postgrex, ">= 0.0.0", override: true},
       {:prom_ex, "~> 1.11.0"},
       {:rambo, "~> 0.3.4"},
       {:retry, "~> 0.18"},
