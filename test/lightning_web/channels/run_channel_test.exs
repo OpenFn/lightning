@@ -247,6 +247,18 @@ defmodule LightningWeb.RunChannelTest do
     setup :set_google_credential
     setup :create_socket_and_run
 
+    # `@latest` resolves via a direct `Repo.get_adaptor/2` read, so it's
+    # safe to seed here even though this file runs async: true.
+    setup do
+      insert(:adaptor,
+        name: "@openfn/language-common",
+        source: :npm,
+        latest_version: "1.6.2"
+      )
+
+      :ok
+    end
+
     test "fetch:plan success", %{
       socket: socket,
       run: run,

@@ -3,9 +3,7 @@ defmodule Lightning.Adaptors.NPM do
   Production implementation of `Lightning.Adaptors.Strategy` that talks
   to the public NPM registry and the OpenFn adaptors monorepo on GitHub.
 
-  Consolidates the legacy `Lightning.AdaptorRegistry`,
-  `Mix.Tasks.Lightning.InstallSchemas`, and
-  `Mix.Tasks.Lightning.InstallAdaptorIcons` into one stateless module:
+  Implements the four `Lightning.Adaptors.Strategy` callbacks:
 
     * `c:list_adaptors/0` — single search-API call returning
       `name + latest_version` for every `@openfn/language-*` package.

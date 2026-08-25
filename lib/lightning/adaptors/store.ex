@@ -13,8 +13,7 @@ defmodule Lightning.Adaptors.Store do
 
   Each cache key carries the active `:source` (`:npm | :local`) read via
   `Lightning.Adaptors.Supervisor.source/1`, so the same package name can
-  coexist across deployment modes without manual scrubbing (see §4.4 of
-  `.context/adaptors/REWRITE-2026-05.md`).
+  coexist across deployment modes without manual scrubbing.
 
   ## Commit vs ignore
 

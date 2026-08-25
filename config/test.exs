@@ -101,7 +101,7 @@ config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Test
 config :lightning, Lightning.AdaptorRegistry,
   use_cache: "test/fixtures/adaptor_registry_cache.json"
 
-# Phase A Adaptors.Supervisor config for test boot.
+# Adaptors.Supervisor config for test boot.
 #
 # - `:strategy` — the production `Lightning.Adaptors.Supervisor` mounted in
 #   `application.ex` would default to `Lightning.Adaptors.NPM` and try to

@@ -602,6 +602,40 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "adaptors NPM upstream URLs" do
+    test "default to the production upstreams when nothing is set" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      assert npm[:registry_url] == "https://registry.npmjs.org"
+      assert npm[:jsdelivr_url] == "https://cdn.jsdelivr.net"
+      assert npm[:github_url] == "https://raw.githubusercontent.com"
+      assert npm[:github_ref] == "main"
+    end
+
+    test "are overridden by the ADAPTOR_* env vars" do
+      Dotenvy.source([
+        %{
+          "ADAPTOR_REGISTRY_URL" => "http://localhost:4874/npm",
+          "ADAPTOR_JSDELIVR_URL" => "http://localhost:4874/jsdelivr",
+          "ADAPTOR_GITHUB_URL" => "http://localhost:4874/github",
+          "ADAPTOR_GITHUB_REF" => "some-feature-branch"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      assert npm[:registry_url] == "http://localhost:4874/npm"
+      assert npm[:jsdelivr_url] == "http://localhost:4874/jsdelivr"
+      assert npm[:github_url] == "http://localhost:4874/github"
+      assert npm[:github_ref] == "some-feature-branch"
+    end
+  end
+
   describe "per_workflow_claim_limit" do
     test "defaults to 50" do
       Dotenvy.source([%{}])

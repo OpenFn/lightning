@@ -337,8 +337,7 @@ defmodule Lightning.Adaptors.NPM.GitHubTest do
           %{"@openfn/language-http" => %{square: etag}}
         )
 
-      # explicit sentinel — distinct from "absent" (which would mean upstream
-      # had no such shape at all).
+      # Distinct from a missing key, which would mean upstream had no such asset at all.
       assert map["@openfn/language-http"][:square] == :not_modified
     end
 

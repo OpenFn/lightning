@@ -1,9 +1,8 @@
 defmodule Lightning.Adaptors.ChannelBroadcasterTest do
   @moduledoc """
-  Tests `:flush` via `Lightning.Adaptors.packages/1` (the 2-arity facade),
-  not `packages/0`, because each test spins up its own isolated supervisor
-  instance. The Batch 7 review should confirm that `/1` and `/0` are
-  behaviourally identical in production (both delegate to `Store.packages/1`).
+  Exercises `Lightning.Adaptors.ChannelBroadcaster` through its real
+  message interface: broadcasting `{:changed, name, source}` tuples onto
+  `:source_topic` and asserting what it forwards to `:client_topic`.
   """
 
   use ExUnit.Case, async: true
@@ -13,170 +12,101 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
   setup do
     sup = :"cb_test_#{System.unique_integer([:positive])}"
 
-    # The supervisor's :rest_for_one child list starts the
-    # ChannelBroadcaster automatically — registered under
-    # `channel_broadcaster_name(sup)`.
+    # :rest_for_one starts the ChannelBroadcaster automatically, registered
+    # under `channel_broadcaster_name(sup)`.
     start_supervised!(
       {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
     )
 
-    # Stop the auto-started Invalidator — these tests pre-populate the
-    # Cachex `{:packages, source}` key directly to exercise the
-    # ChannelBroadcaster's `:flush` path in isolation. The Invalidator
-    # subscribes to the same source_topic and would race the broadcaster
-    # by deleting the cached entry before the flush window expires.
-    :ok = Supervisor.terminate_child(sup, Lightning.Adaptors.Invalidator)
-
     source_topic = AdaptorsSupervisor.source_topic(sup)
     client_topic = AdaptorsSupervisor.client_topic(sup)
     cb_name = AdaptorsSupervisor.channel_broadcaster_name(sup)
-    cache = AdaptorsSupervisor.cache_name(sup)
-    source = AdaptorsSupervisor.source(sup)
-
-    packages = [%{name: "@openfn/language-http", latest_version: "1.0.0"}]
-    Cachex.put!(cache, {:packages, source}, {:ok, packages})
 
     :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, client_topic)
 
-    {:ok,
-     sup: sup,
-     cb_name: cb_name,
-     source_topic: source_topic,
-     cache: cache,
-     source: source,
-     packages: packages}
+    {:ok, cb_name: cb_name, source_topic: source_topic}
   end
 
-  describe "start_link/1" do
-    test "registers under the :name opt", %{cb_name: cb_name} do
-      assert is_pid(Process.whereis(cb_name))
-    end
+  defp changed(source_topic, name) do
+    Phoenix.PubSub.broadcast!(
+      Lightning.PubSub,
+      source_topic,
+      {:changed, name, :npm}
+    )
   end
 
-  describe "handle_info/2 - {:changed, ...}" do
-    test "first message in idle state arms the 250ms timer", %{
-      cb_name: cb_name,
+  describe "handle_info/2 - :flush" do
+    test "broadcasts just the changed adaptor's name", %{
       source_topic: source_topic
     } do
-      Phoenix.PubSub.broadcast!(
-        Lightning.PubSub,
-        source_topic,
-        {:changed, "pkg", :npm}
-      )
-
-      %{timer: timer} = :sys.get_state(cb_name)
-      assert is_reference(timer)
-    end
-
-    test "subsequent messages within the window are dropped — one broadcast per burst",
-         %{source_topic: source_topic, packages: packages} do
-      for _ <- 1..5 do
-        Phoenix.PubSub.broadcast!(
-          Lightning.PubSub,
-          source_topic,
-          {:changed, "pkg", :npm}
-        )
-      end
+      changed(source_topic, "@openfn/language-http")
 
       assert_receive %{
                        event: "adaptors_updated",
-                       payload: %{adaptors: ^packages}
+                       payload: %{names: ["@openfn/language-http"]}
+                     },
+                     500
+    end
+
+    test "two adaptors changing within one debounce window are both named in a single broadcast",
+         %{source_topic: source_topic} do
+      changed(source_topic, "@openfn/language-salesforce")
+      changed(source_topic, "@openfn/language-http")
+      # Duplicate: must not appear twice in the output.
+      changed(source_topic, "@openfn/language-http")
+
+      assert_receive %{
+                       event: "adaptors_updated",
+                       payload: %{
+                         names: [
+                           "@openfn/language-http",
+                           "@openfn/language-salesforce"
+                         ]
+                       }
                      },
                      500
 
       refute_receive %{event: "adaptors_updated"}, 100
-    end
 
-    test "timer resets to nil after :flush fires", %{
-      cb_name: cb_name,
-      source_topic: source_topic
-    } do
-      Phoenix.PubSub.broadcast!(
-        Lightning.PubSub,
-        source_topic,
-        {:changed, "pkg", :npm}
-      )
-
-      assert_receive %{event: "adaptors_updated"}, 500
-      %{timer: timer} = :sys.get_state(cb_name)
-      assert timer == nil
-    end
-  end
-
-  describe "handle_info/2 - :flush" do
-    test "broadcasts the envelope to client_topic with the correct shape", %{
-      source_topic: source_topic,
-      packages: packages
-    } do
-      Phoenix.PubSub.broadcast!(
-        Lightning.PubSub,
-        source_topic,
-        {:changed, "pkg", :npm}
-      )
+      # A second, separate burst must not still carry the first burst's
+      # names — the accumulator has to reset after :flush.
+      changed(source_topic, "@openfn/language-dhis2")
 
       assert_receive %{
                        event: "adaptors_updated",
-                       payload: %{adaptors: ^packages}
+                       payload: %{names: ["@openfn/language-dhis2"]}
                      },
                      500
-    end
-
-    test "broadcasts with empty adaptors list when packages returns {:ok, []}",
-         %{
-           cache: cache,
-           source: source,
-           source_topic: source_topic
-         } do
-      Cachex.put!(cache, {:packages, source}, {:ok, []})
-
-      Phoenix.PubSub.broadcast!(
-        Lightning.PubSub,
-        source_topic,
-        {:changed, "pkg", :npm}
-      )
-
-      assert_receive %{event: "adaptors_updated", payload: %{adaptors: []}}, 500
     end
   end
 
   describe "crash recovery" do
     test "supervisor restarts the GenServer; next {:changed} re-arms cleanly", %{
       cb_name: cb_name,
-      source_topic: source_topic,
-      packages: packages
+      source_topic: source_topic
     } do
       original_pid = Process.whereis(cb_name)
       assert is_pid(original_pid)
 
       ref = Process.monitor(original_pid)
 
-      # Arm the timer, then kill the process mid-burst.
-      Phoenix.PubSub.broadcast!(
-        Lightning.PubSub,
-        source_topic,
-        {:changed, "pkg", :npm}
-      )
+      changed(source_topic, "@openfn/language-http")
 
       Process.exit(original_pid, :kill)
 
-      # Confirm death before looking for the restarted process.
       assert_receive {:DOWN, ^ref, :process, ^original_pid, :killed}, 500
 
       new_pid = await_registered(cb_name)
       assert is_pid(new_pid)
       assert new_pid != original_pid
 
-      # The new instance starts with timer: nil — one more {:changed} opens a
-      # fresh 250ms window and produces a clean broadcast.
-      Phoenix.PubSub.broadcast!(
-        Lightning.PubSub,
-        source_topic,
-        {:changed, "pkg", :npm}
-      )
+      # The restarted GenServer starts with timer: nil and an empty
+      # names accumulator, so this reopens a fresh window.
+      changed(source_topic, "@openfn/language-http")
 
       assert_receive %{
                        event: "adaptors_updated",
-                       payload: %{adaptors: ^packages}
+                       payload: %{names: ["@openfn/language-http"]}
                      },
                      500
     end
@@ -188,12 +118,7 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
       task =
         Task.async(fn ->
           for _ <- 1..50 do
-            Phoenix.PubSub.broadcast!(
-              Lightning.PubSub,
-              source_topic,
-              {:changed, "pkg", :npm}
-            )
-
+            changed(source_topic, "@openfn/language-http")
             Process.sleep(10)
           end
         end)
@@ -204,8 +129,6 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
 
       count = drain_broadcasts()
 
-      # Leading-edge invariant: throttle produces some broadcasts (> 0)
-      # but far fewer than one per message (< 50).
       assert count > 0 and count < 50,
              "Expected leading-edge throttling (1..49), got #{count}"
     end

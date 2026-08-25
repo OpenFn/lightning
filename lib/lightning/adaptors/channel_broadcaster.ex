@@ -3,17 +3,15 @@ defmodule Lightning.Adaptors.ChannelBroadcaster do
   Burst-coalesced fan-out of adaptor changes to connected sessions.
 
   Subscribes to `:source_topic` (the cache-coherence topic shared with
-  `Lightning.Adaptors.Invalidator`) and republishes a single pre-rendered
-  envelope to `:client_topic` at most once per 250ms leading-edge window.
+  `Lightning.Adaptors.Invalidator`) and republishes a single envelope of
+  changed names to `:client_topic` at most once per 250ms leading-edge
+  window.
 
   Two-topic separation: the source topic is the cache-coherence audience;
   the client topic is the display-freshness audience (`WorkflowChannel`
-  subscribers). This bridges them: `Lightning.Adaptors.packages/1` is
-  rendered once per burst and fanned out by PubSub rather than once per
-  session (§6.5c).
-
-  No within-callback fan-out in `:flush` — `Phoenix.PubSub.broadcast/3`
-  is a single call that reaches all subscribers in one hop (§10 #19).
+  subscribers). This bridges them: the payload tells a session "these
+  adaptors changed, go refetch" — not what changed about them, so
+  `:flush` never has to touch the cache or render anything.
   """
 
   use GenServer
@@ -35,9 +33,7 @@ defmodule Lightning.Adaptors.ChannelBroadcaster do
   Required opts:
     * `:name` — registered GenServer name.
     * `:source_topic` — PubSub topic to subscribe to (cache-coherence).
-    * `:client_topic` — PubSub topic to broadcast the rendered envelope to.
-    * `:sup` — supervisor instance name; forwarded to
-      `Lightning.Adaptors.packages/1` for per-instance isolation.
+    * `:client_topic` — PubSub topic to broadcast the changed names to.
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
@@ -56,36 +52,33 @@ defmodule Lightning.Adaptors.ChannelBroadcaster do
     {:ok,
      %{
        client_topic: Keyword.fetch!(opts, :client_topic),
-       sup: Keyword.fetch!(opts, :sup),
-       timer: nil
+       timer: nil,
+       names: MapSet.new()
      }}
   end
 
   @impl true
   # First message of a burst: arm the leading-edge timer.
-  def handle_info({:changed, _name, _source}, %{timer: nil} = state) do
+  def handle_info({:changed, name, _source}, %{timer: nil} = state) do
     timer = Process.send_after(self(), :flush, @debounce_ms)
-    {:noreply, %{state | timer: timer}}
+    {:noreply, %{state | timer: timer, names: MapSet.put(state.names, name)}}
   end
 
-  # Subsequent messages within the debounce window: drop on the floor.
-  def handle_info({:changed, _name, _source}, state) do
-    {:noreply, state}
+  # Subsequent messages within the debounce window: accumulate, don't flush.
+  def handle_info({:changed, name, _source}, state) do
+    {:noreply, %{state | names: MapSet.put(state.names, name)}}
   end
 
-  def handle_info(:flush, %{client_topic: topic, sup: sup} = state) do
-    case Lightning.Adaptors.packages(sup) do
-      {:ok, pkgs} ->
-        Phoenix.PubSub.broadcast(
-          Lightning.PubSub,
-          topic,
-          %{event: "adaptors_updated", payload: %{adaptors: pkgs}}
-        )
+  def handle_info(:flush, %{client_topic: topic, names: names} = state) do
+    Phoenix.PubSub.broadcast(
+      Lightning.PubSub,
+      topic,
+      %{
+        event: "adaptors_updated",
+        payload: %{names: Enum.sort(names)}
+      }
+    )
 
-      {:error, _} ->
-        :ok
-    end
-
-    {:noreply, %{state | timer: nil}}
+    {:noreply, %{state | timer: nil, names: MapSet.new()}}
   end
 end

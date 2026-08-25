@@ -10,9 +10,7 @@ defmodule Lightning.Adaptors.Repo do
 
   Every read helper takes the desired `:source` (`:npm | :local`)
   explicitly; the module itself stays source-agnostic. Callers resolve
-  the active source via `Lightning.Adaptors.Config.current_source/0`
-  (see §4.4 source-tagging invariant and §6.4 in
-  `.context/lightning/adaptors/REWRITE-2026-05.md`).
+  the active source via `Lightning.Adaptors.Config.current_source/0`.
 
   `upsert_adaptor/1` is the only writer the Scheduler uses. It is
   idempotent, transactional, and diff-aware: `checked_at` advances on
@@ -36,6 +34,17 @@ defmodule Lightning.Adaptors.Repo do
           description: String.t() | nil,
           deprecated: boolean(),
           updated_at: DateTime.t(),
+          icon_square_ext: String.t() | nil,
+          icon_rectangle_ext: String.t() | nil,
+          icon_square_sha256: binary() | nil,
+          icon_rectangle_sha256: binary() | nil
+        }
+
+  @type catalogue_entry :: %{
+          name: String.t(),
+          latest_version: String.t(),
+          repository: String.t() | nil,
+          versions: [String.t()],
           icon_square_ext: String.t() | nil,
           icon_rectangle_ext: String.t() | nil,
           icon_square_sha256: binary() | nil,
@@ -264,6 +273,69 @@ defmodule Lightning.Adaptors.Repo do
       from a in Adaptor,
         where: a.source == ^source,
         select: max(a.checked_at)
+    )
+  end
+
+  @doc """
+  Full catalogue projection for a source: every adaptor's `name`,
+  `latest_version`, `repository`, icon fields, and full version list.
+  """
+  @spec catalogue(source()) :: [catalogue_entry()]
+  def catalogue(source) do
+    adaptors =
+      Lightning.Repo.all(
+        from a in Adaptor,
+          where: a.source == ^source,
+          order_by: [asc: a.name],
+          select: %{
+            name: a.name,
+            latest_version: a.latest_version,
+            repository: a.repository,
+            icon_square_ext: a.icon_square_ext,
+            icon_rectangle_ext: a.icon_rectangle_ext,
+            icon_square_sha256: a.icon_square_sha256,
+            icon_rectangle_sha256: a.icon_rectangle_sha256
+          }
+      )
+
+    versions_by_name =
+      Lightning.Repo.all(
+        from v in AdaptorVersion,
+          join: a in Adaptor,
+          on: v.adaptor_id == a.id,
+          where: a.source == ^source,
+          order_by: [asc: v.inserted_at, asc: v.version],
+          select: {a.name, v.version}
+      )
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    Enum.map(adaptors, fn adaptor ->
+      Map.put(adaptor, :versions, Map.get(versions_by_name, adaptor.name, []))
+    end)
+  end
+
+  @doc """
+  ETag basis for the catalogue: `{timestamp, version_row_count}` for
+  `source`, where `timestamp` is the later of
+  `MAX(adaptors.updated_at)` and `MAX(adaptor_versions.inserted_at)`,
+  or `nil` when the source has no rows.
+
+  `version_row_count` is carried alongside the timestamp because a
+  removed version doesn't move either max — deleting rows only ever
+  lowers the count.
+  """
+  @spec catalogue_stamp(source()) :: {DateTime.t() | nil, non_neg_integer()}
+  def catalogue_stamp(source) do
+    Lightning.Repo.one(
+      from a in Adaptor,
+        left_join: v in AdaptorVersion,
+        on: v.adaptor_id == a.id,
+        where: a.source == ^source,
+        select:
+          {type(
+             fragment("GREATEST(?, ?)", max(a.updated_at), max(v.inserted_at)),
+             :utc_datetime_usec
+           ), count(v.id)}
     )
   end
 

@@ -271,10 +271,11 @@ defmodule Lightning.Adaptors.Scheduler do
       :touched
     else
       case strategy.fetch_adaptor(name) do
-        {:ok, record} ->
-          Logger.debug(
-            "Adaptors[#{state.source}]: fetched #{name}@#{record.version}"
-          )
+        # latest_version is bound in the head rather than read inside the
+        # Logger call. A log message is only built when its level is enabled,
+        # so a field read inside one isn't exercised.
+        {:ok, %{latest_version: version} = record} ->
+          Logger.debug("Adaptors[#{state.source}]: fetched #{name}@#{version}")
 
           {:fetched, record}
 
@@ -326,23 +327,12 @@ defmodule Lightning.Adaptors.Scheduler do
       |> merge_icon(:square, package_icons, state.source)
       |> merge_icon(:rectangle, package_icons, state.source)
 
-    try do
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(record_with_icons)
+    case upsert_and_broadcast(record_with_icons, name, state) do
+      :ok ->
+        Logger.debug("Adaptors[#{state.source}]: persisted #{name}")
+        :ok
 
-      Phoenix.PubSub.broadcast(
-        Lightning.PubSub,
-        state.source_topic,
-        {:changed, name, state.source}
-      )
-
-      Logger.debug("Adaptors[#{state.source}]: persisted #{name}")
-      :ok
-    rescue
-      e ->
-        Logger.error(
-          "Scheduler: upsert_adaptor(#{name}) failed: #{Exception.message(e)}"
-        )
-
+      {:error, _reason} ->
         :error
     end
   end
@@ -386,10 +376,9 @@ defmodule Lightning.Adaptors.Scheduler do
     Map.put(record, :"icon_#{shape}_etag", etag)
   end
 
-  # Top up icons on rows that currently have NULL on at least one shape.
-  # Runs after the main upsert pass on every tick — cheap, scoped to
-  # rows with gaps, and self-correcting after a strategy outage or a
-  # past bug like the one that left every row iconless.
+  # Tops up icons on rows currently missing at least one shape. Runs
+  # after the main upsert pass on every tick — cheap, scoped to rows
+  # with gaps, and self-correcting after a strategy outage.
   defp heal_missing_icons(icons, _state) when map_size(icons) == 0, do: 0
 
   defp heal_missing_icons(icons, state) do
@@ -512,30 +501,19 @@ defmodule Lightning.Adaptors.Scheduler do
 
   defp force_refresh_one(strategy, name, state) do
     case strategy.fetch_adaptor(name) do
-      {:ok, record} ->
+      {:ok, %{latest_version: version} = record} ->
         record_with_source = Map.put(record, :source, state.source)
 
-        try do
-          {:ok, _} = AdaptorsRepo.upsert_adaptor(record_with_source)
-
-          Phoenix.PubSub.broadcast(
-            Lightning.PubSub,
-            state.source_topic,
-            {:changed, name, state.source}
-          )
-
-          Logger.info(
-            "Adaptors[#{state.source}]: refresh_package(#{name}) ok version=#{record.version}"
-          )
-
-          :ok
-        rescue
-          e ->
-            Logger.error(
-              "Scheduler: upsert_adaptor(#{name}) failed: #{Exception.message(e)}"
+        case upsert_and_broadcast(record_with_source, name, state) do
+          :ok ->
+            Logger.info(
+              "Adaptors[#{state.source}]: refresh_package(#{name}) ok version=#{version}"
             )
 
-            {:error, {:upsert_failed, Exception.message(e)}}
+            :ok
+
+          {:error, _reason} = error ->
+            error
         end
 
       {:error, reason} ->
@@ -545,6 +523,28 @@ defmodule Lightning.Adaptors.Scheduler do
 
         {:error, reason}
     end
+  end
+
+  # The rescue deliberately covers only the upsert and the broadcast. Callers
+  # log their own success line outside it, so a mistake in that line crashes
+  # rather than being reported back as a failed upsert.
+  defp upsert_and_broadcast(record, name, state) do
+    {:ok, _} = AdaptorsRepo.upsert_adaptor(record)
+
+    Phoenix.PubSub.broadcast(
+      Lightning.PubSub,
+      state.source_topic,
+      {:changed, name, state.source}
+    )
+
+    :ok
+  rescue
+    e ->
+      Logger.error(
+        "Scheduler: upsert_adaptor(#{name}) failed: #{Exception.message(e)}"
+      )
+
+      {:error, {:upsert_failed, Exception.message(e)}}
   end
 
   # Project a list of adaptor rows to the prior-etag map shape expected
@@ -576,7 +576,6 @@ defmodule Lightning.Adaptors.Scheduler do
   defp maybe_put_shape_etag(map, shape, etag) when is_binary(etag),
     do: Map.put(map, shape, etag)
 
-  # Count :not_modified sentinels across all shapes in the icons map.
   # Used in the tick summary log.
   defp count_not_modified(icons) do
     Enum.reduce(icons, 0, fn {_name, shapes}, acc ->

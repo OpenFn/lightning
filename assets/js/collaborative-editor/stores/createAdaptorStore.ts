@@ -12,25 +12,15 @@
  *
  * ## Update Patterns:
  *
- * ### Pattern 1: Channel Message → Immer → Notify (Server Updates)
+ * ### Pattern 1: Channel Signal → HTTP Re-fetch → Immer → Notify (Server Updates)
  * **When to use**: All server-initiated adaptor updates
- * **Flow**: Channel message → validate with Zod → Immer update → React notification
- * **Benefits**: Automatic validation, error handling, type safety
- *
- * ```typescript
- * // Example: Handle server adaptor list update
- * const handleAdaptorsUpdate = (rawData: unknown) => {
- *   const result = AdaptorsListSchema.safeParse(rawData);
- *   if (result.success) {
- *     state = produce(state, (draft) => {
- *       draft.adaptors = result.data;
- *       draft.lastUpdated = Date.now();
- *       draft.error = null;
- *     });
- *     notify();
- *   }
- * };
- * ```
+ * **Flow**: `adaptors_updated` channel push (a name-only signal, no adaptor
+ * data) → re-fetch the catalogue over HTTP → validate the response with Zod
+ * → Immer update → React notification
+ * **Benefits**: Automatic validation, error handling, type safety. Every
+ * update goes through the same HTTP path as the initial load, so
+ * `handleAdaptorsReceived` (below) is the only place that writes
+ * `state.adaptors` from server data.
  *
  * ### Pattern 2: Direct Immer → Notify (Local State)
  * **When to use**: Loading states, errors, local UI state
@@ -82,7 +72,7 @@ import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 
 import _logger from '#/utils/logger';
 
-import { channelRequest } from '../hooks/useChannel';
+import { getAdaptorCatalogue } from '../api/adaptors';
 import {
   type Adaptor,
   type AdaptorState,
@@ -96,6 +86,29 @@ import { wrapStoreWithDevTools } from './devtools';
 
 const logger = _logger.ns('AdaptorStore').seal();
 
+// Deep-equality check tailored to the Adaptor shape so referential identity is
+// preserved across no-op `adaptors_updated` pushes.
+function adaptorsEqual(a: Adaptor, b: Adaptor): boolean {
+  if (a === b) return true;
+  if (
+    a.name !== b.name ||
+    a.repository !== b.repository ||
+    a.latest_version !== b.latest_version ||
+    a.icon_urls.square !== b.icon_urls.square ||
+    a.icon_urls.rectangle !== b.icon_urls.rectangle ||
+    a.versions.length !== b.versions.length
+  ) {
+    return false;
+  }
+  for (let i = 0; i < a.versions.length; i++) {
+    const aVer = a.versions[i];
+    const bVer = b.versions[i];
+    if (aVer === undefined || bVer === undefined) return false;
+    if (aVer !== bVer) return false;
+  }
+  return true;
+}
+
 // sorts adaptors coming into the adaptor store
 // 1. sorts the versions for every adaptor
 // 2. sorts the adaptors themselves by name
@@ -104,7 +117,7 @@ export function sortAdaptors(adaptors: AdaptorsList = []) {
   for (const adaptor of adaptors) {
     // spreading because it could be read-only.
     const versions = [...(adaptor.versions || [])].sort((a, b) =>
-      b.version.localeCompare(a.version)
+      b.localeCompare(a)
     );
     sortedAdaptors.push({ ...adaptor, versions });
   }
@@ -119,7 +132,6 @@ export const createAdaptorStore = (): AdaptorStore => {
   let state: AdaptorState = produce(
     {
       adaptors: [],
-      projectAdaptors: [],
       isLoading: false,
       error: null,
       lastUpdated: null,
@@ -159,7 +171,7 @@ export const createAdaptorStore = (): AdaptorStore => {
   const withSelector = createWithSelector(getSnapshot);
 
   // =============================================================================
-  // PATTERN 1: Channel Message → Immer → Notify (Server Updates)
+  // PATTERN 1: Channel Signal → HTTP Re-fetch → Immer → Notify (Server Updates)
   // =============================================================================
 
   /**
@@ -170,14 +182,36 @@ export const createAdaptorStore = (): AdaptorStore => {
     const result = AdaptorsListSchema.safeParse(rawData);
 
     if (result.success) {
-      const adaptors = sortAdaptors(result.data);
+      const incoming = sortAdaptors(result.data);
+      const existing = state.adaptors;
+      const existingByName = new Map(existing.map(a => [a.name, a]));
 
-      state = produce(state, draft => {
-        draft.adaptors = adaptors;
-        draft.isLoading = false;
-        draft.error = null;
-        draft.lastUpdated = Date.now();
+      // Merge by name to preserve referential identity of unchanged adaptors so
+      // `withSelector` consumers don't re-render on no-op `adaptors_updated`
+      // pushes.
+      const merged: Adaptor[] = incoming.map(next => {
+        const prev = existingByName.get(next.name);
+        return prev && adaptorsEqual(prev, next) ? prev : next;
       });
+
+      const arrayUnchanged =
+        merged.length === existing.length &&
+        merged.every((a, i) => a === existing[i]);
+
+      if (arrayUnchanged) {
+        state = produce(state, draft => {
+          draft.isLoading = false;
+          draft.error = null;
+          draft.lastUpdated = Date.now();
+        });
+      } else {
+        state = produce(state, draft => {
+          draft.adaptors = merged;
+          draft.isLoading = false;
+          draft.error = null;
+          draft.lastUpdated = Date.now();
+        });
+      }
       notify('handleAdaptorsReceived');
     } else {
       const errorMessage = `Invalid adaptors data: ${result.error.message}`;
@@ -192,14 +226,6 @@ export const createAdaptorStore = (): AdaptorStore => {
       });
       notify('adaptorsError');
     }
-  };
-
-  /**
-   * Handle real-time adaptors update from server
-   */
-  const handleAdaptorsUpdated = (rawData: unknown) => {
-    // Same validation logic as handleAdaptorsReceived
-    handleAdaptorsReceived(rawData);
   };
 
   // =============================================================================
@@ -241,22 +267,18 @@ export const createAdaptorStore = (): AdaptorStore => {
   // CHANNEL INTEGRATION
   // =============================================================================
 
-  let channelProvider: PhoenixChannelProvider | null = null;
-
   /**
    * Connect to Phoenix channel provider for real-time updates
    */
   const connectChannel = (provider: PhoenixChannelProvider) => {
-    channelProvider = provider;
-
-    const adaptorsListHandler = (message: unknown) => {
-      logger.debug('Received adaptors_list message', message);
-      handleAdaptorsReceived(message);
-    };
-
-    const adaptorsUpdatedHandler = (message: unknown) => {
-      logger.debug('Received adaptors_updated message', message);
-      handleAdaptorsUpdated(message);
+    // The push only signals that named adaptors changed; it carries no
+    // adaptor data. Always re-fetch the catalogue over HTTP rather than
+    // branching on which names changed -- a brand-new adaptor needs the
+    // fetch regardless, and 304 caching makes re-fetching a known one just
+    // as cheap.
+    const adaptorsUpdatedHandler = () => {
+      logger.debug('Received adaptors_updated signal, refreshing catalogue');
+      void requestAdaptors();
     };
 
     // Set up channel listeners
@@ -266,97 +288,36 @@ export const createAdaptorStore = (): AdaptorStore => {
 
     devtools.connect();
 
+    // Refresh the catalogue on (re)connect so a user who leaves the editor
+    // open across an adaptor publish still sees the new version. The
+    // `adaptors_updated` push alone isn't a reliable substitute for this.
     void requestAdaptors();
-    void requestProjectAdaptors();
 
     return () => {
       devtools.disconnect();
       if (provider.channel) {
-        provider.channel.off('adaptors_list', adaptorsListHandler);
         provider.channel.off('adaptors_updated', adaptorsUpdatedHandler);
       }
-      channelProvider = null;
     };
   };
 
   /**
-   * Request adaptors from server via channel
+   * Request the adaptor catalogue over HTTP. Independent of Phoenix channel
+   * connection/document sync so the picker can populate as soon as the app
+   * mounts.
    */
   const requestAdaptors = async (): Promise<void> => {
-    if (!channelProvider?.channel) {
-      logger.warn('Cannot request adaptors - no channel connected');
-      setError('No connection available');
-      return;
-    }
-
     setLoading(true);
     clearError();
 
     try {
-      const response = await channelRequest<{ adaptors: unknown }>(
-        channelProvider.channel,
-        'request_adaptors',
-        {}
-      );
-
-      if (response.adaptors) {
-        handleAdaptorsReceived(response.adaptors);
-      }
+      const response = await getAdaptorCatalogue();
+      handleAdaptorsReceived(response.data);
     } catch (error) {
       logger.error('Adaptor request failed', error);
       setError(
         `Failed to request adaptors: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
-    }
-  };
-
-  /**
-   * Request project adaptors from server via channel
-   */
-  const requestProjectAdaptors = async (): Promise<void> => {
-    if (!channelProvider?.channel) {
-      logger.warn('Cannot request project adaptors - no channel connected');
-      setError('No connection available');
-      return;
-    }
-
-    setLoading(true);
-    clearError();
-
-    try {
-      logger.debug('Requesting project adaptors');
-      const response = await channelRequest(
-        channelProvider.channel,
-        'request_project_adaptors',
-        {}
-      );
-
-      if (response && typeof response === 'object') {
-        const { project_adaptors, all_adaptors } = response as {
-          project_adaptors: unknown;
-          all_adaptors: unknown;
-        };
-
-        const projectResult = AdaptorsListSchema.safeParse(project_adaptors);
-        const allResult = AdaptorsListSchema.safeParse(all_adaptors);
-
-        if (projectResult.success && allResult.success) {
-          state = produce(state, draft => {
-            draft.projectAdaptors = sortAdaptors(projectResult.data);
-            draft.adaptors = sortAdaptors(allResult.data);
-            draft.isLoading = false;
-            draft.error = null;
-          });
-          notify('requestProjectAdaptors');
-        } else {
-          const errorMessage = 'Invalid project adaptors data';
-          logger.error(errorMessage, { projectResult, allResult });
-          setError(errorMessage);
-        }
-      }
-    } catch (error) {
-      logger.error('Project adaptors request failed', error);
-      setError('Failed to request project adaptors');
     }
   };
 
@@ -370,7 +331,7 @@ export const createAdaptorStore = (): AdaptorStore => {
 
   const getLatestVersion = (adaptorName: string): string | null => {
     const adaptor = findAdaptorByName(adaptorName);
-    return adaptor?.latest || null;
+    return adaptor?.latest_version || null;
   };
 
   const getVersions = (adaptorName: string) => {
@@ -390,7 +351,6 @@ export const createAdaptorStore = (): AdaptorStore => {
 
     // Commands (CQS pattern)
     requestAdaptors,
-    requestProjectAdaptors,
     setAdaptors,
     setLoading,
     setError,
@@ -403,13 +363,6 @@ export const createAdaptorStore = (): AdaptorStore => {
 
     // Internal methods (not part of public AdaptorStore interface)
     _connectChannel: connectChannel,
-    // Test helper to set project adaptors directly
-    _setProjectAdaptors: (adaptors: Adaptor[]) => {
-      state = produce(state, draft => {
-        draft.projectAdaptors = sortAdaptors(adaptors);
-      });
-      notify('_setProjectAdaptors');
-    },
   };
 };
 
