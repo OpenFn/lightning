@@ -67,6 +67,10 @@ defmodule LightningWeb.Router do
     get "/authenticate/:provider/callback", OidcController, :new
 
     get "/oauth/:provider/callback", OauthController, :new
+
+    get "/adaptors/icons/:name/:filename",
+        AdaptorIconController,
+        :show
   end
 
   ## JSON API
