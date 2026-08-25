@@ -59,8 +59,10 @@ and this project adheres to
   schemas and adaptor icons in Postgres, and the collaborative editor receives
   them over the workflow channel, so jobs show their real adaptor icons rather
   than first-letter placeholders. Superusers can force a refresh from Settings →
-  Maintenance, or by running `mix lightning.refresh_adaptors`.
-  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+  Maintenance, or by running `mix lightning.refresh_adaptors`. The npm, jsDelivr
+  and GitHub endpoints the registry reads from can be pointed elsewhere with
+  `ADAPTOR_REGISTRY_URL`, `ADAPTOR_JSDELIVR_URL`, `ADAPTOR_GITHUB_URL` and
+  `ADAPTOR_GITHUB_REF`. [#4801](https://github.com/OpenFn/lightning/pull/4801)
 
 ### Changed
 

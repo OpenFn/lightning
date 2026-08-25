@@ -1,0 +1,233 @@
+#!/usr/bin/env bash
+
+# =============================================================================
+# Lightning Adaptor Cache
+# =============================================================================
+#
+# A local caching reverse proxy in front of the three upstreams the
+# Lightning.Adaptors.* subsystem reads from: registry.npmjs.org,
+# cdn.jsdelivr.net and raw.githubusercontent.com. See
+# tooling/adaptor_cache/README.md.
+#
+# A forward proxy would not work: Lightning talks to these upstreams through
+# Tesla over the Finch adapter, and neither honours HTTP_PROXY/HTTPS_PROXY.
+# Each upstream does have a configurable base URL, which is what this reverse
+# proxy plugs into.
+#
+# =============================================================================
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+COMPOSE_DIR="${PROJECT_ROOT}/tooling/adaptor_cache"
+COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
+
+# Fixed project name, not derived from the directory, so every git worktree
+# shares one cache instead of each spinning up its own.
+PROJECT_NAME="adaptor-cache"
+
+PORT="${ADAPTOR_CACHE_PORT:-4874}"
+BASE_URL="http://localhost:${PORT}"
+
+compose() {
+  ADAPTOR_CACHE_PORT="${PORT}" \
+    docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" "$@"
+}
+
+show_help() {
+  cat <<'EOF'
+Lightning Adaptor Cache
+
+A local caching reverse proxy in front of the three upstreams the
+Lightning.Adaptors.* subsystem reads from: registry.npmjs.org,
+cdn.jsdelivr.net and raw.githubusercontent.com. See
+tooling/adaptor_cache/README.md.
+
+Usage: bin/adaptor_cache <command>
+
+  up        Start the proxy and print the export lines
+  down      Stop the proxy, keeping the cache on disk
+  status    Show container state and reachability
+  purge     Stop the proxy AND drop the cache volume
+  logs      Tail the access log (cache=HIT / cache=MISS)
+  check     Probe all three prefixes, prove MISS then HIT
+  --help    This message
+
+Environment variables:
+
+  ADAPTOR_CACHE_PORT   Host port to bind (default: 4874)
+EOF
+}
+
+require_docker() {
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "adaptor_cache: docker not found on PATH." >&2
+    exit 1
+  fi
+
+  if ! docker compose version >/dev/null 2>&1; then
+    echo "adaptor_cache: 'docker compose' is not available." >&2
+    exit 1
+  fi
+
+  if [[ ! -f "${COMPOSE_FILE}" ]]; then
+    echo "adaptor_cache: missing ${COMPOSE_FILE}" >&2
+    exit 1
+  fi
+}
+
+wait_for_healthz() {
+  local _attempt
+  for _attempt in $(seq 1 30); do
+    if curl -fsS -o /dev/null --max-time 2 "${BASE_URL}/_healthz"; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "adaptor_cache: proxy did not come up on ${BASE_URL} after 30s." >&2
+  echo "adaptor_cache: run 'bin/adaptor_cache logs' to see why." >&2
+  return 1
+}
+
+print_exports() {
+  cat <<EOF
+
+Point Lightning at the cache by exporting these (or uncommenting them in .env):
+
+  export ADAPTOR_REGISTRY_URL=${BASE_URL}/npm
+  export ADAPTOR_JSDELIVR_URL=${BASE_URL}/jsdelivr
+  export ADAPTOR_GITHUB_URL=${BASE_URL}/github
+
+Then: mix lightning.refresh_adaptors
+Watch it work:  bin/adaptor_cache logs
+Prove it works: bin/adaptor_cache check
+EOF
+}
+
+# Probe a URL twice. The pass criterion is not "the asset exists" but "the
+# second identical request was answered from disk", which holds for 200s, for
+# jsDelivr's version-resolution redirects, and for the png 404s the icon
+# fallback generates.
+probe() {
+  local label="$1" url="$2"
+  local headers status cache_1 cache_2
+
+  if ! headers="$(curl -sS -o /dev/null -D - --max-time 30 "${url}" 2>&1)"; then
+    printf '  %-9s FAIL  could not reach %s\n' "${label}" "${url}"
+    printf '            %s\n' "${headers}"
+    return 1
+  fi
+
+  status="$(printf '%s' "${headers}" | tr -d '\r' | awk 'NR==1 {print $2}')"
+  cache_1="$(printf '%s' "${headers}" | tr -d '\r' \
+    | awk -F': ' 'tolower($1)=="x-cache-status" {print $2}' | tail -1)"
+
+  headers="$(curl -sS -o /dev/null -D - --max-time 30 "${url}")"
+  cache_2="$(printf '%s' "${headers}" | tr -d '\r' \
+    | awk -F': ' 'tolower($1)=="x-cache-status" {print $2}' | tail -1)"
+
+  printf '  %-9s %-4s first=%-12s second=%-12s %s\n' \
+    "${label}" "${status:-???}" "${cache_1:--}" "${cache_2:--}" "${url}"
+
+  if [[ "${cache_2}" != "HIT" ]]; then
+    printf '            ^ expected the second request to be a HIT\n'
+    return 1
+  fi
+
+  return 0
+}
+
+cmd_up() {
+  require_docker
+  compose up -d
+  wait_for_healthz
+  echo "adaptor_cache: up on ${BASE_URL}"
+  print_exports
+}
+
+cmd_down() {
+  require_docker
+  compose down
+  echo "adaptor_cache: down. The cache volume is intact; 'purge' drops it."
+}
+
+cmd_purge() {
+  require_docker
+  compose down -v
+  echo "adaptor_cache: down and cache volume removed."
+}
+
+cmd_status() {
+  require_docker
+  compose ps
+  echo
+  if curl -fsS -o /dev/null --max-time 2 "${BASE_URL}/_healthz"; then
+    echo "adaptor_cache: reachable at ${BASE_URL}"
+  else
+    echo "adaptor_cache: NOT reachable at ${BASE_URL}"
+  fi
+}
+
+cmd_logs() {
+  require_docker
+  if [[ $# -gt 0 ]]; then
+    compose logs "$@"
+  else
+    compose logs -f --tail 100 nginx
+  fi
+}
+
+cmd_check() {
+  require_docker
+
+  if ! curl -fsS -o /dev/null --max-time 2 "${BASE_URL}/_healthz"; then
+    echo "adaptor_cache: not running. Start it with 'bin/adaptor_cache up'." >&2
+    exit 1
+  fi
+
+  echo "adaptor_cache: probing all three prefixes twice each"
+  echo
+
+  local failed=0
+
+  probe npm "${BASE_URL}/npm/-/v1/search?text=@openfn&size=1" || failed=1
+  probe jsdelivr \
+    "${BASE_URL}/jsdelivr/npm/@openfn/language-common/package.json" || failed=1
+  probe github \
+    "${BASE_URL}/github/OpenFn/adaptors/main/packages/common/assets/square.png" \
+    || failed=1
+
+  echo
+  if [[ "${failed}" -ne 0 ]]; then
+    echo "adaptor_cache: check FAILED" >&2
+    exit 1
+  fi
+
+  echo "adaptor_cache: check passed — all three prefixes cache."
+}
+
+main() {
+  local command="${1:-help}"
+  [[ $# -gt 0 ]] && shift || true
+
+  case "${command}" in
+    up) cmd_up "$@" ;;
+    down) cmd_down "$@" ;;
+    purge) cmd_purge "$@" ;;
+    status) cmd_status "$@" ;;
+    logs) cmd_logs "$@" ;;
+    check) cmd_check "$@" ;;
+    help | --help | -h) show_help ;;
+    *)
+      echo "adaptor_cache: unknown command '${command}'" >&2
+      echo >&2
+      show_help >&2
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

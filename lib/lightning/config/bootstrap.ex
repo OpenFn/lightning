@@ -245,6 +245,28 @@ defmodule Lightning.Config.Bootstrap do
       local_adaptors_repos:
         if(use_local_adaptors_repos?, do: local_adaptors_repos, else: [])
 
+    # Upstreams for the NPM strategy. Each key reaches exactly one sub-module
+    # through Lightning.Adaptors.Config.strategy_opts/1: registry_url is the
+    # npm search and packument endpoint (NPM.Registry), jsdelivr_url serves
+    # configuration schemas (NPM.Schema), and github_url plus github_ref locate
+    # the raw icon files under OpenFn/adaptors (NPM.GitHub). The defaults match
+    # the @default_* attributes in those modules.
+    #
+    # Point them at `bin/adaptor_cache` to serve all three from a local disk
+    # cache while working on adaptors.
+    config :lightning, Lightning.Adaptors.NPM,
+      registry_url:
+        env!("ADAPTOR_REGISTRY_URL", :string, "https://registry.npmjs.org"),
+      jsdelivr_url:
+        env!("ADAPTOR_JSDELIVR_URL", :string, "https://cdn.jsdelivr.net"),
+      github_url:
+        env!(
+          "ADAPTOR_GITHUB_URL",
+          :string,
+          "https://raw.githubusercontent.com"
+        ),
+      github_ref: env!("ADAPTOR_GITHUB_REF", :string, "main")
+
     config :lightning,
       schemas_path:
         env!(
