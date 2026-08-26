@@ -32,9 +32,10 @@ Reports are welcome for:
 # Requirements for a Valid Report
 
 - Please ensure the issue is reproducible on `main` or on the latest public tag.
-- Please ensure a fully working, end-to-end reproducer is provided.
-- Please ensure the reproducer is real-world and not simulated or abstracted.
-- Please ensure the reproducer demonstrably violates a security boundary.
+- Please provide a fully working, end-to-end proof of concept.
+- Please ensure the proof of concept is real-world and not simulated or
+  abstracted.
+- Please ensure the proof of concept demonstrably violates a security boundary.
 - Please understand that the team maintaining this digital public good is small
   and manages a broad portfolio of repositories and services. While we will try
   to triage and fix issues in a timely manner, we cannot guarantee a fixed
