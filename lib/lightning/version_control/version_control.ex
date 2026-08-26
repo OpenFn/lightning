@@ -182,7 +182,7 @@ defmodule Lightning.VersionControl do
         where: w.project_id == ^project_id and is_nil(w.deleted_at),
         select: s.id
 
-    Repo.all(current_query) |> Enum.reverse()
+    Repo.all(current_query)
   end
 
   defp maybe_add_snapshots(inputs, snapshot_ids) do
