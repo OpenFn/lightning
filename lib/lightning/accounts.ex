@@ -11,6 +11,7 @@ defmodule Lightning.Accounts do
 
   alias Ecto.Changeset
   alias Ecto.Multi
+  alias Lightning.Accounts.AdminSearchParams
   alias Lightning.Accounts.Events
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserBackupCode
@@ -130,6 +131,18 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  Returns a paginated list of users for the superuser settings table with
+  server-side filtering and sorting.
+  """
+  @spec list_all_users(AdminSearchParams.t()) :: Scrivener.Page.t()
+  def list_all_users(%AdminSearchParams{} = params) do
+    User
+    |> search_users_query(params.search_term)
+    |> sort_users_query(params.sort_by, params.sort_direction)
+    |> Repo.paginate(AdminSearchParams.pagination_opts(params))
+  end
+
+  @doc """
   Returns the list of users with the given emails
   """
   def list_users_by_emails(emails) do
@@ -199,6 +212,41 @@ defmodule Lightning.Accounts do
     user = Repo.get_by(User, email: email)
     if User.valid_password?(user, password), do: user
   end
+
+  defp search_users_query(query, ""), do: query
+
+  defp search_users_query(query, search_term) do
+    search = "%#{escape_like_pattern(search_term)}%"
+
+    where(
+      query,
+      [u],
+      ilike(u.first_name, ^search) or
+        ilike(u.last_name, ^search) or
+        ilike(u.email, ^search) or
+        ilike(fragment("?::text", u.role), ^search)
+    )
+  end
+
+  # Postgres treats % _ and \ as LIKE metacharacters. Escape them so a term
+  # typed by a superuser matches literally, like the previous in-memory filter.
+  defp escape_like_pattern(term), do: String.replace(term, ~r{[\\%_]}, "\\\\\\0")
+
+  defp sort_users_query(query, "scheduled_deletion", "asc"),
+    do: order_by(query, [u], asc_nulls_last: u.scheduled_deletion, asc: u.id)
+
+  defp sort_users_query(query, "scheduled_deletion", "desc"),
+    do: order_by(query, [u], desc_nulls_last: u.scheduled_deletion, asc: u.id)
+
+  defp sort_users_query(query, sort_by, sort_direction) do
+    direction = sort_direction_to_atom(sort_direction)
+    sort_field = String.to_existing_atom(sort_by)
+
+    order_by(query, [u], [{^direction, field(u, ^sort_field)}, asc: u.id])
+  end
+
+  defp sort_direction_to_atom("asc"), do: :asc
+  defp sort_direction_to_atom("desc"), do: :desc
 
   @doc """
   Gets a single user.

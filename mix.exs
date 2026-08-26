@@ -66,7 +66,7 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(_), do: ["lib"]
 
   # Advisories acknowledged for `mix hex.audit`. cowlib is the only one left, and
-  # it has no patched release (latest is 2.19.0). Note that both EEF records carry
+  # it has no patched release (latest is 2.19.0). Note that the EEF records carry
   # no `fixed` event, while the GitHub twin of CVE-2026-43969
   # (GHSA-g2wm-735q-3f56) records `last_affected: 2.16.1` -- so 2.19.0 may
   # already be unaffected and the EEF record simply lacks a fix event. IDs are
@@ -77,7 +77,8 @@ defmodule Lightning.MixProject do
       ignore_advisories: [
         # cowlib
         "CVE-2026-43966",
-        "CVE-2026-43969"
+        "CVE-2026-43969",
+        "CVE-2026-43971"
       ]
     ]
   end

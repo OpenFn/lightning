@@ -37,7 +37,7 @@
         placeholder="Filter projects..."
       />
 
-      <.table id="projects">
+      <.table id="projects" page={@page} url={@pagination_path}>
         <:header>
           <.tr>
             <.th
@@ -86,7 +86,7 @@
           </.tr>
         </:header>
         <:body>
-          <%= for project <- @projects do %>
+          <%= for project <- @page.entries do %>
             <.tr id={"project-row-#{project.id}"}>
               <.td class="max-w-80">{project.name}</.td>
               <.td>{Calendar.strftime(project.inserted_at, "%d %b  %H:%M")}</.td>

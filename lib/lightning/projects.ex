@@ -18,6 +18,7 @@ defmodule Lightning.Projects do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Step
   alias Lightning.Projects
+  alias Lightning.Projects.AdminSearchParams
   alias Lightning.Projects.Audit
   alias Lightning.Projects.Events
   alias Lightning.Projects.Project
@@ -253,6 +254,21 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Returns a paginated list of projects for the superuser settings table with
+  server-side filtering and sorting.
+  """
+  @spec list_all_projects(AdminSearchParams.t()) :: Scrivener.Page.t()
+  def list_all_projects(%AdminSearchParams{} = params) do
+    Project
+    |> join(:left, [p], pu in assoc(p, :project_users), on: pu.role == :owner)
+    |> join(:left, [_p, pu], owner in assoc(pu, :user))
+    |> preload([_p, _pu, _owner], project_users: :user)
+    |> search_projects_query(params.search_term)
+    |> sort_projects_query(params.sort_by, params.sort_direction)
+    |> Repo.paginate(AdminSearchParams.pagination_opts(params))
+  end
+
+  @doc """
   Lists all projects that have history retention
   """
   @spec list_projects_having_history_retention() :: [] | [Project.t(), ...]
@@ -280,6 +296,68 @@ defmodule Lightning.Projects do
       p -> Repo.preload(p, :parent)
     end
   end
+
+  defp search_projects_query(query, ""), do: query
+
+  defp search_projects_query(query, search_term) do
+    search = "%#{escape_like_pattern(search_term)}%"
+
+    where(
+      query,
+      [p, _pu, owner],
+      ilike(p.name, ^search) or
+        ilike(p.description, ^search) or
+        ilike(
+          fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name),
+          ^search
+        )
+    )
+  end
+
+  # Postgres treats % _ and \ as LIKE metacharacters. Escape them so a term
+  # typed by a superuser matches literally, like the previous in-memory filter.
+  defp escape_like_pattern(term), do: String.replace(term, ~r{[\\%_]}, "\\\\\\0")
+
+  defp sort_projects_query(query, "scheduled_deletion", "asc"),
+    do:
+      order_by(query, [p, _pu, _owner],
+        asc_nulls_last: p.scheduled_deletion,
+        asc: p.id
+      )
+
+  defp sort_projects_query(query, "scheduled_deletion", "desc"),
+    do:
+      order_by(query, [p, _pu, _owner],
+        desc_nulls_last: p.scheduled_deletion,
+        asc: p.id
+      )
+
+  defp sort_projects_query(query, "owner", sort_direction) do
+    direction = sort_direction_to_atom(sort_direction)
+
+    order_by(
+      query,
+      [p, _pu, owner],
+      [
+        {^direction,
+         fragment("concat_ws(' ', ?, ?)", owner.first_name, owner.last_name)},
+        asc: p.id
+      ]
+    )
+  end
+
+  defp sort_projects_query(query, sort_by, sort_direction) do
+    direction = sort_direction_to_atom(sort_direction)
+    sort_field = String.to_existing_atom(sort_by)
+
+    order_by(query, [p, _pu, _owner], [
+      {^direction, field(p, ^sort_field)},
+      asc: p.id
+    ])
+  end
+
+  defp sort_direction_to_atom("asc"), do: :asc
+  defp sort_direction_to_atom("desc"), do: :desc
 
   @doc """
   Gets the project associated with a run.

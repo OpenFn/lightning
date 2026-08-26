@@ -13,6 +13,7 @@ defmodule Lightning.ProjectsTest do
   alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Step
   alias Lightning.Projects
+  alias Lightning.Projects.AdminSearchParams
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectOverviewRow
   alias Lightning.Projects.ProjectUser
@@ -31,6 +32,98 @@ defmodule Lightning.ProjectsTest do
     test "list_projects/0 returns all projects" do
       project = project_fixture() |> unload_relation(:project_users)
       assert Projects.list_projects() == [project]
+    end
+
+    test "list_all_projects/1 supports search by project fields and owner name" do
+      owner = insert(:user, first_name: "Jane", last_name: "Owner")
+
+      project =
+        insert(:project, name: "alpha-project", description: "first project")
+
+      insert(:project_user, project: project, user: owner, role: :owner)
+
+      _other =
+        insert(:project, name: "beta-project", description: "second project")
+
+      page =
+        Projects.list_all_projects(
+          AdminSearchParams.new(%{
+            "search_term" => "jane",
+            "sort_by" => "owner",
+            "sort_direction" => "asc",
+            "page" => "1",
+            "page_size" => "10"
+          })
+        )
+
+      assert page.page_number == 1
+      assert page.page_size == 10
+      assert Enum.map(page.entries, & &1.id) == [project.id]
+    end
+
+    test "list_all_projects/1 falls back to safe defaults for invalid params" do
+      project = insert(:project, name: "safe-project")
+
+      page =
+        Projects.list_all_projects(
+          AdminSearchParams.new(%{
+            "sort_by" => "drop table projects",
+            "sort_direction" => "sideways",
+            "page" => "0",
+            "page_size" => "1000"
+          })
+        )
+
+      assert page.page_number == 1
+      assert page.page_size <= 100
+      assert Enum.any?(page.entries, fn entry -> entry.id == project.id end)
+    end
+
+    test "list_all_projects/1 treats LIKE wildcards in search_term literally" do
+      insert(:project, name: "percent%project")
+      insert(:project, name: "ordinary-project")
+
+      page =
+        Projects.list_all_projects(
+          AdminSearchParams.new(%{"search_term" => "percent%"})
+        )
+
+      assert Enum.map(page.entries, & &1.name) == ["percent%project"]
+    end
+
+    test "list_all_projects/1 paging is deterministic for tied sort keys" do
+      for i <- 1..12 do
+        padded = String.pad_leading(Integer.to_string(i), 2, "0")
+
+        insert(:project,
+          description: "tied description",
+          name: "tied-#{padded}"
+        )
+      end
+
+      first_page =
+        Projects.list_all_projects(
+          AdminSearchParams.new(%{
+            "sort_by" => "description",
+            "page_size" => "10"
+          })
+        )
+
+      second_page =
+        Projects.list_all_projects(
+          AdminSearchParams.new(%{
+            "sort_by" => "description",
+            "page" => "2",
+            "page_size" => "10"
+          })
+        )
+
+      first_ids = Enum.map(first_page.entries, & &1.id)
+      second_ids = Enum.map(second_page.entries, & &1.id)
+
+      assert length(first_ids) == 10
+      assert length(second_ids) == 2
+      refute Enum.any?(first_ids, &(&1 in second_ids))
     end
 
     test "list_project_credentials/1 returns all project_credentials for a project" do

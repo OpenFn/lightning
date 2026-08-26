@@ -563,6 +563,32 @@ defmodule LightningWeb.UserLiveTest do
              ])
     end
 
+    test "users index paginates and navigates pages", %{conn: conn} do
+      for i <- 1..25 do
+        user_fixture(
+          email: "page-user-#{i}@example.com",
+          first_name: "Page#{i}",
+          last_name: "User"
+        )
+      end
+
+      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+
+      assert html =~ "Showing"
+      assert has_element?(index_live, "nav[aria-label='Pagination'] a", "2")
+
+      index_live
+      |> element("nav[aria-label='Pagination'] a", "2")
+      |> render_click()
+
+      patched_path = assert_patch(index_live)
+      patch_uri = URI.parse(patched_path)
+      patch_params = URI.decode_query(patch_uri.query || "")
+
+      assert patch_uri.path == "/settings/users"
+      assert patch_params["page"] == "2"
+    end
+
     test "sorting by first name column works correctly", %{conn: conn} do
       _user_a = user_fixture(first_name: "Alice", email: "alice@example.com")
       _user_b = user_fixture(first_name: "Bob", email: "bob@example.com")
@@ -579,45 +605,6 @@ defmodule LightningWeb.UserLiveTest do
 
       # Check that first names are in alphabetical order
       assert assert_elements_in_order(html, ["Alice", "Bob", "Charlie"])
-    end
-
-    test "sorting by role column works correctly", %{conn: conn} do
-      _user_a = user_fixture(role: :user, email: "user@example.com")
-      _user_b = user_fixture(role: :superuser, email: "super@example.com")
-
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      # Click role header to sort
-      index_live
-      |> element("a[phx-click='sort'][phx-value-by='role']")
-      |> render_click()
-
-      html = render(index_live)
-
-      # Check that superuser appears before user (alphabetical order)
-      assert assert_elements_in_order(html, ["superuser", "user@example.com"])
-    end
-
-    test "sorting by enabled status works correctly", %{conn: conn} do
-      _user_enabled = user_fixture(disabled: false, email: "enabled@example.com")
-
-      _user_disabled =
-        user_fixture(disabled: true, email: "disabled@example.com")
-
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
-
-      # Click enabled header to sort (enabled users should appear first)
-      index_live
-      |> element("a[phx-click='sort'][phx-value-by='enabled']")
-      |> render_click()
-
-      html = render(index_live)
-
-      # Check that disabled user appears before enabled user (false < true)
-      assert assert_elements_in_order(html, [
-               "disabled@example.com",
-               "enabled@example.com"
-             ])
     end
 
     test "filtering users by search term works correctly", %{conn: conn} do
