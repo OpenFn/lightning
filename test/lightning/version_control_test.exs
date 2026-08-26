@@ -596,6 +596,10 @@ defmodule Lightning.VersionControlTest do
         :ok
       end)
 
+      expect_create_installation_token(repo_connection.github_installation_id)
+      expect_get_repo(repo_connection.repo)
+      expect_create_workflow_dispatch(repo_connection.repo, "openfn-pull.yml")
+
       VersionControl.initiate_sync(repo_connection, commit_message)
     end
 
@@ -728,41 +732,26 @@ defmodule Lightning.VersionControlTest do
 
       expect_create_installation_token(installation_id)
 
-      Lightning.Tesla.Mock
-      |> expect(
-        :call,
-        fn %{
-             url: "https://api.github.com/installation/repositories",
-             query: [page: 1, per_page: 100]
-           },
-           _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "total_count" => Enum.count(expected_repos),
-               "repositories" => first_100_repos
-             }
-           }}
-        end
-      )
-      |> expect(
-        :call,
-        fn %{
-             url: "https://api.github.com/installation/repositories",
-             query: [page: 2, per_page: 100]
-           },
-           _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "total_count" => Enum.count(expected_repos),
-               "repositories" => next_batch
-             }
-           }}
-        end
-      )
+      expect(Lightning.Tesla.Mock, :call, 2, fn %{
+                                                  url:
+                                                    "https://api.github.com/installation/repositories",
+                                                  query: [
+                                                    page: page,
+                                                    per_page: 100
+                                                  ]
+                                                },
+                                                _opts ->
+        repositories = if page == 1, do: first_100_repos, else: next_batch
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{
+             "total_count" => Enum.count(expected_repos),
+             "repositories" => repositories
+           }
+         }}
+      end)
 
       expected_result = %{
         "total_count" => Enum.count(expected_repos),
@@ -798,56 +787,45 @@ defmodule Lightning.VersionControlTest do
 
       expect_create_installation_token(installation_id)
 
-      Lightning.Tesla.Mock
-      |> expect(
-        :call,
-        fn %{
-             url: "https://api.github.com/installation/repositories",
-             query: [page: 1, per_page: 100]
-           },
-           _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "total_count" => total_repo_count,
-               "repositories" => first_100_repos
-             }
-           }}
+      expect(Lightning.Tesla.Mock, :call, 3, fn %{
+                                                  url:
+                                                    "https://api.github.com/installation/repositories",
+                                                  query: [
+                                                    page: page,
+                                                    per_page: 100
+                                                  ]
+                                                },
+                                                _opts ->
+        case page do
+          1 ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "total_count" => total_repo_count,
+                 "repositories" => first_100_repos
+               }
+             }}
+
+          2 ->
+            # We're failing to return the 2nd batch
+            {:ok,
+             %Tesla.Env{
+               status: 403,
+               body: %{"message" => "some error maybe spike"}
+             }}
+
+          3 ->
+            {:ok,
+             %Tesla.Env{
+               status: 200,
+               body: %{
+                 "total_count" => total_repo_count,
+                 "repositories" => last_batch
+               }
+             }}
         end
-      )
-      |> expect(
-        :call,
-        fn %{
-             url: "https://api.github.com/installation/repositories",
-             query: [page: 2, per_page: 100]
-           },
-           _opts ->
-          # We're failing to return the 2nd batch
-          {:ok,
-           %Tesla.Env{
-             status: 403,
-             body: %{"message" => "some error maybe spike"}
-           }}
-        end
-      )
-      |> expect(
-        :call,
-        fn %{
-             url: "https://api.github.com/installation/repositories",
-             query: [page: 3, per_page: 100]
-           },
-           _opts ->
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "total_count" => total_repo_count,
-               "repositories" => last_batch
-             }
-           }}
-        end
-      )
+      end)
 
       expected_result = %{
         "total_count" => total_repo_count,
