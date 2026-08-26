@@ -405,6 +405,11 @@ defmodule Lightning.Runs.Handlers do
   defmodule CompleteStep do
     @moduledoc """
     Schema to validate the input attributes of a completed step.
+
+    `output_dataclip` may arrive either as a JSON-encoded string (older
+    workers) or already decoded — a map, list, or scalar (newer workers).
+    See `maybe_decode_dataclip/1`. Map values are stored as-is; non-map
+    values are wrapped as `%{"value" => x}` before persistence.
     """
     use Lightning.Schema
     import Ecto.Query
@@ -415,7 +420,7 @@ defmodule Lightning.Runs.Handlers do
     embedded_schema do
       field :project_id, Ecto.UUID
       field :run_id, Ecto.UUID
-      field :output_dataclip, :string
+      field :output_dataclip, :any, virtual: true
       field :output_dataclip_id, Ecto.UUID
       field :reason, :string
       field :error_type, :string
@@ -550,11 +555,19 @@ defmodule Lightning.Runs.Handlers do
       Dataclip.new(%{
         id: dataclip_id,
         project_id: project_id,
-        body: output_dataclip |> Jason.decode!() |> ensure_map(),
+        body: output_dataclip |> maybe_decode_dataclip() |> ensure_map(),
         type: :step_result
       })
       |> Repo.insert()
     end
+
+    # For back compat: older workers JSON-encode output_dataclip into a string before sending
+    # it (Lightning then decodes it); newer workers send the value already
+    # decoded.
+    defp maybe_decode_dataclip(value) when is_binary(value),
+      do: Jason.decode!(value)
+
+    defp maybe_decode_dataclip(value), do: value
 
     defp ensure_map(%{} = map), do: map
     defp ensure_map(value), do: %{"value" => value}

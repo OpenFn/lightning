@@ -412,6 +412,35 @@ defmodule Lightning.RunsTest do
         Runs.complete_step(%{
           step_id: step.id,
           reason: "success",
+          output_dataclip: %{"foo" => "bar"},
+          output_dataclip_id: Ecto.UUID.generate(),
+          run_id: run.id,
+          project_id: workflow.project_id
+        })
+
+      step =
+        step
+        |> Repo.preload(output_dataclip: Invocation.Query.dataclip_with_body())
+
+      assert step.exit_reason == "success"
+      assert Jason.decode!(step.output_dataclip.body) == %{"foo" => "bar"}
+    end
+
+    test "accepts a JSON-encoded string output_dataclip, for backward compatibility with older workers" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step =
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+
+      {:ok, step} =
+        Runs.complete_step(%{
+          step_id: step.id,
+          reason: "success",
           output_dataclip: ~s({"foo": "bar"}),
           output_dataclip_id: Ecto.UUID.generate(),
           run_id: run.id,
@@ -446,7 +475,7 @@ defmodule Lightning.RunsTest do
                Runs.complete_step(%{
                  step_id: step.id,
                  reason: "success",
-                 output_dataclip: ~s({"deferred": "indexword"}),
+                 output_dataclip: %{"deferred" => "indexword"},
                  output_dataclip_id: output_dataclip_id,
                  run_id: run.id,
                  project_id: workflow.project_id
@@ -491,7 +520,7 @@ defmodule Lightning.RunsTest do
           %{
             step_id: step.id,
             reason: "success",
-            output_dataclip: ~s({"foo": "bar"}),
+            output_dataclip: %{"foo" => "bar"},
             output_dataclip_id: Ecto.UUID.generate(),
             run_id: run.id,
             project_id: workflow.project_id
@@ -538,7 +567,7 @@ defmodule Lightning.RunsTest do
                Runs.complete_step(%{
                  step_id: Ecto.UUID.generate(),
                  reason: "success",
-                 output_dataclip: ~s({"foo": "bar"}),
+                 output_dataclip: %{"foo" => "bar"},
                  output_dataclip_id: Ecto.UUID.generate(),
                  run_id: run.id,
                  project_id: workflow.project_id
