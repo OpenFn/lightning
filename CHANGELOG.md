@@ -22,6 +22,9 @@ and this project adheres to
   button), closes any other open panel, deselects the current node, and drops
   any run-viewing context, landing on the bare canvas.
   [#4984](https://github.com/OpenFn/lightning/pull/4984)
+- `step:complete` now accepts `output_dataclip` as a decoded value, not just a
+  JSON string, while staying compatible with workers that still send a string.
+  [#5098](https://github.com/OpenFn/lightning/pull/5098)
 
 ### Changed
 
