@@ -34,6 +34,13 @@ and this project adheres to
 
 ### Fixed
 
+- The global AI chat now honours its "Send logs" and "Send scrubbed I/O"
+  checkboxes. Run logs and scrubbed step input and output are forwarded to
+  Apollo as attachments, with each log line carrying its job, step and level;
+  previously the UI said the data was attached but nothing was sent. When Apollo
+  rejects an oversized attachment, the chat now names the checkbox to untick
+  instead of showing raw Apollo output.
+  [#5096](https://github.com/OpenFn/lightning/pull/5096)
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
