@@ -2374,7 +2374,7 @@ defmodule Lightning.InvocationTest do
     end
   end
 
-  describe "logs_for_run/1" do
+  describe "logs_for_run/2" do
     setup do
       project = insert(:project)
       dataclip = insert(:dataclip, project: project)
@@ -2405,10 +2405,11 @@ defmodule Lightning.InvocationTest do
           "step_id" => Ecto.UUID.generate()
         })
 
-      %{run: run, step: step, job: job}
+      %{project: project, run: run, step: step, job: job}
     end
 
     test "returns lines oldest first with the step's job attributed", %{
+      project: project,
       run: run,
       step: step,
       job: job
@@ -2437,13 +2438,16 @@ defmodule Lightning.InvocationTest do
                  step_id: first_step_id
                },
                %{message: "second", level: :error}
-             ] = Invocation.logs_for_run(run.id)
+             ] = Invocation.logs_for_run(run.id, project.id)
 
       assert first_job_id == job.id
       assert first_step_id == step.id
     end
 
-    test "returns nil ids for a run-level line with no step", %{run: run} do
+    test "returns nil ids for a run-level line with no step", %{
+      project: project,
+      run: run
+    } do
       insert(:log_line,
         run: run,
         step: nil,
@@ -2452,14 +2456,21 @@ defmodule Lightning.InvocationTest do
       )
 
       assert [%{message: "starting worker", job_id: nil, step_id: nil}] =
-               Invocation.logs_for_run(run.id)
+               Invocation.logs_for_run(run.id, project.id)
     end
 
-    test "returns an empty list when the run has no lines", %{run: run} do
-      assert Invocation.logs_for_run(run.id) == []
+    test "returns an empty list when the run has no lines", %{
+      project: project,
+      run: run
+    } do
+      assert Invocation.logs_for_run(run.id, project.id) == []
     end
 
-    test "excludes lines from other runs", %{run: run, step: step} do
+    test "excludes lines from other runs", %{
+      project: project,
+      run: run,
+      step: step
+    } do
       other_run =
         insert(:run,
           work_order: insert(:workorder),
@@ -2470,7 +2481,16 @@ defmodule Lightning.InvocationTest do
       insert(:log_line, run: run, step: step, message: "mine")
       insert(:log_line, run: other_run, message: "theirs")
 
-      assert [%{message: "mine"}] = Invocation.logs_for_run(run.id)
+      assert [%{message: "mine"}] = Invocation.logs_for_run(run.id, project.id)
+    end
+
+    test "returns nothing for a run outside the project", %{
+      run: run,
+      step: step
+    } do
+      insert(:log_line, run: run, step: step, message: "mine")
+
+      assert Invocation.logs_for_run(run.id, insert(:project).id) == []
     end
   end
 

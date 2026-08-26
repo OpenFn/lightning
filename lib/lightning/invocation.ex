@@ -904,18 +904,20 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Return every log line for a run, oldest first, as maps.
+  Return every log line for a run in `project_id`, oldest first, as maps.
 
-  Unlike the `assemble_logs_*` functions this keeps the columns a consumer
-  needs to tell the lines apart: `job_id` (matching a job in the workflow) for
-  attribution, `level` for filtering, and `step_id` to separate retries.
-  Run-level lines have no step, so both ids are nil for them.
+  Unlike the `assemble_logs_*` functions this keeps the columns needed to tell
+  the lines apart: `job_id` for attribution, `level`, and `step_id` to separate
+  retries. Run-level lines have no step, so both ids are nil for them.
   """
-  @spec logs_for_run(Ecto.UUID.t()) :: [map()]
-  def logs_for_run(run_id) do
+  @spec logs_for_run(Ecto.UUID.t(), Ecto.UUID.t()) :: [map()]
+  def logs_for_run(run_id, project_id) do
     from(l in LogLine,
+      join: r in assoc(l, :run),
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow),
       left_join: s in assoc(l, :step),
-      where: l.run_id == ^run_id,
+      where: l.run_id == ^run_id and w.project_id == ^project_id,
       order_by: [asc: l.timestamp],
       select: %{
         step_id: l.step_id,

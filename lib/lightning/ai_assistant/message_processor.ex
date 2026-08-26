@@ -169,14 +169,14 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     )
   end
 
-  # Run context the user asked for via the chat input's checkboxes. A source
-  # that can't be resolved is omitted rather than sent as an empty attachment.
+  # Run context the user ticked on the chat input; an unresolvable source is
+  # omitted rather than sent as an empty attachment.
   @spec build_attachments(AiAssistant.ChatSession.t()) :: [map()]
   defp build_attachments(session) do
     opts = get_in(session.meta, ["message_options"]) || %{}
     run_id = get_in(session.meta, ["follow_run_id"])
 
-    log_attachments(opts["log"] == true, run_id) ++
+    log_attachments(opts["log"] == true, run_id, session.project_id) ++
       io_attachments(
         opts["attach_io_data"] == true,
         opts["step_id"],
@@ -184,14 +184,14 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       )
   end
 
-  defp log_attachments(true, run_id) when is_binary(run_id) do
-    case Invocation.logs_for_run(run_id) do
+  defp log_attachments(true, run_id, project_id) when is_binary(run_id) do
+    case Invocation.logs_for_run(run_id, project_id) do
       [] -> []
       lines -> [%{"type" => "log", "content" => lines}]
     end
   end
 
-  defp log_attachments(_attach, _run_id), do: []
+  defp log_attachments(_attach, _run_id, _project_id), do: []
 
   defp io_attachments(true, step_id, project_id) when is_binary(step_id) do
     {input, output} = fetch_and_scrub_io_data(step_id, project_id)

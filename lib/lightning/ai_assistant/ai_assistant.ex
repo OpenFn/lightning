@@ -1204,20 +1204,25 @@ defmodule Lightning.AiAssistant do
   # Catch-all for anything unexpected
   defp handle_sse_event(_session_id, _event, acc), do: acc
 
-  # Built from `details` rather than Apollo's prose so the wording, and which
-  # checkbox it names, stay ours.
+  # Built from `details`, not Apollo's prose, so the wording stays ours.
   defp attachment_too_large_message(
          %{"total_characters" => total, "limit_characters" => limit} = details
        ) do
     control =
       case get_in(details, ["largest_attachment", "type"]) do
-        "log" -> "Send logs"
-        _ -> "Send scrubbed I/O"
+        "log" ->
+          "“Send logs”"
+
+        dataclip when dataclip in ["input_dataclip", "output_dataclip"] ->
+          "“Send scrubbed I/O”"
+
+        _ ->
+          "an attachment"
       end
 
     "The attached run context is too large to analyse " <>
       "(#{total} characters against a #{limit} limit). " <>
-      "Untick “#{control}” and send again, or pick a run with less data."
+      "Untick #{control} and send again, or pick a run with less data."
   end
 
   defp attachment_too_large_message(_details),

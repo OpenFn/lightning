@@ -899,7 +899,7 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       user: user,
       project: project
     } do
-      %{job: job, run: run, step: step} = run_with_step(project)
+      %{job: job, run: run, step: step} = step_in_run(project)
 
       insert(:log_line,
         run: run,
@@ -941,7 +941,7 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       user: user,
       project: project
     } do
-      %{run: run, step: step} = run_with_step(project)
+      %{run: run, step: step} = step_in_run(project)
       insert(:log_line, run: run, step: step, message: "boom")
 
       message =
@@ -973,16 +973,20 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
     end
 
-    test "must not egress IO for a step outside the session's project", %{
+    test "must not egress logs or IO from outside the session's project", %{
       user: user,
       project: project
     } do
-      %{step: foreign_step} = run_with_step(insert(:project))
+      foreign_project = insert(:project)
+      %{run: foreign_run, step: foreign_step} = step_in_run(foreign_project)
+      insert(:log_line, run: foreign_run, step: foreign_step, message: "secret")
 
       message =
         global_message(user, project, %{
+          "log" => true,
           "attach_io_data" => true,
-          "step_id" => foreign_step.id
+          "step_id" => foreign_step.id,
+          "follow_run_id" => foreign_run.id
         })
 
       Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
@@ -995,47 +999,18 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
 
     # --- helpers ---------------------------------------------------------------
 
-    defp run_with_step(project) do
-      workflow = insert(:workflow, project: project)
-      job = insert(:job, workflow: workflow)
-      snapshot = insert(:snapshot, workflow: workflow)
-      work_order = insert(:workorder, workflow: workflow, snapshot: snapshot)
-
-      run =
-        insert(:run,
-          work_order: work_order,
-          snapshot: snapshot,
-          dataclip: build(:dataclip, project: project),
-          starting_job: job
-        )
-
-      step =
-        insert(:step,
-          job: job,
-          snapshot: snapshot,
-          input_dataclip: build(:dataclip, project: project, body: %{"a" => 1}),
-          output_dataclip: build(:dataclip, project: project, body: %{"b" => 2})
-        )
-
-      insert(:run_step, run: run, step: step)
-
-      %{job: job, run: run, step: step}
-    end
-
-    # A global session in `project`. `opts` is merged into message_options, and
-    # a "follow_run_id" key is lifted to session meta where the processor reads
-    # it from.
+    # A global session in `project`. `opts` is merged into message_options,
+    # except "follow_run_id" which is lifted to session meta where the
+    # processor reads it from.
     defp global_message(user, project, opts) do
       {run_id, message_options} = Map.pop(opts, "follow_run_id")
 
-      meta =
-        %{
-          "message_options" =>
-            Map.put(message_options, "use_global_assistant", true)
-        }
-        |> then(fn meta ->
-          if run_id, do: Map.put(meta, "follow_run_id", run_id), else: meta
-        end)
+      meta = %{
+        "message_options" =>
+          Map.put(message_options, "use_global_assistant", true)
+      }
+
+      meta = if run_id, do: Map.put(meta, "follow_run_id", run_id), else: meta
 
       session =
         insert(:chat_session,
@@ -1043,7 +1018,6 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
           session_type: "workflow_template",
           project: project,
           workflow: insert(:workflow, project: project),
-          job_id: nil,
           meta: meta
         )
 
@@ -1056,7 +1030,7 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
             user: user,
             code: "workflow:\n  name: test"
           },
-          meta: meta
+          []
         )
 
       Enum.find(updated_session.messages, &(&1.role == :user))
@@ -1065,7 +1039,6 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
     defp global_reply do
       Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
         "response" => "Global response",
-        "attachments" => [],
         "usage" => %{}
       })
     end
