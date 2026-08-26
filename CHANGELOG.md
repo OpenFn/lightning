@@ -39,6 +39,9 @@ and this project adheres to
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
   [#5009](https://github.com/OpenFn/lightning/pull/5009)
+- `eligible_for_claim/0` now breaks ties with `id` after `priority` and
+  `inserted_at`, so two runs inserted in the same microsecond no longer get
+  claimed in a nondeterministic order.
 
 ## [2.18.1] - 2026-08-28
 
