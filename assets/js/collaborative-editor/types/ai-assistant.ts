@@ -276,6 +276,7 @@ export interface MessageOptions {
 
   use_global_assistant?: boolean;
   page?: string;
+  follow_run_id?: string;
 }
 
 /**

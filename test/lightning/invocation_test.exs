@@ -2374,6 +2374,106 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  describe "logs_for_run/1" do
+    setup do
+      project = insert(:project)
+      dataclip = insert(:dataclip, project: project)
+
+      %{workflow: workflow, trigger: trigger, job: job, snapshot: snapshot} =
+        build_workflow(project: project, name: "logs-for-run")
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          starting_trigger: trigger
+        )
+
+      {:ok, step} =
+        Runs.start_step(run, %{
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "step_id" => Ecto.UUID.generate()
+        })
+
+      %{run: run, step: step, job: job}
+    end
+
+    test "returns lines oldest first with the step's job attributed", %{
+      run: run,
+      step: step,
+      job: job
+    } do
+      insert(:log_line,
+        run: run,
+        step: step,
+        message: "second",
+        level: :error,
+        timestamp: ~U[2026-08-25 10:00:01Z]
+      )
+
+      insert(:log_line,
+        run: run,
+        step: step,
+        message: "first",
+        level: :info,
+        timestamp: ~U[2026-08-25 10:00:00Z]
+      )
+
+      assert [
+               %{
+                 message: "first",
+                 level: :info,
+                 job_id: first_job_id,
+                 step_id: first_step_id
+               },
+               %{message: "second", level: :error}
+             ] = Invocation.logs_for_run(run.id)
+
+      assert first_job_id == job.id
+      assert first_step_id == step.id
+    end
+
+    test "returns nil ids for a run-level line with no step", %{run: run} do
+      insert(:log_line,
+        run: run,
+        step: nil,
+        message: "starting worker",
+        timestamp: ~U[2026-08-25 10:00:00Z]
+      )
+
+      assert [%{message: "starting worker", job_id: nil, step_id: nil}] =
+               Invocation.logs_for_run(run.id)
+    end
+
+    test "returns an empty list when the run has no lines", %{run: run} do
+      assert Invocation.logs_for_run(run.id) == []
+    end
+
+    test "excludes lines from other runs", %{run: run, step: step} do
+      other_run =
+        insert(:run,
+          work_order: insert(:workorder),
+          dataclip: insert(:dataclip),
+          starting_trigger: build(:trigger)
+        )
+
+      insert(:log_line, run: run, step: step, message: "mine")
+      insert(:log_line, run: other_run, message: "theirs")
+
+      assert [%{message: "mine"}] = Invocation.logs_for_run(run.id)
+    end
+  end
+
   defp assert_dataclips_list(expected, returned) do
     assert expected
            |> Enum.map(&format_listed/1)

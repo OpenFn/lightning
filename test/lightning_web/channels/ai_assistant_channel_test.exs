@@ -3786,6 +3786,72 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert message_options["page"] == "/projects/p1/workflows/w1"
     end
 
+    test "stores follow_run_id in the new session's meta", %{
+      socket: socket,
+      project: project,
+      workflow: workflow,
+      job: job
+    } do
+      run =
+        insert(:run,
+          work_order: insert(:workorder, workflow: workflow),
+          starting_job: job,
+          dataclip: insert(:dataclip, project: project)
+        )
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 %{
+                   "project_id" => project.id,
+                   "content" => "why did this fail?",
+                   "use_global_assistant" => true,
+                   "follow_run_id" => run.id,
+                   "attach_logs" => true
+                 }
+               )
+
+      session = AiAssistant.get_session!(response.session_id)
+
+      assert session.meta["follow_run_id"] == run.id
+      assert session.meta["message_options"]["log"] == true
+    end
+
+    test "does not store a follow_run_id from another project", %{
+      socket: socket,
+      project: project
+    } do
+      foreign_project = insert(:project)
+      foreign_workflow = insert(:workflow, project: foreign_project)
+
+      foreign_run =
+        insert(:run,
+          work_order: insert(:workorder, workflow: foreign_workflow),
+          starting_job: insert(:job, workflow: foreign_workflow),
+          dataclip: insert(:dataclip, project: foreign_project)
+        )
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 %{
+                   "project_id" => project.id,
+                   "content" => "why did this fail?",
+                   "use_global_assistant" => true,
+                   "follow_run_id" => foreign_run.id,
+                   "attach_logs" => true
+                 }
+               )
+
+      session = AiAssistant.get_session!(response.session_id)
+
+      refute Map.has_key?(session.meta, "follow_run_id")
+    end
+
     test "new_message with use_global_assistant stores options and code",
          %{
            socket: socket,

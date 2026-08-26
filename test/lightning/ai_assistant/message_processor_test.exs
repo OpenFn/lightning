@@ -893,4 +893,181 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       })
     end
   end
+
+  describe "attachments via process_global_message/2" do
+    test "sends logs and scrubbed step IO when both are ticked", %{
+      user: user,
+      project: project
+    } do
+      %{job: job, run: run, step: step} = run_with_step(project)
+
+      insert(:log_line,
+        run: run,
+        step: step,
+        message: "boom",
+        level: :error,
+        timestamp: ~U[2026-08-25 10:00:00Z]
+      )
+
+      message =
+        global_message(user, project, %{
+          "log" => true,
+          "attach_io_data" => true,
+          "step_id" => step.id,
+          "follow_run_id" => run.id
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert env.url =~ "/services/global_chat/stream"
+
+        assert [
+                 %{"type" => "log", "content" => [line]},
+                 %{"type" => "input_dataclip", "content" => %{"a" => "number"}},
+                 %{"type" => "output_dataclip", "content" => %{"b" => "number"}}
+               ] = Jason.decode!(env.body)["attachments"]
+
+        assert line["message"] == "boom"
+        assert line["level"] == "error"
+        assert line["job_id"] == job.id
+        assert line["step_id"] == step.id
+
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    test "sends no attachments when nothing is ticked", %{
+      user: user,
+      project: project
+    } do
+      %{run: run, step: step} = run_with_step(project)
+      insert(:log_line, run: run, step: step, message: "boom")
+
+      message =
+        global_message(user, project, %{
+          "step_id" => step.id,
+          "follow_run_id" => run.id
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    test "omits each attachment whose source is missing", %{
+      user: user,
+      project: project
+    } do
+      message =
+        global_message(user, project, %{"log" => true, "attach_io_data" => true})
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    test "must not egress IO for a step outside the session's project", %{
+      user: user,
+      project: project
+    } do
+      %{step: foreign_step} = run_with_step(insert(:project))
+
+      message =
+        global_message(user, project, %{
+          "attach_io_data" => true,
+          "step_id" => foreign_step.id
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    # --- helpers ---------------------------------------------------------------
+
+    defp run_with_step(project) do
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      snapshot = insert(:snapshot, workflow: workflow)
+      work_order = insert(:workorder, workflow: workflow, snapshot: snapshot)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          snapshot: snapshot,
+          dataclip: build(:dataclip, project: project),
+          starting_job: job
+        )
+
+      step =
+        insert(:step,
+          job: job,
+          snapshot: snapshot,
+          input_dataclip: build(:dataclip, project: project, body: %{"a" => 1}),
+          output_dataclip: build(:dataclip, project: project, body: %{"b" => 2})
+        )
+
+      insert(:run_step, run: run, step: step)
+
+      %{job: job, run: run, step: step}
+    end
+
+    # A global session in `project`. `opts` is merged into message_options, and
+    # a "follow_run_id" key is lifted to session meta where the processor reads
+    # it from.
+    defp global_message(user, project, opts) do
+      {run_id, message_options} = Map.pop(opts, "follow_run_id")
+
+      meta =
+        %{
+          "message_options" =>
+            Map.put(message_options, "use_global_assistant", true)
+        }
+        |> then(fn meta ->
+          if run_id, do: Map.put(meta, "follow_run_id", run_id), else: meta
+        end)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: insert(:workflow, project: project),
+          job_id: nil,
+          meta: meta
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(
+          session,
+          %{
+            role: :user,
+            content: "why did this fail?",
+            user: user,
+            code: "workflow:\n  name: test"
+          },
+          meta: meta
+        )
+
+      Enum.find(updated_session.messages, &(&1.role == :user))
+    end
+
+    defp global_reply do
+      Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+        "response" => "Global response",
+        "attachments" => [],
+        "usage" => %{}
+      })
+    end
+  end
 end

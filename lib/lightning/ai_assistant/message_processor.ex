@@ -164,9 +164,45 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
     AiAssistant.query_global_stream(session, message.content,
       workflow_yaml: workflow_yaml,
-      page: page
+      page: page,
+      attachments: build_attachments(session)
     )
   end
+
+  # Run context the user asked for via the chat input's checkboxes. A source
+  # that can't be resolved is omitted rather than sent as an empty attachment.
+  @spec build_attachments(AiAssistant.ChatSession.t()) :: [map()]
+  defp build_attachments(session) do
+    opts = get_in(session.meta, ["message_options"]) || %{}
+    run_id = get_in(session.meta, ["follow_run_id"])
+
+    log_attachments(opts["log"] == true, run_id) ++
+      io_attachments(
+        opts["attach_io_data"] == true,
+        opts["step_id"],
+        session.project_id
+      )
+  end
+
+  defp log_attachments(true, run_id) when is_binary(run_id) do
+    case Invocation.logs_for_run(run_id) do
+      [] -> []
+      lines -> [%{"type" => "log", "content" => lines}]
+    end
+  end
+
+  defp log_attachments(_attach, _run_id), do: []
+
+  defp io_attachments(true, step_id, project_id) when is_binary(step_id) do
+    {input, output} = fetch_and_scrub_io_data(step_id, project_id)
+
+    attachment("input_dataclip", input) ++ attachment("output_dataclip", output)
+  end
+
+  defp io_attachments(_attach, _step_id, _project_id), do: []
+
+  defp attachment(_type, nil), do: []
+  defp attachment(type, content), do: [%{"type" => type, "content" => content}]
 
   @spec job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()
   defp job_chat?(session, message) do

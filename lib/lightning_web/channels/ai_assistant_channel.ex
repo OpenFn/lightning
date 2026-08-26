@@ -459,7 +459,12 @@ defmodule LightningWeb.AiAssistantChannel do
 
           is_new_workflow = params["workflow_id"] && is_nil(workflow)
 
-          base_opts = extract_session_options("workflow_template", params)
+          base_opts =
+            extract_session_options(
+              "workflow_template",
+              sanitize_follow_run_id(params, project.id)
+            )
+
           base_meta = Keyword.get(base_opts, :meta, %{})
 
           opts =
@@ -779,7 +784,9 @@ defmodule LightningWeb.AiAssistantChannel do
         meta = Keyword.get(opts, :meta, %{})
 
         meta =
-          Map.put(meta, "message_options", build_message_options(params))
+          meta
+          |> Map.put("message_options", build_message_options(params))
+          |> maybe_put_follow_run_id(params)
 
         Keyword.put(opts, :meta, meta)
       else
@@ -788,6 +795,15 @@ defmodule LightningWeb.AiAssistantChannel do
 
     opts
   end
+
+  # Global chat resolves its log attachment from the followed run, so the run
+  # id has to survive session creation as well as the new_message path.
+  defp maybe_put_follow_run_id(meta, %{"follow_run_id" => run_id})
+       when not is_nil(run_id) do
+    Map.put(meta, "follow_run_id", run_id)
+  end
+
+  defp maybe_put_follow_run_id(meta, _params), do: meta
 
   defp extract_message_options(%{"use_global_assistant" => true} = params) do
     opts = [meta: %{"message_options" => build_message_options(params)}]

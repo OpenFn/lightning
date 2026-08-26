@@ -439,6 +439,7 @@ export function AIAssistantPanelWrapper({
             code?: string;
             use_global_assistant?: boolean;
             page?: string;
+            follow_run_id?: string;
           }
         | undefined = {
         ...messageOptions, // Include attach_code, attach_logs, attach_io_data, step_id
@@ -465,11 +466,18 @@ export function AIAssistantPanelWrapper({
 
         // Derive page for global assistant routing
         if (messageOptions?.use_global_assistant) {
-          const jobName = (aiMode?.context as JobCodeContext)?.job_name;
+          const context = aiMode?.context as JobCodeContext;
+          const jobName = context?.job_name;
           const workflowName = workflow?.name || 'workflow';
           options.page = jobName
             ? `workflows/${workflowName}/${jobName}`
             : `workflows/${workflowName}`;
+
+          // Only follow_run_id, not the whole context: a job_id here would
+          // route the message to job chat.
+          if (context?.follow_run_id) {
+            options.follow_run_id = context.follow_run_id;
+          }
         }
       } else {
         // important: determines what ai to be used

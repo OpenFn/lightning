@@ -2856,6 +2856,92 @@ defmodule Lightning.AiAssistantTest do
       :ok
     end
 
+    test "reports an oversized attachment with the checkbox to untick", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{
+          "code" => 400,
+          "type" => "ATTACHMENT_TOO_LARGE",
+          "message" => "Apollo's own prose, which we deliberately ignore",
+          "details" => %{
+            "total_characters" => 300_000,
+            "limit_characters" => 250_000,
+            "largest_attachment" => %{"type" => "log", "characters" => 300_000}
+          }
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error, %{error: message}}
+      assert message =~ "300000 characters against a 250000 limit"
+      assert message =~ "Send logs"
+      refute message =~ "deliberately ignore"
+    end
+
+    test "names the I/O checkbox when a dataclip is the largest attachment", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{
+          "type" => "ATTACHMENT_TOO_LARGE",
+          "details" => %{
+            "total_characters" => 260_000,
+            "limit_characters" => 250_000,
+            "largest_attachment" => %{"type" => "input_dataclip"}
+          }
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error, %{error: message}}
+      assert message =~ "Send scrubbed I/O"
+    end
+
+    # Apollo on main has no ATTACHMENT_TOO_LARGE, so an unrecognised type must
+    # keep falling through to its own message rather than being swallowed.
+    test "passes through an error type it does not recognise", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{
+          "type" => "PROMPT_TOO_LONG",
+          "message" => "The prompt is too long."
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: "The prompt is too long."}}
+    end
+
     test "processes SSE stream and saves global response", %{
       user: user,
       project: project,
@@ -3299,6 +3385,25 @@ defmodule Lightning.AiAssistantTest do
       assistant_msg = List.last(updated_session.messages)
       assert assistant_msg.content == "No artifacts"
       assert is_nil(assistant_msg.code)
+    end
+
+    defp global_session(user, project, workflow) do
+      insert(:chat_session,
+        user: user,
+        project: project,
+        workflow: workflow,
+        session_type: "workflow_template",
+        meta: %{"message_options" => %{"use_global_assistant" => true}},
+        messages: [
+          %{
+            role: :user,
+            content: "why?",
+            user: user,
+            status: :pending,
+            inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+          }
+        ]
+      )
     end
   end
 

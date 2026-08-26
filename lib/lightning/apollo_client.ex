@@ -150,6 +150,8 @@ defmodule Lightning.ApolloClient do
       Omitted from the wire payload when not supplied.
     - `:metrics_opt_in` - Optional boolean enabling Langfuse metrics tracking
       on the Apollo side. Omitted from the wire payload when not supplied.
+    - `:attachments` - Run context the user chose to send, as a list of
+      `%{"type" => type, "content" => content}` maps (default: `[]`)
   """
   @spec global_chat_stream(String.t(), opts()) :: Tesla.Env.result()
   def global_chat_stream(content, opts \\ []) do
@@ -158,6 +160,7 @@ defmodule Lightning.ApolloClient do
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta)
     metrics_opt_in = Keyword.get(opts, :metrics_opt_in)
+    attachments = Keyword.get(opts, :attachments, [])
 
     payload =
       %{
@@ -168,6 +171,7 @@ defmodule Lightning.ApolloClient do
         "history" => history,
         "meta" => meta,
         "metrics_opt_in" => metrics_opt_in,
+        "attachments" => attachments,
         "options" => %{"stream" => true}
       }
       |> Enum.reject(fn {_, v} -> is_nil(v) end)

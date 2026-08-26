@@ -8,6 +8,7 @@ defmodule Lightning.Invocation do
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.DataclipAudit
+  alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Query
   alias Lightning.Invocation.Step
   alias Lightning.Projects.File, as: ProjectFile
@@ -900,6 +901,30 @@ defmodule Lightning.Invocation do
     query
     |> Repo.all()
     |> Enum.join("\n")
+  end
+
+  @doc """
+  Return every log line for a run, oldest first, as maps.
+
+  Unlike the `assemble_logs_*` functions this keeps the columns a consumer
+  needs to tell the lines apart: `job_id` (matching a job in the workflow) for
+  attribution, `level` for filtering, and `step_id` to separate retries.
+  Run-level lines have no step, so both ids are nil for them.
+  """
+  @spec logs_for_run(Ecto.UUID.t()) :: [map()]
+  def logs_for_run(run_id) do
+    from(l in LogLine,
+      left_join: s in assoc(l, :step),
+      where: l.run_id == ^run_id,
+      order_by: [asc: l.timestamp],
+      select: %{
+        step_id: l.step_id,
+        job_id: s.job_id,
+        level: l.level,
+        message: l.message
+      }
+    )
+    |> Repo.all()
   end
 
   def assemble_logs_for_step(nil), do: nil
