@@ -114,6 +114,13 @@ defmodule LightningWeb.Router do
     get "/ai_assistant/sessions", API.AiAssistantController, :list_sessions
   end
 
+  ## Adaptor catalogue (cookie-authenticated JSON)
+  scope "/", LightningWeb do
+    pipe_through [:authenticated_json, :require_authenticated_user]
+
+    get "/adaptors/catalogue", AdaptorController, :index
+  end
+
   ## Collections
   scope "/collections", LightningWeb do
     pipe_through [:authenticated_api]
