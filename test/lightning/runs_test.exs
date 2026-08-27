@@ -455,6 +455,35 @@ defmodule Lightning.RunsTest do
       assert Jason.decode!(step.output_dataclip.body) == %{"foo" => "bar"}
     end
 
+    test "wraps a JSON-encoded scalar output_dataclip in %{\"value\" => x}" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step =
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+
+      {:ok, step} =
+        Runs.complete_step(%{
+          step_id: step.id,
+          reason: "success",
+          output_dataclip: ~s(42),
+          output_dataclip_id: Ecto.UUID.generate(),
+          run_id: run.id,
+          project_id: workflow.project_id
+        })
+
+      step =
+        step
+        |> Repo.preload(output_dataclip: Invocation.Query.dataclip_with_body())
+
+      assert step.exit_reason == "success"
+      assert Jason.decode!(step.output_dataclip.body) == %{"value" => 42}
+    end
+
     # Regression for #4800: dataclip inserts no longer build the search_vector
     # synchronously (the AFTER INSERT trigger was dropped). Saving an output
     # dataclip via the handler must succeed and the row must be retrievable with
