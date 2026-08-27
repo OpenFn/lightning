@@ -206,7 +206,7 @@ const SegmentTimeline = ({
   streaming?: boolean;
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
-  onOpenStep?: (jobId: string) => void;
+  onOpenStep?: (step: { jobId?: string; name: string }) => void;
   /**
    * Per-status change sets (segment index → what that action changed),
    * rendered right under the status row that announced it. Passed while
@@ -313,35 +313,56 @@ const WorkflowReplyTimeline = ({
   streaming?: boolean;
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
-  onOpenStep?: (jobId: string) => void;
+  onOpenStep?: (step: { jobId?: string; name: string }) => void;
 }) => {
-  const { byStatusIndex, trailing } = useMemo(() => {
-    if (snapshots.length > 0) {
-      const grouped = new Map<number, WorkflowChangeSet[]>();
-      const after: WorkflowChangeSet[] = [];
+  // The snapshot path only needs to know how many segments have drained,
+  // never their contents, and the store rebuilds `segments` on every streamed
+  // character. Depending on the array itself would reparse every snapshot
+  // (compiling a fresh Ajv validator each time) and re-diff every job body
+  // ~66 times a second for the length of the reply, so the two paths get
+  // separate memos with the dependencies each actually reads.
+  // A stable key for the only thing the snapshot memo reads about segments:
+  // how many there are and which are statuses. Depending on the array itself
+  // would churn per character; this string does not change while the drained
+  // timeline does not.
+  const segmentTypeKey = segments
+    .map(segment => (segment.type === 'status' ? 's' : 't'))
+    .join('');
 
-      for (const { segmentIndex, changes } of deriveSnapshotChanges(
-        baselineYaml,
-        snapshots
-      )) {
-        // A snapshot whose status has not drained yet (or never comes)
-        // renders below the timeline rather than vanishing.
-        if (segmentIndex >= segments.length) {
-          after.push(changes);
-          continue;
-        }
-        const existing = grouped.get(segmentIndex);
-        if (existing) existing.push(changes);
-        else grouped.set(segmentIndex, [changes]);
+  const snapshotAssignment = useMemo(() => {
+    if (snapshots.length === 0) return null;
+
+    const grouped = new Map<number, WorkflowChangeSet[]>();
+    const after: WorkflowChangeSet[] = [];
+
+    for (const { segmentIndex, changes } of deriveSnapshotChanges(
+      baselineYaml,
+      snapshots
+    )) {
+      // The index a snapshot was pinned to only carries its diff if a status
+      // actually landed there. A text chunk draining between the snapshot and
+      // its status pushes the status one row later, and the timeline only
+      // reads this map for status rows, so anything else would render
+      // nowhere at all. Fall back to the tail rather than lose it.
+      if (segmentTypeKey[segmentIndex] !== 's') {
+        after.push(changes);
+        continue;
       }
-
-      return {
-        byStatusIndex: new Map(
-          [...grouped].map(([index, sets]) => [index, mergeChangeSets(sets)])
-        ),
-        trailing: after.length > 0 ? mergeChangeSets(after) : null,
-      };
+      const existing = grouped.get(segmentIndex);
+      if (existing) existing.push(changes);
+      else grouped.set(segmentIndex, [changes]);
     }
+
+    return {
+      byStatusIndex: new Map(
+        [...grouped].map(([index, sets]) => [index, mergeChangeSets(sets)])
+      ),
+      trailing: after.length > 0 ? mergeChangeSets(after) : null,
+    };
+  }, [snapshots, baselineYaml, segmentTypeKey]);
+
+  const fallbackAssignment = useMemo(() => {
+    if (snapshots.length > 0) return null;
 
     const changes = finalYaml
       ? deriveWorkflowChanges(baselineYaml, finalYaml)
@@ -366,7 +387,13 @@ const WorkflowReplyTimeline = ({
         structure: changes.structure,
       },
     };
-  }, [snapshots, baselineYaml, finalYaml, segments]);
+  }, [snapshots.length, baselineYaml, finalYaml, segments]);
+
+  const { byStatusIndex, trailing } = snapshotAssignment ??
+    fallbackAssignment ?? {
+      byStatusIndex: new Map<number, WorkflowChangeSet>(),
+      trailing: null,
+    };
 
   return (
     <>
@@ -642,7 +669,7 @@ interface MessageListProps {
   /** Snapshots retained per finalized assistant message id */
   snapshotsByMessageId?: Record<string, WorkflowSnapshot[]>;
   /** Opens a step in the IDE from a diff block */
-  onOpenStep?: (jobId: string) => void;
+  onOpenStep?: (step: { jobId?: string; name: string }) => void;
   /**
    * Whether the global assistant is active. Gates the woven streaming
    * timeline — non-global streams keep the flat content + single scalar
@@ -778,11 +805,7 @@ export function MessageList({
   const beforeYamlByMessageId = useMemo(() => {
     const map = new Map<string, string | null>();
     messages.forEach((message, index) => {
-      if (
-        message.role !== 'assistant' ||
-        !message.from_global ||
-        !message.code
-      ) {
+      if (message.role !== 'assistant' || !message.from_global) {
         return;
       }
       let before: string | null = null;
@@ -869,8 +892,12 @@ export function MessageList({
       className="h-full overflow-y-auto"
       data-testid="message-list"
       onScroll={() => {
+        // Tracked unconditionally, not just mid-reply: gated on a live
+        // stream, scrolling back to the bottom between replies never cleared
+        // the flag, so the next reply (and the user's own message) would not
+        // scroll into view.
         const el = containerRef.current;
-        if (el && isStreamLive) {
+        if (el) {
           const isNearBottom =
             el.scrollHeight - el.scrollTop - el.clientHeight < 100;
           userScrolledAwayRef.current = !isNearBottom;

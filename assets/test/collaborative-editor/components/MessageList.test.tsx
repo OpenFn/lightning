@@ -1312,8 +1312,12 @@ describe('MessageList', () => {
 
       await userEvent.click(screen.getByTestId('diff-block-open-step'));
 
-      // The id comes from the workflow the reply produced, not the name
-      expect(onOpenStep).toHaveBeenCalledWith('job-1');
+      // Carries both: the id can be one the parser invented, so the caller
+      // resolves by id first and falls back to the name.
+      expect(onOpenStep).toHaveBeenCalledWith({
+        jobId: 'job-1',
+        name: 'Transform data',
+      });
     });
 
     it('offers no link for a removed step, which has nowhere to go', () => {

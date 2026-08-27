@@ -290,12 +290,15 @@ export const StepDiffBlock = ({
   onOpenStep,
 }: {
   step: StepChange;
-  /** Opens this step in the IDE. Omitted where navigation isn't available. */
-  onOpenStep?: (jobId: string) => void;
+  /**
+   * Opens this step in the IDE. Takes the name as well as the id: parsing
+   * YAML without `id:` fields invents ids, and the apply path parses the
+   * same YAML separately, so the two do not agree for a newly added step.
+   */
+  onOpenStep?: (step: { jobId?: string; name: string }) => void;
 }) => {
-  const jobId = step.jobId;
   // A removed step has nowhere to go, so it gets no link.
-  const canOpen = Boolean(onOpenStep && jobId && step.type !== 'remove');
+  const canOpen = Boolean(onOpenStep && step.type !== 'remove');
 
   return (
     <DiffBlockShell
@@ -309,7 +312,7 @@ export const StepDiffBlock = ({
             type="button"
             data-testid="diff-block-open-step"
             onClick={() => {
-              onOpenStep?.(jobId!);
+              onOpenStep?.({ jobId: step.jobId, name: step.name });
             }}
             className="shrink-0 text-xs text-[#0969da] hover:underline px-1 py-0.5"
           >
@@ -386,7 +389,7 @@ export const WorkflowChangeBlocks = ({
 }: {
   steps: StepChange[];
   structure: StructuralChange[];
-  onOpenStep?: (jobId: string) => void;
+  onOpenStep?: (step: { jobId?: string; name: string }) => void;
 }) => {
   if (steps.length === 0 && structure.length === 0) return null;
 
@@ -417,7 +420,7 @@ export function WorkflowDiffBlocks({
 }: {
   beforeYaml: string | null;
   afterYaml: string;
-  onOpenStep?: (jobId: string) => void;
+  onOpenStep?: (step: { jobId?: string; name: string }) => void;
 }) {
   // Memoized so YAML parsing/diffing runs once per message, not per render
   const changes = useMemo(

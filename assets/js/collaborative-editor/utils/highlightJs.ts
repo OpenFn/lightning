@@ -14,6 +14,9 @@
  * multi-line strings correct where a hunk shows only part of them.
  */
 
+// Must come first: it puts Prism in manual mode so importing Prism does not
+// schedule a document-wide highlightAll that rewrites other components' DOM.
+import './prismManual';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-javascript';
 

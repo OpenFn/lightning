@@ -174,17 +174,21 @@ export function AIAssistantPanelWrapper({
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
   /**
-   * Open a step from a diff block in the IDE. Selects the node and opens the
-   * editor panel in one navigation, so the user lands on the code they were
-   * just reading rather than on the canvas.
+   * Open a step from a diff block in the IDE, selecting the node and opening
+   * the editor in one navigation.
+   *
+   * Resolves by id first, then by name. Parsing YAML without `id:` fields
+   * invents ids, and the apply path parses the same YAML separately, so for
+   * a step the reply just added the diff's id and the canvas's id disagree.
+   * Navigating to an id nothing owns opens an empty editor.
    */
   const handleOpenStep = useCallback(
-    (jobId: string) => {
-      // Parsing YAML without `id:` fields invents ids, so a step's id is not
-      // guaranteed to name a job on the canvas. Navigating to one that does
-      // not exist opens an empty editor, so check first.
-      if (!jobs.some(job => job.id === jobId)) return;
-      updateSearchParams({ panel: 'editor', job: jobId });
+    ({ jobId, name }: { jobId?: string; name: string }) => {
+      const match =
+        (jobId && jobs.find(job => job.id === jobId)) ??
+        jobs.find(job => job.name === name);
+      if (!match) return;
+      updateSearchParams({ panel: 'editor', job: match.id });
     },
     [jobs, updateSearchParams]
   );
