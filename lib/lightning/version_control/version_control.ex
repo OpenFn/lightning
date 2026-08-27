@@ -180,6 +180,7 @@ defmodule Lightning.VersionControl do
         join: s in assoc(w, :snapshots),
         on: s.lock_version == w.lock_version,
         where: w.project_id == ^project_id and is_nil(w.deleted_at),
+        order_by: s.id,
         select: s.id
 
     Repo.all(current_query)

@@ -202,6 +202,9 @@ defmodule Lightning.VersionControl.GithubClient do
 
         {:ok, %{status: 403, body: %{"message" => message} = resp}} ->
           {:error, GithubError.api_error(message, resp)}
+
+        {:error, reason} ->
+          {:error, reason}
       end
     end
   end
