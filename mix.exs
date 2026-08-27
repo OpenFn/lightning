@@ -67,7 +67,7 @@ defmodule Lightning.MixProject do
 
   # cowlib advisories we have checked and accepted. Each names a function on
   # cowlib's header-building path, and nothing in our tree calls any of them. The
-  # parse side of these modules IS reachable through cowboy_req, so recheck by
+  # parse side of two of them is reachable through cowboy_req, so recheck by
   # function rather than by module. No patched cowlib release exists yet. Hex
   # matches an advisory's primary ID or any alias, so the CVE form also silences
   # the GHSA and EEF variants. Detail in #5102.
