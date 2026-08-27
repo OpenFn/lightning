@@ -72,6 +72,8 @@ import type {
 import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
 
+import { clearWorkflowDiffCaches } from '../utils/workflowDiff';
+
 const logger = _logger.ns('AIAssistantStore').seal();
 
 /**
@@ -207,6 +209,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Forces creation of a new session by clearing sessionId and messages
    */
   const clearSession = () => {
+    clearWorkflowDiffCaches();
     state = produce(state, draft => {
       draft.sessionId = null;
       draft.messages = [];
@@ -229,10 +232,16 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Switches to the specified session
    */
   const loadSession = (sessionId: string) => {
+    clearWorkflowDiffCaches();
     state = produce(state, draft => {
       draft.connectionState = 'connecting';
       draft.sessionId = sessionId;
       draft.messages = [];
+      draft.streamingContent = null;
+      draft.streamingStatus = null;
+      draft.streamingSegments = [];
+      draft.streamingSnapshots = [];
+      draft.snapshotsByMessageId = {};
       draft.isLoading = true;
       draft.streamingApply = null;
     });

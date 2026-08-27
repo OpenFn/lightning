@@ -113,7 +113,8 @@ const diffBodies = (
 const matchEntities = <T extends { id: string }>(
   before: T[],
   after: T[],
-  fallbackKey: (entity: T) => string
+  fallbackKey: (entity: T) => string,
+  { pairLeftovers = false }: { pairLeftovers?: boolean } = {}
 ): { pairs: Array<[T, T]>; removed: T[]; added: T[] } => {
   const pairs: Array<[T, T]> = [];
   const remainingBefore = [...before];
@@ -131,6 +132,22 @@ const matchEntities = <T extends { id: string }>(
         remainingAfter.splice(j, 1);
       }
     }
+  }
+
+  // Neither id nor name matched, which is what a rename looks like when the
+  // YAML carried no ids. Pairing what is left in order recovers it: without
+  // this a renamed step reads as a remove plus an add of the whole body, and
+  // the rename row can never be produced at all. Only safe one-to-one, since
+  // a genuine add and a genuine remove in the same reply would otherwise be
+  // paired into a nonsense diff.
+  if (
+    pairLeftovers &&
+    remainingBefore.length === 1 &&
+    remainingAfter.length === 1
+  ) {
+    pairs.push([remainingBefore[0], remainingAfter[0]]);
+    remainingBefore.length = 0;
+    remainingAfter.length = 0;
   }
 
   return { pairs, removed: remainingBefore, added: remainingAfter };
@@ -154,17 +171,28 @@ const edgeCondition = (edge: StateEdge): string =>
 const deriveStepChanges = (
   before: DiffState,
   after: DiffState
-): { steps: StepChange[]; renames: StructuralChange[] } => {
+): {
+  steps: StepChange[];
+  renames: StructuralChange[];
+  jobIdentity: Map<string, string>;
+} => {
   const { pairs, removed, added } = matchEntities(
     before.jobs,
     after.jobs,
-    job => `name:${job.name}`
+    job => `name:${job.name}`,
+    { pairLeftovers: true }
   );
 
   const renames: StructuralChange[] = [];
   const updates = new Map<StateJob, StepChange>();
+  // Both sides of a pair answer to one identity, so an edge touching a
+  // renamed step still matches itself rather than reading as a remove of the
+  // old wiring plus an add of the new.
+  const jobIdentity = new Map<string, string>();
 
   for (const [beforeJob, afterJob] of pairs) {
+    jobIdentity.set(beforeJob.id, afterJob.id);
+    jobIdentity.set(afterJob.id, afterJob.id);
     if (beforeJob.name !== afterJob.name) {
       renames.push({
         kind: 'rename',
@@ -231,24 +259,35 @@ const deriveStepChanges = (
     });
   }
 
-  return { steps, renames };
+  return { steps, renames, jobIdentity };
 };
 
 const deriveEdgeChanges = (
   before: DiffState,
-  after: DiffState
+  after: DiffState,
+  identity: Map<string, string>
 ): StructuralChange[] => {
+  // Keyed on the identities the job pairing settled on rather than on display
+  // names: a renamed step changes both endpoint names, which made every edge
+  // touching it read as a remove plus an add of wiring that never moved.
+  const endpointKey = (edge: StateEdge): string => {
+    const sourceId = edge.source_trigger_id ?? edge.source_job_id ?? '';
+    const targetId = edge.target_job_id ?? '';
+    // Falls back to the display names where the pairing knows nothing about
+    // either endpoint, which is what this key was before identities existed.
+    if (!identity.has(sourceId) && !identity.has(targetId)) {
+      const state = before.edges.includes(edge) ? before : after;
+      return `endpoints:${edgeEndpoints(edge, state)}`;
+    }
+    return `endpoints:${identity.get(sourceId) ?? sourceId}->${
+      identity.get(targetId) ?? targetId
+    }`;
+  };
+
   const { pairs, removed, added } = matchEntities(
     before.edges,
     after.edges,
-    // Endpoint names are only resolvable within each edge's own state, so
-    // the fallback key is computed against the matching side.
-    edge =>
-      `endpoints:${
-        before.edges.includes(edge)
-          ? edgeEndpoints(edge, before)
-          : edgeEndpoints(edge, after)
-      }`
+    endpointKey
   );
 
   const changes: StructuralChange[] = [];
@@ -271,19 +310,17 @@ const deriveEdgeChanges = (
 
   for (const [beforeEdge, afterEdge] of pairs) {
     const details: string[] = [];
-    // Rewiring is detected on ids, because display names shift when a step
-    // is renamed and that is not an edge change. Ids alone are not enough
-    // though: parsing YAML without `id:` fields invents a fresh UUID per
-    // entity, so two parses of the same workflow never agree on ids and
-    // every edge would report itself rewired. Require the endpoints to have
-    // actually moved as well.
-    const idsDiffer =
-      (beforeEdge.source_trigger_id ?? beforeEdge.source_job_id) !==
-        (afterEdge.source_trigger_id ?? afterEdge.source_job_id) ||
-      beforeEdge.target_job_id !== afterEdge.target_job_id;
+    // Rewiring is a change of endpoint, compared on the identities the
+    // pairing settled on. Raw ids are no good (parsing YAML without `id:`
+    // invents a fresh UUID per entity, so no two parses agree) and neither
+    // are display names, which shift when a step is renamed without the
+    // wiring moving at all.
+    const resolve = (id: string | null | undefined): string =>
+      id ? (identity.get(id) ?? id) : '';
     const rewired =
-      idsDiffer &&
-      edgeEndpoints(beforeEdge, before) !== edgeEndpoints(afterEdge, after);
+      resolve(beforeEdge.source_trigger_id ?? beforeEdge.source_job_id) !==
+        resolve(afterEdge.source_trigger_id ?? afterEdge.source_job_id) ||
+      resolve(beforeEdge.target_job_id) !== resolve(afterEdge.target_job_id);
     if (rewired) {
       details.push(`was ${edgeEndpoints(beforeEdge, before)}`);
     }
@@ -318,12 +355,20 @@ const deriveEdgeChanges = (
 const deriveTriggerChanges = (
   before: DiffState,
   after: DiffState
-): StructuralChange[] => {
+): { changes: StructuralChange[]; triggerIdentity: Map<string, string> } => {
   const { pairs, removed, added } = matchEntities(
     before.triggers,
     after.triggers,
     trigger => `type:${trigger.type}`
   );
+
+  // Same purpose as the job identities: an edge from a trigger must match
+  // itself even though both sides carry invented trigger ids.
+  const triggerIdentity = new Map<string, string>();
+  for (const [beforeTrigger, afterTrigger] of pairs) {
+    triggerIdentity.set(beforeTrigger.id, afterTrigger.id);
+    triggerIdentity.set(afterTrigger.id, afterTrigger.id);
+  }
 
   const changes: StructuralChange[] = [];
 
@@ -370,7 +415,7 @@ const deriveTriggerChanges = (
     }
   }
 
-  return changes;
+  return { changes, triggerIdentity };
 };
 
 /**
@@ -384,11 +429,16 @@ const diffStates = (
   before: DiffState,
   after: DiffState
 ): WorkflowChangeSet | null => {
-  const { steps, renames } = deriveStepChanges(before, after);
+  const { steps, renames, jobIdentity } = deriveStepChanges(before, after);
+  const { changes: triggerChanges, triggerIdentity } = deriveTriggerChanges(
+    before,
+    after
+  );
+  const identity = new Map([...jobIdentity, ...triggerIdentity]);
   const structure = [
     ...renames,
-    ...deriveTriggerChanges(before, after),
-    ...deriveEdgeChanges(before, after),
+    ...triggerChanges,
+    ...deriveEdgeChanges(before, after, identity),
   ];
 
   if (steps.length === 0 && structure.length === 0) return null;
@@ -578,6 +628,18 @@ const cachedDiff = (
   }
   diffedPairs.set(key, changes);
   return changes;
+};
+
+/**
+ * Drops both caches.
+ *
+ * Their keys are whole YAML documents, so for a large workflow they hold
+ * several MB for the life of the tab. A session change is the natural point
+ * to let that go: nothing from the previous session will be diffed again.
+ */
+export const clearWorkflowDiffCaches = (): void => {
+  parsedStates.clear();
+  diffedPairs.clear();
 };
 
 export const deriveSnapshotChanges = (

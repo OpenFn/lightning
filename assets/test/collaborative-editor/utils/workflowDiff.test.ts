@@ -648,6 +648,44 @@ describe('edges without preserved ids', () => {
     expect(changes?.structure).toEqual([]);
   });
 
+  it('reports a rename as a rename, not a remove plus an add', () => {
+    const named = (name: string, body: string) =>
+      [
+        'name: Test Workflow',
+        'jobs:',
+        '  step-one:',
+        `    name: ${name}`,
+        "    adaptor: '@openfn/language-common@latest'",
+        `    body: ${body}`,
+        'triggers:',
+        '  webhook:',
+        '    type: webhook',
+        '    enabled: true',
+        'edges:',
+        '  webhook->step-one:',
+        '    source_trigger: webhook',
+        `    target_job: step-one`,
+        '    condition_type: always',
+        '    enabled: true',
+      ].join('\n') + '\n';
+
+    const changes = deriveWorkflowChanges(
+      named('Fetch data', 'fn(s => s);'),
+      named('Fetch records', 'fn(s => s.body);')
+    );
+
+    // Without id or name to pair on, this used to read as two whole-body
+    // blocks plus edge rows for wiring that never moved.
+    expect(changes?.steps.map(step => step.type)).toEqual(['update']);
+    expect(changes?.structure).toContainEqual(
+      expect.objectContaining({
+        kind: 'rename',
+        description: 'Fetch data → Fetch records',
+      })
+    );
+    expect(changes?.structure.filter(row => row.kind === 'edge')).toEqual([]);
+  });
+
   it('still reports an edge whose endpoints actually moved', () => {
     const before = buildYaml({
       jobs: [

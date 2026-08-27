@@ -1167,6 +1167,7 @@ defmodule Lightning.AiAssistant do
           segment
           |> Map.take(["type", "content", "summary", "steps"])
           |> normalize_segment_steps()
+          |> normalize_segment_summary()
         )
 
       _ ->
