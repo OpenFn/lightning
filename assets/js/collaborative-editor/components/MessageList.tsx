@@ -201,12 +201,14 @@ const SegmentTimeline = ({
   isWriteDisabled = false,
   changesByStatusIndex,
   onOpenStep,
+  canOpenStep,
 }: {
   segments: ResponseSegment[];
   streaming?: boolean;
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
   onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
   /**
    * Per-status change sets (segment index → what that action changed),
    * rendered right under the status row that announced it. Passed while
@@ -240,6 +242,7 @@ const SegmentTimeline = ({
                       key={`${step.type}-${step.name}-${stepIndex}`}
                       step={step}
                       onOpenStep={onOpenStep}
+                      canOpenStep={canOpenStep}
                     />
                   ))}
                   {changes.structure.length > 0 && (
@@ -305,6 +308,7 @@ const WorkflowReplyTimeline = ({
   showAddButtons = false,
   isWriteDisabled = false,
   onOpenStep,
+  canOpenStep,
 }: {
   segments: ResponseSegment[];
   snapshots: WorkflowSnapshot[];
@@ -314,6 +318,7 @@ const WorkflowReplyTimeline = ({
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
   onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
 }) => {
   // The snapshot path only needs to know how many segments have drained,
   // never their contents, and the store rebuilds `segments` on every streamed
@@ -409,6 +414,7 @@ const WorkflowReplyTimeline = ({
         isWriteDisabled={isWriteDisabled}
         changesByStatusIndex={byStatusIndex}
         onOpenStep={onOpenStep}
+        canOpenStep={canOpenStep}
       />
       {trailing &&
         (trailing.steps.length > 0 || trailing.structure.length > 0) && (
@@ -416,6 +422,7 @@ const WorkflowReplyTimeline = ({
             steps={trailing.steps}
             structure={trailing.structure}
             onOpenStep={onOpenStep}
+            canOpenStep={canOpenStep}
           />
         )}
     </>
@@ -675,6 +682,7 @@ interface MessageListProps {
   snapshotsByMessageId?: Record<string, WorkflowSnapshot[]>;
   /** Opens a step in the IDE from a diff block */
   onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
   /**
    * Global replies whose auto-apply failed. They get the code panel and its
    * Apply button back, because a failed import is never retried on its own.
@@ -706,6 +714,7 @@ export function MessageList({
   streamingSnapshots = [],
   snapshotsByMessageId = {},
   onOpenStep,
+  canOpenStep,
   failedApplyMessageIds,
   isGlobalAssistantActive = false,
 }: MessageListProps) {
@@ -977,6 +986,7 @@ export function MessageList({
                           showAddButtons={showMessageAddButtons}
                           isWriteDisabled={isWriteDisabled}
                           onOpenStep={onOpenStep}
+                          canOpenStep={canOpenStep}
                         />
                       ) : (
                         <SegmentTimeline
@@ -1027,6 +1037,7 @@ export function MessageList({
                           }
                           afterYaml={message.code}
                           onOpenStep={onOpenStep}
+                          canOpenStep={canOpenStep}
                         />
                       )}
 

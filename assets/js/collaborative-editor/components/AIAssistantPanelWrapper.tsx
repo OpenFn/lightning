@@ -182,6 +182,13 @@ export function AIAssistantPanelWrapper({
    * a step the reply just added the diff's id and the canvas's id disagree.
    * Navigating to an id nothing owns opens an empty editor.
    */
+  /** Whether a diff block's step actually exists on the canvas */
+  const canOpenStep = useCallback(
+    ({ jobId, name }: { jobId?: string; name: string }) =>
+      jobs.some(job => job.id === jobId || job.name === name),
+    [jobs]
+  );
+
   const handleOpenStep = useCallback(
     ({ jobId, name }: { jobId?: string; name: string }) => {
       const match =
@@ -848,6 +855,7 @@ export function AIAssistantPanelWrapper({
                 streamingSnapshots={streamingSnapshots}
                 snapshotsByMessageId={snapshotsByMessageId}
                 onOpenStep={handleOpenStep}
+                canOpenStep={canOpenStep}
                 failedApplyMessageIds={failedApplyMessageIds}
                 isGlobalAssistantActive={isGlobalAssistantActive}
               />

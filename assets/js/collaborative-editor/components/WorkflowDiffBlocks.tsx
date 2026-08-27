@@ -288,6 +288,7 @@ const DiffHunks = ({ step }: { step: StepChange }) => {
 export const StepDiffBlock = ({
   step,
   onOpenStep,
+  canOpenStep,
 }: {
   step: StepChange;
   /**
@@ -296,9 +297,19 @@ export const StepDiffBlock = ({
    * same YAML separately, so the two do not agree for a newly added step.
    */
   onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  /**
+   * Whether this step exists on the canvas. A reply whose apply failed, or
+   * a step renamed since, resolves to nothing, and a link that silently
+   * does nothing is worse than no link.
+   */
+  canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
 }) => {
   // A removed step has nowhere to go, so it gets no link.
-  const canOpen = Boolean(onOpenStep && step.type !== 'remove');
+  const canOpen = Boolean(
+    onOpenStep &&
+      step.type !== 'remove' &&
+      (!canOpenStep || canOpenStep({ jobId: step.jobId, name: step.name }))
+  );
 
   return (
     <DiffBlockShell
@@ -386,10 +397,12 @@ export const WorkflowChangeBlocks = ({
   steps,
   structure,
   onOpenStep,
+  canOpenStep,
 }: {
   steps: StepChange[];
   structure: StructuralChange[];
   onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
 }) => {
   if (steps.length === 0 && structure.length === 0) return null;
 
@@ -400,6 +413,7 @@ export const WorkflowChangeBlocks = ({
           key={`${step.type}-${step.name}-${index}`}
           step={step}
           onOpenStep={onOpenStep}
+          canOpenStep={canOpenStep}
         />
       ))}
       {structure.length > 0 && <StructureBlock rows={structure} />}

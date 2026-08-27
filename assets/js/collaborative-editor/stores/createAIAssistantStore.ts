@@ -455,22 +455,22 @@ export const createAIAssistantStore = (): AIAssistantStore => {
           // the blocks would jump to the wrong status at exactly the moment
           // this is meant to be seamless. Fall back to the whole-message
           // diff rather than show them against the wrong statuses.
-          // Each entry holds a full workflow YAML per mutation, so an old
-          // reply's snapshots are dropped rather than kept for the life of
-          // the tab. Only the most recent replies can still be on screen in
-          // a state where they matter.
-          const retained = Object.keys(draft.snapshotsByMessageId);
-          if (retained.length >= MAX_RETAINED_SNAPSHOT_MESSAGES) {
-            retained
-              .slice(0, retained.length - MAX_RETAINED_SNAPSHOT_MESSAGES + 1)
-              .forEach(id => delete draft.snapshotsByMessageId[id]);
-          }
-
           const serverSegments = message.response_segments?.length ?? 0;
           if (
             draft.streamingSnapshots.length > 0 &&
             serverSegments === streamedSegmentCount
           ) {
+            // Evict only when actually storing something. Doing it up front
+            // meant a plain-text reply, which retains nothing, still dropped
+            // the oldest reply's snapshots and quietly sent it back to the
+            // whole-message diff. Each entry holds a full workflow YAML per
+            // mutation, so the cap is what keeps a long session bounded.
+            const retained = Object.keys(draft.snapshotsByMessageId);
+            if (retained.length >= MAX_RETAINED_SNAPSHOT_MESSAGES) {
+              retained
+                .slice(0, retained.length - MAX_RETAINED_SNAPSHOT_MESSAGES + 1)
+                .forEach(id => delete draft.snapshotsByMessageId[id]);
+            }
             draft.snapshotsByMessageId[message.id] = draft.streamingSnapshots;
           }
           draft.streamingSnapshots = [];

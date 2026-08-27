@@ -113,8 +113,7 @@ const diffBodies = (
 const matchEntities = <T extends { id: string }>(
   before: T[],
   after: T[],
-  fallbackKey: (entity: T) => string,
-  { pairLeftovers = false }: { pairLeftovers?: boolean } = {}
+  fallbackKey: (entity: T) => string
 ): { pairs: Array<[T, T]>; removed: T[]; added: T[] } => {
   const pairs: Array<[T, T]> = [];
   const remainingBefore = [...before];
@@ -132,22 +131,6 @@ const matchEntities = <T extends { id: string }>(
         remainingAfter.splice(j, 1);
       }
     }
-  }
-
-  // Neither id nor name matched, which is what a rename looks like when the
-  // YAML carried no ids. Pairing what is left in order recovers it: without
-  // this a renamed step reads as a remove plus an add of the whole body, and
-  // the rename row can never be produced at all. Only safe one-to-one, since
-  // a genuine add and a genuine remove in the same reply would otherwise be
-  // paired into a nonsense diff.
-  if (
-    pairLeftovers &&
-    remainingBefore.length === 1 &&
-    remainingAfter.length === 1
-  ) {
-    pairs.push([remainingBefore[0], remainingAfter[0]]);
-    remainingBefore.length = 0;
-    remainingAfter.length = 0;
   }
 
   return { pairs, removed: remainingBefore, added: remainingAfter };
@@ -179,8 +162,7 @@ const deriveStepChanges = (
   const { pairs, removed, added } = matchEntities(
     before.jobs,
     after.jobs,
-    job => `name:${job.name}`,
-    { pairLeftovers: true }
+    job => `name:${job.name}`
   );
 
   const renames: StructuralChange[] = [];
@@ -234,6 +216,9 @@ const deriveStepChanges = (
       steps.push(update);
     } else if (added.includes(job)) {
       const { hunks, added: addedLines } = diffBodies('', job.body);
+      // Same guard as updates: a step whose body is empty produces no hunks
+      // and would render a block headed "no changes" with nothing in it.
+      if (addedLines === 0) continue;
       steps.push({
         type: 'add',
         name: job.name,
@@ -248,6 +233,7 @@ const deriveStepChanges = (
   }
   for (const job of removed) {
     const { hunks, removed: removedLines } = diffBodies(job.body, '');
+    if (removedLines === 0) continue;
     steps.push({
       type: 'remove',
       name: job.name,
