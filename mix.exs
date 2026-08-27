@@ -65,16 +65,21 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # cowlib advisories we have checked and accepted. None of the three vulnerable
-  # functions are reachable from our dependency tree, and there is no patched
-  # cowlib release to move to. Reasoning per advisory is in #5102. Recheck when
-  # cowlib next ships; a new advisory ID will still fail the build.
+  # cowlib advisories we have checked and accepted. Each names a function on
+  # cowlib's header-building path, and nothing in our tree calls any of them. The
+  # parse side of these modules IS reachable through cowboy_req, so recheck by
+  # function rather than by module. No patched cowlib release exists yet. Hex
+  # matches an advisory's primary ID or any alias, so the CVE form also silences
+  # the GHSA and EEF variants. Detail in #5102.
   defp hex_audit do
     [
       ignore_advisories: [
         # cowlib
+        # cow_http_struct_hd:escape_string/2
         "CVE-2026-43966",
+        # cow_cookie:cookie/1
         "CVE-2026-43969",
+        # cow_link:link/1
         "CVE-2026-43971"
       ]
     ]
