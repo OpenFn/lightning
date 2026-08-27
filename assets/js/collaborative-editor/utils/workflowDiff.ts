@@ -419,8 +419,15 @@ const rememberState = (yaml: string, state: DiffState | null) => {
 
 /** Parsed state, or null when the YAML could not be read */
 const tryParseState = (yaml: string): DiffState | null => {
-  const cached = parsedStates.get(yaml);
-  if (cached !== undefined) return cached;
+  if (parsedStates.has(yaml)) {
+    const cached = parsedStates.get(yaml) ?? null;
+    // Re-insert so eviction is least-recently-used. Plain insertion order
+    // evicts the front of the chain, which is exactly what the next pass
+    // reads first, so a chain longer than the cap would thrash.
+    parsedStates.delete(yaml);
+    parsedStates.set(yaml, cached);
+    return cached;
+  }
 
   try {
     const state = parseState(yaml);
@@ -547,6 +554,32 @@ export interface SnapshotChangeSet {
  * Snapshots that changed nothing are dropped, so a tool call that
  * rewrote the YAML without altering it leaves no empty block behind.
  */
+const diffedPairs = new Map<string, WorkflowChangeSet | null>();
+
+/** Change set for one before/after pair, computed once per pair */
+const cachedDiff = (
+  beforeYaml: string,
+  afterYaml: string,
+  before: DiffState,
+  after: DiffState
+): WorkflowChangeSet | null => {
+  const key = `${beforeYaml}\u0000${afterYaml}`;
+  if (diffedPairs.has(key)) {
+    const cached = diffedPairs.get(key) ?? null;
+    diffedPairs.delete(key);
+    diffedPairs.set(key, cached);
+    return cached;
+  }
+
+  const changes = diffStates(before, after);
+  if (diffedPairs.size >= MAX_CACHED_STATES) {
+    const oldest = diffedPairs.keys().next().value;
+    if (oldest !== undefined) diffedPairs.delete(oldest);
+  }
+  diffedPairs.set(key, changes);
+  return changes;
+};
+
 export const deriveSnapshotChanges = (
   baselineYaml: string | null | undefined,
   snapshots: WorkflowSnapshot[]
@@ -560,17 +593,24 @@ export const deriveSnapshotChanges = (
     (baselineYaml?.trim() ? tryParseState(baselineYaml) : EMPTY_STATE) ??
     EMPTY_STATE;
 
+  // Keyed on the pair, because this restarts from the baseline every time a
+  // new snapshot arrives. Without it K snapshots cost K(K+1)/2 diffs, each
+  // running structuredPatch over every changed job body on the main thread
+  // while the reply is still streaming.
+  let beforeYaml = baselineYaml?.trim() ? baselineYaml : '';
+
   for (const snapshot of snapshots) {
     const after = tryParseState(snapshot.yaml);
     // Hold the cursor on the last state we could read, so one bad snapshot
     // costs its own block instead of poisoning every snapshot after it.
     if (!after) continue;
 
-    const changes = diffStates(before, after);
+    const changes = cachedDiff(beforeYaml, snapshot.yaml, before, after);
     if (changes) {
       out.push({ segmentIndex: snapshot.segmentIndex, changes });
     }
     before = after;
+    beforeYaml = snapshot.yaml;
   }
 
   return out;

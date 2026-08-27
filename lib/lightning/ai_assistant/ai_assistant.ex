@@ -1364,7 +1364,11 @@ defmodule Lightning.AiAssistant do
     {valid, dropped} =
       segments
       |> Enum.map(fn segment ->
-        if is_map(segment), do: normalize_segment_steps(segment), else: segment
+        if is_map(segment) do
+          segment |> normalize_segment_steps() |> normalize_segment_summary()
+        else
+          segment
+        end
       end)
       |> Enum.split_with(fn segment ->
         is_map(segment) and
@@ -1397,6 +1401,19 @@ defmodule Lightning.AiAssistant do
   # Apollo sent nothing usable — an empty list would otherwise read as "this
   # action touched no steps", which is not the same as "this Apollo version
   # does not report steps".
+  # `summary` is optional decoration, so it must never be the reason a segment
+  # is thrown away: anything the embed would reject is dropped here instead.
+  defp normalize_segment_summary(%{"summary" => summary} = segment)
+       when is_binary(summary) do
+    if String.length(summary) <= ChatMessage.Segment.max_content_length() do
+      segment
+    else
+      Map.delete(segment, "summary")
+    end
+  end
+
+  defp normalize_segment_summary(segment), do: Map.delete(segment, "summary")
+
   defp normalize_segment_steps(%{"steps" => steps} = segment)
        when is_list(steps) do
     max_steps = ChatMessage.Segment.max_steps()

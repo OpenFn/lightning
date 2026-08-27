@@ -748,7 +748,11 @@ export function MessageList({
   const scrollRafRef = useRef<number>(0);
 
   useEffect(() => {
-    if (streamingContent && !userScrolledAwayRef.current) {
+    // Follows the whole reply, not just its prose. A global reply emits its
+    // statuses, snapshots and diff blocks before writing a word, so gating on
+    // text alone left those mounting below the fold with no scroll until the
+    // first chunk landed.
+    if (isStreamLive && !userScrolledAwayRef.current) {
       if (!scrollRafRef.current) {
         scrollRafRef.current = requestAnimationFrame(() => {
           scrollRafRef.current = 0;
@@ -770,7 +774,7 @@ export function MessageList({
         scrollRafRef.current = 0;
       }
     };
-  }, [streamingContent]);
+  }, [isStreamLive, streamingContent, streamingSegments, streamingSnapshots]);
 
   // Build a unified message list: real messages + optional streaming placeholder.
   // The streaming message renders in the same loop as finalized messages,

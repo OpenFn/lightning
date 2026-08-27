@@ -236,6 +236,23 @@ defmodule Lightning.AiAssistant.ChatMessageTest do
                Ecto.Changeset.apply_changes(changeset).response_segments
     end
 
+    test "an over-long summary invalidates its segment at the schema boundary" do
+      changeset =
+        ChatMessage.changeset(%ChatMessage{}, %{
+          content: "Done",
+          role: :assistant,
+          response_segments: [
+            %{
+              "type" => "status",
+              "content" => "Wrote code",
+              "summary" => String.duplicate("a", 10_001)
+            }
+          ]
+        })
+
+      refute changeset.valid?
+    end
+
     test "caps a step's key and name at the schema's field length" do
       long = String.duplicate("a", 501)
 
