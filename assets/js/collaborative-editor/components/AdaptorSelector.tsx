@@ -20,7 +20,7 @@ interface AdaptorSelectorProps {
   updateJob: (jobId: string, updates: Partial<Workflow.Job>) => void;
   /** Setter to control configure modal state */
   setIsConfigureModalOpen: (open: boolean) => void;
-  /** Available project adaptors */
+  /** Adaptors currently in use in this workflow */
   adaptorsInUse: Adaptor[];
   /** Optional callback before adaptor change (for form sync in JobForm) */
   onAdaptorChangeStart?: () => void;

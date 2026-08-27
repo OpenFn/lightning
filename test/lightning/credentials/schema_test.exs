@@ -18,9 +18,9 @@ defmodule Lightning.Credentials.SchemaTest do
   end
 
   defp seed_adaptor_schema(name) do
-    # Persist the raw JSON binary so the credential-form renderer can
-    # re-engage `Jason.decode!(_, objects: :ordered_objects)` and
-    # preserve the schema author's property order.
+    # Persist the raw JSON binary (not a decoded map) so
+    # `Jason.decode!(_, objects: :ordered_objects)` downstream can
+    # preserve the schema's property order.
     schema_body =
       Path.join(["test", "fixtures", "schemas", "#{name}.json"])
       |> File.read!()

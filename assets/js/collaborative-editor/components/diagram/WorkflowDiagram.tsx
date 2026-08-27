@@ -200,7 +200,6 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
     position: { x: number; y: number };
   } | null>(null);
 
-  // Fetch project adaptors for modal
   const { adaptorsInUse } = useAdaptorsInUse();
 
   const updateSelection = useCallback(

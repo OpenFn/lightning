@@ -1,9 +1,8 @@
 defmodule Lightning.Adaptors.ChannelBroadcasterTest do
   @moduledoc """
-  Tests `:flush` via `Lightning.Adaptors.packages/1` (the 2-arity facade),
-  not `packages/0`, because each test spins up its own isolated supervisor
-  instance. The Batch 7 review should confirm that `/1` and `/0` are
-  behaviourally identical in production (both delegate to `Store.packages/1`).
+  `handle_info(:flush)` calls `Lightning.Adaptors.packages/1`, not the
+  0-arity default, since each test spins up its own isolated supervisor
+  instance.
   """
 
   use ExUnit.Case, async: true
@@ -13,18 +12,16 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
   setup do
     sup = :"cb_test_#{System.unique_integer([:positive])}"
 
-    # The supervisor's :rest_for_one child list starts the
-    # ChannelBroadcaster automatically — registered under
-    # `channel_broadcaster_name(sup)`.
+    # :rest_for_one starts the ChannelBroadcaster automatically, registered
+    # under `channel_broadcaster_name(sup)`.
     start_supervised!(
       {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
     )
 
-    # Stop the auto-started Invalidator — these tests pre-populate the
-    # Cachex `{:packages, source}` key directly to exercise the
-    # ChannelBroadcaster's `:flush` path in isolation. The Invalidator
-    # subscribes to the same source_topic and would race the broadcaster
-    # by deleting the cached entry before the flush window expires.
+    # These tests pre-populate the Cachex {:packages, source} key directly
+    # to exercise :flush in isolation. The Invalidator subscribes to the
+    # same source_topic and would race the broadcaster by deleting that
+    # entry before the flush window expires, so stop it first.
     :ok = Supervisor.terminate_child(sup, Lightning.Adaptors.Invalidator)
 
     source_topic = AdaptorsSupervisor.source_topic(sup)
@@ -150,7 +147,6 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
 
       ref = Process.monitor(original_pid)
 
-      # Arm the timer, then kill the process mid-burst.
       Phoenix.PubSub.broadcast!(
         Lightning.PubSub,
         source_topic,
@@ -159,15 +155,14 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
 
       Process.exit(original_pid, :kill)
 
-      # Confirm death before looking for the restarted process.
       assert_receive {:DOWN, ^ref, :process, ^original_pid, :killed}, 500
 
       new_pid = await_registered(cb_name)
       assert is_pid(new_pid)
       assert new_pid != original_pid
 
-      # The new instance starts with timer: nil — one more {:changed} opens a
-      # fresh 250ms window and produces a clean broadcast.
+      # The restarted GenServer starts with timer: nil, so this reopens a
+      # fresh window.
       Phoenix.PubSub.broadcast!(
         Lightning.PubSub,
         source_topic,
@@ -204,8 +199,6 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
 
       count = drain_broadcasts()
 
-      # Leading-edge invariant: throttle produces some broadcasts (> 0)
-      # but far fewer than one per message (< 50).
       assert count > 0 and count < 50,
              "Expected leading-edge throttling (1..49), got #{count}"
     end

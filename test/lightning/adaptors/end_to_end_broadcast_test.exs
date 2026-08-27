@@ -1,17 +1,12 @@
 defmodule Lightning.Adaptors.EndToEndBroadcastTest do
   @moduledoc """
-  Phase A closeout — §6.5c integration smoke.
+  A `{:changed, name, source}` broadcast on the per-instance source topic
+  (shared by `Scheduler` and `Invalidator` for cache coherence) must reach
+  the per-instance client topic (which `WorkflowChannel` subscribers use
+  for display freshness) as a single coalesced `adaptors_updated` envelope.
 
-  A `{:changed, name, source}` broadcast on the per-instance source
-  topic (the cache-coherence audience that the `Scheduler` and
-  `Invalidator` share) must traverse the wired stack and arrive on
-  the per-instance client topic (the display-freshness audience that
-  `WorkflowChannel` subscribers listen to) as a single coalesced
-  `adaptors_updated` envelope.
-
-  This is the only assertion that breaks if any of the four newly-wired
-  Supervisor children (Invalidator, NodeMonitor, ChannelBroadcaster,
-  Scheduler) is misconfigured for the boot path.
+  This is the only test that exercises the full wiring across Invalidator,
+  NodeMonitor, ChannelBroadcaster, and Scheduler.
   """
 
   use Lightning.DataCase, async: false
@@ -38,10 +33,8 @@ defmodule Lightning.Adaptors.EndToEndBroadcastTest do
         {:changed, "@openfn/language-test", :local}
       )
 
-    # The ChannelBroadcaster fans out a map envelope (see
-    # `Lightning.Adaptors.ChannelBroadcaster.handle_info(:flush, _)`).
-    # The DB is empty in this case → `Store.packages/1` returns
-    # `{:ok, []}` → an empty-list envelope is broadcast.
+    # The DB is empty here, so Store.packages/1 returns {:ok, []} and the
+    # broadcast carries an empty adaptors list.
     assert_receive %{event: "adaptors_updated", payload: %{adaptors: _}},
                    ChannelBroadcaster.debounce_ms() + 200
   end

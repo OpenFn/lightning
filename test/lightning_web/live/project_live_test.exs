@@ -881,9 +881,9 @@ defmodule LightningWeb.ProjectLiveTest do
     setup :create_project_for_current_user
 
     setup do
-      # Credential creation flows render the JsonSchemaBodyComponent
-      # which calls `Credentials.get_schema/1` — now backed by
-      # `Lightning.Adaptors.schema/1`.
+      # Credential creation flows render the JsonSchemaBodyComponent, which
+      # calls `Credentials.get_schema/1` and so reads through
+      # `Lightning.Adaptors.Repo`.
       Lightning.AdaptorTestHelpers.seed_credential_schema("http")
       :ok
     end

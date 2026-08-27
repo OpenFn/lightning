@@ -335,9 +335,7 @@ defmodule Lightning.CredentialsTest do
 
   describe "create_credential/1" do
     setup do
-      # `Credentials.create_credential/1` calls `get_schema/1` which is
-      # now routed through `Lightning.Adaptors.schema/1`. Seed the
-      # `postgresql` fixture (used by the body-casting test below).
+      # create_credential/1 needs a schema on file for body casting to work.
       Lightning.AdaptorTestHelpers.seed_credential_schema("postgresql")
       :ok
     end

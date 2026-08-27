@@ -1,8 +1,8 @@
 defmodule Lightning.Adaptors.HighlanderIntegrationTest do
   @moduledoc """
-  §12.7 — verifies that the HighlanderPG-wrapped `Lightning.Adaptors.Scheduler`
-  actually behaves as a cluster singleton when two supervisor instances
-  compete for the same Postgres advisory lock.
+  Verifies that the HighlanderPG-wrapped `Lightning.Adaptors.Scheduler`
+  behaves as a cluster singleton when two supervisor instances compete for
+  the same Postgres advisory lock.
 
   Both supervisors share an explicit `:lock_key` so they race for the
   same `pg_try_advisory_lock` bucket, but each keeps its own derived
@@ -86,8 +86,6 @@ defmodule Lightning.Adaptors.HighlanderIntegrationTest do
 
     leader_sup = if leader_global == gname_a, do: sup_a, else: sup_b
 
-    # Singleton invariant: only the leader's :global registration is
-    # populated cluster-wide.
     assert :global.whereis_name(surviving_global) == :undefined,
            "expected only the leader to have a globally-registered Scheduler"
 
@@ -101,7 +99,6 @@ defmodule Lightning.Adaptors.HighlanderIntegrationTest do
     # its wrapped Scheduler under its own :global name.
     assert_eventually(is_pid(:global.whereis_name(surviving_global)), 3_000)
 
-    # Sanity: the formerly-leading :global name is gone.
     assert :global.whereis_name(leader_global) == :undefined
   end
 end

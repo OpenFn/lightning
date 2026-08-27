@@ -672,7 +672,6 @@ defmodule Lightning.Adaptors.SchedulerTest do
         )
 
       expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn opts ->
-        # Strategy receives the prior etag for this row's shape.
         assert Keyword.get(opts, :prior_etags) == %{
                  "@openfn/language-same" => %{square: etag}
                }
@@ -847,7 +846,6 @@ defmodule Lightning.Adaptors.SchedulerTest do
         )
 
       expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn opts ->
-        # Both rows contribute prior etags.
         assert Keyword.get(opts, :prior_etags) == %{
                  "@openfn/language-stale-etag" => %{square: stale_old_etag},
                  "@openfn/language-current-etag" => %{square: current_etag}

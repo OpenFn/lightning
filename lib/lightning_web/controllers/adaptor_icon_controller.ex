@@ -2,8 +2,8 @@ defmodule LightningWeb.AdaptorIconURL do
   @moduledoc """
   Single source of truth for content-addressable adaptor-icon URLs.
 
-  Called from `LightningWeb.AdaptorIconController` for redirect targets and —
-  in Phase B — from `WorkflowChannel`'s `request_adaptors` payload.
+  Called from `LightningWeb.AdaptorIconController` for redirect targets and
+  from `WorkflowChannel`'s `request_adaptors` payload.
 
   `sha8` is the first 4 raw bytes of the icon's sha256, hex-encoded
   to 8 lowercase characters, yielding a deterministic content-addressable

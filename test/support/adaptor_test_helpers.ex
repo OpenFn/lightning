@@ -1,19 +1,17 @@
 defmodule Lightning.AdaptorTestHelpers do
   @moduledoc """
-  Test helpers for seeding the `Lightning.Adaptors.Repo` and clearing the
-  global `Lightning.Adaptors.Supervisor` Cachex.
+  Seeds `Lightning.Adaptors.Repo` and clears the global
+  `Lightning.Adaptors.Supervisor` Cachex.
 
-  The production `Lightning.Adaptors` supervisor is started by the
-  application and shared across the test suite — its Cachex persists
+  The production `Lightning.Adaptors` supervisor starts with the
+  application and is shared across the test suite: its Cachex persists
   across the `Ecto.Adapters.SQL.Sandbox` boundary, so tests that seed
-  rows via `Lightning.Factories.adaptor/2` must clear the cache to make
-  those rows visible to facade reads.
+  rows via the `:adaptor` factory (`insert(:adaptor, attrs)`) must
+  clear the cache to make them visible to facade reads.
 
-  See `test/lightning/adaptors_test.exs` and
-  `test/lightning/adaptors/store_test.exs` for the canonical patterns
-  exercised by per-test isolated supervisors. This module covers the
-  complementary case: tests that touch the production-named supervisor
-  via `Lightning.Adaptors.{packages, versions, schema, resolve_version}`.
+  For tests that run their own isolated supervisor instead of the
+  production one, see `test/lightning/adaptors_test.exs` and
+  `test/lightning/adaptors/store_test.exs`.
   """
 
   import Lightning.Factories
@@ -48,17 +46,15 @@ defmodule Lightning.AdaptorTestHelpers do
   Seed a credential schema row keyed by short name (e.g. `"postgresql"`),
   reading the JSON body from `test/fixtures/schemas/<name>.json`.
 
-  After `lib/lightning/credentials.ex` was migrated to read schemas via
-  `Lightning.Adaptors.schema/1`, schema fixtures live in the adaptor
-  registry rather than on disk; tests that exercise
-  `Credentials.get_schema/1` must seed them here.
+  `Credentials.get_schema/1` reads schemas from the adaptor registry,
+  not directly from disk, so tests exercising it must seed them here.
   """
   @spec seed_credential_schema(String.t()) ::
           Lightning.Adaptors.Repo.Adaptor.t()
   def seed_credential_schema(short_name) when is_binary(short_name) do
-    # Keep the raw JSON binary so field order survives — credential-form
-    # rendering re-engages `Jason.decode!(_, objects: :ordered_objects)`
-    # downstream via `Lightning.Credentials.Schema.new/2`.
+    # Keep the raw JSON binary (not a decoded map) so
+    # `Lightning.Credentials.Schema.new/2` can decode it downstream with
+    # `Jason.decode!(_, objects: :ordered_objects)` and preserve field order.
     schema_body =
       Path.join(["test", "fixtures", "schemas", "#{short_name}.json"])
       |> File.read!()
@@ -86,8 +82,8 @@ defmodule Lightning.AdaptorTestHelpers do
   def seed_all_credential_schemas do
     Path.wildcard("test/fixtures/schemas/*.json")
     |> Enum.each(fn path ->
-      # Skip empty fixture files (e.g. `asana.json`, `primero.json` are
-      # intentional empty placeholders).
+      # Skip empty fixture files — some (e.g. `asana.json`,
+      # `primero.json`) are intentional empty placeholders.
       if File.stat!(path).size > 0 do
         short_name = path |> Path.basename(".json")
         seed_credential_schema(short_name)
@@ -100,15 +96,13 @@ defmodule Lightning.AdaptorTestHelpers do
   @doc """
   Seed an `@openfn/*` adaptor package with a concrete `latest_version`
   so `Lightning.Adaptors.PackageName.to_wire/1` resolves `@latest`
-  correctly. The legacy `AdaptorRegistry` fixture
-  (`test/fixtures/adaptor_registry_cache.json`) used to provide these
-  resolutions for free; the migrated facade reads them from Postgres.
+  correctly.
   """
   @spec seed_adaptor_package(String.t(), String.t() | [String.t()]) ::
           Lightning.Adaptors.Repo.Adaptor.t()
   def seed_adaptor_package(name, versions)
       when is_binary(name) and is_list(versions) do
-    # Latest is the first entry per legacy registry semantics.
+    # The first version in the list is treated as latest.
     [latest | _] = versions
 
     {:ok, row} =
@@ -179,12 +173,10 @@ defmodule Lightning.AdaptorTestHelpers do
   end
 
   @doc """
-  Seed the production `Lightning.Adaptors` supervisor's Cachex with a
-  pre-built packages map. Useful for tests that exercise
-  `AdaptorPicker.get_adaptor_version_options/1` under async mode — the
-  picker calls `Lightning.Adaptors.packages/0` and (when the adaptor is
-  known) `Lightning.Adaptors.versions/1`, both of which are routed
-  through Cachex.
+  Pre-populate the production `Lightning.Adaptors` supervisor's Cachex
+  with a packages map, so async tests get seeded data without the
+  Cachex Courier process falling through to a DB query it can't see
+  (the sandboxed connection is invisible to it).
 
   Returns the supervisor source atom for convenience.
   """
@@ -199,9 +191,8 @@ defmodule Lightning.AdaptorTestHelpers do
   end
 
   @doc """
-  Bulk-seed the common `@openfn/*` packages used across the test suite
-  with the versions that the legacy `adaptor_registry_cache.json`
-  fixture used to publish.
+  Bulk-seed the common `@openfn/*` packages, with the versions
+  expected by tests across the suite.
   """
   @spec seed_common_packages() :: :ok
   def seed_common_packages do

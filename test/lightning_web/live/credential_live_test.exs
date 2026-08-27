@@ -42,9 +42,8 @@ defmodule LightningWeb.CredentialLiveTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
-  # Seed credential schemas into Lightning.Adaptors.Repo so
-  # `Credentials.get_schema/1` (now backed by `Lightning.Adaptors.schema/1`)
-  # finds them via the DB rather than calling the Strategy mock.
+  # `Credentials.get_schema/1` reads through `Lightning.Adaptors.Repo`;
+  # seed schemas there so it doesn't fall through to the Strategy mock.
   setup do
     Lightning.AdaptorTestHelpers.seed_all_credential_schemas()
     :ok

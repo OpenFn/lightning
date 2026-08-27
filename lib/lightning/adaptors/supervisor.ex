@@ -3,11 +3,11 @@ defmodule Lightning.Adaptors.Supervisor do
   Per-instance supervisor for the `Lightning.Adaptors.*` subsystem.
 
   The entire subsystem boots, crashes, and is supervised as a unit
-  under `:rest_for_one`. `Cachex` is the load-bearing root: if it
-  crashes, the supervisor restarts it and cascades to its dependents
-  (`Task.Supervisor`, plus the broadcaster/scheduler children added in
-  later phases) so they re-bind to the fresh Cachex name on the way
-  back up.
+  under `:rest_for_one`. `Cachex` is the first child: if it crashes,
+  the supervisor restarts it and every child listed after it
+  (`Task.Supervisor`, `Invalidator`, `NodeMonitor`, `ChannelBroadcaster`,
+  and the `HighlanderPG`-wrapped `Scheduler`) so they re-bind to the
+  fresh Cachex name on the way back up.
 
   No registered name, Cachex table name, PubSub topic, `Task.Supervisor`
   name, or `HighlanderPG` lock key is hardcoded. Every name is derived

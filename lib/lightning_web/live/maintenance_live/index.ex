@@ -1,11 +1,11 @@
 defmodule LightningWeb.MaintenanceLive.Index do
   @moduledoc """
-  Superuser-only maintenance page exposing on-demand operations against the
-  `Lightning.Adaptors` supervisor (and, eventually, other facades).
+  Superuser-only maintenance page for on-demand operations against
+  `Lightning.Adaptors`.
 
-  Currently exposes a single action: "Refresh Adaptor Registry", which calls
-  `Lightning.Adaptors.refresh_now/0`. The call is fire-and-forget; the user
-  receives a flash and the actual work happens asynchronously on the leader
+  Exposes two actions: "Refresh Adaptor Registry" (`refresh_now/0`) and
+  "Refresh Adaptor Icons" (`refresh_icons/0`). Both are fire-and-forget: the
+  user gets a flash and the actual work happens asynchronously on the leader
   node.
   """
   use LightningWeb, :live_view

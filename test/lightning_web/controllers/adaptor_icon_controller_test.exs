@@ -17,10 +17,6 @@ defmodule LightningWeb.AdaptorIconControllerTest do
   # uses `Lightning.Adaptors.StrategyMock` (see `config/test.exs`). No
   # per-test supervisor start is needed.
 
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
-
   defp sha8_from_bytes(bytes) do
     :crypto.hash(:sha256, bytes)
     |> binary_part(0, 4)
@@ -52,10 +48,6 @@ defmodule LightningWeb.AdaptorIconControllerTest do
     {:ok, _sha} = IconCache.write!(source(), name, shape, ext, bytes)
     :ok
   end
-
-  # ---------------------------------------------------------------------------
-  # 200 — sha matches, disk warm
-  # ---------------------------------------------------------------------------
 
   describe "show/2 — match + warm disk" do
     test "returns 200 with immutable Cache-Control", %{conn: conn} do
@@ -196,10 +188,6 @@ defmodule LightningWeb.AdaptorIconControllerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # 200 — sha matches, disk cold (strategy fetches)
-  # ---------------------------------------------------------------------------
-
   describe "show/2 — match + cold disk" do
     test "strategy is called, bytes written to disk, 200 returned", %{conn: conn} do
       name = unique_adaptor_name()
@@ -237,10 +225,6 @@ defmodule LightningWeb.AdaptorIconControllerTest do
       assert result.resp_body == bytes
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # 302 — stale sha8, current icon exists
-  # ---------------------------------------------------------------------------
 
   describe "show/2 — stale sha8" do
     test "redirects 302 with no-store and current Location", %{conn: conn} do
@@ -336,10 +320,6 @@ defmodule LightningWeb.AdaptorIconControllerTest do
       assert get_resp_header(result, "location") == [expected_url]
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # 404 cases
-  # ---------------------------------------------------------------------------
 
   describe "show/2 — 404" do
     test "adaptor not in DB", %{conn: conn} do
@@ -457,11 +437,8 @@ defmodule LightningWeb.AdaptorIconControllerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Full router pipeline — proves route + pipe + controller resolves.
-  # The matrix above already covers the controller's behaviour by direct call.
-  # ---------------------------------------------------------------------------
-
+  # The tests above call the controller directly; these confirm the route
+  # and pipeline wire up to it too.
   describe "GET /adaptors/icons/... (full router pipeline)" do
     test "200 on sha match", %{conn: conn} do
       name = unique_adaptor_name()
@@ -489,10 +466,6 @@ defmodule LightningWeb.AdaptorIconControllerTest do
       assert conn.status == 404
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # AdaptorIconURL.build/3
-  # ---------------------------------------------------------------------------
 
   describe "AdaptorIconURL.build/3" do
     test "returns nil when ext is nil" do

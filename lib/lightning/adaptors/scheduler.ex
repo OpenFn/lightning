@@ -376,10 +376,9 @@ defmodule Lightning.Adaptors.Scheduler do
     Map.put(record, :"icon_#{shape}_etag", etag)
   end
 
-  # Top up icons on rows that currently have NULL on at least one shape.
-  # Runs after the main upsert pass on every tick — cheap, scoped to
-  # rows with gaps, and self-correcting after a strategy outage or a
-  # past bug like the one that left every row iconless.
+  # Tops up icons on rows currently missing at least one shape. Runs
+  # after the main upsert pass on every tick — cheap, scoped to rows
+  # with gaps, and self-correcting after a strategy outage.
   defp heal_missing_icons(icons, _state) when map_size(icons) == 0, do: 0
 
   defp heal_missing_icons(icons, state) do
@@ -577,7 +576,6 @@ defmodule Lightning.Adaptors.Scheduler do
   defp maybe_put_shape_etag(map, shape, etag) when is_binary(etag),
     do: Map.put(map, shape, etag)
 
-  # Count :not_modified sentinels across all shapes in the icons map.
   # Used in the tick summary log.
   defp count_not_modified(icons) do
     Enum.reduce(icons, 0, fn {_name, shapes}, acc ->

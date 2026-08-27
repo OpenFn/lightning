@@ -10,9 +10,7 @@ defmodule Lightning.Adaptors.Repo do
 
   Every read helper takes the desired `:source` (`:npm | :local`)
   explicitly; the module itself stays source-agnostic. Callers resolve
-  the active source via `Lightning.Adaptors.Config.current_source/0`
-  (see §4.4 source-tagging invariant and §6.4 in
-  `.context/lightning/adaptors/REWRITE-2026-05.md`).
+  the active source via `Lightning.Adaptors.Config.current_source/0`.
 
   `upsert_adaptor/1` is the only writer the Scheduler uses. It is
   idempotent, transactional, and diff-aware: `checked_at` advances on

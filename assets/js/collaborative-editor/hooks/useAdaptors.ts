@@ -120,8 +120,8 @@ export const useAdaptorIconUrl = (
 
 /**
  * Hook to derive the subset of the adaptor catalogue that is referenced by jobs
- * in the current Y.Doc workflow. Pure selector — the catalogue comes from
- * `request_adaptors` and the jobs come from the collaborative workflow store.
+ * in the current Y.Doc workflow. Pure selector: the catalogue comes from the
+ * AdaptorStore's HTTP fetch, the jobs from the collaborative workflow store.
  */
 export const useAdaptorsInUse = (): {
   adaptorsInUse: Adaptor[];

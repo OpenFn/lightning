@@ -11,9 +11,8 @@ defmodule Lightning.Adaptors.NPM.RegistryTest do
       http_timeout: 1_000
     )
 
-    # Per-test Tesla adapter override — config/test.exs globally pins
-    # `Lightning.Tesla.Mock`, but we need the real Finch adapter so that
-    # Bypass actually receives requests over a socket.
+    # config/test.exs globally pins Lightning.Tesla.Mock; override to the real
+    # Finch adapter here so Bypass actually receives requests over a socket.
     prev_adapter = Application.get_env(:tesla, :adapter)
 
     Application.put_env(

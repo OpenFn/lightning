@@ -6,9 +6,8 @@ defmodule Lightning.Adaptors.NPMTest do
   @package "@openfn/language-http"
   @latest_version "2.1.0"
 
-  # Three Bypass servers: one for the npm registry, one for jsDelivr,
-  # one for raw.githubusercontent.com. Per-test config installs all three
-  # URLs onto the strategy_opts block.
+  # One Bypass server each for the npm registry, jsDelivr, and
+  # raw.githubusercontent.com; each URL is installed onto the strategy_opts block.
   setup do
     registry = Bypass.open()
     jsdelivr = Bypass.open()
@@ -225,8 +224,6 @@ defmodule Lightning.Adaptors.NPMTest do
       assert {:error, _} = NPM.fetch_icons([])
     end
   end
-
-  # ==================== Helpers ====================
 
   defp build_packument do
     %{
