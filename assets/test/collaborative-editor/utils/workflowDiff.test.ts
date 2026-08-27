@@ -499,7 +499,7 @@ describe('assignStepDiffsToStatuses', () => {
     expect(unmatched).toEqual(steps);
   });
 
-  it('assigns each step once, to the first status that claims it', () => {
+  it('assigns a step edited twice to the last status that touched it', () => {
     const steps = [step('Transform data')];
     const segments = [status(['Transform data']), status(['Transform data'])];
 
@@ -508,8 +508,21 @@ describe('assignStepDiffsToStatuses', () => {
       segments
     );
 
-    expect([...byStatusIndex.keys()]).toEqual([0]);
+    // Reload has one cumulative diff per step, and it only reaches the body
+    // it shows at the last edit, so an earlier status would misdescribe it.
+    expect([...byStatusIndex.keys()]).toEqual([1]);
     expect(unmatched).toEqual([]);
+  });
+
+  it('matches a status that reported only the key', () => {
+    const steps = [step('Transform data')];
+    const segments = [{ type: 'status', steps: [{ key: 'transform-data' }] }];
+
+    const { byStatusIndex } = assignStepDiffsToStatuses(steps, segments);
+
+    // `key` is the required field on the wire; the YAML writer derives it
+    // from the name, so the same transform recovers it here.
+    expect(byStatusIndex.get(0)).toEqual(steps);
   });
 
   it('leaves steps no status claimed unmatched', () => {

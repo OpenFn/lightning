@@ -236,6 +236,25 @@ defmodule Lightning.AiAssistant.ChatMessageTest do
                Ecto.Changeset.apply_changes(changeset).response_segments
     end
 
+    test "caps a step's key and name at the schema's field length" do
+      long = String.duplicate("a", 501)
+
+      changeset =
+        ChatMessage.changeset(%ChatMessage{}, %{
+          content: "Done",
+          role: :assistant,
+          response_segments: [
+            %{
+              "type" => "status",
+              "content" => "Wrote code",
+              "steps" => [%{"key" => long, "name" => "Fine"}]
+            }
+          ]
+        })
+
+      refute changeset.valid?
+    end
+
     test "rejects a step with no key at the schema boundary" do
       changeset =
         ChatMessage.changeset(%ChatMessage{}, %{

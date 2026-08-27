@@ -707,8 +707,12 @@ export function MessageList({
 
   useEffect(() => {
     if (messagesEndRef.current && !userScrolledAwayRef.current) {
+      // Instant, not smooth: a smooth animation emits scroll events at
+      // every intermediate position, and the handler below reads each of
+      // those as the user scrolling away, which kills auto-scroll for the
+      // rest of the reply.
       messagesEndRef.current.scrollIntoView({
-        behavior: 'smooth',
+        behavior: 'instant',
         block: 'end',
       });
     }
@@ -717,7 +721,7 @@ export function MessageList({
   useEffect(() => {
     if (isLoading && loadingRef.current && !userScrolledAwayRef.current) {
       loadingRef.current.scrollIntoView({
-        behavior: 'smooth',
+        behavior: 'instant',
         block: 'end',
       });
     }

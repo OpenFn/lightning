@@ -396,15 +396,42 @@ const diffStates = (
   return { steps, structure };
 };
 
+/**
+ * Parsed states, keyed by the YAML that produced them.
+ *
+ * `deriveSnapshotChanges` re-runs whenever a new snapshot arrives and starts
+ * again from the baseline, so K snapshots would otherwise parse K(K+1)/2
+ * times. Each parse compiles a fresh Ajv validator, which is far too much
+ * work to repeat on the main thread mid-reply. Bounded so a long session
+ * cannot grow it without limit; snapshots are re-read in order, so evicting
+ * the oldest keeps the entries that are about to be used again.
+ */
+const MAX_CACHED_STATES = 64;
+const parsedStates = new Map<string, DiffState | null>();
+
+const rememberState = (yaml: string, state: DiffState | null) => {
+  if (parsedStates.size >= MAX_CACHED_STATES) {
+    const oldest = parsedStates.keys().next().value;
+    if (oldest !== undefined) parsedStates.delete(oldest);
+  }
+  parsedStates.set(yaml, state);
+};
+
 /** Parsed state, or null when the YAML could not be read */
 const tryParseState = (yaml: string): DiffState | null => {
+  const cached = parsedStates.get(yaml);
+  if (cached !== undefined) return cached;
+
   try {
-    return parseState(yaml);
+    const state = parseState(yaml);
+    rememberState(yaml, state);
+    return state;
   } catch (error) {
     console.warn(
       '[WorkflowDiff] Could not derive workflow changes from YAML:',
       error
     );
+    rememberState(yaml, null);
     return null;
   }
 };
@@ -446,6 +473,10 @@ export interface StepDiffAssignment {
  * Apollo that predates the `steps` field simply render their blocks at the
  * end of the message rather than woven in.
  */
+/** Mirrors the key the YAML writer derives from a job name */
+const hyphenateName = (name: string): string =>
+  name.replace(/\s+/g, '-').toLowerCase();
+
 export const assignStepDiffsToStatuses = (
   steps: StepChange[],
   segments: Array<{
@@ -455,32 +486,40 @@ export const assignStepDiffsToStatuses = (
 ): StepDiffAssignment => {
   const byStatusIndex = new Map<number, StepChange[]>();
   const remaining = new Set(steps);
+  // A step edited by two actions belongs under the later one: the cumulative
+  // diff only reaches the body it shows at the last edit.
+  const lastClaim = new Map<StepChange, number>();
 
   segments.forEach((segment, index) => {
     if (segment.type !== 'status') return;
-    if (remaining.size === 0) return;
     if (!segment.steps?.length) return;
 
-    // Matching is on the reported name. `key` is the required field on the
-    // wire, but the parsed workflow does not keep the YAML key for a job, so
-    // there is nothing here to compare it against; a status that reported
-    // keys and no names attracts nothing and its blocks fall to the tail.
+    // `key` is the required field on the wire and `name` the optional one, so
+    // match on both. The parsed workflow does not keep a job's YAML key, but
+    // the writer derives it from the name, so the same transform recovers it.
     const claimed = new Set(
       segment.steps
-        .map(step => step.name)
-        .filter((name): name is string => !!name)
-        .map(name => name.toLowerCase())
+        .flatMap(step => [step.name?.toLowerCase(), step.key?.toLowerCase()])
+        .filter((value): value is string => !!value)
     );
     if (claimed.size === 0) return;
 
-    const matched = [...remaining].filter(step =>
-      claimed.has(step.name.toLowerCase())
+    const matched = steps.filter(
+      step =>
+        claimed.has(step.name.toLowerCase()) ||
+        claimed.has(hyphenateName(step.name))
     );
-    if (matched.length > 0) {
-      byStatusIndex.set(index, matched);
-      matched.forEach(step => remaining.delete(step));
-    }
+    matched.forEach(step => {
+      lastClaim.set(step, index);
+      remaining.delete(step);
+    });
   });
+
+  for (const [step, index] of lastClaim) {
+    const existing = byStatusIndex.get(index);
+    if (existing) existing.push(step);
+    else byStatusIndex.set(index, [step]);
+  }
 
   return { byStatusIndex, unmatched: steps.filter(s => remaining.has(s)) };
 };

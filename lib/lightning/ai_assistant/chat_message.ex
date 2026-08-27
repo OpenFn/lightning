@@ -63,6 +63,9 @@ defmodule Lightning.AiAssistant.ChatMessage do
         field :name, :string
       end
 
+      @doc "Maximum length of a step's key or name."
+      def max_field_length, do: @max_field_length
+
       @doc false
       def changeset(step, attrs) do
         step
@@ -116,6 +119,9 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
     @doc "Maximum number of steps recorded against one status segment."
     def max_steps, do: @max_steps
+
+    @doc "Maximum length of a step's key or name."
+    def max_step_field_length, do: Step.max_field_length()
   end
 
   # A reply's segment count is naturally bounded by the model's output size;

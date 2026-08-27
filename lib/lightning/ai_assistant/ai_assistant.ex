@@ -1399,10 +1399,13 @@ defmodule Lightning.AiAssistant do
   # does not report steps".
   defp normalize_segment_steps(%{"steps" => steps} = segment)
        when is_list(steps) do
+    max_steps = ChatMessage.Segment.max_steps()
+
     steps
     |> Enum.filter(&is_map/1)
     |> Enum.map(&Map.take(&1, ["key", "name"]))
-    |> Enum.reject(&(Map.get(&1, "key") in [nil, ""]))
+    |> Enum.filter(&valid_segment_step?/1)
+    |> Enum.take(max_steps)
     |> case do
       [] -> Map.delete(segment, "steps")
       kept -> Map.put(segment, "steps", kept)
@@ -1410,6 +1413,22 @@ defmodule Lightning.AiAssistant do
   end
 
   defp normalize_segment_steps(segment), do: Map.delete(segment, "steps")
+
+  # Anything the embed would reject has to be dropped here rather than left to
+  # fail the cast: an invalid step invalidates its whole segment, which loses
+  # a status line the user already saw live.
+  defp valid_segment_step?(%{"key" => key} = step) when is_binary(key) do
+    max = ChatMessage.Segment.max_step_field_length()
+
+    key != "" and String.length(key) <= max and
+      case Map.get(step, "name") do
+        nil -> true
+        name when is_binary(name) -> String.length(name) <= max
+        _other -> false
+      end
+  end
+
+  defp valid_segment_step?(_step), do: false
 
   # Global chat always returns a full workflow YAML (job bodies embedded).
   # The frontend handles per-step diffing and full-workflow apply.

@@ -814,7 +814,7 @@ describe('MessageList', () => {
       );
 
       expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
+        behavior: 'instant',
         block: 'end',
       });
 
@@ -832,7 +832,7 @@ describe('MessageList', () => {
 
       // Should scroll again with new message
       expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
+        behavior: 'instant',
         block: 'end',
       });
     });
