@@ -91,6 +91,8 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       streamingStatus: null,
       streamingChanges: null,
       streamingSegments: [],
+      streamingSnapshots: [],
+      snapshotsByMessageId: {},
       streamingApply: null,
       sessionList: [],
       sessionListLoading: false,
@@ -165,6 +167,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingStatus = null;
       draft.streamingChanges = null;
       draft.streamingSegments = [];
+      draft.streamingSnapshots = [];
     });
 
     notify('disconnect');
@@ -213,6 +216,8 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingStatus = null;
       draft.streamingChanges = null;
       draft.streamingSegments = [];
+      draft.streamingSnapshots = [];
+      draft.snapshotsByMessageId = {};
       draft.streamingApply = null;
     });
 
@@ -423,6 +428,13 @@ export const createAIAssistantStore = (): AIAssistantStore => {
           draft.streamingStatus = null;
           draft.streamingChanges = null;
           draft.streamingSegments = [];
+          // Hand the streamed snapshots to the id the server just assigned,
+          // so the settled message renders the same per-status diffs it did
+          // a moment ago instead of collapsing to one whole-message diff.
+          if (draft.streamingSnapshots.length > 0) {
+            draft.snapshotsByMessageId[message.id] = draft.streamingSnapshots;
+          }
+          draft.streamingSnapshots = [];
         } else if (message.status === 'processing') {
           draft.isLoading = true;
         }
@@ -453,6 +465,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
           draft.streamingContent = null;
           draft.streamingStatus = null;
           draft.streamingSegments = [];
+          draft.streamingSnapshots = [];
         }
         if (status === 'processing') {
           draft.isLoading = true;
@@ -599,6 +612,27 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     notify('_appendStreamingSegment');
   };
 
+  /**
+   * Record a workflow YAML snapshot at its position in the segment timeline.
+   *
+   * Pinned to the current segment count, which is the index of the status
+   * segment that describes this change once it drains — Apollo sends the
+   * snapshot immediately before its settled status. Consecutive identical
+   * snapshots are collapsed: Apollo re-sends the whole document on every
+   * mutation, and a tool that changed nothing would otherwise hang an
+   * empty diff under a status line.
+   */
+  const _appendStreamingSnapshot = (yaml: string) => {
+    if (state.streamingSnapshots.at(-1)?.yaml === yaml) return;
+    state = produce(state, draft => {
+      draft.streamingSnapshots.push({
+        yaml,
+        segmentIndex: draft.streamingSegments.length,
+      });
+    });
+    notify('_appendStreamingSnapshot');
+  };
+
   const setStreamingStatus = (text: string | null) => {
     state = produce(state, draft => {
       draft.streamingStatus = text;
@@ -621,6 +655,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingStatus = null;
       draft.streamingChanges = null;
       draft.streamingSegments = [];
+      draft.streamingSnapshots = [];
     });
     notify('_clearStreaming');
   };
@@ -750,6 +785,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _appendStreamingChunk,
     _appendStreamingSegment,
     setStreamingStatus,
+    _appendStreamingSnapshot,
     _setStreamingChanges,
     _clearStreaming,
     _setStreamingApply,

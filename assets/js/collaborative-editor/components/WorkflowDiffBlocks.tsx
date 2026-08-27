@@ -14,11 +14,10 @@ import { useMemo, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
+import type { Token } from '../utils/highlightJs';
+import { TOKEN_CLASS, tokenizeJs } from '../utils/highlightJs';
 import type { StepChange, StructuralChange } from '../utils/workflowDiff';
 import { deriveWorkflowChanges } from '../utils/workflowDiff';
-
-/** Blocks with more diff lines than this start collapsed */
-const COLLAPSE_LINE_THRESHOLD = 30;
 
 const pluralize = (count: number, noun: string): string =>
   `${count} ${noun}${count === 1 ? '' : 's'}`;
@@ -29,19 +28,25 @@ const stepVerb: Record<StepChange['type'], string> = {
   update: 'Update',
 };
 
-const stepSummary = (step: StepChange): string => {
-  switch (step.type) {
-    case 'add':
-      return pluralize(step.addedLines, 'line');
-    case 'remove':
-      return pluralize(step.removedLines, 'line');
-    case 'update':
-      return `Added ${pluralize(step.addedLines, 'line')}, removed ${pluralize(
-        step.removedLines,
-        'line'
-      )}`;
-  }
-};
+/**
+ * Line counts in the same shorthand GitHub uses in a file list: a green
+ * `+n` and a red `-n`, side by side. A count of zero is dropped rather
+ * than shown, so an added step reads `+41` instead of `+41 -0`.
+ */
+const StepCounts = ({ step }: { step: StepChange }) => (
+  <>
+    {step.addedLines > 0 && (
+      <span className="text-[#1a7f37]">{`+${step.addedLines}`}</span>
+    )}
+    {step.addedLines > 0 && step.removedLines > 0 && ' '}
+    {step.removedLines > 0 && (
+      <span className="text-[#cf222e]">{`-${step.removedLines}`}</span>
+    )}
+    {step.addedLines === 0 && step.removedLines === 0 && (
+      <span className="text-[#59636e]">no changes</span>
+    )}
+  </>
+);
 
 /** Collapsible container shared by step blocks and the structure block */
 const DiffBlockShell = ({
@@ -49,75 +54,112 @@ const DiffBlockShell = ({
   summary,
   defaultExpanded,
   testId,
+  action,
   children,
 }: {
   title: string;
-  summary: string;
+  summary: React.ReactNode;
   defaultExpanded: boolean;
   testId: string;
+  /** Optional control shown beside the counts, outside the collapse toggle */
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
     <div
-      className="rounded-lg overflow-hidden border border-gray-200 bg-white"
+      className="rounded-md overflow-hidden border border-[#d1d9e0] bg-white"
       data-testid={testId}
     >
-      <button
-        type="button"
-        data-testid="diff-block-toggle"
-        onClick={() => setExpanded(prev => !prev)}
+      {/* Header shares the body's surface: a filled header over a white body
+          with a rule between reads as three stacked layers. One surface with
+          a single hairline reads as one code block. */}
+      <div
         className={cn(
-          'w-full px-4 py-2 bg-gray-50 flex items-center justify-between gap-2',
-          'hover:bg-gray-100 transition-colors',
-          expanded && 'border-b border-gray-200'
+          'flex items-center gap-2 pr-2',
+          expanded && 'border-b border-[#d1d9e0]'
         )}
       >
-        <span className="flex items-center gap-2 min-w-0">
+        <button
+          type="button"
+          data-testid="diff-block-toggle"
+          onClick={() => setExpanded(prev => !prev)}
+          className={cn(
+            'flex-1 min-w-0 px-3 py-1.5 flex items-center justify-between gap-2',
+            // No chevron, so the hover state is the only cue that the header
+            // collapses the block.
+            'cursor-pointer hover:bg-[#f6f8fa]'
+          )}
+        >
           <span
-            className={cn(
-              'transition-transform duration-200',
-              expanded && 'rotate-90'
-            )}
-          >
-            <span className="hero-chevron-right h-4 w-4 text-gray-500" />
-          </span>
-          <span
-            className="text-xs text-left font-medium font-mono text-gray-700 truncate"
+            className="text-xs text-left font-medium font-mono text-[#1f2328] truncate"
             data-testid="diff-block-header"
           >
             {title}
           </span>
-        </span>
-        <span
-          className="text-xs text-gray-500 shrink-0"
-          data-testid="diff-block-summary"
-        >
-          {summary}
-        </span>
-      </button>
+          <span
+            className="text-xs shrink-0 font-mono tabular-nums"
+            data-testid="diff-block-summary"
+          >
+            {summary}
+          </span>
+        </button>
+        {action}
+      </div>
       {expanded && children}
     </div>
   );
 };
 
-/** One unified-diff row: line-number gutter + marker + code */
+/** Syntax-coloured code for one row, from the pre-tokenized body */
+const DiffCode = ({
+  tokens,
+  fallback,
+}: {
+  tokens?: Token[];
+  fallback: string;
+}) => {
+  if (!tokens) return <>{fallback}</>;
+  return (
+    <>
+      {tokens.map((token, index) => (
+        <span key={index} className={TOKEN_CLASS[token.kind]}>
+          {token.text}
+        </span>
+      ))}
+    </>
+  );
+};
+
+/**
+ * One unified-diff row.
+ *
+ * Two gutters, old and new, each blank where that side has no line: a
+ * removed row exists only in the old file and an added row only in the new
+ * one. Collapsing them into a single column makes a diff read as though the
+ * same line number appears twice with different content.
+ */
 const DiffLine = ({
-  lineNumber,
+  oldLineNumber,
+  newLineNumber,
   marker,
   content,
+  tokens,
 }: {
-  lineNumber: number;
+  oldLineNumber: number | null;
+  newLineNumber: number | null;
   marker: '+' | '-' | ' ';
   content: string;
+  tokens?: Token[];
 }) => (
   <div
     className={cn(
-      'flex min-w-full w-max',
-      marker === '+' && 'bg-green-100 text-green-900',
-      marker === '-' && 'bg-red-100 text-red-900',
-      marker === ' ' && 'text-slate-500'
+      'flex',
+      // Primer's diff line colours. Context rows stay white so the tinted
+      // rows are the only thing carrying colour.
+      marker === '+' && 'bg-[#e6ffec]',
+      marker === '-' && 'bg-[#ffebe9]'
     )}
     data-testid={
       marker === '+'
@@ -127,76 +169,154 @@ const DiffLine = ({
           : 'diff-line-context'
     }
   >
-    <span className="w-10 shrink-0 pr-2 text-right text-slate-400 select-none">
-      {lineNumber}
+    {/* Both gutters sized to a 4-digit line number and no wider: this panel
+        is narrow and every pixel of chrome is a pixel of code lost. */}
+    {/* Both gutters sized to a 4-digit line number and no wider: this panel
+        is narrow and every pixel of chrome is a pixel of code lost. The
+        gutter carries a deeper tint than its row, as Primer does, so the
+        numbers stay legible against the line colour. */}
+    <span
+      className={cn(
+        'w-7 shrink-0 pl-1 text-right select-none tabular-nums text-[#59636e]',
+        marker === '+' && 'bg-[#ccffd8]',
+        marker === '-' && 'bg-[#ffd7d5]'
+      )}
+      data-testid="diff-gutter-old"
+    >
+      {oldLineNumber ?? ''}
     </span>
-    <span className="whitespace-pre pr-4">
-      {marker} {content}
+    <span
+      className={cn(
+        'w-7 shrink-0 pr-1 text-right select-none tabular-nums text-[#59636e]',
+        marker === '+' && 'bg-[#ccffd8]',
+        marker === '-' && 'bg-[#ffd7d5]'
+      )}
+      data-testid="diff-gutter-new"
+    >
+      {newLineNumber ?? ''}
+    </span>
+    <span
+      className={cn(
+        'w-3 shrink-0 select-none text-center',
+        marker === '+' && 'text-[#1a7f37]',
+        marker === '-' && 'text-[#cf222e]'
+      )}
+    >
+      {marker === ' ' ? '' : marker}
+    </span>
+    {/* Wraps rather than scrolling: this panel is narrow, and code hidden
+        behind a horizontal scrollbar inside a vertically scrolling chat is
+        content the reader will never find. */}
+    <span className="whitespace-pre-wrap break-words pr-4 min-w-0">
+      <DiffCode tokens={tokens} fallback={content} />
     </span>
   </div>
 );
 
-/** Unified diff body for one step: hunks with old/new line numbering */
-const DiffHunks = ({ step }: { step: StepChange }) => (
-  <div
-    className="bg-slate-100 text-slate-800 py-2 overflow-x-auto text-xs font-mono leading-5"
-    data-testid="diff-hunks"
-  >
-    {step.hunks.map((hunk, hunkIndex) => {
-      let oldLine = hunk.oldStart;
-      let newLine = hunk.newStart;
-      return (
-        <div key={hunkIndex}>
-          {hunkIndex > 0 && (
-            <div className="px-4 py-1 text-slate-400 select-none">⋯</div>
-          )}
-          {hunk.lines.map((line, lineIndex) => {
-            const marker = line[0] as '+' | '-' | ' ';
-            const content = line.slice(1);
-            // Old line numbers for context/removed rows, new for added
-            let lineNumber: number;
-            if (marker === '+') {
-              lineNumber = newLine;
-              newLine += 1;
-            } else if (marker === '-') {
-              lineNumber = oldLine;
-              oldLine += 1;
-            } else {
-              lineNumber = oldLine;
-              oldLine += 1;
-              newLine += 1;
-            }
-            return (
-              <DiffLine
-                key={lineIndex}
-                lineNumber={lineNumber}
-                marker={marker}
-                content={content}
-              />
-            );
-          })}
-        </div>
-      );
-    })}
-  </div>
-);
+/**
+ * Unified diff body for one step.
+ *
+ * Both bodies are tokenized once and rows look up their own line, so a
+ * multi-line template literal or block comment is coloured correctly even
+ * where the hunk shows only part of it. Ligatures are disabled: in a diff a
+ * glyph has to be the character it stands for, or `=>` reads as `⇒` and the
+ * reader cannot tell what the code actually says.
+ */
+const DiffHunks = ({ step }: { step: StepChange }) => {
+  const oldTokens = useMemo(() => tokenizeJs(step.oldBody), [step.oldBody]);
+  const newTokens = useMemo(() => tokenizeJs(step.newBody), [step.newBody]);
 
-export const StepDiffBlock = ({ step }: { step: StepChange }) => {
-  const totalDiffLines = step.hunks.reduce(
-    (total, hunk) => total + hunk.lines.length,
-    0
+  return (
+    <div
+      className="bg-white text-[#1f2328] py-1 text-xs font-mono leading-5 [font-variant-ligatures:none]"
+      data-testid="diff-hunks"
+    >
+      {step.hunks.map((hunk, hunkIndex) => {
+        let oldLine = hunk.oldStart;
+        let newLine = hunk.newStart;
+        return (
+          <div key={hunkIndex}>
+            {hunkIndex > 0 && (
+              <div className="bg-[#f6f8fa] px-3 py-1 text-[#59636e] select-none border-y border-[#d1d9e0]">
+                ⋯
+              </div>
+            )}
+            {hunk.lines.map((line, lineIndex) => {
+              const marker = line[0] as '+' | '-' | ' ';
+              const content = line.slice(1);
+
+              // A removed row exists only in the old body, an added row only
+              // in the new one; context rows advance both.
+              let oldLineNumber: number | null = null;
+              let newLineNumber: number | null = null;
+              let tokens: Token[] | undefined;
+
+              if (marker === '+') {
+                newLineNumber = newLine;
+                tokens = newTokens[newLine - 1];
+                newLine += 1;
+              } else if (marker === '-') {
+                oldLineNumber = oldLine;
+                tokens = oldTokens[oldLine - 1];
+                oldLine += 1;
+              } else {
+                oldLineNumber = oldLine;
+                newLineNumber = newLine;
+                tokens = oldTokens[oldLine - 1];
+                oldLine += 1;
+                newLine += 1;
+              }
+
+              return (
+                <DiffLine
+                  key={lineIndex}
+                  oldLineNumber={oldLineNumber}
+                  newLineNumber={newLineNumber}
+                  marker={marker}
+                  content={content}
+                  tokens={tokens}
+                />
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
   );
-  // Body updates start expanded when small; add/remove blocks (whole-body
-  // diffs, usually long and low-signal) always start collapsed.
-  const defaultExpanded =
-    step.type === 'update' && totalDiffLines <= COLLAPSE_LINE_THRESHOLD;
+};
+
+export const StepDiffBlock = ({
+  step,
+  onOpenStep,
+}: {
+  step: StepChange;
+  /** Opens this step in the IDE. Omitted where navigation isn't available. */
+  onOpenStep?: (jobId: string) => void;
+}) => {
+  const jobId = step.jobId;
+  // A removed step has nowhere to go, so it gets no link.
+  const canOpen = Boolean(onOpenStep && jobId && step.type !== 'remove');
 
   return (
     <DiffBlockShell
       title={`${stepVerb[step.type]}(${step.name})`}
-      summary={stepSummary(step)}
-      defaultExpanded={defaultExpanded}
+      summary={<StepCounts step={step} />}
+      defaultExpanded
       testId="diff-block"
+      action={
+        canOpen ? (
+          <button
+            type="button"
+            data-testid="diff-block-open-step"
+            onClick={() => {
+              onOpenStep?.(jobId!);
+            }}
+            className="shrink-0 text-xs text-[#0969da] hover:underline px-1 py-0.5"
+          >
+            Open
+          </button>
+        ) : undefined
+      }
     >
       <DiffHunks step={step} />
     </DiffBlockShell>
@@ -262,16 +382,22 @@ export const StructureBlock = ({ rows }: { rows: StructuralChange[] }) => (
 export const WorkflowChangeBlocks = ({
   steps,
   structure,
+  onOpenStep,
 }: {
   steps: StepChange[];
   structure: StructuralChange[];
+  onOpenStep?: (jobId: string) => void;
 }) => {
   if (steps.length === 0 && structure.length === 0) return null;
 
   return (
     <div className="space-y-2" data-testid="workflow-diff-blocks">
       {steps.map((step, index) => (
-        <StepDiffBlock key={`${step.type}-${step.name}-${index}`} step={step} />
+        <StepDiffBlock
+          key={`${step.type}-${step.name}-${index}`}
+          step={step}
+          onOpenStep={onOpenStep}
+        />
       ))}
       {structure.length > 0 && <StructureBlock rows={structure} />}
     </div>
@@ -287,9 +413,11 @@ export const WorkflowChangeBlocks = ({
 export function WorkflowDiffBlocks({
   beforeYaml,
   afterYaml,
+  onOpenStep,
 }: {
   beforeYaml: string | null;
   afterYaml: string;
+  onOpenStep?: (jobId: string) => void;
 }) {
   // Memoized so YAML parsing/diffing runs once per message, not per render
   const changes = useMemo(
@@ -300,6 +428,10 @@ export function WorkflowDiffBlocks({
   if (!changes) return null;
 
   return (
-    <WorkflowChangeBlocks steps={changes.steps} structure={changes.structure} />
+    <WorkflowChangeBlocks
+      steps={changes.steps}
+      structure={changes.structure}
+      onOpenStep={onOpenStep}
+    />
   );
 }

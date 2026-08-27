@@ -989,6 +989,157 @@ describe('MessageList', () => {
         '    enabled: true',
       ].join('\n') + '\n';
 
+    describe('while the reply is still streaming', () => {
+      const userMessage = (code: string) =>
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Change the transform',
+          code,
+        });
+
+      it('renders the diff as soon as the snapshot lands, before the reply settles', () => {
+        const before = workflowYaml('fn(state => state);');
+        const after = workflowYaml('fn(state => state.data);');
+
+        render(
+          <MessageList
+            messages={[userMessage(before)]}
+            isGlobalAssistantActive
+            streamingSegments={[
+              { type: 'status', content: 'Edited workflow structure' },
+            ]}
+            streamingSnapshots={[{ yaml: after, segmentIndex: 0 }]}
+          />
+        );
+
+        // The blocks used to wait for the persisted message, which is what
+        // made every diff appear at once when the stream ended.
+        expect(screen.getByTestId('streaming-message')).toBeInTheDocument();
+        expect(screen.getByTestId('diff-block-header')).toHaveTextContent(
+          'Update(Transform data)'
+        );
+      });
+
+      it('renders each action under the status that announced it', () => {
+        const before = twoStepYaml('fn(s => s);', 'fn(s => s);');
+        const first = twoStepYaml('fn(s => s.data);', 'fn(s => s);');
+        const second = twoStepYaml('fn(s => s.data);', 'fn(s => s.mail);');
+
+        render(
+          <MessageList
+            messages={[userMessage(before)]}
+            isGlobalAssistantActive
+            streamingSegments={[
+              { type: 'status', content: 'Wrote code for "Transform data"' },
+              { type: 'status', content: 'Wrote code for "Send to Gmail"' },
+            ]}
+            streamingSnapshots={[
+              { yaml: first, segmentIndex: 0 },
+              { yaml: second, segmentIndex: 1 },
+            ]}
+          />
+        );
+
+        const groups = screen.getAllByTestId('status-step-diffs');
+        expect(groups).toHaveLength(2);
+        expect(
+          within(groups[0]!).getByTestId('diff-block-header')
+        ).toHaveTextContent('Update(Transform data)');
+        expect(
+          within(groups[1]!).getByTestId('diff-block-header')
+        ).toHaveTextContent('Update(Send to Gmail)');
+      });
+
+      it('attributes by snapshot, not by name, when the status never names the step', () => {
+        const before = workflowYaml('fn(state => state);');
+        const after = workflowYaml('fn(state => state.data);');
+
+        render(
+          <MessageList
+            messages={[userMessage(before)]}
+            isGlobalAssistantActive
+            streamingSegments={[{ type: 'status', content: 'Made an edit' }]}
+            streamingSnapshots={[{ yaml: after, segmentIndex: 0 }]}
+          />
+        );
+
+        // The old prose-matching path needed the step name in the status
+        // text; the snapshot pairing does not.
+        const group = screen.getByTestId('status-step-diffs');
+        expect(
+          within(group).getByTestId('diff-block-header')
+        ).toHaveTextContent('Update(Transform data)');
+      });
+
+      it('holds a snapshot below the timeline until its status arrives', () => {
+        const before = workflowYaml('fn(state => state);');
+        const after = workflowYaml('fn(state => state.data);');
+
+        render(
+          <MessageList
+            messages={[userMessage(before)]}
+            isGlobalAssistantActive
+            streamingSegments={[{ type: 'status', content: 'Planning' }]}
+            streamingSnapshots={[{ yaml: after, segmentIndex: 1 }]}
+          />
+        );
+
+        // Pinned past the last drained segment — render it at the end
+        // rather than dropping it.
+        expect(
+          screen.queryByTestId('status-step-diffs')
+        ).not.toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diff-blocks')).toBeInTheDocument();
+      });
+
+      it('keeps the same blocks when the reply settles with its snapshots', () => {
+        const before = workflowYaml('fn(state => state);');
+        const after = workflowYaml('fn(state => state.data);');
+        const segments = [
+          { type: 'status' as const, content: 'Edited workflow structure' },
+        ];
+
+        const { rerender } = render(
+          <MessageList
+            messages={[userMessage(before)]}
+            isGlobalAssistantActive
+            streamingSegments={segments}
+            streamingSnapshots={[{ yaml: after, segmentIndex: 0 }]}
+          />
+        );
+
+        const streamed = screen.getByTestId('status-step-diffs').innerHTML;
+
+        // The stream ends: the placeholder goes away and the persisted
+        // message arrives carrying the same snapshots.
+        rerender(
+          <MessageList
+            messages={[
+              userMessage(before),
+              createMockAIMessage({
+                id: 'msg-global',
+                role: 'assistant',
+                content: 'Done.',
+                code: after,
+                from_global: true,
+                response_segments: segments,
+              }),
+            ]}
+            isGlobalAssistantActive
+            snapshotsByMessageId={{
+              'msg-global': [{ yaml: after, segmentIndex: 0 }],
+            }}
+          />
+        );
+
+        expect(screen.getByTestId('assistant-message')).toBeInTheDocument();
+        expect(screen.getByTestId('status-step-diffs').innerHTML).toBe(
+          streamed
+        );
+      });
+    });
+
     it('renders a diff block with header and red/green rows for a changed step', () => {
       const messages = [
         createMockAIMessage({
@@ -1014,16 +1165,16 @@ describe('MessageList', () => {
         'Update(Transform data)'
       );
       expect(screen.getByTestId('diff-block-summary')).toHaveTextContent(
-        'Added 1 line, removed 1 line'
+        '+1 -1'
       );
 
-      // Small update -> expanded by default with red/green rows
+      // Every block starts expanded, with red/green rows
       const removed = screen.getByTestId('diff-line-removed');
       const added = screen.getByTestId('diff-line-added');
       expect(removed).toHaveTextContent('fn(state => state);');
-      expect(removed).toHaveClass('bg-red-100');
+      expect(removed).toHaveClass('bg-[#ffebe9]');
       expect(added).toHaveTextContent('fn(state => state.data);');
-      expect(added).toHaveClass('bg-green-100');
+      expect(added).toHaveClass('bg-[#e6ffec]');
     });
 
     it('renders a Structure block for edge/trigger changes', () => {
@@ -1086,8 +1237,8 @@ describe('MessageList', () => {
       structureRows.forEach(row => {
         expect(row.getAttribute('data-change')).toBe('add');
       });
-      // Add blocks are collapsed by default: no diff rows until expanded
-      expect(screen.queryByTestId('diff-line-added')).not.toBeInTheDocument();
+      // Every block starts expanded, add blocks included
+      expect(screen.getByTestId('diff-line-added')).toBeInTheDocument();
     });
 
     it('renders nothing when the workflow is unchanged', () => {
@@ -1139,7 +1290,87 @@ describe('MessageList', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('expands a collapsed add block on toggle click', async () => {
+    it('opens a changed step in the IDE from its diff block', async () => {
+      const onOpenStep = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Change the transform',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Done.',
+          code: workflowYaml('fn(state => state.data);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} onOpenStep={onOpenStep} />);
+
+      await userEvent.click(screen.getByTestId('diff-block-open-step'));
+
+      // The id comes from the workflow the reply produced, not the name
+      expect(onOpenStep).toHaveBeenCalledWith('job-1');
+    });
+
+    it('offers no link for a removed step, which has nowhere to go', () => {
+      const before = twoStepYaml('fn(s => s);', 'fn(s => s);');
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Drop the second step',
+          code: before,
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Removed it.',
+          code: workflowYaml('fn(s => s);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} onOpenStep={vi.fn()} />);
+
+      const headers = screen
+        .getAllByTestId('diff-block-header')
+        .map(h => h.textContent);
+      expect(headers.some(h => h?.startsWith('Remove('))).toBe(true);
+      // One block is a removal, so there are fewer links than blocks
+      expect(
+        screen.queryAllByTestId('diff-block-open-step').length
+      ).toBeLessThan(screen.getAllByTestId('diff-block').length);
+    });
+
+    it('shows no link when navigation is not wired up', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Change it',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Done.',
+          code: workflowYaml('fn(state => state.data);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(
+        screen.queryByTestId('diff-block-open-step')
+      ).not.toBeInTheDocument();
+    });
+
+    it('collapses an expanded add block on toggle click', async () => {
       const messages = [
         createMockAIMessage({
           id: 'msg-user',
@@ -1157,12 +1388,15 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} />);
 
-      const toggles = screen.getAllByTestId('diff-block-toggle');
-      // First toggle belongs to the Add step block
-      await userEvent.click(toggles[0]!);
+      // Blocks start expanded, so the toggle collapses rather than expands
       expect(screen.getByTestId('diff-line-added')).toHaveTextContent(
         'fn(state => state);'
       );
+
+      const toggles = screen.getAllByTestId('diff-block-toggle');
+      // First toggle belongs to the Add step block
+      await userEvent.click(toggles[0]!);
+      expect(screen.queryByTestId('diff-line-added')).not.toBeInTheDocument();
     });
 
     describe('interleaved with response segments', () => {
@@ -1185,6 +1419,11 @@ describe('MessageList', () => {
               {
                 type: 'status',
                 content: 'Wrote code for "Transform data", "Send to Gmail"',
+                summary: 'Wrote code for 2 steps',
+                steps: [
+                  { key: 'transform-data', name: 'Transform data' },
+                  { key: 'send-to-gmail', name: 'Send to Gmail' },
+                ],
               },
               { type: 'text', content: 'All done.' },
             ],
@@ -1258,7 +1497,11 @@ describe('MessageList', () => {
             code: twoStepYaml('fn(state => state.data);', 'sendEmail(body);'),
             from_global: true,
             response_segments: [
-              { type: 'status', content: 'Wrote code for "Transform data"' },
+              {
+                type: 'status',
+                content: 'Wrote code for "Transform data"',
+                steps: [{ key: 'transform-data', name: 'Transform data' }],
+              },
               { type: 'text', content: 'Done.' },
             ],
           }),

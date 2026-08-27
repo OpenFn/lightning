@@ -10,6 +10,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 
 import {
   assignStepDiffsToStatuses,
+  deriveSnapshotChanges,
   deriveWorkflowChanges,
 } from '../../../js/collaborative-editor/utils/workflowDiff';
 import type { StepChange } from '../../../js/collaborative-editor/utils/workflowDiff';
@@ -460,43 +461,31 @@ describe('assignStepDiffsToStatuses', () => {
     hunks: [],
   });
 
-  it('assigns steps to the write status that mentions them, case-insensitively', () => {
+  const status = (steps: string[]) => ({
+    type: 'status',
+    steps: steps.map(name => ({ key: name.toLowerCase(), name })),
+  });
+
+  it('assigns steps to the status that reports touching them', () => {
     const steps = [step('Transform data'), step('Send to Gmail')];
     const segments = [
-      { type: 'text', content: 'Updating now.' },
-      {
-        type: 'status',
-        content: 'Wrote code for "TRANSFORM DATA", "Send to Gmail"',
-      },
+      { type: 'text' },
+      status(['Transform data', 'Send to Gmail']),
     ];
 
     const { byStatusIndex, unmatched } = assignStepDiffsToStatuses(
       steps,
       segments
     );
+
     expect(byStatusIndex.get(1)).toEqual(steps);
     expect(unmatched).toEqual([]);
   });
 
-  it('skips read-only statuses and assigns each step once (first write wins)', () => {
+  it('ignores the status prose entirely', () => {
     const steps = [step('Transform data')];
-    const segments = [
-      { type: 'status', content: 'Read code for "Transform data"' },
-      { type: 'status', content: 'Checking "Transform data"' },
-      { type: 'status', content: 'Edited "Transform data"' },
-      { type: 'status', content: 'Updated "Transform data" again' },
-    ];
-
-    const { byStatusIndex, unmatched } = assignStepDiffsToStatuses(
-      steps,
-      segments
-    );
-    expect([...byStatusIndex.keys()]).toEqual([2]);
-    expect(unmatched).toEqual([]);
-  });
-
-  it('leaves unmentioned steps unmatched', () => {
-    const steps = [step('Transform data'), step('Send to Gmail')];
+    // The sentence names the step; the data says this action touched
+    // nothing. The data wins — that is the whole point of the change.
     const segments = [
       { type: 'status', content: 'Wrote code for "Transform data"' },
     ];
@@ -505,7 +494,223 @@ describe('assignStepDiffsToStatuses', () => {
       steps,
       segments
     );
+
+    expect(byStatusIndex.size).toBe(0);
+    expect(unmatched).toEqual(steps);
+  });
+
+  it('assigns each step once, to the first status that claims it', () => {
+    const steps = [step('Transform data')];
+    const segments = [status(['Transform data']), status(['Transform data'])];
+
+    const { byStatusIndex, unmatched } = assignStepDiffsToStatuses(
+      steps,
+      segments
+    );
+
+    expect([...byStatusIndex.keys()]).toEqual([0]);
+    expect(unmatched).toEqual([]);
+  });
+
+  it('leaves steps no status claimed unmatched', () => {
+    const steps = [step('Transform data'), step('Send to Gmail')];
+    const segments = [status(['Transform data'])];
+
+    const { byStatusIndex, unmatched } = assignStepDiffsToStatuses(
+      steps,
+      segments
+    );
+
     expect(byStatusIndex.get(0)).toEqual([steps[0]]);
     expect(unmatched).toEqual([steps[1]]);
+  });
+
+  it('matches names case-insensitively, since the two sides are recorded apart', () => {
+    const steps = [step('Transform data')];
+    const segments = [status(['TRANSFORM DATA'])];
+
+    const { byStatusIndex } = assignStepDiffsToStatuses(steps, segments);
+
+    expect(byStatusIndex.get(0)).toEqual(steps);
+  });
+
+  it('claims nothing for a reply from an Apollo that reports no steps', () => {
+    const steps = [step('Transform data')];
+    const segments = [{ type: 'status', content: 'Edited workflow structure' }];
+
+    const { byStatusIndex, unmatched } = assignStepDiffsToStatuses(
+      steps,
+      segments
+    );
+
+    // Blocks fall to the end of the message rather than being misattributed.
+    expect(byStatusIndex.size).toBe(0);
+    expect(unmatched).toEqual(steps);
+  });
+});
+
+describe('YAML re-serialization', () => {
+  /** Same body, written as an inline scalar instead of a block scalar */
+  const inlineBodyWorkflow = (body: string) =>
+    [
+      'id: wf-1',
+      'name: Test Workflow',
+      'jobs:',
+      '  transform-data:',
+      '    id: job-1',
+      '    name: Transform data',
+      "    adaptor: '@openfn/language-common@latest'",
+      `    body: ${body}`,
+      'triggers:',
+      '  webhook:',
+      '    id: trigger-1',
+      '    type: webhook',
+      '    enabled: true',
+      'edges:',
+      '  webhook->transform-data:',
+      '    id: edge-1',
+      '    source_trigger: webhook',
+      '    target_job: transform-data',
+      '    condition_type: always',
+      '    enabled: true',
+    ].join('\n') + '\n';
+
+  it('reports no change when only the scalar style differs', () => {
+    // Apollo rewrites the whole document on every mutation, so a `body: |`
+    // block becomes inline and the parsed strings differ by a trailing
+    // newline. That is not an edit and must not render a blank block.
+    const before = baseWorkflow('fn(state => state);');
+    const after = inlineBodyWorkflow('fn(state => state);');
+
+    expect(deriveWorkflowChanges(before, after)).toBeNull();
+  });
+
+  it('still reports a real edit made in the re-serialized style', () => {
+    const before = baseWorkflow('fn(state => state);');
+    const after = inlineBodyWorkflow('fn(state => state.data);');
+
+    const changes = deriveWorkflowChanges(before, after);
+
+    expect(changes?.steps).toHaveLength(1);
+    expect(changes?.steps[0]).toMatchObject({
+      type: 'update',
+      addedLines: 1,
+      removedLines: 1,
+    });
+  });
+});
+
+describe('deriveSnapshotChanges', () => {
+  const snapshot = (yaml: string, segmentIndex: number) => ({
+    yaml,
+    segmentIndex,
+  });
+
+  it('diffs each snapshot against its predecessor, not against the baseline', () => {
+    const baseline = baseWorkflow('fn(s => s);');
+    const first = baseWorkflow('fn(s => s);\nconsole.log(1);');
+    const second = baseWorkflow(
+      'fn(s => s);\nconsole.log(1);\nconsole.log(2);'
+    );
+
+    const result = deriveSnapshotChanges(baseline, [
+      snapshot(first, 0),
+      snapshot(second, 1),
+    ]);
+
+    expect(result).toHaveLength(2);
+    // Each step reports only the line its own action added, which is the
+    // whole point: a cumulative diff would report 1 then 2.
+    expect(result[0]!.changes.steps[0]!.addedLines).toBe(1);
+    expect(result[1]!.changes.steps[0]!.addedLines).toBe(1);
+  });
+
+  it('pins each change set to the segment index its snapshot carried', () => {
+    const baseline = baseWorkflow('fn(s => s);');
+    const edited = baseWorkflow('fn(s => s);\nconsole.log(1);');
+
+    const result = deriveSnapshotChanges(baseline, [snapshot(edited, 3)]);
+
+    expect(result[0]!.segmentIndex).toBe(3);
+  });
+
+  it('treats a missing baseline as an empty workflow so the first action reads as adds', () => {
+    const first = baseWorkflow('fn(s => s);');
+
+    const result = deriveSnapshotChanges(null, [snapshot(first, 0)]);
+
+    expect(result[0]!.changes.steps[0]!.type).toBe('add');
+  });
+
+  it('drops snapshots that changed nothing rather than leaving an empty block', () => {
+    const baseline = baseWorkflow('fn(s => s);');
+    const unchanged = baseWorkflow('fn(s => s);');
+    const edited = baseWorkflow('fn(s => s);\nconsole.log(1);');
+
+    const result = deriveSnapshotChanges(baseline, [
+      snapshot(unchanged, 0),
+      snapshot(edited, 1),
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.segmentIndex).toBe(1);
+  });
+
+  it('reports structural changes on the snapshot that introduced them', () => {
+    const baseline = buildYaml({
+      jobs: [transformJob('fn(s => s);')],
+      triggers: [webhookTrigger],
+      edges: [webhookToTransformEdge],
+    });
+    const withSecondStep = buildYaml({
+      jobs: [
+        transformJob('fn(s => s);'),
+        {
+          key: 'send-mail',
+          id: 'job-2',
+          name: 'Send mail',
+          body: 'fn(s => s);',
+        },
+      ],
+      triggers: [webhookTrigger],
+      edges: [
+        webhookToTransformEdge,
+        {
+          key: 'transform-data->send-mail',
+          id: 'edge-2',
+          source_job: 'transform-data',
+          target_job: 'send-mail',
+        },
+      ],
+    });
+
+    const result = deriveSnapshotChanges(baseline, [
+      snapshot(withSecondStep, 0),
+    ]);
+
+    expect(result[0]!.changes.steps.map(step => step.name)).toEqual([
+      'Send mail',
+    ]);
+    expect(result[0]!.changes.structure).toContainEqual(
+      expect.objectContaining({ kind: 'edge', change: 'add' })
+    );
+  });
+
+  it('returns nothing when there are no snapshots', () => {
+    expect(deriveSnapshotChanges(baseWorkflow('fn(s => s);'), [])).toEqual([]);
+  });
+
+  it('skips an unparseable snapshot without losing the ones around it', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const baseline = baseWorkflow('fn(s => s);');
+    const edited = baseWorkflow('fn(s => s);\nconsole.log(1);');
+
+    const result = deriveSnapshotChanges(baseline, [
+      snapshot('{{ not yaml', 0),
+      snapshot(edited, 1),
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.segmentIndex).toBe(1);
   });
 });

@@ -5,19 +5,25 @@ import remarkGfm from 'remark-gfm';
 import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import { cn } from '#/utils/cn';
 
-import type { Message, ResponseSegment } from '../types/ai-assistant';
+import type {
+  Message,
+  ResponseSegment,
+  WorkflowSnapshot,
+} from '../types/ai-assistant';
 import { STREAMING_MESSAGE_ID } from '../types/ai-assistant';
 
 import { Tooltip } from '../../components/Tooltip';
 
-import type { StepChange } from '../utils/workflowDiff';
+import type { WorkflowChangeSet } from '../utils/workflowDiff';
 import {
   assignStepDiffsToStatuses,
+  deriveSnapshotChanges,
   deriveWorkflowChanges,
 } from '../utils/workflowDiff';
 
 import {
   StepDiffBlock,
+  StructureBlock,
   WorkflowChangeBlocks,
   WorkflowDiffBlocks,
 } from './WorkflowDiffBlocks';
@@ -193,39 +199,54 @@ const SegmentTimeline = ({
   streaming = false,
   showAddButtons = false,
   isWriteDisabled = false,
-  stepDiffsByStatusIndex,
+  changesByStatusIndex,
+  onOpenStep,
 }: {
   segments: ResponseSegment[];
   streaming?: boolean;
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
+  onOpenStep?: (jobId: string) => void;
   /**
-   * Per-status step diffs (segment index → blocks) rendered right after
-   * the status row that announced writing those steps. Completed global
-   * replies only — streaming timelines never pass this.
+   * Per-status change sets (segment index → what that action changed),
+   * rendered right under the status row that announced it. Passed while
+   * streaming and after settling alike, so no blocks appear or move when
+   * the reply finalizes.
    */
-  stepDiffsByStatusIndex?: Map<number, StepChange[]>;
+  changesByStatusIndex?: Map<number, WorkflowChangeSet>;
 }) => (
   <>
     {segments.map((segment, index) => {
       const isLast = index === segments.length - 1;
 
       if (segment.type === 'status') {
-        const stepDiffs = stepDiffsByStatusIndex?.get(index);
+        const changes = changesByStatusIndex?.get(index);
         return (
           // Timeline is append-only, so index keys are stable
           <Fragment key={index}>
-            <StatusSegmentRow content={segment.content} />
-            {stepDiffs && stepDiffs.length > 0 && (
-              <div className="space-y-2" data-testid="status-step-diffs">
-                {stepDiffs.map((step, stepIndex) => (
-                  <StepDiffBlock
-                    key={`${step.type}-${step.name}-${stepIndex}`}
-                    step={step}
-                  />
-                ))}
-              </div>
-            )}
+            <StatusSegmentRow
+              content={
+                // When the steps render as blocks right below, the shorter
+                // summary avoids naming them twice. Apollo versions that
+                // send no summary keep their full sentence.
+                changes && segment.summary ? segment.summary : segment.content
+              }
+            />
+            {changes &&
+              (changes.steps.length > 0 || changes.structure.length > 0) && (
+                <div className="space-y-2" data-testid="status-step-diffs">
+                  {changes.steps.map((step, stepIndex) => (
+                    <StepDiffBlock
+                      key={`${step.type}-${step.name}-${stepIndex}`}
+                      step={step}
+                      onOpenStep={onOpenStep}
+                    />
+                  ))}
+                  {changes.structure.length > 0 && (
+                    <StructureBlock rows={changes.structure} />
+                  )}
+                </div>
+              )}
           </Fragment>
         );
       }
@@ -248,52 +269,122 @@ const SegmentTimeline = ({
 );
 
 /**
- * Timeline of a completed global reply with its workflow diff blocks woven
- * in: each changed step's diff renders immediately after the status segment
- * that announced writing it ("Wrote code for \"X\", \"Y\"" → the X and Y
- * blocks), and anything no status claimed — plus the Structure block —
- * renders at the end.
+ * Merge change sets that landed under the same status row (two `changes`
+ * events with no status between them).
  */
-const GlobalReplyTimeline = ({
+const mergeChangeSets = (sets: WorkflowChangeSet[]): WorkflowChangeSet => ({
+  steps: sets.flatMap(set => set.steps),
+  structure: sets.flatMap(set => set.structure),
+});
+
+/**
+ * Timeline of a global assistant reply with its workflow diff blocks woven
+ * in, used unchanged while the reply streams and after it settles.
+ *
+ * Two ways to get there, in preference order:
+ *
+ * 1. Streamed snapshots. Apollo sends the workflow YAML each time it
+ *    mutates it, followed by the status describing that mutation, so each
+ *    consecutive pair of snapshots is exactly one action. Diffing them
+ *    gives what that action did, and the snapshot's pinned segment index
+ *    says which status it belongs under. This is the live path, and it
+ *    survives into the settled message so nothing shifts on finalize.
+ *
+ * 2. Whole-message fallback, for a reply reloaded from history where the
+ *    snapshots are gone. One diff of the message's final YAML against the
+ *    workflow as it stood before, with blocks attributed to statuses by
+ *    name. Less precise, and the reason persisting snapshots server-side
+ *    is worth doing.
+ */
+const WorkflowReplyTimeline = ({
   segments,
-  beforeYaml,
-  afterYaml,
+  snapshots,
+  baselineYaml,
+  finalYaml,
+  streaming = false,
   showAddButtons = false,
   isWriteDisabled = false,
+  onOpenStep,
 }: {
   segments: ResponseSegment[];
-  beforeYaml: string | null;
-  afterYaml: string;
+  snapshots: WorkflowSnapshot[];
+  baselineYaml: string | null;
+  finalYaml: string | null;
+  streaming?: boolean;
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
+  onOpenStep?: (jobId: string) => void;
 }) => {
-  // Derived once per message (keyed on the YAML snapshots), not per segment
-  const changes = useMemo(
-    () => deriveWorkflowChanges(beforeYaml, afterYaml),
-    [beforeYaml, afterYaml]
-  );
-  const assignment = useMemo(
-    () =>
-      changes
-        ? assignStepDiffsToStatuses(changes.steps, segments)
-        : { byStatusIndex: new Map<number, StepChange[]>(), unmatched: [] },
-    [changes, segments]
-  );
+  const { byStatusIndex, trailing } = useMemo(() => {
+    if (snapshots.length > 0) {
+      const grouped = new Map<number, WorkflowChangeSet[]>();
+      const after: WorkflowChangeSet[] = [];
+
+      for (const { segmentIndex, changes } of deriveSnapshotChanges(
+        baselineYaml,
+        snapshots
+      )) {
+        // A snapshot whose status has not drained yet (or never comes)
+        // renders below the timeline rather than vanishing.
+        if (segmentIndex >= segments.length) {
+          after.push(changes);
+          continue;
+        }
+        const existing = grouped.get(segmentIndex);
+        if (existing) existing.push(changes);
+        else grouped.set(segmentIndex, [changes]);
+      }
+
+      return {
+        byStatusIndex: new Map(
+          [...grouped].map(([index, sets]) => [index, mergeChangeSets(sets)])
+        ),
+        trailing: after.length > 0 ? mergeChangeSets(after) : null,
+      };
+    }
+
+    const changes = finalYaml
+      ? deriveWorkflowChanges(baselineYaml, finalYaml)
+      : null;
+    if (!changes) {
+      return {
+        byStatusIndex: new Map<number, WorkflowChangeSet>(),
+        trailing: null,
+      };
+    }
+
+    const assignment = assignStepDiffsToStatuses(changes.steps, segments);
+    return {
+      byStatusIndex: new Map(
+        [...assignment.byStatusIndex].map(([index, steps]) => [
+          index,
+          { steps, structure: [] },
+        ])
+      ),
+      trailing: {
+        steps: assignment.unmatched,
+        structure: changes.structure,
+      },
+    };
+  }, [snapshots, baselineYaml, finalYaml, segments]);
 
   return (
     <>
       <SegmentTimeline
         segments={segments}
+        streaming={streaming}
         showAddButtons={showAddButtons}
         isWriteDisabled={isWriteDisabled}
-        stepDiffsByStatusIndex={assignment.byStatusIndex}
+        changesByStatusIndex={byStatusIndex}
+        onOpenStep={onOpenStep}
       />
-      {changes && (
-        <WorkflowChangeBlocks
-          steps={assignment.unmatched}
-          structure={changes.structure}
-        />
-      )}
+      {trailing &&
+        (trailing.steps.length > 0 || trailing.structure.length > 0) && (
+          <WorkflowChangeBlocks
+            steps={trailing.steps}
+            structure={trailing.structure}
+          />
+        )}
     </>
   );
 };
@@ -545,6 +636,12 @@ interface MessageListProps {
   streamingStatus?: string | null;
   /** Woven text/status timeline built while a reply streams in */
   streamingSegments?: ResponseSegment[] | null;
+  /** Workflow snapshots streamed so far for the in-flight reply */
+  streamingSnapshots?: WorkflowSnapshot[];
+  /** Snapshots retained per finalized assistant message id */
+  snapshotsByMessageId?: Record<string, WorkflowSnapshot[]>;
+  /** Opens a step in the IDE from a diff block */
+  onOpenStep?: (jobId: string) => void;
   /**
    * Whether the global assistant is active. Gates the woven streaming
    * timeline — non-global streams keep the flat content + single scalar
@@ -568,6 +665,9 @@ export function MessageList({
   streamingContent,
   streamingStatus,
   streamingSegments,
+  streamingSnapshots = [],
+  snapshotsByMessageId = {},
+  onOpenStep,
   isGlobalAssistantActive = false,
 }: MessageListProps) {
   const loadingRef = useRef<HTMLDivElement>(null);
@@ -578,7 +678,7 @@ export function MessageList({
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (messagesEndRef.current && !userScrolledAwayRef.current) {
       messagesEndRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'end',
@@ -587,7 +687,7 @@ export function MessageList({
   }, [messages.length]);
 
   useEffect(() => {
-    if (isLoading && loadingRef.current) {
+    if (isLoading && loadingRef.current && !userScrolledAwayRef.current) {
       loadingRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'end',
@@ -595,12 +695,21 @@ export function MessageList({
     }
   }, [isLoading]);
 
-  // Reset scroll tracking when streaming starts
+  // A reply is live from its first status, well before any prose: a global
+  // reply streams its statuses, workflow and diff blocks first. Scroll
+  // tracking has to cover that whole window, not just the text part.
+  const isStreamLive =
+    !!streamingContent ||
+    !!streamingStatus ||
+    streamingSegments != null ||
+    streamingSnapshots.length > 0;
+
+  // Reset scroll tracking when a reply starts
   useEffect(() => {
-    if (streamingContent) {
+    if (isStreamLive) {
       userScrolledAwayRef.current = false;
     }
-  }, [!!streamingContent]);
+  }, [isStreamLive]);
 
   // Auto-scroll during streaming, but stop if user scrolls away.
   // Uses requestAnimationFrame to coalesce multiple updates per frame
@@ -611,11 +720,16 @@ export function MessageList({
     if (streamingContent && !userScrolledAwayRef.current) {
       if (!scrollRafRef.current) {
         scrollRafRef.current = requestAnimationFrame(() => {
+          scrollRafRef.current = 0;
+          // Re-check on the frame it actually runs. Text arrives every 15ms
+          // and a frame is ~16ms, so a scroll is almost always already
+          // queued; without this a scroll scheduled before the user moved
+          // still fires afterwards and drags them back down.
+          if (userScrolledAwayRef.current) return;
           messagesEndRef.current?.scrollIntoView({
             behavior: 'instant',
             block: 'end',
           });
-          scrollRafRef.current = 0;
         });
       }
     }
@@ -683,6 +797,41 @@ export function MessageList({
     return map;
   }, [messages]);
 
+  /**
+   * Whether this message renders as a global reply with workflow diffs.
+   * The streaming placeholder has no `from_global` flag of its own, so the
+   * active-assistant prop stands in for it; a settled message needs either
+   * its final YAML or retained snapshots to have anything to show.
+   */
+  const isGlobalReply = (message: Message): boolean =>
+    isStreaming(message)
+      ? isGlobalAssistantActive
+      : Boolean(
+          message.from_global &&
+            (message.code || snapshotsByMessageId[message.id]?.length)
+        );
+
+  const snapshotsFor = (message: Message): WorkflowSnapshot[] =>
+    isStreaming(message)
+      ? streamingSnapshots
+      : (snapshotsByMessageId[message.id] ?? []);
+
+  /**
+   * The workflow as it stood before this reply started: for a settled
+   * message the indexed lookup below, for the in-flight one the last user
+   * message's serialized doc, which is what the request was built from.
+   */
+  const baselineYamlFor = (message: Message): string | null => {
+    if (!isStreaming(message)) {
+      return beforeYamlByMessageId.get(message.id) ?? null;
+    }
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const candidate = messages[i];
+      if (candidate?.role === 'user') return candidate.code ?? null;
+    }
+    return null;
+  };
+
   // Woven text/status timeline to render instead of flat content, or null.
   // - Completed messages: persisted `response_segments` (global replies).
   // - Streaming placeholder: live `streamingSegments`. Gated on the global
@@ -721,7 +870,7 @@ export function MessageList({
       data-testid="message-list"
       onScroll={() => {
         const el = containerRef.current;
-        if (el && streamingContent) {
+        if (el && isStreamLive) {
           const isNearBottom =
             el.scrollHeight - el.scrollTop - el.clientHeight < 100;
           userScrolledAwayRef.current = !isNearBottom;
@@ -764,17 +913,16 @@ export function MessageList({
                         </div>
                       </div>
                     ) : segments ? (
-                      !isStreaming(message) &&
-                      message.from_global &&
-                      message.code ? (
-                        <GlobalReplyTimeline
+                      isGlobalReply(message) ? (
+                        <WorkflowReplyTimeline
                           segments={segments}
-                          beforeYaml={
-                            beforeYamlByMessageId.get(message.id) ?? null
-                          }
-                          afterYaml={message.code}
+                          snapshots={snapshotsFor(message)}
+                          baselineYaml={baselineYamlFor(message)}
+                          finalYaml={message.code ?? null}
+                          streaming={isStreaming(message)}
                           showAddButtons={showMessageAddButtons}
                           isWriteDisabled={isWriteDisabled}
+                          onOpenStep={onOpenStep}
                         />
                       ) : (
                         <SegmentTimeline
@@ -824,6 +972,7 @@ export function MessageList({
                             beforeYamlByMessageId.get(message.id) ?? null
                           }
                           afterYaml={message.code}
+                          onOpenStep={onOpenStep}
                         />
                       )}
 

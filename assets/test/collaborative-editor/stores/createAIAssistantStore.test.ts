@@ -450,6 +450,74 @@ describe('createAIAssistantStore', () => {
     });
   });
 
+  describe('Streaming Snapshots', () => {
+    it('pins each snapshot to the segment index its status will occupy', () => {
+      store._appendStreamingSegment({ type: 'status', content: 'Planned' });
+      store._appendStreamingSnapshot('yaml-a');
+      store._appendStreamingSegment({ type: 'status', content: 'Edited' });
+      store._appendStreamingSnapshot('yaml-b');
+      store._appendStreamingSegment({ type: 'status', content: 'Wrote code' });
+
+      // Apollo sends the snapshot immediately before the status describing
+      // it, so the pinned index is the index of that status.
+      expect(store.getSnapshot().streamingSnapshots).toEqual([
+        { yaml: 'yaml-a', segmentIndex: 1 },
+        { yaml: 'yaml-b', segmentIndex: 2 },
+      ]);
+    });
+
+    it('collapses a repeated snapshot so no empty diff hangs off a status', () => {
+      store._appendStreamingSnapshot('yaml-a');
+      store._appendStreamingSegment({ type: 'status', content: 'Edited' });
+      store._appendStreamingSnapshot('yaml-a');
+
+      expect(store.getSnapshot().streamingSnapshots).toEqual([
+        { yaml: 'yaml-a', segmentIndex: 0 },
+      ]);
+    });
+
+    it('hands the snapshots to the assistant message id when the reply settles', () => {
+      store._appendStreamingSnapshot('yaml-a');
+      store._appendStreamingSegment({ type: 'status', content: 'Edited' });
+
+      store._addMessage(
+        createMockAIMessage({
+          id: 'assistant-1',
+          role: 'assistant',
+          status: 'success',
+        })
+      );
+
+      const state = store.getSnapshot();
+      // The server only names the message at new_message, so the live
+      // stream cannot record under that id itself.
+      expect(state.snapshotsByMessageId['assistant-1']).toEqual([
+        { yaml: 'yaml-a', segmentIndex: 0 },
+      ]);
+      expect(state.streamingSnapshots).toEqual([]);
+    });
+
+    it('records nothing for a message that streamed no snapshots', () => {
+      store._addMessage(
+        createMockAIMessage({
+          id: 'assistant-2',
+          role: 'assistant',
+          status: 'success',
+        })
+      );
+
+      expect(store.getSnapshot().snapshotsByMessageId).toEqual({});
+    });
+
+    it('drops the snapshots when a stream errors out', () => {
+      store._appendStreamingSnapshot('yaml-a');
+
+      store._clearStreaming();
+
+      expect(store.getSnapshot().streamingSnapshots).toEqual([]);
+    });
+  });
+
   describe('Streaming Apply', () => {
     it('records, flags, and clears the streaming apply lifecycle', () => {
       store._setStreamingApply('name: Test');

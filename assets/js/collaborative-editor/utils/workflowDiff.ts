@@ -13,6 +13,7 @@ import { structuredPatch } from 'diff';
 
 import type { StateEdge, StateJob, WorkflowState } from '../../yaml/types';
 import { convertWorkflowSpecToState, parseWorkflowYAML } from '../../yaml/util';
+import type { WorkflowSnapshot } from '../types/ai-assistant';
 
 export interface DiffHunk {
   /** 1-based line number of the hunk's first line in the old body */
@@ -32,6 +33,19 @@ export interface StepChange {
   addedLines: number;
   removedLines: number;
   hunks: DiffHunk[];
+  /**
+   * Whole bodies either side of the change. Syntax highlighting tokenizes
+   * these rather than the hunk rows, so a template literal or block comment
+   * spanning several lines is coloured correctly even where the hunk shows
+   * only part of it.
+   */
+  oldBody: string;
+  newBody: string;
+  /**
+   * Id of the step in the workflow the reply produced, so the block can link
+   * to it. Absent for a removed step: it is not there to open.
+   */
+  jobId?: string;
 }
 
 export interface StructuralChange {
@@ -164,13 +178,23 @@ const deriveStepChanges = (
         added: addedLines,
         removed: removedLines,
       } = diffBodies(beforeJob.body, afterJob.body);
-      updates.set(afterJob, {
-        type: 'update',
-        name: afterJob.name,
-        addedLines,
-        removedLines,
-        hunks,
-      });
+      // Apollo re-serializes the whole document on every mutation, which
+      // turns a `body: |` block scalar into an inline scalar and back. The
+      // parsed strings then differ by a trailing newline while the diff
+      // itself is empty. Emitting that would hang a blank block under a
+      // status row on almost every reply.
+      if (addedLines > 0 || removedLines > 0) {
+        updates.set(afterJob, {
+          type: 'update',
+          name: afterJob.name,
+          addedLines,
+          removedLines,
+          hunks,
+          oldBody: beforeJob.body,
+          newBody: afterJob.body,
+          jobId: afterJob.id,
+        });
+      }
     }
   }
 
@@ -188,6 +212,9 @@ const deriveStepChanges = (
         addedLines,
         removedLines: 0,
         hunks,
+        oldBody: '',
+        newBody: job.body,
+        jobId: job.id,
       });
     }
   }
@@ -199,6 +226,8 @@ const deriveStepChanges = (
       addedLines: 0,
       removedLines,
       hunks,
+      oldBody: job.body,
+      newBody: '',
     });
   }
 
@@ -344,23 +373,10 @@ const deriveTriggerChanges = (
  * - Any parse failure → `null` (caller renders nothing).
  * - Nothing changed → `null`.
  */
-export const deriveWorkflowChanges = (
-  beforeYaml: string | null | undefined,
-  afterYaml: string
+const diffStates = (
+  before: DiffState,
+  after: DiffState
 ): WorkflowChangeSet | null => {
-  let before: DiffState;
-  let after: DiffState;
-  try {
-    after = parseState(afterYaml);
-    before = beforeYaml?.trim() ? parseState(beforeYaml) : EMPTY_STATE;
-  } catch (error) {
-    console.warn(
-      '[WorkflowDiff] Could not derive workflow changes from YAML:',
-      error
-    );
-    return null;
-  }
-
   const { steps, renames } = deriveStepChanges(before, after);
   const structure = [
     ...renames,
@@ -373,38 +389,59 @@ export const deriveWorkflowChanges = (
   return { steps, structure };
 };
 
-/**
- * Statuses that announce writing/editing a step, e.g.
- * `Wrote code for "Transform data", "Http"` or `Added step send-to-gmail`.
- * Deliberately excludes read-only statuses ("Read code for...",
- * "Reviewing...", "Checking...") so they never attract a diff block.
- * Bare "add"/"remove" are not matched (a step *named* "Add contact" quoted
- * inside a read status must not read as a write verb) — only inflected
- * forms Apollo actually emits.
- */
-const WRITE_STATUS_PATTERN =
-  /\b(wrote|writ\w*|edit\w*|updat\w*|add(?:ed|ing|s)|remov(?:ed|ing|es)|creat\w*|renam\w*)\b/i;
+/** Parsed state, or null when the YAML could not be read */
+const tryParseState = (yaml: string): DiffState | null => {
+  try {
+    return parseState(yaml);
+  } catch (error) {
+    console.warn(
+      '[WorkflowDiff] Could not derive workflow changes from YAML:',
+      error
+    );
+    return null;
+  }
+};
+
+export const deriveWorkflowChanges = (
+  beforeYaml: string | null | undefined,
+  afterYaml: string
+): WorkflowChangeSet | null => {
+  const after = tryParseState(afterYaml);
+  if (!after) return null;
+
+  const before = beforeYaml?.trim() ? tryParseState(beforeYaml) : EMPTY_STATE;
+  if (!before) return null;
+
+  return diffStates(before, after);
+};
 
 export interface StepDiffAssignment {
   /**
    * Timeline segment index → step diffs to render immediately after that
-   * status row. Only write/edit statuses that mention a changed step's
-   * name attract its block; each block is assigned once (first match wins).
+   * status row.
    */
   byStatusIndex: Map<number, StepChange[]>;
-  /** Steps no status segment claimed — rendered at the end of the message */
+  /** Steps no status claimed — rendered at the end of the message */
   unmatched: StepChange[];
 }
 
 /**
- * Distributes derived step diffs across a message's status segments so each
- * diff renders right after the status that announced writing that step
- * (Claude-Code style). Matching is case-insensitive substring on the step
- * name, which tolerates quotes and punctuation around the name.
+ * Distributes derived step diffs across a message's status segments, using
+ * the steps each status reports having touched.
+ *
+ * This is the reload path. A live reply pairs diffs to statuses through the
+ * streamed snapshots instead, which is exact; here we have only the final
+ * workflow, so a step edited by two separate actions appears once, under
+ * the last status that touched it.
+ *
+ * Attribution is by name against `segment.steps`, which Apollo sends as
+ * data. A status that reports no steps attracts no diffs — replies from an
+ * Apollo that predates the `steps` field simply render their blocks at the
+ * end of the message rather than woven in.
  */
 export const assignStepDiffsToStatuses = (
   steps: StepChange[],
-  segments: Array<{ type: string; content: string }>
+  segments: Array<{ type: string; steps?: Array<{ name?: string }> }>
 ): StepDiffAssignment => {
   const byStatusIndex = new Map<number, StepChange[]>();
   const remaining = new Set(steps);
@@ -412,11 +449,17 @@ export const assignStepDiffsToStatuses = (
   segments.forEach((segment, index) => {
     if (segment.type !== 'status') return;
     if (remaining.size === 0) return;
-    if (!WRITE_STATUS_PATTERN.test(segment.content)) return;
+    if (!segment.steps?.length) return;
 
-    const content = segment.content.toLowerCase();
+    const claimed = new Set(
+      segment.steps
+        .map(step => step.name?.toLowerCase())
+        .filter((name): name is string => !!name)
+    );
+    if (claimed.size === 0) return;
+
     const matched = [...remaining].filter(step =>
-      content.includes(step.name.toLowerCase())
+      claimed.has(step.name.toLowerCase())
     );
     if (matched.length > 0) {
       byStatusIndex.set(index, matched);
@@ -425,4 +468,56 @@ export const assignStepDiffsToStatuses = (
   });
 
   return { byStatusIndex, unmatched: steps.filter(s => remaining.has(s)) };
+};
+
+/** A change set pinned to the timeline segment that announced it */
+export interface SnapshotChangeSet {
+  /** Index of the status segment this change set renders under */
+  segmentIndex: number;
+  changes: WorkflowChangeSet;
+}
+
+/**
+ * Derives one change set per streamed snapshot.
+ *
+ * Apollo emits the workflow YAML every time it actually mutates it, then
+ * the settled status describing that mutation. So consecutive snapshots
+ * bracket exactly one action, and diffing each against its predecessor
+ * gives what that action did — no prose parsing, no name matching.
+ *
+ * `baselineYaml` is the workflow as it stood when the user sent the
+ * message, and is the "before" for the first snapshot. A missing or
+ * unparseable baseline is treated as an empty workflow, so the opening
+ * action reads as a set of adds rather than rendering nothing.
+ *
+ * Snapshots that changed nothing are dropped, so a tool call that
+ * rewrote the YAML without altering it leaves no empty block behind.
+ */
+export const deriveSnapshotChanges = (
+  baselineYaml: string | null | undefined,
+  snapshots: WorkflowSnapshot[]
+): SnapshotChangeSet[] => {
+  const out: SnapshotChangeSet[] = [];
+
+  // An unparseable baseline is treated as an empty workflow, the same as a
+  // missing one: the opening action then reads as a set of adds rather
+  // than silently dropping every diff in the reply.
+  let before: DiffState =
+    (baselineYaml?.trim() ? tryParseState(baselineYaml) : EMPTY_STATE) ??
+    EMPTY_STATE;
+
+  for (const snapshot of snapshots) {
+    const after = tryParseState(snapshot.yaml);
+    // Hold the cursor on the last state we could read, so one bad snapshot
+    // costs its own block instead of poisoning every snapshot after it.
+    if (!after) continue;
+
+    const changes = diffStates(before, after);
+    if (changes) {
+      out.push({ segmentIndex: snapshot.segmentIndex, changes });
+    }
+    before = after;
+  }
+
+  return out;
 };

@@ -1159,10 +1159,14 @@ defmodule Lightning.AiAssistant do
       {:ok, %{"type" => "status", "content" => content} = segment}
       when is_binary(content) ->
         # Take only the contract fields so stray keys from Apollo never
-        # reach the client.
+        # reach the client. `steps` and `summary` are optional: `steps`
+        # names what the action touched as data, which is how the client
+        # attaches per-step detail without parsing `content`.
         broadcast_streaming_segment(
           session_id,
-          Map.take(segment, ["type", "content"])
+          segment
+          |> Map.take(["type", "content", "summary", "steps"])
+          |> normalize_segment_steps()
         )
 
       _ ->
@@ -1372,12 +1376,38 @@ defmodule Lightning.AiAssistant do
     end
 
     case kept do
-      [] -> nil
-      kept -> Enum.map(kept, &Map.take(&1, ["type", "content"]))
+      [] ->
+        nil
+
+      kept ->
+        Enum.map(
+          kept,
+          &(&1
+            |> Map.take(["type", "content", "summary", "steps"])
+            |> normalize_segment_steps())
+        )
     end
   end
 
   defp normalize_response_segments(_segments), do: nil
+
+  # Keeps only the step fields we persist, and drops the key entirely when
+  # Apollo sent nothing usable — an empty list would otherwise read as "this
+  # action touched no steps", which is not the same as "this Apollo version
+  # does not report steps".
+  defp normalize_segment_steps(%{"steps" => steps} = segment)
+       when is_list(steps) do
+    steps
+    |> Enum.filter(&is_map/1)
+    |> Enum.map(&Map.take(&1, ["key", "name"]))
+    |> Enum.reject(&(Map.get(&1, "key") in [nil, ""]))
+    |> case do
+      [] -> Map.delete(segment, "steps")
+      kept -> Map.put(segment, "steps", kept)
+    end
+  end
+
+  defp normalize_segment_steps(segment), do: Map.delete(segment, "steps")
 
   # Global chat always returns a full workflow YAML (job bodies embedded).
   # The frontend handles per-step diffing and full-workflow apply.

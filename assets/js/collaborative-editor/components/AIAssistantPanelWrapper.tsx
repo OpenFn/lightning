@@ -32,6 +32,8 @@ import {
   useAIStreamingChanges,
   useAIStreamingContent,
   useAIStreamingSegments,
+  useAIStreamingSnapshots,
+  useAISnapshotsByMessageId,
   useAIStreamingStatus,
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
@@ -148,6 +150,20 @@ export function AIAssistantPanelWrapper({
   const streamingContent = useAIStreamingContent();
   const streamingStatus = useAIStreamingStatus();
   const streamingSegments = useAIStreamingSegments();
+  const streamingSnapshots = useAIStreamingSnapshots();
+
+  /**
+   * Open a step from a diff block in the IDE. Selects the node and opens the
+   * editor panel in one navigation, so the user lands on the code they were
+   * just reading rather than on the canvas.
+   */
+  const handleOpenStep = useCallback(
+    (jobId: string) => {
+      updateSearchParams({ panel: 'editor', job: jobId });
+    },
+    [updateSearchParams]
+  );
+  const snapshotsByMessageId = useAISnapshotsByMessageId();
   const streamingChanges = useAIStreamingChanges();
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
@@ -812,6 +828,9 @@ export function AIAssistantPanelWrapper({
                 streamingContent={streamingContent}
                 streamingStatus={streamingStatus}
                 streamingSegments={streamingSegments}
+                streamingSnapshots={streamingSnapshots}
+                snapshotsByMessageId={snapshotsByMessageId}
+                onOpenStep={handleOpenStep}
                 isGlobalAssistantActive={isGlobalAssistantActive}
               />
             </AIAssistantPanel>
