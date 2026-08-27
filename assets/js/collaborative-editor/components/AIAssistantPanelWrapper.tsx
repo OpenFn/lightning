@@ -152,17 +152,6 @@ export function AIAssistantPanelWrapper({
   const streamingSegments = useAIStreamingSegments();
   const streamingSnapshots = useAIStreamingSnapshots();
 
-  /**
-   * Open a step from a diff block in the IDE. Selects the node and opens the
-   * editor panel in one navigation, so the user lands on the code they were
-   * just reading rather than on the canvas.
-   */
-  const handleOpenStep = useCallback(
-    (jobId: string) => {
-      updateSearchParams({ panel: 'editor', job: jobId });
-    },
-    [updateSearchParams]
-  );
   const snapshotsByMessageId = useAISnapshotsByMessageId();
   const streamingChanges = useAIStreamingChanges();
   const sessionId = useAISessionId();
@@ -184,6 +173,21 @@ export function AIAssistantPanelWrapper({
 
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
+  /**
+   * Open a step from a diff block in the IDE. Selects the node and opens the
+   * editor panel in one navigation, so the user lands on the code they were
+   * just reading rather than on the canvas.
+   */
+  const handleOpenStep = useCallback(
+    (jobId: string) => {
+      // Parsing YAML without `id:` fields invents ids, so a step's id is not
+      // guaranteed to name a job on the canvas. Navigating to one that does
+      // not exist opens an empty editor, so check first.
+      if (!jobs.some(job => job.id === jobId)) return;
+      updateSearchParams({ panel: 'editor', job: jobId });
+    },
+    [jobs, updateSearchParams]
+  );
   const edges = useWorkflowState(state => state.edges);
   const positions = useWorkflowState(state => state.positions);
 

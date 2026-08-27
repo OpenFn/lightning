@@ -271,12 +271,19 @@ const deriveEdgeChanges = (
 
   for (const [beforeEdge, afterEdge] of pairs) {
     const details: string[] = [];
-    // Rewiring is detected on ids (display names shift when a step is
-    // renamed, which is not an edge change)
-    const rewired =
+    // Rewiring is detected on ids, because display names shift when a step
+    // is renamed and that is not an edge change. Ids alone are not enough
+    // though: parsing YAML without `id:` fields invents a fresh UUID per
+    // entity, so two parses of the same workflow never agree on ids and
+    // every edge would report itself rewired. Require the endpoints to have
+    // actually moved as well.
+    const idsDiffer =
       (beforeEdge.source_trigger_id ?? beforeEdge.source_job_id) !==
         (afterEdge.source_trigger_id ?? afterEdge.source_job_id) ||
       beforeEdge.target_job_id !== afterEdge.target_job_id;
+    const rewired =
+      idsDiffer &&
+      edgeEndpoints(beforeEdge, before) !== edgeEndpoints(afterEdge, after);
     if (rewired) {
       details.push(`was ${edgeEndpoints(beforeEdge, before)}`);
     }
@@ -441,7 +448,10 @@ export interface StepDiffAssignment {
  */
 export const assignStepDiffsToStatuses = (
   steps: StepChange[],
-  segments: Array<{ type: string; steps?: Array<{ name?: string }> }>
+  segments: Array<{
+    type: string;
+    steps?: Array<{ key?: string; name?: string }>;
+  }>
 ): StepDiffAssignment => {
   const byStatusIndex = new Map<number, StepChange[]>();
   const remaining = new Set(steps);
@@ -451,10 +461,15 @@ export const assignStepDiffsToStatuses = (
     if (remaining.size === 0) return;
     if (!segment.steps?.length) return;
 
+    // Matching is on the reported name. `key` is the required field on the
+    // wire, but the parsed workflow does not keep the YAML key for a job, so
+    // there is nothing here to compare it against; a status that reported
+    // keys and no names attracts nothing and its blocks fall to the tail.
     const claimed = new Set(
       segment.steps
-        .map(step => step.name?.toLowerCase())
+        .map(step => step.name)
         .filter((name): name is string => !!name)
+        .map(name => name.toLowerCase())
     );
     if (claimed.size === 0) return;
 

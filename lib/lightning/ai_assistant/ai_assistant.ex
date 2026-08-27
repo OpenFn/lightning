@@ -1358,8 +1358,15 @@ defmodule Lightning.AiAssistant do
   # save: absent or all-invalid segments mean a flat legacy message. The
   # segment contract itself lives in `ChatMessage.Segment`.
   defp normalize_response_segments(segments) when is_list(segments) do
+    # Sanitise before validating, not after. A malformed `steps` entry would
+    # otherwise fail the whole segment and lose its prose, and a non-map entry
+    # would reach cast_embed and raise rather than simply being dropped.
     {valid, dropped} =
-      Enum.split_with(segments, fn segment ->
+      segments
+      |> Enum.map(fn segment ->
+        if is_map(segment), do: normalize_segment_steps(segment), else: segment
+      end)
+      |> Enum.split_with(fn segment ->
         is_map(segment) and
           ChatMessage.Segment.changeset(%ChatMessage.Segment{}, segment).valid?
       end)
@@ -1380,12 +1387,7 @@ defmodule Lightning.AiAssistant do
         nil
 
       kept ->
-        Enum.map(
-          kept,
-          &(&1
-            |> Map.take(["type", "content", "summary", "steps"])
-            |> normalize_segment_steps())
-        )
+        Enum.map(kept, &Map.take(&1, ["type", "content", "summary", "steps"]))
     end
   end
 

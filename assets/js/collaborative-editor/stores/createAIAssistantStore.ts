@@ -427,11 +427,23 @@ export const createAIAssistantStore = (): AIAssistantStore => {
           draft.streamingContent = null;
           draft.streamingStatus = null;
           draft.streamingChanges = null;
+          const streamedSegmentCount = draft.streamingSegments.length;
           draft.streamingSegments = [];
           // Hand the streamed snapshots to the id the server just assigned,
           // so the settled message renders the same per-status diffs it did
           // a moment ago instead of collapsing to one whole-message diff.
-          if (draft.streamingSnapshots.length > 0) {
+          //
+          // Their indices count the timeline this client built. The server
+          // drops invalid segments and truncates long ones, so if its
+          // timeline is a different length the indices no longer line up and
+          // the blocks would jump to the wrong status at exactly the moment
+          // this is meant to be seamless. Fall back to the whole-message
+          // diff rather than show them against the wrong statuses.
+          const serverSegments = message.response_segments?.length ?? 0;
+          if (
+            draft.streamingSnapshots.length > 0 &&
+            serverSegments === streamedSegmentCount
+          ) {
             draft.snapshotsByMessageId[message.id] = draft.streamingSnapshots;
           }
           draft.streamingSnapshots = [];

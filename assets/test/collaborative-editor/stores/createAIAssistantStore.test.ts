@@ -485,6 +485,7 @@ describe('createAIAssistantStore', () => {
           id: 'assistant-1',
           role: 'assistant',
           status: 'success',
+          response_segments: [{ type: 'status', content: 'Edited' }],
         })
       );
 
@@ -495,6 +496,26 @@ describe('createAIAssistantStore', () => {
         { yaml: 'yaml-a', segmentIndex: 0 },
       ]);
       expect(state.streamingSnapshots).toEqual([]);
+    });
+
+    it('drops the snapshots when the server timeline is a different length', () => {
+      store._appendStreamingSnapshot('yaml-a');
+      store._appendStreamingSegment({ type: 'status', content: 'Edited' });
+      store._appendStreamingSegment({ type: 'status', content: 'Wrote code' });
+
+      // The server dropped or truncated a segment, so the pinned indices no
+      // longer name the same statuses; showing them would put blocks under
+      // the wrong rows.
+      store._addMessage(
+        createMockAIMessage({
+          id: 'assistant-3',
+          role: 'assistant',
+          status: 'success',
+          response_segments: [{ type: 'status', content: 'Edited' }],
+        })
+      );
+
+      expect(store.getSnapshot().snapshotsByMessageId).toEqual({});
     });
 
     it('records nothing for a message that streamed no snapshots', () => {

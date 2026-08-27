@@ -383,6 +383,7 @@ const WorkflowReplyTimeline = ({
           <WorkflowChangeBlocks
             steps={trailing.steps}
             structure={trailing.structure}
+            onOpenStep={onOpenStep}
           />
         )}
     </>
@@ -701,10 +702,9 @@ export function MessageList({
   const isStreamLive =
     !!streamingContent ||
     !!streamingStatus ||
-    streamingSegments != null ||
+    !!streamingSegments?.length ||
     streamingSnapshots.length > 0;
 
-  // Reset scroll tracking when a reply starts
   useEffect(() => {
     if (isStreamLive) {
       userScrolledAwayRef.current = false;

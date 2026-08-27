@@ -600,6 +600,84 @@ describe('YAML re-serialization', () => {
   });
 });
 
+describe('edges without preserved ids', () => {
+  /** Same workflow twice, with no `id:` anywhere */
+  const idlessYaml = (body: string) =>
+    [
+      'name: Test Workflow',
+      'jobs:',
+      '  transform-data:',
+      '    name: Transform data',
+      "    adaptor: '@openfn/language-common@latest'",
+      `    body: ${body}`,
+      'triggers:',
+      '  webhook:',
+      '    type: webhook',
+      '    enabled: true',
+      'edges:',
+      '  webhook->transform-data:',
+      '    source_trigger: webhook',
+      '    target_job: transform-data',
+      '    condition_type: always',
+      '    enabled: true',
+    ].join('\n') + '\n';
+
+  it('does not report an unchanged edge as rewired', () => {
+    // Parsing id-less YAML invents a fresh UUID per entity, so the two sides
+    // never agree on ids. Reporting that as a rewire put a bogus Structure
+    // row under every status of every reply.
+    const changes = deriveWorkflowChanges(
+      idlessYaml('fn(s => s);'),
+      idlessYaml('fn(s => s.data);')
+    );
+
+    expect(changes?.steps).toHaveLength(1);
+    expect(changes?.structure).toEqual([]);
+  });
+
+  it('still reports an edge whose endpoints actually moved', () => {
+    const before = buildYaml({
+      jobs: [
+        transformJob('fn(s => s);'),
+        {
+          key: 'send-mail',
+          id: 'job-2',
+          name: 'Send mail',
+          body: 'fn(s => s);',
+        },
+      ],
+      triggers: [webhookTrigger],
+      edges: [webhookToTransformEdge],
+    });
+    const after = buildYaml({
+      jobs: [
+        transformJob('fn(s => s);'),
+        {
+          key: 'send-mail',
+          id: 'job-2',
+          name: 'Send mail',
+          body: 'fn(s => s);',
+        },
+      ],
+      triggers: [webhookTrigger],
+      edges: [
+        {
+          key: 'webhook->transform-data',
+          id: 'edge-1',
+          source_trigger: 'webhook',
+          target_job: 'send-mail',
+        },
+      ],
+    });
+
+    const changes = deriveWorkflowChanges(before, after);
+
+    expect(changes?.structure).toContainEqual(
+      expect.objectContaining({ kind: 'edge', change: 'modify' })
+    );
+  });
+});
+
 describe('deriveSnapshotChanges', () => {
   const snapshot = (yaml: string, segmentIndex: number) => ({
     yaml,

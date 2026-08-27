@@ -236,7 +236,7 @@ defmodule Lightning.AiAssistant.ChatMessageTest do
                Ecto.Changeset.apply_changes(changeset).response_segments
     end
 
-    test "rejects a step with no key to identify it by" do
+    test "rejects a step with no key at the schema boundary" do
       changeset =
         ChatMessage.changeset(%ChatMessage{}, %{
           content: "Done",
