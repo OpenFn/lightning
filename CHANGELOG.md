@@ -31,6 +31,7 @@ and this project adheres to
   less before seeing output. Lightning handles the several streaming event types
   Apollo sends, including status updates.
   [#4969](https://github.com/OpenFn/lightning/pull/4969)
+- Bumped bundled worker to version 1.29.2
 
 ### Fixed
 
