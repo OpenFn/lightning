@@ -273,6 +273,7 @@ vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
     adaptorsInUse: [],
     allAdaptors: [],
   }),
+  useAdaptorsLoading: () => false,
 }));
 
 // Mock LiveView actions

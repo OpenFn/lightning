@@ -58,9 +58,9 @@ describe('JobNode - adaptor icon', () => {
     const { container } = renderJob('@openfn/language-http@1.0.0', [
       {
         name: '@openfn/language-http',
-        versions: [{ version: '1.0.0' }],
-        repo: 'https://example.com',
-        latest: '1.0.0',
+        versions: ['1.0.0'],
+        repository: 'https://example.com',
+        latest_version: '1.0.0',
         icon_urls: { square: url, rectangle: null },
       },
     ]);
@@ -75,9 +75,9 @@ describe('JobNode - adaptor icon', () => {
     const { container } = renderJob('@openfn/language-http@1.0.0', [
       {
         name: '@openfn/language-http',
-        versions: [{ version: '1.0.0' }],
-        repo: 'https://example.com',
-        latest: '1.0.0',
+        versions: ['1.0.0'],
+        repository: 'https://example.com',
+        latest_version: '1.0.0',
         icon_urls: { square: null, rectangle: '/rect.png' },
       },
     ]);

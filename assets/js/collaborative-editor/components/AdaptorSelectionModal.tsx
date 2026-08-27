@@ -3,7 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useKeyboardShortcut } from '../keyboard';
 
-import { useAdaptors } from '../hooks/useAdaptors';
+import {
+  useAdaptorCommands,
+  useAdaptors,
+  useAdaptorsError,
+  useAdaptorsLoading,
+} from '../hooks/useAdaptors';
 import type { Adaptor } from '../types/adaptor';
 import { getAdaptorDisplayName } from '../utils/adaptorUtils';
 
@@ -28,6 +33,11 @@ export function AdaptorSelectionModal({
   adaptorsInUse = [],
 }: AdaptorSelectionModalProps) {
   const allAdaptors = useAdaptors();
+  const isLoading = useAdaptorsLoading();
+  const catalogueError = useAdaptorsError();
+  const { requestAdaptors } = useAdaptorCommands();
+  const catalogueLoading = isLoading && allAdaptors.length === 0;
+  const catalogueFailed = !!catalogueError && allAdaptors.length === 0;
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
 
@@ -142,7 +152,7 @@ export function AdaptorSelectionModal({
 
   const handleRowClick = (adaptor: AdaptorWithDisplayName) => {
     // Construct full adaptor spec with semantic version
-    const adaptorSpec = `${adaptor.name}@${adaptor.latest}`;
+    const adaptorSpec = `${adaptor.name}@${adaptor.latest_version}`;
 
     // Immediately select and close (Figma design - no Continue button)
     onSelect(adaptorSpec);
@@ -216,67 +226,96 @@ export function AdaptorSelectionModal({
           >
             <div className="flex items-start gap-3">
               <div className="flex-1">
-                <SearchableList
-                  placeholder="Search for an adaptor to connect..."
-                  onSearch={setSearchQuery}
-                  onKeyDown={handleKeyDown}
-                  listboxId="adaptor-listbox"
-                  {...(activeDescendantId && { activeDescendantId })}
-                >
-                  {showingHttpFallback && (
-                    <div className="mb-4 px-3 py-4 bg-blue-50 rounded-lg border border-blue-100">
-                      <p className="text-sm text-gray-700 mb-1">
-                        <span className="font-medium">No adaptor found</span>{' '}
-                        for "{searchQuery}"
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Try the HTTP adaptor below to connect to any system with
-                        a REST API.
-                      </p>
-                    </div>
-                  )}
-
-                  {filteredProjectAdaptors.length > 0 && (
-                    <ListSection title="Adaptors in this project">
-                      {filteredProjectAdaptors.map(adaptor => (
-                        <ListRow
-                          key={adaptor.name}
-                          id={`adaptor-option-${adaptor.name}`}
-                          title={adaptor.displayName}
-                          description={`Latest: ${adaptor.latest}`}
-                          icon={<AdaptorIcon name={adaptor.name} size="md" />}
-                          onClick={() => handleRowClick(adaptor)}
-                          focused={isAdaptorFocused(adaptor, 0)}
-                        />
-                      ))}
-                    </ListSection>
-                  )}
-
-                  {filteredAllAdaptors.length > 0 && (
-                    <ListSection
-                      title={
-                        filteredProjectAdaptors.length > 0
-                          ? 'All adaptors'
-                          : 'Available adaptors'
-                      }
+                {catalogueLoading ? (
+                  <div
+                    data-testid="adaptor-list-loading"
+                    aria-live="polite"
+                    className="flex items-center justify-center gap-2 py-8
+                      text-sm text-gray-500"
+                  >
+                    <span className="hero-arrow-path h-4 w-4 animate-spin" />
+                    Loading adaptors...
+                  </div>
+                ) : catalogueFailed ? (
+                  <div
+                    data-testid="adaptor-list-error"
+                    aria-live="polite"
+                    className="flex flex-col items-center justify-center
+                      gap-2 py-8 text-sm text-gray-500"
+                  >
+                    <p>Couldn't load adaptors. Please try again.</p>
+                    <button
+                      type="button"
+                      onClick={() => void requestAdaptors()}
+                      className="text-primary-600 hover:text-primary-500
+                        font-medium"
                     >
-                      {filteredAllAdaptors.map(adaptor => (
-                        <ListRow
-                          key={adaptor.name}
-                          id={`adaptor-option-${adaptor.name}`}
-                          title={adaptor.displayName}
-                          description={`Latest: ${adaptor.latest}`}
-                          icon={<AdaptorIcon name={adaptor.name} size="sm" />}
-                          onClick={() => handleRowClick(adaptor)}
-                          focused={isAdaptorFocused(
-                            adaptor,
-                            filteredProjectAdaptors.length
-                          )}
-                        />
-                      ))}
-                    </ListSection>
-                  )}
-                </SearchableList>
+                      Retry
+                    </button>
+                  </div>
+                ) : (
+                  <SearchableList
+                    placeholder="Search for an adaptor to connect..."
+                    onSearch={setSearchQuery}
+                    onKeyDown={handleKeyDown}
+                    listboxId="adaptor-listbox"
+                    {...(activeDescendantId && { activeDescendantId })}
+                  >
+                    {showingHttpFallback && (
+                      <div className="mb-4 px-3 py-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <p className="text-sm text-gray-700 mb-1">
+                          <span className="font-medium">No adaptor found</span>{' '}
+                          for "{searchQuery}"
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Try the HTTP adaptor below to connect to any system
+                          with a REST API.
+                        </p>
+                      </div>
+                    )}
+
+                    {filteredProjectAdaptors.length > 0 && (
+                      <ListSection title="Adaptors in this project">
+                        {filteredProjectAdaptors.map(adaptor => (
+                          <ListRow
+                            key={adaptor.name}
+                            id={`adaptor-option-${adaptor.name}`}
+                            title={adaptor.displayName}
+                            description={`Latest: ${adaptor.latest_version}`}
+                            icon={<AdaptorIcon name={adaptor.name} size="md" />}
+                            onClick={() => handleRowClick(adaptor)}
+                            focused={isAdaptorFocused(adaptor, 0)}
+                          />
+                        ))}
+                      </ListSection>
+                    )}
+
+                    {filteredAllAdaptors.length > 0 && (
+                      <ListSection
+                        title={
+                          filteredProjectAdaptors.length > 0
+                            ? 'All adaptors'
+                            : 'Available adaptors'
+                        }
+                      >
+                        {filteredAllAdaptors.map(adaptor => (
+                          <ListRow
+                            key={adaptor.name}
+                            id={`adaptor-option-${adaptor.name}`}
+                            title={adaptor.displayName}
+                            description={`Latest: ${adaptor.latest_version}`}
+                            icon={<AdaptorIcon name={adaptor.name} size="sm" />}
+                            onClick={() => handleRowClick(adaptor)}
+                            focused={isAdaptorFocused(
+                              adaptor,
+                              filteredProjectAdaptors.length
+                            )}
+                          />
+                        ))}
+                      </ListSection>
+                    )}
+                  </SearchableList>
+                )}
               </div>
             </div>
           </DialogPanel>

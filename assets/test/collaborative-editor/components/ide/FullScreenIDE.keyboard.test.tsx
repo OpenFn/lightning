@@ -372,6 +372,7 @@ vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
     adaptors: [],
     loading: false,
   }),
+  useAdaptorsLoading: () => false,
 }));
 
 // Mock awareness hooks

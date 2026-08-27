@@ -13,25 +13,21 @@ import { z } from 'zod';
 // =============================================================================
 
 /**
- * Individual adaptor version schema
- */
-export const AdaptorVersionSchema = z.object({
-  version: z.string(),
-});
-
-/**
- * Single adaptor schema with all its versions
+ * Square and rectangle icon URLs for an adaptor. Either may be unavailable.
  */
 export const AdaptorIconUrlsSchema = z.object({
   square: z.string().nullable(),
   rectangle: z.string().nullable(),
 });
 
+/**
+ * Single adaptor schema with all its versions
+ */
 export const AdaptorSchema = z.object({
   name: z.string(),
-  versions: z.array(AdaptorVersionSchema),
-  repo: z.string(),
-  latest: z.string(),
+  latest_version: z.string(),
+  versions: z.array(z.string()),
+  repository: z.string().nullable(),
   icon_urls: AdaptorIconUrlsSchema,
 });
 
@@ -43,11 +39,6 @@ export const AdaptorsListSchema = z.array(AdaptorSchema);
 // =============================================================================
 // TYPESCRIPT TYPES (Compile-time)
 // =============================================================================
-
-/**
- * Individual adaptor version
- */
-export type AdaptorVersion = z.infer<typeof AdaptorVersionSchema>;
 
 /**
  * Single adaptor with all its versions and metadata
@@ -116,7 +107,7 @@ export interface AdaptorQueries {
   getLatestVersion: (adaptorName: string) => string | null;
 
   /** Get all versions for adaptor */
-  getVersions: (adaptorName: string) => AdaptorVersion[];
+  getVersions: (adaptorName: string) => string[];
 }
 
 /**

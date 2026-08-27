@@ -291,7 +291,7 @@ describe('useAdaptors hooks', () => {
       await waitFor(() => {
         expect(httpAdaptor.current).not.toBe(null);
         expect(httpAdaptor.current?.name).toBe('@openfn/language-http');
-        expect(httpAdaptor.current?.latest).toBe('2.1.0');
+        expect(httpAdaptor.current?.latest_version).toBe('2.1.0');
       });
 
       expect(nonExistent.current).toBe(null);
@@ -419,8 +419,7 @@ describe('useAdaptors hooks', () => {
         '@openfn/language-http',
       ]);
 
-      // Per-entry referential identity: each item in adaptorsInUse is the same
-      // reference as the corresponding catalogue entry.
+      // adaptorsInUse entries are the same object references as the catalogue entries, not copies.
       const catalogue = result.current.allAdaptors;
       for (const a of result.current.adaptorsInUse) {
         const fromCatalogue = catalogue.find(c => c.name === a.name);

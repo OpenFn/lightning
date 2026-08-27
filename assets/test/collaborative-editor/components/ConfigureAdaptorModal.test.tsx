@@ -38,26 +38,24 @@ vi.mock('#/workflow-diagram/useAdaptorIcons', () => ({
 const mockProjectAdaptors: Adaptor[] = [
   {
     name: '@openfn/language-http',
-    latest: '1.5.0',
-    versions: [
-      { version: '1.5.0' },
-      { version: '1.0.0' },
-      { version: '0.9.0' },
-    ],
+    latest_version: '1.5.0',
+    versions: ['1.5.0', '1.0.0', '0.9.0'],
+    repository: 'https://github.com/openfn/language-http',
+    icon_urls: { square: null, rectangle: null },
   },
   {
     name: '@openfn/language-salesforce',
-    latest: '2.1.0',
-    versions: [
-      { version: '2.1.0' },
-      { version: '2.0.0' },
-      { version: '1.9.0' },
-    ],
+    latest_version: '2.1.0',
+    versions: ['2.1.0', '2.0.0', '1.9.0'],
+    repository: 'https://github.com/openfn/language-salesforce',
+    icon_urls: { square: null, rectangle: null },
   },
   {
     name: '@openfn/language-common',
-    latest: '2.0.0',
-    versions: [{ version: '2.0.0' }],
+    latest_version: '2.0.0',
+    versions: ['2.0.0'],
+    repository: 'https://github.com/openfn/language-common',
+    icon_urls: { square: null, rectangle: null },
   },
 ];
 
@@ -413,15 +411,10 @@ describe('ConfigureAdaptorModal', () => {
       // Create adaptor with versions that need semantic sorting
       const adaptorWithManyVersions: Adaptor = {
         name: '@openfn/language-test',
-        latest: '10.0.0',
-        versions: [
-          { version: '2.0.0' },
-          { version: '10.0.0' },
-          { version: '1.9.0' },
-          { version: '9.0.0' },
-          { version: '1.10.0' },
-        ],
-        repo: 'https://github.com/openfn/language-test',
+        latest_version: '10.0.0',
+        versions: ['2.0.0', '10.0.0', '1.9.0', '9.0.0', '1.10.0'],
+        repository: 'https://github.com/openfn/language-test',
+        icon_urls: { square: null, rectangle: null },
       };
 
       renderWithProviders(

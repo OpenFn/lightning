@@ -82,7 +82,7 @@ import type { PhoenixChannelProvider } from 'y-phoenix-channel';
 
 import _logger from '#/utils/logger';
 
-import { channelRequest } from '../hooks/useChannel';
+import { getAdaptorCatalogue } from '../api/adaptors';
 import {
   type Adaptor,
   type AdaptorState,
@@ -102,8 +102,8 @@ function adaptorsEqual(a: Adaptor, b: Adaptor): boolean {
   if (a === b) return true;
   if (
     a.name !== b.name ||
-    a.repo !== b.repo ||
-    a.latest !== b.latest ||
+    a.repository !== b.repository ||
+    a.latest_version !== b.latest_version ||
     a.icon_urls.square !== b.icon_urls.square ||
     a.icon_urls.rectangle !== b.icon_urls.rectangle ||
     a.versions.length !== b.versions.length
@@ -113,8 +113,8 @@ function adaptorsEqual(a: Adaptor, b: Adaptor): boolean {
   for (let i = 0; i < a.versions.length; i++) {
     const aVer = a.versions[i];
     const bVer = b.versions[i];
-    if (!aVer || !bVer) return false;
-    if (aVer.version !== bVer.version) return false;
+    if (aVer === undefined || bVer === undefined) return false;
+    if (aVer !== bVer) return false;
   }
   return true;
 }
@@ -127,7 +127,7 @@ export function sortAdaptors(adaptors: AdaptorsList = []) {
   for (const adaptor of adaptors) {
     // spreading because it could be read-only.
     const versions = [...(adaptor.versions || [])].sort((a, b) =>
-      b.version.localeCompare(a.version)
+      b.localeCompare(a)
     );
     sortedAdaptors.push({ ...adaptor, versions });
   }
@@ -238,14 +238,6 @@ export const createAdaptorStore = (): AdaptorStore => {
     }
   };
 
-  /**
-   * Handle real-time adaptors update from server
-   */
-  const handleAdaptorsUpdated = (rawData: unknown) => {
-    // Same validation logic as handleAdaptorsReceived
-    handleAdaptorsReceived(rawData);
-  };
-
   // =============================================================================
   // PATTERN 2: Direct Immer → Notify (Local State)
   // =============================================================================
@@ -285,22 +277,13 @@ export const createAdaptorStore = (): AdaptorStore => {
   // CHANNEL INTEGRATION
   // =============================================================================
 
-  let channelProvider: PhoenixChannelProvider | null = null;
-
   /**
    * Connect to Phoenix channel provider for real-time updates
    */
   const connectChannel = (provider: PhoenixChannelProvider) => {
-    channelProvider = provider;
-
-    const adaptorsListHandler = (message: unknown) => {
-      logger.debug('Received adaptors_list message', message);
-      handleAdaptorsReceived(message);
-    };
-
     const adaptorsUpdatedHandler = (message: unknown) => {
       logger.debug('Received adaptors_updated message', message);
-      handleAdaptorsUpdated(message);
+      handleAdaptorsReceived(message);
     };
 
     // Set up channel listeners
@@ -310,41 +293,31 @@ export const createAdaptorStore = (): AdaptorStore => {
 
     devtools.connect();
 
+    // Refresh the catalogue on (re)connect so a user who leaves the editor
+    // open across an adaptor publish still sees the new version. The
+    // `adaptors_updated` push alone isn't a reliable substitute for this.
     void requestAdaptors();
 
     return () => {
       devtools.disconnect();
       if (provider.channel) {
-        provider.channel.off('adaptors_list', adaptorsListHandler);
         provider.channel.off('adaptors_updated', adaptorsUpdatedHandler);
       }
-      channelProvider = null;
     };
   };
 
   /**
-   * Request adaptors from server via channel
+   * Request the adaptor catalogue over HTTP. Independent of Phoenix channel
+   * connection/document sync so the picker can populate as soon as the app
+   * mounts.
    */
   const requestAdaptors = async (): Promise<void> => {
-    if (!channelProvider?.channel) {
-      logger.warn('Cannot request adaptors - no channel connected');
-      setError('No connection available');
-      return;
-    }
-
     setLoading(true);
     clearError();
 
     try {
-      const response = await channelRequest<{ adaptors: unknown }>(
-        channelProvider.channel,
-        'request_adaptors',
-        {}
-      );
-
-      if (response.adaptors) {
-        handleAdaptorsReceived(response.adaptors);
-      }
+      const response = await getAdaptorCatalogue();
+      handleAdaptorsReceived(response.data);
     } catch (error) {
       logger.error('Adaptor request failed', error);
       setError(
@@ -363,7 +336,7 @@ export const createAdaptorStore = (): AdaptorStore => {
 
   const getLatestVersion = (adaptorName: string): string | null => {
     const adaptor = findAdaptorByName(adaptorName);
-    return adaptor?.latest || null;
+    return adaptor?.latest_version || null;
   };
 
   const getVersions = (adaptorName: string) => {

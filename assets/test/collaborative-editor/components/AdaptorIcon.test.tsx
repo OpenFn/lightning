@@ -47,9 +47,9 @@ describe('AdaptorIcon', () => {
       [
         {
           name: '@openfn/language-salesforce',
-          versions: [{ version: '2.0.0' }],
-          repo: 'https://example.com',
-          latest: '2.0.0',
+          versions: ['2.0.0'],
+          repository: 'https://example.com',
+          latest_version: '2.0.0',
           icon_urls: { square: url, rectangle: null },
         },
       ]
@@ -66,9 +66,9 @@ describe('AdaptorIcon', () => {
       [
         {
           name: '@openfn/language-salesforce',
-          versions: [{ version: '2.0.0' }],
-          repo: 'https://example.com',
-          latest: '2.0.0',
+          versions: ['2.0.0'],
+          repository: 'https://example.com',
+          latest_version: '2.0.0',
           icon_urls: { square: null, rectangle: '/some-rectangle.png' },
         },
       ]

@@ -3,7 +3,7 @@
  *
  * Verifies that the minimap renders job icons sourced from the AdaptorStore
  * via useAdaptorIconUrl, with the rect-only placeholder fallback when the
- * URL is null. Trigger rendering must remain untouched.
+ * URL is null. Trigger rendering is unaffected.
  */
 
 import { render } from '@testing-library/react';
@@ -73,9 +73,9 @@ describe('MiniMapNode - job icon', () => {
       [
         {
           name: '@openfn/language-http',
-          versions: [{ version: '1.0.0' }],
-          repo: 'https://example.com',
-          latest: '1.0.0',
+          versions: ['1.0.0'],
+          repository: 'https://example.com',
+          latest_version: '1.0.0',
           icon_urls: { square: url, rectangle: null },
         },
       ]
@@ -94,9 +94,9 @@ describe('MiniMapNode - job icon', () => {
       [
         {
           name: '@openfn/language-http',
-          versions: [{ version: '1.0.0' }],
-          repo: 'https://example.com',
-          latest: '1.0.0',
+          versions: ['1.0.0'],
+          repository: 'https://example.com',
+          latest_version: '1.0.0',
           icon_urls: { square: null, rectangle: null },
         },
       ]

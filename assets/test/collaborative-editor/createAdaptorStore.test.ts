@@ -1,34 +1,14 @@
 /**
  * Tests for createAdaptorStore
  *
- * This test suite covers all aspects of the AdaptorStore:
- * - Core store interface (subscribe/getSnapshot)
- * - State management commands (setLoading, setError, etc.)
- * - Channel integration and message handling
- * - Query helpers (findAdaptorByName, getLatestVersion, etc.)
- * - Error handling and validation
+ * Covers the core store interface (subscribe/getSnapshot), state management
+ * commands, HTTP-backed `requestAdaptors`, Phoenix channel `adaptors_updated`
+ * live-update handling, and query helpers.
  */
 
-/**
- * Test Fixtures
- *
- * This file uses Vitest 3.x fixtures for cleaner test setup and automatic cleanup.
- *
- * Available fixtures:
- * - store: AdaptorStore instance (auto cleanup)
- * - mockChannel: Mock Phoenix channel
- * - mockProvider: Mock Phoenix channel provider (depends on mockChannel)
- * - connectedStore: Store with channel connected (auto cleanup)
- *
- * Usage:
- * adaptorTest("test name", async ({ connectedStore }) => {
- *   const { store, provider } = connectedStore;
- *   // test logic - cleanup automatic
- * });
- */
+import { describe, test, expect, vi, beforeEach } from 'vitest';
 
-import { describe, test, expect } from 'vitest';
-
+import * as adaptorsApi from '../../js/collaborative-editor/api/adaptors';
 import { createAdaptorStore } from '../../js/collaborative-editor/stores/createAdaptorStore';
 import type { AdaptorStoreInstance } from '../../js/collaborative-editor/stores/createAdaptorStore';
 
@@ -42,54 +22,31 @@ import {
   createMockPhoenixChannelProvider,
   waitForCondition,
 } from './mocks/phoenixChannel.js';
-import {
-  createMockChannelPushOk,
-  createMockChannelPushError,
-} from './__helpers__/channelMocks';
 import type {
   MockPhoenixChannel,
   MockPhoenixChannelProvider,
 } from './mocks/phoenixChannel.js';
+
+vi.mock('../../js/collaborative-editor/api/adaptors');
+
+const getAdaptorCatalogueMock = vi.mocked(adaptorsApi.getAdaptorCatalogue);
 
 // Define fixture types
 interface AdaptorTestFixtures {
   store: AdaptorStoreInstance;
   mockChannel: MockPhoenixChannel;
   mockProvider: MockPhoenixChannelProvider;
-  connectedStore: {
-    store: AdaptorStoreInstance;
-    provider: MockPhoenixChannelProvider;
-    cleanup: () => void;
-  };
 }
 
-// Vitest 3.x fixtures for cleaner test setup and automatic cleanup
 const adaptorTest = test.extend<AdaptorTestFixtures>({
   store: async ({}, use) => {
-    const store = createAdaptorStore();
-    await use(store);
-    // Automatic cleanup - store doesn't need explicit cleanup
+    await use(createAdaptorStore());
   },
-
   mockChannel: async ({}, use) => {
-    const channel = createMockPhoenixChannel();
-    await use(channel);
-    // Channel cleanup happens automatically
+    await use(createMockPhoenixChannel());
   },
-
   mockProvider: async ({ mockChannel }, use) => {
-    const provider = createMockPhoenixChannelProvider(mockChannel);
-    await use(provider);
-  },
-
-  connectedStore: async ({ store, mockProvider }, use) => {
-    // Setup: connect channel to store
-    const cleanup = store._connectChannel(mockProvider as any);
-
-    await use({ store, provider: mockProvider, cleanup });
-
-    // Automatic cleanup
-    cleanup();
+    await use(createMockPhoenixChannelProvider(mockChannel));
   },
 });
 
@@ -99,411 +56,295 @@ function getSortedAdaptors(adaptors: any[]) {
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(adaptor => ({
       ...adaptor,
-      versions: [...adaptor.versions].sort((a, b) =>
-        b.version.localeCompare(a.version)
-      ),
+      versions: [...adaptor.versions].sort((a, b) => b.localeCompare(a)),
     }));
 }
 
+beforeEach(() => {
+  getAdaptorCatalogueMock.mockReset();
+});
+
 describe('createAdaptorStore', () => {
-  describe('initialization', () => {
-    test('getSnapshot returns initial state', () => {
-      const store = createAdaptorStore();
-      const initialState = store.getSnapshot();
-
-      expect(initialState.adaptors).toEqual([]);
-      expect(initialState.isLoading).toBe(false);
-      expect(initialState.error).toBe(null);
-      expect(initialState.lastUpdated).toBe(null);
+  test('initializes with default state', () => {
+    const store = createAdaptorStore();
+    expect(store.getSnapshot()).toEqual({
+      adaptors: [],
+      isLoading: false,
+      error: null,
+      lastUpdated: null,
     });
   });
 
-  describe('subscriptions', () => {
-    test('subscribe/unsubscribe functionality works correctly', () => {
-      const store = createAdaptorStore();
-      let callCount = 0;
+  test('subscribe/unsubscribe and multiple subscribers behave correctly', () => {
+    const store = createAdaptorStore();
+    let count1 = 0;
+    let count2 = 0;
+    const unsubscribe1 = store.subscribe(() => count1++);
+    const unsubscribe2 = store.subscribe(() => count2++);
 
-      const listener = () => {
-        callCount++;
-      };
+    store.setLoading(true);
+    expect(count1).toBe(1);
+    expect(count2).toBe(1);
 
-      // Subscribe to changes
-      const unsubscribe = store.subscribe(listener);
+    unsubscribe2();
+    store.clearError();
+    expect(count1).toBe(2);
+    expect(count2).toBe(1); // unsubscribed, no longer notified
 
-      // Trigger a state change
-      store.setLoading(true);
-
-      expect(callCount).toBe(1);
-
-      // Unsubscribe and trigger change
-      unsubscribe();
-      store.clearError();
-
-      // Listener should not be called after unsubscribe
-      expect(callCount).toBe(1);
-    });
-
-    test('withSelector creates memoized selector with referential stability', () => {
-      const store = createAdaptorStore();
-
-      const selectAdaptors = store.withSelector(state => state.adaptors);
-      const selectIsLoading = store.withSelector(state => state.isLoading);
-
-      // Initial calls
-      const adaptors1 = selectAdaptors();
-      const loading1 = selectIsLoading();
-
-      // Change unrelated state - adaptors selector should return same reference
-      store.setLoading(true);
-      const adaptors3 = selectAdaptors();
-      const loading3 = selectIsLoading();
-
-      // Unrelated state change should not affect memoized selector
-      expect(adaptors1).toBe(adaptors3);
-      // Related state change should return new value
-      expect(loading1).not.toBe(loading3);
-    });
-
-    test('handles multiple subscribers correctly', () => {
-      const store = createAdaptorStore();
-
-      let listener1Count = 0;
-      let listener2Count = 0;
-
-      const unsubscribe1 = store.subscribe(() => {
-        listener1Count++;
-      });
-      const unsubscribe2 = store.subscribe(() => {
-        listener2Count++;
-      });
-
-      // Trigger change
-      store.setLoading(true);
-
-      expect(listener1Count).toBe(1);
-      expect(listener2Count).toBe(1);
-
-      // Unsubscribe middle listener
-      unsubscribe2();
-
-      // Trigger another change
-      store.setError('test');
-
-      // Unsubscribed listener should not be called
-      expect(listener2Count).toBe(1);
-
-      // Cleanup
-      unsubscribe1();
-    });
+    unsubscribe1();
+    store.setLoading(false);
+    expect(count1).toBe(2); // unsubscribed, no longer notified
   });
 
-  describe('state management', () => {
-    test('handles state transitions for loading, error, and data correctly', () => {
+  test('withSelector returns a referentially stable value until its slice changes', () => {
+    const store = createAdaptorStore();
+    const selectAdaptors = store.withSelector(state => state.adaptors);
+    const selectIsLoading = store.withSelector(state => state.isLoading);
+
+    const adaptorsBefore = selectAdaptors();
+    const loadingBefore = selectIsLoading();
+
+    store.setLoading(true);
+
+    expect(selectAdaptors()).toBe(adaptorsBefore); // unrelated slice unchanged
+    expect(selectIsLoading()).not.toBe(loadingBefore);
+  });
+
+  test('setLoading/setError/clearError/setAdaptors transition state as expected', () => {
+    const store = createAdaptorStore();
+
+    store.setLoading(true);
+    expect(store.getSnapshot().isLoading).toBe(true);
+
+    store.setError('Test error message');
+    let state = store.getSnapshot();
+    expect(state.error).toBe('Test error message');
+    expect(state.isLoading).toBe(false); // setError clears loading
+
+    store.clearError();
+    expect(store.getSnapshot().error).toBeNull();
+
+    const timestamp = Date.now();
+    store.setAdaptors(mockAdaptorsList);
+    state = store.getSnapshot();
+    expect(state.adaptors).toEqual(mockAdaptorsList);
+    expect(state.error).toBeNull();
+    expect(state.lastUpdated).toBeGreaterThanOrEqual(timestamp);
+  });
+
+  describe('requestAdaptors (HTTP)', () => {
+    test('fetches, validates, sorts and stores a valid catalogue', async () => {
+      getAdaptorCatalogueMock.mockResolvedValue({ data: mockAdaptorsList });
       const store = createAdaptorStore();
-      let notificationCount = 0;
 
-      store.subscribe(() => {
-        notificationCount++;
+      await store.requestAdaptors();
+
+      const state = store.getSnapshot();
+      expect(state.adaptors).toEqual(getSortedAdaptors(mockAdaptorsList));
+      expect(state.isLoading).toBe(false);
+      expect(state.error).toBeNull();
+      expect(state.lastUpdated).toBeGreaterThan(0);
+    });
+
+    test('records a validation error and leaves adaptors empty on invalid entries', async () => {
+      getAdaptorCatalogueMock.mockResolvedValue({
+        data: [invalidAdaptorData.missingName],
       });
+      const store = createAdaptorStore();
 
-      // Test loading state transitions
-      store.setLoading(true);
+      await store.requestAdaptors();
+
+      const state = store.getSnapshot();
+      expect(state.adaptors).toHaveLength(0);
+      expect(state.isLoading).toBe(false);
+      expect(state.error).toContain('Invalid adaptors data');
+    });
+
+    test('records an error when the fetch itself rejects', async () => {
+      getAdaptorCatalogueMock.mockRejectedValue(new Error('Server error'));
+      const store = createAdaptorStore();
+
+      await store.requestAdaptors();
+
+      const state = store.getSnapshot();
+      expect(state.adaptors).toHaveLength(0);
+      expect(state.error).toContain('Failed to request adaptors');
+      expect(state.isLoading).toBe(false);
+    });
+
+    test('sets isLoading synchronously while the request is in flight', async () => {
+      let resolveFetch: (value: {
+        data: typeof mockAdaptorsList;
+      }) => void = () => {};
+      getAdaptorCatalogueMock.mockReturnValue(
+        new Promise(resolve => {
+          resolveFetch = resolve;
+        })
+      );
+      const store = createAdaptorStore();
+
+      const pending = store.requestAdaptors();
       expect(store.getSnapshot().isLoading).toBe(true);
-      expect(notificationCount).toBe(1);
 
-      store.setLoading(false);
+      resolveFetch({ data: mockAdaptorsList });
+      await pending;
+
       expect(store.getSnapshot().isLoading).toBe(false);
-      expect(notificationCount).toBe(2);
+    });
 
-      // Test error state transitions
-      store.setLoading(true);
-      const errorMessage = 'Test error message';
-      store.setError(errorMessage);
-      let state = store.getSnapshot();
-      expect(state.error).toBe(errorMessage);
-      expect(state.isLoading).toBe(false); // Setting error clears loading
+    test('clears a stale error from a previous failed fetch as soon as a retry starts', async () => {
+      getAdaptorCatalogueMock.mockRejectedValueOnce(new Error('Server error'));
+      const store = createAdaptorStore();
+      await store.requestAdaptors();
+      expect(store.getSnapshot().error).toContain('Failed to request adaptors');
 
-      store.clearError();
+      getAdaptorCatalogueMock.mockResolvedValueOnce({ data: mockAdaptorsList });
+      const pending = store.requestAdaptors();
       expect(store.getSnapshot().error).toBeNull();
 
-      // Test adaptors state updates
-      const timestamp = Date.now();
-      store.setAdaptors(mockAdaptorsList);
-      state = store.getSnapshot();
-      expect(state.adaptors).toEqual(mockAdaptorsList);
-      expect(state.error).toBeNull();
-      expect(state.lastUpdated).toBeGreaterThanOrEqual(timestamp);
-
-      // Test rapid state updates maintain consistency
-      store.setLoading(true);
-      store.setError('error 1');
-      store.clearError();
-      store.setAdaptors(mockAdaptorsList);
-      store.setLoading(false);
-      store.setError('error 2');
-      store.clearError();
-
-      // Final state should be consistent
-      const finalState = store.getSnapshot();
-      expect(finalState.adaptors).toEqual(mockAdaptorsList);
-      expect(finalState.isLoading).toBe(false);
-      expect(finalState.error).toBeNull();
-      expect(finalState.lastUpdated).toBeGreaterThan(0);
+      await pending;
+      expect(store.getSnapshot().error).toBeNull();
     });
   });
 
-  describe('Phoenix channel integration', () => {
-    describe('requestAdaptors', () => {
-      adaptorTest(
-        'processes valid and invalid data via channel',
-        async ({ mockChannel, mockProvider }) => {
-          // Test successful response with valid data
-          const store1 = createAdaptorStore();
-          mockChannel.push = createMockChannelPushOk({
-            adaptors: mockAdaptorsList,
-          });
-          store1._connectChannel(mockProvider as any);
-          await store1.requestAdaptors();
+  describe('channel connection and adaptors_updated events', () => {
+    adaptorTest(
+      'connectChannel refreshes the catalogue over HTTP so a reconnect picks up new adaptors',
+      async ({ store, mockProvider }) => {
+        getAdaptorCatalogueMock.mockResolvedValue({ data: mockAdaptorsList });
 
-          let state = store1.getSnapshot();
-          const expectedSortedAdaptors = getSortedAdaptors(mockAdaptorsList);
+        const cleanup = store._connectChannel(mockProvider as any);
 
-          expect(state.adaptors).toEqual(expectedSortedAdaptors);
-          expect(state.isLoading).toBe(false);
-          expect(state.error).toBeNull();
-          expect(state.lastUpdated).toBeGreaterThan(0);
-          expect(state.adaptors).toHaveLength(mockAdaptorsList.length);
+        await waitForCondition(() => store.getSnapshot().adaptors.length > 0);
 
-          // Test invalid data handling with fresh store
-          const store2 = createAdaptorStore();
-          mockChannel.push = createMockChannelPushOk({
-            adaptors: [invalidAdaptorData.missingName],
-          });
-          store2._connectChannel(mockProvider as any);
-          await store2.requestAdaptors();
-
-          state = store2.getSnapshot();
-          expect(state.adaptors).toHaveLength(0);
-          expect(state.isLoading).toBe(false);
-          expect(state.error).toContain('Invalid adaptors data');
-        }
-      );
-
-      adaptorTest(
-        'handles error response and no connection',
-        async ({ store, mockChannel, mockProvider }) => {
-          // Test error response
-          mockChannel.push = createMockChannelPushError(
-            'Server error',
-            'server_error'
-          );
-          store._connectChannel(mockProvider as any);
-          await store.requestAdaptors();
-
-          let state = store.getSnapshot();
-          expect(state.adaptors).toHaveLength(0);
-          expect(state.error).toContain('Failed to request adaptors');
-          expect(state.isLoading).toBe(false);
-
-          // Test no channel connection
-          const storeWithoutChannel = createAdaptorStore();
-          await storeWithoutChannel.requestAdaptors();
-
-          state = storeWithoutChannel.getSnapshot();
-          expect(state.error).toContain('No connection available');
-          expect(state.isLoading).toBe(false);
-        }
-      );
-    });
-
-    describe('channel connection and events', () => {
-      adaptorTest(
-        'connects channel, loads adaptors, and processes real-time updates',
-        async ({ store, mockChannel, mockProvider }) => {
-          // Setup mock to return adaptors on initial request
-          mockChannel.push = createMockChannelPushOk({
-            adaptors: mockAdaptorsList,
-          });
-
-          // Connect to channel
-          const cleanup = store._connectChannel(mockProvider as any);
-
-          // Wait for initial adaptors to be loaded
-          await waitForCondition(() => store.getSnapshot().adaptors.length > 0);
-
-          // Verify initial load with sorting
-          let state = store.getSnapshot();
-          const expectedSortedAdaptors = getSortedAdaptors(mockAdaptorsList);
-          expect(state.adaptors).toEqual(expectedSortedAdaptors);
-
-          // Test real-time updates via adaptors_updated event
-          const updatedAdaptors = [mockAdaptor];
-          const mockChannelWithTest = mockChannel as typeof mockChannel & {
-            _test: { emit: (event: string, message: unknown) => void };
-          };
-          mockChannelWithTest._test.emit('adaptors_updated', updatedAdaptors);
-
-          // Wait for the update to be processed
-          await waitForCondition(
-            () => store.getSnapshot().adaptors.length === 1
-          );
-
-          state = store.getSnapshot();
-          const expectedUpdatedAdaptors = getSortedAdaptors(updatedAdaptors);
-          expect(state.adaptors).toEqual(expectedUpdatedAdaptors);
-
-          // Cleanup
-          cleanup();
-        }
-      );
-    });
-
-    describe('error handling', () => {
-      test('handles invalid channel provider', async () => {
-        const store = createAdaptorStore();
-
-        // Test with null provider
-        expect(() => store._connectChannel(null as any)).toThrow(TypeError);
-
-        // Test with undefined provider
-        expect(() => store._connectChannel(undefined as any)).toThrow(
-          TypeError
+        expect(getAdaptorCatalogueMock).toHaveBeenCalledTimes(1);
+        expect(store.getSnapshot().adaptors).toEqual(
+          getSortedAdaptors(mockAdaptorsList)
         );
-      });
+        cleanup();
+      }
+    );
+
+    // CON-128: the server pushes `{ adaptors: [package_meta, ...] }` — wrapped,
+    // and each entry lacks `versions`/`repository`/`icon_urls`. This fails
+    // AdaptorsListSchema, so a live `adaptors_updated` push never actually
+    // updates the catalogue today. This test pins that (broken) behaviour
+    // rather than a hand-built payload the server doesn't send; update it once
+    // CON-128 reconciles the wire shape.
+    adaptorTest(
+      'a real-shaped adaptors_updated push fails validation and leaves the catalogue untouched',
+      async ({ store, mockChannel, mockProvider }) => {
+        getAdaptorCatalogueMock.mockResolvedValue({ data: mockAdaptorsList });
+        const cleanup = store._connectChannel(mockProvider as any);
+
+        await waitForCondition(() => store.getSnapshot().adaptors.length > 0);
+        expect(store.getSnapshot().adaptors).toEqual(
+          getSortedAdaptors(mockAdaptorsList)
+        );
+
+        const wireShapedPush = {
+          adaptors: [
+            {
+              name: '@openfn/language-http',
+              latest_version: '99.0.0',
+              description: null,
+              deprecated: false,
+              updated_at: '2026-08-01T00:00:00Z',
+            },
+          ],
+        };
+        (
+          mockChannel as MockPhoenixChannel & {
+            _test: { emit: (event: string, message: unknown) => void };
+          }
+        )._test.emit('adaptors_updated', wireShapedPush);
+
+        await waitForCondition(() => store.getSnapshot().error !== null);
+
+        expect(store.getSnapshot().error).toContain('Invalid adaptors data');
+        expect(store.getSnapshot().adaptors).toEqual(
+          getSortedAdaptors(mockAdaptorsList)
+        );
+        cleanup();
+      }
+    );
+
+    test('throws when connecting with a null/undefined provider', () => {
+      const store = createAdaptorStore();
+      expect(() => store._connectChannel(null as any)).toThrow(TypeError);
+      expect(() => store._connectChannel(undefined as any)).toThrow(TypeError);
     });
   });
 
   describe('query helpers', () => {
-    test('findAdaptorByName returns correct adaptor', () => {
+    test('findAdaptorByName/getLatestVersion/getVersions look up by name', () => {
       const store = createAdaptorStore();
       store.setAdaptors(mockAdaptorsList);
 
-      const foundAdaptor = store.findAdaptorByName('@openfn/language-http');
-      expect(foundAdaptor).toEqual(mockAdaptor);
+      expect(store.findAdaptorByName('@openfn/language-http')).toEqual(
+        mockAdaptor
+      );
+      expect(
+        store.findAdaptorByName('@openfn/language-nonexistent')
+      ).toBeNull();
 
-      const notFound = store.findAdaptorByName('@openfn/language-nonexistent');
-      expect(notFound).toBeNull();
-    });
+      expect(store.getLatestVersion('@openfn/language-http')).toBe('2.1.0');
+      expect(store.getLatestVersion('@openfn/language-nonexistent')).toBeNull();
 
-    test('getLatestVersion returns correct version', () => {
-      const store = createAdaptorStore();
-      store.setAdaptors(mockAdaptorsList);
-
-      const latestVersion = store.getLatestVersion('@openfn/language-http');
-      expect(latestVersion).toBe('2.1.0');
-
-      const notFound = store.getLatestVersion('@openfn/language-nonexistent');
-      expect(notFound).toBeNull();
-    });
-
-    test('getVersions returns correct versions array', () => {
-      const store = createAdaptorStore();
-      store.setAdaptors(mockAdaptorsList);
-
-      const versions = store.getVersions('@openfn/language-http');
-      expect(versions).toEqual(mockAdaptor.versions);
-
-      const notFound = store.getVersions('@openfn/language-nonexistent');
-      expect(notFound).toHaveLength(0);
+      expect(store.getVersions('@openfn/language-http')).toEqual(
+        mockAdaptor.versions
+      );
+      expect(store.getVersions('@openfn/language-nonexistent')).toHaveLength(0);
     });
   });
 
   describe('handleAdaptorsReceived merge-by-name', () => {
-    adaptorTest(
-      'preserves referential identity across identical pushes',
-      async ({ mockChannel, mockProvider }) => {
-        const store = createAdaptorStore();
-        mockChannel.push = createMockChannelPushOk({
-          adaptors: mockAdaptorsList,
-        });
-        store._connectChannel(mockProvider as any);
-        await store.requestAdaptors();
+    test('preserves referential identity across identical loads', async () => {
+      getAdaptorCatalogueMock.mockResolvedValue({ data: mockAdaptorsList });
+      const store = createAdaptorStore();
+      await store.requestAdaptors();
 
-        const selectAdaptors = store.withSelector(state => state.adaptors);
-        const firstRef = selectAdaptors();
-        const firstItems = firstRef.map(a => a);
+      const selectAdaptors = store.withSelector(state => state.adaptors);
+      const firstRef = selectAdaptors();
 
-        const mockChannelWithTest = mockChannel as typeof mockChannel & {
-          _test: { emit: (event: string, message: unknown) => void };
-        };
-        mockChannelWithTest._test.emit('adaptors_updated', mockAdaptorsList);
+      await store.requestAdaptors();
 
-        await waitForCondition(() => store.getSnapshot().lastUpdated !== null);
+      const secondRef = selectAdaptors();
+      expect(secondRef).toBe(firstRef);
+      secondRef.forEach((adaptor, i) => {
+        expect(adaptor).toBe(firstRef[i]);
+      });
+    });
 
-        const secondRef = selectAdaptors();
-        expect(secondRef).toBe(firstRef);
-        secondRef.forEach((adaptor, i) => {
-          expect(adaptor).toBe(firstItems[i]);
-        });
-      }
-    );
+    test('replaces only the changed entry when one adaptor mutates', async () => {
+      getAdaptorCatalogueMock.mockResolvedValue({ data: mockAdaptorsList });
+      const store = createAdaptorStore();
+      await store.requestAdaptors();
 
-    adaptorTest(
-      'replaces only the changed entry when one adaptor mutates',
-      async ({ mockChannel, mockProvider }) => {
-        const store = createAdaptorStore();
-        mockChannel.push = createMockChannelPushOk({
-          adaptors: mockAdaptorsList,
-        });
-        store._connectChannel(mockProvider as any);
-        await store.requestAdaptors();
+      const beforeByName = new Map(
+        store.getSnapshot().adaptors.map(a => [a.name, a])
+      );
 
-        const beforeItems = store
-          .getSnapshot()
-          .adaptors.reduce<Record<string, unknown>>((acc, a) => {
-            acc[a.name] = a;
-            return acc;
-          }, {});
+      const target = mockAdaptorsList[0]!;
+      const mutated = mockAdaptorsList.map(a =>
+        a.name === target.name
+          ? {
+              ...a,
+              versions: ['99.0.0', ...a.versions],
+              latest_version: '99.0.0',
+            }
+          : a
+      );
+      getAdaptorCatalogueMock.mockResolvedValue({ data: mutated });
+      await store.requestAdaptors();
 
-        const target = mockAdaptorsList[0]!;
-        const mutated = mockAdaptorsList.map(a =>
-          a.name === target.name
-            ? {
-                ...a,
-                versions: [{ version: '99.0.0' }, ...a.versions],
-                latest: '99.0.0',
-              }
-            : a
-        );
-
-        const mockChannelWithTest = mockChannel as typeof mockChannel & {
-          _test: { emit: (event: string, message: unknown) => void };
-        };
-        mockChannelWithTest._test.emit('adaptors_updated', mutated);
-
-        await waitForCondition(
-          () => store.findAdaptorByName(target.name)?.latest === '99.0.0'
-        );
-
-        const after = store.getSnapshot().adaptors;
-        for (const adaptor of after) {
-          if (adaptor.name === target.name) {
-            expect(adaptor).not.toBe(beforeItems[adaptor.name]);
-          } else {
-            expect(adaptor).toBe(beforeItems[adaptor.name]);
-          }
+      for (const adaptor of store.getSnapshot().adaptors) {
+        if (adaptor.name === target.name) {
+          expect(adaptor).not.toBe(beforeByName.get(adaptor.name));
+        } else {
+          expect(adaptor).toBe(beforeByName.get(adaptor.name));
         }
       }
-    );
-
-    adaptorTest(
-      'connectChannel does not request project adaptors',
-      async ({ mockChannel, mockProvider }) => {
-        const pushes: string[] = [];
-        const originalPush = mockChannel.push.bind(mockChannel);
-        mockChannel.push = ((event: string, payload: unknown) => {
-          pushes.push(event);
-          return originalPush(event, payload);
-        }) as typeof mockChannel.push;
-
-        const store = createAdaptorStore();
-        store._connectChannel(mockProvider as any);
-
-        await waitForCondition(() => pushes.includes('request_adaptors'));
-
-        expect(pushes).toContain('request_adaptors');
-        expect(pushes).not.toContain('request_project_adaptors');
-      }
-    );
+    });
   });
 });

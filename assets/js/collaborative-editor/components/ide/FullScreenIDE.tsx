@@ -412,13 +412,14 @@ export function FullScreenIDE({
     if (!currentJob?.adaptor) {
       const latestCommon = adaptorsInUse.find(
         a => a.name === '@openfn/language-common'
-      )?.versions?.[0]?.version;
+      )?.latest_version;
       return `@openfn/language-common@${latestCommon || 'latest'}`;
     }
     const resolved = resolveAdaptor(currentJob.adaptor);
     if (resolved.version !== 'latest') return currentJob?.adaptor;
-    const latestVersion = adaptorsInUse.find(a => a.name === resolved.package)
-      ?.versions?.[0]?.version;
+    const latestVersion = adaptorsInUse.find(
+      a => a.name === resolved.package
+    )?.latest_version;
     // If version not found, return original adaptor string
     if (!latestVersion) return currentJob.adaptor;
     return `${resolved.package}@${latestVersion}`;
