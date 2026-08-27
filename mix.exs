@@ -65,16 +65,25 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # Advisories acknowledged for `mix hex.audit`. cowlib is the only one left, and
-  # it has no patched release (latest is 2.19.0, published 2026-07-28). cowlib
-  # is transitive: cowboy 2.18.0 requires `>= 2.19.0 and < 3.0.0`. None of the
-  # three EEF records carry a `fixed` event on their version range, while the
-  # GitHub twin of CVE-2026-43969 (GHSA-g2wm-735q-3f56) records
-  # `last_affected: 2.16.1` -- so 2.19.0 may already be unaffected and the EEF
-  # records simply lack a fix event. CVE-2026-43971 was published 2026-08-18 and
-  # its only fix is a git commit with no release on Hex yet. IDs are matched
-  # against an advisory's primary ID or any alias, so the CVE form also silences
-  # the GHSA/EEF variants. Drop these once cowlib ships a patched version.
+  # Advisories acknowledged for `mix hex.audit`. All three are cowlib, and in
+  # each case the vulnerable function is unreachable from our dependency tree:
+  #
+  #   CVE-2026-43971  cow_link:link/1 -- nothing outside cowlib references the
+  #                   cow_link module at all, and we never build Link headers.
+  #   CVE-2026-43966  cow_http_struct_hd:escape_string/2 -- same, no references
+  #                   outside cowlib.
+  #   CVE-2026-43969  cow_cookie:cookie/1 -- cowboy_req only calls
+  #                   parse_cookie/1,2 and setcookie/3, never cookie/1. Its
+  #                   GitHub twin (GHSA-g2wm-735q-3f56) also records
+  #                   last_affected 2.16.1, so 2.19.0 is already past it.
+  #
+  # There is also nothing to upgrade to. cowlib 2.19.0 is the newest release on
+  # Hex (2026-07-28) and the CVE-2026-43971 fix is a git commit from 2026-08-18
+  # with no release behind it. cowlib is transitive: cowboy 2.18.0 requires
+  # `>= 2.19.0 and < 3.0.0`. IDs match an advisory's primary ID or any alias, so
+  # the CVE form also silences the GHSA/EEF variants. Recheck this list when
+  # cowlib next ships, and note that a new cowlib advisory would still fail the
+  # build, since these entries only silence these three IDs.
   defp hex_audit do
     [
       ignore_advisories: [
