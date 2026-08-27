@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import {
@@ -432,6 +432,11 @@ export function useAIWorkflowApplications({
    * (it calls handleApplyWorkflow directly) so it never lands in
    * appliedMessageIdsRef and can be superseded by the final new_message.
    */
+  /** Replies whose auto-apply failed, so the manual button can come back */
+  const [failedApplyMessageIds, setFailedApplyMessageIds] = useState<
+    Set<string>
+  >(() => new Set());
+
   const launchApply = useCallback(
     (messageId: string, code: string) => {
       if (inFlightApplyRef.current.has(messageId)) return;
@@ -444,6 +449,16 @@ export function useAIWorkflowApplications({
           } else {
             appliedMessageIdsRef.current.add(messageId);
           }
+          // A failed import is never retried automatically, so the reply is
+          // a dead end unless the user is given the manual button back.
+          setFailedApplyMessageIds(previous => {
+            const failed = outcome === 'failed';
+            if (failed === previous.has(messageId)) return previous;
+            const next = new Set(previous);
+            if (failed) next.add(messageId);
+            else next.delete(messageId);
+            return next;
+          });
         } finally {
           inFlightApplyRef.current.delete(messageId);
         }
@@ -813,6 +828,7 @@ export function useAIWorkflowApplications({
      * handleApplyWorkflow's (yaml, messageId).
      */
     launchApply,
+    failedApplyMessageIds,
     handlePreviewJobCode,
     handlePreviewGlobalStep,
     handleApplyJobCode,

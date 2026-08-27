@@ -1350,6 +1350,42 @@ describe('MessageList', () => {
       ).toBeLessThan(screen.getAllByTestId('diff-block').length);
     });
 
+    it('gives a global reply its Apply button back when the apply failed', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Build it',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Done.',
+          code: workflowYaml('fn(state => state.data);'),
+          from_global: true,
+        }),
+      ];
+
+      // Global replies auto-apply and normally show no panel, but a failed
+      // import is never retried, so without this the reply is a dead end.
+      const { rerender } = render(
+        <MessageList messages={messages} showApplyButton />
+      );
+      expect(
+        screen.queryByTestId('apply-workflow-button')
+      ).not.toBeInTheDocument();
+
+      rerender(
+        <MessageList
+          messages={messages}
+          showApplyButton
+          failedApplyMessageIds={new Set(['msg-global'])}
+        />
+      );
+      expect(screen.getByTestId('apply-workflow-button')).toBeInTheDocument();
+    });
+
     it('shows no link when navigation is not wired up', () => {
       const messages = [
         createMockAIMessage({

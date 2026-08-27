@@ -188,7 +188,15 @@ export function AIAssistantPanelWrapper({
         (jobId && jobs.find(job => job.id === jobId)) ??
         jobs.find(job => job.name === name);
       if (!match) return;
-      updateSearchParams({ panel: 'editor', job: match.id });
+      // Clears the sibling selections too: leaving a stale trigger or edge
+      // behind still resolves to the job, but leaves a URL that is wrong to
+      // share and wrong to go back to.
+      updateSearchParams({
+        panel: 'editor',
+        job: match.id,
+        trigger: null,
+        edge: null,
+      });
     },
     [jobs, updateSearchParams]
   );
@@ -610,6 +618,7 @@ export function AIAssistantPanelWrapper({
   const {
     handleApplyWorkflow,
     launchApply,
+    failedApplyMessageIds,
     handlePreviewJobCode,
     handlePreviewGlobalStep,
     handleApplyJobCode,
@@ -839,6 +848,7 @@ export function AIAssistantPanelWrapper({
                 streamingSnapshots={streamingSnapshots}
                 snapshotsByMessageId={snapshotsByMessageId}
                 onOpenStep={handleOpenStep}
+                failedApplyMessageIds={failedApplyMessageIds}
                 isGlobalAssistantActive={isGlobalAssistantActive}
               />
             </AIAssistantPanel>

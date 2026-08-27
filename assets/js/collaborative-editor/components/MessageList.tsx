@@ -344,13 +344,18 @@ const WorkflowReplyTimeline = ({
       // its status pushes the status one row later, and the timeline only
       // reads this map for status rows, so anything else would render
       // nowhere at all. Fall back to the tail rather than lose it.
-      if (segmentTypeKey[segmentIndex] !== 's') {
+      // The pinned index only carries the diff if a status landed there. A
+      // text chunk draining between the snapshot and its status pushes the
+      // status one row later, and that shift is permanent, so look forward
+      // for the status this snapshot was describing before giving up.
+      const statusIndex = segmentTypeKey.indexOf('s', segmentIndex);
+      if (statusIndex === -1) {
         after.push(changes);
         continue;
       }
-      const existing = grouped.get(segmentIndex);
+      const existing = grouped.get(statusIndex);
       if (existing) existing.push(changes);
-      else grouped.set(segmentIndex, [changes]);
+      else grouped.set(statusIndex, [changes]);
     }
 
     return {
@@ -671,6 +676,11 @@ interface MessageListProps {
   /** Opens a step in the IDE from a diff block */
   onOpenStep?: (step: { jobId?: string; name: string }) => void;
   /**
+   * Global replies whose auto-apply failed. They get the code panel and its
+   * Apply button back, because a failed import is never retried on its own.
+   */
+  failedApplyMessageIds?: Set<string>;
+  /**
    * Whether the global assistant is active. Gates the woven streaming
    * timeline — non-global streams keep the flat content + single scalar
    * status row behavior.
@@ -696,6 +706,7 @@ export function MessageList({
   streamingSnapshots = [],
   snapshotsByMessageId = {},
   onOpenStep,
+  failedApplyMessageIds,
   isGlobalAssistantActive = false,
 }: MessageListProps) {
   const loadingRef = useRef<HTMLDivElement>(null);
@@ -705,7 +716,15 @@ export function MessageList({
   const [expandedYaml, setExpandedYaml] = useState<Set<string>>(new Set());
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
+  const lastMessageRole = messages.at(-1)?.role;
+
   useEffect(() => {
+    // Sending is an explicit request to be at the bottom, so it clears any
+    // earlier decision to stay put. Without this, scrolling up to read
+    // history meant your own next message did not scroll into view.
+    if (lastMessageRole === 'user') {
+      userScrolledAwayRef.current = false;
+    }
     if (messagesEndRef.current && !userScrolledAwayRef.current) {
       // Instant, not smooth: a smooth animation emits scroll events at
       // every intermediate position, and the handler below reads each of
@@ -716,7 +735,7 @@ export function MessageList({
         block: 'end',
       });
     }
-  }, [messages.length]);
+  }, [messages.length, lastMessageRole]);
 
   useEffect(() => {
     if (isLoading && loadingRef.current && !userScrolledAwayRef.current) {
@@ -1012,12 +1031,14 @@ export function MessageList({
                       )}
 
                     {/* Global replies render no "Generated Workflow" panel
-                      and no action buttons: changes auto-apply (failures
-                      surface their own retry paths), so the diff blocks
-                      above are the entire representation of the change. */}
+                      and no action buttons while the apply worked: the diff
+                      blocks above are the whole representation of the change.
+                      A failed import is never retried automatically, so those
+                      replies get the panel back as the only way out. */}
                     {!isStreaming(message) &&
                       message.code &&
-                      !message.from_global && (
+                      (!message.from_global ||
+                        failedApplyMessageIds?.has(message.id)) && (
                         <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
                           <div
                             className={cn(

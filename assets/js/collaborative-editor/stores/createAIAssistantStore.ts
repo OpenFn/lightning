@@ -79,6 +79,13 @@ const logger = _logger.ns('AIAssistantStore').seal();
 /**
  * Creates an AI Assistant store instance
  */
+/**
+ * How many replies keep their streamed snapshots. Each holds a full workflow
+ * YAML per mutation, so this is the difference between a bounded cost and
+ * tens of megabytes across a long session.
+ */
+const MAX_RETAINED_SNAPSHOT_MESSAGES = 10;
+
 export const createAIAssistantStore = (): AIAssistantStore => {
   let state: AIAssistantState = produce(
     {
@@ -448,6 +455,17 @@ export const createAIAssistantStore = (): AIAssistantStore => {
           // the blocks would jump to the wrong status at exactly the moment
           // this is meant to be seamless. Fall back to the whole-message
           // diff rather than show them against the wrong statuses.
+          // Each entry holds a full workflow YAML per mutation, so an old
+          // reply's snapshots are dropped rather than kept for the life of
+          // the tab. Only the most recent replies can still be on screen in
+          // a state where they matter.
+          const retained = Object.keys(draft.snapshotsByMessageId);
+          if (retained.length >= MAX_RETAINED_SNAPSHOT_MESSAGES) {
+            retained
+              .slice(0, retained.length - MAX_RETAINED_SNAPSHOT_MESSAGES + 1)
+              .forEach(id => delete draft.snapshotsByMessageId[id]);
+          }
+
           const serverSegments = message.response_segments?.length ?? 0;
           if (
             draft.streamingSnapshots.length > 0 &&
