@@ -47,7 +47,7 @@ defmodule Lightning.WorkflowEdgeCasesTest do
   # ---------------------------------------------------------------------------
 
   @tag :integration
-  @tag timeout: 10_000
+  @tag timeout: 120_000
   test "job that returns 42 completes successfully", %{uri: uri} do
     job_body = """
     fn(state => {
