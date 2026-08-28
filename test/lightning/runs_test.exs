@@ -484,7 +484,7 @@ defmodule Lightning.RunsTest do
       assert Jason.decode!(step.output_dataclip.body) == %{"value" => 42}
     end
 
-    test "raises when output_dataclip is a plain string that isn't valid JSON" do
+    test "wraps a plain string output_dataclip that isn't valid JSON in %{\"value\" => x}" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
 
@@ -495,7 +495,7 @@ defmodule Lightning.RunsTest do
       step =
         insert(:step, runs: [run], job: job, input_dataclip: dataclip)
 
-      assert_raise Jason.DecodeError, fn ->
+      {:ok, step} =
         Runs.complete_step(%{
           step_id: step.id,
           reason: "success",
@@ -504,7 +504,13 @@ defmodule Lightning.RunsTest do
           run_id: run.id,
           project_id: workflow.project_id
         })
-      end
+
+      step =
+        step
+        |> Repo.preload(output_dataclip: Invocation.Query.dataclip_with_body())
+
+      assert step.exit_reason == "success"
+      assert Jason.decode!(step.output_dataclip.body) == %{"value" => "abc-123"}
     end
 
     # Regression for #4800: dataclip inserts no longer build the search_vector
