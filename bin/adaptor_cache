@@ -97,9 +97,9 @@ print_exports() {
 
 Point Lightning at the cache by exporting these (or uncommenting them in .env):
 
-  export ADAPTOR_REGISTRY_URL=${BASE_URL}/npm
-  export ADAPTOR_JSDELIVR_URL=${BASE_URL}/jsdelivr
-  export ADAPTOR_GITHUB_URL=${BASE_URL}/github
+  export ADAPTORS_NPM_REGISTRY_URL=${BASE_URL}/npm
+  export ADAPTORS_NPM_JSDELIVR_URL=${BASE_URL}/jsdelivr
+  export ADAPTORS_NPM_GITHUB_URL=${BASE_URL}/github
 
 Then: mix lightning.refresh_adaptors
 Watch it work:  bin/adaptor_cache logs

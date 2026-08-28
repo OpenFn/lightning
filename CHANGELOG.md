@@ -61,8 +61,16 @@ and this project adheres to
   than first-letter placeholders. Superusers can force a refresh from Settings →
   Maintenance, or by running `mix lightning.refresh_adaptors`. The npm, jsDelivr
   and GitHub endpoints the registry reads from can be pointed elsewhere with
-  `ADAPTOR_REGISTRY_URL`, `ADAPTOR_JSDELIVR_URL`, `ADAPTOR_GITHUB_URL` and
-  `ADAPTOR_GITHUB_REF`. [#4801](https://github.com/OpenFn/lightning/pull/4801)
+  `ADAPTORS_NPM_REGISTRY_URL`, `ADAPTORS_NPM_JSDELIVR_URL`,
+  `ADAPTORS_NPM_GITHUB_URL` and `ADAPTORS_NPM_GITHUB_REF`.
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+- `ADAPTORS_STRATEGY` (`npm`, default, or `local`) picks which strategy the
+  adaptors subsystem serves from. `ADAPTORS_LOCAL_REPO` and
+  `ADAPTORS_ICONS_PATH` configure the local strategy's repo paths and the
+  on-disk icon cache location respectively. `LOCAL_ADAPTORS` and
+  `OPENFN_ADAPTORS_REPO` still work as deprecated aliases for
+  `ADAPTORS_STRATEGY=local` and `ADAPTORS_LOCAL_REPO`, logging a boot warning.
+  [#CON-136](https://linear.app/openfn/issue/CON-136)
 
 ### Changed
 
