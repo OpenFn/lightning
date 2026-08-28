@@ -21,6 +21,14 @@ and this project adheres to
 
 ### Fixed
 
+## [2.18.1] - 2026-08-28
+
+### Added
+
+- `step:complete` now accepts `output_dataclip` as a decoded value, not just a
+  JSON string, while staying compatible with workers that still send a string.
+  [#5098](https://github.com/OpenFn/lightning/pull/5098)
+
 ## [2.18.0] - 2026-08-20
 
 ## [2.18.0-pre2] - 2026-08-18
