@@ -126,6 +126,11 @@ and this project adheres to
   is unaffected.
 - Fixed two paths (adaptor metadata lookup, channel proxy) that resolved a
   sandbox's credential from the parent project's environment instead of its own.
+- Fixed an authorization issue in credential and OAuth client writes.
+- Fixed a privilege-escalation issue where an OAuth client's owner could be
+  changed by an update.
+- Starting a credential transfer now checks that the initiator owns the
+  credential.
 - Fixed a signup-gate bypass that let registration be reached even with
   `ALLOW_SIGNUP=false`.
 - Fixed a cross-project scoping issue in keychain default credentials.

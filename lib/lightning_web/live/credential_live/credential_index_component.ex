@@ -198,12 +198,24 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
 
     if can_edit_credential(socket.assigns.current_user, client) do
       # TODO: refetch oauth clients
-      OauthClients.delete_client(client)
+      #
+      # The gate above and the context ask the same question, so a refusal here
+      # is unreachable today. Matched anyway: the deletion modal was fixed for
+      # exactly this and leaving its neighbours reporting success regardless
+      # reads as deliberate.
+      case OauthClients.delete_client(client, socket.assigns.current_user) do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Oauth client deleted")
+           |> push_patch(to: socket.assigns.return_to)}
 
-      {:noreply,
-       socket
-       |> put_flash(:info, "Oauth client deleted")
-       |> push_patch(to: socket.assigns.return_to)}
+        _error ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Could not delete this OAuth client.")
+           |> push_patch(to: socket.assigns.return_to)}
+      end
     else
       not_authorized(socket)
     end
@@ -347,12 +359,19 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
     credential = Enum.find(credentials, &(&1.id == credential_id))
 
     if credential && can_delete_credential(current_user, credential) do
-      Credentials.cancel_scheduled_deletion(credential.id)
+      case Credentials.cancel_scheduled_deletion(credential.id, current_user) do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Credential deletion canceled")
+           |> push_navigate(to: socket.assigns.return_to)}
 
-      {:noreply,
-       socket
-       |> put_flash(:info, "Credential deletion canceled")
-       |> push_navigate(to: socket.assigns.return_to)}
+        _error ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Could not cancel the deletion.")
+           |> push_navigate(to: socket.assigns.return_to)}
+      end
     else
       not_authorized(socket)
     end

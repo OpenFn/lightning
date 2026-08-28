@@ -49,8 +49,15 @@ defmodule Lightning.Accounts do
       # Remove user from projects
       Ecto.assoc(%User{id: id}, :project_users) |> Repo.delete_all()
 
-      Credentials.list_credentials(%User{id: id})
-      |> Enum.each(&Credentials.delete_credential/1)
+      # The user is on their way out, so they are the only person who could
+      # ever have been authorised for these, and the list is already theirs.
+      # The result is still matched: a refusal has to roll the purge back
+      # rather than leave credentials owned by a user who no longer exists.
+      owner = %User{id: id}
+
+      Enum.each(Credentials.list_credentials(owner), fn credential ->
+        {:ok, _} = Credentials.delete_credential(credential, owner)
+      end)
 
       Repo.get(User, id) |> delete_user()
     end)

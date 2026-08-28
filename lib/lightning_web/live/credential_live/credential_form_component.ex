@@ -1220,45 +1220,29 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
        ) do
     %{credential: form_credential} = socket.assigns
 
-    with {:same_user, true} <-
-           {:same_user,
-            socket.assigns.current_user.id == socket.assigns.credential.user_id},
-         {:ok, credential} <-
-           Credentials.update_credential(form_credential, credential_params) do
-      # Call on_save callback if it exists (for collaborative editor)
-      if socket.assigns[:on_save] do
-        socket.assigns[:on_save].(credential)
-      end
-
-      socket =
-        socket
-        |> put_flash(:info, "Credential updated successfully")
-
-      socket =
-        if socket.assigns.return_to do
-          push_navigate(socket, to: socket.assigns.return_to)
-        else
-          socket
+    form_credential
+    |> Credentials.update_credential(
+      credential_params,
+      socket.assigns.current_user
+    )
+    |> case do
+      {:ok, credential} ->
+        # Call on_save callback if it exists (for collaborative editor)
+        if socket.assigns[:on_save] do
+          socket.assigns[:on_save].(credential)
         end
 
-      {:noreply, socket}
-    else
-      {:same_user, false} ->
-        socket =
-          socket
-          |> put_flash(
-            :error,
-            "Invalid credentials. Please log in again."
-          )
+        socket
+        |> put_flash(:info, "Credential updated successfully")
+        |> close_or_stay()
 
-        socket =
-          if socket.assigns.return_to do
-            push_navigate(socket, to: socket.assigns.return_to)
-          else
-            socket
-          end
-
-        {:noreply, socket}
+      # Same refusal as the creation branch below, and as the OAuth client
+      # form. The user is signed in, they are just not allowed to touch this
+      # credential, so don't send them back to the login page.
+      {:error, :unauthorized} ->
+        socket
+        |> put_flash(:error, "You are not authorized to do that.")
+        |> close_or_stay()
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -1276,13 +1260,29 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     credential_params
     |> Map.put("user_id", user_id)
     |> Map.put("schema", schema_name)
-    |> Credentials.create_credential()
+    |> Credentials.create_credential(socket.assigns.current_user)
     |> case do
       {:ok, credential} ->
         {:noreply, Helpers.handle_save_response(socket, credential)}
 
+      # Defence in depth. No screen can reach this today, because
+      # `Credential.changeset/2` does not cast :user_id and both render sites
+      # seed the struct with the current user. It is here so a future caller
+      # that names another owner is refused rather than silently allowed.
+      {:error, :unauthorized} ->
+        {:noreply,
+         put_flash(socket, :error, "You are not authorized to do that.")}
+
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
+    end
+  end
+
+  defp close_or_stay(socket) do
+    if socket.assigns.return_to do
+      {:noreply, push_navigate(socket, to: socket.assigns.return_to)}
+    else
+      {:noreply, socket}
     end
   end
 

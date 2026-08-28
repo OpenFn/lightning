@@ -941,15 +941,18 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, credential} =
-        Lightning.Credentials.create_credential(%{
-          body: %{},
-          name: "some name",
-          user_id: user.id,
-          schema: "raw",
-          project_credentials: [
-            %{project_id: project.id}
-          ]
-        })
+        Lightning.Credentials.create_credential(
+          %{
+            body: %{},
+            name: "some name",
+            user_id: user.id,
+            schema: "raw",
+            project_credentials: [
+              %{project_id: project.id}
+            ]
+          },
+          user
+        )
 
       credential = Lightning.Repo.preload(credential, :user)
 

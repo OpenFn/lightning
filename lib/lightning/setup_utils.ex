@@ -99,18 +99,21 @@ defmodule Lightning.SetupUtils do
     end)
   end
 
-  defp create_dhis2_credential(%Accounts.User{id: user_id}) do
+  defp create_dhis2_credential(%Accounts.User{id: user_id} = user) do
     {:ok, credential} =
-      Credentials.create_credential(%{
-        body: %{
-          username: "admin",
-          password: "district",
-          hostUrl: "https://play.dhis2.org/dev"
+      Credentials.create_credential(
+        %{
+          body: %{
+            username: "admin",
+            password: "district",
+            hostUrl: "https://play.dhis2.org/dev"
+          },
+          name: "DHIS2 play",
+          user_id: user_id,
+          schema: "dhis2"
         },
-        name: "DHIS2 play",
-        user_id: user_id,
-        schema: "dhis2"
-      })
+        user
+      )
 
     credential
   end
@@ -1003,8 +1006,8 @@ defmodule Lightning.SetupUtils do
           Enum.each(credentials, fn credential ->
             {:ok, _credential} =
               Credentials.create_credential(
-                credential
-                |> Map.put(:user_id, user.id)
+                credential |> Map.put(:user_id, user.id),
+                user
               )
           end)
 
