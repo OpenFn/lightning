@@ -846,6 +846,54 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert job_id == job.id
     end
 
+    test "a sandbox asks for its own environment, not the parent's" do
+      # The bug this closes: metadata was fetched against "main" whatever
+      # project the job belonged to, so a sandbox saw its parent's production
+      # credential. Reverting the fix has to fail here.
+      Mimic.copy(Lightning.MetadataService)
+
+      root = insert(:project)
+      user = insert(:user)
+
+      sandbox =
+        insert(:project,
+          parent: root,
+          env: "staging",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      workflow = insert(:workflow, project: sandbox)
+      credential = insert(:credential, user: user, schema: "http")
+      job = insert(:job, workflow: workflow, credential: credential)
+
+      test_pid = self()
+
+      Mimic.stub(Lightning.MetadataService, :fetch, fn _adaptor,
+                                                       _credential,
+                                                       environment ->
+        send(test_pid, {:metadata_environment, environment})
+        {:ok, %{"name" => "ok"}}
+      end)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(socket.assigns.workflow.id)
+      end)
+
+      ref = push(socket, "request_metadata", %{"job_id" => job.id})
+      assert_reply ref, :ok, %{job_id: _}
+
+      assert_receive {:metadata_environment, "staging"}
+    end
+
     test "returns job_not_found for a job in another project (no cross-tenant credential use)",
          %{socket: socket} do
       # A job outside the session's workflow must be indistinguishable from a

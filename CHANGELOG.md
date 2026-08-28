@@ -118,6 +118,8 @@ and this project adheres to
   role changes now close open sessions instead of leaving them active.
 - Fixed an authorization issue in AI assistant session writes. Asking questions
   is unaffected.
+- Fixed two paths (adaptor metadata lookup, channel proxy) that resolved a
+  sandbox's credential from the parent project's environment instead of its own.
 - Fixed a signup-gate bypass that let registration be reached even with
   `ALLOW_SIGNUP=false`.
 - Fixed a token-confusion issue that let a personal access token or credential

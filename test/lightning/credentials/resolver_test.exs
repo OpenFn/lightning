@@ -31,7 +31,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       credential = Repo.preload(credential, :credential_bodies)
@@ -62,7 +62,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
 
       # Empty strings should be removed
       expected_body = %{
@@ -108,7 +108,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should have all the data
@@ -143,7 +143,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should remove empty values
@@ -199,7 +199,7 @@ defmodule ResolverTest do
 
       credential = Repo.preload(credential, :oauth_client)
 
-      assert {:ok, resolved} = Resolver.resolve_credential(credential)
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should have refreshed token data merged with credential body
@@ -252,7 +252,9 @@ defmodule ResolverTest do
       credential = Repo.preload(credential, :oauth_client)
 
       {result, log} =
-        capture_info_log(fn -> Resolver.resolve_credential(credential) end)
+        capture_info_log(fn ->
+          Resolver.resolve_credential(credential, "main")
+        end)
 
       assert {:error, {:reauthorization_required, credential}} = result
       assert credential.name == "Test Googlesheets Credential"
@@ -290,7 +292,9 @@ defmodule ResolverTest do
       credential = Repo.preload(credential, :oauth_client)
 
       {result, log} =
-        capture_info_log(fn -> Resolver.resolve_credential(credential) end)
+        capture_info_log(fn ->
+          Resolver.resolve_credential(credential, "main")
+        end)
 
       assert {:error, {:temporary_failure, _credential}} = result
 
@@ -327,7 +331,7 @@ defmodule ResolverTest do
       credential = Repo.preload(credential, :oauth_client)
 
       assert {:error, {original_error, _credential}} =
-               Resolver.resolve_credential(credential)
+               Resolver.resolve_credential(credential, "main")
 
       # Should return the original error for generic failures
       assert original_error != :reauthorization_required
@@ -340,7 +344,7 @@ defmodule ResolverTest do
       credential = insert(:keychain_credential)
 
       assert_raise FunctionClauseError, fn ->
-        Resolver.resolve_credential(credential)
+        Resolver.resolve_credential(credential, "main")
       end
     end
   end

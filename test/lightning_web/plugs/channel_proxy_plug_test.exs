@@ -1231,6 +1231,111 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert event.error_message == "credential_environment_not_found"
     end
 
+    test "a sandbox authenticates with its own environment, not the parent's",
+         %{bypass: bypass} do
+      # The bug this PR fixes: the proxy asked for "main" whatever project it
+      # was acting for, so a sandbox reached its destination holding the
+      # parent's production secret. Reverting the fix has to fail here.
+      root = insert(:project)
+      sandbox = insert(:project, parent: root, env: "staging")
+      user = insert(:user)
+
+      credential =
+        insert(:credential, schema: "http", name: "shared", user: user)
+        |> with_body(%{
+          name: "main",
+          body: %{"username" => "prod", "password" => "prod-secret"}
+        })
+        |> with_body(%{
+          name: "staging",
+          body: %{"username" => "sbx", "password" => "sbx-secret"}
+        })
+
+      project_credential =
+        insert(:project_credential, project: sandbox, credential: credential)
+
+      channel =
+        insert(:channel,
+          project: sandbox,
+          destination_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :destination,
+              webhook_auth_method: nil,
+              project_credential: project_credential
+            )
+          ]
+        )
+
+      sandbox_auth = "Basic #{Base.encode64("sbx:sbx-secret")}"
+      parent_auth = "Basic #{Base.encode64("prod:prod-secret")}"
+
+      Bypass.expect_once(bypass, "GET", "/test", fn conn ->
+        auth = Plug.Conn.get_req_header(conn, "authorization")
+        assert auth == [sandbox_auth]
+        refute auth == [parent_auth]
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+    end
+
+    test "a sandbox with no environment set returns 502 with observable error",
+         %{bypass: bypass} do
+      # Deriving the environment instead of assuming "main" gave this path two
+      # new failure reasons. They have to land as a recorded 502 like every
+      # other credential error, not as an unhandled crash.
+      root = insert(:project)
+      sandbox = insert(:project, parent: root, env: nil)
+      user = insert(:user)
+
+      credential =
+        insert(:credential, schema: "http", name: "parent", user: user)
+
+      project_credential =
+        insert(:project_credential, project: sandbox, credential: credential)
+
+      channel =
+        insert(:channel,
+          project: sandbox,
+          destination_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :destination,
+              webhook_auth_method: nil,
+              project_credential: project_credential
+            )
+          ]
+        )
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 502
+      assert %{"error" => "Bad Gateway"} = json_response(resp, 502)
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.state == :error
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent, where: e.channel_request_id == ^request.id)
+        )
+
+      assert event.error_message == "credential_environment_not_configured"
+    end
+
     test "credential with missing auth fields returns 502 with observable error",
          %{bypass: bypass} do
       channel =

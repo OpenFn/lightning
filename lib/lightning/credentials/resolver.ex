@@ -43,7 +43,7 @@ defmodule Lightning.Credentials.Resolver do
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.ResolvedCredential
-  alias Lightning.Projects.Project
+  alias Lightning.Projects.Environment
   alias Lightning.Repo
   alias Lightning.Run
 
@@ -69,8 +69,6 @@ defmodule Lightning.Credentials.Resolver do
   @spec resolve_credential(Credential.t(), environment :: String.t()) ::
           {:ok, ResolvedCredential.t()}
           | {:error, resolve_error()}
-
-  def resolve_credential(a, b \\ "main")
 
   def resolve_credential(%Run{} = run, id) do
     Logger.metadata(run_id: run.id, credential_id: id)
@@ -134,24 +132,13 @@ defmodule Lightning.Credentials.Resolver do
 
   @spec get_project_env(Run.t()) :: {:ok, String.t()} | {:error, term()}
   defp get_project_env(%Run{} = run) do
-    case Lightning.Projects.get_project_for_run(run) do
-      %Project{env: nil, parent_id: nil} ->
-        Logger.warning(
-          "Root project has no environment set, defaulting to 'main'"
-        )
-
-        {:ok, "main"}
-
-      %Project{env: env} when is_binary(env) ->
+    case Environment.fetch(run) do
+      {:ok, env} ->
         {:ok, env}
 
-      %Project{env: nil} ->
-        log_resolution_error(:environment_not_configured)
-        {:error, :environment_not_configured}
-
-      nil ->
-        log_resolution_error(:project_not_found)
-        {:error, :project_not_found}
+      {:error, reason} ->
+        log_resolution_error(reason)
+        {:error, reason}
     end
   end
 

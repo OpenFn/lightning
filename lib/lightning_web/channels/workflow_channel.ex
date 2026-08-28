@@ -15,6 +15,7 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaboration.WorkflowResolver
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Projects.Environment
   alias Lightning.Projects.Events.ProjectUserAdded
   alias Lightning.Projects.Events.ProjectUserRemoved
   alias Lightning.Projects.Events.ProjectUserRoleChanged
@@ -174,14 +175,23 @@ defmodule LightningWeb.WorkflowChannel do
           }
 
         job ->
+          # The adaptor describes a real credential, so it has to be the body
+          # this project would actually run with. A sandbox with no environment
+          # reports the error the same way a missing job does, rather than
+          # raising inside the task.
           metadata =
-            Lightning.MetadataService.fetch(job.adaptor, job.credential)
-            |> case do
-              {:error, %{type: error_type}} ->
-                %{error: error_type}
-
-              {:ok, metadata} ->
-                metadata
+            with {:ok, environment} <-
+                   Environment.fetch(socket.assigns.project),
+                 {:ok, metadata} <-
+                   Lightning.MetadataService.fetch(
+                     job.adaptor,
+                     job.credential,
+                     environment
+                   ) do
+              metadata
+            else
+              {:error, %{type: error_type}} -> %{error: error_type}
+              {:error, reason} -> %{error: to_string(reason)}
             end
 
           %{job_id: job_id, metadata: metadata}
