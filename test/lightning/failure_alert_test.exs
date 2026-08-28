@@ -3,6 +3,7 @@ defmodule Lightning.FailureAlertTest do
 
   import Lightning.Factories
   import Lightning.Helpers, only: [ms_to_human: 1]
+  import Lightning.TokenHelpers
   import Swoosh.TestAssertions
 
   alias Lightning.Extensions.UsageLimiter
@@ -282,11 +283,9 @@ defmodule Lightning.FailureAlertTest do
     } do
       Lightning.Stub.reset_time()
 
-      {:ok, bearer, claims} =
-        Workers.WorkerToken.generate_and_sign(
-          %{},
-          Lightning.Config.worker_token_signer()
-        )
+      # `socket/3` bypasses `WorkerSocket.connect/2`, so these claims are
+      # assigned rather than verified — but they are still the shape ws-worker sends.
+      claims = ws_worker_claims()
 
       expect(Lightning.MockConfig, :default_max_run_duration, fn -> 1 end)
 
@@ -298,7 +297,7 @@ defmodule Lightning.FailureAlertTest do
 
       {:ok, %{}, socket} =
         LightningWeb.WorkerSocket
-        |> socket("socket_id", %{token: bearer, claims: claims})
+        |> socket("socket_id", %{token: raw_worker_token(claims), claims: claims})
         |> subscribe_and_join(
           LightningWeb.RunChannel,
           "run:#{run.id}",

@@ -3,9 +3,17 @@ defmodule Lightning.Tokens do
   Token generation, verification and validation.
   """
 
+  require Logger
+
   defmodule PersonalAccessToken do
     @moduledoc false
     use Joken.Config
+
+    # A token is minted on whichever replica served the request and verified on
+    # whichever serves the next one, and their clocks agree only as closely as
+    # NTP keeps them. Without a tolerance, a user who creates an API token and
+    # immediately calls the API gets a 401 for the length of the skew.
+    @clock_skew_seconds 60
 
     @impl true
     def token_config do
@@ -19,7 +27,9 @@ defmodule Lightning.Tokens do
         "iat",
         fn -> Lightning.current_time() |> DateTime.to_unix() end,
         fn iat, _claims, _context ->
-          Lightning.current_time() >= iat |> DateTime.from_unix()
+          is_number(iat) and
+            DateTime.to_unix(Lightning.current_time()) >=
+              iat - @clock_skew_seconds
         end
       )
     end
@@ -66,8 +76,10 @@ defmodule Lightning.Tokens do
           )
           |> DateTime.to_unix()
         end,
+        # See the note on `RunToken`'s `exp`: without `is_number/1` a
+        # non-numeric `exp` sorts above every timestamp and never expires.
         fn exp, _claims, _context ->
-          DateTime.to_unix(Lightning.current_time()) < exp
+          is_number(exp) and DateTime.to_unix(Lightning.current_time()) < exp
         end
       )
     end
@@ -83,7 +95,7 @@ defmodule Lightning.Tokens do
   """
   @spec verify(String.t()) :: {:ok, map()} | {:error, any()}
   def verify(token) do
-    Joken.peek_claims(token)
+    safe_peek(token)
     |> case do
       {:ok, %{"sub" => "user:" <> user_id}} ->
         with {:ok, claims} <-
@@ -110,6 +122,51 @@ defmodule Lightning.Tokens do
       {:error, err} ->
         {:error, err}
     end
+  end
+
+  @doc """
+  Asserts every claim in `required` is present on the token.
+
+  Joken iterates the token's claims and looks each up in the config, so a
+  validator for an absent claim never runs — a claim config cannot make a claim
+  mandatory on its own. This runs before verification and only ever rejects, so
+  peeking at unverified claims is safe.
+  """
+  @spec require_claims(String.t(), [String.t()]) ::
+          :ok | {:error, {:missing_claims, [String.t()]} | :token_malformed}
+  def require_claims(token, required) do
+    case safe_peek(token) do
+      {:ok, claims} when is_map(claims) ->
+        case Enum.reject(required, &Map.has_key?(claims, &1)) do
+          [] -> :ok
+          missing -> {:error, {:missing_claims, Enum.sort(missing)}}
+        end
+
+      _ ->
+        {:error, :token_malformed}
+    end
+  end
+
+  # Joken.peek_claims/1 is not total, and every caller here hands it
+  # attacker-controlled input: a three-segment token whose payload does not
+  # base64-decode to JSON raises Jason.DecodeError, and one that decodes to a
+  # JSON array or string returns {:ok, [1, 2, 3]} or {:ok, "hi"}, which then
+  # crashes any Map operation on it.
+  #
+  # The rescue stays broad rather than naming the known raisers: a Joken version
+  # that raises something outside the list would put the 500-on-unauthenticated-
+  # input back. The log line is what stops a genuine fault hiding behind a quiet
+  # 401. Warning, not error — garbage tokens are routine, and `error` would page
+  # someone every time a scanner reaches the API.
+  defp safe_peek(token) do
+    Joken.peek_claims(token)
+  rescue
+    exception ->
+      Logger.warning(fn ->
+        "Token could not be read: #{Exception.format(:error, exception)}"
+      end)
+
+      {:error, :token_malformed}
   end
 
   @doc """

@@ -10,6 +10,7 @@ defmodule LightningWeb.RunChannelTest do
   import Ecto.Query
   import Lightning.Factories
   import Lightning.TestUtils
+  import Lightning.TokenHelpers
   import Lightning.Utils.Maps, only: [stringify_keys: 1]
 
   setup do
@@ -57,28 +58,6 @@ defmodule LightningWeb.RunChannelTest do
                  %{"token" => "invalid"}
                )
 
-      # A valid token, but nbf hasn't been reached yet
-      {:ok, bearer, _} =
-        Workers.WorkerToken.generate_and_sign(
-          %{
-            "nbf" =>
-              DateTime.utc_now()
-              |> DateTime.add(5, :second)
-              |> DateTime.to_unix()
-          },
-          Lightning.Config.run_token_signer()
-        )
-
-      Lightning.Stub.freeze_time(DateTime.utc_now())
-
-      assert {:error, %{reason: "unauthorized"}} =
-               socket
-               |> subscribe_and_join(
-                 LightningWeb.RunChannel,
-                 "run:123",
-                 %{"token" => bearer}
-               )
-
       # A valid token, but the id doesn't match the channel name
       id = Ecto.UUID.generate()
       other_id = Ecto.UUID.generate()
@@ -95,6 +74,130 @@ defmodule LightningWeb.RunChannelTest do
                  "run:#{other_id}",
                  %{"token" => bearer}
                )
+    end
+
+    # The channel only ever says "unauthorized", which cannot tell "refused for
+    # nbf" apart from "refused because the claim set is not a run token's", so
+    # this test and the next each name the verifier's own reason as well.
+    test "rejects a WorkerToken claim set signed with the run signer", %{
+      socket: socket
+    } do
+      {:ok, bearer, _} =
+        Workers.WorkerToken.generate_and_sign(
+          %{
+            "nbf" =>
+              DateTime.utc_now()
+              |> DateTime.add(5, :second)
+              |> DateTime.to_unix()
+          },
+          Lightning.Config.run_token_signer()
+        )
+
+      # Positive control on the same signer and the same context: a genuine run
+      # token is accepted here, so the refusal below is about the claim set and
+      # not about the signer or the context being wrong.
+      "123"
+      |> valid_run_claims()
+      |> raw_run_token()
+      |> Workers.verify_run_token(%{id: "123"})
+      |> assert_accepted(
+        "positive control: the run signer refused a genuine run token, so the WorkerToken " <>
+          "refusal below says nothing about its claim set."
+      )
+
+      bearer
+      |> Workers.verify_run_token(%{id: "123"})
+      |> assert_refused_naming(
+        ~w(id exp sub),
+        "verify_run_token/2 accepted a WorkerToken claim set carrying a valid run-signer " <>
+          "signature, so anything minted off that key authorises as a run token."
+      )
+
+      assert {:error, %{reason: "unauthorized"}} =
+               socket
+               |> subscribe_and_join(
+                 LightningWeb.RunChannel,
+                 "run:123",
+                 %{"token" => bearer}
+               )
+    end
+
+    test "rejects a complete run token whose nbf has not been reached", %{
+      socket: socket
+    } do
+      id = Ecto.UUID.generate()
+      now = DateTime.utc_now()
+
+      # Mint and verification must agree on "now" for "five seconds ahead" to
+      # mean anything.
+      Lightning.Stub.freeze_time(now)
+
+      claims = valid_run_claims(id)
+
+      # Positive control off the same claim set, nbf left alone, so the refusal
+      # below is about nbf and not about a fixture that never verified.
+      claims
+      |> raw_run_token()
+      |> Workers.verify_run_token(%{id: id})
+      |> assert_accepted(
+        "positive control: the claim set this test moves nbf on does not verify " <>
+          "unmodified, so refusing it with nbf ahead proves nothing."
+      )
+
+      not_yet =
+        claims |> Map.put("nbf", DateTime.to_unix(now) + 5) |> raw_run_token()
+
+      # Pinned to the exact atom so a refusal here cannot be the presence gate
+      # swallowing an nbf failure as a missing claim.
+      assert Workers.verify_run_token(not_yet, %{id: id}) ==
+               {:error, :nbf_not_reached},
+             "a run token complete in every other respect must be refused for its nbf, " <>
+               "and say so — a worker that presents one early would otherwise look like " <>
+               "a malformed-token bug."
+
+      assert {:error, %{reason: "unauthorized"}} =
+               socket
+               |> subscribe_and_join(
+                 LightningWeb.RunChannel,
+                 "run:#{id}",
+                 %{"token" => not_yet}
+               )
+    end
+
+    # The join payload is decoded JSON, so `"token"` can be a number, null, an
+    # object or an array. Each must be refused rather than crash the channel,
+    # which would cost an error log and a Sentry event per attempt.
+    test "rejects a token param that is not a string at all", %{socket: socket} do
+      id = Ecto.UUID.generate()
+
+      # Positive control on the same socket and topic: a genuine run token gets
+      # past verification and is refused for the run not existing, so the
+      # refusals below are about the token param, not an unusable socket.
+      assert {:error, %{reason: "not_found"}} =
+               socket
+               |> subscribe_and_join(
+                 LightningWeb.RunChannel,
+                 "run:#{id}",
+                 %{
+                   "token" =>
+                     Workers.generate_run_token(%{id: id}, %{
+                       run_timeout_ms: 1000
+                     })
+                 }
+               )
+
+      # Compared with ==, not matched: assert/2 is a function, so a match would
+      # raise MatchError before the message naming the offending param is read.
+      for token <- [nil, 123, %{"alg" => "none"}, ["a", "b"], true] do
+        assert subscribe_and_join(
+                 socket,
+                 LightningWeb.RunChannel,
+                 "run:#{id}",
+                 %{"token" => token}
+               ) == {:error, %{reason: "unauthorized"}},
+               "joining with a #{inspect(token)} token param must be refused, " <>
+                 "not crash the channel process."
+      end
     end
 
     test "joining with a valid token but run is not found", %{socket: socket} do
@@ -1909,15 +2012,14 @@ defmodule LightningWeb.RunChannelTest do
           options: run_options |> Map.from_struct()
         )
 
-      {:ok, bearer, claims} =
-        Lightning.Workers.WorkerToken.generate_and_sign(
-          %{},
-          Lightning.Config.worker_token_signer()
-        )
+      claims = ws_worker_claims()
 
       socket =
         LightningWeb.WorkerSocket
-        |> socket("socket_id", %{token: bearer, claims: claims})
+        |> socket("socket_id", %{
+          token: raw_worker_token(claims),
+          claims: claims
+        })
 
       {:ok, _, socket} =
         socket
@@ -2564,14 +2666,12 @@ defmodule LightningWeb.RunChannelTest do
   end
 
   defp create_socket(context) do
-    {:ok, bearer, claims} =
-      Workers.WorkerToken.generate_and_sign(
-        %{},
-        Lightning.Config.worker_token_signer()
-      )
+    # `socket/3` bypasses `WorkerSocket.connect/2`, so these claims are assigned
+    # rather than verified — but they are still the shape ws-worker sends.
+    claims = ws_worker_claims()
 
     assigns = %{
-      token: bearer,
+      token: raw_worker_token(claims),
       claims: claims,
       api_version: context[:api_version]
     }

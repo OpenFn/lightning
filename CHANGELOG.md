@@ -54,6 +54,12 @@ and this project adheres to
 
 ### Security
 
+- Fixed a token-confusion issue that let a personal access token or credential
+  transfer token be used as a run token.
+- Fixed a token-validation issue in worker authentication. Workers older than
+  `@openfn/ws-worker` 1.0 (February 2024) will be refused.
+- A malformed or non-JWT bearer token on `/collections` now returns 401 instead
+  of raising an error.
 - Removing a collaborator, or changing their role, now takes effect immediately
   on their open sessions.
 - Switching off a project's support access now ends the open sessions of support
