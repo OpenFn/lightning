@@ -273,6 +273,16 @@ components:
           type: string
         custom_path:
           type: string
+          readOnly: true
+          deprecated: true
+          description: >
+            Deprecated, no longer settable, and no longer used to route inbound
+            webhooks — a trigger is reached at /i/<trigger id> regardless of
+            this value. Still present in responses for triggers that already
+            have one. Sending a value that differs from the stored one returns
+            422. Echoing the stored value or omitting the field is accepted and
+            changes nothing; sending null or an empty string clears a stored
+            value, which cannot then be set again.
         cron_expression:
           type: string
         type:

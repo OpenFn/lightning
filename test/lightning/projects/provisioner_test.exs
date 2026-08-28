@@ -7,6 +7,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   alias Lightning.ProjectsFixtures
   alias Lightning.Workflows.Snapshot
 
+  import Ecto.Changeset, only: [get_assoc: 2]
   import Ecto.Query
   import Lightning.Factories
   import LightningWeb.CoreComponents, only: [translate_error: 1]
@@ -73,6 +74,100 @@ defmodule Lightning.Projects.ProvisionerTest do
                name: ["This field can't be blank."],
                base: ["extraneous parameters: baz, foo"]
              }
+    end
+
+    test "rejects a trigger that sets custom_path" do
+      %{body: body} = valid_document()
+
+      Mox.expect(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      changeset =
+        Provisioner.parse_document(
+          %Lightning.Projects.Project{},
+          put_custom_path(body, "some-path")
+        )
+
+      refute changeset.valid?
+
+      assert %{
+               workflows: [
+                 %{
+                   triggers: [
+                     %{
+                       custom_path: [
+                         "is currently not supported and cannot be set"
+                       ]
+                     }
+                   ]
+                 }
+               ]
+             } = flatten_errors(changeset)
+    end
+
+    test "tolerates a trigger that sends a blank custom_path" do
+      # The CLI may still send the key. A blank value cannot create a collision,
+      # so it is ignored rather than rejected as an extraneous parameter.
+      %{body: body} = valid_document()
+
+      for value <- [nil, ""] do
+        Mox.expect(
+          Lightning.Extensions.MockUsageLimiter,
+          :limit_action,
+          fn _action, _context -> :ok end
+        )
+
+        changeset =
+          Provisioner.parse_document(
+            %Lightning.Projects.Project{},
+            put_custom_path(body, value)
+          )
+
+        assert changeset.valid?, inspect(flatten_errors(changeset))
+
+        [workflow_changeset] = get_assoc(changeset, :workflows)
+        [trigger_changeset] = get_assoc(workflow_changeset, :triggers)
+
+        refute Map.has_key?(trigger_changeset.changes, :custom_path)
+      end
+    end
+
+    test "re-provisioning a project echoes its stored custom_path back without erroring" do
+      # The highest-risk compatibility case: `openfn pull` emits the stored
+      # custom_path, and `openfn deploy` sends it straight back. That round trip
+      # must not 422 for the projects that already have one.
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: body} = valid_document()
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      %{workflows: [%{triggers: [trigger]}]} = project
+
+      trigger
+      |> Ecto.Changeset.change(custom_path: "partner-feed")
+      |> Repo.update!()
+
+      assert {:ok, reprovisioned} =
+               Provisioner.import_document(
+                 Repo.reload(project),
+                 user,
+                 put_custom_path(body, "partner-feed")
+               )
+
+      %{workflows: [%{triggers: [reloaded]}]} = reprovisioned
+      assert reloaded.custom_path == "partner-feed"
     end
 
     test "rejects a job with a malformed adaptor" do
@@ -2398,6 +2493,16 @@ defmodule Lightning.Projects.ProvisionerTest do
       trigger_edge: trigger_edge,
       job_edge: job_edge
     }
+  end
+
+  defp put_custom_path(body, value) do
+    Map.update!(body, "workflows", fn workflows ->
+      Enum.map(workflows, fn workflow ->
+        Map.update!(workflow, "triggers", fn triggers ->
+          Enum.map(triggers, &Map.put(&1, "custom_path", value))
+        end)
+      end)
+    end)
   end
 
   defp valid_document(project_id \\ nil, number_of_workflows \\ 1) do

@@ -101,6 +101,8 @@ defmodule Lightning.Workflows.Trigger do
     |> validate()
   end
 
+  # `:custom_path` is cast but rejected by `reject_custom_path_change/1` in
+  # `validate/1`.
   def cast_changeset(trigger, attrs) do
     cast(trigger, attrs, [
       :id,
@@ -119,6 +121,7 @@ defmodule Lightning.Workflows.Trigger do
   def validate(changeset) do
     changeset
     |> validate_required([:type])
+    |> reject_custom_path_change()
     |> assoc_constraint(:workflow)
     |> validate_by_type()
     |> validate_uuid([:id, :workflow_id, :cron_cursor_job_id])
@@ -127,6 +130,12 @@ defmodule Lightning.Workflows.Trigger do
       name: "triggers_cron_cursor_job_id_fkey",
       message: "cursor job doesn't exist, or is not in the same workflow"
     )
+  end
+
+  defp reject_custom_path_change(changeset) do
+    validate_change(changeset, :custom_path, fn :custom_path, _value ->
+      [custom_path: "is currently not supported and cannot be set"]
+    end)
   end
 
   defp validate_cron(changeset, _options \\ []) do

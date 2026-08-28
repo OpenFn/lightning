@@ -903,18 +903,16 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Gets a single Webhook Trigger by its `custom_path` or `id`.
+  Gets a single Webhook Trigger by its `id`.
+
   """
   def get_webhook_trigger(path, opts \\ []) when is_binary(path) do
     preloads = opts |> Keyword.get(:include, [])
 
+    # add simple comment here that t.cutom_path is nolonger consulted
+    # it will come back later once global namespacing implications re sorted
     from(t in Trigger,
-      where:
-        fragment(
-          "coalesce(?, ?)",
-          t.custom_path,
-          type(t.id, :string)
-        ) == ^path and t.type == :webhook,
+      where: type(t.id, :string) == ^path and t.type == :webhook,
       preload: ^preloads
     )
     |> Repo.one()

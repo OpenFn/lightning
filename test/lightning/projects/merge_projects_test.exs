@@ -2175,26 +2175,26 @@ defmodule Lightning.Projects.MergeProjectsTest do
       assert result["positions"] == expected_positions
     end
 
-    test "preserves webhook trigger custom_path" do
+    test "drops webhook trigger custom_path" do
+      # `custom_path` is a key in a global, cross-project webhook routing
+      # namespace, so a merge must not carry one project's value into another.
       {source, _source_elements} =
         generate_workflow([:webhook], %{
-          triggers: %{
-            :webhook => %{custom_path: "/custom/webhook/path"}
-          }
+          webhook: %{custom_path: "/custom/webhook/path"}
         })
 
       {target, _target_elements} =
         generate_workflow([:webhook], %{
-          triggers: %{
-            :webhook => %{custom_path: "/different/path"}
-          }
+          webhook: %{custom_path: "/different/path"}
         })
+
+      assert hd(source.triggers).custom_path == "/custom/webhook/path"
+      assert hd(target.triggers).custom_path == "/different/path"
 
       result = MergeProjects.merge_workflow(source, target)
 
       result_trigger = hd(result["triggers"])
-      source_trigger = hd(source.triggers)
-      assert result_trigger["custom_path"] == source_trigger.custom_path
+      refute Map.has_key?(result_trigger, "custom_path")
     end
 
     test "preserves attributes with multiple triggers feeding same job" do

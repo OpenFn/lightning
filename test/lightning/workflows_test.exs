@@ -1478,7 +1478,7 @@ defmodule Lightning.WorkflowsTest do
   end
 
   describe "finders" do
-    test "get_webhook_trigger/1 returns the trigger for a path" do
+    test "get_webhook_trigger/1 returns the trigger for its id" do
       %{triggers: [trigger]} =
         insert(:simple_workflow) |> Repo.preload(:triggers)
 
@@ -1487,9 +1487,10 @@ defmodule Lightning.WorkflowsTest do
       Ecto.Changeset.change(trigger, custom_path: "foo")
       |> Lightning.Repo.update!()
 
-      assert Workflows.get_webhook_trigger(trigger.id) == nil
-
-      assert Workflows.get_webhook_trigger("foo").id == trigger.id
+      # A stored custom_path no longer diverts the lookup away from the id, and
+      # does not resolve on its own.
+      assert Workflows.get_webhook_trigger(trigger.id).id == trigger.id
+      assert Workflows.get_webhook_trigger("foo") == nil
     end
 
     test "get_webhook_trigger/1 does not return a trigger when type is cron" do
@@ -1502,12 +1503,6 @@ defmodule Lightning.WorkflowsTest do
 
       # Should not return the trigger even though the ID matches
       assert Workflows.get_webhook_trigger(trigger.id) == nil
-
-      # Set a custom path and verify it still doesn't return
-      Ecto.Changeset.change(trigger, custom_path: "cron_path")
-      |> Lightning.Repo.update!()
-
-      assert Workflows.get_webhook_trigger("cron_path") == nil
     end
 
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
@@ -1541,11 +1536,13 @@ defmodule Lightning.WorkflowsTest do
   end
 
   describe "get_webhook_trigger/1" do
-    test "returns a trigger when a matching custom_path is provided" do
+    test "does not return a trigger when a matching custom_path is provided" do
       trigger = insert(:trigger, custom_path: "some_path")
 
+      refute Workflows.get_webhook_trigger("some_path")
+
       assert trigger |> unload_relation(:workflow) ==
-               Workflows.get_webhook_trigger("some_path")
+               Workflows.get_webhook_trigger(trigger.id)
     end
 
     test "returns a trigger when a matching id is provided" do
@@ -1558,6 +1555,121 @@ defmodule Lightning.WorkflowsTest do
     test "returns nil when no matching trigger is found" do
       insert(:trigger, custom_path: "some_path")
       assert Workflows.get_webhook_trigger("non_existent_path") == nil
+    end
+  end
+
+  describe "Trigger.custom_path" do
+    # `custom_path` used to key a global, instance-wide webhook routing
+    # namespace: `get_webhook_trigger/2` matched `coalesce(custom_path,
+    # id::text)` across every project, and there was no unique index behind it.
+
+    test "cannot be set or changed to a new value" do
+      other = insert(:trigger, type: :webhook)
+
+      # Setting one on a trigger that has none.
+      for value <- [other.id, "partner-feed", "anything"] do
+        changeset =
+          insert(:trigger, type: :webhook)
+          |> Trigger.changeset(%{custom_path: value})
+
+        refute changeset.valid?
+
+        assert {:custom_path,
+                {"is currently not supported and cannot be set", []}} in changeset.errors
+
+        assert {:error, _} = Repo.update(changeset)
+      end
+
+      # Changing one that is already stored.
+      stored = insert(:trigger, type: :webhook, custom_path: "other-feed")
+
+      changeset = Trigger.changeset(stored, %{custom_path: "something-else"})
+      refute changeset.valid?
+      assert {:error, _} = Repo.update(changeset)
+      assert Repo.reload!(stored).custom_path == "other-feed"
+
+      # No lookup was disturbed.
+      assert %Trigger{id: id} = Workflows.get_webhook_trigger(other.id)
+      assert id == other.id
+    end
+
+    test "tolerates writes that echo the stored value or leave it out" do
+      # `validate_change/3` fires only on a real change, and `cast/4` records
+      # none when the value matches what is stored. The CLI round-trips whole
+      # project documents, so a project that already has a custom_path sends it
+      # back on every deploy — that must not 422.
+      stored = insert(:trigger, type: :webhook, custom_path: "partner-feed")
+
+      for {attrs, label} <- [
+            {%{custom_path: "partner-feed"}, "echoed"},
+            {%{comment: "unrelated"}, "omitted"}
+          ] do
+        assert {:ok, saved} =
+                 stored |> Trigger.changeset(attrs) |> Repo.update()
+
+        assert saved.custom_path == "partner-feed",
+               "#{label} must leave the stored value alone"
+      end
+
+      # A blank against a trigger that has none is likewise a no-op, not an
+      # error — `cast/4` treats "" as absent via its `:empty_values` default.
+      blank = insert(:trigger, type: :webhook, custom_path: nil)
+
+      for value <- [nil, ""] do
+        assert {:ok, saved} =
+                 blank
+                 |> Trigger.changeset(%{custom_path: value})
+                 |> Repo.update()
+
+        refute saved.custom_path
+      end
+    end
+
+    test "a blank clears a stored value, and it cannot be set again" do
+      trigger = insert(:trigger, type: :webhook, custom_path: "partner-feed")
+
+      assert {:ok, cleared} =
+               trigger |> Trigger.changeset(%{custom_path: nil}) |> Repo.update()
+
+      refute cleared.custom_path
+
+      changeset = Trigger.changeset(cleared, %{custom_path: "partner-feed"})
+      refute changeset.valid?
+    end
+
+    test "a stored value no longer routes, and no longer collides" do
+      first = insert(:trigger, type: :webhook, custom_path: "partner-feed")
+      second = insert(:trigger, type: :webhook, custom_path: "partner-feed")
+
+      refute Workflows.get_webhook_trigger("partner-feed")
+
+      for trigger <- [first, second] do
+        assert %Trigger{id: id} = Workflows.get_webhook_trigger(trigger.id)
+
+        assert id == trigger.id,
+               "each row answers on its own id, which is the URL the editor shows"
+      end
+
+      # A row in another project holding this trigger's UUID as its custom_path
+      # used to win this trigger's lookup outright.
+      squatted =
+        insert(:trigger,
+          type: :webhook,
+          workflow: build(:workflow, project: build(:project))
+        )
+
+      insert(:trigger,
+        type: :webhook,
+        workflow: build(:workflow, project: build(:project)),
+        custom_path: squatted.id
+      )
+
+      resolved = Workflows.get_webhook_trigger(squatted.id, include: [:workflow])
+
+      assert resolved.id == squatted.id
+
+      assert resolved.workflow.project_id ==
+               Repo.preload(squatted, :workflow).workflow.project_id
     end
   end
 

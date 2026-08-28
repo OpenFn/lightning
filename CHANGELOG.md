@@ -29,6 +29,8 @@ and this project adheres to
   methods table shows counts like "2 triggers, 1 channel", each auth method's
   detail view lists every linked workflow and channel, and deleting one now
   warns which triggers and channels will lose authentication.
+- Deleting a webhook auth method now logs each trigger and channel it was
+  detached from, in addition to the deletion itself.
 
 ### Changed
 
@@ -39,6 +41,9 @@ and this project adheres to
   Apollo sends, including status updates.
   [#4969](https://github.com/OpenFn/lightning/pull/4969)
 - Bumped bundled worker to version 1.29.2
+- A trigger's `custom_path` can no longer be set, and no longer affects webhook
+  routing. The field was never finished or exposed in the UI; a webhook trigger
+  is reached at `/i/<trigger id>`.
 - Webhook requests refused by a rate or usage limit now answer
   `429 Too Many Requests` rather than `402 Payment Required`. Lightning has no
   notion of payments — the usage limiter is an extension — and the response body
@@ -163,6 +168,9 @@ and this project adheres to
 - Admin password and email resets now revoke the user's existing sessions.
   (Personal access tokens are unaffected — disable or delete the account to
   revoke those.)
+- Deleting a webhook auth method now removes its trigger and channel links
+  immediately, and a method scheduled for deletion is no longer accepted as
+  authentication.
 - Fixed a session-teardown issue where revoking an account's sessions
   (disabling, scheduling deletion, or resetting password/email) left
   already-open pages running on stale permissions.

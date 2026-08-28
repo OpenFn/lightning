@@ -915,6 +915,157 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert resp.status == 200
       assert resp.resp_body == "mixed-ok"
     end
+
+    test "revoked API key (scheduled for deletion) returns 401",
+         %{bypass: bypass} do
+      channel =
+        create_client_auth_channel(bypass, [
+          %{auth_type: :api, api_key: "live-key"},
+          %{auth_type: :api, api_key: "revoked-key"}
+        ])
+
+      revoke_client_auth_method(channel, "revoked-key")
+
+      # A stub, not an expectation: if the revoked credential is accepted the
+      # request reaches the destination and this responds 200.
+      Bypass.stub(bypass, "GET", "/protected", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "proxied-with-revoked-credential")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/protected")
+        |> put_req_header("x-api-key", "revoked-key")
+        |> send_to_endpoint()
+
+      assert resp.status == 401
+      assert %{"error" => "Unauthorized"} = json_response(resp, 401)
+    end
+
+    test "revoked basic credentials (scheduled for deletion) return 401",
+         %{bypass: bypass} do
+      channel =
+        create_client_auth_channel(bypass, [
+          %{auth_type: :api, api_key: "live-key"},
+          %{auth_type: :basic, username: "partner", password: "revoked-pass"}
+        ])
+
+      revoke_client_auth_method(channel, fn wam -> wam.auth_type == :basic end)
+
+      # A stub, not an expectation: if the revoked credential is accepted the
+      # request reaches the destination and this responds 200.
+      Bypass.stub(bypass, "GET", "/protected", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "proxied-with-revoked-credential")
+      end)
+
+      encoded = Base.encode64("partner:revoked-pass")
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/protected")
+        |> put_req_header("authorization", "Basic #{encoded}")
+        |> send_to_endpoint()
+
+      assert resp.status == 401
+      assert %{"error" => "Unauthorized"} = json_response(resp, 401)
+    end
+
+    test "the remaining live key still authenticates after another is revoked",
+         %{bypass: bypass} do
+      channel =
+        create_client_auth_channel(bypass, [
+          %{auth_type: :api, api_key: "live-key"},
+          %{auth_type: :api, api_key: "revoked-key"}
+        ])
+
+      revoke_client_auth_method(channel, "revoked-key")
+
+      Bypass.expect_once(bypass, "GET", "/protected", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "authenticated")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/protected")
+        |> put_req_header("x-api-key", "live-key")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+      assert resp.resp_body == "authenticated"
+    end
+
+    # Severing the join rows at delete time revokes the credential immediately,
+    # but a channel left with no client method authenticates nobody and keeps
+    # forwarding with its destination credential. That is #387, not a
+    # regression introduced here; this test pins the behaviour so the gap is
+    # visible in the suite rather than implied. Delete it when #387 lands.
+    test "revoking a channel's only client method opens it to anonymous callers",
+         %{bypass: bypass} do
+      project = insert(:project)
+      user = insert(:user)
+
+      credential =
+        insert(:credential, schema: "http", name: "destination-cred", user: user)
+        |> with_body(%{body: %{"access_token" => "dest-token-xyz"}})
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      channel =
+        insert(:channel,
+          project: project,
+          destination_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :client,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :api,
+                  api_key: "only-key"
+                )
+            ),
+            build(:channel_auth_method,
+              role: :destination,
+              webhook_auth_method: nil,
+              project_credential: project_credential
+            )
+          ]
+        )
+
+      revoke_client_auth_method(channel, "only-key")
+
+      Bypass.expect_once(bypass, "GET", "/protected", fn conn ->
+        assert Plug.Conn.get_req_header(conn, "authorization") == [
+                 "Bearer dest-token-xyz"
+               ],
+               "the destination credential is still spent on an unauthenticated caller"
+
+        Plug.Conn.send_resp(conn, 200, "anonymous")
+      end)
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/protected")
+        |> send_to_endpoint()
+
+      assert resp.status == 200
+      assert resp.resp_body == "anonymous"
+    end
+
+    defp revoke_client_auth_method(channel, api_key) when is_binary(api_key) do
+      revoke_client_auth_method(channel, fn wam -> wam.api_key == api_key end)
+    end
+
+    defp revoke_client_auth_method(channel, matcher) when is_function(matcher) do
+      auth_method =
+        channel.channel_auth_methods
+        |> Enum.map(& &1.webhook_auth_method)
+        |> Enum.reject(&is_nil/1)
+        |> Enum.find(matcher)
+
+      {:ok, _} =
+        Lightning.WebhookAuthMethods.schedule_for_deletion(auth_method,
+          actor: insert(:user)
+        )
+    end
   end
 
   describe "client auth header stripping" do

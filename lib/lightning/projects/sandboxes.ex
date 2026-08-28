@@ -1018,7 +1018,6 @@ defmodule Lightning.Projects.Sandboxes do
           type: parent_trigger.type,
           enabled: false,
           comment: parent_trigger.comment,
-          custom_path: parent_trigger.custom_path,
           cron_expression: parent_trigger.cron_expression
         }
 

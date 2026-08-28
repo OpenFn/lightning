@@ -1105,7 +1105,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       patch =
         %{
           name: "work1.1",
-          triggers: [%{trigger | custom_path: ["invalid path in list"]}]
+          triggers: [%{trigger | comment: ["invalid comment in list"]}]
         }
 
       conn =
@@ -1119,10 +1119,83 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => workflow.id,
                "errors" => %{
                  "triggers" => [
-                   "Trigger #{trigger.id} has the errors: [custom_path: is invalid]"
+                   "Trigger #{trigger.id} has the errors: [comment: is invalid]"
                  ]
                }
              }
+    end
+
+    test "returns 422 when a triggers patch sets custom_path", %{
+      conn: conn,
+      project: project
+    } do
+      # `custom_path` keys a global, cross-project webhook routing namespace
+      # with no unique index, so it is not settable.
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      refute trigger.custom_path
+
+      patch = %{
+        name: "work1.1",
+        triggers: [%{trigger | custom_path: "some-path"}]
+      }
+
+      conn =
+        patch(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => workflow.id,
+               "errors" => %{
+                 "triggers" => [
+                   "Trigger #{trigger.id} has the errors: " <>
+                     "[custom_path: is currently not supported and cannot be set]"
+                 ]
+               }
+             }
+
+      refute Repo.reload!(trigger).custom_path
+    end
+
+    test "accepts a triggers patch that echoes an existing custom_path", %{
+      conn: conn,
+      project: project
+    } do
+      # The CLI round-trips whole documents, so a trigger that already has a
+      # custom_path sends the same value back on every deploy. That must not
+      # 422.
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(custom_path: "partner-feed")
+        |> Repo.update!()
+
+      patch = %{
+        name: "work1.1",
+        triggers: [%{trigger | comment: "untouched routing"}]
+      }
+
+      conn =
+        patch(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert %{"errors" => %{}} = json_response(conn, 200)
+      assert Repo.reload!(trigger).custom_path == "partner-feed"
     end
 
     test "returns 422 for invalid jobs patch", %{

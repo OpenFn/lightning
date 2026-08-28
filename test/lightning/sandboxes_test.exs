@@ -75,7 +75,14 @@ defmodule Lightning.Projects.SandboxesTest do
     pc = attach_credential!(parent, actor)
 
     w1 = insert(:workflow, %{project: parent, name: "Alpha"})
-    t1 = insert(:trigger, %{workflow: w1, enabled: true, type: :webhook})
+
+    t1 =
+      insert(:trigger, %{
+        workflow: w1,
+        enabled: true,
+        type: :webhook,
+        custom_path: "parent-partner-feed"
+      })
 
     j1 =
       insert(:job, %{
@@ -388,6 +395,23 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert s_triggers != []
       assert Enum.all?(s_triggers, &match?(false, &1.enabled))
+
+      # `custom_path` keys a global webhook routing namespace with no unique
+      # index, so copying it verbatim would leave the parent's live webhook URL
+      # matching two rows.
+      assert Enum.all?(s_triggers, &is_nil(&1.custom_path)),
+             "sandbox triggers must not inherit the parent's custom_path"
+
+      parent_custom_paths =
+        from(t in Trigger,
+          join: w in assoc(t, :workflow),
+          where: w.project_id == ^parent.id,
+          select: t.custom_path
+        )
+        |> Repo.all()
+
+      assert "parent-partner-feed" in parent_custom_paths,
+             "the parent's own custom_path is untouched"
 
       s_edges =
         from(e in Edge,

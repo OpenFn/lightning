@@ -696,7 +696,6 @@ defmodule Lightning.Projects.MergeProjects do
             source_trigger
             |> Map.take([
               :comment,
-              :custom_path,
               :cron_expression,
               :type
             ])
@@ -900,7 +899,6 @@ defmodule Lightning.Projects.MergeProjects do
         trigger
         |> Map.take([
           :comment,
-          :custom_path,
           :cron_expression,
           :type
         ])
@@ -970,7 +968,6 @@ defmodule Lightning.Projects.MergeProjects do
         trigger
         |> Map.take([
           :comment,
-          :custom_path,
           :cron_expression,
           :type
         ])
