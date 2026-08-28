@@ -458,9 +458,9 @@
             on_close={JS.push("close_active_modal")}
             return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
           />
-          <LightningWeb.WorkflowLive.Components.linked_triggers_for_webhook_auth_method_modal
-            :if={@active_modal == :linked_triggers_for_webhook_auth_method}
-            id={"linked_triggers_for_#{@active_modal_assigns.webhook_auth_method.id}_modal"}
+          <LightningWeb.WorkflowLive.Components.linked_usage_for_webhook_auth_method_modal
+            :if={@active_modal == :linked_usage_for_webhook_auth_method}
+            id={"linked_usage_for_#{@active_modal_assigns.webhook_auth_method.id}_modal"}
             webhook_auth_method={@active_modal_assigns.webhook_auth_method}
             on_close={JS.push("close_active_modal")}
           />
@@ -484,32 +484,32 @@
                 button_disabled={!@can_write_webhook_auth_method}
               />
             </:empty_state>
-            <:linked_triggers :let={auth_method}>
+            <:linked_usage :let={usage}>
               <span class="relative font-normal">
                 <a
-                  :if={auth_method.triggers != []}
-                  id={"display_linked_triggers_link_#{auth_method.id}"}
+                  :if={usage.in_use?}
+                  id={"display_linked_usage_link_#{usage.auth_method.id}"}
                   href="#"
                   class="text-indigo-600 hover:text-indigo-900"
                   phx-click={
                     JS.push("show_modal",
                       value: %{
-                        target: "linked_triggers_for_webhook_auth_method",
-                        id: auth_method.id
+                        target: "linked_usage_for_webhook_auth_method",
+                        id: usage.auth_method.id
                       }
                     )
                   }
                 >
-                  {Enum.count(auth_method.triggers)}
+                  {usage.summary}
                 </a>
                 <span
-                  :if={auth_method.triggers == []}
+                  :if={!usage.in_use?}
                   class="italic font-normal text-gray-300"
                 >
-                  No associated triggers...
+                  No associated triggers or channels...
                 </span>
               </span>
-            </:linked_triggers>
+            </:linked_usage>
             <:action :let={auth_method}>
               <%= if @can_write_webhook_auth_method do %>
                 <a

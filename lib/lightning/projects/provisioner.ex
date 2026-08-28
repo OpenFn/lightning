@@ -644,7 +644,7 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   defp channel_changeset(channel, attrs) do
-    attrs = maybe_add_destination_auth_param(attrs, channel)
+    attrs = resolve_destination_auth_param(attrs, channel)
 
     channel
     |> cast(attrs, [
@@ -678,10 +678,10 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  defp maybe_add_destination_auth_param(attrs, %Channel{} = channel) do
+  defp resolve_destination_auth_param(attrs, %Channel{} = channel) do
     case Map.fetch(attrs, "destination_credential_id") do
       :error ->
-        attrs
+        Map.delete(attrs, "destination_auth_method")
 
       {:ok, project_credential_id} ->
         attrs

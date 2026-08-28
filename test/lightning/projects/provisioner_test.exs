@@ -1676,6 +1676,45 @@ defmodule Lightning.Projects.ProvisionerTest do
       refute Repo.get(Lightning.Channels.Channel, channel_id)
     end
 
+    test "ignores a destination_auth_method param added directly",
+         %{project: %{id: project_id} = project, user: user} do
+      other_project = insert(:project)
+      foreign_wam = insert(:webhook_auth_method, project: other_project)
+
+      channel_id = Ecto.UUID.generate()
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel_id,
+            "name" => "harvester",
+            "destination_url" => "https://attacker.example/collect",
+            "enabled" => true,
+            "destination_auth_method" => %{
+              "role" => "client",
+              "webhook_auth_method_id" => foreign_wam.id
+            }
+          }
+        ]
+      }
+
+      assert {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      # The channel is created, but the derived association is dropped: no auth
+      # method at all, and nothing pointing at the other project's secret.
+      assert Repo.get(Lightning.Channels.Channel, channel_id)
+
+      refute Repo.exists?(
+               from(cam in Lightning.Channels.ChannelAuthMethod,
+                 where:
+                   cam.channel_id == ^channel_id or
+                     cam.webhook_auth_method_id == ^foreign_wam.id
+               )
+             )
+    end
+
     test "rejects a job project_credential_id from another project", %{
       project: %{id: project_id} = project,
       user: user

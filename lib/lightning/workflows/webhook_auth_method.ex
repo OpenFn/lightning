@@ -43,6 +43,11 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
     many_to_many :triggers, Lightning.Workflows.Trigger,
       join_through: "trigger_webhook_auth_methods"
 
+    has_many :channel_auth_methods, Lightning.Channels.ChannelAuthMethod,
+      where: [role: :client]
+
+    has_many :channels, through: [:channel_auth_methods, :channel]
+
     timestamps()
   end
 

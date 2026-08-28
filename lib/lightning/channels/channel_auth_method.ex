@@ -46,7 +46,9 @@ defmodule Lightning.Channels.ChannelAuthMethod do
     )
     |> validate_role_target_consistency()
     |> assoc_constraint(:channel)
-    |> foreign_key_constraint(:webhook_auth_method_id)
+    |> foreign_key_constraint(:webhook_auth_method_id,
+      message: Scoping.violation_message(:webhook_auth_method_id)
+    )
     |> foreign_key_constraint(:project_credential_id,
       message: Scoping.violation_message(:project_credential_id)
     )

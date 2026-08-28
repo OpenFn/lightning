@@ -25,6 +25,10 @@ and this project adheres to
 - The audit log now records collaborator changes: adding or removing a
   collaborator, or changing their role, is logged with who made the change and
   the role before and after.
+- Webhook auth methods now account for channels as well as triggers: the auth
+  methods table shows counts like "2 triggers, 1 channel", each auth method's
+  detail view lists every linked workflow and channel, and deleting one now
+  warns which triggers and channels will lose authentication.
 
 ### Changed
 

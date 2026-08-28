@@ -584,7 +584,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   def handle_event(
         "show_modal",
         %{
-          "target" => "linked_triggers_for_webhook_auth_method",
+          "target" => "linked_usage_for_webhook_auth_method",
           "id" => auth_method_id
         },
         socket
@@ -602,7 +602,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       auth_method ->
         socket
         |> assign(
-          active_modal: :linked_triggers_for_webhook_auth_method,
+          active_modal: :linked_usage_for_webhook_auth_method,
           active_modal_assigns: %{webhook_auth_method: auth_method}
         )
         |> noreply()
