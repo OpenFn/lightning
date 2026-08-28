@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.0">
+    <meta name="project" content="Lightning v2.18.1">
 
 
-    <title>Lightning.Runs.Handlers.CompleteStep — Lightning v2.18.0</title>
+    <title>Lightning.Runs.Handlers.CompleteStep — Lightning v2.18.1</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-55EB4AD1.js"></script>
+    <script defer src="dist/sidebar_items-E3E71881.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.0
+          v2.18.1
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Runs.Handlers.CompleteStep</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.0)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
 
     </h1>
 
@@ -111,7 +111,10 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Schema to validate the input attributes of a completed step.</p>
+<p>Schema to validate the input attributes of a completed step.</p><p><code class="inline">output_dataclip</code> may arrive either as a JSON-encoded string (older
+workers) or already decoded — a map, list, or scalar (newer workers).
+See <code class="inline">maybe_decode_dataclip/1</code>. Map values are stored as-is; non-map
+values are wrapped as <code class="inline">%{&quot;value&quot; =&gt; x}</code> before persistence.</p>
     </section>
 
 </div>
@@ -168,7 +171,7 @@ Lightning
       <h1 class="signature" translate="no">call(params, options)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/handlers.ex#L465" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/handlers.ex#L470" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -190,7 +193,7 @@ Lightning
       <h1 class="signature" translate="no">new(params, options)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/handlers.ex#L427" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/handlers.ex#L432" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
