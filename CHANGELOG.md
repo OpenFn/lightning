@@ -45,6 +45,9 @@ and this project adheres to
 - Fixed the nightly scheduled-account-deletion job dying on a user who created a
   keychain credential, which stalled every deletion queued behind them and left
   that user half-deleted.
+- Fixed permanent project deletion never removing history export archives, which
+  aborted the delete partway through and left the exports in storage
+  indefinitely.
 - Blanking the owner's role on the superuser project form removed the project
   owner and left the project with none. The owner validation counted members
   that were marked for deletion, so it saw an owner that was on its way out.

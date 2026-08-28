@@ -30,6 +30,7 @@ defmodule Lightning.Projects do
   alias Lightning.RunStep
   alias Lightning.Services.AccountHook
   alias Lightning.Services.ProjectHook
+  alias Lightning.Storage.ProjectFileDefinition
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
@@ -193,11 +194,14 @@ defmodule Lightning.Projects do
         args: %{"project_id" => project_id, "type" => "purge_deleted"}
       }) do
     case get_project(project_id) do
-      nil -> :ok
-      project -> delete_project(project)
-    end
+      nil ->
+        :ok
 
-    :ok
+      project ->
+        # Return the error rather than swallowing it, so a purge that can't
+        # complete shows up as a failed job instead of reporting success.
+        with {:ok, _project} <- delete_project(project), do: :ok
+    end
   end
 
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
@@ -1694,6 +1698,26 @@ defmodule Lightning.Projects do
     {:error, :missing_dataclip_retention_period}
   end
 
+  @doc """
+  Removes every stored file belonging to a project, both the object in the
+  storage backend and the `project_files` row.
+
+  Used by the deletion path: `project_files.project_id` doesn't cascade, so
+  these have to go before the project itself can be deleted. Returns the files
+  that could not be removed, so the caller can stop rather than tear the
+  project down around an archive that is still sitting in storage.
+  """
+  @spec remove_all_files_for(Project.t()) :: :ok | {:error, [Projects.File.t()]}
+  def remove_all_files_for(%Project{id: project_id}) do
+    from(f in Projects.File, where: f.project_id == ^project_id)
+    |> Repo.all()
+    |> Enum.reject(&remove_file/1)
+    |> case do
+      [] -> :ok
+      remaining -> {:error, remaining}
+    end
+  end
+
   defp remove_expired_files_for(%Project{
          id: project_id,
          history_retention_period: period
@@ -1704,27 +1728,34 @@ defmodule Lightning.Projects do
           f.project_id == ^project_id and f.inserted_at < ago(^period, "day")
       )
       |> Repo.all()
-      |> Enum.each(fn
-        %{path: nil} = project_file ->
-          Logger.warning(
-            "Deleting orphaned project file #{project_file.id} " <>
-              "for project #{project_file.project_id} " <>
-              "with nil path (likely a failed export)"
-          )
-
-          Repo.delete(project_file)
-
-        %{path: object_path} = project_file ->
-          result = Lightning.Storage.delete(object_path)
-
-          if match?({:ok, _res}, result) or
-               match?({:error, %{status: 404}}, result) do
-            Repo.delete(project_file)
-          end
-      end)
+      |> Enum.each(&remove_file/1)
     end
 
     :ok
+  end
+
+  # Returns true when the file is gone, both from storage and from the table.
+  defp remove_file(%Projects.File{} = project_file) do
+    if is_nil(project_file.path) do
+      Logger.warning(
+        "Deleting orphaned project file #{project_file.id} " <>
+          "for project #{project_file.project_id} " <>
+          "with nil path (likely a failed export)"
+      )
+    end
+
+    with :ok <- ProjectFileDefinition.delete(project_file),
+         {:ok, _} <- Repo.delete(project_file) do
+      true
+    else
+      {:error, reason} ->
+        Logger.error(
+          "Failed to delete stored file #{project_file.path} for project " <>
+            "#{project_file.project_id}: #{inspect(reason)}"
+        )
+
+        false
+    end
   end
 
   defp delete_history_for(

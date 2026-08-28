@@ -513,6 +513,122 @@ defmodule Lightning.ProjectsTest do
              "The OAuth client itself should survive — only the join row is project-scoped"
     end
 
+    test "delete_project/1 deletes the project's stored files and their objects" do
+      project =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      object_path = "exports/#{project.id}/#{Ecto.UUID.generate()}.zip"
+
+      local_path =
+        Lightning.Config.storage(:path)
+        |> Path.expand()
+        |> Path.join(object_path)
+
+      File.mkdir_p!(Path.dirname(local_path))
+      File.write!(local_path, "pretend archive of dataclip bodies")
+      on_exit(fn -> File.rm_rf!(Path.dirname(local_path)) end)
+
+      exported = insert(:project_file, project: project, path: object_path)
+
+      # A failed export leaves a row with no object behind it.
+      orphaned = insert(:project_file, project: project, path: nil)
+
+      assert {:ok, %Project{}} = Projects.delete_project(project)
+
+      refute Repo.get(Project, project.id)
+      refute Repo.get(Lightning.Projects.File, exported.id)
+      refute Repo.get(Lightning.Projects.File, orphaned.id)
+
+      refute File.exists?(local_path),
+             "the export archive must not survive the project it belonged to"
+    end
+
+    test "delete_project/1 deletes the project when the stored object is already gone" do
+      project =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      # Nothing was ever written at this path. There is no archive left to
+      # protect, so an object that isn't there must not hold up the deletion.
+      project_file =
+        insert(:project_file,
+          project: project,
+          path: "exports/#{project.id}/already-gone.zip"
+        )
+
+      assert {:ok, %Project{}} = Projects.delete_project(project)
+
+      refute Repo.get(Project, project.id)
+      refute Repo.get(Lightning.Projects.File, project_file.id)
+    end
+
+    test "delete_project/1 leaves the project intact when a stored object can't be deleted" do
+      project =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      project_user = insert(:project_user, project: project, user: insert(:user))
+
+      # A path the backend refuses to remove (rather than one that's simply
+      # missing) means the archive may still be sitting there, so we must not
+      # tear the project down around it.
+      project_file =
+        insert(:project_file, project: project, path: undeletable_path(project))
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Projects.delete_project(project)
+
+      assert changeset.errors[:project_files]
+
+      assert Repo.get(Project, project.id)
+      assert Repo.get(Lightning.Projects.File, project_file.id)
+      assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+    end
+
+    test "delete_project/1 deletes a sandbox's stored files along with the parent" do
+      parent =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      sandbox = insert(:project, parent_id: parent.id)
+
+      sandbox_file = insert(:project_file, project: sandbox, path: nil)
+
+      assert {:ok, %Project{}} = Projects.delete_project(parent)
+
+      refute Repo.get(Project, parent.id)
+      refute Repo.get(Project, sandbox.id)
+      refute Repo.get(Lightning.Projects.File, sandbox_file.id)
+    end
+
+    test "delete_project/1 stops at a sandbox whose stored file can't be deleted" do
+      parent =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      sandbox = insert(:project, parent_id: parent.id)
+
+      insert(:project_file, project: sandbox, path: undeletable_path(sandbox))
+
+      assert {:error, %Ecto.Changeset{}} = Projects.delete_project(parent)
+
+      # parent_id is ON DELETE SET NULL, so tearing the parent down anyway would
+      # quietly promote the leftover sandbox to a root project.
+      assert Repo.get(Project, parent.id)
+      assert Repo.get(Project, sandbox.id).parent_id == parent.id
+    end
+
     test "change_project/1 returns a project changeset" do
       project = project_fixture()
       assert %Ecto.Changeset{} = Projects.change_project(project)
@@ -1533,6 +1649,23 @@ defmodule Lightning.ProjectsTest do
                Projects.perform(%Oban.Job{
                  args: %{"project_id" => missing_id, "type" => "purge_deleted"}
                })
+    end
+
+    test "reports a failure instead of returning :ok when the purge can't complete" do
+      project =
+        project_fixture(
+          scheduled_deletion:
+            Lightning.current_time() |> Timex.shift(seconds: -10)
+        )
+
+      insert(:project_file, project: project, path: undeletable_path(project))
+
+      assert {:error, %Ecto.Changeset{}} =
+               Projects.perform(%Oban.Job{
+                 args: %{"project_id" => project.id, "type" => "purge_deleted"}
+               })
+
+      assert Repo.get(Project, project.id)
     end
   end
 
@@ -4190,5 +4323,20 @@ defmodule Lightning.ProjectsTest do
 
     from(Dataclip, select: [:wiped_at, :body, :request])
     |> Lightning.Repo.get(reloaded_dataclip.id)
+  end
+
+  # A storage path the local backend refuses to delete: it's a directory, so
+  # File.rm/1 answers {:error, :eperm} rather than the {:error, :enoent} it
+  # gives for a path that simply holds nothing.
+  defp undeletable_path(project) do
+    object_path = "exports/#{project.id}/undeletable.zip"
+
+    local_path =
+      Lightning.Config.storage(:path) |> Path.expand() |> Path.join(object_path)
+
+    File.mkdir_p!(local_path)
+    on_exit(fn -> File.rm_rf!(Path.dirname(local_path)) end)
+
+    object_path
   end
 end
