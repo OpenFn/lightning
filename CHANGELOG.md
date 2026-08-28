@@ -64,6 +64,10 @@ and this project adheres to
 ### Security
 
 - Fixed a cross-site-scripting issue in channel proxy responses.
+- Fixed an access-revocation issue in the AI assistant panel: membership and
+  role changes now close open sessions instead of leaving them active.
+- Fixed an authorization issue in AI assistant session writes. Asking questions
+  is unaffected.
 - Fixed a signup-gate bypass that let registration be reached even with
   `ALLOW_SIGNUP=false`.
 - Fixed a token-confusion issue that let a personal access token or credential

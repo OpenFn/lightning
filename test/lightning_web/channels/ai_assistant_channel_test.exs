@@ -874,6 +874,342 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
+  describe "privileged frames re-authorise against the database" do
+    setup %{socket: socket, job: job, user: user} do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, joined_socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      %{session: session, joined_socket: joined_socket}
+    end
+
+    # Access is revoked after the socket is already open, so a handler that
+    # trusted the join-time decision would let all four frames through.
+    for {event, params} <- [
+          {"new_message", %{"content" => "still here?"}},
+          {"retry_message", %{"message_id" => Ecto.UUID.generate()}},
+          {"update_context", %{"job_body" => "console.log('sneak');"}},
+          {"list_sessions", %{}}
+        ] do
+      test "#{event} is rejected once the user loses project access", %{
+        joined_socket: joined_socket,
+        project: project,
+        user: user
+      } do
+        project
+        |> Lightning.Projects.get_project_user(user)
+        |> Repo.delete!()
+
+        ref = push(joined_socket, unquote(event), unquote(Macro.escape(params)))
+
+        assert_reply ref,
+                     :error,
+                     %{type: "unauthorized", errors: %{base: ["unauthorized"]}}
+      end
+    end
+
+    # Broadcasts (assistant replies, streaming chunks) leave without passing
+    # through the inbound guard, so the channel has to drop itself when the
+    # user's standing on the project stops authorising the session.
+    test "the channel stops when the user's membership is revoked", %{
+      joined_socket: joined_socket,
+      project: project,
+      user: user
+    } do
+      Process.monitor(joined_socket.channel_pid)
+
+      project
+      |> Lightning.Projects.get_project_user(user)
+      |> Repo.delete!()
+
+      Lightning.Projects.Events.project_user_removed(project.id, user.id)
+
+      assert_receive {:DOWN, _ref, :process, _pid, :normal}
+    end
+
+    test "the channel survives a role change that still authorises reads", %{
+      joined_socket: joined_socket,
+      project: project,
+      user: user
+    } do
+      Process.monitor(joined_socket.channel_pid)
+
+      project
+      |> Lightning.Projects.get_project_user(user)
+      |> Ecto.Changeset.change(%{role: :viewer})
+      |> Repo.update!()
+
+      Lightning.Projects.Events.project_user_role_changed(project.id, user.id)
+
+      refute_receive {:DOWN, _ref, :process, _pid, _reason}
+
+      ref = push(joined_socket, "list_sessions", %{})
+      assert_reply ref, :ok, %{sessions: _}
+    end
+
+    # Support access is a support user's only standing on a project when they
+    # hold no membership row, so revoking it has to end their session. A member
+    # who also happens to be a support user is decided by their row instead, and
+    # is unaffected.
+    test "a support user's channel stops when support access is withdrawn", %{
+      project: project,
+      session: session
+    } do
+      # Rebind: `change/2` drops a value equal to the struct's, so writing
+      # `false` back onto the pre-update struct would be a silent no-op.
+      project =
+        project
+        |> Ecto.Changeset.change(%{allow_support_access: true})
+        |> Repo.update!()
+
+      support_user = insert(:user, support_user: true)
+
+      {:ok, _, support_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{support_user.id}", %{current_user: support_user})
+        |> subscribe_and_join(
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      Process.monitor(support_socket.channel_pid)
+
+      project
+      |> Ecto.Changeset.change(%{allow_support_access: false})
+      |> Repo.update!()
+
+      Lightning.Projects.Events.support_access_updated(project.id, false)
+
+      assert_receive {:DOWN, _ref, :process, _pid, :normal}
+    end
+
+    test "a support user who is also a member keeps their channel", %{
+      project: project,
+      session: session
+    } do
+      # Rebind: `change/2` drops a value equal to the struct's, so writing
+      # `false` back onto the pre-update struct would be a silent no-op.
+      project =
+        project
+        |> Ecto.Changeset.change(%{allow_support_access: true})
+        |> Repo.update!()
+
+      support_member = insert(:user, support_user: true)
+
+      insert(:project_user,
+        project: project,
+        user: support_member,
+        role: :editor
+      )
+
+      {:ok, _, support_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{support_member.id}", %{current_user: support_member})
+        |> subscribe_and_join(
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      Process.monitor(support_socket.channel_pid)
+
+      project
+      |> Ecto.Changeset.change(%{allow_support_access: false})
+      |> Repo.update!()
+
+      Lightning.Projects.Events.support_access_updated(project.id, false)
+
+      refute_receive {:DOWN, _ref, :process, _pid, _reason}
+
+      ref = push(support_socket, "list_sessions", %{})
+      assert_reply ref, :ok, %{sessions: _}
+    end
+
+    # `save_message/3` writes `meta` back from the session struct it is handed.
+    # A second participant's socket never sees another socket's `update_context`,
+    # so writing from its join-time snapshot silently drops the context. The
+    # `job_id` matters: without it the merged meta is unchanged and Ecto skips
+    # the write, which hides the bug.
+    test "a message from a second participant keeps context another socket wrote",
+         %{socket: socket, job: job, project: project, session: session} do
+      topic = "ai_assistant:job_code:#{session.id}"
+
+      bystander = insert(:user)
+      insert(:project_user, project: project, user: bystander, role: :editor)
+
+      {:ok, _, bystander_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{bystander.id}", %{current_user: bystander})
+        |> subscribe_and_join(AiAssistantChannel, topic, %{})
+
+      {:ok, _, writer_socket} =
+        subscribe_and_join(socket, AiAssistantChannel, topic, %{})
+
+      write_ref =
+        push(writer_socket, "update_context", %{
+          "job_body" => "fn(state => state)"
+        })
+
+      assert_reply write_ref, :ok, %{success: true}
+
+      message_ref =
+        push(bystander_socket, "new_message", %{
+          "content" => "what does this do?",
+          "job_id" => job.id
+        })
+
+      assert_reply message_ref, :ok, %{}
+
+      assert %{"job_body" => "fn(state => state)"} =
+               AiAssistant.get_session!(session.id).meta["runtime_context"]
+    end
+
+    test "frames are rejected once the session row is gone", %{
+      joined_socket: joined_socket,
+      session: session
+    } do
+      Repo.delete!(session)
+
+      ref = push(joined_socket, "list_sessions", %{})
+
+      assert_reply ref,
+                   :error,
+                   %{type: "unauthorized", errors: %{base: ["unauthorized"]}}
+    end
+
+    test "a viewer keeps read frames but is denied update_context", %{
+      project: project,
+      session: session
+    } do
+      viewer = user_fixture()
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      viewer_socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+
+      {:ok, _, viewer_socket} =
+        subscribe_and_join(
+          viewer_socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      read_ref = push(viewer_socket, "list_sessions", %{})
+      assert_reply read_ref, :ok, %{sessions: _}
+
+      # Chat stays a read-level frame on purpose: viewers may ask the assistant,
+      # they just cannot write the answer back onto the job.
+      message_ref =
+        push(viewer_socket, "new_message", %{"content" => "What does this do?"})
+
+      assert_reply message_ref, :ok, %{message: %{role: "user"}}
+
+      write_ref =
+        push(viewer_socket, "update_context", %{
+          "job_body" => "console.log('viewer wrote this');"
+        })
+
+      assert_reply write_ref,
+                   :error,
+                   %{type: "unauthorized", errors: %{base: ["unauthorized"]}}
+
+      assert is_nil(AiAssistant.get_session!(session.id).meta["runtime_context"])
+    end
+
+    # The write has to come from the row the guard authorised, not from the
+    # join-time snapshot, or it clobbers meta persisted in between.
+    test "binding a workflow keeps meta written after join", %{
+      project: project,
+      workflow: workflow,
+      socket: socket
+    } do
+      {:ok, %{session_id: session_id}, joined_socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:new",
+          %{
+            "project_id" => project.id,
+            "workflow_id" => Ecto.UUID.generate(),
+            "content" => "Help me create a workflow"
+          }
+        )
+
+      session = Repo.get!(ChatSession, session_id)
+
+      session
+      |> Ecto.Changeset.change(%{
+        meta:
+          Map.put(session.meta, "message_options", %{
+            "use_global_assistant" => true
+          })
+      })
+      |> Repo.update!()
+
+      ref =
+        push(joined_socket, "update_context", %{"workflow_id" => workflow.id})
+
+      assert_reply ref, :ok, %{success: true}
+
+      updated = Repo.reload(session)
+      assert updated.workflow_id == workflow.id
+      refute Map.has_key?(updated.meta, "unsaved_workflow")
+
+      assert updated.meta["message_options"] == %{
+               "use_global_assistant" => true
+             }
+    end
+
+    test "a viewer cannot bind a workflow to a workflow_template session", %{
+      project: project,
+      user: user,
+      workflow: workflow
+    } do
+      {:ok, session} =
+        AiAssistant.create_workflow_session(
+          project,
+          nil,
+          nil,
+          user,
+          "Create workflow"
+        )
+
+      viewer = user_fixture()
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      viewer_socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+
+      {:ok, _, viewer_socket} =
+        subscribe_and_join(
+          viewer_socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      ref =
+        push(viewer_socket, "update_context", %{"workflow_id" => workflow.id})
+
+      assert_reply ref,
+                   :error,
+                   %{type: "unauthorized", errors: %{base: ["unauthorized"]}}
+
+      assert is_nil(Repo.reload(session).workflow_id)
+    end
+  end
+
   describe "authorization" do
     test "rejects join without authenticated user", %{job: job} do
       socket = socket(LightningWeb.UserSocket, "unauthenticated", %{})
