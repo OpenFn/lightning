@@ -1,34 +1,60 @@
 defmodule Mix.Tasks.Lightning.DownloadAdaptorRegistryCache do
-  @shortdoc "Downloads the adaptor registry json cache"
+  @shortdoc "Downloads an adaptor catalogue snapshot for offline seeding"
 
   @moduledoc """
-  Downloads the adaptor registry json cache
+  Fetches every `@openfn/language-*` adaptor from npm via
+  `Lightning.Adaptors.NPM` and writes the full records to a JSON file, in
+  the shape `Lightning.Adaptors.Repo.upsert_adaptor/1` accepts.
+
+  The file this writes is what `mix lightning.seed_adaptors_from_file`
+  reads.
+
   Use --path to specify the location
   """
 
   use Mix.Task
 
-  alias Lightning.AdaptorRegistry
+  alias Lightning.Adaptors.NPM
+  alias Lightning.Adaptors.NPM.Registry
 
   def run(args) do
     Application.ensure_started(:telemetry)
     Finch.start_link(name: Lightning.Finch)
 
-    case AdaptorRegistry.fetch() do
-      [] ->
+    case Registry.list_adaptors() do
+      {:ok, []} ->
         Mix.shell().error(
           "No adaptors found! Check that you have internet connection"
         )
 
-      adaptors ->
+      {:ok, listing} ->
+        adaptors =
+          listing
+          |> Task.async_stream(&fetch_full_record/1,
+            max_concurrency: 10,
+            timeout: 30_000
+          )
+          |> Stream.map(fn {:ok, record} -> record end)
+          |> Enum.reject(&is_nil/1)
+
         path = parse_path(args)
         cache_file = File.open!(path, [:write])
         IO.binwrite(cache_file, Jason.encode_to_iodata!(adaptors))
         File.close(cache_file)
 
         Mix.shell().info(
-          "AdaptorRegistry downloaded successfully. File stored at: #{path}"
+          "Adaptor catalogue downloaded successfully. File stored at: #{path}"
         )
+
+      {:error, reason} ->
+        Mix.shell().error("Unable to fetch adaptor listing: #{inspect(reason)}")
+    end
+  end
+
+  defp fetch_full_record(%{name: name}) do
+    case NPM.fetch_adaptor(name) do
+      {:ok, record} -> Map.put(record, :source, :npm)
+      {:error, _reason} -> nil
     end
   end
 

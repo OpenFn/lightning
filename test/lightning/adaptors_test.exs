@@ -200,6 +200,106 @@ defmodule Lightning.AdaptorsTest do
     end
   end
 
+  describe "get_adaptor/1" do
+    test "returns a Package for an adaptor in the active source" do
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(adaptor_record(latest_version: "4.1.0"))
+
+      assert %Adaptors.Package{
+               name: "@openfn/language-http",
+               source: :npm,
+               latest_version: "4.1.0"
+             } = Adaptors.get_adaptor("@openfn/language-http")
+    end
+
+    test "returns nil for an adaptor absent from the catalogue" do
+      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record())
+
+      assert Adaptors.get_adaptor("@openfn/never-existed") == nil
+    end
+
+    test "returns nil when the catalogue is empty" do
+      assert Adaptors.get_adaptor("@openfn/language-http") == nil
+    end
+
+    test "returns nil for a row under a different source than the active one" do
+      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record(source: :local))
+
+      assert Adaptors.get_adaptor("@openfn/language-http") == nil
+    end
+  end
+
+  describe "to_wire/1" do
+    test "delegates to PackageName.to_wire/1" do
+      {:ok, _} =
+        AdaptorsRepo.upsert_adaptor(adaptor_record(latest_version: "2.0.0"))
+
+      assert Adaptors.to_wire("@openfn/language-http@latest") ==
+               "@openfn/language-http@2.0.0"
+
+      assert Adaptors.to_wire("@openfn/language-http@1.0.0") ==
+               "@openfn/language-http@1.0.0"
+
+      assert Adaptors.to_wire(nil) == ""
+    end
+  end
+
+  describe "parse_spec/1" do
+    test "splits a spec carrying a version" do
+      assert Adaptors.parse_spec("@openfn/language-http@1.2.3") ==
+               {"@openfn/language-http", "1.2.3"}
+
+      assert Adaptors.parse_spec("@openfn/language-http@latest") ==
+               {"@openfn/language-http", "latest"}
+
+      assert Adaptors.parse_spec("common@1.0.0") == {"common", "1.0.0"}
+    end
+
+    test "returns a nil version for a spec without one" do
+      assert Adaptors.parse_spec("@openfn/language-http") ==
+               {"@openfn/language-http", nil}
+    end
+
+    test "returns {nil, nil} for a string that isn't a well-formed spec" do
+      assert Adaptors.parse_spec("@openfn/language-http; rm -rf /") ==
+               {nil, nil}
+
+      assert Adaptors.parse_spec("@openfn/x\npwd\nb@1.0.0") == {nil, nil}
+      assert Adaptors.parse_spec("") == {nil, nil}
+    end
+  end
+
+  describe "valid_format?/1" do
+    test "true for well-formed specs" do
+      [
+        "@openfn/language-http",
+        "@openfn/language-http@1.2.3",
+        "@openfn/language-http@1.2.3-pre",
+        "@openfn/language-http@latest",
+        "@openfn/language-http@local",
+        "common",
+        "common@1.0.0"
+      ]
+      |> Enum.each(fn spec ->
+        assert Adaptors.valid_format?(spec), "expected #{inspect(spec)} to pass"
+      end)
+    end
+
+    test "false for malformed / injection-shaped strings" do
+      [
+        "@openfn/x\npwd\nb@1.0.0",
+        "@openfn/language-http@7.3.2; touch /tmp/x",
+        "@openfn/language-common@latest and stuff",
+        "@openfn/a/b/c@1.0.0",
+        ""
+      ]
+      |> Enum.each(fn spec ->
+        refute Adaptors.valid_format?(spec),
+               "expected #{inspect(spec)} to be rejected"
+      end)
+    end
+  end
+
   describe "refresh_now/1" do
     test "delegates to Scheduler.refresh_now via global_scheduler_name/1", %{
       sup: sup

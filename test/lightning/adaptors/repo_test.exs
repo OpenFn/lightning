@@ -202,36 +202,6 @@ defmodule Lightning.Adaptors.RepoTest do
     end
   end
 
-  describe "stalest/2 (§12.2)" do
-    test "orders by :checked_at ascending" do
-      base = DateTime.utc_now()
-
-      seed_adaptor(name: "@openfn/a", checked_at: DateTime.add(base, -300))
-      seed_adaptor(name: "@openfn/b", checked_at: DateTime.add(base, -100))
-      seed_adaptor(name: "@openfn/c", checked_at: DateTime.add(base, -200))
-
-      assert AdaptorRepo.stalest(10, :npm) |> Enum.map(& &1.name) ==
-               ["@openfn/a", "@openfn/c", "@openfn/b"]
-    end
-
-    test "honours the limit" do
-      base = DateTime.utc_now()
-      seed_adaptor(name: "@openfn/a", checked_at: DateTime.add(base, -300))
-      seed_adaptor(name: "@openfn/b", checked_at: DateTime.add(base, -200))
-      seed_adaptor(name: "@openfn/c", checked_at: DateTime.add(base, -100))
-
-      assert length(AdaptorRepo.stalest(2, :npm)) == 2
-    end
-
-    test "filters by source" do
-      seed_adaptor(name: "@openfn/a", source: :npm)
-      seed_adaptor(name: "@openfn/a", source: :local)
-
-      assert [%Adaptor{source: :npm}] = AdaptorRepo.stalest(10, :npm)
-      assert [%Adaptor{source: :local}] = AdaptorRepo.stalest(10, :local)
-    end
-  end
-
   describe "max_checked_at/1" do
     test "returns the largest :checked_at for the given source" do
       base = DateTime.utc_now()

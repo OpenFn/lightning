@@ -80,12 +80,12 @@ defmodule Lightning.Adaptors.NPM do
 
   # Strategy boundary: re-encode the decoded schema map to a JSON binary
   # so the row is persisted as text and `Jason.decode!(_,
-  # objects: :ordered_objects)` re-engages downstream. NPM's upstream
-  # Schema sub-module already decoded into a regular map, so field order
-  # is whatever map iteration yields — the round-trip preserves it for
-  # the Local strategy (raw binary in) and is a no-op for NPM data.
+  # objects: :ordered_objects)` re-engages downstream. `Schema.schema/2`
+  # always decodes via `Jason.decode/1`, so `data` is a map (or nil) here,
+  # never a raw binary — the Local strategy's own raw-binary schema text
+  # takes a separate path (`Local.read_schema/1`) and never reaches this
+  # function.
   defp encode_schema(nil), do: nil
-  defp encode_schema(data) when is_binary(data), do: data
   defp encode_schema(data) when is_map(data), do: Jason.encode!(data)
 
   @impl Lightning.Adaptors.Strategy

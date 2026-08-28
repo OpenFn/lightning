@@ -192,6 +192,8 @@ defmodule Lightning.JobsTest do
 
   describe "create_job/2" do
     setup do
+      Lightning.AdaptorTestHelpers.ensure_adaptor("@openfn/language-common")
+
       %{actor: insert(:user)}
     end
 

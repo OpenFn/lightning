@@ -36,6 +36,28 @@ defmodule Lightning.Release do
     end
   end
 
+  @doc """
+  Populate the adaptor catalogue from a JSON snapshot file, without
+  reaching npm. The release-safe path for `Lightning.Adaptors.seed_from_file/2`
+  — there is no Mix in a release, so `mix lightning.seed_adaptors_from_file`
+  cannot run there; this is what `bin/lightning eval` calls instead.
+
+  ## Usage
+
+      bin/lightning eval 'Lightning.Release.seed_adaptors("/path/to/snapshot.json")'
+      bin/lightning eval 'Lightning.Release.seed_adaptors("/path/to/snapshot.json", replace: true)'
+  """
+  def seed_adaptors(path, opts \\ []) do
+    load_app()
+
+    {:ok, result, _apps} =
+      Ecto.Migrator.with_repo(@repo, fn _repo ->
+        Lightning.Adaptors.seed_from_file(path, opts)
+      end)
+
+    result
+  end
+
   def rollback(repo, version) do
     load_app()
 
