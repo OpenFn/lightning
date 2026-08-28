@@ -1,7 +1,9 @@
 defmodule Lightning.ExportWorkerTest do
   use Lightning.DataCase, async: true
+  use Mimic
 
   alias Lightning.WorkOrders.{ExportWorker, SearchParams}
+  import ExUnit.CaptureLog
   import Lightning.Factories
 
   setup do
@@ -184,6 +186,78 @@ defmodule Lightning.ExportWorkerTest do
       :zip.zip_close(zip_handle)
     end
 
+    # Batched loading only drops or misattributes entities across a page
+    # boundary, which a single-work-order export never crosses.
+    test "exports every page's entities when the work orders span several pages" do
+      project = insert(:project)
+      project_file = insert(:project_file, project: project)
+
+      %{jobs: [job], triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      # One past a full page, so the last page holds a single work order.
+      work_orders =
+        for index <- 1..51 do
+          dataclip =
+            insert(:dataclip, body: %{"index" => index}, project: project)
+
+          step =
+            insert(:step,
+              input_dataclip: dataclip,
+              output_dataclip: dataclip,
+              job: job,
+              started_at: DateTime.utc_now()
+            )
+
+          insert(:workorder,
+            trigger: trigger,
+            dataclip: dataclip,
+            workflow: workflow,
+            runs: [
+              build(:run,
+                starting_trigger: trigger,
+                dataclip: dataclip,
+                steps: [step],
+                log_lines: [
+                  build(:log_line, step: step, message: "log line #{index}")
+                ]
+              )
+            ]
+          )
+        end
+
+      zip_file_path = run_export!(project, project_file)
+
+      entries = list_zip_entries(zip_file_path)
+      runs = Enum.flat_map(work_orders, & &1.runs)
+
+      assert length(runs) == 51
+
+      for run <- runs do
+        assert "logs/#{run.id}.txt" in entries
+      end
+
+      for work_order <- work_orders do
+        assert "dataclips/#{work_order.dataclip_id}.json" in entries
+      end
+
+      # A multi-page export.json has to be one JSON document, not one object
+      # appended per page.
+      entities = Jason.decode!(extract_and_read(zip_file_path, "export.json"))
+
+      assert Enum.sort(Map.keys(entities)) ==
+               ["run_steps", "runs", "steps", "work_orders"]
+
+      assert MapSet.new(entities["work_orders"], & &1["id"]) ==
+               MapSet.new(work_orders, & &1.id)
+
+      assert MapSet.new(entities["runs"], & &1["id"]) ==
+               MapSet.new(runs, & &1.id)
+
+      assert length(entities["steps"]) == 51
+      assert length(entities["run_steps"]) == 51
+    end
+
     test "marks project file as failed when export fails",
          %{
            project_file: project_file,
@@ -219,6 +293,129 @@ defmodule Lightning.ExportWorkerTest do
       project_file = Repo.reload(project_file)
       assert project_file.status == :failed
       assert is_nil(project_file.path)
+    end
+
+    # Uncaught, this crashes the job under `max_attempts: 1` and strands the
+    # project file at `:in_progress`.
+    test "marks project file as failed when the work order walk raises",
+         %{
+           project: project,
+           project_file: project_file,
+           search_params: search_params
+         } do
+      # Only the per-page section writes pass three arguments; the log and
+      # dataclip writes go through `File.write/2`.
+      stub(File, :write!, fn _path, _content, _modes ->
+        raise File.Error, reason: :enospc, action: "write to", path: "sections"
+      end)
+
+      log =
+        capture_log(fn ->
+          assert {:error, %File.Error{reason: :enospc}} =
+                   ExportWorker.perform(%Oban.Job{
+                     args: %{
+                       "project_id" => project.id,
+                       "project_file" => project_file.id,
+                       "search_params" => to_oban_args(search_params)
+                     }
+                   })
+        end)
+
+      assert log =~ "no space left on device"
+
+      project_file = Repo.reload(project_file)
+      assert project_file.status == :failed
+      assert is_nil(project_file.path)
+    end
+
+    test "marks project file as failed when export.json cannot be written",
+         %{
+           project: project,
+           project_file: project_file,
+           search_params: search_params
+         } do
+      # Only the opening brace fails: the rest of the document still gets
+      # written, and stubbing every write would break Packmatic's zip writer.
+      stub(IO, :binwrite, fn device, iodata ->
+        if IO.iodata_to_binary(iodata) == "{\n" do
+          {:error, :enospc}
+        else
+          Mimic.call_original(IO, :binwrite, [device, iodata])
+        end
+      end)
+
+      capture_log(fn ->
+        assert {:error, %File.Error{reason: :enospc}} =
+                 ExportWorker.perform(%Oban.Job{
+                   args: %{
+                     "project_id" => project.id,
+                     "project_file" => project_file.id,
+                     "search_params" => to_oban_args(search_params)
+                   }
+                 })
+      end)
+
+      project_file = Repo.reload(project_file)
+      assert project_file.status == :failed
+      assert is_nil(project_file.path)
+      refute File.exists?("exports/#{project.id}/#{project_file.id}.zip")
+    end
+
+    # Ordering on `timestamp` alone leaves tied lines in whatever order the
+    # plan returns them - here insertion order, deliberately not id order.
+    test "orders log lines sharing a timestamp deterministically" do
+      project = insert(:project)
+      project_file = insert(:project_file, project: project)
+
+      %{jobs: [job], triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      dataclip = insert(:dataclip, body: %{}, project: project)
+
+      step =
+        insert(:step,
+          input_dataclip: dataclip,
+          output_dataclip: dataclip,
+          job: job,
+          started_at: DateTime.utc_now()
+        )
+
+      tied_at = DateTime.utc_now()
+
+      log_lines =
+        for index <- 1..10 do
+          build(:log_line,
+            step: step,
+            message: "line #{index}",
+            timestamp: tied_at
+          )
+        end
+
+      workorder =
+        insert(:workorder,
+          trigger: trigger,
+          dataclip: dataclip,
+          workflow: workflow,
+          runs: [
+            build(:run,
+              starting_trigger: trigger,
+              dataclip: dataclip,
+              steps: [step],
+              log_lines: log_lines
+            )
+          ]
+        )
+
+      [run] = workorder.runs
+
+      zip_file_path = run_export!(project, project_file)
+
+      expected =
+        log_lines
+        |> Enum.sort_by(& &1.id)
+        |> Enum.map_join("\n", & &1.message)
+
+      assert extract_and_read(zip_file_path, "logs/#{run.id}.txt") == expected
     end
   end
 
@@ -422,6 +619,18 @@ defmodule Lightning.ExportWorkerTest do
              })
 
     zip_file_path
+  end
+
+  defp list_zip_entries(zip_file_path) do
+    {:ok, zip_handle} =
+      :zip.zip_open(String.to_charlist(zip_file_path), [:memory])
+
+    {:ok, file_list} = :zip.zip_list_dir(zip_handle)
+    :zip.zip_close(zip_handle)
+
+    file_list
+    |> Enum.reject(&match?({:zip_comment, _}, &1))
+    |> Enum.map(fn {_, file_name, _, _, _, _} -> to_string(file_name) end)
   end
 
   def extract_and_read(zip_file_path, target_file_name) do

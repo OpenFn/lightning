@@ -119,6 +119,12 @@ and this project adheres to
   so it never sent a response at all.
 - Opening a dataclip or export link for a project that no longer exists now
   shows a refusal instead of a server error.
+- Exporting a project's history no longer times out. Past roughly 800 work
+  orders every export was killed partway through, and left showing as in
+  progress forever. Exports are now processed in pages, and one that does fail
+  is marked as failed.
+- The `export.json` in a history export is now a single valid JSON document.
+  Exports of more than 50 work orders could not be parsed past the first 50.
 
 ### Security
 

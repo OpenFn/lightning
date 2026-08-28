@@ -24,74 +24,185 @@ defmodule Lightning.DataclipScrubber do
   def scrub_dataclip_body!(%{body: body} = dataclip) when is_binary(body) do
     case dataclip.type do
       :step_result ->
-        step_query = from s in Step, where: s.output_dataclip_id == ^dataclip.id
-        scrub_body(body, Repo.one(step_query))
+        steps =
+          from(s in Step, where: s.output_dataclip_id == ^dataclip.id)
+          |> Repo.all()
+
+        scrub_body(
+          body,
+          Enum.flat_map(
+            steps,
+            &(&1.id |> credentials_for_step(&1.started_at) |> Repo.all())
+          ),
+          Enum.flat_map(steps, &webhook_auth_methods_for_step(&1.id))
+        )
 
       :http_request ->
-        scrub_http_request(body, dataclip.id)
+        scrub_body(body, [], webhook_auth_methods_for_dataclip(dataclip.id))
 
       _ ->
         body
     end
   end
 
-  defp scrub_body(body_str, %Step{id: step_id, started_at: started_at}) do
-    credentials_with_env =
-      step_id
-      |> credentials_for_step(started_at)
-      |> Repo.all()
+  @doc """
+  Scrubs a batch of dataclip bodies, resolving what to scrub with a fixed
+  number of queries.
 
-    webhook_auth_methods = webhook_auth_methods_for_step(step_id)
+  `scrub_dataclip_body!/1` looks up the step behind a dataclip, then its
+  credentials, then its webhook auth methods - three queries per dataclip, two
+  of them many-table joins. That is fine for the one dataclip a controller
+  renders and an N+1 for the hundreds a page of the history export touches.
 
-    if Enum.empty?(credentials_with_env) and Enum.empty?(webhook_auth_methods) do
-      body_str
-    else
-      project_env =
-        case credentials_with_env do
-          [{_cred, env} | _] -> env || "main"
-          [] -> "main"
-        end
+  Takes the same `%{id:, type:, body:}` maps as `scrub_dataclip_body!/1` and
+  returns the scrubbed bodies keyed by dataclip id.
+  """
+  @spec scrub_dataclip_bodies!([
+          %{body: String.t() | nil, type: atom(), id: Ecto.UUID.t()}
+        ]) :: %{optional(Ecto.UUID.t()) => String.t() | nil}
+  def scrub_dataclip_bodies!(dataclips) do
+    context = build_context(dataclips)
 
-      credentials = Enum.map(credentials_with_env, fn {c, _env} -> c end)
-
-      {:ok, scrubber} = Scrubber.start_link([])
-
-      scrubber =
-        Enum.reduce(credentials, scrubber, fn credential, scrubber ->
-          samples = Credentials.sensitive_values_for(credential, project_env)
-          basic_auth = Credentials.basic_auth_for(credential, project_env)
-          :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
-          scrubber
-        end)
-
-      scrubber = add_webhook_auth_samples(scrubber, webhook_auth_methods)
-
-      Scrubber.scrub(scrubber, body_str)
-    end
+    Map.new(dataclips, fn dataclip ->
+      {dataclip.id, scrub_in_context(dataclip, context)}
+    end)
   end
 
-  defp scrub_body(body_str, _step), do: body_str
+  defp build_context(dataclips) do
+    ids_by_type = Enum.group_by(dataclips, & &1.type, & &1.id)
 
-  defp scrub_http_request(body_str, dataclip_id) do
-    webhook_auth_methods = webhook_auth_methods_for_dataclip(dataclip_id)
+    steps_by_dataclip =
+      steps_for_output_dataclips(Map.get(ids_by_type, :step_result, []))
 
-    if Enum.empty?(webhook_auth_methods) do
-      body_str
-    else
-      {:ok, scrubber} = Scrubber.start_link([])
+    step_ids =
+      steps_by_dataclip
+      |> Enum.flat_map(fn {_dataclip_id, steps} -> Enum.map(steps, & &1.id) end)
+      |> Enum.uniq()
 
-      scrubber = add_webhook_auth_samples(scrubber, webhook_auth_methods)
-
-      Scrubber.scrub(scrubber, body_str)
-    end
+    %{
+      steps_by_dataclip: steps_by_dataclip,
+      credentials_by_step: credentials_for_steps(step_ids),
+      auth_methods_by_step: webhook_auth_methods_for_steps(step_ids),
+      auth_methods_by_dataclip:
+        webhook_auth_methods_for_dataclips(
+          Map.get(ids_by_type, :http_request, [])
+        )
+    }
   end
 
-  defp add_webhook_auth_samples(scrubber, webhook_auth_methods) do
-    Enum.reduce(webhook_auth_methods, scrubber, fn auth_method, scrubber ->
-      samples = WebhookAuthMethod.sensitive_values_for(auth_method)
-      basic_auth = WebhookAuthMethod.basic_auth_for(auth_method)
-      :ok = Scrubber.add_samples(scrubber, samples, basic_auth)
-      scrubber
+  defp scrub_in_context(%{body: nil}, _context), do: nil
+
+  defp scrub_in_context(%{body: body, type: :step_result, id: id}, context) do
+    steps = Map.get(context.steps_by_dataclip, id, [])
+
+    scrub_body(
+      body,
+      Enum.flat_map(steps, &Map.get(context.credentials_by_step, &1.id, [])),
+      Enum.flat_map(steps, &Map.get(context.auth_methods_by_step, &1.id, []))
+    )
+  end
+
+  defp scrub_in_context(%{body: body, type: :http_request, id: id}, context) do
+    scrub_body(body, [], Map.get(context.auth_methods_by_dataclip, id, []))
+  end
+
+  defp scrub_in_context(%{body: body}, _context), do: body
+
+  defp scrub_body(body_str, [], []), do: body_str
+
+  defp scrub_body(body_str, credentials_with_env, webhook_auth_methods) do
+    project_env =
+      case credentials_with_env do
+        [{_cred, env} | _] -> env || "main"
+        [] -> "main"
+      end
+
+    credential_samples =
+      Enum.map(credentials_with_env, fn {credential, _env} ->
+        {Credentials.sensitive_values_for(credential, project_env),
+         Credentials.basic_auth_for(credential, project_env)}
+      end)
+
+    auth_method_samples =
+      Enum.map(webhook_auth_methods, fn auth_method ->
+        {WebhookAuthMethod.sensitive_values_for(auth_method),
+         WebhookAuthMethod.basic_auth_for(auth_method)}
+      end)
+
+    (credential_samples ++ auth_method_samples)
+    |> Scrubber.build_state()
+    |> Scrubber.scrub_string(body_str)
+  end
+
+  defp steps_for_output_dataclips([]), do: %{}
+
+  defp steps_for_output_dataclips(dataclip_ids) do
+    from(step in Step,
+      where: step.output_dataclip_id in ^dataclip_ids,
+      select: {step.output_dataclip_id, step}
+    )
+    |> Repo.all()
+    |> group_by_key()
+  end
+
+  defp credentials_for_steps([]), do: %{}
+
+  # `credentials_for_step/2` for many steps at once: each sibling step's cutoff
+  # comes from its own target step rather than a bound value.
+  defp credentials_for_steps(step_ids) do
+    from(target_run_step in RunStep,
+      where: target_run_step.step_id in ^step_ids,
+      join: target_step in assoc(target_run_step, :step),
+      join: run_step in RunStep,
+      on: run_step.run_id == target_run_step.run_id,
+      join: step in assoc(run_step, :step),
+      join: job in assoc(step, :job),
+      join: credential in assoc(job, :credential),
+      join: run in assoc(run_step, :run),
+      join: work_order in assoc(run, :work_order),
+      join: workflow in assoc(work_order, :workflow),
+      join: project in assoc(workflow, :project),
+      where: step.started_at <= target_step.started_at,
+      select: {target_run_step.step_id, {credential, project.env}},
+      distinct: [target_run_step.step_id, credential.id]
+    )
+    |> Repo.all()
+    |> group_by_key()
+  end
+
+  defp webhook_auth_methods_for_steps([]), do: %{}
+
+  defp webhook_auth_methods_for_steps(step_ids) do
+    from(run_step in RunStep,
+      where: run_step.step_id in ^step_ids,
+      join: run in assoc(run_step, :run),
+      join: work_order in assoc(run, :work_order),
+      join: trigger in assoc(work_order, :trigger),
+      join: auth_method in assoc(trigger, :webhook_auth_methods),
+      select: {run_step.step_id, auth_method},
+      distinct: [run_step.step_id, auth_method.id]
+    )
+    |> Repo.all()
+    |> group_by_key()
+  end
+
+  defp webhook_auth_methods_for_dataclips([]), do: %{}
+
+  defp webhook_auth_methods_for_dataclips(dataclip_ids) do
+    from(work_order in WorkOrder,
+      where: work_order.dataclip_id in ^dataclip_ids,
+      join: trigger in assoc(work_order, :trigger),
+      join: auth_method in assoc(trigger, :webhook_auth_methods),
+      select: {work_order.dataclip_id, auth_method},
+      distinct: [work_order.dataclip_id, auth_method.id]
+    )
+    |> Repo.all()
+    |> group_by_key()
+  end
+
+  defp group_by_key(rows) do
+    Enum.group_by(rows, fn {key, _value} -> key end, fn {_key, value} ->
+      value
     end)
   end
 
