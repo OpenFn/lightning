@@ -561,11 +561,20 @@ defmodule Lightning.Runs.Handlers do
       |> Repo.insert()
     end
 
-    # For back compat: older workers JSON-encode output_dataclip into a string before sending
-    # it (Lightning then decodes it); newer workers send the value already
-    # decoded.
-    defp maybe_decode_dataclip(value) when is_binary(value),
-      do: Jason.decode!(value)
+    # For back compat: older workers JSON-encode output_dataclip into a string
+    # before sending it (Lightning then decodes it); newer workers send the
+    # value already decoded.
+    #
+    # A binary is ambiguous, since a job's final state can itself be a string.
+    # `fn(state => state.data.id)` sends `abc-123`, which is not JSON. Decode
+    # when we can and keep the binary as a value when we cannot, so an
+    # unencoded string is stored rather than crashing the run channel.
+    defp maybe_decode_dataclip(value) when is_binary(value) do
+      case Jason.decode(value) do
+        {:ok, decoded} -> decoded
+        {:error, _} -> value
+      end
+    end
 
     defp maybe_decode_dataclip(value), do: value
 
