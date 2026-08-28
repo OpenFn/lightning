@@ -754,6 +754,9 @@ defmodule Lightning.AccountsTest do
           dataclip: dataclip
         )
 
+      project_user = insert(:project_user, project: insert(:project), user: user)
+      credential = insert(:credential, user: user)
+
       result = Accounts.purge_user(user.id)
 
       # purge_user should propagate the delete_user failure, not return :ok
@@ -761,6 +764,32 @@ defmodule Lightning.AccountsTest do
 
       # The user should still exist since deletion was blocked by RESTRICT
       assert Repo.get(User, user.id)
+
+      # ...and nothing destructive should have been committed on the way there
+      assert Repo.get(ProjectUser, project_user.id)
+      assert Repo.get(Credentials.Credential, credential.id)
+    end
+
+    test "purging a user who created a keychain credential fails cleanly instead of raising" do
+      user = insert(:user)
+      project = insert(:project)
+      project_user = insert(:project_user, project: project, user: user)
+      credential = insert(:credential, user: user)
+
+      keychain =
+        insert(:keychain_credential, project: project, created_by: user)
+
+      assert {:error, changeset} = Accounts.purge_user(user.id)
+
+      assert {"user has associated keychain credentials and cannot be deleted",
+              _} = changeset.errors[:keychain_credentials]
+
+      # The user, their memberships and their credentials must all survive: a
+      # partially purged user cannot be reconstructed.
+      assert Repo.get(User, user.id)
+      assert Repo.get(ProjectUser, project_user.id)
+      assert Repo.get(Credentials.Credential, credential.id)
+      assert Repo.get(Credentials.KeychainCredential, keychain.id)
     end
   end
 
@@ -792,12 +821,9 @@ defmodule Lightning.AccountsTest do
 
       assert count_for(User) >= 1
 
-      {:ok, %{users_deleted: users_deleted}} =
-        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
       assert Repo.get(User, user.id)
-
-      refute user.id in Enum.map(users_deleted, & &1.id)
     end
 
     test "doesn't delete users that have a project file" do
@@ -818,11 +844,50 @@ defmodule Lightning.AccountsTest do
       _project_file1 =
         insert(:project_file, project: project, created_by: user1)
 
-      {:ok, %{users_deleted: users_deleted}} =
-        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
-      refute Enum.any?(users_deleted, &(&1.id == user1.id))
-      assert Enum.any?(users_deleted, &(&1.id == user2.id))
+      assert Repo.get(User, user1.id)
+      refute Repo.get(User, user2.id)
+    end
+
+    test "doesn't delete, or stall on, users that created a keychain credential" do
+      project = insert(:project)
+
+      %{user: user1} =
+        insert(:project_user,
+          project: project,
+          user: build(:user, scheduled_deletion: DateTime.utc_now())
+        )
+
+      %{user: user2} =
+        insert(:project_user,
+          project: project,
+          user: build(:user, scheduled_deletion: DateTime.utc_now())
+        )
+
+      insert(:keychain_credential, project: project, created_by: user1)
+
+      # user1 holds an ON DELETE RESTRICT reference, so no purge job should even
+      # be enqueued for them — the same treatment run and project-file owners get.
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+        refute_enqueued(
+          worker: Accounts,
+          args: %{user_id: user1.id, type: "purge_deleted"}
+        )
+
+        assert_enqueued(
+          worker: Accounts,
+          args: %{user_id: user2.id, type: "purge_deleted"}
+        )
+      end)
+
+      # This whole tick used to die on user1, taking user2's deletion with it.
+      :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      assert Repo.get(User, user1.id)
+      refute Repo.get(User, user2.id)
     end
 
     test "removes all users past deletion date when called with type 'purge_deleted'" do
@@ -831,12 +896,79 @@ defmodule Lightning.AccountsTest do
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
         )
 
-      user_fixture(
-        scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
-      )
+      %{id: id_of_kept} =
+        user_fixture(
+          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
+        )
 
-      {:ok, %{users_deleted: [%{id: ^id_of_deleted}]}} =
-        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      refute Repo.get(User, id_of_deleted)
+      assert Repo.get(User, id_of_kept)
+    end
+
+    test "enqueues one job per user rather than purging them in a single batch" do
+      users =
+        for _ <- 1..3 do
+          user_fixture(
+            scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
+          )
+        end
+
+      _not_yet_due =
+        user_fixture(
+          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
+        )
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+        for user <- users do
+          assert_enqueued(
+            worker: Accounts,
+            args: %{user_id: user.id, type: "purge_deleted"}
+          )
+        end
+
+        # Nothing was purged by the batch job itself; each user is its own job.
+        assert Enum.all?(users, &Repo.get(User, &1.id))
+      end)
+    end
+
+    test "purges a single user when called with a user_id" do
+      user = insert(:user)
+      project_user = insert(:project_user, project: insert(:project), user: user)
+
+      assert :ok =
+               Accounts.perform(%Oban.Job{
+                 args: %{"user_id" => user.id, "type" => "purge_deleted"}
+               })
+
+      refute Repo.get(User, user.id)
+      refute Repo.get(ProjectUser, project_user.id)
+    end
+
+    test "no-ops when the per-user purge target is already gone" do
+      assert :ok =
+               Accounts.perform(%Oban.Job{
+                 args: %{
+                   "user_id" => Ecto.UUID.generate(),
+                   "type" => "purge_deleted"
+                 }
+               })
+    end
+
+    test "returns the error when a single user's purge is refused" do
+      user = insert(:user)
+      project = insert(:project)
+      insert(:keychain_credential, project: project, created_by: user)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Accounts.perform(%Oban.Job{
+                 args: %{"user_id" => user.id, "type" => "purge_deleted"}
+               })
+
+      assert Repo.get(User, user.id)
     end
 
     test "removes user from project users before deleting them" do
@@ -855,12 +987,10 @@ defmodule Lightning.AccountsTest do
           ]
         )
 
-      {:ok, %{users_deleted: users_deleted}} =
-        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
-      assert 1 == users_deleted |> Enum.count()
-
-      assert user_to_delete.id == users_deleted |> Enum.at(0) |> Map.get(:id)
+      refute Repo.get(User, user_to_delete.id)
+      assert Repo.get(User, another_user.id)
 
       project = Projects.get_project!(project.id) |> Repo.preload(:project_users)
 

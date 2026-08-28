@@ -42,6 +42,9 @@ and this project adheres to
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
   [#5009](https://github.com/OpenFn/lightning/pull/5009)
+- Fixed the nightly scheduled-account-deletion job dying on a user who created a
+  keychain credential, which stalled every deletion queued behind them and left
+  that user half-deleted.
 - Blanking the owner's role on the superuser project form removed the project
   owner and left the project with none. The owner validation counted members
   that were marked for deletion, so it saw an owner that was on its way out.

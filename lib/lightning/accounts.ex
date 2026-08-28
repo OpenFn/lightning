@@ -45,15 +45,16 @@ defmodule Lightning.Accounts do
       # coveralls-ignore-stop
     end)
 
-    # Remove user from projects
-    Ecto.assoc(%User{id: id}, :project_users) |> Repo.delete_all()
+    Repo.transact(fn ->
+      # Remove user from projects
+      Ecto.assoc(%User{id: id}, :project_users) |> Repo.delete_all()
 
-    # Delete the credentials of the user.
-    # Note that there's a nilify constraint that set all project_credentials associated to this user to nil
-    Credentials.list_credentials(%User{id: id})
-    |> Enum.each(&Credentials.delete_credential/1)
+      Credentials.list_credentials(%User{id: id})
+      |> Enum.each(&Credentials.delete_credential/1)
 
-    case Repo.get(User, id) |> delete_user() do
+      Repo.get(User, id) |> delete_user()
+    end)
+    |> case do
       {:ok, _user} ->
         Logger.debug(fn ->
           # coveralls-ignore-start
@@ -69,11 +70,29 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Perform, when called with %{"type" => "purge_deleted"} will find users that are ready for permanent deletion and purge them.
+  Perform, when called with %{"type" => "purge_deleted"} will find users that
+  are ready for permanent deletion and enqueue one job per user; when called
+  with %{"user_id" => id, "type" => "purge_deleted"} it purges that single user.
+
+  Fanning out one job per user means a user who can't be deleted — because of a
+  foreign key we haven't accounted for, say — fails and retries on its own
+  instead of aborting the whole nightly batch and stalling every user behind it.
+  `purge_user/1` is transactional, so a retry always starts from a clean slate.
   """
   @impl Oban.Worker
+  def perform(job)
+
+  def perform(%Oban.Job{
+        args: %{"user_id" => user_id, "type" => "purge_deleted"}
+      }) do
+    case Repo.get(User, user_id) do
+      nil -> :ok
+      _user -> purge_user(user_id)
+    end
+  end
+
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
-    users_to_delete =
+    jobs =
       from(u in User,
         as: :user,
         where: u.scheduled_deletion <= ago(0, "second"),
@@ -90,24 +109,23 @@ defmodule Lightning.Accounts do
               where: parent_as(:user).id == f.created_by_id,
               select: 1
             )
+          ),
+        where:
+          not exists(
+            from(k in Credentials.KeychainCredential,
+              where: parent_as(:user).id == k.created_by_id,
+              select: 1
+            )
           )
       )
       |> Repo.all()
-
-    :ok =
-      Enum.each(users_to_delete, fn u ->
-        case purge_user(u.id) do
-          :ok ->
-            :ok
-
-          {:error, changeset} ->
-            Logger.warning(fn ->
-              "Failed to purge user ##{u.id}: #{inspect(changeset.errors)}"
-            end)
-        end
+      |> Enum.map(fn user ->
+        new(%{user_id: user.id, type: "purge_deleted"}, max_attempts: 3)
       end)
 
-    {:ok, %{users_deleted: users_to_delete}}
+    Oban.insert_all(Lightning.Oban, jobs)
+
+    :ok
   end
 
   def create_user(attrs) do
@@ -700,6 +718,14 @@ defmodule Lightning.Accounts do
     |> Ecto.Changeset.foreign_key_constraint(:runs,
       name: :runs_created_by_id_fkey,
       message: "user has associated runs and cannot be deleted"
+    )
+    |> Ecto.Changeset.foreign_key_constraint(:project_files,
+      name: :project_files_created_by_id_fkey,
+      message: "user has associated project files and cannot be deleted"
+    )
+    |> Ecto.Changeset.foreign_key_constraint(:keychain_credentials,
+      name: :keychain_credentials_created_by_id_fkey,
+      message: "user has associated keychain credentials and cannot be deleted"
     )
     |> Repo.delete()
   end
