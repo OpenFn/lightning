@@ -494,6 +494,9 @@ defmodule Lightning.Workflows.JobTest do
     end
 
     test "accepts well-formed, registry-listed adaptor strings" do
+      insert(:adaptor, name: "@openfn/language-common")
+      insert(:adaptor, name: "@openfn/language-http")
+
       [
         "@openfn/language-common@latest",
         "@openfn/language-http@1.2.3",
@@ -502,12 +505,39 @@ defmodule Lightning.Workflows.JobTest do
         "@openfn/language-common"
       ]
       |> Enum.each(fn adaptor ->
-        errors = Job.changeset(%Job{}, %{adaptor: adaptor}) |> errors_on()
+        errors =
+          Job.changeset(%Job{}, %{
+            name: "job",
+            body: "fn(state => state)",
+            adaptor: adaptor
+          })
+          |> errors_on()
+
         refute errors[:adaptor], "expected #{inspect(adaptor)} to be accepted"
       end)
     end
 
+    test "rejects an unrecognised adaptor whether or not the catalogue has rows for the active source" do
+      # `job.adaptor` reaches the worker's install step unfiltered, so an
+      # empty catalogue must permit nothing — not even an `@openfn/` name.
+      params = %{
+        name: "job",
+        body: "fn(state => state)",
+        adaptor: "@openfn/language-totally-unseeded-xyz@1.0.0"
+      }
+
+      assert Job.changeset(%Job{}, params) |> errors_on() |> Map.get(:adaptor) ==
+               ["is not a recognised adaptor"]
+
+      insert(:adaptor, name: "@openfn/language-http")
+
+      assert Job.changeset(%Job{}, params) |> errors_on() |> Map.get(:adaptor) ==
+               ["is not a recognised adaptor"]
+    end
+
     test "rejects a well-formed adaptor that is not in the registry" do
+      insert(:adaptor, name: "@openfn/language-http")
+
       # The registry membership check only runs on an otherwise-valid changeset,
       # so name and body are supplied here.
       [

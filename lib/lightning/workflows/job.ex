@@ -17,7 +17,7 @@ defmodule Lightning.Workflows.Job do
   """
   use Lightning.Schema
 
-  alias Lightning.AdaptorRegistry
+  alias Lightning.Adaptors
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.Scoping
@@ -140,9 +140,11 @@ defmodule Lightning.Workflows.Job do
 
   defp validate_adaptor(changeset) do
     changeset =
-      validate_format(changeset, :adaptor, AdaptorRegistry.adaptor_format(),
-        message: "adaptor has invalid format"
-      )
+      validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
+        if Adaptors.valid_format?(adaptor),
+          do: [],
+          else: [adaptor: "adaptor has invalid format"]
+      end)
 
     if changeset.valid? do
       validate_known_adaptor(changeset)
@@ -151,23 +153,18 @@ defmodule Lightning.Workflows.Job do
     end
   end
 
-  # Rejects an adaptor the registry doesn't know about, so an unknown package
-  # cannot be persisted on a job.
+  # `job.adaptor` reaches the worker's install step unfiltered, so an
+  # adaptor missing from the catalogue is rejected here whatever its name
+  # — an empty catalogue permits nothing.
   defp validate_known_adaptor(changeset) do
     validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
-      if adaptor_known?(adaptor) do
+      with {name, _version} when is_binary(name) <- Adaptors.parse_spec(adaptor),
+           %Adaptors.Package{} <- Adaptors.get_adaptor(name) do
         []
       else
-        [adaptor: "is not a recognised adaptor"]
+        _ -> [adaptor: "is not a recognised adaptor"]
       end
     end)
-  end
-
-  defp adaptor_known?(adaptor) do
-    case AdaptorRegistry.resolve_package_name(adaptor) do
-      {name, _version} when is_binary(name) -> AdaptorRegistry.exists?(name)
-      _ -> false
-    end
   end
 
   defp validate_keychain_credential_project_membership(changeset) do

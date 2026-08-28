@@ -25,6 +25,8 @@ defmodule LightningWeb.WorkflowChannelBroadcastTest do
     # Stub the broadcast calls that save_workflow makes
     Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
 
+    Lightning.AdaptorTestHelpers.ensure_adaptor("@openfn/language-common")
+
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
     workflow = insert(:workflow, project: project)

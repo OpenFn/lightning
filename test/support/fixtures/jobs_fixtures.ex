@@ -23,15 +23,17 @@ defmodule Lightning.JobsFixtures do
         workflow_fixture(project_id: attrs[:project_id]).id
       end)
 
-    {:ok, job} =
-      attrs
-      |> Enum.into(%{
+    attrs =
+      Enum.into(attrs, %{
         body: "fn(state => state)",
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common"
       })
-      |> Lightning.Jobs.create_job(insert(:user))
+
+    Lightning.AdaptorTestHelpers.ensure_adaptor(attrs.adaptor)
+
+    {:ok, job} = Lightning.Jobs.create_job(attrs, insert(:user))
 
     job
   end

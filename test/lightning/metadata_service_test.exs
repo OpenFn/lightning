@@ -3,6 +3,13 @@ defmodule Lightning.MetadataServiceTest do
 
   alias Lightning.MetadataService
 
+  # Seeds the one name the "succeeds" cases below use; the "not in the
+  # registry" cases rely on their name staying unseeded.
+  setup do
+    insert(:adaptor, name: "@openfn/language-common")
+    :ok
+  end
+
   describe "fetch/2" do
     test "returns the metadata when it exists" do
       path =
@@ -172,6 +179,20 @@ defmodule Lightning.MetadataServiceTest do
                    __exception__: true
                  }
                }
+    end
+
+    test "returns an error, rather than raising, for a malformed adaptor string" do
+      credential =
+        insert(:credential)
+        |> with_body(%{name: "main", body: %{"username" => "user"}})
+
+      assert MetadataService.fetch("not a valid package!!", credential) == {
+               :error,
+               %Lightning.MetadataService.Error{
+                 type: "no_matching_adaptor",
+                 __exception__: true
+               }
+             }
     end
 
     test "refuses a well-formed adaptor that is not in the registry (whitelist)" do

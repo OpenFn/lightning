@@ -436,7 +436,6 @@ defmodule Lightning.Adaptors.Scheduler do
 
   defp accumulate_icon_change(acc, shape, row, package_icons, state) do
     sha_key = :"icon_#{shape}_sha256"
-    ext_key = :"icon_#{shape}_ext"
     etag_key = :"icon_#{shape}_etag"
 
     case Map.get(package_icons, shape) do
@@ -447,11 +446,7 @@ defmodule Lightning.Adaptors.Scheduler do
           # that differs from what we have. nil never clobbers.
           maybe_accumulate_etag(acc, etag_key, row, Map.get(entry, :etag))
         else
-          accumulate_fetched_icon(acc, shape, row, entry, ext, sha, bytes, state,
-            sha_key: sha_key,
-            ext_key: ext_key,
-            etag_key: etag_key
-          )
+          accumulate_fetched_icon(acc, shape, row, entry, ext, sha, bytes, state)
         end
 
       :not_modified ->
@@ -463,27 +458,25 @@ defmodule Lightning.Adaptors.Scheduler do
     end
   end
 
-  defp accumulate_fetched_icon(acc, shape, row, entry, ext, sha, bytes, state,
-         sha_key: sha_key,
-         ext_key: ext_key,
-         etag_key: etag_key
-       ) do
-    try do
-      {:ok, ^sha} = IconCache.write!(state.source, row.name, shape, ext, bytes)
+  defp accumulate_fetched_icon(acc, shape, row, entry, ext, sha, bytes, state) do
+    sha_key = :"icon_#{shape}_sha256"
+    ext_key = :"icon_#{shape}_ext"
+    etag_key = :"icon_#{shape}_etag"
+
+    {:ok, ^sha} = IconCache.write!(state.source, row.name, shape, ext, bytes)
+
+    acc
+    |> Map.put(ext_key, ext)
+    |> Map.put(sha_key, sha)
+    |> maybe_accumulate_etag(etag_key, row, Map.get(entry, :etag))
+  rescue
+    e ->
+      Logger.warning(
+        "Scheduler: IconCache.write!(#{row.name}, #{shape}) failed: " <>
+          Exception.message(e)
+      )
 
       acc
-      |> Map.put(ext_key, ext)
-      |> Map.put(sha_key, sha)
-      |> maybe_accumulate_etag(etag_key, row, Map.get(entry, :etag))
-    rescue
-      e ->
-        Logger.warning(
-          "Scheduler: IconCache.write!(#{row.name}, #{shape}) failed: " <>
-            Exception.message(e)
-        )
-
-        acc
-    end
   end
 
   # nil → preserve existing etag on the row (do not clobber).

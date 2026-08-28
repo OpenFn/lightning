@@ -6,16 +6,10 @@ defmodule Lightning.Adaptors.LocalTest do
   alias Lightning.Adaptors.Local
 
   setup do
-    root =
-      Path.join(
-        System.tmp_dir!(),
-        "lightning_adaptors_local_test_#{System.unique_integer([:positive])}"
-      )
-
-    File.mkdir_p!(Path.join(root, "packages"))
+    root = new_root!()
 
     original = Application.get_env(:lightning, Local, :__unset__)
-    Application.put_env(:lightning, Local, path: root)
+    Application.put_env(:lightning, Local, paths: [root])
 
     on_exit(fn ->
       case original do
@@ -58,8 +52,12 @@ defmodule Lightning.Adaptors.LocalTest do
       write_package!(root, "http-2", "@openfn/language-http", "2.3.4")
       write_package!(root, "http-3", "@openfn/language-http", "2.3.1")
 
+      {result, log} = with_log(fn -> Local.list_adaptors() end)
+
       assert {:ok, [%{name: "@openfn/language-http", latest_version: "2.3.4"}]} =
-               Local.list_adaptors()
+               result
+
+      refute log =~ "shadowed"
     end
 
     test "skips a directory with a missing package.json and logs a warning",
@@ -107,6 +105,109 @@ defmodule Lightning.Adaptors.LocalTest do
       assert capture_log(fn ->
                assert Local.list_adaptors() == {:error, :no_repo_path}
              end) =~ "not configured"
+    end
+
+    test "returns {:error, :no_repo_path} and logs a warning when :paths is not a list" do
+      Application.put_env(:lightning, Local, paths: "/mnt/a,/mnt/b")
+
+      assert capture_log(fn ->
+               assert Local.list_adaptors() == {:error, :no_repo_path}
+             end) =~ "not configured"
+    end
+  end
+
+  describe "multi-directory support" do
+    test "lists adaptors found across every configured path", %{root: root} do
+      root2 = new_root!()
+      on_exit(fn -> File.rm_rf!(root2) end)
+      Application.put_env(:lightning, Local, paths: [root, root2])
+
+      write_package!(root, "http", "@openfn/language-http", "1.0.0")
+
+      write_package!(
+        root2,
+        "sf",
+        "@openfn/language-salesforce",
+        "2.0.0"
+      )
+
+      {:ok, listing} = Local.list_adaptors()
+
+      assert Enum.sort_by(listing, & &1.name) == [
+               %{name: "@openfn/language-http", latest_version: "1.0.0"},
+               %{name: "@openfn/language-salesforce", latest_version: "2.0.0"}
+             ]
+    end
+
+    test "resolves a package that only exists in the second configured path",
+         %{root: root} do
+      root2 = new_root!()
+      on_exit(fn -> File.rm_rf!(root2) end)
+      Application.put_env(:lightning, Local, paths: [root, root2])
+
+      write_package!(root2, "sf", "@openfn/language-salesforce", "3.2.1")
+
+      assert {:ok,
+              %{name: "@openfn/language-salesforce", latest_version: "3.2.1"}} =
+               Local.fetch_adaptor("@openfn/language-salesforce")
+    end
+
+    test "the first configured path wins on a name collision and only its versions are kept",
+         %{root: root} do
+      root2 = new_root!()
+      on_exit(fn -> File.rm_rf!(root2) end)
+      Application.put_env(:lightning, Local, paths: [root, root2])
+
+      write_package!(root, "http", "@openfn/language-http", "1.0.0")
+      write_package!(root2, "http", "@openfn/language-http", "9.9.9")
+
+      {result, log} =
+        with_log(fn -> Local.fetch_adaptor("@openfn/language-http") end)
+
+      assert {:ok, record} = result
+      assert record.latest_version == "1.0.0"
+      assert [%{version: "1.0.0"}] = record.versions
+
+      assert log =~ "shadowed"
+      assert log =~ "@openfn/language-http"
+    end
+
+    test "logs a single warning naming every shadowed package, not one per collision",
+         %{root: root} do
+      root2 = new_root!()
+      on_exit(fn -> File.rm_rf!(root2) end)
+      Application.put_env(:lightning, Local, paths: [root, root2])
+
+      write_package!(root, "http", "@openfn/language-http", "1.0.0")
+      write_package!(root2, "http-dup", "@openfn/language-http", "1.0.1")
+      write_package!(root, "sf", "@openfn/language-salesforce", "1.0.0")
+      write_package!(root2, "sf-dup", "@openfn/language-salesforce", "1.0.1")
+
+      {_result, log} = with_log(fn -> Local.list_adaptors() end)
+
+      assert log =~ "@openfn/language-http"
+      assert log =~ "@openfn/language-salesforce"
+
+      assert length(String.split(log, "shadowed duplicate")) == 2
+    end
+
+    test "logs a warning and skips a root whose packages dir is missing, still returning the other roots",
+         %{root: root} do
+      missing_root =
+        Path.join(
+          System.tmp_dir!(),
+          "lightning_adaptors_local_test_missing_#{System.unique_integer([:positive])}"
+        )
+
+      Application.put_env(:lightning, Local, paths: [root, missing_root])
+
+      write_package!(root, "http", "@openfn/language-http", "1.0.0")
+
+      {result, log} = with_log(fn -> Local.list_adaptors() end)
+
+      assert {:ok, [%{name: "@openfn/language-http"}]} = result
+      assert log =~ "skipping"
+      assert log =~ missing_root
     end
   end
 
@@ -343,6 +444,17 @@ defmodule Lightning.Adaptors.LocalTest do
 
   defp write_package!(root, dir_name, name, version) do
     write_package_raw!(root, dir_name, %{"name" => name, "version" => version})
+  end
+
+  defp new_root! do
+    root =
+      Path.join(
+        System.tmp_dir!(),
+        "lightning_adaptors_local_test_#{System.unique_integer([:positive])}"
+      )
+
+    File.mkdir_p!(Path.join(root, "packages"))
+    root
   end
 
   defp write_package_raw!(root, dir_name, package_json) do

@@ -39,10 +39,6 @@ defmodule Lightning.Application do
     #   formatter: Logger.Formatter.new()
     # })
 
-    adaptor_registry_childspec =
-      {Lightning.AdaptorRegistry,
-       Application.get_env(:lightning, Lightning.AdaptorRegistry, [])}
-
     adaptor_service_childspec =
       {Lightning.AdaptorService,
        [name: :adaptor_service]
@@ -160,7 +156,6 @@ defmodule Lightning.Application do
         LightningWeb.Endpoint,
         Lightning.Workflows.Presence,
         LightningWeb.WorkerPresence,
-        adaptor_registry_childspec,
         adaptor_service_childspec,
         {Lightning.Adaptors.Supervisor, name: Lightning.Adaptors},
         {Lightning.TaskWorker, name: :cli_task_worker},

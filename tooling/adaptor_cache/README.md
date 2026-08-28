@@ -35,9 +35,9 @@ the full command list.
 Point Lightning at the cache by exporting these:
 
 ```sh
-export ADAPTOR_REGISTRY_URL=http://localhost:4874/npm
-export ADAPTOR_JSDELIVR_URL=http://localhost:4874/jsdelivr
-export ADAPTOR_GITHUB_URL=http://localhost:4874/github
+export ADAPTORS_NPM_REGISTRY_URL=http://localhost:4874/npm
+export ADAPTORS_NPM_JSDELIVR_URL=http://localhost:4874/jsdelivr
+export ADAPTORS_NPM_GITHUB_URL=http://localhost:4874/github
 ```
 
 `bin/adaptor_cache up` prints these for you with the right port baked in, so you
@@ -94,17 +94,17 @@ already builds full paths under each — the proxy just rewrites the host:
 | jsDelivr schema fetch (`schema.ex`)    | `http://localhost:4874/jsdelivr/npm/@openfn/language-http@2.1.0/configuration-schema.json` | `/jsdelivr/` | `https://cdn.jsdelivr.net/...`          |
 | GitHub icon fetch (`github.ex`)        | `http://localhost:4874/github/OpenFn/adaptors/main/packages/http/assets/square.png`        | `/github/`   | `https://raw.githubusercontent.com/...` |
 
-Setting `ADAPTOR_REGISTRY_URL`, `ADAPTOR_JSDELIVR_URL` and `ADAPTOR_GITHUB_URL`
-to the proxy's `/npm`, `/jsdelivr` and `/github` base URLs is all that's needed
-— the strategy code appends the same paths it always did, just against a
-different host.
+Setting `ADAPTORS_NPM_REGISTRY_URL`, `ADAPTORS_NPM_JSDELIVR_URL` and
+`ADAPTORS_NPM_GITHUB_URL` to the proxy's `/npm`, `/jsdelivr` and `/github` base
+URLs is all that's needed — the strategy code appends the same paths it always
+did, just against a different host.
 
 ## Caveats
 
 - **The legacy `Lightning.AdaptorRegistry` and `mix lightning.install_schemas`
   bypass this entirely.** Both have hardcoded upstream URLs and don't read the
-  `ADAPTOR_*` env vars, so they'll always hit the real internet regardless of
-  whether the cache is up.
+  `ADAPTORS_NPM_*` env vars, so they'll always hit the real internet regardless
+  of whether the cache is up.
 - **Redirects bypass the cache.** Tesla's `FollowRedirects` middleware requests
   the absolute `Location` URL, which points at the real upstream even when the
   redirect is same-host, so anything that 30x's is fetched live.
@@ -128,8 +128,8 @@ request usually means the upstream is refusing the request outright (check
 status code) rather than a caching problem.
 
 **Port already in use.** Set `ADAPTOR_CACHE_PORT` to something else before
-`bin/adaptor_cache up`, and update the three `ADAPTOR_*_URL` exports to match
-the new port.
+`bin/adaptor_cache up`, and update the three `ADAPTORS_NPM_*_URL` exports to
+match the new port.
 
 **Stale or wrong data cached.** `bin/adaptor_cache purge` drops the on-disk
 cache volume entirely (unlike `down`, which keeps it); `up` again to rebuild

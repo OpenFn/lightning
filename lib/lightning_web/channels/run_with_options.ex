@@ -1,7 +1,7 @@
 defmodule LightningWeb.RunWithOptions do
   @moduledoc false
 
-  alias Lightning.Adaptors.PackageName
+  alias Lightning.Adaptors
   alias Lightning.Run
   alias Lightning.Workflows.Snapshot.Edge
   alias Lightning.Workflows.Snapshot.Job
@@ -41,7 +41,7 @@ defmodule LightningWeb.RunWithOptions do
   def render(%Job{} = job) do
     %{
       "id" => job.id,
-      "adaptor" => PackageName.to_wire(job.adaptor),
+      "adaptor" => Adaptors.to_wire(job.adaptor),
       "credential_id" => get_credential_id(job),
       "body" => job.body,
       "name" => job.name

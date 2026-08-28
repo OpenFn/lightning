@@ -12,11 +12,6 @@ import { AdaptorSelectionModal } from '../../../js/collaborative-editor/componen
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import type { Adaptor } from '../../../js/collaborative-editor/types/adaptor';
 
-// Mock useAdaptorIcons to avoid fetching icon manifest
-vi.mock('#/workflow-diagram/useAdaptorIcons', () => ({
-  default: () => null,
-}));
-
 // Mock adaptor data
 const mockProjectAdaptors: Adaptor[] = [
   {

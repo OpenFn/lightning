@@ -5,20 +5,28 @@ defmodule Lightning.Adaptors.Local do
   Serves adaptor metadata, schemas, and icons from an on-disk OpenFn
   adaptors monorepo checkout. Gated by `LOCAL_ADAPTORS=true` and
   `OPENFN_ADAPTORS_REPO=/path/to/adaptors` at the runtime-config layer;
-  this module only reads the resolved path via
-  `Lightning.Adaptors.Config.strategy_opts(__MODULE__)[:path]`.
+  this module only reads the resolved paths via
+  `Lightning.Adaptors.Config.strategy_opts(__MODULE__)[:paths]`, an
+  ordered list of root directories.
 
   Each callback walks the filesystem afresh — caching is the Store's
   responsibility. The module is stateless; no GenServer, no ETS.
 
   ## Layout
 
-  Walks `$path/packages/*/`, reads each subdirectory's `package.json`
-  for the authoritative `name` and `version`. Directories with missing
-  or unparseable `package.json` are skipped with `Logger.warning` so a
-  malformed entry never crashes boot. Multiple directories sharing the
-  same `name` are collapsed into one record: `latest_version` is the
-  highest semver and `versions` lists every on-disk path.
+  Walks `packages/*/` under each configured root, reads each
+  subdirectory's `package.json` for the authoritative `name` and
+  `version`. Directories with missing or unparseable `package.json` are
+  skipped with `Logger.warning` so a malformed entry never crashes
+  boot. Multiple directories sharing the same `name` within one root
+  are collapsed into one record: `latest_version` is the highest
+  semver and `versions` lists every on-disk path in that root.
+
+  When the same `name` appears under more than one configured root,
+  the earliest root in the list wins outright: its version directories
+  are used and the other root's are ignored entirely, not merged in,
+  and a single `Logger.warning` names every shadowed package once per
+  scan.
 
   `source: :local` is **not** set here — the Store stamps it before
   upsert. No network calls anywhere in this module.
@@ -96,27 +104,67 @@ defmodule Lightning.Adaptors.Local do
   end
 
   defp discover do
-    case Config.strategy_opts(__MODULE__)[:path] do
-      nil ->
+    case Config.strategy_opts(__MODULE__)[:paths] do
+      paths when paths in [nil, []] or not is_list(paths) ->
         Logger.warning(
-          "Lightning.Adaptors.Local: :path is not configured " <>
-            "(set OPENFN_ADAPTORS_REPO or :lightning, Lightning.Adaptors.Local, path:)"
+          "Lightning.Adaptors.Local: :paths is not configured " <>
+            "(set OPENFN_ADAPTORS_REPO or :lightning, Lightning.Adaptors.Local, paths:)"
         )
 
         {:error, :no_repo_path}
 
-      path ->
-        records =
-          path
-          |> Path.join("packages")
-          |> Path.join("*")
-          |> Path.wildcard()
-          |> Enum.filter(&File.dir?/1)
-          |> Enum.flat_map(&read_package_dir/1)
-          |> group_by_name()
-
-        {:ok, records}
+      paths ->
+        {:ok, discover_paths(paths)}
     end
+  end
+
+  # First occurrence wins: each root is grouped (highest semver) on its own
+  # first, then a name found in more than one root keeps only its earliest
+  # root's record. Matches install_schemas.ex:171-172's precedence for the
+  # same rule.
+  defp discover_paths(paths) do
+    paths
+    |> Enum.flat_map(&scan_root/1)
+    |> warn_shadowed()
+    |> Enum.uniq_by(& &1.name)
+  end
+
+  defp scan_root(path) do
+    packages_dir = Path.join(path, "packages")
+
+    if File.dir?(packages_dir) do
+      packages_dir
+      |> Path.join("*")
+      |> Path.wildcard()
+      |> Enum.filter(&File.dir?/1)
+      |> Enum.flat_map(&read_package_dir/1)
+      |> group_by_name()
+    else
+      Logger.warning(
+        "Lightning.Adaptors.Local: skipping root #{inspect(path)}: " <>
+          "#{inspect(packages_dir)} does not exist"
+      )
+
+      []
+    end
+  end
+
+  defp warn_shadowed(records) do
+    shadowed =
+      records
+      |> Enum.frequencies_by(& &1.name)
+      |> Enum.filter(fn {_name, count} -> count > 1 end)
+      |> Enum.map(fn {name, _count} -> name end)
+
+    if shadowed != [] do
+      Logger.warning(
+        "Lightning.Adaptors.Local: shadowed duplicate package name(s) " <>
+          "across configured paths, first occurrence wins: " <>
+          Enum.join(shadowed, ", ")
+      )
+    end
+
+    records
   end
 
   defp read_package_dir(dir) do

@@ -226,9 +226,9 @@ bin/adaptor_cache check   # prove all three upstreams cache correctly
 Then point Lightning at it:
 
 ```sh
-export ADAPTOR_REGISTRY_URL=http://localhost:4874/npm
-export ADAPTOR_JSDELIVR_URL=http://localhost:4874/jsdelivr
-export ADAPTOR_GITHUB_URL=http://localhost:4874/github
+export ADAPTORS_NPM_REGISTRY_URL=http://localhost:4874/npm
+export ADAPTORS_NPM_JSDELIVR_URL=http://localhost:4874/jsdelivr
+export ADAPTORS_NPM_GITHUB_URL=http://localhost:4874/github
 ```
 
 See `tooling/adaptor_cache/README.md` for the full command list, how to read the

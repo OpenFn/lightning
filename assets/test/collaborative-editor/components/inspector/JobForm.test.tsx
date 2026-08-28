@@ -40,11 +40,6 @@ import {
 } from '../../__helpers__/channelMocks';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 
-// Mock useAdaptorIcons to avoid fetching icon manifest
-vi.mock('#/workflow-diagram/useAdaptorIcons', () => ({
-  default: () => null,
-}));
-
 /**
  * Helper to create and connect a workflow store with Y.Doc
  */
