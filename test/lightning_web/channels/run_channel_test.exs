@@ -1129,7 +1129,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => step.id,
           "output_dataclip_id" => Ecto.UUID.generate(),
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "normal",
           "timestamp" => to_string(timestamp)
         })
@@ -1154,7 +1154,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => step.id,
           "output_dataclip_id" => Ecto.UUID.generate(),
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "normal"
         })
 
@@ -1174,7 +1174,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => step.id,
           "output_dataclip_id" => Ecto.UUID.generate(),
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "fail"
         })
 
@@ -1196,7 +1196,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => step_id,
           "output_dataclip_id" => dataclip_id,
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "normal"
         })
 
@@ -1231,7 +1231,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => step_id,
           "output_dataclip_id" => dataclip_id,
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "normal"
         })
 
@@ -1258,7 +1258,7 @@ defmodule LightningWeb.RunChannelTest do
       ref =
         push(socket, "step:complete", %{
           "step_id" => step_id,
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "normal"
         })
 
@@ -1277,7 +1277,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => foreign_step.id,
           "output_dataclip_id" => output_dataclip_id,
-          "output_dataclip" => ~s({"leaked": "data"}),
+          "output_dataclip" => %{"leaked" => "data"},
           "reason" => "fail"
         })
 
@@ -2733,7 +2733,7 @@ defmodule LightningWeb.RunChannelTest do
       %{
         "step_id" => step.id,
         "output_dataclip_id" => Ecto.UUID.generate(),
-        "output_dataclip" => ~s({"foo": "bar"}),
+        "output_dataclip" => %{"foo" => "bar"},
         "reason" => "normal"
       }
       |> maybe_put("webhook_response", Keyword.get(opts, :webhook_response))
@@ -3314,7 +3314,7 @@ defmodule LightningWeb.RunChannelTest do
         Lightning.Runs.complete_step(
           %{
             "step_id" => step.id,
-            "output_dataclip" => Jason.encode!(%{"foo" => "bar"}),
+            "output_dataclip" => %{"foo" => "bar"},
             "output_dataclip_id" => Ecto.UUID.generate(),
             "reason" => "success",
             "finished_at" => DateTime.utc_now(),
