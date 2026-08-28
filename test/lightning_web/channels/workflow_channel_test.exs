@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   import Lightning.CollaborationHelpers
   import Lightning.Factories
+  import Lightning.ProjectsHelpers
   import Mox
   import ExUnit.CaptureLog
 
@@ -180,6 +181,43 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert %{session_pid: session_pid} = socket.assigns
       assert is_pid(session_pid)
     end
+
+    test "grants a support user without a membership row edit rights only while the project allows support access" do
+      support_user = insert(:user, support_user: true)
+      project = insert(:project, allow_support_access: true)
+      workflow = insert(:workflow, project: project)
+
+      join = fn ->
+        LightningWeb.UserSocket
+        |> socket("user_#{support_user.id}", %{current_user: support_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+      end
+
+      assert {:ok, _, socket} = join.()
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      assert socket.assigns.project_user == nil
+
+      ref = push(socket, "get_context", %{})
+      assert_reply ref, :ok, %{permissions: permissions}
+
+      assert %{
+               can_edit_workflow: true,
+               can_run_workflow: true,
+               can_write_webhook_auth_method: false
+             } = permissions
+
+      project
+      |> Ecto.Changeset.change(allow_support_access: false)
+      |> Lightning.Repo.update!()
+
+      assert {:error, %{reason: "unauthorized"}} = join.()
+    end
   end
 
   describe "yjs frame authorization" do
@@ -257,6 +295,234 @@ defmodule LightningWeb.WorkflowChannelTest do
       await_channel_processed(socket)
 
       assert workflow_name(session_pid) == "Edited By Owner"
+    end
+  end
+
+  describe "project membership teardown" do
+    setup do
+      # The module-level setup stubs `Lightning.broadcast/2` to a no-op so
+      # `save_workflow` does not fan out. Membership teardown *is* the
+      # broadcast, so put the real implementation back for these tests.
+      Mox.stub(LightningMock, :broadcast, &Lightning.API.broadcast/2)
+
+      Mox.stub(
+        Lightning.Extensions.MockProjectHook,
+        :handle_project_validation,
+        & &1
+      )
+
+      :ok
+    end
+
+    test "demoting the joined user blocks their writes without dropping the channel",
+         %{project: project, workflow: workflow} do
+      editor = insert(:user)
+
+      project_user =
+        insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+      session_pid = socket.assigns.session_pid
+      original_name = workflow_name(session_pid)
+
+      change_role(project, project_user, :viewer)
+
+      assert_push "session_context_updated", %{
+        permissions: %{can_edit_workflow: false}
+      }
+
+      # The broadcast is delivered before this push, so once the channel has
+      # replied it has necessarily already handled the membership event.
+      ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+      assert_reply ref, :ok, %{workflow: _}
+      assert Process.alive?(socket.channel_pid)
+
+      chunk =
+        build_name_mutation(session_pid, :sync_update, "Mutated After Demotion")
+
+      push(socket, "yjs", {:binary, chunk})
+      await_channel_processed(socket)
+
+      assert workflow_name(session_pid) == original_name
+    end
+
+    test "stops the channel when the joined user is removed from the project",
+         %{project: project, workflow: workflow} do
+      editor = insert(:user)
+
+      project_user =
+        insert(:project_user, project: project, user: editor, role: :editor)
+
+      channel_pid = join_as(editor, project, workflow).channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      Lightning.Projects.delete_project_user!(project_user, insert(:user))
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    test "leaves the channel joined when a different user's membership changes",
+         %{project: project, workflow: workflow} do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      other_member = insert(:user)
+
+      other_project_user =
+        insert(:project_user, project: project, user: other_member, role: :admin)
+
+      socket = join_as(editor, project, workflow)
+
+      change_role(project, other_project_user, :viewer)
+
+      # The broadcast is delivered before this push, so once the channel has
+      # replied it has necessarily already handled the membership event.
+      ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+      assert_reply ref, :ok, %{workflow: _}
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "leaves the channel joined when membership changes on another project",
+         %{project: project, workflow: workflow} do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      other_project =
+        insert(:project, project_users: [%{user: insert(:user), role: :owner}])
+
+      other_project_user =
+        insert(:project_user, project: other_project, user: editor, role: :admin)
+
+      socket = join_as(editor, project, workflow)
+
+      change_role(other_project, other_project_user, :viewer)
+
+      ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+      assert_reply ref, :ok, %{workflow: _}
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "adding another collaborator neither logs nor drops the channel", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+
+      log =
+        capture_log(fn ->
+          add_member(project, insert(:user), :editor)
+
+          ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+          assert_reply ref, :ok, %{workflow: _}
+        end)
+
+      refute log =~ "unhandled message"
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "granting a support user a lesser role blocks their writes", %{
+      project: project,
+      workflow: workflow
+    } do
+      project =
+        Lightning.Repo.update!(
+          Ecto.Changeset.change(project, allow_support_access: true)
+        )
+
+      support_user = insert(:user, support_user: true)
+
+      socket = join_as(support_user, project, workflow)
+      assert socket.assigns.can_edit_workflow
+      session_pid = socket.assigns.session_pid
+      original_name = workflow_name(session_pid)
+
+      add_member(project, support_user, :viewer)
+
+      assert_push "session_context_updated", %{
+        permissions: %{can_edit_workflow: false}
+      }
+
+      chunk =
+        build_name_mutation(session_pid, :sync_update, "Mutated After Addition")
+
+      push(socket, "yjs", {:binary, chunk})
+      await_channel_processed(socket)
+
+      assert workflow_name(session_pid) == original_name
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "stops a support-access channel when support access is revoked" do
+      project =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: insert(:user), role: :owner}]
+        )
+
+      workflow = insert(:workflow, project: project)
+      support_user = insert(:user, support_user: true)
+
+      socket = join_as(support_user, project, workflow)
+      assert socket.assigns.project_user == nil
+
+      channel_pid = socket.channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      revoke_support_access(project)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    test "leaves a member's channel joined and quiet when support access is revoked",
+         %{project: project, workflow: workflow} do
+      project =
+        Lightning.Repo.update!(
+          Ecto.Changeset.change(project, allow_support_access: true)
+        )
+
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+
+      log =
+        capture_log(fn ->
+          revoke_support_access(project)
+
+          # The broadcast is delivered before this push, so once the channel has
+          # replied it has necessarily already handled the event.
+          ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+          assert_reply ref, :ok, %{workflow: _}
+        end)
+
+      refute log =~ "unhandled message"
+      assert Process.alive?(socket.channel_pid)
+      refute_received %Phoenix.Socket.Message{event: "session_context_updated"}
+    end
+
+    test "leaves a support user who is also a member joined when support access is revoked" do
+      project =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: insert(:user), role: :owner}]
+        )
+
+      workflow = insert(:workflow, project: project)
+      support_user = insert(:user, support_user: true)
+
+      insert(:project_user, project: project, user: support_user, role: :viewer)
+
+      socket = join_as(support_user, project, workflow)
+      assert socket.assigns.project_user
+
+      revoke_support_access(project)
+
+      ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+      assert_reply ref, :ok, %{workflow: _}
+      assert Process.alive?(socket.channel_pid)
     end
   end
 
@@ -850,7 +1116,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
     end
 
-    test "blocks save after user demoted to viewer mid-session", %{
+    test "blocks save on a socket that outlived the demotion", %{
       project: project,
       workflow: workflow
     } do
@@ -859,14 +1125,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       project_user =
         insert(:project_user, project: project, user: editor_user, role: :editor)
 
-      {:ok, _, socket} =
-        LightningWeb.UserSocket
-        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
-        |> subscribe_and_join(
-          LightningWeb.WorkflowChannel,
-          "workflow:collaborate:#{workflow.id}",
-          %{"project_id" => project.id, "action" => "edit"}
-        )
+      socket = join_as(editor_user, project, workflow)
 
       # Verify editor can save initially
       session_pid = socket.assigns.session_pid
@@ -880,9 +1139,10 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref1 = push(socket, "save_workflow", %{})
       assert_reply ref1, :ok, %{saved_at: _, lock_version: _}
 
-      # Demote user to viewer
-      {:ok, _updated_project_user} =
-        Lightning.Projects.update_project_user(project_user, %{role: :viewer})
+      # Demote user to viewer without broadcasting
+      project_user
+      |> Ecto.Changeset.change(%{role: :viewer})
+      |> Lightning.Repo.update!()
 
       # Attempt to save after demotion should fail
       Yex.Doc.transaction(doc, "test_update", fn ->
@@ -1285,7 +1545,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
     end
 
-    test "blocks reset after user demoted mid-session", %{
+    test "blocks reset on a socket that outlived the demotion", %{
       project: project,
       workflow: workflow
     } do
@@ -1294,22 +1554,16 @@ defmodule LightningWeb.WorkflowChannelTest do
       project_user =
         insert(:project_user, project: project, user: editor_user, role: :editor)
 
-      {:ok, _, socket} =
-        LightningWeb.UserSocket
-        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
-        |> subscribe_and_join(
-          LightningWeb.WorkflowChannel,
-          "workflow:collaborate:#{workflow.id}",
-          %{"project_id" => project.id, "action" => "edit"}
-        )
+      socket = join_as(editor_user, project, workflow)
 
       # Verify editor can reset initially
       ref1 = push(socket, "reset_workflow", %{})
       assert_reply ref1, :ok, %{lock_version: _, workflow_id: _}
 
-      # Demote user to viewer
-      {:ok, _} =
-        Lightning.Projects.update_project_user(project_user, %{role: :viewer})
+      # Demote user to viewer without broadcasting
+      project_user
+      |> Ecto.Changeset.change(%{role: :viewer})
+      |> Lightning.Repo.update!()
 
       # Attempt to reset after demotion should fail
       ref2 = push(socket, "reset_workflow", %{})
@@ -4011,5 +4265,40 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   defp await_channel_processed(socket) do
     :sys.get_state(socket.channel_pid)
+  end
+
+  defp join_as(user, project, workflow) do
+    {:ok, _reply, socket} =
+      LightningWeb.UserSocket
+      |> socket("user_#{user.id}", %{current_user: user})
+      |> subscribe_and_join(
+        LightningWeb.WorkflowChannel,
+        "workflow:collaborate:#{workflow.id}",
+        %{"project_id" => project.id, "action" => "edit"}
+      )
+
+    socket
+  end
+
+  defp change_role(project, project_user, role) do
+    project
+    |> membership_params(%{project_user => role})
+    |> submit_membership()
+  end
+
+  defp add_member(project, user, role) do
+    project
+    |> membership_params(%{}, [%{user_id: user.id, role: role}])
+    |> submit_membership()
+  end
+
+  defp submit_membership({project, params}) do
+    {:ok, _project} =
+      Lightning.Projects.update_project_with_users(
+        project,
+        params,
+        insert(:user),
+        false
+      )
   end
 end

@@ -186,54 +186,6 @@ defmodule Lightning.ProjectsTest do
                Projects.create_project(%{"name" => "Can't have spaces!"})
     end
 
-    test "update_project_user/2 with valid data updates the project_user" do
-      project =
-        project_fixture(
-          project_users: [
-            %{
-              user_id: user_fixture().id,
-              role: :viewer,
-              digest: :daily,
-              failure_alert: false
-            }
-          ]
-        )
-
-      update_attrs = %{digest: "weekly"}
-
-      assert {:ok, %ProjectUser{} = project_user} =
-               Projects.update_project_user(
-                 project.project_users |> List.first(),
-                 update_attrs
-               )
-
-      assert project_user.digest == :weekly
-      assert project_user.failure_alert == false
-    end
-
-    test "update_project_user/2 with invalid data returns error changeset" do
-      project =
-        project_fixture(
-          project_users: [
-            %{
-              user_id: user_fixture().id,
-              role: :viewer,
-              digest: :monthly,
-              failure_alert: true
-            }
-          ]
-        )
-
-      project_user = project.project_users |> List.first()
-
-      update_attrs = %{digest: "bad_value"}
-
-      assert {:error, %Ecto.Changeset{}} =
-               Projects.update_project_user(project_user, update_attrs)
-
-      assert project_user == Projects.get_project_user!(project_user.id)
-    end
-
     test "set_notification_pref/3 with a changed value updates the field" do
       project =
         project_fixture(
@@ -3107,7 +3059,7 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe "delete_project_user!/1" do
+  describe "delete_project_user!/2" do
     test "deletes the project user and removes their credentials from the project" do
       user1 = insert(:user)
       user2 = insert(:user)
@@ -3143,7 +3095,8 @@ defmodule Lightning.ProjectsTest do
           project_credentials: [%{project_id: other_project.id}]
         )
 
-      deleted_project_user = Projects.delete_project_user!(project_user)
+      deleted_project_user =
+        Projects.delete_project_user!(project_user, insert(:user))
 
       assert deleted_project_user.id == project_user.id
       refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
@@ -3181,11 +3134,18 @@ defmodule Lightning.ProjectsTest do
       user = insert(:user)
 
       project =
-        insert(:project, project_users: [%{user_id: user.id, role: :editor}])
+        insert(:project,
+          project_users: [
+            %{user_id: insert(:user).id, role: :owner},
+            %{user_id: user.id, role: :editor}
+          ]
+        )
 
-      project_user = List.first(project.project_users)
+      project_user =
+        Enum.find(project.project_users, &(&1.user_id == user.id))
 
-      deleted_project_user = Projects.delete_project_user!(project_user)
+      deleted_project_user =
+        Projects.delete_project_user!(project_user, insert(:user))
 
       assert deleted_project_user.id == project_user.id
       refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
@@ -3209,7 +3169,10 @@ defmodule Lightning.ProjectsTest do
       assert_raise ArgumentError,
                    "Cannot remove the owner of a project. Transfer ownership first.",
                    fn ->
-                     Projects.delete_project_user!(owner_project_user)
+                     Projects.delete_project_user!(
+                       owner_project_user,
+                       insert(:user)
+                     )
                    end
 
       assert Repo.get(Lightning.Projects.ProjectUser, owner_project_user.id)

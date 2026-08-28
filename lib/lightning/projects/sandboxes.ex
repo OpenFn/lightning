@@ -82,7 +82,7 @@ defmodule Lightning.Projects.Sandboxes do
   owner who is demoted to `:admin`. The `actor` is then set as the sandbox
   owner (replacing any other role they may have had on the parent). To add
   a user to the sandbox who is not on the parent, call
-  `Lightning.Projects.add_project_users/3` after provision returns — that
+  `Lightning.Projects.add_project_users/4` after provision returns — that
   path goes through the seat-limit check.
   """
   @type provision_attrs :: %{

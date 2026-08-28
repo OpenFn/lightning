@@ -2664,6 +2664,15 @@ defmodule LightningWeb.RunChannelTest do
     insert(:step, runs: [run], job: job, exit_reason: "success")
   end
 
+  # Browser clients reach the channel through `UserSocket`, so their standing
+  # comes from the session token rather than a worker run token.
+  defp connect_browser_socket(user) do
+    session_token = Lightning.Accounts.generate_user_session_token(user)
+    token = Phoenix.Token.encrypt(@endpoint, "user socket", session_token)
+    {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
+    socket
+  end
+
   # Browser client tests
   describe "joining the run:* channel as browser client" do
     setup do
@@ -2984,5 +2993,152 @@ defmodule LightningWeb.RunChannelTest do
       assert pushed_log.id == log_line.id
       assert pushed_log.message == "test message"
     end
+  end
+
+  describe "project access revocation for browser clients" do
+    setup do
+      owner = insert(:user)
+      member = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: owner.id, role: :owner},
+            %{user_id: member.id, role: :editor}
+          ]
+        )
+
+      run = run_in(project)
+
+      {:ok, _reply, socket} =
+        member
+        |> connect_browser_socket()
+        |> subscribe_and_join("run:#{run.id}", %{})
+
+      %{
+        actor: insert(:user),
+        member: member,
+        project: project,
+        run: run,
+        socket: socket
+      }
+    end
+
+    test "stops the channel when the joined user is removed from the project",
+         %{actor: actor, member: member, project: project, socket: socket} do
+      channel_pid = socket.channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      remove_member(project, member, actor)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    test "stops streaming run data once the joined user is removed", %{
+      actor: actor,
+      member: member,
+      project: project,
+      run: run,
+      socket: socket
+    } do
+      # Positive control: the stream is live before the removal.
+      append_log(run, "before removal")
+      assert_push "logs", %{logs: [%{message: "before removal"}]}
+
+      monitor_ref = Process.monitor(socket.channel_pid)
+      remove_member(project, member, actor)
+      assert_receive {:DOWN, ^monitor_ref, :process, _pid, :normal}
+
+      append_log(run, "after removal")
+
+      refute_push "logs", %{logs: [%{message: "after removal"}]}
+    end
+
+    test "leaves the channel joined when a different member is removed", %{
+      actor: actor,
+      project: project,
+      run: run,
+      socket: socket
+    } do
+      other_member = insert(:user)
+
+      insert(:project_user,
+        project: project,
+        user: other_member,
+        role: :editor
+      )
+
+      remove_member(project, other_member, actor)
+
+      # The broadcast is delivered before this push, so once the channel has
+      # replied it has necessarily already handled the membership event.
+      ref = push(socket, "fetch:logs", %{})
+      assert_reply ref, :ok, %{logs: _}
+      assert Process.alive?(socket.channel_pid)
+
+      append_log(run, "still a member")
+      assert_push "logs", %{logs: [%{message: "still a member"}]}
+    end
+
+    test "leaves the channel joined when the user is removed from another project",
+         %{actor: actor, member: member, socket: socket} do
+      other_project =
+        insert(:project,
+          project_users: [
+            %{user_id: insert(:user).id, role: :owner},
+            %{user_id: member.id, role: :editor}
+          ]
+        )
+
+      remove_member(other_project, member, actor)
+
+      ref = push(socket, "fetch:logs", %{})
+      assert_reply ref, :ok, %{logs: _}
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "stops a support user's channel when the project withdraws support access",
+         %{project: project, run: run} do
+      Mox.stub(
+        Lightning.Extensions.MockProjectHook,
+        :handle_project_validation,
+        & &1
+      )
+
+      {:ok, project} =
+        Lightning.Projects.update_project(project, %{allow_support_access: true})
+
+      support_user = insert(:user, support_user: true)
+
+      {:ok, _reply, socket} =
+        support_user
+        |> connect_browser_socket()
+        |> subscribe_and_join("run:#{run.id}", %{})
+
+      monitor_ref = Process.monitor(socket.channel_pid)
+
+      {:ok, _project} =
+        Lightning.Projects.update_project(project, %{
+          allow_support_access: false
+        })
+
+      assert_receive {:DOWN, ^monitor_ref, :process, _pid, :normal}
+    end
+  end
+
+  defp remove_member(project, user, actor) do
+    project
+    |> Lightning.Projects.get_project_user(user)
+    |> Lightning.Projects.delete_project_user!(actor)
+  end
+
+  defp append_log(run, message) do
+    {:ok, _log_line} =
+      Lightning.Runs.append_run_log(run, %{
+        message: message,
+        level: :info,
+        source: "TEST",
+        timestamp: DateTime.utc_now()
+      })
   end
 end

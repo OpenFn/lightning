@@ -3,8 +3,6 @@ defmodule Lightning.Invocation.QueryTest do
 
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Query
-  alias Lightning.Workflows
-  alias Lightning.Workflows.Trigger
 
   import Ecto.Query
   import Lightning.Factories

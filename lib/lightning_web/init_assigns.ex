@@ -54,9 +54,19 @@ defmodule LightningWeb.InitAssigns do
     RuntimeError -> socket
   end
 
+  # `:current_path` stays query-free — the project picker splits it on `/`.
+  # `:current_uri` keeps the query for anything that needs to reproduce the
+  # request, such as re-mounting the socket where the user left off.
   defp assign_current_path(_params, uri, socket) do
-    path = if is_binary(uri), do: URI.parse(uri).path, else: nil
-    {:cont, assign(socket, :current_path, path)}
+    parsed = if is_binary(uri), do: URI.parse(uri), else: %URI{}
+    path = parsed.path
+
+    current_uri = if parsed.query, do: "#{path}?#{parsed.query}", else: path
+
+    {:cont,
+     socket
+     |> assign(:current_path, path)
+     |> assign(:current_uri, current_uri)}
   end
 
   defp handle_sidebar_toggle("toggle_sidebar", _params, socket) do

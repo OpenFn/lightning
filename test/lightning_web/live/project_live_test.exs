@@ -7543,18 +7543,6 @@ defmodule LightningWeb.ProjectLiveTest do
     |> Enum.find(fn el -> el =~ "selected=\"true\"" end)
   end
 
-  defp find_user_index_in_list(view, user) do
-    Floki.parse_fragment!(render(view))
-    |> Floki.find("#project-form tbody tr")
-    |> Enum.find_index(fn el ->
-      el
-      |> Floki.find("td:first-child()")
-      |> Floki.text() =~
-        "#{user.first_name} #{user.last_name}"
-    end)
-    |> to_string()
-  end
-
   # Helper to check element order in rendered HTML using proper parsing
   defp assert_elements_in_order(
          html,

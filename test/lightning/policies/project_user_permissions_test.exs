@@ -13,6 +13,18 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   alias Lightning.Accounts
   alias Lightning.Policies.{Permissions, ProjectUsers}
 
+  @project_user_actions ~w(
+    create_workflow
+    edit_workflow
+    delete_workflow
+    run_workflow
+    create_project_credential
+    initiate_github_sync
+    create_channel
+    delete_channel
+    update_channel
+  )a
+
   setup do
     viewer = insert(:user)
     admin = insert(:user)
@@ -199,7 +211,8 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
              |> Permissions.can?(:access_project, support_user, project)
     end
 
-    test "have the same worfklow allowance as editor", %{project: project} do
+    test "have the same worfklow allowance as editor on a project that allows support access",
+         %{project: project} do
       support_user = insert(:user, support_user: true)
 
       editor_project_user =
@@ -209,44 +222,69 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
           role: :editor
         )
 
-      ~w(
-        create_workflow
-        edit_workflow
-        delete_workflow
-        run_workflow
-        create_project_credential
-        initiate_github_sync
-      )a |> (&assert_can(ProjectUsers, &1, support_user, nil)).()
+      assert_can(
+        ProjectUsers,
+        @project_user_actions,
+        support_user,
+        %{project | allow_support_access: true}
+      )
 
-      ~w(
-        create_workflow
-        edit_workflow
-        delete_workflow
-        run_workflow
-        create_project_credential
-        initiate_github_sync
-      )a
-      |> (&assert_can(
-            ProjectUsers,
-            &1,
-            editor_project_user.user,
-            editor_project_user
-          )).()
+      assert_can(
+        ProjectUsers,
+        @project_user_actions,
+        editor_project_user.user,
+        editor_project_user
+      )
+    end
+
+    test "cannot perform project user actions on a project that denies support access",
+         %{project: project} do
+      support_user = insert(:user, support_user: true)
+
+      refute_can(
+        ProjectUsers,
+        @project_user_actions,
+        support_user,
+        %{project | allow_support_access: false}
+      )
+    end
+
+    test "cannot perform project user actions when pinned to a viewer role",
+         %{project: project} do
+      support_user = insert(:user, support_user: true)
+
+      insert(:project_user, project: project, user: support_user, role: :viewer)
+
+      for allow_support_access <- [true, false] do
+        refute_can(
+          ProjectUsers,
+          @project_user_actions,
+          support_user,
+          %{project | allow_support_access: allow_support_access}
+        )
+      end
     end
 
     test "cannot perform project user actions when not a support user", %{
-      project: _project
+      project: project
     } do
       regular_user = insert(:user, support_user: false)
 
-      ~w(
-        create_workflow
-        edit_workflow
-        delete_workflow
-        run_workflow
-        create_project_credential
-        initiate_github_sync
-      )a |> (&refute_can(ProjectUsers, &1, regular_user, nil)).()
+      refute_can(ProjectUsers, @project_user_actions, regular_user, nil)
+
+      refute_can(
+        ProjectUsers,
+        @project_user_actions,
+        regular_user,
+        %{project | allow_support_access: true}
+      )
+    end
+
+    test "cannot perform project user actions given only a missing membership row",
+         %{project: _project} do
+      support_user = insert(:user, support_user: true)
+
+      refute_can(ProjectUsers, @project_user_actions, support_user, nil)
     end
 
     test "can publish template when project member", %{project: project} do

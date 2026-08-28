@@ -593,6 +593,8 @@ defmodule Lightning.Projects do
     |> Repo.transaction()
     |> case do
       {:ok, %{project: updated_project}} ->
+        broadcast_support_access_change(updated_project, changeset)
+
         if retention_setting_updated?(changeset) do
           send_data_retention_change_email(updated_project)
         end
@@ -617,27 +619,159 @@ defmodule Lightning.Projects do
     |> Audit.derive_events(changeset, user)
   end
 
-  @spec update_project_with_users(Project.t(), map(), boolean()) ::
+  @spec update_project_with_users(Project.t(), map(), User.t(), boolean()) ::
           {:ok, Project.t()} | {:error, Ecto.Changeset.t()}
   def update_project_with_users(
         %Project{} = project,
         attrs,
+        %User{} = actor,
         notify_users \\ true
       ) do
     project = Repo.preload(project, :project_users)
 
-    result =
-      project
-      |> Project.project_with_users_changeset(attrs)
-      |> Repo.update()
+    changeset = Project.project_with_users_changeset(project, attrs)
 
-    if notify_users do
-      with {:ok, updated_project} <- result do
-        schedule_project_addition_emails(project, updated_project)
-      end
+    project
+    |> membership_multi(changeset, actor)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{project: updated_project, membership_changes: changes}} ->
+        broadcast_membership_changes(updated_project.id, changes)
+        broadcast_support_access_change(updated_project, changeset)
+
+        if notify_users do
+          schedule_project_addition_emails(project, updated_project)
+        end
+
+        {:ok, updated_project}
+
+      {:error, :project, changeset, _changes_so_far} ->
+        {:error, changeset}
+
+      # Every other step — the audit trail, credential revocation — fails only
+      # if the database itself is in trouble. Raising beats returning a shape
+      # callers would render as a form changeset.
+      {:error, operation, reason, _changes_so_far} ->
+        raise "membership update failed at #{inspect(operation)}: #{inspect(reason)}"
     end
+  end
 
-    result
+  # A membership write submits the whole member list: `cast_assoc/3` only sees
+  # the children the params name, and the owner validation runs over exactly
+  # those, so members nobody is touching still have to be named. `rows` names
+  # the members being changed — a row with an `:id` replaces that member's
+  # entry, one without is a new member. The list is re-read from the database
+  # because a caller's struct may carry an association that predates the rows
+  # being submitted.
+  @spec membership_params(Project.t(), [map()]) :: {Project.t(), map()}
+  defp membership_params(%Project{} = project, rows) do
+    project = Repo.preload(project, :project_users, force: true)
+
+    {changed, added} = Enum.split_with(rows, &Map.has_key?(&1, :id))
+    changed = Map.new(changed, &{&1.id, &1})
+
+    members =
+      Enum.map(project.project_users, fn %{id: id} ->
+        Map.get(changed, id, %{id: id})
+      end)
+
+    {project, %{project_users: added ++ members}}
+  end
+
+  defp membership_multi(%Project{} = project, changeset, actor) do
+    changes = membership_changes(changeset)
+
+    Multi.new()
+    |> Multi.update(:project, changeset)
+    |> Multi.put(:membership_changes, changes)
+    |> revoke_credentials_for_removed(project.id, changes)
+    |> Audit.derive_membership_events(project.id, changes, actor)
+  end
+
+  # A member submitted unchanged arrives as a no-op `:update` child and
+  # classifies as nothing.
+  @spec membership_changes(Ecto.Changeset.t()) :: [{atom(), map()}]
+  defp membership_changes(changeset) do
+    changeset
+    |> Ecto.Changeset.get_change(:project_users, [])
+    |> Enum.flat_map(&classify_membership_change/1)
+  end
+
+  defp classify_membership_change(%Ecto.Changeset{action: :insert} = changeset) do
+    [
+      {:added,
+       %{
+         user_id: Ecto.Changeset.get_field(changeset, :user_id),
+         role: Ecto.Changeset.get_field(changeset, :role)
+       }}
+    ]
+  end
+
+  defp classify_membership_change(%Ecto.Changeset{action: :update} = changeset) do
+    case Ecto.Changeset.fetch_change(changeset, :role) do
+      {:ok, role} ->
+        [
+          {:role_changed,
+           %{
+             user_id: Ecto.Changeset.get_field(changeset, :user_id),
+             role: role,
+             previous_role: changeset.data.role
+           }}
+        ]
+
+      :error ->
+        []
+    end
+  end
+
+  defp classify_membership_change(%Ecto.Changeset{action: :delete} = changeset) do
+    [
+      {:removed, %{user_id: changeset.data.user_id, role: changeset.data.role}}
+    ]
+  end
+
+  defp revoke_credentials_for_removed(multi, project_id, changes) do
+    for {:removed, %{user_id: user_id}} <- changes, reduce: multi do
+      multi ->
+        Multi.delete_all(
+          multi,
+          {:revoke_project_credentials, user_id},
+          user_project_credentials_query(project_id, user_id)
+        )
+    end
+  end
+
+  defp user_project_credentials_query(project_id, user_id) do
+    from(pc in Lightning.Projects.ProjectCredential,
+      join: c in Lightning.Credentials.Credential,
+      on: c.id == pc.credential_id,
+      where: c.user_id == ^user_id and pc.project_id == ^project_id
+    )
+  end
+
+  defp broadcast_membership_changes(project_id, changes) do
+    Enum.each(changes, &broadcast_membership_change(project_id, &1))
+  end
+
+  defp broadcast_membership_change(project_id, {:added, %{user_id: user_id}}),
+    do: Events.project_user_added(project_id, user_id)
+
+  defp broadcast_membership_change(
+         project_id,
+         {:role_changed, %{user_id: user_id}}
+       ),
+       do: Events.project_user_role_changed(project_id, user_id)
+
+  defp broadcast_membership_change(project_id, {:removed, %{user_id: user_id}}),
+    do: Events.project_user_removed(project_id, user_id)
+
+  # Support access is the only standing a support user without a membership row
+  # has on a project, so flipping it changes their permissions the way a role
+  # change does a member's.
+  defp broadcast_support_access_change(project, changeset) do
+    if Ecto.Changeset.changed?(changeset, :allow_support_access) do
+      Events.support_access_updated(project.id, project.allow_support_access)
+    end
   end
 
   defp retention_setting_updated?(changeset) do
@@ -662,24 +796,6 @@ defmodule Lightning.Projects do
     end)
   end
 
-  @doc """
-  Updates a project user.
-
-  ## Examples
-
-      iex> update_project_user(project_user, %{field: new_value})
-      {:ok, %ProjectUser{}}
-
-      iex> update_project_user(projectUser, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_project_user(%ProjectUser{} = project_user, attrs) do
-    project_user
-    |> ProjectUser.changeset(attrs)
-    |> Repo.update()
-  end
-
   @notification_pref_fields [:failure_alert, :digest]
 
   @doc """
@@ -701,16 +817,13 @@ defmodule Lightning.Projects do
     end
   end
 
-  @spec add_project_users(Project.t(), [map(), ...], boolean()) ::
+  @spec add_project_users(Project.t(), [map(), ...], User.t(), boolean()) ::
           {:ok, [ProjectUser.t(), ...]} | {:error, Ecto.Changeset.t()}
-  def add_project_users(project, project_users, notify_users \\ true) do
-    project = Repo.preload(project, :project_users)
-    # include the current list to ensure project owner validations work correctly
-    current_users = Enum.map(project.project_users, fn pu -> %{id: pu.id} end)
-    params = %{project_users: project_users ++ current_users}
+  def add_project_users(project, project_users, actor, notify_users \\ true) do
+    {project, params} = membership_params(project, project_users)
 
     with {:ok, updated_project} <-
-           update_project_with_users(project, params, notify_users) do
+           update_project_with_users(project, params, actor, notify_users) do
       {:ok, updated_project.project_users}
     end
   end
@@ -729,25 +842,22 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Deletes a project user and removes their credentials from the project.
+  Removes a collaborator from a project, revoking their project credentials,
+  auditing the removal against `actor` and broadcasting the change.
 
-  This function:
-  1. Deletes the association between the user and the project
-  2. Removes any credentials owned by the user from the project
-
-  All operations are performed within a transaction for data consistency.
+  Refuses to remove the project owner, or an admin of the parent project from a
+  sandbox — neither is expressible through the project form, so both raise.
 
   ## Parameters
     - `project_user`: The `ProjectUser` struct to be deleted
+    - `actor`: The `User` removing them, recorded on the audit event
 
   ## Returns
     - The deleted `ProjectUser` struct
   """
-  @spec delete_project_user!(ProjectUser.t()) :: ProjectUser.t()
-  def delete_project_user!(%ProjectUser{} = project_user) do
-    project_user =
-      %{user_id: user_id, project_id: project_id} =
-      Repo.preload(project_user, [:user, :project])
+  @spec delete_project_user!(ProjectUser.t(), User.t()) :: ProjectUser.t()
+  def delete_project_user!(%ProjectUser{} = project_user, %User{} = actor) do
+    project_user = Repo.preload(project_user, [:user, :project])
 
     if project_user.role == :owner do
       raise ArgumentError,
@@ -763,19 +873,17 @@ defmodule Lightning.Projects do
             "Cannot remove a parent project admin from a sandbox"
     end
 
-    Repo.transaction(fn ->
-      from(pc in Lightning.Projects.ProjectCredential,
-        join: c in Lightning.Credentials.Credential,
-        on: c.id == pc.credential_id,
-        where: c.user_id == ^user_id and pc.project_id == ^project_id
-      )
-      |> Repo.delete_all()
+    {project, params} =
+      membership_params(project_user.project, [
+        %{id: project_user.id, delete: true}
+      ])
 
-      Repo.delete!(project_user)
-    end)
-    |> case do
-      {:ok, project_user} -> project_user
-      {:error, error} -> raise error
+    case update_project_with_users(project, params, actor, false) do
+      {:ok, _project} ->
+        project_user
+
+      {:error, changeset} ->
+        raise Ecto.InvalidChangesetError, action: :update, changeset: changeset
     end
   end
 
@@ -1795,16 +1903,20 @@ defmodule Lightning.Projects do
   end
 
   def invite_collaborators(project, collaborators, inviter) do
-    Multi.new()
-    |> Multi.put(:collaborators, collaborators)
-    |> Multi.merge(&register_users/1)
-    |> Multi.run(:add_users_to_project, fn _repo, changes ->
-      add_users_to_project(changes, project, collaborators)
-    end)
-    |> Multi.run(:send_invitations, fn _repo, changes ->
-      send_invitations(changes, project, inviter)
-    end)
-    |> execute_transaction()
+    multi =
+      Multi.new()
+      |> Multi.put(:collaborators, collaborators)
+      |> Multi.merge(&register_users/1)
+      |> Multi.merge(&add_users_to_project(&1, project, collaborators, inviter))
+      |> Multi.run(:send_invitations, fn _repo, changes ->
+        send_invitations(changes, project, inviter)
+      end)
+
+    with {:ok, %{project: project, membership_changes: changes}} = result <-
+           execute_transaction(multi) do
+      broadcast_membership_changes(project.id, changes)
+      result
+    end
   end
 
   defp execute_transaction(%Ecto.Multi{} = multi) do
@@ -1814,13 +1926,18 @@ defmodule Lightning.Projects do
     end
   end
 
-  defp add_users_to_project(changes, project, collaborators) do
-    project_users = build_project_users_list(collaborators, changes)
+  defp add_users_to_project(changes, project, collaborators, inviter) do
+    {project, params} =
+      membership_params(
+        project,
+        build_project_users_list(collaborators, changes)
+      )
 
-    case add_project_users(project, project_users, false) do
-      {:ok, project_users} -> {:ok, %{project_users: project_users}}
-      {:error, reason} -> {:error, reason}
-    end
+    membership_multi(
+      project,
+      Project.project_with_users_changeset(project, params),
+      inviter
+    )
   end
 
   defp register_users(%{collaborators: collaborators}) do

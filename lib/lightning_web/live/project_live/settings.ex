@@ -349,17 +349,17 @@ defmodule LightningWeb.ProjectLive.Settings do
                        dataclip_retention_period)
 
   def handle_event("save", %{"project" => project_params}, socket) do
-    if socket.assigns.can_edit_project do
-      params =
-        project_params
-        |> Helpers.derive_name_param()
-        |> Map.take(@project_settings_fields)
+    case authorize(socket, :edit_project) do
+      :ok ->
+        params =
+          project_params
+          |> Helpers.derive_name_param()
+          |> Map.take(@project_settings_fields)
 
-      save_project(socket, params)
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+        save_project(socket, params)
+
+      {:error, :unauthorized} ->
+        deny_action(socket, "save")
     end
   end
 
@@ -368,51 +368,50 @@ defmodule LightningWeb.ProjectLive.Settings do
         %{"project" => project_params},
         socket
       ) do
-    if socket.assigns.can_edit_data_retention do
-      save_project(socket, Map.take(project_params, @retention_fields))
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+    case authorize(socket, :edit_data_retention) do
+      :ok ->
+        save_project(socket, Map.take(project_params, @retention_fields))
+
+      {:error, :unauthorized} ->
+        deny_action(socket, "save_retention_settings")
     end
   end
 
   def handle_event("toggle_support_access", _params, socket) do
-    if socket.assigns.can_edit_project do
-      project = socket.assigns.project
+    case authorize(socket, :edit_project) do
+      :ok ->
+        project = socket.assigns.project
 
-      {:ok, project} =
-        Projects.update_project(
-          project,
-          %{
-            allow_support_access: !project.allow_support_access
-          },
-          socket.assigns.current_user
-        )
+        {:ok, project} =
+          Projects.update_project(
+            project,
+            %{
+              allow_support_access: !project.allow_support_access
+            },
+            socket.assigns.current_user
+          )
 
-      flash_msg =
-        if project.allow_support_access do
-          "Granted access to support users successfully"
-        else
-          "Revoked access to support users successfully"
-        end
+        flash_msg =
+          if project.allow_support_access do
+            "Granted access to support users successfully"
+          else
+            "Revoked access to support users successfully"
+          end
 
-      {:noreply,
-       socket
-       |> assign(:project, project)
-       |> put_flash(:info, flash_msg)}
-    else
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "You are not authorized to perform this action."
-       )}
+        {:noreply,
+         socket
+         |> assign(:project, project)
+         |> put_flash(:info, flash_msg)}
+
+      {:error, :unauthorized} ->
+        deny_action(socket, "toggle_support_access")
     end
   end
 
   def handle_event("toggle-mfa", _params, socket) do
-    if socket.assigns.can_edit_project && socket.assigns.can_require_mfa do
+    # `can_require_mfa` comes from the `:limit_mfa` hook - a usage limit rather
+    # than a role-derived boolean
+    if :ok == authorize(socket, :edit_project) and socket.assigns.can_require_mfa do
       %{project: project, current_user: current_user} = socket.assigns
 
       {:ok, project} =
@@ -427,12 +426,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        |> assign(:project, project)
        |> put_flash(:info, "Project MFA requirement updated successfully")}
     else
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "You are not authorized to perform this action."
-       )}
+      deny_action(socket, "toggle-mfa")
     end
   end
 
@@ -646,7 +640,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         result -> dispatch_flash(result, socket)
       end
     else
-      deny_project_user_action(socket, event, project_user_id)
+      deny_action(socket, event, project_user_id)
     end
   end
 
@@ -662,15 +656,17 @@ defmodule LightningWeb.ProjectLive.Settings do
         include: :user
       )
 
+    # Re-resolve the actor's own permission rather than trusting the
+    # mount-time `:can_remove_project_user` assign - see `authorize/2`.
     if project_user &&
          user_removable?(
            project_user,
            assigns.current_user,
-           assigns.can_remove_project_user,
+           :ok == authorize(socket, :remove_project_user),
            assigns.project,
            assigns.sandbox?
          ) do
-      Projects.delete_project_user!(project_user)
+      Projects.delete_project_user!(project_user, assigns.current_user)
 
       {:noreply,
        socket
@@ -679,7 +675,7 @@ defmodule LightningWeb.ProjectLive.Settings do
          to: ~p"/projects/#{assigns.project}/settings#collaboration"
        )}
     else
-      deny_project_user_action(socket, "remove_project_user", project_user_id)
+      deny_action(socket, "remove_project_user", project_user_id)
     end
   end
 
@@ -745,20 +741,27 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
-  # Respond to a message that fails project-scoping or the permission check.
-  # These branches are only reachable by a forged websocket frame
-  # (the id never renders in the actor's own DOM), so we log a
-  # security warning. There is no audit trail on project_users - and
-  # return the standard authz flash to match every other denial in this LiveView.
-  defp deny_project_user_action(socket, event, project_user_id) do
-    Logger.warning(
-      "Rejected forged #{event}: project_user_id=#{inspect(project_user_id)} " <>
-        "not in project=#{socket.assigns.project.id} or not permitted for " <>
-        "user=#{socket.assigns.current_user.id}"
-    )
+  defp authorize(
+         %{assigns: %{current_user: current_user, project: project}},
+         action
+       ) do
+    Permissions.can(:project_users, action, current_user, project)
+  end
+
+  defp deny_action(socket, event, project_user_id \\ nil) do
+    %{project: project, current_user: current_user} = socket.assigns
+
+    reason =
+      if project_user_id,
+        do:
+          "project_user_id=#{inspect(project_user_id)} not in project, or " <>
+            "not permitted for user=#{current_user.id}",
+        else: "not permitted for user=#{current_user.id}"
+
+    Logger.warning("Rejected #{event} in project=#{project.id}: #{reason}")
 
     {:noreply,
-     put_flash(socket, :error, "You are not authorized to perform this action")}
+     put_flash(socket, :error, "You are not authorized to perform this action.")}
   end
 
   defp checked?(changeset, input_id) do

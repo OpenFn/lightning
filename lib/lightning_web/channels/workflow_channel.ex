@@ -14,6 +14,10 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaboration.Utils
   alias Lightning.Collaboration.WorkflowResolver
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects.Events.ProjectUserAdded
+  alias Lightning.Projects.Events.ProjectUserRemoved
+  alias Lightning.Projects.Events.ProjectUserRoleChanged
+  alias Lightning.Projects.Events.SupportAccessUpdated
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.VersionControlUsageLimiter
@@ -43,6 +47,8 @@ defmodule LightningWeb.WorkflowChannel do
            {:user, socket.assigns[:current_user]},
          {:project, %_{} = project} <-
            {:project, Lightning.Projects.get_project(project_id)},
+         {:subscribed, :ok} <-
+           {:subscribed, Lightning.Projects.Events.subscribe(project.id)},
          {:workflow, {:ok, workflow, workflow_kind}} <-
            {:workflow,
             load_workflow(action, workflow_id, project, user, version)} do
@@ -63,7 +69,7 @@ defmodule LightningWeb.WorkflowChannel do
 
       project_user = Lightning.Projects.get_project_user(project, user)
 
-      permissions = user_permissions(user, project_user)
+      permissions = user_permissions(user, project_user, project)
 
       # Subscribe to work order events for this workflow's project
       WorkOrders.subscribe(project.id)
@@ -87,6 +93,7 @@ defmodule LightningWeb.WorkflowChannel do
     else
       {:user, nil} -> {:error, %{reason: "unauthorized"}}
       {:project, nil} -> {:error, %{reason: "project not found"}}
+      {:subscribed, _error} -> {:error, %{reason: "unable to join"}}
       {:workflow, {:error, reason}} -> {:error, %{reason: reason}}
     end
   end
@@ -192,58 +199,7 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_in("get_context", _payload, socket) do
-    user = socket.assigns[:current_user]
-    workflow = socket.assigns.workflow
-    project = socket.assigns.project
-    workflow_kind = socket.assigns.workflow_kind
-
-    permissions =
-      Map.take(socket.assigns, [
-        :can_edit_workflow,
-        :can_run_workflow,
-        :can_write_webhook_auth_method
-      ])
-
-    async_task(socket, "get_context", fn ->
-      # A genuinely-new workflow has no DB row, so use the in-memory struct and
-      # report a nil latest version. Otherwise reload to get the current
-      # lock_version, since socket.assigns.workflow may be stale.
-      {fresh_workflow, latest_lock_version} =
-        if workflow_kind == :new do
-          {workflow, nil}
-        else
-          fresh =
-            Lightning.Workflows.get_workflow(workflow.id,
-              include: [:edges, :jobs, :triggers]
-            )
-
-          {fresh, (fresh && fresh.lock_version) || workflow.lock_version}
-        end
-
-      project_repo_connection =
-        VersionControl.get_repo_connection_for_project(project.id)
-
-      webhook_auth_methods =
-        Lightning.WebhookAuthMethods.list_for_project(project)
-
-      workflow_template =
-        Lightning.WorkflowTemplates.get_template_by_workflow_id(workflow.id)
-
-      %{
-        user: render_user_context(user),
-        project: render_project_context(project),
-        config: render_config_context(),
-        permissions: permissions,
-        latest_snapshot_lock_version: latest_lock_version,
-        project_repo_connection: render_repo_connection(project_repo_connection),
-        webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
-        workflow_template: render_workflow_template(workflow_template),
-        experimental_features_enabled:
-          Lightning.Accounts.experimental_features_enabled?(user),
-        limits: render_limits(project.id),
-        workflow: fresh_workflow || %{}
-      }
-    end)
+    async_task(socket, "get_context", fn -> build_session_context(socket) end)
   end
 
   @impl true
@@ -808,6 +764,72 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
+  # We lost access entirely, so there is nothing left to re-authorise: drop the
+  # channel.
+  @impl true
+  def handle_info(
+        %ProjectUserRemoved{user_id: user_id},
+        %{assigns: %{current_user: %{id: user_id}}} = socket
+      ) do
+    {:stop, :normal, socket}
+  end
+
+  # Support access is this session's only standing on the project, so losing it
+  # leaves nothing to re-authorise. A member's channel is unaffected: their row
+  # outranks support access, and turning support access on cannot reach a
+  # support-access session that could not have joined without it.
+  @impl true
+  def handle_info(
+        %SupportAccessUpdated{},
+        %{assigns: %{current_user: %{support_user: true}, project_user: nil}} =
+          socket
+      ) do
+    {:stop, :normal, socket}
+  end
+
+  # Being added can narrow permissions as much as a role change can: a support
+  # user given a low role loses the access their support standing granted.
+  @impl true
+  def handle_info(
+        %event{user_id: user_id},
+        %{assigns: %{current_user: %{id: user_id} = user, project: project}} =
+          socket
+      )
+      when event in [ProjectUserAdded, ProjectUserRoleChanged] do
+    project_user = Lightning.Projects.get_project_user(project, user)
+    permissions = user_permissions(user, project_user, project)
+
+    socket =
+      socket
+      |> assign(:project_user, project_user)
+      |> assign(permissions)
+
+    push(socket, "session_context_updated", build_session_context(socket))
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(%event{}, socket)
+      when event in [
+             ProjectUserAdded,
+             ProjectUserRemoved,
+             ProjectUserRoleChanged,
+             SupportAccessUpdated
+           ] do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(message, socket) do
+    Logger.warning(fn ->
+      "WorkflowChannel: unhandled message #{inspect(message, limit: 5)} " <>
+        "on workflow #{socket.assigns[:workflow_id]}"
+    end)
+
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_out(event, payload, socket) do
     push(socket, event, payload)
@@ -881,6 +903,58 @@ defmodule LightningWeb.WorkflowChannel do
     }
   end
 
+  defp build_session_context(socket) do
+    user = socket.assigns[:current_user]
+    workflow = socket.assigns.workflow
+    project = socket.assigns.project
+    workflow_kind = socket.assigns.workflow_kind
+
+    permissions =
+      Map.take(socket.assigns, [
+        :can_edit_workflow,
+        :can_run_workflow,
+        :can_write_webhook_auth_method
+      ])
+
+    # A genuinely-new workflow has no DB row, so use the in-memory struct and
+    # report a nil latest version. Otherwise reload to get the current
+    # lock_version, since socket.assigns.workflow may be stale.
+    {fresh_workflow, latest_lock_version} =
+      if workflow_kind == :new do
+        {workflow, nil}
+      else
+        fresh =
+          Lightning.Workflows.get_workflow(workflow.id,
+            include: [:edges, :jobs, :triggers]
+          )
+
+        {fresh, (fresh && fresh.lock_version) || workflow.lock_version}
+      end
+
+    project_repo_connection =
+      VersionControl.get_repo_connection_for_project(project.id)
+
+    webhook_auth_methods = Lightning.WebhookAuthMethods.list_for_project(project)
+
+    workflow_template =
+      Lightning.WorkflowTemplates.get_template_by_workflow_id(workflow.id)
+
+    %{
+      user: render_user_context(user),
+      project: render_project_context(project),
+      config: render_config_context(),
+      permissions: permissions,
+      latest_snapshot_lock_version: latest_lock_version,
+      project_repo_connection: render_repo_connection(project_repo_connection),
+      webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
+      workflow_template: render_workflow_template(workflow_template),
+      experimental_features_enabled:
+        Lightning.Accounts.experimental_features_enabled?(user),
+      limits: render_limits(project.id),
+      workflow: fresh_workflow || %{}
+    }
+  end
+
   defp render_user_context(nil), do: nil
 
   defp render_user_context(user) do
@@ -947,13 +1021,17 @@ defmodule LightningWeb.WorkflowChannel do
     ])
   end
 
-  defp user_permissions(user, project_user) do
+  # Without a membership row the policy needs the project itself to weigh up
+  # support access.
+  defp user_permissions(user, project_user, project) do
+    subject = project_user || project
+
     can_edit =
       Permissions.can?(
         :project_users,
         :edit_workflow,
         user,
-        project_user
+        subject
       )
 
     can_run =
@@ -961,7 +1039,7 @@ defmodule LightningWeb.WorkflowChannel do
         :project_users,
         :run_workflow,
         user,
-        project_user
+        subject
       )
 
     can_write_webhook_auth =
@@ -969,7 +1047,7 @@ defmodule LightningWeb.WorkflowChannel do
         :project_users,
         :write_webhook_auth_method,
         user,
-        project_user
+        subject
       )
 
     %{
@@ -1163,7 +1241,7 @@ defmodule LightningWeb.WorkflowChannel do
     %{current_user: user, project: project} = socket.assigns
     project_user = Lightning.Projects.get_project_user(project, user)
 
-    case Permissions.can(:project_users, action, user, project_user) do
+    case Permissions.can(:project_users, action, user, project_user || project) do
       :ok ->
         :ok
 

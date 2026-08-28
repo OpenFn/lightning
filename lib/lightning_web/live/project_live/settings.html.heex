@@ -602,6 +602,7 @@
           id="add_collaborators_modal"
           project={@project}
           project_users={@project_users}
+          current_user={@current_user}
         />
         <.live_component
           :if={@can_add_project_user && @show_invite_collaborators_modal}

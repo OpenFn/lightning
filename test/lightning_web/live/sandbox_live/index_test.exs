@@ -1215,14 +1215,18 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       conn = log_in_user(conn, other_user)
 
       _ =
-        Lightning.Projects.add_project_users(parent, [
-          %{user_id: other_user.id, role: :viewer}
-        ])
+        Lightning.Projects.add_project_users(
+          parent,
+          [%{user_id: other_user.id, role: :viewer}],
+          other_user
+        )
 
       _ =
-        Lightning.Projects.add_project_users(scheduled, [
-          %{user_id: other_user.id, role: :viewer}
-        ])
+        Lightning.Projects.add_project_users(
+          scheduled,
+          [%{user_id: other_user.id, role: :viewer}],
+          other_user
+        )
 
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 

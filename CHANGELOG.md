@@ -22,6 +22,9 @@ and this project adheres to
   button), closes any other open panel, deselects the current node, and drops
   any run-viewing context, landing on the bare canvas.
   [#4984](https://github.com/OpenFn/lightning/pull/4984)
+- The audit log now records collaborator changes: adding or removing a
+  collaborator, or changing their role, is logged with who made the change and
+  the role before and after.
 
 ### Changed
 
@@ -39,6 +42,20 @@ and this project adheres to
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
   [#5009](https://github.com/OpenFn/lightning/pull/5009)
+- Blanking the owner's role on the superuser project form removed the project
+  owner and left the project with none. The owner validation counted members
+  that were marked for deletion, so it saw an owner that was on its way out.
+
+### Security
+
+- Removing a collaborator, or changing their role, now takes effect immediately
+  on their open sessions.
+- Switching off a project's support access now ends the open sessions of support
+  users who were on the project only by virtue of that setting.
+- Removing a collaborator now revokes their project credential links from every
+  screen, including the superuser project form.
+- Fixed an authorization issue where support users retained project permissions
+  on projects with support access switched off.
 
 ## [2.18.0] - 2026-08-20
 

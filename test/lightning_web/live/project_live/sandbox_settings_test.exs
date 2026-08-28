@@ -341,7 +341,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       assert_raise ArgumentError,
                    ~r/Cannot remove a parent project admin/,
                    fn ->
-                     Projects.delete_project_user!(sandbox_pu)
+                     Projects.delete_project_user!(sandbox_pu, insert(:user))
                    end
     end
 
@@ -364,7 +364,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       sandbox_pu = Projects.get_project_user(sandbox, regular)
 
       assert %Lightning.Projects.ProjectUser{} =
-               Projects.delete_project_user!(sandbox_pu)
+               Projects.delete_project_user!(sandbox_pu, insert(:user))
     end
 
     test "allows removing any user from a non-sandbox project" do
@@ -382,7 +382,7 @@ defmodule LightningWeb.ProjectLive.SandboxSettingsTest do
       pu = Projects.get_project_user(project, admin)
 
       assert %Lightning.Projects.ProjectUser{} =
-               Projects.delete_project_user!(pu)
+               Projects.delete_project_user!(pu, insert(:user))
     end
   end
 

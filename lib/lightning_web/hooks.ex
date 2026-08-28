@@ -12,6 +12,11 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Users
+  alias Lightning.Projects.Events
+  alias Lightning.Projects.Events.ProjectUserAdded
+  alias Lightning.Projects.Events.ProjectUserRemoved
+  alias Lightning.Projects.Events.ProjectUserRoleChanged
+  alias Lightning.Projects.Events.SupportAccessUpdated
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
@@ -70,6 +75,13 @@ defmodule LightningWeb.Hooks do
         %{assigns: %{current_user: current_user}} = socket
       ) do
     project = Lightning.Projects.get_project(project_id)
+
+    # Subscribe *before* the membership reads below. A revocation committed in
+    # the gap between reading the role and subscribing would be missed, and
+    # this socket would keep its mount-time permissions for as long as it lives
+    # — the exact failure this hook exists to prevent.
+    socket = watch_project_membership(socket, project)
+
     projects = Lightning.Projects.get_projects_for_user(current_user)
 
     project_user =
@@ -219,4 +231,87 @@ defmodule LightningWeb.Hooks do
         {:cont, socket}
     end
   end
+
+  @project_user_events [
+    ProjectUserAdded,
+    ProjectUserRemoved,
+    ProjectUserRoleChanged,
+    SupportAccessUpdated
+  ]
+
+  # A mount-time authorisation decision is not durable: the ProjectUser row can
+  # be written while the socket lives. Subscribe to the project's events and
+  # re-mount on any change to our own membership, so `:project_scope` and every
+  # mount-time permission assign are recomputed. A removed user is redirected
+  # out by the re-mount itself.
+  #
+  # Every direction re-mounts, including additions: a support user added with a
+  # narrower role than their support access would otherwise keep their wider
+  # mount-time assigns, and "did this widen or narrow my access?" cannot be
+  # answered from the event alone.
+  #
+  # Called before the caller has decided whether access is granted, so that no
+  # revocation can slip through between the decision and the subscription. If
+  # the mount goes on to halt, the subscription dies with the process.
+  defp watch_project_membership(socket, nil), do: socket
+
+  defp watch_project_membership(socket, project) do
+    if connected?(socket) do
+      Events.subscribe(project.id)
+
+      attach_hook(
+        socket,
+        :project_user_events,
+        :handle_info,
+        &handle_project_user_event/2
+      )
+    else
+      socket
+    end
+  end
+
+  # Support access is project-wide, so there is no user to match on: the sockets
+  # it speaks for are the ones holding the project by support access alone. A
+  # membership row wins over support access while it exists, so those sessions
+  # are untouched. Turning support access *on* cannot match a live socket, since
+  # a support user without a row could not have mounted while it was off, which
+  # is why this needs no direction check.
+  defp handle_project_user_event(
+         %SupportAccessUpdated{},
+         %{
+           assigns: %{
+             current_user: %{support_user: true},
+             project_user: nil
+           }
+         } = socket
+       ) do
+    {:halt, push_navigate(socket, to: remount_path(socket))}
+  end
+
+  defp handle_project_user_event(
+         %event{user_id: user_id},
+         %{assigns: %{current_user: %{id: user_id}}} = socket
+       )
+       when event in @project_user_events do
+    {:halt, push_navigate(socket, to: remount_path(socket))}
+  end
+
+  # Somebody else's standing on the project — nothing to do, but halt so the
+  # event never reaches a LiveView that has no matching `handle_info/2` clause.
+  defp handle_project_user_event(%event{}, socket)
+       when event in @project_user_events do
+    {:halt, socket}
+  end
+
+  defp handle_project_user_event(_message, socket), do: {:cont, socket}
+
+  # `:current_uri` is assigned by `LightningWeb.InitAssigns`, but only from
+  # `handle_params` — fall back to the project's workflow index, which re-runs
+  # the same `:project_scope` gate. The URI carries the query string, so the
+  # re-mount keeps filters and panel params.
+  defp remount_path(%{assigns: %{current_uri: uri}}) when is_binary(uri),
+    do: uri
+
+  defp remount_path(%{assigns: %{project: project}}),
+    do: ~p"/projects/#{project}/w"
 end

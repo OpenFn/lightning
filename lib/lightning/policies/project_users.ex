@@ -44,7 +44,10 @@ defmodule Lightning.Policies.ProjectUsers do
   @spec authorize(
           actions(),
           Lightning.Accounts.User.t(),
-          Lightning.Projects.Project.t() | %{project_id: Ecto.UUID.t()} | nil
+          Lightning.Projects.Project.t()
+          | Lightning.Projects.ProjectUser.t()
+          | %{project_id: Ecto.UUID.t()}
+          | nil
         ) :: boolean
   def authorize(:access_project, %User{}, nil), do: false
 
@@ -68,9 +71,27 @@ defmodule Lightning.Policies.ProjectUsers do
          allow_as_support_user?(user, project))
   end
 
+  @project_user_actions [
+    :create_workflow,
+    :edit_workflow,
+    :delete_workflow,
+    :run_workflow,
+    :create_project_credential,
+    :initiate_github_sync,
+    :create_channel,
+    :delete_channel,
+    :update_channel
+  ]
+
   def authorize(action, %User{} = user, %Project{} = project) do
-    project_user = Projects.get_project_user(project, user)
-    authorize(action, user, project_user)
+    case Projects.get_project_user(project, user) do
+      nil ->
+        action in @project_user_actions and
+          allow_as_support_user?(user, project)
+
+      project_user ->
+        authorize(action, user, project_user)
+    end
   end
 
   def authorize(action, %User{id: id}, %ProjectUser{user_id: user_id})
@@ -104,18 +125,6 @@ defmodule Lightning.Policies.ProjectUsers do
            ],
       do: false
 
-  @project_user_actions [
-    :create_workflow,
-    :edit_workflow,
-    :delete_workflow,
-    :run_workflow,
-    :create_project_credential,
-    :initiate_github_sync,
-    :create_channel,
-    :delete_channel,
-    :update_channel
-  ]
-
   def authorize(
         action,
         %User{},
@@ -125,13 +134,12 @@ defmodule Lightning.Policies.ProjectUsers do
     project_user.role in [:owner, :admin, :editor]
   end
 
-  def authorize(
-        action,
-        %User{support_user: support_user},
-        nil
-      )
+  # A caller holding only a nil membership row cannot decide support access:
+  # that needs the project's `allow_support_access` flag, so pass the
+  # `%Project{}` to have support users considered.
+  def authorize(action, %User{}, nil)
       when action in @project_user_actions,
-      do: support_user
+      do: false
 
   # TODO: these should be private, but they are called from elsewhere currently
   # ideally we move the concept of support access into Projects.get_project_user_role/2
