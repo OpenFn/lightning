@@ -357,6 +357,106 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     end
   end
 
+  describe "response security headers" do
+    @security_headers [
+      {"content-security-policy",
+       "default-src 'none'; sandbox; frame-ancestors 'none'"},
+      {"x-content-type-options", "nosniff"},
+      {"x-frame-options", "DENY"},
+      {"referrer-policy", "no-referrer"}
+    ]
+
+    test "set on a proxied response", %{
+      conn: conn,
+      bypass: bypass,
+      channel: channel
+    } do
+      Bypass.expect_once(bypass, "GET", "/test", fn conn ->
+        Plug.Conn.send_resp(conn, 200, "ok")
+      end)
+
+      resp = get(conn, "/channels/#{channel.id}/test")
+
+      assert resp.status == 200
+      assert_security_headers(resp)
+    end
+
+    test "destination cannot override them", %{
+      conn: conn,
+      bypass: bypass,
+      channel: channel
+    } do
+      Bypass.expect_once(bypass, "GET", "/bad", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("content-security-policy", "default-src *")
+        |> Plug.Conn.put_resp_header("x-frame-options", "ALLOWALL")
+        |> Plug.Conn.put_resp_header("x-content-type-options", "")
+        |> Plug.Conn.put_resp_header("referrer-policy", "unsafe-url")
+        |> Plug.Conn.put_resp_content_type("text/html")
+        |> Plug.Conn.send_resp(200, "<script>alert(1)</script>")
+      end)
+
+      resp = get(conn, "/channels/#{channel.id}/bad")
+
+      assert resp.status == 200
+      assert_security_headers(resp)
+    end
+
+    test "set-cookie from the destination is not forwarded", %{
+      conn: conn,
+      bypass: bypass,
+      channel: channel
+    } do
+      Bypass.expect_once(bypass, "GET", "/cookie", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header(
+          "set-cookie",
+          "_lightning_key=forged; Path=/"
+        )
+        |> Plug.Conn.send_resp(200, "ok")
+      end)
+
+      resp = get(conn, "/channels/#{channel.id}/cookie")
+
+      assert resp.status == 200
+      assert Plug.Conn.get_resp_header(resp, "set-cookie") == []
+    end
+
+    test "set on the unknown-channel response", %{conn: conn} do
+      resp = get(conn, "/channels/#{Ecto.UUID.generate()}/test")
+
+      assert resp.status == 404
+      assert_security_headers(resp)
+    end
+
+    test "set on the unauthorized response", %{conn: conn, bypass: bypass} do
+      project = insert(:project)
+
+      channel =
+        insert(:channel,
+          project: project,
+          destination_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :client,
+              webhook_auth_method:
+                build(:webhook_auth_method,
+                  project: project,
+                  auth_type: :api,
+                  api_key: "valid-api-key"
+                )
+            )
+          ]
+        )
+
+      resp = get(conn, "/channels/#{channel.id}/test")
+
+      assert resp.status == 401
+      assert_security_headers(resp)
+    end
+  end
+
   describe "error cases" do
     test "disabled channel returns 404", %{
       conn: conn,
@@ -1873,6 +1973,13 @@ defmodule LightningWeb.ChannelProxyPlugTest do
                project_id: ^expected_project_id,
                status: 401
              } = stop_meta
+    end
+  end
+
+  defp assert_security_headers(resp) do
+    for {header, value} <- @security_headers do
+      assert Plug.Conn.get_resp_header(resp, header) == [value],
+             "expected #{header}: #{value}"
     end
   end
 

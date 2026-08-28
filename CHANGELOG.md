@@ -63,6 +63,7 @@ and this project adheres to
 
 ### Security
 
+- Fixed a cross-site-scripting issue in channel proxy responses.
 - Fixed a signup-gate bypass that let registration be reached even with
   `ALLOW_SIGNUP=false`.
 - Fixed a token-confusion issue that let a personal access token or credential
