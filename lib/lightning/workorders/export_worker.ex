@@ -67,6 +67,7 @@ defmodule Lightning.WorkOrders.ExportWorker do
              path: storage_path
            }) do
       UserNotifier.notify_history_export_completion(
+        project,
         project_file.created_by,
         project_file
       )

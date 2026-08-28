@@ -1,6 +1,7 @@
 defmodule Lightning.FailureAlertTest do
   use LightningWeb.ChannelCase, async: true
 
+  import Lightning.ApplicationHelpers, only: [capture_info_log: 1]
   import Lightning.Factories
   import Lightning.Helpers, only: [ms_to_human: 1]
   import Lightning.TokenHelpers
@@ -318,5 +319,196 @@ defmodule Lightning.FailureAlertTest do
       assert_receive {:email, %Swoosh.Email{subject: ^subject}},
                      1_000
     end
+  end
+
+  describe "recipients who may not be sent the project's contents" do
+    test "an enrolled member of a project that requires MFA is still alerted" do
+      user = insert(:user, mfa_enabled: true)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, failure_alert: true}]
+        )
+
+      run = failing_run(project, "workflow-enrolled")
+
+      FailureAlerter.alert_on_failure(run)
+
+      recipient = [{"", user.email}]
+      subject = "\"workflow-enrolled\" (#{project.name}) failed"
+
+      assert_received {:email, %Swoosh.Email{to: ^recipient, subject: ^subject}}
+    end
+
+    test "a disabled account is not alerted" do
+      user = insert(:user, disabled: true)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, failure_alert: true}]
+        )
+
+      FailureAlerter.alert_on_failure(failing_run(project, "workflow-disabled"))
+
+      recipient = [{"", user.email}]
+      refute_received {:email, %Swoosh.Email{to: ^recipient}}
+    end
+
+    test "an account scheduled for deletion is not alerted" do
+      user = insert(:user, scheduled_deletion: DateTime.utc_now())
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, failure_alert: true}]
+        )
+
+      FailureAlerter.alert_on_failure(failing_run(project, "workflow-leaving"))
+
+      recipient = [{"", user.email}]
+      refute_received {:email, %Swoosh.Email{to: ^recipient}}
+    end
+
+    test "a member who has not enrolled in MFA is not alerted for a project that requires it" do
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, failure_alert: true}]
+        )
+
+      FailureAlerter.alert_on_failure(failing_run(project, "workflow-mfa"))
+
+      recipient = [{"", user.email}]
+      refute_received {:email, %Swoosh.Email{to: ^recipient}}
+    end
+
+    test "a refused recipient spends none of the workflow's rate-limit budget" do
+      [time_scale: time_scale, rate_limit: rate_limit] =
+        Application.fetch_env!(:lightning, Lightning.FailureAlerter)
+
+      disabled_user = insert(:user, disabled: true)
+      live_user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: disabled_user.id, failure_alert: true},
+            %{user_id: live_user.id, failure_alert: true}
+          ]
+        )
+
+      run = failing_run(project, "workflow-budget")
+      workflow_id = run.work_order.workflow.id
+
+      for _ <- 1..rate_limit, do: FailureAlerter.alert_on_failure(run)
+
+      # The refused recipient never reached the rate limiter, so their bucket
+      # was never created.
+      assert {:ok, {0, ^rate_limit, _ms, nil, nil}} =
+               Hammer.inspect_bucket(
+                 "#{workflow_id}::#{disabled_user.id}",
+                 time_scale,
+                 rate_limit
+               )
+
+      live_recipient = [{"", live_user.email}]
+
+      for _ <- 1..rate_limit do
+        assert_received {:email, %Swoosh.Email{to: ^live_recipient}}
+      end
+
+      refused_recipient = [{"", disabled_user.email}]
+      refute_received {:email, %Swoosh.Email{to: ^refused_recipient}}
+    end
+
+    # The verification deadline is the one condition that turns on a config
+    # flag rather than on the records, so it is worth pinning on a real send.
+    test "an account barred pending email confirmation is not alerted" do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        other -> Lightning.Config.API.check_flag?(other)
+      end)
+
+      user =
+        insert(:user,
+          confirmed_at: nil,
+          inserted_at: DateTime.utc_now(:second) |> DateTime.add(-50, :hour)
+        )
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, failure_alert: true}]
+        )
+
+      FailureAlerter.alert_on_failure(
+        failing_run(project, "workflow-unconfirmed")
+      )
+
+      recipient = [{"", user.email}]
+      refute_received {:email, %Swoosh.Email{to: ^recipient}}
+    end
+
+    # Without this line, "I never got the alert" leaves the same evidence as a
+    # mailer outage. `info`, not `error`: a refusal is the rule working.
+    test "records the withheld alert in the log" do
+      user = insert(:user, disabled: true)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, failure_alert: true}]
+        )
+
+      run = failing_run(project, "workflow-logged")
+
+      {_result, log} =
+        capture_info_log(fn -> FailureAlerter.alert_on_failure(run) end)
+
+      assert log =~ "Withheld failure alert from user #{user.id}"
+      assert log =~ "in project #{project.id}"
+
+      # The address itself stays out of the log; the ids are enough to answer
+      # "why did this person not get mail".
+      refute log =~ user.email
+    end
+
+    # The alerter loads its project with `get_project!/1`, which has no
+    # liveness filter of its own. The refusal comes from the recipient rule.
+    test "no one is alerted for a project that is winding down" do
+      user = insert(:user)
+
+      project =
+        insert(:project,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          project_users: [%{user_id: user.id, failure_alert: true}]
+        )
+
+      FailureAlerter.alert_on_failure(failing_run(project, "workflow-closing"))
+
+      recipient = [{"", user.email}]
+      refute_received {:email, %Swoosh.Email{to: ^recipient}}
+    end
+  end
+
+  defp failing_run(project, workflow_name) do
+    workflow = insert(:workflow, name: workflow_name, project: project)
+
+    workorder =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: build(:trigger),
+        dataclip: build(:dataclip),
+        last_activity: DateTime.utc_now()
+      )
+
+    insert(:run,
+      work_order: workorder,
+      starting_trigger: build(:trigger),
+      dataclip: build(:dataclip),
+      finished_at: build(:timestamp),
+      state: :started
+    )
+    |> Repo.preload(:log_lines)
   end
 end

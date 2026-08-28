@@ -5,6 +5,7 @@ defmodule ResolverTest do
 
   require Logger
 
+  import Lightning.ApplicationHelpers, only: [capture_info_log: 1]
   import Lightning.Factories
   import ExUnit.CaptureLog
 
@@ -925,22 +926,6 @@ defmodule ResolverTest do
 
       assert log =~ "[error]"
       assert log =~ "Project not found for run"
-    end
-  end
-
-  # The test logger level is :warning (see config/test.exs), which gates
-  # :info messages at the primary :logger level before any capture handler
-  # sees them. Per-process levels (Logger.put_process_level/2) can only
-  # restrict below the primary level, not lift above it, so the primary level
-  # must be lowered for the duration of the capture and restored afterwards.
-  defp capture_info_log(fun) do
-    previous_level = Logger.level()
-    Logger.configure(level: :info)
-
-    try do
-      with_log([level: :info], fun)
-    after
-      Logger.configure(level: previous_level)
     end
   end
 end

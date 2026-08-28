@@ -16,8 +16,11 @@ defmodule Lightning.Accounts.UserNotifier do
   alias Lightning.Helpers
   alias Lightning.Mailer
   alias Lightning.Projects
+  alias Lightning.Projects.MailRecipients
   alias Lightning.Projects.Project
   alias Lightning.WorkOrders.SearchParams
+
+  require Logger
 
   defp admin, do: Lightning.Config.instance_admin_email()
 
@@ -52,6 +55,31 @@ defmodule Lightning.Accounts.UserNotifier do
 
     with {:ok, _metadata} <- Mailer.deliver(email) do
       {:ok, email}
+    end
+  end
+
+  # Mail carrying a project's own contents goes only to someone who could open
+  # that project. Every such mail routes through here rather than `deliver/3`,
+  # so adding one means passing a project, and passing a project runs the check.
+  #
+  # Account mail keeps using `deliver/3` directly. A password reset belongs to
+  # the account rather than to any project, and the notice that an account is
+  # being deleted has to reach an account this would refuse.
+  defp deliver_project_mail(project, user, subject, body) do
+    if MailRecipients.may_receive?(project, user) do
+      deliver(user, subject, body)
+    else
+      # Logged so withheld mail is distinguishable from mail that failed to
+      # send. Without it, "I never got the digest" has the same evidence as an
+      # SMTP outage. `info` rather than `error`: this is the policy working, not
+      # a fault, and `error` would page someone (see .claude/rules/logging.md).
+      Logger.info(
+        "Withheld project mail #{inspect(subject)} from user " <>
+          "#{user.id} in project #{project.id}: they may not be sent this " <>
+          "project's contents"
+      )
+
+      {:ok, :suppressed}
     end
   end
 
@@ -134,11 +162,12 @@ defmodule Lightning.Accounts.UserNotifier do
 
   @doc """
   Deliver an email to notify the user about a data retention setting change made in their project
+
+  Returns `{:ok, :suppressed}` without sending to anyone who may not be sent
+  this project's contents.
   """
-  @spec send_data_retention_change_email(
-          user :: map(),
-          updated_project :: map()
-        ) :: {:ok, term()} | {:error, term()}
+  @spec send_data_retention_change_email(User.t(), Project.t()) ::
+          {:ok, term()} | {:error, term()}
   def send_data_retention_change_email(user, updated_project) do
     history_retention_period = updated_project.history_retention_period || "∞"
 
@@ -147,7 +176,8 @@ defmodule Lightning.Accounts.UserNotifier do
 
     io_data_saved = updated_project.retention_policy != :erase_all
 
-    deliver(
+    deliver_project_mail(
+      updated_project,
       user,
       "The data retention policy for #{updated_project.name} has been modified",
       """
@@ -269,16 +299,32 @@ defmodule Lightning.Accounts.UserNotifier do
     """)
   end
 
-  def notify_history_export_completion(user, project_file) do
-    deliver(user, "Your OpenFn History Export Is Complete", """
-    Hello #{user.first_name},
+  @doc """
+  Deliver the link to a completed history export.
 
-    You history export requested on #{Helpers.format_date(project_file.inserted_at, "%F at %T")} is completed. Please visit this URL to download the file:
+  Returns `{:ok, :suppressed}` without sending to anyone who may not be sent
+  this project's contents.
+  """
+  @spec notify_history_export_completion(
+          Project.t(),
+          User.t(),
+          Projects.File.t()
+        ) :: {:ok, term()} | {:error, term()}
+  def notify_history_export_completion(project, user, project_file) do
+    deliver_project_mail(
+      project,
+      user,
+      "Your OpenFn History Export Is Complete",
+      """
+      Hello #{user.first_name},
 
-    #{url(~p"/project_files/#{project_file.id}/download")}
+      You history export requested on #{Helpers.format_date(project_file.inserted_at, "%F at %T")} is completed. Please visit this URL to download the file:
 
-    OpenFn
-    """)
+      #{url(~p"/project_files/#{project_file.id}/download")}
+
+      OpenFn
+      """
+    )
   end
 
   def build_digest_url(workflow, start_date, end_date) do
@@ -316,6 +362,10 @@ defmodule Lightning.Accounts.UserNotifier do
 
   @doc """
   Deliver a project digest of daily/weekly or monthly activity to a user.
+
+  Returns `{:ok, :suppressed}` without sending to anyone who may not be sent
+  this project's contents; `Lightning.DigestEmailWorker` keeps those people out
+  of its notified list.
   """
   def deliver_project_digest(
         digest_data,
@@ -352,7 +402,7 @@ defmodule Lightning.Accounts.UserNotifier do
     OpenFn
     """
 
-    deliver(user, title, body)
+    deliver_project_mail(project, user, title, body)
   end
 
   def notify_project_deletion(

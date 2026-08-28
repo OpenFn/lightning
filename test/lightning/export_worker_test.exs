@@ -222,6 +222,69 @@ defmodule Lightning.ExportWorkerTest do
     end
   end
 
+  describe "the completion notice and who may be sent the download link" do
+    test "reaches the live member who asked for the export", %{
+      project: project,
+      search_params: search_params
+    } do
+      user = insert(:user)
+      insert(:project_user, project: project, user: user, role: :editor)
+      project_file = insert(:project_file, project: project, created_by: user)
+
+      assert :ok == run_export(project, project_file, search_params)
+
+      recipient = Swoosh.Email.Recipient.format(user)
+
+      assert_received {:email,
+                       %Swoosh.Email{
+                         to: [^recipient],
+                         subject: "Your OpenFn History Export Is Complete"
+                       }}
+    end
+
+    # The export is still produced and stored; what is withheld is the mail
+    # carrying the link to it.
+    test "is withheld from a requester whose account was disabled while it ran",
+         %{project: project, search_params: search_params} do
+      user = insert(:user, disabled: true)
+      insert(:project_user, project: project, user: user, role: :editor)
+      project_file = insert(:project_file, project: project, created_by: user)
+
+      assert :ok == run_export(project, project_file, search_params)
+
+      assert Repo.reload(project_file).status == :completed
+
+      recipient = Swoosh.Email.Recipient.format(user)
+      refute_received {:email, %Swoosh.Email{to: [^recipient]}}
+    end
+
+    test "is withheld from a requester who has not met the project's MFA rule",
+         %{project: project, search_params: search_params} do
+      user = insert(:user, mfa_enabled: false)
+      insert(:project_user, project: project, user: user, role: :editor)
+
+      project =
+        project |> Ecto.Changeset.change(requires_mfa: true) |> Repo.update!()
+
+      project_file = insert(:project_file, project: project, created_by: user)
+
+      assert :ok == run_export(project, project_file, search_params)
+
+      recipient = Swoosh.Email.Recipient.format(user)
+      refute_received {:email, %Swoosh.Email{to: [^recipient]}}
+    end
+
+    defp run_export(project, project_file, search_params) do
+      ExportWorker.perform(%Oban.Job{
+        args: %{
+          "project_id" => project.id,
+          "project_file" => project_file.id,
+          "search_params" => to_oban_args(search_params)
+        }
+      })
+    end
+  end
+
   describe "perform/1 dataclip scrubbing" do
     test "scrubs webhook auth secrets from exported http_request dataclips" do
       project = insert(:project)

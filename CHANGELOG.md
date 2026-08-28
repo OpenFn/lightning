@@ -179,6 +179,9 @@ and this project adheres to
 - Fixed a session-teardown issue where revoking an account's sessions
   (disabling, scheduling deletion, or resetting password/email) left
   already-open pages running on stale permissions.
+- Fixed an issue where project emails (failure alerts, digests, retention
+  notices, export links) could reach recipients who could no longer open the
+  project themselves.
 
 ## [2.18.0] - 2026-08-20
 

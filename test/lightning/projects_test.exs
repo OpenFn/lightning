@@ -4158,6 +4158,74 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "data retention notices and who may be sent the project's contents" do
+    test "notifies an enrolled admin of a project that requires MFA" do
+      user = insert(:user, mfa_enabled: true)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, updated_project} = change_retention_periods(project)
+
+      recipient = Swoosh.Email.Recipient.format(user)
+      %{subject: subject} = data_retention_email(updated_project)
+
+      assert_received {:email,
+                       %Swoosh.Email{to: [^recipient], subject: ^subject}}
+    end
+
+    test "withholds the notice from a disabled admin while a live owner is still notified" do
+      disabled_user = insert(:user, disabled: true)
+      live_user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: disabled_user.id, role: :admin},
+            %{user_id: live_user.id, role: :owner}
+          ]
+        )
+
+      {:ok, _updated_project} = change_retention_periods(project)
+
+      live_recipient = Swoosh.Email.Recipient.format(live_user)
+      assert_received {:email, %Swoosh.Email{to: [^live_recipient]}}
+
+      disabled_recipient = Swoosh.Email.Recipient.format(disabled_user)
+      refute_received {:email, %Swoosh.Email{to: [^disabled_recipient]}}
+    end
+
+    test "withholds the notice from an admin scheduled for deletion" do
+      user = insert(:user, scheduled_deletion: DateTime.utc_now())
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :admin}])
+
+      {:ok, _updated_project} = change_retention_periods(project)
+
+      recipient = Swoosh.Email.Recipient.format(user)
+      refute_received {:email, %Swoosh.Email{to: [^recipient]}}
+    end
+
+    test "withholds the notice from an admin who has not enrolled in MFA when the project requires it" do
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, _updated_project} = change_retention_periods(project)
+
+      recipient = Swoosh.Email.Recipient.format(user)
+      refute_received {:email, %Swoosh.Email{to: [^recipient]}}
+    end
+  end
+
   describe "subscribe/0" do
     test "delivers project lifecycle events to the calling process" do
       assert :ok = Projects.subscribe()
@@ -4200,6 +4268,13 @@ defmodule Lightning.ProjectsTest do
       workflow_1_job: hd(workflow_1.jobs),
       workflow_2_job: hd(workflow_2.jobs)
     }
+  end
+
+  defp change_retention_periods(project) do
+    Projects.update_project(project, %{
+      history_retention_period: 14,
+      dataclip_retention_period: 7
+    })
   end
 
   defp data_retention_email(updated_project) do

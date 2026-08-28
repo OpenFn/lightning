@@ -207,6 +207,130 @@ defmodule Lightning.DigestEmailWorkerTest do
     end
   end
 
+  describe "recipients who may not be sent the project's contents" do
+    test "sends the digest to an enrolled member of a project that requires MFA" do
+      user = insert(:user, mfa_enabled: true)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, digest: :daily}]
+        )
+
+      insert(:simple_workflow, project: project)
+
+      {:ok, result} = perform_daily_digest()
+
+      recipient = Swoosh.Email.Recipient.format(user)
+      subject = "Daily digest for project #{project.name}"
+
+      assert_received {:email,
+                       %Swoosh.Email{to: [^recipient], subject: ^subject}}
+
+      assert Enum.map(result.notified_users, & &1.user_id) == [user.id]
+      assert result.suppressed_users == []
+      assert result.skipped_users == []
+    end
+
+    test "withholds the digest from a disabled account while the project's live members still receive theirs" do
+      disabled_user = insert(:user, disabled: true)
+      live_user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: disabled_user.id, digest: :daily},
+            %{user_id: live_user.id, digest: :daily}
+          ]
+        )
+
+      insert(:simple_workflow, project: project)
+
+      {:ok, result} = perform_daily_digest()
+
+      live_recipient = Swoosh.Email.Recipient.format(live_user)
+      assert_received {:email, %Swoosh.Email{to: [^live_recipient]}}
+
+      disabled_recipient = Swoosh.Email.Recipient.format(disabled_user)
+      refute_received {:email, %Swoosh.Email{to: [^disabled_recipient]}}
+
+      assert Enum.map(result.notified_users, & &1.user_id) == [live_user.id]
+
+      assert Enum.map(result.suppressed_users, & &1.user_id) == [
+               disabled_user.id
+             ]
+
+      assert result.skipped_users == []
+    end
+
+    test "withholds the digest from an account scheduled for deletion" do
+      user = insert(:user, scheduled_deletion: DateTime.utc_now())
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, digest: :daily}]
+        )
+
+      insert(:simple_workflow, project: project)
+
+      {:ok, result} = perform_daily_digest()
+
+      recipient = Swoosh.Email.Recipient.format(user)
+      refute_received {:email, %Swoosh.Email{to: [^recipient]}}
+
+      assert result.notified_users == []
+      assert Enum.map(result.suppressed_users, & &1.user_id) == [user.id]
+      assert result.skipped_users == []
+    end
+
+    test "withholds the digest from a member who has not enrolled in MFA when the project requires it" do
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, digest: :daily}]
+        )
+
+      insert(:simple_workflow, project: project)
+
+      {:ok, result} = perform_daily_digest()
+
+      recipient = Swoosh.Email.Recipient.format(user)
+      refute_received {:email, %Swoosh.Email{to: [^recipient]}}
+
+      assert result.notified_users == []
+      assert Enum.map(result.suppressed_users, & &1.user_id) == [user.id]
+      assert result.skipped_users == []
+    end
+
+    test "keeps suppressed_users and skipped_users distinct when both occur in the same run" do
+      disabled_user = insert(:user, disabled: true)
+      idle_user = insert(:user)
+
+      project_with_workflow =
+        insert(:project,
+          project_users: [%{user_id: disabled_user.id, digest: :daily}]
+        )
+
+      insert(:simple_workflow, project: project_with_workflow)
+
+      insert(:project,
+        project_users: [%{user_id: idle_user.id, digest: :daily}]
+      )
+
+      {:ok, result} = perform_daily_digest()
+
+      assert result.notified_users == []
+
+      assert Enum.map(result.suppressed_users, & &1.user_id) == [
+               disabled_user.id
+             ]
+
+      assert Enum.map(result.skipped_users, & &1.user_id) == [idle_user.id]
+    end
+  end
+
   describe "get_digest_data/3" do
     test "Gets project digest data" do
       user = insert(:user)
@@ -265,6 +389,12 @@ defmodule Lightning.DigestEmailWorkerTest do
                  }
       end
     end
+  end
+
+  defp perform_daily_digest do
+    DigestEmailWorker.perform(%Oban.Job{
+      args: %{"type" => "daily_project_digest"}
+    })
   end
 
   defp create_runs(
