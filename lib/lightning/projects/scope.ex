@@ -39,6 +39,10 @@ defmodule Lightning.Projects.Scope do
 
   Every other project-scoped decision resolves here; no policy module reads
   `Project.scheduled_deletion` directly.
+
+  Likewise, no policy module reads `requires_mfa`/`mfa_enabled` directly. That
+  rule is written once, privately, below; `mfa_satisfied?` is the only way to
+  reach it.
   """
   import Ecto.Query
 
@@ -48,13 +52,17 @@ defmodule Lightning.Projects.Scope do
   alias Lightning.Repo
   alias Lightning.VersionControl.ProjectRepoConnection
 
+  # `mfa_satisfied?` defaults to false so a `%Scope{}` that never went through
+  # `build/2` — a fixture, or a clause for a future actor type that forgets to
+  # set it — fails closed rather than silently bypassing the requirement.
   defstruct [
     :project,
     :actor,
     :project_user,
     :role,
     support_user?: false,
-    support?: false
+    support?: false,
+    mfa_satisfied?: false
   ]
 
   @type t :: %__MODULE__{
@@ -63,7 +71,8 @@ defmodule Lightning.Projects.Scope do
           project_user: ProjectUser.t() | nil,
           role: :owner | :admin | :editor | :viewer | nil,
           support_user?: boolean(),
-          support?: boolean()
+          support?: boolean(),
+          mfa_satisfied?: boolean()
         }
 
   @typedoc """
@@ -121,16 +130,19 @@ defmodule Lightning.Projects.Scope do
   @doc """
   Whether the user holds one of `roles` in the project.
 
-  `false` for a project that does not exist or is scheduled for deletion, and
-  `false` for a user with no membership row. It reads `role` only, so it cannot
-  express a rule that admits a support user on the strength of `support?` —
-  those decide on the `%Scope{}` itself.
+  `false` for a project that does not exist or is scheduled for deletion,
+  `false` for a user with no membership row, and `false` for a user who has
+  not met the project's MFA requirement. It never consults `support?`, so a
+  rule that admits a support user has to decide on the `%Scope{}` itself.
   """
   @spec role_in?(User.t(), subject(), [atom()]) :: boolean()
   def role_in?(%User{} = user, subject, roles) do
     case fetch(user, subject) do
-      {:ok, %__MODULE__{role: role}} -> role in roles
-      {:error, _reason} -> false
+      {:ok, %__MODULE__{role: role, mfa_satisfied?: mfa_satisfied?}} ->
+        role in roles and mfa_satisfied?
+
+      {:error, _reason} ->
+        false
     end
   end
 
@@ -182,13 +194,32 @@ defmodule Lightning.Projects.Scope do
       project_user: project_user,
       role: project_user && project_user.role,
       support_user?: user.support_user,
-      support?: user.support_user and project.allow_support_access
+      support?: user.support_user and project.allow_support_access,
+      mfa_satisfied?: mfa_satisfied?(project, user)
     }
   end
 
   # No membership row to look up, and no support-user concept. Its authority
   # comes from the token, which the caller has already verified.
+  #
+  # No MFA concept either — a machine credential cannot enrol — so the
+  # exemption is set here rather than defaulted, to keep it a decision a
+  # reviewer can see and a future actor type cannot inherit by accident.
   defp build(%ProjectRepoConnection{} = repo_connection, %Project{} = project) do
-    %__MODULE__{project: project, actor: repo_connection, role: nil}
+    %__MODULE__{
+      project: project,
+      actor: repo_connection,
+      role: nil,
+      mfa_satisfied?: true
+    }
   end
+
+  # Only an enrolled `true` counts; an unset flag is not enrolled.
+  #
+  # A support user is a human reading project data, so the rule binds them as
+  # much as a member and nothing here consults `support_user`.
+  defp mfa_satisfied?(%Project{requires_mfa: true}, %User{mfa_enabled: enrolled}),
+    do: enrolled == true
+
+  defp mfa_satisfied?(%Project{}, %User{}), do: true
 end

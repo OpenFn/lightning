@@ -63,6 +63,8 @@ and this project adheres to
 
 ### Security
 
+- Fixed an MFA-enforcement gap so a project's MFA requirement now applies
+  consistently across pages, channel joins, routes and the API.
 - Fixed a cross-site-scripting issue in channel proxy responses.
 - Fixed an access-revocation issue in the AI assistant panel: membership and
   role changes now close open sessions instead of leaving them active.

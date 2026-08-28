@@ -10,9 +10,10 @@ defmodule Lightning.Policies.ProjectUsers do
   standing in a wound-down project.
 
   `permitted?/2` makes the **judgement**: given that standing, is this action
-  allowed. It decides on `role` alone and never mentions
-  `Project.scheduled_deletion` — there is no shut-down project left for it to
-  see.
+  allowed. It decides on `role` and `mfa_satisfied?`, and never mentions
+  `Project.scheduled_deletion` or `Project.requires_mfa` — there is no
+  shut-down project left for it to see, and the MFA rule reaches it as a fact
+  on the scope.
 
   Adding an action means adding an atom to `@admin_actions` or
   `@editor_actions`. It inherits the guard; there is nothing to remember.
@@ -98,7 +99,14 @@ defmodule Lightning.Policies.ProjectUsers do
         %ProjectUser{user_id: user_id} = project_user
       )
       when action in @self_actions do
-    id == user_id and match?({:ok, _}, Scope.fetch(user, project_user))
+    # This clause never reaches permitted?/2, so the guards there do not cover
+    # it and it checks the scope itself. Without that, a member the project
+    # blocks could still edit their own preferences on it.
+    id == user_id and
+      match?(
+        {:ok, %Scope{mfa_satisfied?: true}},
+        Scope.fetch(user, project_user)
+      )
   end
 
   def authorize(action, %User{} = user, subject) do
@@ -120,8 +128,12 @@ defmodule Lightning.Policies.ProjectUsers do
   rather than once per question.
   """
   @spec permitted?(actions(), Scope.t()) :: boolean()
-  def permitted?(:access_project, %Scope{role: role, support?: support?}),
-    do: not is_nil(role) or support?
+
+  # First, so it denies every action this module decides — including ones added
+  # later — without anyone having to remember @admin_actions/@editor_actions.
+  def permitted?(_action, %Scope{mfa_satisfied?: false}), do: false
+
+  def permitted?(:access_project, %Scope{} = scope), do: has_standing?(scope)
 
   def permitted?(:delete_project, %Scope{role: role}), do: role == :owner
 
@@ -160,4 +172,24 @@ defmodule Lightning.Policies.ProjectUsers do
     do: role in [:owner, :admin, :editor]
 
   def permitted?(_action, %Scope{}), do: false
+
+  @doc """
+  Whether this actor would have standing on the project if not for the
+  project's MFA requirement.
+
+  Lets a caller distinguish "no access at all" from "access except MFA" —
+  `LightningWeb.Hooks` sends the first to not-found and the second to
+  `/mfa_required` — without duplicating what counts as standing. It cannot ask
+  `permitted?(:access_project, ...)` for that, since the guard above answers
+  `false` for both cases.
+  """
+  @spec blocked_by_mfa?(Scope.t()) :: boolean()
+  def blocked_by_mfa?(%Scope{mfa_satisfied?: mfa_satisfied?} = scope),
+    do: has_standing?(scope) and not mfa_satisfied?
+
+  # The one definition of "has any standing at all". `:access_project` is
+  # exactly this plus the MFA guard; `blocked_by_mfa?/1` is exactly this minus
+  # it. Written once so the two cannot answer differently.
+  defp has_standing?(%Scope{role: role, support?: support?}),
+    do: not is_nil(role) or support?
 end

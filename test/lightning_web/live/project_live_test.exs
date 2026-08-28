@@ -2142,6 +2142,25 @@ defmodule LightningWeb.ProjectLiveTest do
       end)
     end
 
+    # /mfa_required tells the caller the project exists and how it is
+    # configured. Only someone who would otherwise have standing may be told
+    # that; a stranger gets the same not-found they get for any other project
+    # they are not a member of.
+    test "a non-member of an MFA-required project is not told it requires MFA",
+         %{conn: conn} do
+      stranger = insert(:user, mfa_enabled: false)
+      project = insert(:project, requires_mfa: true)
+
+      assert {:error, {:redirect, %{to: "/projects", flash: flash}}} =
+               live(
+                 log_in_user(conn, stranger),
+                 ~p"/projects/#{project}/settings",
+                 on_error: :raise
+               )
+
+      assert flash == %{"nav" => :not_found}
+    end
+
     test "project admin can toggle support access",
          %{
            conn: conn,

@@ -18,6 +18,7 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Projects.Events.ProjectUserRoleChanged
   alias Lightning.Projects.Events.SupportAccessUpdated
   alias Lightning.Projects.ProjectLimiter
+  alias Lightning.Projects.Scope
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias LightningWeb.LiveHelpers
@@ -87,33 +88,43 @@ defmodule LightningWeb.Hooks do
     project_user =
       project && Lightning.Projects.get_project_user(project, current_user)
 
-    can_access_project =
-      Permissions.can?(ProjectUsers, :access_project, current_user, project)
+    # One Scope, two questions. `:access_project` now refuses an MFA-blocked
+    # member outright, so it can no longer tell "not a member" apart from
+    # "member who hasn't enrolled" — and only the second may be told the
+    # project exists. `blocked_by_mfa?/1` draws that line.
+    case Scope.fetch(current_user, project) do
+      {:ok, scope} ->
+        cond do
+          ProjectUsers.blocked_by_mfa?(scope) ->
+            {:halt, redirect(socket, to: ~p"/mfa_required")}
 
-    cond do
-      can_access_project and project.requires_mfa and !current_user.mfa_enabled ->
-        {:halt, redirect(socket, to: ~p"/mfa_required")}
+          ProjectUsers.permitted?(:access_project, scope) ->
+            access_root =
+              Lightning.Projects.access_root_for_user(project, current_user)
 
-      can_access_project ->
-        access_root =
-          Lightning.Projects.access_root_for_user(project, current_user)
+            project_label =
+              Lightning.Projects.display_name_within_access_root(
+                project,
+                access_root
+              )
 
-        project_label =
-          Lightning.Projects.display_name_within_access_root(
-            project,
-            access_root
-          )
+            {:cont,
+             socket
+             |> assign(:side_menu_theme, "primary-theme")
+             |> assign(:project_user, project_user)
+             |> assign(:project, project)
+             |> assign(:access_root, access_root)
+             |> assign(:project_label, project_label)
+             |> assign(:projects, projects)}
 
-        {:cont,
-         socket
-         |> assign(:side_menu_theme, "primary-theme")
-         |> assign(:project_user, project_user)
-         |> assign(:project, project)
-         |> assign(:access_root, access_root)
-         |> assign(:project_label, project_label)
-         |> assign(:projects, projects)}
+          true ->
+            {:halt,
+             redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
+        end
 
-      true ->
+      # No such project, or one scheduled for deletion. Both were already the
+      # not-found redirect before Scope answered them here.
+      {:error, _reason} ->
         {:halt, redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
     end
   end

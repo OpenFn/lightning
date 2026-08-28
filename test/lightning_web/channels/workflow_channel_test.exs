@@ -318,6 +318,80 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert socket.assigns.project_user == nil
       assert socket.assigns.workflow.id == workflow.id
     end
+
+    # The `/mfa_required` page a blocked member lands on still renders their
+    # session token, so that session can open the socket by hand. The check has
+    # to hold on the join, not only on the LiveView mount.
+    test "rejects a member of an MFA-required project who has not enrolled" do
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      workflow = insert(:workflow, project: project)
+
+      assert {:error, %{reason: "unauthorized"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}",
+                 %{"project_id" => project.id, "action" => "edit"}
+               ),
+             "an unenrolled member joined the collaboration channel of a " <>
+               "project that requires MFA"
+    end
+
+    test "rejects an unenrolled member on the \"new\" action too" do
+      # "new" resolves a fresh workflow into the project, a second way in that
+      # needs no existing workflow id to name.
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      assert {:error, %{reason: "unauthorized"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{Ecto.UUID.generate()}",
+                 %{"project_id" => project.id, "action" => "new"}
+               ),
+             "an unenrolled member reached the project through the `new` branch"
+    end
+
+    # Control: without it, a policy that refuses everybody would pass.
+    test "admits a member of an MFA-required project who has enrolled" do
+      user = insert(:user, mfa_enabled: true)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      workflow = insert(:workflow, project: project)
+
+      assert {:ok, _reply, socket} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}",
+                 %{"project_id" => project.id, "action" => "edit"}
+               )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(socket.assigns.workflow.id)
+      end)
+    end
   end
 
   describe "yjs frame authorization" do

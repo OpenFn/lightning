@@ -127,6 +127,100 @@ defmodule Lightning.Projects.ScopeTest do
     end
   end
 
+  describe "the MFA requirement" do
+    test "is satisfied on a project that does not require it, either way" do
+      project = insert(:project, requires_mfa: false)
+
+      for mfa_enabled <- [false, true] do
+        user = insert(:user, mfa_enabled: mfa_enabled)
+
+        assert {:ok, scope} = Scope.fetch(user, project)
+        assert scope.mfa_satisfied? == true
+      end
+    end
+
+    test "is satisfied on a requiring project by an enrolled user" do
+      project = insert(:project, requires_mfa: true)
+      user = insert(:user, mfa_enabled: true)
+
+      assert {:ok, scope} = Scope.fetch(user, project)
+      assert scope.mfa_satisfied? == true
+    end
+
+    test "is not satisfied on a requiring project by an unenrolled user" do
+      project = insert(:project, requires_mfa: true)
+      user = insert(:user, mfa_enabled: false)
+
+      assert {:ok, scope} = Scope.fetch(user, project)
+      assert scope.mfa_satisfied? == false
+    end
+
+    # An unset flag is not "not yet decided", it is not enrolled.
+    test "is not satisfied on a requiring project by an unset enrolment flag" do
+      project = insert(:project, requires_mfa: true)
+      user = insert(:user, mfa_enabled: nil)
+
+      assert {:ok, scope} = Scope.fetch(user, project)
+      assert scope.mfa_satisfied? == false
+    end
+
+    test "binds a support user as much as a member" do
+      support_user = insert(:user, support_user: true, mfa_enabled: false)
+
+      project =
+        insert(:project, requires_mfa: true, allow_support_access: true)
+
+      assert {:ok, scope} = Scope.fetch(support_user, project)
+      assert scope.support? == true
+      assert scope.mfa_satisfied? == false
+    end
+
+    # Pins the fail-closed default: a scope built without going through
+    # `build/2` should refuse, not silently pass.
+    test "defaults to false on a scope that never went through build/2" do
+      assert %Scope{}.mfa_satisfied? == false
+    end
+  end
+
+  describe "role_in?/3" do
+    test "is true for a role-holding user on a project without the requirement",
+         %{editor: editor, live_project: project} do
+      assert Scope.role_in?(editor, project, [:editor])
+      refute Scope.role_in?(editor, project, [:owner, :admin])
+    end
+
+    test "is false for a role-holding user who has not met the requirement" do
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      refute Scope.role_in?(user, project, [:owner, :admin])
+    end
+
+    test "is true again once that user enrols" do
+      user = insert(:user, mfa_enabled: true)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      assert Scope.role_in?(user, project, [:owner, :admin])
+    end
+
+    test "is false for a scheduled-deleted project", %{
+      editor: editor,
+      scheduled_deleted_project: project
+    } do
+      refute Scope.role_in?(editor, project, [:editor])
+    end
+  end
+
   describe "a repo connection as the actor" do
     test "resolves a live project with no role", %{live_project: project} do
       repo_connection = insert(:project_repo_connection, project: project)
@@ -138,6 +232,17 @@ defmodule Lightning.Projects.ScopeTest do
       assert scope.role == nil
       assert scope.project_user == nil
       assert scope.support? == false
+    end
+
+    # A machine credential cannot enrol, so the requirement does not apply to
+    # it — and must not, or GitHub sync breaks the moment a project turns the
+    # toggle on.
+    test "meets the MFA requirement of a project that has one" do
+      project = insert(:project, requires_mfa: true)
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      assert {:ok, scope} = Scope.fetch(repo_connection, project)
+      assert scope.mfa_satisfied? == true
     end
 
     test "is refused a scheduled-deleted project, same as a user", %{

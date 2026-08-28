@@ -2902,6 +2902,46 @@ defmodule LightningWeb.RunChannelTest do
       assert {:error, %{reason: "not_found"}} =
                subscribe_and_join(socket, "run:#{fake_id}", %{})
     end
+
+    # The `/mfa_required` page a blocked member lands on still renders their
+    # session token, so that session can open the socket by hand. The check has
+    # to hold on the join, not only on the LiveView mount.
+    test "rejects a member of an MFA-required project who has not enrolled" do
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      run = run_in(project)
+
+      assert {:error, %{reason: "unauthorized"}} =
+               user
+               |> connect_browser_socket()
+               |> subscribe_and_join("run:#{run.id}", %{}),
+             "an unenrolled member joined a run channel on a project that " <>
+               "requires MFA — this streams log lines and step dataclips"
+    end
+
+    # Control: without it, a policy that refuses everybody would pass.
+    test "admits a member of an MFA-required project who has enrolled" do
+      user = insert(:user, mfa_enabled: true)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      run = run_in(project)
+
+      assert {:ok, _reply, _socket} =
+               user
+               |> connect_browser_socket()
+               |> subscribe_and_join("run:#{run.id}", %{})
+    end
   end
 
   describe "handle_in fetch:run for browser clients" do

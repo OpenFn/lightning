@@ -5,7 +5,9 @@ defmodule Lightning.Policies.Provisioning do
   Two kinds of caller reach this: a person with an API token, and a
   `%ProjectRepoConnection{}` — a GitHub connection pushing a project definition
   back to us. Both resolve through `Lightning.Projects.Scope`, so both are
-  refused on a project scheduled for deletion.
+  refused on a project scheduled for deletion. A person is additionally held to
+  the project's MFA requirement; a repo connection has no MFA concept, and
+  `Scope` says so for it.
 
   The repo-connection clauses previously compared
   `repo_connection.project_id == project.id`, which is trivially true for the
@@ -39,8 +41,12 @@ defmodule Lightning.Policies.Provisioning do
 
   def authorize(:provision_project, %User{} = user, %Project{} = project) do
     case Scope.fetch(user, project) do
-      {:ok, %Scope{role: role}} when role in [:owner, :admin] -> true
-      _ -> {:error, :forbidden}
+      {:ok, %Scope{role: role, mfa_satisfied?: true}}
+      when role in [:owner, :admin] ->
+        true
+
+      _ ->
+        {:error, :forbidden}
     end
   end
 

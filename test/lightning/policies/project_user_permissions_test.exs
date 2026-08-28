@@ -12,6 +12,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
 
   alias Lightning.Accounts
   alias Lightning.Policies.{Permissions, ProjectUsers}
+  alias Lightning.Projects.Scope
 
   @project_user_actions ~w(
     create_workflow
@@ -341,6 +342,191 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
 
       refute ProjectUsers
              |> Permissions.can?(:publish_template, regular_user, project)
+    end
+  end
+
+  # Requiring MFA removes no membership rows either, so — as with a scheduled
+  # deletion — every role below still holds a real project_users row and the
+  # refusal has to come from the policy layer. The users in `setup` are all
+  # unenrolled: `mfa_enabled` defaults to false.
+  describe "a project that requires MFA, for an unenrolled member" do
+    @roles [:viewer, :editor, :admin, :owner]
+
+    setup context do
+      mfa_project =
+        insert(:project,
+          requires_mfa: true,
+          project_users:
+            Enum.map(@roles, fn role ->
+              %{user_id: context[role].id, role: role}
+            end)
+        )
+
+      %{mfa_project: mfa_project}
+    end
+
+    test "refuses every action this policy decides, for every role", context do
+      %{mfa_project: mfa_project} = context
+
+      actions = ProjectUsers.actions()
+
+      # Same reasoning as the scheduled-deletion sweep: enumerating from the
+      # module covers an action added tomorrow, and the named action stops the
+      # comprehension going quietly vacuous if `actions/0` ever returns [].
+      assert :create_workflow in actions
+
+      allowed =
+        for action <- actions,
+            role <- @roles,
+            Permissions.can?(ProjectUsers, action, context[role], mfa_project) do
+          "#{action}/:#{role}"
+        end
+
+      assert allowed == [],
+             "these actions were ALLOWED to a member who has not enrolled in " <>
+               "MFA: " <> Enum.join(allowed, ", ")
+    end
+
+    # The sweep above passes a project, so it never reaches the clause that
+    # takes a `%ProjectUser{}`. That clause does not call permitted?/2 at all,
+    # so it needs — and has — its own MFA check.
+    test "refuses every action when the subject is the member's own row",
+         context do
+      actions = ProjectUsers.actions()
+      assert :edit_digest_alerts in actions
+
+      own_rows =
+        Map.new(@roles, fn role ->
+          user = context[role]
+
+          row =
+            Enum.find(
+              context.mfa_project.project_users,
+              &(&1.user_id == user.id)
+            )
+
+          assert row,
+                 "no membership row for :#{role} — the sweep below would be " <>
+                   "checking nothing"
+
+          {role, row}
+        end)
+
+      allowed =
+        for action <- actions,
+            role <- @roles,
+            Permissions.can?(ProjectUsers, action, context[role], own_rows[role]) do
+          "#{action}/:#{role}"
+        end
+
+      assert allowed == [],
+             "these actions were ALLOWED against the member's own row on an " <>
+               "MFA-required project: " <> Enum.join(allowed, ", ")
+    end
+
+    # Without this, both sweeps above would pass just as happily against a
+    # policy that refused everyone everything.
+    test "allows the same actions once the member enrols", %{
+      mfa_project: mfa_project
+    } do
+      enrolled = insert(:user, mfa_enabled: true)
+
+      project_user =
+        insert(:project_user,
+          project: mfa_project,
+          user: enrolled,
+          role: :admin
+        )
+
+      assert_can(ProjectUsers, :access_project, enrolled, mfa_project)
+      assert_can(ProjectUsers, @project_user_actions, enrolled, mfa_project)
+      assert_can(ProjectUsers, :edit_project, enrolled, mfa_project)
+      assert_can(ProjectUsers, :edit_digest_alerts, enrolled, project_user)
+    end
+
+    # A support user is a human reading project data, so the requirement binds
+    # them on the same terms as a member.
+    test "refuses a support user on a consenting project", %{
+      mfa_project: mfa_project
+    } do
+      support_user = insert(:user, support_user: true)
+      mfa_project = with_support_access(mfa_project, true)
+
+      refute_can(ProjectUsers, :access_project, support_user, mfa_project)
+      refute_can(ProjectUsers, @project_user_actions, support_user, mfa_project)
+    end
+  end
+
+  describe "blocked_by_mfa?/1" do
+    setup %{editor: editor} do
+      enrolled = insert(:user, mfa_enabled: true)
+
+      # Both projects require MFA; support consent is the axis between them, so
+      # it is written out on each rather than left to the schema default.
+      mfa_project =
+        insert(:project,
+          requires_mfa: true,
+          allow_support_access: false,
+          project_users: [
+            %{user_id: editor.id, role: :editor},
+            %{user_id: enrolled.id, role: :editor}
+          ]
+        )
+
+      consenting_project =
+        insert(:project, requires_mfa: true, allow_support_access: true)
+
+      %{
+        mfa_project: mfa_project,
+        consenting_project: consenting_project,
+        enrolled: enrolled
+      }
+    end
+
+    # The paired `permitted?(:access_project, ...)` answer is what gives the
+    # predicate its meaning: an unenrolled member is refused but blocked, while
+    # a stranger is refused and not blocked. Only the first may be sent to
+    # `/mfa_required`, which tells whoever asked that the project exists and how
+    # it is configured; a stranger has to get not-found instead. Support access
+    # is what gives a support user standing at all, so without it they are the
+    # stranger, not the blocked member.
+    test "answers true only for an actor with standing who has not enrolled",
+         %{
+           editor: editor,
+           enrolled: enrolled,
+           intruder: intruder,
+           project: project,
+           mfa_project: mfa_project,
+           consenting_project: consenting_project
+         } do
+      support_user = insert(:user, support_user: true)
+
+      rows = [
+        {"a member who has not enrolled", editor, mfa_project, true, false},
+        {"a member who has enrolled", enrolled, mfa_project, false, true},
+        {"someone with no standing at all", intruder, mfa_project, false, false},
+        {"an unenrolled support user on a consenting project", support_user,
+         consenting_project, true, false},
+        {"a support user the project has not consented to", support_user,
+         mfa_project, false, false},
+        {"a member on a project that does not require MFA", editor, project,
+         false, true}
+      ]
+
+      for {label, actor, subject, blocked?, access?} <- rows do
+        scope =
+          case Scope.fetch(actor, subject) do
+            {:ok, scope} -> scope
+            error -> flunk("no scope for #{label}: #{inspect(error)}")
+          end
+
+        assert ProjectUsers.blocked_by_mfa?(scope) == blocked?,
+               "blocked_by_mfa?/1 should answer #{blocked?} for #{label}"
+
+        assert ProjectUsers.permitted?(:access_project, scope) == access?,
+               "permitted?(:access_project, ...) should answer #{access?} " <>
+                 "for #{label}"
+      end
     end
   end
 

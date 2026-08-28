@@ -81,11 +81,16 @@ defmodule Lightning.Policies.Sandboxes do
   # The root cascade is a role rule, not a bypass: a root owner/admin counts as
   # admin *on this sandbox*, so the sandbox still has to be operable. Resolving
   # it first keeps the cascade unreachable for a sandbox scheduled for deletion.
+  #
+  # Only this branch reads `role` off the Scope directly, so only it needs the
+  # MFA fact spelled out; has_root_project_permission?/2 gets the same guard for
+  # free from Scope.role_in?/3.
   def authorize(action, %User{} = user, %Project{} = sandbox)
       when action in [:delete_sandbox, :update_sandbox] do
     case Scope.fetch(user, sandbox) do
-      {:ok, %Scope{role: role}} ->
-        role in [:owner, :admin] or has_root_project_permission?(sandbox, user)
+      {:ok, %Scope{role: role, mfa_satisfied?: mfa}} ->
+        (role in [:owner, :admin] and mfa) or
+          has_root_project_permission?(sandbox, user)
 
       {:error, _reason} ->
         false
@@ -115,6 +120,13 @@ defmodule Lightning.Policies.Sandboxes do
 
   Assumes `root_project.project_users` and each `sandbox.project_users`
   are preloaded (as ensured by `Projects.list_workspace_projects/2`).
+
+  Reads those preloaded rows rather than resolving a `Scope`, so it does not
+  hold the actor to the project's MFA requirement. Nothing reaches it that has
+  not already been held to it: the list it feeds mounts
+  `LightningWeb.Hooks.:project_scope`, which redirects an unenrolled member to
+  `/mfa_required` before the page renders, and every action a `true` enables
+  refuses on its own.
   """
   @spec check_manage_permissions([Project.t()], User.t(), Project.t()) ::
           %{binary() => boolean()}
