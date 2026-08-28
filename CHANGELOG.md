@@ -134,6 +134,8 @@ and this project adheres to
   role changes now close open sessions instead of leaving them active.
 - Scheduling a project for deletion, or deleting a workflow, now ends the
   sessions open on it.
+- Fixed a data-exposure issue in job execution and log output.
+- Sentry error reports no longer include sensitive values from request headers.
 - Fixed an authorization issue in AI assistant session writes. Asking questions
   is unaffected.
 - Fixed two paths (adaptor metadata lookup, channel proxy) that resolved a

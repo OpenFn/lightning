@@ -8,6 +8,7 @@ defmodule Lightning.DataclipScrubber do
   alias Lightning.Credentials
   alias Lightning.Invocation.Step
   alias Lightning.Repo
+  alias Lightning.Run
   alias Lightning.RunStep
   alias Lightning.Scrubber
   alias Lightning.Workflows.WebhookAuthMethod
@@ -126,6 +127,22 @@ defmodule Lightning.DataclipScrubber do
     from(rs in RunStep,
       where: rs.step_id == ^step_id,
       join: r in assoc(rs, :run),
+      join: wo in assoc(r, :work_order),
+      join: t in assoc(wo, :trigger),
+      join: wam in assoc(t, :webhook_auth_methods),
+      select: wam,
+      distinct: wam.id
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns webhook auth methods for a run by traversing:
+  run -> work_order -> trigger -> webhook_auth_methods
+  """
+  def webhook_auth_methods_for_run(run_id) do
+    from(r in Run,
+      where: r.id == ^run_id,
       join: wo in assoc(r, :work_order),
       join: t in assoc(wo, :trigger),
       join: wam in assoc(t, :webhook_auth_methods),

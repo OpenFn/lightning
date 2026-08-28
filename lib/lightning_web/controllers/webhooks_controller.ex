@@ -2,6 +2,7 @@ defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
   alias Lightning.Extensions.RateLimiting
+  alias Lightning.Invocation.RequestHeaders
   alias Lightning.Retry
   alias Lightning.Services.RateLimiter
   alias Lightning.Workflows
@@ -51,7 +52,7 @@ defmodule LightningWeb.WebhooksController do
             workflow: trigger.workflow,
             dataclip: %{
               body: conn.body_params,
-              request: build_request(conn),
+              request: build_request(conn, trigger),
               type: :http_request,
               project_id: project_id
             },
@@ -229,12 +230,13 @@ defmodule LightningWeb.WebhooksController do
     end
   end
 
-  defp build_request(%Plug.Conn{} = conn) do
+  defp build_request(%Plug.Conn{} = conn, %Workflows.Trigger{} = trigger) do
     %{
       method: conn.method,
       path: conn.path_info,
       query_params: conn.query_params,
-      headers: conn.req_headers |> Enum.into(%{})
+      headers:
+        RequestHeaders.redact(conn.req_headers, trigger.webhook_auth_methods)
     }
   end
 end

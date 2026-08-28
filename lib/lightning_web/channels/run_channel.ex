@@ -9,6 +9,7 @@ defmodule LightningWeb.RunChannel do
 
   alias Lightning.Credentials
   alias Lightning.Credentials.Resolver
+  alias Lightning.DataclipScrubber
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
@@ -19,6 +20,7 @@ defmodule LightningWeb.RunChannel do
   alias Lightning.Runs
   alias Lightning.Scrubber
   alias Lightning.Workers
+  alias Lightning.Workflows.WebhookAuthMethod
   alias LightningWeb.RunWithOptions
 
   require Jason.Helpers
@@ -50,7 +52,7 @@ defmodule LightningWeb.RunChannel do
          id: id,
          run: run,
          project_id: project_id,
-         scrubber: nil,
+         scrubber: webhook_auth_scrubber(run),
          webhook_response: nil
        })}
     else
@@ -499,6 +501,27 @@ defmodule LightningWeb.RunChannel do
   defp malformed_response(reason, run, config) do
     {default_response_status(run.state, config),
      %{message: "Run completed, but webhook_response was malformed: #{reason}"}}
+  end
+
+  defp webhook_auth_scrubber(run) do
+    case DataclipScrubber.webhook_auth_methods_for_run(run.id) do
+      [] ->
+        nil
+
+      auth_methods ->
+        {:ok, scrubber} =
+          Scrubber.start_link(
+            samples:
+              Enum.flat_map(
+                auth_methods,
+                &WebhookAuthMethod.sensitive_values_for/1
+              ),
+            basic_auth:
+              Enum.flat_map(auth_methods, &WebhookAuthMethod.basic_auth_for/1)
+          )
+
+        scrubber
+    end
   end
 
   defp update_scrubber(nil, samples, basic_auth) do

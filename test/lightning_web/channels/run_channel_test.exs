@@ -479,6 +479,29 @@ defmodule LightningWeb.RunChannelTest do
       assert_reply ref, :ok, {:binary, "null"}
     end
 
+    test "fetch:dataclip passes stored request headers through unscrubbed", %{
+      socket: socket,
+      dataclip: dataclip
+    } do
+      dataclip
+      |> Ecto.Changeset.change(
+        request: %{
+          "headers" => %{
+            "content-type" => "application/json",
+            "x-api-key" => "a-pre-fix-stored-secret"
+          }
+        }
+      )
+      |> Repo.update!()
+
+      ref = push(socket, "fetch:dataclip", %{})
+
+      assert_reply ref, :ok, {:binary, payload}
+
+      assert payload =~ "a-pre-fix-stored-secret"
+      assert payload =~ "application/json"
+    end
+
     @tag project_retention_policy: :erase_all
     test "fetch:dataclip wipes dataclip body for projects with erase_all retention policy",
          %{socket: socket, dataclip: dataclip} do
@@ -1625,6 +1648,141 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_receive %Lightning.Runs.Events.LogAppended{log_line: log_line_2}
       assert log_line_2.message == "Log 2"
+    end
+  end
+
+  describe "logging on a trigger with webhook auth methods" do
+    setup do
+      project = insert(:project)
+      dataclip = insert(:dataclip, body: %{"foo" => "bar"}, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      auth_methods = [
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :api,
+          api_key: "sup3r-s3cret-api-key"
+        ),
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic,
+          username: "caller",
+          password: "sup3r-s3cret-password"
+        )
+      ]
+
+      trigger
+      |> Repo.preload(:webhook_auth_methods)
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:webhook_auth_methods, auth_methods)
+      |> Repo.update!()
+
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Map.new()
+        )
+
+      %{run: run, workflow: workflow}
+    end
+
+    setup [:create_socket, :join_run_channel]
+
+    # The channel scrubber used to be seeded only by `fetch:credential`, so a job
+    # that read an inbound auth header out of `state.request.headers` and logged
+    # it wrote the secret into `log_lines` verbatim -- readable by any project
+    # member, including a `:viewer` who is not allowed to see auth methods.
+    test "run:log scrubs the trigger's api key out of the message", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "run:log", %{
+          "message" => ["the inbound key was sup3r-s3cret-api-key"],
+          "timestamp" => "1699444653874083"
+        })
+
+      assert_reply ref, :ok, %{log_line_id: _}
+
+      assert Repo.one(Lightning.Invocation.LogLine).message ==
+               "the inbound key was ***"
+    end
+
+    test "run:log scrubs the trigger's basic password and its base64 form", %{
+      socket: socket
+    } do
+      credentials = Base.encode64("caller:sup3r-s3cret-password")
+
+      ref =
+        push(socket, "run:log", %{
+          "message" => ["Basic #{credentials} / sup3r-s3cret-password"],
+          "timestamp" => "1699444653874083"
+        })
+
+      assert_reply ref, :ok, %{log_line_id: _}
+
+      message = Repo.one(Lightning.Invocation.LogLine).message
+
+      refute message =~ credentials
+      refute message =~ "sup3r-s3cret-password"
+      assert message == "Basic *** / ***"
+    end
+
+    test "run:batch_logs scrubs every line in the batch", %{socket: socket} do
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "message" => ["first sup3r-s3cret-api-key"],
+              "timestamp" => "1699444653874083"
+            },
+            %{
+              "message" => ["second sup3r-s3cret-api-key"],
+              "timestamp" => "1699444653874084"
+            }
+          ]
+        })
+
+      assert_reply ref, :ok, _
+
+      messages =
+        Lightning.Invocation.LogLine
+        |> order_by(asc: :timestamp)
+        |> Repo.all()
+        |> Enum.map(& &1.message)
+
+      assert messages == ["first ***", "second ***"]
+    end
+
+    test "a message with no secret in it is stored verbatim", %{socket: socket} do
+      ref =
+        push(socket, "run:log", %{
+          "message" => ["nothing sensitive here"],
+          "timestamp" => "1699444653874083"
+        })
+
+      assert_reply ref, :ok, %{log_line_id: _}
+
+      assert Repo.one(Lightning.Invocation.LogLine).message ==
+               "nothing sensitive here"
     end
   end
 
