@@ -637,4 +637,150 @@ defmodule Lightning.Policies.SandboxesTest do
       end
     end
   end
+
+  defp future_deletion, do: DateTime.utc_now() |> DateTime.add(7, :day)
+
+  describe "a project scheduled for deletion" do
+    test "refuses provisioning for an :owner on a scheduled parent", %{
+      root_project_owner: owner,
+      root_project: root_project
+    } do
+      # Control: the same actor CAN provision on a live project, so the
+      # refusal below is about the project's lifecycle and not the role.
+      assert Sandboxes
+             |> Permissions.can?(:provision_sandbox, owner, root_project)
+
+      scheduled_root =
+        insert(:project,
+          project_users: [%{user_id: owner.id, role: :owner}],
+          scheduled_deletion: future_deletion()
+        )
+
+      refute Sandboxes
+             |> Permissions.can?(:provision_sandbox, owner, scheduled_root)
+    end
+
+    test "refuses merge for an :admin on a scheduled target", %{
+      root_project: root_project,
+      user: user
+    } do
+      insert(:project_user, user: user, project: root_project, role: :admin)
+
+      root_project =
+        Lightning.Repo.preload(root_project, :project_users, force: true)
+
+      assert Sandboxes
+             |> Permissions.can?(:merge_sandbox, user, root_project)
+
+      scheduled_target =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :admin}],
+          scheduled_deletion: future_deletion()
+        )
+
+      refute Sandboxes
+             |> Permissions.can?(:merge_sandbox, user, scheduled_target)
+    end
+
+    test "refuses delete/update for :owner and :admin on a scheduled sandbox",
+         %{
+           sandbox_owner: owner,
+           sandbox_with_owner: owner_sandbox,
+           sandbox_admin: admin,
+           sandbox_with_admin: admin_sandbox
+         } do
+      for {actor, sandbox, role} <- [
+            {owner, owner_sandbox, :owner},
+            {admin, admin_sandbox, :admin}
+          ] do
+        assert Sandboxes |> Permissions.can?(:delete_sandbox, actor, sandbox)
+        assert Sandboxes |> Permissions.can?(:update_sandbox, actor, sandbox)
+
+        scheduled_sandbox =
+          insert(:sandbox,
+            parent: sandbox.parent,
+            project_users: [%{user_id: actor.id, role: role}],
+            scheduled_deletion: future_deletion()
+          )
+
+        refute Sandboxes
+               |> Permissions.can?(:delete_sandbox, actor, scheduled_sandbox)
+
+        refute Sandboxes
+               |> Permissions.can?(:update_sandbox, actor, scheduled_sandbox)
+      end
+    end
+
+    test "refuses the root-project cascade when the root is scheduled, but a direct sandbox role is unaffected",
+         %{
+           root_project_owner: owner
+         } do
+      scheduled_root =
+        insert(:project,
+          project_users: [%{user_id: owner.id, role: :owner}],
+          scheduled_deletion: future_deletion()
+        )
+
+      live_sandbox_under_scheduled_root =
+        insert(:sandbox, parent: scheduled_root)
+
+      # `has_root_project_permission?/2` walks up to the scheduled root, so
+      # the cascade path is refused even though the sandbox itself is live.
+      refute Sandboxes
+             |> Permissions.can?(
+               :delete_sandbox,
+               owner,
+               live_sandbox_under_scheduled_root
+             )
+
+      # A direct owner/admin role on the sandbox is evaluated independently
+      # of the root's schedule: `role_in?/3` only looks at the sandbox.
+      sandbox_owner = insert(:user)
+
+      insert(:project_user,
+        user: sandbox_owner,
+        project: live_sandbox_under_scheduled_root,
+        role: :owner
+      )
+
+      live_sandbox_under_scheduled_root =
+        Lightning.Repo.preload(
+          live_sandbox_under_scheduled_root,
+          :project_users,
+          force: true
+        )
+
+      assert Sandboxes
+             |> Permissions.can?(
+               :delete_sandbox,
+               sandbox_owner,
+               live_sandbox_under_scheduled_root
+             )
+    end
+
+    test "refuses the root-project cascade onto a sandbox scheduled for deletion",
+         %{
+           root_project_owner: owner,
+           root_project: root_project
+         } do
+      # The root is live and the actor owns it, so the cascade is the only
+      # thing that could admit them — a direct role on the sandbox is absent.
+      live_sandbox = insert(:sandbox, parent: root_project)
+
+      assert Sandboxes |> Permissions.can?(:delete_sandbox, owner, live_sandbox)
+      assert Sandboxes |> Permissions.can?(:update_sandbox, owner, live_sandbox)
+
+      scheduled_sandbox =
+        insert(:sandbox,
+          parent: root_project,
+          scheduled_deletion: future_deletion()
+        )
+
+      refute Sandboxes
+             |> Permissions.can?(:delete_sandbox, owner, scheduled_sandbox)
+
+      refute Sandboxes
+             |> Permissions.can?(:update_sandbox, owner, scheduled_sandbox)
+    end
+  end
 end

@@ -175,7 +175,7 @@ defmodule LightningWeb.ProjectLive.Settings do
           :credentials,
           :create_keychain_credential,
           current_user,
-          %{project: project, project_user: project_user}
+          project
         ),
       can_create_collection:
         Permissions.can?(

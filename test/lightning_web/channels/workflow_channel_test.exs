@@ -137,6 +137,65 @@ defmodule LightningWeb.WorkflowChannelTest do
                )
     end
 
+    # `Policies.ProjectUsers.authorize/3` loads the
+    # ProjectUser and DISCARDS the project before deciding `:create_workflow`,
+    # four lines below the `:access_project` clause that does check
+    # `scheduled_deletion`. Scheduling deletion removes no membership rows, so
+    # the editor below still joins and can build a workflow — with triggers —
+    # inside a project that has been shut down.
+    test "rejects joins on a project scheduled for deletion" do
+      editor = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: editor.id, role: :editor}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.add(7, :day)
+        )
+
+      existing_workflow = insert(:workflow, project: project)
+      new_workflow_id = Ecto.UUID.generate()
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(existing_workflow.id)
+        ensure_doc_supervisor_stopped(new_workflow_id)
+      end)
+
+      join = fn workflow_id, action ->
+        LightningWeb.UserSocket
+        |> socket("user_#{editor.id}", %{current_user: editor})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow_id}",
+          %{"project_id" => project.id, "action" => action}
+        )
+      end
+
+      # Control: "edit" is ALREADY refused. It routes through
+      # `:workflows, :access_read` -> `:access_project`, whose clause reads
+      # `project.scheduled_deletion` off the loaded struct the channel holds.
+      assert {:error, %{reason: "unauthorized"}} =
+               join.(existing_workflow.id, "edit")
+
+      # "new" routes through `:project_users, :create_workflow`, which throws
+      # the project away and decides on the ProjectUser's role alone.
+      # Projected onto the granted permissions so the failure stays readable.
+      result =
+        case join.(new_workflow_id, "new") do
+          {:error, %{reason: reason}} ->
+            {:error, reason}
+
+          {:ok, _reply, joined_socket} ->
+            {:joined,
+             Map.take(joined_socket.assigns, [
+               :can_edit_workflow,
+               :can_run_workflow,
+               :workflow_kind
+             ])}
+        end
+
+      assert result == {:error, "unauthorized"}
+    end
+
     test "does not reveal which snapshot versions exist to a non-member", %{
       workflow: workflow,
       project: project
@@ -217,6 +276,47 @@ defmodule LightningWeb.WorkflowChannelTest do
       |> Lightning.Repo.update!()
 
       assert {:error, %{reason: "unauthorized"}} = join.()
+    end
+
+    test "refuses a non-member support user joining an existing workflow with action \"new\" when the project has not consented" do
+      # action="new" against an id that already exists just returns the
+      # persisted workflow, so this is the same question as an "edit" join.
+      support_user = insert(:user, support_user: true)
+      project = insert(:project, allow_support_access: false)
+      workflow = insert(:workflow, project: project)
+
+      assert {:error, %{reason: "unauthorized"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{support_user.id}", %{
+                 current_user: support_user
+               })
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}",
+                 %{"project_id" => project.id, "action" => "new"}
+               )
+    end
+
+    test "admits a non-member support user joining an existing workflow with action \"new\" once the project consents" do
+      support_user = insert(:user, support_user: true)
+      project = insert(:project, allow_support_access: true)
+      workflow = insert(:workflow, project: project)
+
+      assert {:ok, _, socket} =
+               LightningWeb.UserSocket
+               |> socket("user_#{support_user.id}", %{
+                 current_user: support_user
+               })
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}",
+                 %{"project_id" => project.id, "action" => "new"}
+               )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      assert socket.assigns.project_user == nil
+      assert socket.assigns.workflow.id == workflow.id
     end
   end
 
@@ -1084,6 +1184,53 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
 
       assert message =~ "don't have permission to edit"
+    end
+
+    # Both subjects are here because they take different routes into Scope: a
+    # member is identified by their ProjectUser, a support user by the project
+    # itself — which the channel holds as it was at join. Only the second could
+    # read its answer off that stale struct.
+    test "blocks saving once the project is scheduled for deletion mid-session" do
+      editor = insert(:user)
+      support_user = insert(:user, support_user: true)
+
+      project =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [
+            %{user: insert(:user), role: :owner},
+            %{user_id: editor.id, role: :editor}
+          ]
+        )
+
+      workflow = insert(:workflow, project: project)
+
+      editor_socket = join_as(editor, project, workflow)
+      support_socket = join_as(support_user, project, workflow)
+
+      assert editor_socket.assigns.can_edit_workflow
+      assert support_socket.assigns.can_edit_workflow
+      assert support_socket.assigns.project_user == nil
+
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(project,
+          scheduled_deletion:
+            DateTime.utc_now()
+            |> DateTime.add(7, :day)
+            |> DateTime.truncate(:second)
+        )
+      )
+
+      for socket <- [editor_socket, support_socket] do
+        ref = push(socket, "save_workflow", %{})
+
+        assert_reply ref, :error, %{
+          errors: %{base: [message]},
+          type: "unauthorized"
+        }
+
+        assert message =~ "don't have permission to edit"
+      end
     end
 
     test "allows editors to save", %{project: project, workflow: workflow} do

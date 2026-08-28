@@ -109,6 +109,26 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         edit_failure_alerts
       )a |> (&refute_can(ProjectUsers, &1, user_1, project_user_2)).()
     end
+
+    # A %Project{} subject never carries a client-supplied project_user_id, so
+    # there is no "whose row is this" question to answer — Scope already
+    # resolved it to the caller's own standing. This goes through `permitted?`
+    # rather than the id == user_id clause above.
+    test "can edit their own digest and failure alerts given only the project",
+         %{project: project, editor: editor} do
+      ~w(
+        edit_digest_alerts
+        edit_failure_alerts
+      )a |> (&assert_can(ProjectUsers, &1, editor, project)).()
+    end
+
+    test "cannot edit digest and failure alerts given only the project without a membership row",
+         %{project: project, intruder: intruder} do
+      ~w(
+        edit_digest_alerts
+        edit_failure_alerts
+      )a |> (&refute_can(ProjectUsers, &1, intruder, project)).()
+    end
   end
 
   describe "Project users with the :viewer role" do
@@ -195,7 +215,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   describe "Support users" do
     test "can access projects that allow support access", %{project: project} do
       support_user = insert(:user, support_user: true)
-      project = %{project | allow_support_access: true}
+      project = with_support_access(project, true)
 
       assert ProjectUsers
              |> Permissions.can?(:access_project, support_user, project)
@@ -205,7 +225,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       project: project
     } do
       support_user = insert(:user, support_user: true)
-      project = %{project | allow_support_access: false}
+      project = with_support_access(project, false)
 
       refute ProjectUsers
              |> Permissions.can?(:access_project, support_user, project)
@@ -226,7 +246,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         ProjectUsers,
         @project_user_actions,
         support_user,
-        %{project | allow_support_access: true}
+        with_support_access(project, true)
       )
 
       assert_can(
@@ -245,7 +265,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         ProjectUsers,
         @project_user_actions,
         support_user,
-        %{project | allow_support_access: false}
+        with_support_access(project, false)
       )
     end
 
@@ -260,7 +280,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
           ProjectUsers,
           @project_user_actions,
           support_user,
-          %{project | allow_support_access: allow_support_access}
+          with_support_access(project, allow_support_access)
         )
       end
     end
@@ -276,7 +296,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         ProjectUsers,
         @project_user_actions,
         regular_user,
-        %{project | allow_support_access: true}
+        with_support_access(project, true)
       )
     end
 
@@ -299,7 +319,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       project: project
     } do
       support_user = insert(:user, support_user: true)
-      project = %{project | allow_support_access: true}
+      project = with_support_access(project, true)
 
       assert ProjectUsers
              |> Permissions.can?(:publish_template, support_user, project)
@@ -308,7 +328,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
     test "cannot publish template without project membership and support access disabled",
          %{project: project} do
       support_user = insert(:user, support_user: true)
-      project = %{project | allow_support_access: false}
+      project = with_support_access(project, false)
 
       refute ProjectUsers
              |> Permissions.can?(:publish_template, support_user, project)
@@ -322,6 +342,123 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       refute ProjectUsers
              |> Permissions.can?(:publish_template, regular_user, project)
     end
+  end
+
+  # Scheduling deletion removes no membership rows
+  # (`Projects.scheduled_project_deletion_changes/2`), so each role below still
+  # holds a real project_users row on the shut-down project. The refusal has to
+  # come from the policy layer, because nothing else has taken these people's
+  # standing away.
+  describe "a project scheduled for deletion" do
+    @roles [:viewer, :editor, :admin, :owner]
+
+    test "refuses every action this policy decides, for every role", context do
+      %{marked_project: marked_project} = context
+
+      actions = ProjectUsers.actions()
+
+      # Enumerating from the module is the point: an action added tomorrow is
+      # covered tomorrow, not whenever someone remembers this file. It is also
+      # how the test could go quietly vacuous — an `actions/0` returning `[]`
+      # empties the comprehension and passes having checked nothing. Named
+      # action rather than a count, because a count is a number someone bumps
+      # without reading.
+      assert :create_workflow in actions
+
+      # Collected rather than asserted one at a time, so a failure names every
+      # action/role pair that gets through, not just the first.
+      allowed =
+        for action <- actions,
+            role <- @roles,
+            Permissions.can?(ProjectUsers, action, context[role], marked_project) do
+          "#{action}/:#{role}"
+        end
+
+      assert allowed == [],
+             "these actions were ALLOWED on a project scheduled for deletion: " <>
+               Enum.join(allowed, ", ")
+    end
+
+    # The sweep above passes a project, so it never reaches the clause that
+    # takes a `%ProjectUser{}` — the one asking "is this row mine" rather than
+    # "what standing do I have here". That is the shape project settings calls
+    # with, and it consults Scope for the project too, so a wound-down project
+    # refuses even your own notification preferences.
+    test "refuses every action when the subject is the member's own row",
+         context do
+      actions = ProjectUsers.actions()
+      assert :edit_digest_alerts in actions
+
+      own_rows =
+        Map.new(@roles, fn role ->
+          user = context[role]
+
+          row =
+            Enum.find(
+              context.marked_project.project_users,
+              &(&1.user_id == user.id)
+            )
+
+          assert row,
+                 "no membership row for :#{role} — the sweep below would be " <>
+                   "checking nothing"
+
+          {role, row}
+        end)
+
+      allowed =
+        for action <- actions,
+            role <- @roles,
+            Permissions.can?(ProjectUsers, action, context[role], own_rows[role]) do
+          "#{action}/:#{role}"
+        end
+
+      assert allowed == [],
+             "these actions were ALLOWED against a member's own row on a " <>
+               "project scheduled for deletion: " <> Enum.join(allowed, ", ")
+    end
+
+    test "refuses :delete_project for the owner", context do
+      refute_scheduled(
+        :delete_project,
+        context.owner,
+        context.marked_project,
+        :owner
+      )
+    end
+
+    test "refuses :publish_template for a support user who is a member",
+         context do
+      support_user = insert(:user, support_user: true)
+
+      insert(:project_user,
+        project: context.marked_project,
+        user: support_user,
+        role: :editor
+      )
+
+      refute_scheduled(
+        :publish_template,
+        support_user,
+        context.marked_project,
+        :editor
+      )
+    end
+  end
+
+  # Persisted, not set on the struct in passing: support access is a stored
+  # containment control, and Scope reads it from the row. A policy that could be
+  # satisfied by a field assigned in the caller would not be a control at all.
+  defp with_support_access(project, allowed) do
+    project
+    |> Ecto.Changeset.change(allow_support_access: allowed)
+    |> Lightning.Repo.update!()
+  end
+
+  defp refute_scheduled(action, user, project, role) do
+    refute Permissions.can?(ProjectUsers, action, user, project),
+           "expected #{action} to be REFUSED for a :#{role} on project " <>
+             "#{project.id}, which is scheduled for deletion"
   end
 
   defp assert_can(module, actions, user, subject) when is_list(actions) do

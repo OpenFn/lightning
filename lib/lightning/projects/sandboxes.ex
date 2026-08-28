@@ -633,7 +633,10 @@ defmodule Lightning.Projects.Sandboxes do
 
   ## Parameters
   * `sandbox` - Sandbox project to restore (or sandbox ID as string)
-  * `actor` - User performing the action (needs `:delete_sandbox` permission)
+  * `actor` - User performing the action (needs `:cancel_scheduled_deletion`
+    permission — the same owner/admin rule as `:delete_sandbox`, read directly
+    rather than through Scope, since the subject is by definition a project
+    scheduled for deletion)
 
   ## Returns
   * `{:ok, restored_sandbox}` - Sandbox subtree restored
@@ -649,7 +652,7 @@ defmodule Lightning.Projects.Sandboxes do
           | {:error, :unauthorized | :not_found | term()}
           | Lightning.Extensions.UsageLimiting.error()
   def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
-    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
+    if Permissions.can?(:sandboxes, :cancel_scheduled_deletion, actor, sandbox) do
       case ProjectLimiter.limit_new_sandbox(sandbox.id) do
         :ok -> do_cancel_scheduled_sandbox_deletion(sandbox)
         {:error, _reason, _message} = error -> error

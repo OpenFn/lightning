@@ -43,7 +43,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
            :credentials,
            :create_keychain_credential,
            current_user,
-           %{project: project, project_user: project_user}
+           project
          )
      })
      |> load_credentials()}

@@ -1540,6 +1540,180 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     end
   end
 
+  # `Policies.Provisioning` never mentions
+  # `scheduled_deletion`. Its `%User{}` clauses decide on
+  # `Projects.get_project_user_role/2` alone, and its
+  # `%ProjectRepoConnection{}` clauses check only
+  # `repo_connection.project_id == project.id`, which is trivially true.
+  #
+  # Scheduling deletion removes no membership row and revokes no repo-connection
+  # token, so both principals below still exist during the grace window.
+  describe "a project scheduled for deletion" do
+    setup [:assign_bearer_for_api]
+
+    setup %{conn: conn, user: user} do
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :owner}])
+
+      workflow =
+        insert(:simple_workflow, project: project)
+        |> Lightning.Repo.preload([:jobs, :triggers, :edges])
+
+      # The real offboarding path: stamps `scheduled_deletion` AND disables
+      # every trigger in the project.
+      {:ok, project} = Lightning.Projects.schedule_project_deletion(project)
+
+      [trigger] = workflow.triggers
+      refute Lightning.Repo.reload!(trigger).enabled
+
+      repo_connection = insert(:project_repo_connection, project: project)
+
+      %{
+        conn: conn,
+        project: project,
+        workflow: workflow,
+        trigger: trigger,
+        prc_conn:
+          Plug.Conn.put_req_header(
+            build_conn(),
+            "authorization",
+            "Bearer #{repo_connection.access_token}"
+          )
+      }
+    end
+
+    test "refuses GET /api/provision/:id for a project member", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      response = get(conn, ~p"/api/provision/#{project.id}")
+
+      assert response.status == 403,
+             "a project member read the shut-down project's state"
+
+      refute response.resp_body =~ workflow.name
+    end
+
+    test "refuses GET /api/provision/:id for a repo-connection token", %{
+      prc_conn: prc_conn,
+      project: project,
+      workflow: workflow
+    } do
+      response = get(prc_conn, ~p"/api/provision/#{project.id}")
+
+      assert response.status == 403,
+             "a repo-connection token read the shut-down project's state"
+
+      refute response.resp_body =~ workflow.name
+    end
+
+    test "refuses GET /api/provision/yaml for a project member", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      response = get(conn, ~p"/api/provision/yaml?#{%{id: project.id}}")
+
+      assert response.status == 403,
+             "a project member exported the shut-down project as YAML"
+
+      refute response.resp_body =~ workflow.name
+    end
+
+    test "refuses GET /api/provision/yaml for a repo-connection token", %{
+      prc_conn: prc_conn,
+      project: project,
+      workflow: workflow
+    } do
+      response = get(prc_conn, ~p"/api/provision/yaml?#{%{id: project.id}}")
+
+      assert response.status == 403,
+             "a repo-connection token exported the shut-down project as YAML"
+
+      refute response.resp_body =~ workflow.name
+    end
+
+    # The status code is the lesser assertion. The damage in #287 is that the
+    # import turns the triggers back on, so a fix that returns 403 and still
+    # writes must fail here too.
+    test "refuses POST /api/provision for a project member, leaving the trigger disabled",
+         %{conn: conn, project: project, workflow: workflow, trigger: trigger} do
+      response =
+        post(
+          conn,
+          ~p"/api/provision",
+          reenable_triggers_payload(project, workflow)
+        )
+
+      assert Lightning.Repo.reload!(trigger).enabled == false,
+             "the import re-enabled a trigger that project shutdown had disabled"
+
+      assert response.status == 403,
+             "a project member wrote to the shut-down project"
+    end
+
+    test "refuses POST /api/provision for a repo-connection token, leaving the trigger disabled",
+         %{
+           prc_conn: prc_conn,
+           project: project,
+           workflow: workflow,
+           trigger: trigger
+         } do
+      response =
+        post(
+          prc_conn,
+          ~p"/api/provision",
+          reenable_triggers_payload(project, workflow)
+        )
+
+      assert Lightning.Repo.reload!(trigger).enabled == false,
+             "the import re-enabled a trigger that project shutdown had disabled"
+
+      assert response.status == 403,
+             "a repo-connection token wrote to the shut-down project"
+    end
+  end
+
+  # A document that names the project's existing workflow, job, trigger and
+  # edge, and asks for the trigger to be turned back on.
+  defp reenable_triggers_payload(project, workflow) do
+    [job] = workflow.jobs
+    [trigger] = workflow.triggers
+    [edge] = workflow.edges
+
+    %{
+      "id" => project.id,
+      "name" => project.name,
+      "workflows" => [
+        %{
+          "id" => workflow.id,
+          "name" => workflow.name,
+          "jobs" => [
+            %{
+              "id" => job.id,
+              "name" => job.name,
+              "adaptor" => job.adaptor,
+              "body" => job.body
+            }
+          ],
+          "triggers" => [
+            %{"id" => trigger.id, "type" => "webhook", "enabled" => true}
+          ],
+          "edges" => [
+            %{
+              "id" => edge.id,
+              "source_trigger_id" => trigger.id,
+              "target_job_id" => job.id,
+              "condition_type" => "always",
+              "enabled" => true
+            }
+          ]
+        }
+      ]
+    }
+  end
+
   defp valid_payload(project_id \\ nil) do
     project_id = project_id || Ecto.UUID.generate()
     first_job_id = Ecto.UUID.generate()

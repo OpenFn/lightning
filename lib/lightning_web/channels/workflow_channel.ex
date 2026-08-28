@@ -14,10 +14,12 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaboration.Utils
   alias Lightning.Collaboration.WorkflowResolver
   alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects.Events.ProjectUserAdded
   alias Lightning.Projects.Events.ProjectUserRemoved
   alias Lightning.Projects.Events.ProjectUserRoleChanged
   alias Lightning.Projects.Events.SupportAccessUpdated
+  alias Lightning.Projects.Scope
   alias Lightning.Repo
   alias Lightning.VersionControl
   alias Lightning.VersionControl.VersionControlUsageLimiter
@@ -1022,39 +1024,27 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   # Without a membership row the policy needs the project itself to weigh up
-  # support access.
+  # support access. Resolve the standing once and decide all three questions
+  # against it — three `Permissions.can?/4` calls would resolve three Scopes for
+  # one unchanging answer.
   defp user_permissions(user, project_user, project) do
-    subject = project_user || project
+    case Scope.fetch(user, project_user || project) do
+      {:ok, scope} ->
+        %{
+          can_edit_workflow: ProjectUsers.permitted?(:edit_workflow, scope),
+          can_run_workflow: ProjectUsers.permitted?(:run_workflow, scope),
+          can_write_webhook_auth_method:
+            ProjectUsers.permitted?(:write_webhook_auth_method, scope)
+        }
 
-    can_edit =
-      Permissions.can?(
-        :project_users,
-        :edit_workflow,
-        user,
-        subject
-      )
-
-    can_run =
-      Permissions.can?(
-        :project_users,
-        :run_workflow,
-        user,
-        subject
-      )
-
-    can_write_webhook_auth =
-      Permissions.can?(
-        :project_users,
-        :write_webhook_auth_method,
-        user,
-        subject
-      )
-
-    %{
-      can_edit_workflow: can_edit,
-      can_run_workflow: can_run,
-      can_write_webhook_auth_method: can_write_webhook_auth
-    }
+      # No such project, or one scheduled for deletion.
+      {:error, _reason} ->
+        %{
+          can_edit_workflow: false,
+          can_run_workflow: false,
+          can_write_webhook_auth_method: false
+        }
+    end
   end
 
   defp publish_template(socket, params) do

@@ -1541,19 +1541,6 @@ defmodule Lightning.Projects do
     |> Repo.one()
   end
 
-  def member_of?(%Project{id: project_id}, %User{id: user_id}) do
-    from(p in Project,
-      join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user_id and p.id == ^project_id,
-      select: true
-    )
-    |> Repo.one()
-    |> case do
-      nil -> false
-      true -> true
-    end
-  end
-
   def get_project_credential(project_id, credential_id) do
     from(pc in ProjectCredential,
       where:

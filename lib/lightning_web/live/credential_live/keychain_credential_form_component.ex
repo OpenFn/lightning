@@ -28,7 +28,7 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
   end
 
   @impl true
-  def update(%{project: project, project_user: project_user} = assigns, socket) do
+  def update(%{project: project, project_user: _project_user} = assigns, socket) do
     changeset =
       Credentials.change_keychain_credential(assigns.keychain_credential)
 
@@ -46,7 +46,7 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
         :credentials,
         :create_keychain_credential,
         assigns.current_user,
-        %{project: project, project_user: project_user}
+        project
       )
 
     can_edit =
@@ -54,7 +54,7 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
         Permissions.can?(
           :credentials,
           :edit_keychain_credential,
-          assigns.project_user,
+          assigns.current_user,
           assigns.keychain_credential
         )
 

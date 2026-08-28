@@ -51,6 +51,11 @@ and this project adheres to
 - Blanking the owner's role on the superuser project form removed the project
   owner and left the project with none. The owner validation counted members
   that were marked for deletion, so it saw an owner that was on its way out.
+- Following an export download link for a project you can no longer access now
+  shows a refusal. The download endpoint had no fallback for a refused request,
+  so it never sent a response at all.
+- Opening a dataclip or export link for a project that no longer exists now
+  shows a refusal instead of a server error.
 
 ### Security
 
@@ -70,6 +75,15 @@ and this project adheres to
   screen, including the superuser project form.
 - Fixed an authorization issue where support users retained project permissions
   on projects with support access switched off.
+- Fixed an access-control issue affecting projects scheduled for deletion.
+- Fixed an issue where a GitHub connection could act on a project scheduled for
+  deletion.
+- Fixed an authorization issue in support staff access to keychain credentials.
+- Keychain credential and sandbox actions (create, merge, edit, delete) are now
+  refused in a project scheduled for deletion.
+- Fixed a privilege-escalation issue in support-user project role enforcement.
+- Fixed an issue where support staff with an open collaborative session could
+  keep saving and publishing in a project scheduled for deletion.
 
 ## [2.18.0] - 2026-08-20
 
