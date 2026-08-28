@@ -17,10 +17,12 @@ defmodule LightningWeb.AiAssistantChannel do
   alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
+  alias Lightning.Projects.Events.ProjectDeletionScheduled
   alias Lightning.Projects.Events.ProjectUserAdded
   alias Lightning.Projects.Events.ProjectUserRemoved
   alias Lightning.Projects.Events.ProjectUserRoleChanged
   alias Lightning.Projects.Events.SupportAccessUpdated
+  alias Lightning.Projects.Events.WorkflowDeleted
   alias Lightning.Runs
   alias Lightning.Workflows
   alias LightningWeb.Channels.AiAssistantJSON
@@ -62,6 +64,7 @@ defmodule LightningWeb.AiAssistantChannel do
          session_id: session.id,
          session_type: session_type,
          session: session,
+         workflow_id: get_workflow_id_for_session(session),
          current_user: user
        )}
     else
@@ -423,6 +426,26 @@ defmodule LightningWeb.AiAssistantChannel do
     stop_unless_authorized(socket)
   end
 
+  # The project is wound down, so no standing on it authorises anything any more
+  # and no later change can undo that. Every session on the project is in scope,
+  # so there is no user to match on.
+  @impl true
+  def handle_info(%ProjectDeletionScheduled{}, socket) do
+    stop_unless_authorized(socket)
+  end
+
+  # The workflow this session hangs off is gone. Inbound frames are not refused
+  # for it — a soft-deleted workflow still authorises, because access is the
+  # project's to grant — so the session has to be dropped explicitly.
+  @impl true
+  def handle_info(
+        %WorkflowDeleted{workflow_id: workflow_id},
+        %{assigns: %{workflow_id: workflow_id}} = socket
+      )
+      when not is_nil(workflow_id) do
+    {:stop, :normal, socket}
+  end
+
   # Support access is a support user's only standing on a project, so revoking it
   # can end their session. Members are unaffected: their row outranks it.
   @impl true
@@ -439,7 +462,8 @@ defmodule LightningWeb.AiAssistantChannel do
              ProjectUserAdded,
              ProjectUserRemoved,
              ProjectUserRoleChanged,
-             SupportAccessUpdated
+             SupportAccessUpdated,
+             WorkflowDeleted
            ] do
     {:noreply, socket}
   end

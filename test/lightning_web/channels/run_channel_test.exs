@@ -3315,6 +3315,41 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_receive {:DOWN, ^monitor_ref, :process, _pid, :normal}
     end
+
+    # Project-wide, with no user on the event: `Scope` refuses a wound-down
+    # project to everybody, so every browser socket streaming its runs goes.
+    test "stops the channel when the project is scheduled for deletion", %{
+      project: project,
+      run: run,
+      socket: socket
+    } do
+      # Positive control: the stream is live before the wind-down.
+      append_log(run, "before scheduling")
+      assert_push "logs", %{logs: [%{message: "before scheduling"}]}
+
+      monitor_ref = Process.monitor(socket.channel_pid)
+
+      {:ok, _project} = Lightning.Projects.schedule_project_deletion(project)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, _pid, :normal}
+
+      append_log(run, "after scheduling")
+
+      refute_push "logs", %{logs: [%{message: "after scheduling"}]}
+    end
+
+    test "leaves the channel joined when another project is scheduled for deletion",
+         %{socket: socket} do
+      other_project =
+        insert(:project, project_users: [%{user: insert(:user), role: :owner}])
+
+      {:ok, _project} =
+        Lightning.Projects.schedule_project_deletion(other_project)
+
+      ref = push(socket, "fetch:logs", %{})
+      assert_reply ref, :ok, %{logs: _}
+      assert Process.alive?(socket.channel_pid)
+    end
   end
 
   defp remove_member(project, user, actor) do

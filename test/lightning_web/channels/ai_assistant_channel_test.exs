@@ -1033,6 +1033,54 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert_reply ref, :ok, %{sessions: _}
     end
 
+    # Scheduling deletion broadcasts a project-wide event with no user on it, so
+    # a handler matching on `user_id` would miss it entirely and this panel would
+    # keep receiving replies for a project nobody may work in.
+    test "the channel stops when the project is scheduled for deletion", %{
+      joined_socket: joined_socket,
+      project: project
+    } do
+      Process.monitor(joined_socket.channel_pid)
+
+      {:ok, _project} = Lightning.Projects.schedule_project_deletion(project)
+
+      assert_receive {:DOWN, _ref, :process, _pid, :normal}
+    end
+
+    # A soft-deleted workflow still authorises — access is the project's to
+    # grant, and the project is untouched — so the inbound guard cannot end this
+    # session and the event has to.
+    test "the channel stops when the session's workflow is deleted", %{
+      joined_socket: joined_socket,
+      job: job
+    } do
+      Process.monitor(joined_socket.channel_pid)
+
+      {:ok, _} =
+        job.workflow_id
+        |> Lightning.Workflows.get_workflow!()
+        |> Lightning.Workflows.mark_for_deletion(insert(:user))
+
+      assert_receive {:DOWN, _ref, :process, _pid, :normal}
+    end
+
+    test "the channel survives another workflow in the project being deleted", %{
+      joined_socket: joined_socket,
+      project: project
+    } do
+      Process.monitor(joined_socket.channel_pid)
+
+      other_workflow = insert(:workflow, project: project)
+
+      {:ok, _} =
+        Lightning.Workflows.mark_for_deletion(other_workflow, insert(:user))
+
+      refute_receive {:DOWN, _ref, :process, _pid, _reason}
+
+      ref = push(joined_socket, "list_sessions", %{})
+      assert_reply ref, :ok, %{sessions: _}
+    end
+
     # `save_message/3` writes `meta` back from the session struct it is handed.
     # A second participant's socket never sees another socket's `update_context`,
     # so writing from its join-time snapshot silently drops the context. The

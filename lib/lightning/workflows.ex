@@ -830,6 +830,11 @@ defmodule Lightning.Workflows do
       with {:ok, _} <- result do
         preloaded = Repo.preload(workflow, [:triggers], force: true)
         Events.workflow_updated(preloaded)
+
+        # The deletion goes out on the *project's* topic, not this module's:
+        # sessions have to be told, and they cannot subscribe to a topic that
+        # also fires on every save. See `Lightning.Projects.Events`.
+        Lightning.Projects.Events.workflow_deleted(preloaded)
       end
     end)
   end

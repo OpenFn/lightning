@@ -107,6 +107,14 @@ defmodule Lightning.Projects.Provisioner do
              ) do
         Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
+        # A provisioning document can soft-delete a workflow, which is the same
+        # disappearance as a delete driven from the UI and has to reach the same
+        # sessions. On the project's topic, not this one — see
+        # `Lightning.Projects.Events`.
+        workflows
+        |> Enum.filter(& &1.deleted_at)
+        |> Enum.each(&Lightning.Projects.Events.workflow_deleted/1)
+
         Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
           Lightning.Projects.Project.sandbox?(updated_project)
         )

@@ -1079,6 +1079,36 @@ defmodule Lightning.ProjectsTest do
       assert Timex.diff(project.scheduled_deletion, now, :days) == days
     end
 
+    # Scheduling deletion is the whole of the offboarding gate during the purge
+    # window — it removes no membership row and revokes no token — so the
+    # sessions it has to end only hear about it through this broadcast.
+    test "schedule_project_deletion/1 broadcasts on the project's topic" do
+      %{id: project_id} = project = insert(:project)
+
+      assert :ok = Projects.Events.subscribe(project_id)
+
+      assert {:ok, _project} = Projects.schedule_project_deletion(project)
+
+      assert_receive %Projects.Events.ProjectDeletionScheduled{
+        project_id: ^project_id
+      }
+    end
+
+    test "schedule_project_deletion/1 stays quiet when the update fails" do
+      project = insert(:project)
+
+      assert :ok = Projects.Events.subscribe(project.id)
+
+      # A project that is already gone cannot be stamped.
+      Repo.delete!(project)
+
+      assert_raise Ecto.StaleEntryError, fn ->
+        Projects.schedule_project_deletion(project)
+      end
+
+      refute_received %Projects.Events.ProjectDeletionScheduled{}
+    end
+
     test "cancel_scheduled_deletion/2" do
       project =
         project_fixture(

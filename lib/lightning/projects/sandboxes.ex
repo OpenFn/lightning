@@ -47,6 +47,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.Scoping
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects.Events
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
@@ -723,6 +724,14 @@ defmodule Lightning.Projects.Sandboxes do
       SandboxPromExPlugin.fire_sandbox_scheduled_for_deletion_event()
 
       {:ok, %{sandbox | scheduled_deletion: date}}
+    end)
+    # Every descendant was wound down too, so every descendant's sessions have
+    # to hear about it. After the commit, not inside it: a subscriber that
+    # re-reads its project must not see it still live.
+    |> tap(fn result ->
+      with {:ok, _sandbox} <- result do
+        Enum.each(subtree_ids, &Events.project_deletion_scheduled/1)
+      end
     end)
   end
 

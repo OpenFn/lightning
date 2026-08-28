@@ -1584,8 +1584,13 @@ defmodule Lightning.Projects do
     |> scheduled_project_deletion_changes(project: project)
     |> Repo.transaction()
     |> case do
-      {:ok, %{project: updated_project}} -> {:ok, updated_project}
-      {:error, _op, changeset, _changes} -> {:error, changeset}
+      {:ok, %{project: updated_project}} ->
+        Events.project_deletion_scheduled(updated_project.id)
+
+        {:ok, updated_project}
+
+      {:error, _op, changeset, _changes} ->
+        {:error, changeset}
     end
   end
 

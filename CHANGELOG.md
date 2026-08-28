@@ -132,6 +132,8 @@ and this project adheres to
 - Fixed a cross-site-scripting issue in channel proxy responses.
 - Fixed an access-revocation issue in the AI assistant panel: membership and
   role changes now close open sessions instead of leaving them active.
+- Scheduling a project for deletion, or deleting a workflow, now ends the
+  sessions open on it.
 - Fixed an authorization issue in AI assistant session writes. Asking questions
   is unaffected.
 - Fixed two paths (adaptor metadata lookup, channel proxy) that resolved a

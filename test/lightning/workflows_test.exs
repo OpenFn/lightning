@@ -1898,6 +1898,49 @@ defmodule Lightning.WorkflowsTest do
       assert Repo.get(Trigger, trigger_3_id) |> Map.get(:enabled) == true
     end
 
+    # A workflow disappearing under a live editor session is only visible to it
+    # through this broadcast: the join-time authorisation decision never
+    # mentions the workflow again.
+    #
+    # On the *project's* topic, not `Workflows.Events`. Sessions cannot subscribe
+    # to a topic that also fires on every save just to hear about deletions, so
+    # the second half of this test is as load-bearing as the first.
+    test "mark_for_deletion/3 broadcasts the deletion on the project's topic",
+         %{
+           project: %{id: project_id},
+           w1: %{id: workflow_id} = workflow,
+           w2: %{id: other_workflow_id}
+         } do
+      assert :ok = Lightning.Projects.Events.subscribe(project_id)
+
+      assert {:ok, _workflow} =
+               Workflows.mark_for_deletion(workflow, insert(:user))
+
+      assert_receive %Lightning.Projects.Events.WorkflowDeleted{
+        workflow_id: ^workflow_id,
+        project_id: ^project_id
+      }
+
+      refute_received %Lightning.Projects.Events.WorkflowDeleted{
+        workflow_id: ^other_workflow_id
+      }
+    end
+
+    test "saving a workflow puts nothing on the project's topic", %{
+      project: %{id: project_id},
+      w1: workflow
+    } do
+      assert :ok = Lightning.Projects.Events.subscribe(project_id)
+
+      assert {:ok, _workflow} =
+               Workflows.save_workflow(
+                 Workflows.change_workflow(workflow, %{name: "Renamed"}),
+                 insert(:user)
+               )
+
+      refute_received _message
+    end
+
     test "mark_for_deletion/3 creates an audit event", %{
       w1: %{id: workflow_id} = workflow
     } do

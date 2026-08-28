@@ -700,6 +700,168 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "project and workflow deletion teardown" do
+    setup do
+      # The module-level setup stubs `Lightning.broadcast/2` to a no-op so
+      # `save_workflow` does not fan out. The teardown *is* the broadcast, so
+      # put the real implementation back for these tests.
+      Mox.stub(LightningMock, :broadcast, &Lightning.API.broadcast/2)
+
+      Mox.stub(
+        Lightning.Extensions.MockProjectHook,
+        :handle_project_validation,
+        & &1
+      )
+
+      :ok
+    end
+
+    # `save_workflow` already refuses once the project is wound down, but Yjs
+    # frames are gated on the join-time `can_edit_workflow`, so without this the
+    # participant keeps mutating the shared document — and every other
+    # participant keeps seeing those mutations — for the life of the socket.
+    test "stops the channel when the project is scheduled for deletion", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+      session_pid = socket.assigns.session_pid
+
+      # Positive control: this participant's frames do reach the shared document
+      # right up to the moment the project is wound down.
+      chunk = build_name_mutation(session_pid, :sync_update, "Edited While Live")
+      push(socket, "yjs", {:binary, chunk})
+      await_channel_processed(socket)
+      assert workflow_name(session_pid) == "Edited While Live"
+
+      channel_pid = socket.channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      {:ok, _project} = Lightning.Projects.schedule_project_deletion(project)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    # A support user holds the project itself rather than a membership row, so
+    # they take the other route into `Scope` — and they are exactly who a
+    # wind-down is meant to offboard.
+    test "stops a support-access channel when the project is scheduled for deletion" do
+      project =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: insert(:user), role: :owner}]
+        )
+
+      workflow = insert(:workflow, project: project)
+      support_user = insert(:user, support_user: true)
+
+      socket = join_as(support_user, project, workflow)
+      assert socket.assigns.project_user == nil
+      assert socket.assigns.can_edit_workflow
+
+      channel_pid = socket.channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      {:ok, _project} = Lightning.Projects.schedule_project_deletion(project)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    test "leaves a channel on another project joined", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+
+      other_project =
+        insert(:project, project_users: [%{user: insert(:user), role: :owner}])
+
+      {:ok, _project} =
+        Lightning.Projects.schedule_project_deletion(other_project)
+
+      ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+      assert_reply ref, :ok, %{workflow: _}
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    # A save on the soft-deleted row would write the Y.Doc back over it, so the
+    # deleted workflow's content would reappear.
+    test "stops the channel when its own workflow is deleted", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      channel_pid = join_as(editor, project, workflow).channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      {:ok, _} = Lightning.Workflows.mark_for_deletion(workflow, insert(:user))
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    test "leaves the channel joined when another workflow in the project is deleted",
+         %{project: project, workflow: workflow} do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      other_workflow = insert(:workflow, project: project)
+
+      socket = join_as(editor, project, workflow)
+
+      log =
+        capture_log(fn ->
+          {:ok, _} =
+            Lightning.Workflows.mark_for_deletion(
+              other_workflow,
+              insert(:user)
+            )
+
+          ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+          assert_reply ref, :ok, %{workflow: _}
+        end)
+
+      refute log =~ "unhandled message"
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    # Deletions ride the project's topic precisely so that saves — which are
+    # frequent — do not reach this channel at all. Guard against a future
+    # subscription putting them back.
+    test "leaves the channel joined and quiet when a workflow is saved", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+
+      log =
+        capture_log(fn ->
+          {:ok, _} =
+            Lightning.Workflows.save_workflow(
+              Lightning.Workflows.change_workflow(workflow, %{name: "Renamed"}),
+              user
+            )
+
+          ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+          assert_reply ref, :ok, %{workflow: _}
+        end)
+
+      refute log =~ "unhandled message"
+      assert Process.alive?(socket.channel_pid)
+    end
+  end
+
   describe "request_adaptors and request_credentials" do
     test "handles multiple concurrent requests independently", %{
       socket: socket

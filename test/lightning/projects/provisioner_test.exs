@@ -1184,6 +1184,44 @@ defmodule Lightning.Projects.ProvisionerTest do
       }
     end
 
+    # A provisioning document that soft-deletes a workflow is the same
+    # disappearance as a delete driven from the UI, and has to reach the same
+    # sessions.
+    test "sends workflow deleted event for a soft-deleted workflow", %{
+      project: project,
+      user: user
+    } do
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
+
+      {:ok, project} = Provisioner.import_document(project, user, body)
+
+      Lightning.Projects.Events.subscribe(project.id)
+
+      assert {:ok, _project} =
+               Provisioner.import_document(
+                 project,
+                 user,
+                 remove_workflow_from_document(body, workflow_id)
+               )
+
+      assert_received %Lightning.Projects.Events.WorkflowDeleted{
+        workflow_id: ^workflow_id
+      }
+    end
+
+    test "a document that deletes nothing sends no deletion event", %{
+      project: project,
+      user: user
+    } do
+      %{body: body} = valid_document(project.id)
+
+      Lightning.Projects.Events.subscribe(project.id)
+
+      assert {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      refute_received %Lightning.Projects.Events.WorkflowDeleted{}
+    end
+
     test "audits workflow events as a result of the provisioner", %{
       user: %{id: user_id} = user
     } do

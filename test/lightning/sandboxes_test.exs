@@ -2401,6 +2401,30 @@ defmodule Lightning.Projects.SandboxesTest do
       assert abs(diff_seconds) <= 5
     end
 
+    # Every project in the subtree is wound down, so every project's sessions
+    # have to hear about it — a descendant's editor is no less stale than the
+    # target's.
+    test "broadcasts on every scheduled project's topic" do
+      actor = insert(:user)
+      %{id: parent_id} = parent = insert(:sandbox, name: "p")
+      %{id: child_id} = child = insert(:project, name: "c", parent: parent)
+
+      for project <- [parent, child] do
+        ensure_member!(project, actor, :owner)
+        assert :ok = Lightning.Projects.Events.subscribe(project.id)
+      end
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(parent, actor)
+
+      assert_receive %Lightning.Projects.Events.ProjectDeletionScheduled{
+        project_id: ^parent_id
+      }
+
+      assert_receive %Lightning.Projects.Events.ProjectDeletionScheduled{
+        project_id: ^child_id
+      }
+    end
+
     test "cascades scheduled_deletion to descendants" do
       actor = insert(:user)
       grandparent = insert(:sandbox, name: "gp")

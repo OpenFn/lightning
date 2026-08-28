@@ -16,10 +16,12 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects.Environment
+  alias Lightning.Projects.Events.ProjectDeletionScheduled
   alias Lightning.Projects.Events.ProjectUserAdded
   alias Lightning.Projects.Events.ProjectUserRemoved
   alias Lightning.Projects.Events.ProjectUserRoleChanged
   alias Lightning.Projects.Events.SupportAccessUpdated
+  alias Lightning.Projects.Events.WorkflowDeleted
   alias Lightning.Projects.Scope
   alias Lightning.Repo
   alias Lightning.VersionControl
@@ -776,6 +778,25 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
+  # The project is wound down, so nobody may work in it and no later change can
+  # make it writable again. `save_workflow` already refuses, but Yjs frames are
+  # gated on `assigns.can_edit_workflow` — resolved at join and never lowered by
+  # this event — so the shared document stays writable until the channel goes.
+  # Ending it is the only thing that stops those mutations reaching every other
+  # participant in the room.
+  @impl true
+  def handle_info(%ProjectDeletionScheduled{}, socket) do
+    {:stop, :normal, socket}
+  end
+
+  @impl true
+  def handle_info(
+        %WorkflowDeleted{workflow_id: workflow_id},
+        %{assigns: %{workflow_id: workflow_id}} = socket
+      ) do
+    {:stop, :normal, socket}
+  end
+
   # We lost access entirely, so there is nothing left to re-authorise: drop the
   # channel.
   @impl true
@@ -827,7 +848,8 @@ defmodule LightningWeb.WorkflowChannel do
              ProjectUserAdded,
              ProjectUserRemoved,
              ProjectUserRoleChanged,
-             SupportAccessUpdated
+             SupportAccessUpdated,
+             WorkflowDeleted
            ] do
     {:noreply, socket}
   end

@@ -13,10 +13,12 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Users
   alias Lightning.Projects.Events
+  alias Lightning.Projects.Events.ProjectDeletionScheduled
   alias Lightning.Projects.Events.ProjectUserAdded
   alias Lightning.Projects.Events.ProjectUserRemoved
   alias Lightning.Projects.Events.ProjectUserRoleChanged
   alias Lightning.Projects.Events.SupportAccessUpdated
+  alias Lightning.Projects.Events.WorkflowDeleted
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.Scope
   alias Lightning.Services.UsageLimiter
@@ -143,7 +145,10 @@ defmodule LightningWeb.Hooks do
       Lightning.Workflows.workflow_exists_in_project?(project.id, workflow_id)
 
     if workflow_exists? do
-      {:cont, socket}
+      # Read by `handle_project_user_event/2`, which sees the project's
+      # `WorkflowDeleted` events but has no other way to know which workflow
+      # this socket is holding open.
+      {:cont, assign(socket, :current_workflow_id, workflow_id)}
     else
       {:halt,
        socket
@@ -279,6 +284,41 @@ defmodule LightningWeb.Hooks do
     else
       socket
     end
+  end
+
+  # The project is wound down. Every socket on it is in scope, whatever standing
+  # it holds, and no later change can bring the project back — `Scope` refuses
+  # it for good — so there is nothing to re-mount into. Leave the project
+  # rather than bouncing through a mount that would only redirect again with a
+  # less useful message.
+  defp handle_project_user_event(%ProjectDeletionScheduled{}, socket) do
+    {:halt,
+     socket
+     |> put_flash(:info, "Project deleted.")
+     |> redirect(to: ~p"/projects")}
+  end
+
+  # The workflow this socket is holding open is gone. Nobody resolves it again,
+  # so leave it for the project's workflow list.
+  #
+  # `:ensure_workflow_belongs_to_project` sets `current_workflow_id`; a socket
+  # that never took that hook has no such assign and falls to the clause below.
+  defp handle_project_user_event(
+         %WorkflowDeleted{workflow_id: workflow_id},
+         %{assigns: %{current_workflow_id: workflow_id, project: project}} =
+           socket
+       ) do
+    {:halt,
+     socket
+     |> put_flash(:info, "Workflow deleted.")
+     |> push_navigate(to: ~p"/projects/#{project}/w")}
+  end
+
+  # Some other workflow in the project, or this view is not holding one open at
+  # all — nothing to do, but halt so the event never reaches a LiveView with no
+  # matching `handle_info/2`.
+  defp handle_project_user_event(%WorkflowDeleted{}, socket) do
+    {:halt, socket}
   end
 
   # Support access is project-wide, so there is no user to match on: the sockets

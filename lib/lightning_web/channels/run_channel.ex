@@ -12,6 +12,7 @@ defmodule LightningWeb.RunChannel do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
+  alias Lightning.Projects.Events.ProjectDeletionScheduled
   alias Lightning.Projects.Events.ProjectUserRemoved
   alias Lightning.Projects.Events.SupportAccessUpdated
   alias Lightning.Repo
@@ -319,6 +320,7 @@ defmodule LightningWeb.RunChannel do
   # not project membership, so it carries no `:current_user` to re-check.
   def handle_info(%event{} = message, socket)
       when event in [
+             ProjectDeletionScheduled,
              ProjectUserRemoved,
              SupportAccessUpdated
            ] and is_map_key(socket.assigns, :current_user) do
@@ -332,6 +334,11 @@ defmodule LightningWeb.RunChannel do
 
   # Ignore other messages
   def handle_info(_msg, socket), do: {:noreply, socket}
+
+  # The project is wound down, so nobody's standing on it survives — there is no
+  # user to compare against.
+  defp concerns_current_user?(%ProjectDeletionScheduled{}, _current_user),
+    do: true
 
   defp concerns_current_user?(%SupportAccessUpdated{}, %{support_user: true}),
     do: true
