@@ -22,6 +22,11 @@ and this project adheres to
   button), closes any other open panel, deselects the current node, and drops
   any run-viewing context, landing on the bare canvas.
   [#4984](https://github.com/OpenFn/lightning/pull/4984)
+- Workflows scheduled for deletion are now purged permanently once
+  `PURGE_DELETED_AFTER_DAYS` has elapsed and their work orders have been cleared
+  by the project's retention policy, the same way projects, users, credentials
+  and webhook auth methods are already purged.
+  [#4163](https://github.com/OpenFn/lightning/issues/4163)
 - The audit log now records collaborator changes: adding or removing a
   collaborator, or changing their role, is logged with who made the change and
   the role before and after.

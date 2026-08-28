@@ -293,7 +293,8 @@ defmodule Lightning.Config.Bootstrap do
            args: %{"type" => "purge_deleted"}},
           {"45 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}},
           {"0 3 * * *", Lightning.WebhookAuthMethods,
-           args: %{"type" => "purge_deleted"}}
+           args: %{"type" => "purge_deleted"}},
+          {"15 3 * * *", Lightning.Workflows, args: %{"type" => "purge_deleted"}}
         ],
         else: []
 

@@ -3,10 +3,15 @@ defmodule Lightning.Workflows do
   The Workflows context.
   """
 
+  use Oban.Worker,
+    queue: :background,
+    max_attempts: 1
+
   import Ecto.Query
 
   alias Ecto.Multi
 
+  alias Lightning.Config
   alias Lightning.Credentials.Scoping
   alias Lightning.Projects.Project
   alias Lightning.Repo
@@ -19,6 +24,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkflowVersions
+  alias Lightning.WorkOrder
 
   defdelegate subscribe(project_id), to: Events
 
@@ -882,6 +888,116 @@ defmodule Lightning.Workflows do
     if MapSet.member?(existing_names, candidate),
       do: find_available_name(base_name, existing_names, n + 1),
       else: candidate
+  end
+
+  @doc """
+  Permanently deletes workflows that were marked for deletion long enough ago
+  and have no history left.
+
+  A workflow becomes purgeable `purge_deleted_after_days` days after it was
+  marked for deletion, and only once the last of its work orders is gone.
+  Deleting a workflow's history is the data retention policy's job, not this
+  one's: a workflow whose project keeps history forever is never purged, and
+  one whose retention window is shorter than the purge window is purged on the
+  first nightly sweep after its history expires.
+
+  An unset `purge_deleted_after_days` reads as zero days, in line with the
+  other purge workers — the cron entry driving this is only registered when
+  the setting is greater than zero.
+  """
+  @impl Oban.Worker
+  def perform(%Oban.Job{
+        args: %{"workflow_id" => workflow_id, "type" => "purge_deleted"}
+      }) do
+    case Repo.get(Workflow, workflow_id) do
+      nil ->
+        :ok
+
+      %Workflow{deleted_at: nil} ->
+        # The workflow came back between this job being enqueued and it
+        # running. A purge can't be undone, so leave it alone.
+        :ok
+
+      workflow ->
+        case delete_workflow(workflow) do
+          {:ok, _workflow} ->
+            :ok
+
+          {:error, :has_history} ->
+            # History arrived, or outlasted its expected retention window,
+            # between this job being enqueued and it running. Not an error:
+            # tomorrow's sweep re-checks and enqueues the workflow again.
+            {:cancel, :has_history}
+        end
+    end
+  end
+
+  def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
+    jobs =
+      purgeable_workflows_query()
+      |> Repo.all()
+      |> Enum.map(fn workflow_id ->
+        new(%{workflow_id: workflow_id, type: "purge_deleted"}, max_attempts: 3)
+      end)
+
+    Oban.insert_all(Lightning.Oban, jobs)
+
+    :ok
+  end
+
+  defp purgeable_workflows_query do
+    days = Config.purge_deleted_after_days() || 0
+
+    from(w in Workflow,
+      as: :workflow,
+      where: not is_nil(w.deleted_at) and w.deleted_at <= ago(^days, "day"),
+      where: not exists(workflow_history_query()),
+      select: w.id
+    )
+  end
+
+  defp workflow_history_query do
+    from(wo in WorkOrder,
+      where: wo.workflow_id == parent_as(:workflow).id,
+      select: 1
+    )
+  end
+
+  @doc """
+  Permanently deletes a workflow that has no history left.
+
+  Returns `{:error, :has_history}` for a workflow that still has work orders.
+  Their history belongs to the project and is the data retention policy's to
+  remove; until it does, work orders and steps hold `RESTRICT` references to
+  the workflow's snapshots and the delete could not succeed anyway.
+
+  Deleting the workflow row cascades to its jobs, triggers, edges, snapshots,
+  versions, templates and AI chat sessions. Project-scoped records the
+  workflow merely referenced, dataclips above all, are left where they are:
+  they belong to the project and outlive it.
+  """
+  @spec delete_workflow(Workflow.t()) ::
+          {:ok, Workflow.t()} | {:error, :has_history | Ecto.Changeset.t()}
+  def delete_workflow(%Workflow{} = workflow) do
+    if has_history?(workflow) do
+      {:error, :has_history}
+    else
+      Logger.debug(fn ->
+        # coveralls-ignore-start
+        "Deleting workflow ##{workflow.id}..."
+        # coveralls-ignore-stop
+      end)
+
+      Repo.delete(workflow)
+    end
+  end
+
+  @doc """
+  Whether any work orders are still recorded against `workflow`.
+  """
+  @spec has_history?(Workflow.t()) :: boolean()
+  def has_history?(%Workflow{id: workflow_id}) do
+    Repo.exists?(from(wo in WorkOrder, where: wo.workflow_id == ^workflow_id))
   end
 
   @doc """

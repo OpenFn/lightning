@@ -6,9 +6,16 @@ defmodule Lightning.WorkflowsTest do
   import Lightning.Factories
 
   alias Lightning.Auditing.Audit
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.Step
+  alias Lightning.Projects.Project
   alias Lightning.Workflows
+  alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.Workflow
+  alias Lightning.WorkOrder
 
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
@@ -2164,6 +2171,120 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "Workflows.perform/1 for purge_deleted" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> 7 end)
+
+      :ok
+    end
+
+    test "purges every history-free workflow whose deletion window has closed when called with type 'purge_deleted'" do
+      project = insert(:project)
+
+      past_window =
+        insert(:simple_workflow, project: project, deleted_at: days_ago(8))
+
+      inside_window =
+        insert(:simple_workflow, project: project, deleted_at: days_ago(1))
+
+      never_deleted = insert(:simple_workflow, project: project)
+
+      with_history =
+        insert(:simple_workflow, project: project, deleted_at: days_ago(8))
+
+      insert_history(with_history)
+
+      assert :ok =
+               Workflows.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      refute Repo.get(Workflow, past_window.id)
+      assert Repo.get(Workflow, inside_window.id)
+      assert Repo.get(Workflow, never_deleted.id)
+
+      assert Repo.get(Workflow, with_history.id),
+             "a workflow is only purged once data retention has taken its history"
+    end
+
+    test "permanently deletes a workflow and everything hanging off it" do
+      project = insert(:project)
+
+      %{jobs: jobs, triggers: [trigger], edges: [edge]} =
+        workflow =
+        insert(:simple_workflow, project: project, deleted_at: days_ago(8))
+
+      snapshot = insert(:snapshot, workflow: workflow)
+      dataclip = insert(:dataclip, project: project)
+
+      untouched = insert(:simple_workflow, project: project)
+
+      assert :ok =
+               Workflows.perform(%Oban.Job{
+                 args: %{
+                   "workflow_id" => workflow.id,
+                   "type" => "purge_deleted"
+                 }
+               })
+
+      refute Repo.get(Workflow, workflow.id)
+      refute Repo.get(Trigger, trigger.id)
+      refute Repo.get(Edge, edge.id)
+      refute Repo.get(Snapshot, snapshot.id)
+      for job <- jobs, do: refute(Repo.get(Job, job.id))
+
+      assert Repo.get(Project, project.id),
+             "the project outlives its workflows"
+
+      assert Repo.get(Dataclip, dataclip.id),
+             "dataclips belong to the project, not the workflow"
+
+      assert Repo.get(Workflow, untouched.id)
+    end
+
+    test "leaves a workflow whose history has not expired yet alone" do
+      workflow = insert(:simple_workflow, deleted_at: days_ago(8))
+
+      %{work_order: work_order, step: step} = insert_history(workflow)
+
+      assert {:error, :has_history} = Workflows.delete_workflow(workflow)
+
+      assert {:cancel, :has_history} =
+               Workflows.perform(%Oban.Job{
+                 args: %{
+                   "workflow_id" => workflow.id,
+                   "type" => "purge_deleted"
+                 }
+               })
+
+      assert Repo.get(Workflow, workflow.id)
+      assert Repo.get(WorkOrder, work_order.id)
+      assert Repo.get(Step, step.id)
+    end
+
+    test "leaves a workflow that is no longer marked for deletion alone" do
+      workflow = insert(:simple_workflow, deleted_at: nil)
+
+      assert :ok =
+               Workflows.perform(%Oban.Job{
+                 args: %{
+                   "workflow_id" => workflow.id,
+                   "type" => "purge_deleted"
+                 }
+               })
+
+      assert Repo.get(Workflow, workflow.id)
+    end
+
+    test "no-ops when the workflow is already gone" do
+      assert :ok =
+               Workflows.perform(%Oban.Job{
+                 args: %{
+                   "workflow_id" => Ecto.UUID.generate(),
+                   "type" => "purge_deleted"
+                 }
+               })
+    end
+  end
+
   defp assert_trigger_state_audit(
          workflow_id,
          user_id,
@@ -2196,5 +2317,34 @@ defmodule Lightning.WorkflowsTest do
     |> with_trigger(trigger)
     |> with_edge({trigger, job})
     |> insert()
+  end
+
+  defp days_ago(days) do
+    DateTime.utc_now() |> DateTime.add(-days, :day) |> DateTime.truncate(:second)
+  end
+
+  defp insert_history(%{jobs: [job | _], triggers: [trigger]} = workflow) do
+    snapshot = insert(:snapshot, workflow: workflow)
+    dataclip = insert(:dataclip, project: workflow.project)
+
+    step = insert(:step, job: job, input_dataclip: dataclip, snapshot: snapshot)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot,
+        runs: [
+          build(:run,
+            starting_trigger: trigger,
+            dataclip: dataclip,
+            snapshot: snapshot,
+            steps: [step]
+          )
+        ]
+      )
+
+    %{work_order: work_order, step: step, snapshot: snapshot}
   end
 end
