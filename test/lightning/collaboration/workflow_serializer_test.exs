@@ -210,7 +210,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
     test "converts trigger type atoms to strings" do
       workflow =
         build(:workflow)
-        |> with_trigger(build(:trigger, type: :kafka))
+        |> with_trigger(build(:trigger, type: :webhook))
         |> insert()
         |> preload_workflow_associations()
 
@@ -222,7 +222,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
       trigger = Yex.Array.fetch!(triggers_array, 0)
 
       # Should be converted to string
-      assert trigger["type"] == "kafka"
+      assert trigger["type"] == "webhook"
     end
 
     test "writes positions map to Y.Doc" do
@@ -760,7 +760,6 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "enabled" => true,
                "cron_expression" => nil,
                "cron_cursor_job_id" => nil,
-               "kafka_configuration" => nil,
                "webhook_reply" => "before_start",
                "webhook_response_config" => nil
              } == extracted_trigger
@@ -799,7 +798,6 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
         |> with_trigger(
           build(:trigger, type: :cron, cron_expression: "0 * * * *")
         )
-        |> with_trigger(build(:trigger, type: :kafka))
         |> insert()
         |> preload_workflow_associations()
 
@@ -814,7 +812,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
         |> Enum.sort()
 
       # All types should be strings
-      assert trigger_types == ["cron", "kafka", "webhook"]
+      assert trigger_types == ["cron", "webhook"]
     end
 
     test "preserves edge condition_type as strings" do
@@ -983,7 +981,6 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "enabled" => original_trigger.enabled,
                "cron_expression" => original_trigger.cron_expression,
                "cron_cursor_job_id" => original_trigger.cron_cursor_job_id,
-               "kafka_configuration" => nil,
                "webhook_reply" => nil,
                "webhook_response_config" => nil
              } == extracted_trigger
@@ -1295,113 +1292,9 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "enabled" => true,
                "cron_expression" => "0 */6 * * *",
                "cron_cursor_job_id" => original_trigger.cron_cursor_job_id,
-               "kafka_configuration" => nil,
                "webhook_reply" => nil,
                "webhook_response_config" => nil
              } == trigger
-    end
-
-    test "serializes and deserializes kafka trigger with kafka_configuration" do
-      workflow =
-        build(:workflow)
-        |> with_trigger(
-          build(:trigger,
-            type: :kafka,
-            enabled: true,
-            kafka_configuration: %{
-              hosts: [["broker1", "9092"], ["broker2", "9092"]],
-              topics: ["topic1", "topic2"],
-              sasl: :plain,
-              username: "test_user",
-              password: "test_password",
-              ssl: true,
-              connect_timeout: 10_000,
-              initial_offset_reset_policy: "latest",
-              group_id: "test-group"
-            }
-          )
-        )
-        |> insert()
-        |> preload_workflow_associations()
-
-      doc = Yex.Doc.new()
-
-      # Serialize
-      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
-
-      # Deserialize
-      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
-
-      trigger = List.first(extracted["triggers"])
-      original_trigger = List.first(workflow.triggers)
-
-      assert trigger["id"] == original_trigger.id
-      assert trigger["type"] == "kafka"
-      assert trigger["enabled"] == true
-
-      # Verify kafka_configuration fields
-      # The serializer stores hosts_string and topics_string for the UI
-      kafka_config = trigger["kafka_configuration"]
-      assert kafka_config["hosts_string"] == "broker1:9092, broker2:9092"
-      assert kafka_config["topics_string"] == "topic1, topic2"
-      assert kafka_config["sasl"] == "plain"
-      assert kafka_config["ssl"] == true
-      assert kafka_config["connect_timeout"] == 10_000
-      assert kafka_config["initial_offset_reset_policy"] == "latest"
-      assert kafka_config["group_id"] == "test-group"
-      assert kafka_config["username"] == "test_user"
-      assert kafka_config["password"] == "test_password"
-    end
-
-    test "serializes kafka trigger with nil kafka_configuration" do
-      workflow =
-        build(:workflow)
-        |> with_trigger(
-          build(:trigger,
-            type: :kafka,
-            enabled: true,
-            kafka_configuration: nil
-          )
-        )
-        |> insert()
-        |> preload_workflow_associations()
-
-      doc = Yex.Doc.new()
-
-      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
-      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
-
-      trigger = List.first(extracted["triggers"])
-
-      assert %{
-               "type" => "kafka",
-               "kafka_configuration" => nil
-             } = trigger
-    end
-
-    test "non-kafka triggers have nil kafka_configuration" do
-      workflow =
-        build(:workflow)
-        |> with_trigger(
-          build(:trigger,
-            type: :webhook,
-            enabled: true
-          )
-        )
-        |> insert()
-        |> preload_workflow_associations()
-
-      doc = Yex.Doc.new()
-
-      WorkflowSerializer.serialize_to_ydoc(doc, workflow)
-      extracted = WorkflowSerializer.deserialize_from_ydoc(doc, workflow.id)
-
-      trigger = List.first(extracted["triggers"])
-
-      assert %{
-               "type" => "webhook",
-               "kafka_configuration" => nil
-             } = trigger
     end
 
     test "handles complex positions map structure" do

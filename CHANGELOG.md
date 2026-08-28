@@ -40,6 +40,51 @@ and this project adheres to
   [#4969](https://github.com/OpenFn/lightning/pull/4969)
 - Bumped bundled worker to version 1.29.2
 
+### Removed
+
+- **[BREAKING CHANGE] Kafka triggers have been removed.** A workflow can no
+  longer be started by consuming from a Kafka cluster, and the `KAFKA_*`
+  environment variables no longer do anything. If you had
+  `KAFKA_TRIGGERS_ENABLED` switched on, take a backup and switch it off before
+  upgrading; stay on the previous release if you still need Kafka.
+
+  Existing Kafka triggers are converted to **disabled webhook triggers** rather
+  than deleted: the trigger keeps its id, so the workflow, its connection to the
+  first job, and its run history all survive intact and retryable. Nothing
+  starts that workflow again until you enable the trigger and set it up as a
+  webhook, or delete the workflow if you no longer want it. The conversion
+  doesn't reverse itself. Until the `kafka_configuration` column and
+  `trigger_kafka_message_records` table are dropped in a later release,
+  `kafka_configuration IS NOT NULL` on `triggers` identifies which webhooks were
+  converted from Kafka, so a rollback can restore their type by hand. Each
+  converted workflow's version also bumps, so it will show as edited even though
+  nobody touched it.
+
+  You can upgrade without downtime: the migration only converts trigger rows, so
+  it holds no lock that inbound webhooks wait on. If you're actively consuming
+  from a broker, expect the previous version's pipelines to keep running until
+  their process restarts.
+
+  Dataclips created from Kafka messages keep their run history, but are no
+  longer exempt from your project's retention policy: the first retention run
+  after upgrading clears the body and request of any unnamed Kafka dataclip
+  already past its retention period. After that they age out like any other
+  dataclip.
+
+  Snapshots still hold each converted trigger's encrypted broker settings, even
+  though nothing reads them any more. To scrub that from existing snapshots:
+  this table can be large, so we'd advise running it after hours, or in batches
+  by `id`.
+
+  ```sql
+  UPDATE workflow_snapshots
+  SET triggers = COALESCE(
+        (SELECT jsonb_agg(t - 'kafka_configuration' ORDER BY ord)
+           FROM jsonb_array_elements(triggers) WITH ORDINALITY AS x(t, ord)),
+        '[]'::jsonb)
+  WHERE triggers::text LIKE '%kafka_configuration%';
+  ```
+
 ### Fixed
 
 - The AI assistant no longer appends " 1" to a workflow's name each time it

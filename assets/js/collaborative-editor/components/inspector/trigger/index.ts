@@ -6,4 +6,3 @@ export { TriggerEditWizard } from './TriggerEditWizard';
 
 export { WebhookShowPanel, type EditFocus } from './WebhookShowPanel';
 export { CronShowPanel } from './CronShowPanel';
-export { KafkaShowPanel } from './KafkaShowPanel';

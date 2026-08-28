@@ -30,7 +30,6 @@ export const ProjectRepoConnectionSchema = z.object({
 
 export const AppConfigSchema = z.object({
   require_email_verification: z.boolean(),
-  kafka_triggers_enabled: z.boolean(),
   max_dataclip_size_bytes: z.number().int().optional(),
 });
 

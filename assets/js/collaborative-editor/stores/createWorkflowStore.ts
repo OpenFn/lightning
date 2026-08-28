@@ -400,7 +400,7 @@ export const createWorkflowStore = (
    * This prevents unnecessary object updates in Immer when errors haven't
    * changed, maintaining referential stability for React memoization.
    *
-   * Handles both flat error structures and nested ones (e.g. kafka_configuration)
+   * Handles both flat error structures and nested ones
    */
   function areErrorsEqual(
     a: Record<string, unknown>,
@@ -423,7 +423,7 @@ export const createWorkflowStore = (
         return valsA.every((val, i) => val === valsB[i]);
       }
 
-      // If both values are objects (nested errors like kafka_configuration), recurse
+      // If both values are objects (nested errors), recurse
       if (
         typeof valsA === 'object' &&
         typeof valsB === 'object' &&

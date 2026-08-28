@@ -1285,6 +1285,45 @@ defmodule Lightning.ProjectsTest do
   end
 
   describe "export_project/2 as yaml:" do
+    test "exports a snapshot taken when a removed trigger type still existed" do
+      # Snapshots keep the trigger type they were taken with. The Kafka trigger
+      # is gone, but a snapshot from before it went still says :kafka, and
+      # exporting that version must not fall through an unmatched clause and
+      # take the whole export down.
+      project = insert(:project, name: "has-history")
+
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, project: project, name: "old-workflow")
+
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      # Rewrite the stored snapshot the way an older release would have left it.
+      snapshot
+      |> Ecto.Changeset.change(%{
+        triggers: [
+          %{
+            id: trigger.id,
+            type: :kafka,
+            enabled: false,
+            inserted_at: trigger.inserted_at,
+            updated_at: trigger.updated_at
+          }
+        ]
+      })
+      |> Repo.update!()
+
+      assert {:ok, yaml} =
+               Projects.export_project(:yaml, project.id, [snapshot.id])
+
+      # The workflow name comes from the node, so asserting only that would hold
+      # even if the trigger were dropped or written under the wrong key. Pin the
+      # trigger itself: it is emitted, and emitted as what it was.
+      assert yaml =~ "old-workflow"
+      assert yaml =~ "triggers:"
+      assert yaml =~ "kafka"
+    end
+
     test "works on project with no workflows" do
       project = project_fixture(name: "newly-created-project")
 
@@ -1404,49 +1443,6 @@ defmodule Lightning.ProjectsTest do
       """
 
       assert generated_yaml =~ expected_yaml
-    end
-
-    test "kafka triggers are included in the export" do
-      project = insert(:project, name: "project 1")
-
-      trigger =
-        build(:trigger,
-          type: :kafka,
-          kafka_configuration: %{
-            hosts: [["localhost", "9092"]],
-            topics: ["dummy"],
-            initial_offset_reset_policy: "earliest"
-          }
-        )
-
-      job =
-        build(:job,
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
-        )
-
-      build(:workflow, name: "workflow 1", project: project)
-      |> with_trigger(trigger)
-      |> with_job(job)
-      |> with_edge({trigger, job}, condition_type: :always)
-      |> insert()
-
-      expected_yaml_trigger = """
-          triggers:
-            kafka:
-              type: kafka
-              enabled: true
-              kafka_configuration:
-                hosts:
-                  - 'localhost:9092'
-                topics:
-                  - dummy
-                initial_offset_reset_policy: earliest
-                connect_timeout: 30
-      """
-
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
-
-      assert generated_yaml =~ expected_yaml_trigger
     end
 
     test "channels are included in the export with their destination credential" do
@@ -2485,96 +2481,6 @@ defmodule Lightning.ProjectsTest do
       assert project.project_users
              |> Enum.map(& &1.digest)
              |> Enum.all?(&(&1 == :never))
-    end
-  end
-
-  describe ".find_users_to_notify_of_trigger_failure/1" do
-    setup do
-      other_project = insert(:project)
-      project = insert(:project)
-
-      superuser_1 = insert(:user, email: "super1@test.com", role: :superuser)
-      superuser_2 = insert(:user, email: "super2@test.com", role: :superuser)
-
-      other_project_superuser =
-        insert(:user, email: "other@test.com", role: :superuser)
-
-      admin_user = insert(:user, email: "admin@test.com", role: :user)
-      owner_user = insert(:user, email: "owner@test.com", role: :user)
-      user = insert(:user, email: "user@test.com", role: :user)
-
-      insert(
-        :project_user,
-        project: other_project,
-        user: other_project_superuser,
-        role: :viewer
-      )
-
-      insert(
-        :project_user,
-        project: project,
-        user: user,
-        role: :viewer
-      )
-
-      insert(
-        :project_user,
-        project: project,
-        user: superuser_1,
-        role: :viewer
-      )
-
-      insert(
-        :project_user,
-        project: project,
-        user: superuser_2,
-        role: :admin
-      )
-
-      insert(
-        :project_user,
-        project: project,
-        user: admin_user,
-        role: :admin
-      )
-
-      insert(
-        :project_user,
-        project: project,
-        user: owner_user,
-        role: :owner
-      )
-
-      %{
-        admin_user: admin_user,
-        other_project_superuser: other_project_superuser,
-        owner_user: owner_user,
-        project: project,
-        superuser_1: superuser_1,
-        superuser_2: superuser_2,
-        user: user
-      }
-    end
-
-    test "returns associated superusers or users with admin/owner role", %{
-      admin_user: admin_user,
-      owner_user: owner_user,
-      project: project,
-      superuser_1: superuser_1,
-      superuser_2: superuser_2
-    } do
-      expected_emails =
-        [admin_user, owner_user, superuser_1, superuser_2]
-        |> Enum.map(& &1.email)
-        |> Enum.sort()
-
-      actual_emails =
-        project.id
-        |> Projects.find_users_to_notify_of_trigger_failure()
-        |> Enum.map(& &1.email)
-        |> Enum.sort()
-
-      assert actual_emails == expected_emails
     end
   end
 

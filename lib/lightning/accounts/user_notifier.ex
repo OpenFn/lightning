@@ -391,29 +391,6 @@ defmodule Lightning.Accounts.UserNotifier do
     """)
   end
 
-  def send_trigger_failure_mail(user, workflow, timestamp) do
-    display_timestamp =
-      timestamp |> DateTime.truncate(:second) |> DateTime.to_iso8601()
-
-    deliver(user, "Kafka trigger failure on #{workflow.name}", """
-    As of #{display_timestamp}, the Kafka trigger associated with the workflow `#{workflow.name}` (#{url(~p"/projects/#{workflow.project_id}/w/#{workflow.id}")}) has failed to persist at least one message.
-
-    #{alternate_storage_message(Lightning.Config.kafka_alternate_storage_enabled?())}
-
-    If you have access to the system logs, please look for entries containing 'Kafka Pipeline Error'.
-
-    OpenFn
-    """)
-  end
-
-  defp alternate_storage_message(true = _alternate_storage_enabled) do
-    "This Lightning instance has alternate storage enabled. This means that any messages that failed to persist will be stored in the location referenced by the KAFKA_ALTERNATE_STORAGE_FILE_PATH environment variable. These messages can be recovered by reprocessing them."
-  end
-
-  defp alternate_storage_message(false = _alternate_storage_enabled) do
-    "THIS LIGHTNING INSTANCE DOES NOT HAVE ALTERNATE STORAGE ENABLED, SO THESE FAILED MESSAGES CANNOT BE RECOVERED WITHOUT MAKING THEM AVAILABLE ON THE KAFKA CLUSTER AGAIN."
-  end
-
   @doc """
   Deliver instructions to confirm a credential transfer.
   """

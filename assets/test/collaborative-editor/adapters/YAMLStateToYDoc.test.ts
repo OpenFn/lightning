@@ -194,32 +194,6 @@ describe('YAMLStateToYDoc', () => {
       expect(triggerMap.get('cron_expression')).toBeNull();
     });
 
-    test('transforms kafka trigger with null cron_expression', () => {
-      const workflowState: YAMLWorkflowState = {
-        id: 'workflow-test',
-        name: 'Test',
-        jobs: [],
-        triggers: [
-          {
-            id: 'trigger-kafka',
-            type: 'kafka',
-            enabled: false,
-          },
-        ],
-        edges: [],
-        positions: null,
-      };
-
-      YAMLStateToYDoc.applyToYDoc(ydoc, workflowState);
-
-      const triggersArray = ydoc.getArray('triggers');
-      const triggerMap = triggersArray.get(0) as Y.Map<unknown>;
-
-      expect(triggerMap.get('id')).toBe('trigger-kafka');
-      expect(triggerMap.get('enabled')).toBe(false);
-      expect(triggerMap.get('cron_expression')).toBeNull();
-    });
-
     test('preserves empty ID when provided', () => {
       const workflowState: YAMLWorkflowState = {
         id: 'workflow-test',

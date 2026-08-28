@@ -9,8 +9,6 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Workflows
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Triggers.Events
-  alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
 
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
@@ -283,120 +281,6 @@ defmodule Lightning.WorkflowsTest do
                from(a in Audit, where: a.event in ["enabled", "disabled"]),
                :count
              ) == 1
-    end
-
-    test "save_workflow/1 publishes event for updated Kafka triggers" do
-      kafka_configuration = build(:triggers_kafka_configuration)
-
-      workflow = insert(:workflow) |> Repo.preload(:triggers)
-
-      kafka_trigger_1 =
-        insert(
-          :trigger,
-          type: :kafka,
-          workflow: workflow,
-          kafka_configuration: kafka_configuration,
-          enabled: false
-        )
-
-      cron_trigger_1 =
-        insert(
-          :trigger,
-          type: :cron,
-          workflow: workflow,
-          enabled: false
-        )
-
-      kafka_trigger_2 =
-        insert(
-          :trigger,
-          type: :kafka,
-          workflow: workflow,
-          kafka_configuration: kafka_configuration,
-          enabled: false
-        )
-
-      triggers = [
-        {kafka_trigger_1, %{enabled: true}},
-        {cron_trigger_1, %{enabled: true}},
-        {kafka_trigger_2, %{enabled: true}}
-      ]
-
-      kafka_trigger_1_id = kafka_trigger_1.id
-      cron_trigger_1_id = cron_trigger_1.id
-      kafka_trigger_2_id = kafka_trigger_2.id
-
-      changeset = workflow |> build_changeset(triggers)
-
-      Events.subscribe_to_kafka_trigger_updated()
-
-      changeset |> Workflows.save_workflow(insert(:user))
-
-      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
-      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
-      refute_received %KafkaTriggerUpdated{trigger_id: ^cron_trigger_1_id}
-    end
-
-    test "save_workflow/1 does not publish events if save fails" do
-      kafka_configuration = build(:triggers_kafka_configuration)
-
-      workflow = insert(:workflow) |> Repo.preload(:triggers)
-
-      kafka_trigger_1 =
-        insert(
-          :trigger,
-          type: :kafka,
-          workflow: workflow,
-          kafka_configuration: kafka_configuration,
-          enabled: false
-        )
-
-      cron_trigger_1 =
-        insert(
-          :trigger,
-          type: :cron,
-          workflow: workflow,
-          enabled: false
-        )
-
-      kafka_trigger_2 =
-        insert(
-          :trigger,
-          type: :kafka,
-          workflow: workflow,
-          kafka_configuration: kafka_configuration,
-          enabled: false
-        )
-
-      triggers = [
-        {kafka_trigger_1, %{enabled: true}},
-        {cron_trigger_1, %{type: :unobtainium}},
-        {kafka_trigger_2, %{enabled: true}}
-      ]
-
-      kafka_trigger_1_id = kafka_trigger_1.id
-      cron_trigger_1_id = cron_trigger_1.id
-      kafka_trigger_2_id = kafka_trigger_2.id
-
-      changeset = workflow |> build_changeset(triggers)
-
-      Events.subscribe_to_kafka_trigger_updated()
-
-      changeset |> Workflows.save_workflow(nil)
-
-      refute_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
-      refute_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
-      refute_received %KafkaTriggerUpdated{trigger_id: ^cron_trigger_1_id}
-    end
-
-    defp build_changeset(workflow, triggers_and_attrs) do
-      triggers_changes =
-        triggers_and_attrs
-        |> Enum.map(fn {trigger, attrs} ->
-          Trigger.changeset(trigger, attrs)
-        end)
-
-      Ecto.Changeset.change(workflow, triggers: triggers_changes)
     end
 
     test "save_workflow/1 using attrs" do
@@ -1909,27 +1793,6 @@ defmodule Lightning.WorkflowsTest do
                item_id: ^workflow_id,
                actor_id: ^user_id
              } = audit
-    end
-
-    test "mark_for_deletion/3 publishes events for Kafka triggers", %{w1: w1} do
-      user = insert(:user)
-
-      %{id: kafka_trigger_1_id} =
-        insert(:trigger, workflow: w1, enabled: true, type: :kafka)
-
-      %{id: webhook_trigger_id} =
-        insert(:trigger, workflow: w1, enabled: true, type: :webhook)
-
-      %{id: kafka_trigger_2_id} =
-        insert(:trigger, workflow: w1, enabled: true, type: :kafka)
-
-      Events.subscribe_to_kafka_trigger_updated()
-
-      assert {:ok, _workflow} = Workflows.mark_for_deletion(w1, user)
-
-      refute_received %KafkaTriggerUpdated{trigger_id: ^webhook_trigger_id}
-      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
-      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
     end
 
     test "soft_delete_changeset/1 marks deleted and frees the name in one step" do

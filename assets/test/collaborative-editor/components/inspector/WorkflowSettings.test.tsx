@@ -152,7 +152,6 @@ function setupTest(projectConcurrency: number | null = null) {
       },
       config: {
         require_email_verification: false,
-        kafka_triggers_enabled: false,
       },
       permissions: {
         can_edit_workflow: true,

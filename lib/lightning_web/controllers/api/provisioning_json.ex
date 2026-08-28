@@ -103,13 +103,6 @@ defmodule LightningWeb.API.ProvisioningJSON do
   def as_json(%module{} = trigger) when module in [Trigger, Snapshot.Trigger] do
     trigger = Ecto.embedded_dump(trigger, :json)
 
-    kafka_configuration =
-      trigger.kafka_configuration &&
-        Map.take(
-          trigger.kafka_configuration,
-          ~w(hosts topics initial_offset_reset_policy connect_timeout)a
-        )
-
     webhook_response_config =
       trigger.webhook_response_config &&
         Map.take(trigger.webhook_response_config, [
@@ -122,7 +115,6 @@ defmodule LightningWeb.API.ProvisioningJSON do
     |> Map.take(
       ~w(id type cron_expression enabled webhook_reply cron_cursor_job_id)a
     )
-    |> Map.put(:kafka_configuration, kafka_configuration)
     |> Map.put(:webhook_response_config, webhook_response_config)
     |> drop_keys_with_nil_value()
   end

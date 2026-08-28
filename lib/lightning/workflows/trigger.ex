@@ -15,7 +15,6 @@ defmodule Lightning.Workflows.Trigger do
   import Lightning.Validators
 
   alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
 
@@ -25,7 +24,7 @@ defmodule Lightning.Workflows.Trigger do
         }
   @type trigger_type :: :webhook | :cron
 
-  @trigger_types [:webhook, :cron, :kafka]
+  @trigger_types [:webhook, :cron]
   @webhook_reply_types [:before_start, :after_completion, :custom]
 
   @derive {Jason.Encoder,
@@ -62,8 +61,6 @@ defmodule Lightning.Workflows.Trigger do
       join_through: "trigger_webhook_auth_methods",
       on_replace: :delete
 
-    embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :update
-
     embeds_one :webhook_response_config, WebhookResponseConfig,
       on_replace: :update
 
@@ -90,10 +87,6 @@ defmodule Lightning.Workflows.Trigger do
   def changeset(trigger, attrs) do
     trigger
     |> cast_changeset(attrs)
-    |> cast_embed(:kafka_configuration,
-      required: false,
-      with: &KafkaConfiguration.changeset/2
-    )
     |> cast_embed(:webhook_response_config,
       required: false,
       with: &WebhookResponseConfig.changeset/2
@@ -152,7 +145,6 @@ defmodule Lightning.Workflows.Trigger do
         changeset
         |> put_change(:cron_expression, nil)
         |> put_change(:cron_cursor_job_id, nil)
-        |> put_change(:kafka_configuration, nil)
         |> put_default(:webhook_reply, :before_start)
         |> maybe_clear_webhook_response_config()
 
@@ -160,15 +152,6 @@ defmodule Lightning.Workflows.Trigger do
         changeset
         |> put_default(:cron_expression, "0 0 * * *")
         |> validate_cron()
-        |> put_change(:kafka_configuration, nil)
-        |> put_change(:webhook_reply, nil)
-        |> put_change(:webhook_response_config, nil)
-
-      :kafka ->
-        changeset
-        |> put_change(:cron_expression, nil)
-        |> put_change(:cron_cursor_job_id, nil)
-        |> validate_required([:kafka_configuration])
         |> put_change(:webhook_reply, nil)
         |> put_change(:webhook_response_config, nil)
 

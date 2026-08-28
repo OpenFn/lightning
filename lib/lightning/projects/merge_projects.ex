@@ -698,8 +698,7 @@ defmodule Lightning.Projects.MergeProjects do
               :comment,
               :custom_path,
               :cron_expression,
-              :type,
-              :kafka_configuration
+              :type
             ])
             |> Map.put(:id, mapped_id)
             |> stringify_keys()
@@ -903,8 +902,7 @@ defmodule Lightning.Projects.MergeProjects do
           :comment,
           :custom_path,
           :cron_expression,
-          :type,
-          :kafka_configuration
+          :type
         ])
         |> Map.put(:id, trigger.id)
         |> stringify_keys()
@@ -974,8 +972,7 @@ defmodule Lightning.Projects.MergeProjects do
           :comment,
           :custom_path,
           :cron_expression,
-          :type,
-          :kafka_configuration
+          :type
         ])
         |> Map.put(:id, Map.fetch!(node_mappings, trigger.id))
         |> stringify_keys()

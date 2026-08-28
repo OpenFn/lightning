@@ -19,6 +19,7 @@ import type {
 } from './types';
 import {
   WorkflowError,
+  WorkflowErrorCode,
   YamlSyntaxError,
   JobNotFoundError,
   TriggerNotFoundError,
@@ -66,7 +67,7 @@ export const convertWorkflowStateToSpec = (
       ...(includeIds && { id: trigger.id }),
       type: trigger.type,
       enabled: trigger.enabled,
-      pos: trigger.type !== 'kafka' && pos ? roundPosition(pos) : undefined,
+      pos: pos ? roundPosition(pos) : undefined,
     } as SpecTrigger;
 
     if (trigger.type === 'cron') {
@@ -96,7 +97,6 @@ export const convertWorkflowStateToSpec = (
       }
     }
 
-    // TODO: handle kafka config
     triggers[trigger.type] = triggerDetails;
   });
 
@@ -175,8 +175,11 @@ export const convertWorkflowSpecToState = (
     const uId = specTrigger.id || randomUUID();
     const enabled =
       specTrigger.enabled !== undefined ? specTrigger.enabled : true;
+    // Read before the branches below narrow specTrigger away: not every caller
+    // validates against the schema first.
+    const declaredType: string = specTrigger.type;
 
-    if (specTrigger.type !== 'kafka' && specTrigger.pos) {
+    if (specTrigger.pos) {
       positions[uId] = specTrigger.pos;
     }
 
@@ -201,11 +204,16 @@ export const convertWorkflowSpecToState = (
         webhook_response_config: specTrigger.webhook_response_config ?? null,
       };
     } else {
-      trigger = {
-        id: uId,
-        type: 'kafka',
-        enabled,
-      };
+      // Not every caller validates against the schema first, and quietly
+      // treating an unrecognised type as a webhook would mint a public ingest
+      // endpoint the source never asked for.
+      throw new WorkflowError({
+        code: WorkflowErrorCode.SCHEMA_INVALID_VALUE,
+        message: `Unsupported trigger type: ${declaredType}`,
+        path: `triggers/${key}`,
+        triggerKey: key,
+        allowedValues: ['webhook', 'cron'],
+      });
     }
 
     stateTriggers[key] = trigger;

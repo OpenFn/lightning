@@ -35,7 +35,6 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
@@ -89,7 +88,6 @@ defmodule Lightning.Projects.Provisioner do
            :ok <- cleanup_orphaned_edges(edges_to_cleanup),
            :ok <-
              disable_triggers_for_soft_deleted_workflows(project_changeset),
-           :ok <- notify_kafka_for_soft_deleted_workflows(project_changeset),
            :ok <- handle_collection_deletion(project_changeset),
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
@@ -108,10 +106,6 @@ defmodule Lightning.Projects.Provisioner do
                user_or_repo_connection
              ) do
         Enum.each(workflows, &Workflows.Events.workflow_updated/1)
-
-        project_changeset
-        |> get_assoc(:workflows)
-        |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
 
         Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
           Lightning.Projects.Project.sandbox?(updated_project)
@@ -746,11 +740,6 @@ defmodule Lightning.Projects.Provisioner do
     trigger
     |> Trigger.cast_changeset(attrs)
     |> cast_embed(
-      :kafka_configuration,
-      required: false,
-      with: &kafka_config_changeset/2
-    )
-    |> cast_embed(
       :webhook_response_config,
       required: false,
       with: &WebhookResponseConfig.changeset/2
@@ -761,17 +750,6 @@ defmodule Lightning.Projects.Provisioner do
     |> unique_constraint(:id, name: :triggers_pkey)
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
-  end
-
-  defp kafka_config_changeset(kafka_config, attrs) do
-    kafka_config
-    |> KafkaConfiguration.changeset(attrs)
-    |> validate_change(:username, fn :username, _change ->
-      [username: "credentials can only be changed through the dashboard"]
-    end)
-    |> validate_change(:password, fn :password, _change ->
-      [password: "credentials can only be changed through the dashboard"]
-    end)
   end
 
   defp edge_changeset(edge, attrs) do
@@ -898,16 +876,6 @@ defmodule Lightning.Projects.Provisioner do
     else
       changeset
     end
-  end
-
-  defp notify_kafka_for_soft_deleted_workflows(project_changeset) do
-    project_changeset
-    |> get_assoc(:workflows)
-    |> Enum.filter(
-      &(&1.action == :update and not is_nil(get_change(&1, :deleted_at)))
-    )
-    |> Enum.map(&get_field(&1, :id))
-    |> Workflows.notify_kafka_triggers_for_workflows()
   end
 
   defp disable_triggers_for_soft_deleted_workflows(project_changeset) do

@@ -1,11 +1,10 @@
 import type { ReactNode } from 'react';
 
-import { useSessionContext } from '../../../hooks/useSessionContext';
 import { createDefaultTrigger } from '../../../types/trigger';
 import type { Workflow } from '../../../types/workflow';
 import { InspectorLayout } from '../InspectorLayout';
 
-type PickableType = 'webhook' | 'cron' | 'kafka';
+type PickableType = 'webhook' | 'cron';
 
 interface TriggerPickerProps {
   /** The local draft (read to avoid resetting config on a no-op re-pick). */
@@ -72,9 +71,6 @@ export function TriggerPicker({
   onClose,
   onReturnToChoose,
 }: TriggerPickerProps): ReactNode {
-  const { config } = useSessionContext();
-  const kafkaEnabled = Boolean(config?.kafka_triggers_enabled);
-
   const pickDraftType = (type: PickableType) => {
     if (draft.type !== type) {
       // Drop `enabled` from the defaults so the draft keeps the trigger's
@@ -116,14 +112,6 @@ export function TriggerPicker({
             description="Schedule workflows to run at specific intervals."
             onClick={() => pickDraftType('cron')}
           />
-          {kafkaEnabled && (
-            <PickerRow
-              icon="hero-queue-list"
-              title="Kafka"
-              description="Consume messages from a Kafka topic."
-              onClick={() => pickDraftType('kafka')}
-            />
-          )}
         </div>
       </div>
     </InspectorLayout>

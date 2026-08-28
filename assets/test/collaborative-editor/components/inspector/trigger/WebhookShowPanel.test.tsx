@@ -84,7 +84,6 @@ function makeWebhookTrigger(): Workflow.Trigger {
     has_auth_method: false,
     cron_expression: null,
     cron_cursor_job_id: null,
-    kafka_configuration: null,
     webhook_reply: 'before_start',
     webhook_response_config: null,
   } as Workflow.Trigger;

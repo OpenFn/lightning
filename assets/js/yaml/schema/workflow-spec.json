@@ -47,7 +47,7 @@
             "id": { "type": ["string", "null"] },
             "type": {
               "type": "string",
-              "enum": ["cron", "webhook", "kafka"]
+              "enum": ["cron", "webhook"]
             },
             "enabled": {
               "type": "boolean"
@@ -96,9 +96,6 @@
                 "cron_expression": { "type": "string" }
               },
               "required": ["cron_expression"]
-            },
-            {
-              "properties": { "type": { "const": "kafka" } }
             }
           ]
         }

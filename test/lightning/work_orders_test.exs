@@ -7,7 +7,7 @@ defmodule Lightning.WorkOrdersTest do
   alias Lightning.Extensions.MockUsageLimiter
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.Message
-  alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
+  alias Lightning.Invocation.Dataclip
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.RetryManyWorkOrdersJob
@@ -28,22 +28,11 @@ defmodule Lightning.WorkOrdersTest do
 
       {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
 
-      record_changeset =
-        TriggerKafkaMessageRecord.changeset(
-          %TriggerKafkaMessageRecord{},
-          %{topic_partition_offset: "foo-bar-baz", trigger_id: trigger.id}
-        )
-
-      multi =
-        Multi.new()
-        |> Multi.insert(:record, record_changeset)
-
       %{
         workflow: workflow,
         trigger: trigger |> Repo.reload!(),
         job: job |> Repo.reload!(),
-        snapshot: snapshot,
-        multi: multi
+        snapshot: snapshot
       }
     end
 
@@ -210,9 +199,7 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    @tag trigger_type: :kafka
     test "with a provided multi instance - also executes the multi", %{
-      multi: multi,
       trigger: trigger,
       workflow: workflow
     } do
@@ -226,6 +213,20 @@ defmodule Lightning.WorkOrdersTest do
       Lightning.WorkOrders.subscribe(project_id)
       dataclip = insert(:dataclip, project: project)
 
+      record_id = Ecto.UUID.generate()
+
+      multi =
+        Multi.new()
+        |> Multi.insert(
+          :record,
+          Dataclip.new(%{
+            id: record_id,
+            body: %{"from" => "the multi"},
+            type: :global,
+            project_id: project_id
+          })
+        )
+
       assert {:ok, _workorder} =
                WorkOrders.create_for(
                  trigger,
@@ -234,8 +235,7 @@ defmodule Lightning.WorkOrdersTest do
                  workflow: workflow
                )
 
-      assert TriggerKafkaMessageRecord
-             |> Repo.get_by(trigger_id: trigger.id) != nil
+      assert Repo.get(Dataclip, record_id) != nil
     end
 
     test "with a manual workorder", context do

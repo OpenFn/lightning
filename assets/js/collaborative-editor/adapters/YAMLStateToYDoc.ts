@@ -57,7 +57,7 @@ export class YAMLStateToYDoc {
    *
    * Handles union type transformation:
    * - CronTrigger: has cron_expression
-   * - WebhookTrigger/KafkaTrigger: must default cron_expression to ""
+   * - WebhookTrigger: must default cron_expression to ""
    */
   static transformTrigger(trigger: YAMLStateTrigger): Y.Map<unknown> {
     const triggerMap = new Y.Map();
