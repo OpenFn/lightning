@@ -410,7 +410,7 @@ defmodule Lightning.Policies.SandboxesTest do
     end
   end
 
-  describe "check_manage_permissions/3 bulk operation" do
+  describe "manage_permissions/3 bulk operation" do
     setup %{
       root_project: root_project,
       sandbox: sandbox1,
@@ -470,7 +470,7 @@ defmodule Lightning.Policies.SandboxesTest do
       for {label, resolve_actor, manageable} <- cases do
         {actor, root} = resolve_actor.()
 
-        permissions = Sandboxes.check_manage_permissions(sandboxes, actor, root)
+        permissions = Sandboxes.manage_permissions(sandboxes, actor, root)
 
         assert map_size(permissions) == 4,
                "#{label}: expected an answer for every sandbox handed in"
@@ -499,7 +499,7 @@ defmodule Lightning.Policies.SandboxesTest do
       # `Sandboxes.merge/4` does not authorise, so a `true` here is a real
       # capability rather than a rendering hint.
       permissions =
-        Sandboxes.check_manage_permissions(
+        Sandboxes.manage_permissions(
           [root_project, sandbox],
           owner,
           root_project
@@ -566,7 +566,7 @@ defmodule Lightning.Policies.SandboxesTest do
       refute Sandboxes |> Permissions.can?(:update_sandbox, user, sandbox)
     end
 
-    test "check_manage_permissions with mixed roles", %{
+    test "manage_permissions with mixed roles", %{
       root_project: root_project,
       sandbox: sandbox1,
       sandbox_with_owner: sandbox2
@@ -584,7 +584,7 @@ defmodule Lightning.Policies.SandboxesTest do
       sandboxes = [sandbox1, sandbox2]
 
       permissions =
-        Sandboxes.check_manage_permissions(sandboxes, user, root_project)
+        Sandboxes.manage_permissions(sandboxes, user, root_project)
 
       # Editor on root, editor on sandbox: no manage rights without admin/owner
       # on the sandbox itself (or root cascade).
@@ -737,6 +737,54 @@ defmodule Lightning.Policies.SandboxesTest do
 
       refute Sandboxes
              |> Permissions.can?(:update_sandbox, owner, scheduled_sandbox)
+    end
+  end
+
+  describe "a project with no parent" do
+    test "is refused by every sandbox-scoped action, for its own owner", %{
+      root_project: root_project,
+      root_project_owner: owner
+    } do
+      # The owner of the root is the strongest actor there is on it, and the
+      # cascade resolves the root as its own root, so this is the case that
+      # used to pass. Deleting a workspace is `:delete_project`'s business.
+      for action <- [
+            :delete_sandbox,
+            :update_sandbox,
+            :cancel_scheduled_deletion
+          ] do
+        refute Sandboxes |> Permissions.can?(action, owner, root_project),
+               "#{action} admitted a project with no parent"
+      end
+    end
+
+    test "is still a legal subject for provisioning and as a merge target", %{
+      root_project: root_project,
+      root_project_owner: owner
+    } do
+      assert Sandboxes
+             |> Permissions.can?(:provision_sandbox, owner, root_project)
+
+      assert Sandboxes |> Permissions.can?(:merge_sandbox, owner, root_project)
+    end
+
+    test "is refused even when scheduled for deletion, so cancel cannot revive it",
+         %{root_project_owner: owner} do
+      scheduled_root =
+        insert(:project, scheduled_deletion: future_deletion())
+
+      insert(:project_user,
+        user: owner,
+        project: scheduled_root,
+        role: :owner
+      )
+
+      refute Sandboxes
+             |> Permissions.can?(
+               :cancel_scheduled_deletion,
+               owner,
+               scheduled_root
+             )
     end
   end
 

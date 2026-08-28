@@ -13,6 +13,10 @@ defmodule Lightning.Policies.Sandboxes do
   - Root project owners/admins can manage any sandbox in their workspace
   - Editors (and above) on the parent project can provision sandboxes
 
+  Every action except provisioning and merging acts on a sandbox, and a
+  workspace root is not one. A root is refused before any role is considered,
+  which is what keeps the root cascade from admitting the root itself.
+
   Destructive actions on a sandbox (delete, update, merge) are scoped to
   admin/owner on the sandbox itself (or the root cascade above). This
   matches the rest of Lightning, where destructive actions are admin/owner
@@ -34,14 +38,22 @@ defmodule Lightning.Policies.Sandboxes do
           | :merge_sandbox
           | :cancel_scheduled_deletion
 
+  # The only two actions whose subject is not the sandbox being acted on:
+  # provisioning names the parent to build under, merging names the project to
+  # merge into, and a workspace root is a legal value for both. Listing the
+  # exceptions rather than the rule means a new action that nobody classifies is
+  # refused on a root instead of admitted.
+  @parent_subject_actions [:provision_sandbox, :merge_sandbox]
+
   @doc """
   Authorize sandbox operations based on the user's role on the project
   involved.
 
   ## Authorization Rules
 
-  ### `:delete_sandbox` and `:update_sandbox`
-  User must be one of:
+  ### `:delete_sandbox`, `:update_sandbox` and `:cancel_scheduled_deletion`
+  The subject must be a sandbox: a project with no parent is refused outright,
+  whoever is asking. Beyond that the user must be one of:
   - Owner/admin of the sandbox itself
   - Owner/admin of the root project (workspace)
 
@@ -53,7 +65,7 @@ defmodule Lightning.Policies.Sandboxes do
   This check authorises the **target side** of a merge: the user must be
   editor/admin/owner on the target project (the project being merged
   *into*). The merge flow also requires admin/owner on the **source
-  sandbox** itself, enforced by `check_manage_permissions/3` (button
+  sandbox** itself, enforced by `manage_permissions/3` (button
   gate) and by the post-merge cleanup, which calls `:delete_sandbox`
   to retire the source and so requires admin/owner there.
 
@@ -69,6 +81,15 @@ defmodule Lightning.Policies.Sandboxes do
     or target project (for merge)
   """
   @spec authorize(actions(), User.t(), Project.t()) :: boolean
+
+  # Answered here rather than in each clause below, so no sandbox action can
+  # forget it. A workspace root is not a sandbox, however the caller reached it.
+  # Without this the root cascade admits the root itself: `root_of/1` on a root
+  # returns the root, so a root admin resolves as admin "on the sandbox" and
+  # inherits a capability that `:delete_project` reserves for owners.
+  def authorize(action, %User{}, %Project{parent_id: nil})
+      when action not in @parent_subject_actions,
+      do: false
 
   def authorize(:provision_sandbox, %User{} = user, %Project{} = parent_project) do
     Scope.role_in?(user, parent_project, [:owner, :admin, :editor])
@@ -114,9 +135,12 @@ defmodule Lightning.Policies.Sandboxes do
   Bulk manage check for multiple sandboxes, avoiding N+1 queries.
 
   Returns a map `sandbox_id => boolean()` where `true` means the user can
-  perform any of the destructive sandbox actions (update, delete, merge)
-  on that sandbox. The boolean is `true` when the user is an owner/admin
-  on the sandbox itself, or an owner/admin on the root project (cascade).
+  perform the destructive actions the sandbox list offers on that row: they are
+  an owner/admin on the sandbox itself, or an owner/admin on the root project
+  (cascade). The workspace root is always `false`, which is what the list relies
+  on to withhold edit, delete and merge from the root. Note this is the merge
+  *source* side; `:merge_sandbox` authorises the target and a root is a legal
+  target.
 
   Assumes `root_project.project_users` and each `sandbox.project_users`
   are preloaded (as ensured by `Projects.list_workspace_projects/2`).
@@ -128,28 +152,27 @@ defmodule Lightning.Policies.Sandboxes do
   `/mfa_required` before the page renders, and every action a `true` enables
   refuses on its own.
   """
-  @spec check_manage_permissions([Project.t()], User.t(), Project.t()) ::
+  @spec manage_permissions([Project.t()], User.t(), Project.t()) ::
           %{binary() => boolean()}
-  def check_manage_permissions(sandboxes, %User{} = user, root_project) do
-    is_root_owner_or_admin =
-      Enum.any?(
-        root_project.project_users,
-        &(&1.user_id == user.id and &1.role in [:owner, :admin])
-      )
+  def manage_permissions(sandboxes, %User{} = user, root_project) do
+    root_admin? = owner_or_admin?(root_project, user)
 
-    if is_root_owner_or_admin do
-      Map.new(sandboxes, &{&1.id, true})
-    else
-      Map.new(sandboxes, fn sandbox ->
-        can_manage? =
-          Enum.any?(
-            sandbox.project_users,
-            &(&1.user_id == user.id and &1.role in [:owner, :admin])
-          )
+    # The list this feeds includes the workspace root, and the root is not a
+    # sandbox, so it is never manageable through a sandbox action.
+    Map.new(sandboxes, fn sandbox ->
+      {sandbox.id,
+       Project.sandbox?(sandbox) and
+         (root_admin? or owner_or_admin?(sandbox, user))}
+    end)
+  end
 
-        {sandbox.id, can_manage?}
-      end)
-    end
+  # Read from preloaded rows rather than the database, because this runs over a
+  # whole workspace at once.
+  defp owner_or_admin?(%Project{} = project, %User{id: user_id}) do
+    Enum.any?(
+      project.project_users,
+      &(&1.user_id == user_id and &1.role in [:owner, :admin])
+    )
   end
 
   defp has_root_project_permission?(%Project{} = sandbox, %User{} = user) do

@@ -110,6 +110,9 @@ and this project adheres to
 
 - Fixed an MFA-enforcement gap so a project's MFA requirement now applies
   consistently across pages, channel joins, routes and the API.
+- Fixed a privilege-escalation issue where a project admin could delete an
+  entire workspace through the sandbox-deletion path, bypassing the owner-only
+  recoverable delete flow.
 - Fixed a cross-site-scripting issue in channel proxy responses.
 - Fixed an access-revocation issue in the AI assistant panel: membership and
   role changes now close open sessions instead of leaving them active.
