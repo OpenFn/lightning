@@ -8,8 +8,8 @@ defmodule Lightning.Workflows.TriggerTest do
       assert Trigger.synchronous?(%Trigger{webhook_reply: :after_completion})
     end
 
-    test "returns true for :custom" do
-      assert Trigger.synchronous?(%Trigger{webhook_reply: :custom})
+    test "returns false for :custom, which has no response publisher" do
+      refute Trigger.synchronous?(%Trigger{webhook_reply: :custom})
     end
 
     test "returns false for :before_start" do

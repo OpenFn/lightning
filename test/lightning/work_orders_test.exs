@@ -108,7 +108,7 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     @tag trigger_type: :webhook
-    test "with a sync webhook trigger (custom)", context do
+    test "with a webhook trigger (custom, which is not synchronous)", context do
       %{workflow: existing_workflow} = context
 
       job = build(:job)
@@ -130,7 +130,7 @@ defmodule Lightning.WorkOrdersTest do
         WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
 
       [run] = workorder.runs
-      assert run.queue == "fast_lane"
+      assert run.queue == "default"
     end
 
     test "with a webhook trigger (without runs)", context do

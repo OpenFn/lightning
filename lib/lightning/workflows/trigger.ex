@@ -75,11 +75,18 @@ defmodule Lightning.Workflows.Trigger do
   @doc """
   Returns true if the trigger uses a synchronous webhook reply mode
   (i.e., the HTTP connection is held open waiting for a response).
+
+  This set must stay in step with the reply modes that actually publish a
+  `{:webhook_response, ...}` message — see
+  `LightningWeb.RunChannel.maybe_send_after_completion_response/2`, which
+  broadcasts for `:after_completion` only. A mode that is synchronous here but
+  has no publisher there parks the request process until the webhook response
+  timeout for a message nobody sends, so `:custom` (accepted by the schema but
+  not implemented, and not offered by the trigger editor) is deliberately
+  excluded.
   """
   @spec synchronous?(t()) :: boolean()
-  def synchronous?(%__MODULE__{webhook_reply: reply})
-      when reply in [:after_completion, :custom],
-      do: true
+  def synchronous?(%__MODULE__{webhook_reply: :after_completion}), do: true
 
   def synchronous?(%__MODULE__{}), do: false
 

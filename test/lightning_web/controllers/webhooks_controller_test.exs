@@ -26,7 +26,8 @@ defmodule LightningWeb.WebhooksControllerTest do
   describe "a POST request to '/i'" do
     setup [:stub_rate_limiter_ok, :stub_usage_limiter_ok]
 
-    test "returns 200 when run soft limit has been reached", %{conn: conn} do
+    test "returns 200 and the rejection reason when run soft limit has been reached",
+         %{conn: conn} do
       Mox.stub(MockUsageLimiter, :limit_action, &StubUsageLimiter.limit_action/2)
 
       %{triggers: [trigger]} =
@@ -36,11 +37,22 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       conn = post(conn, "/i/#{trigger.id}")
 
-      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+      response = json_response(conn, 200)
+
+      assert %{"work_order_id" => work_order_id, "error" => "too_many_runs"} =
+               response
+
       assert Ecto.UUID.dump(work_order_id)
+
+      refute Map.has_key?(response, "message"),
+             "the limiter's project-facing copy must not reach /i/*"
+
+      work_order = WorkOrders.get(work_order_id, include: [:runs])
+      assert work_order.state == :rejected
+      assert work_order.runs == []
     end
 
-    test "returns 402 when run limit has been reached", %{conn: conn} do
+    test "returns 429 when run limit has been reached", %{conn: conn} do
       Mox.stub(MockUsageLimiter, :limit_action, fn _action, _ctx ->
         {:error, :runs_hard_limit,
          %Lightning.Extensions.Message{text: "Runs limit exceeded"}}
@@ -51,7 +63,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       conn = post(conn, "/i/#{trigger.id}")
 
-      assert json_response(conn, 402) == %{
+      assert json_response(conn, 429) == %{
                "error" => "runs_hard_limit",
                "message" => "Runs limit exceeded"
              }
@@ -572,6 +584,67 @@ defmodule LightningWeb.WebhooksControllerTest do
 
         Task.await(task)
       end
+    end
+
+    test "replies with the rejection instead of waiting when no run was created",
+         %{conn: conn} do
+      Mox.stub(MockUsageLimiter, :limit_action, &StubUsageLimiter.limit_action/2)
+
+      Mox.stub(Lightning.MockConfig, :webhook_response_timeout_ms, fn ->
+        60_000
+      end)
+
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :after_completion)
+      |> Repo.update!()
+
+      {elapsed_us, conn} =
+        :timer.tc(fn -> post(conn, "/i/#{trigger.id}", %{"foo" => "bar"}) end)
+
+      assert elapsed_us < 5_000_000,
+             "request waited on a response nothing can send"
+
+      response = json_response(conn, 429)
+
+      assert %{"error" => "too_many_runs", "work_order_id" => work_order_id} =
+               response
+
+      refute Map.has_key?(response, "message"),
+             "the limiter's project-facing copy must not reach /i/*"
+
+      work_order = WorkOrders.get(work_order_id, include: [:runs])
+      assert work_order.state == :rejected
+      assert work_order.runs == []
+    end
+
+    test "returns immediately when webhook_reply is :custom, which has no publisher",
+         %{conn: conn} do
+      Mox.stub(Lightning.MockConfig, :webhook_response_timeout_ms, fn ->
+        60_000
+      end)
+
+      %{triggers: [trigger]} =
+        insert(:simple_workflow)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      trigger
+      |> Ecto.Changeset.change(webhook_reply: :custom)
+      |> Repo.update!()
+
+      {elapsed_us, conn} =
+        :timer.tc(fn -> post(conn, "/i/#{trigger.id}", %{"foo" => "bar"}) end)
+
+      assert elapsed_us < 5_000_000,
+             "request waited on a response nothing can send"
+
+      [work_order_id] = get_resp_header(conn, "x-meta-work-order-id")
+      assert %{"work_order_id" => ^work_order_id} = json_response(conn, 200)
     end
 
     test "returns immediately when webhook_reply is before_start (default)", %{

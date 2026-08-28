@@ -38,7 +38,7 @@ defmodule LightningWeb.WebhooksController do
   def create(conn, _params) do
     with %Workflows.Trigger{enabled: true, workflow: %{project_id: project_id}} =
            trigger <- conn.assigns[:trigger],
-         {:ok, without_run?} <- check_skip_run_creation(project_id),
+         {:ok, run_rejection} <- check_skip_run_creation(project_id),
          :ok <-
            RateLimiter.limit_request(
              conn,
@@ -55,7 +55,7 @@ defmodule LightningWeb.WebhooksController do
               type: :http_request,
               project_id: project_id
             },
-            without_run: without_run?
+            without_run: not is_nil(run_rejection)
           )
         end,
         retry_on: &Retry.retriable_error?/1,
@@ -63,24 +63,9 @@ defmodule LightningWeb.WebhooksController do
       )
       |> case do
         {:ok, work_order} ->
-          conn =
-            conn
-            |> put_resp_header("x-meta-work-order-id", work_order.id)
-            |> then(fn conn ->
-              case work_order do
-                %{runs: [run]} ->
-                  put_resp_header(conn, "x-meta-run-id", run.id)
-
-                _ ->
-                  conn
-              end
-            end)
-
-          if Workflows.Trigger.synchronous?(trigger) do
-            handle_delayed_response(conn, work_order)
-          else
-            json(conn, %{work_order_id: work_order.id})
-          end
+          conn
+          |> put_work_order_headers(work_order)
+          |> respond_to_created(trigger, work_order, run_rejection)
 
         {:error, %DBConnection.ConnectionError{} = error} ->
           LightningWeb.Utils.respond_service_unavailable(
@@ -111,13 +96,8 @@ defmodule LightningWeb.WebhooksController do
       end
     else
       {:error, reason, %{text: message}} ->
-        status =
-          if reason == :too_many_requests,
-            do: :too_many_requests,
-            else: :payment_required
-
         conn
-        |> put_status(status)
+        |> put_status(:too_many_requests)
         |> json(%{error: reason, message: message})
 
       nil ->
@@ -133,6 +113,75 @@ defmodule LightningWeb.WebhooksController do
             "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
         })
     end
+  end
+
+  defp put_work_order_headers(conn, work_order) do
+    conn
+    |> put_resp_header("x-meta-work-order-id", work_order.id)
+    |> then(fn conn ->
+      case work_order do
+        %{runs: [run]} -> put_resp_header(conn, "x-meta-run-id", run.id)
+        _ -> conn
+      end
+    end)
+  end
+
+  defp respond_to_created(conn, trigger, work_order, run_rejection) do
+    cond do
+      # Only wait when a run exists to answer the wait: the sole publisher of
+      # `{:webhook_response, ...}` lives on a run's channel, so a run-less work
+      # order would park this process until the response timeout.
+      Workflows.Trigger.synchronous?(trigger) and has_run?(work_order) ->
+        handle_delayed_response(conn, work_order)
+
+      Workflows.Trigger.synchronous?(trigger) ->
+        respond_without_run(conn, work_order, run_rejection)
+
+      true ->
+        json(
+          conn,
+          Map.merge(
+            %{work_order_id: work_order.id},
+            rejection_details(run_rejection)
+          )
+        )
+    end
+  end
+
+  # The limiter's own message is deliberately not echoed here: it is copy written
+  # for the project UI, and `/i/*` is anonymous whenever the trigger carries no
+  # auth methods. The reason code says why no run was created without disclosing
+  # a project's plan or quota wording to whoever holds the webhook URL.
+  defp rejection_details(nil), do: %{}
+  defp rejection_details(reason) when is_atom(reason), do: %{error: reason}
+
+  defp has_run?(%{runs: [_ | _]}), do: true
+  defp has_run?(_work_order), do: false
+
+  # A synchronous request whose work order carries no run can never be answered
+  # by a completion broadcast, so reply now with the reason the run was not
+  # created rather than holding the connection open for the full timeout.
+  defp respond_without_run(conn, work_order, run_rejection) do
+    status =
+      if is_nil(run_rejection) do
+        Logger.warning(
+          "Synchronous webhook work order created without a run: " <>
+            inspect(work_order.id)
+        )
+
+        :internal_server_error
+      else
+        :too_many_requests
+      end
+
+    conn
+    |> put_status(status)
+    |> json(
+      Map.merge(
+        %{work_order_id: work_order.id},
+        rejection_details(run_rejection || :no_run_created)
+      )
+    )
   end
 
   defp handle_delayed_response(conn, work_order) do
@@ -163,13 +212,17 @@ defmodule LightningWeb.WebhooksController do
     end
   end
 
+  # `{:error, :too_many_runs, _}` is not fatal: the payload is still recorded as
+  # a rejected work order, just without a run. The reason travels with that
+  # decision instead of being collapsed into a bare boolean, so the response can
+  # say why no run was created.
   defp check_skip_run_creation(project_id) do
     case WorkOrders.limit_run_creation(project_id) do
       :ok ->
-        {:ok, false}
+        {:ok, nil}
 
       {:error, :too_many_runs, _message} ->
-        {:ok, true}
+        {:ok, :too_many_runs}
 
       error ->
         error

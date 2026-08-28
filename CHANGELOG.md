@@ -39,6 +39,10 @@ and this project adheres to
   Apollo sends, including status updates.
   [#4969](https://github.com/OpenFn/lightning/pull/4969)
 - Bumped bundled worker to version 1.29.2
+- Webhook requests refused by a rate or usage limit now answer
+  `429 Too Many Requests` rather than `402 Payment Required`. Lightning has no
+  notion of payments — the usage limiter is an extension — and the response body
+  still names the specific limit in `error`.
 
 ### Removed
 
@@ -108,6 +112,8 @@ and this project adheres to
 
 ### Security
 
+- Synchronous webhook requests no longer hold connections open for the full
+  response timeout when nothing can answer them.
 - Fixed an MFA-enforcement gap so a project's MFA requirement now applies
   consistently across pages, channel joins, routes and the API.
 - Fixed a privilege-escalation issue where a project admin could delete an
