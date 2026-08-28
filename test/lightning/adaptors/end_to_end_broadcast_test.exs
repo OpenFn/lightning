@@ -33,9 +33,10 @@ defmodule Lightning.Adaptors.EndToEndBroadcastTest do
         {:changed, "@openfn/language-test", :local}
       )
 
-    # The DB is empty here, so Store.packages/1 returns {:ok, []} and the
-    # broadcast carries an empty adaptors list.
-    assert_receive %{event: "adaptors_updated", payload: %{adaptors: _}},
+    assert_receive %{
+                     event: "adaptors_updated",
+                     payload: %{names: ["@openfn/language-test"]}
+                   },
                    ChannelBroadcaster.debounce_ms() + 200
   end
 end

@@ -107,8 +107,7 @@ defmodule Lightning.Adaptors.Supervisor do
       {Lightning.Adaptors.ChannelBroadcaster,
        name: channel_broadcaster_name(name),
        source_topic: source_topic,
-       client_topic: client_topic,
-       sup: name},
+       client_topic: client_topic},
       Supervisor.child_spec(
         {HighlanderPG,
          child: scheduler_child,
