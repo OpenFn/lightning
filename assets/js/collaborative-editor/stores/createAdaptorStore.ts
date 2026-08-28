@@ -12,25 +12,15 @@
  *
  * ## Update Patterns:
  *
- * ### Pattern 1: Channel Message → Immer → Notify (Server Updates)
+ * ### Pattern 1: Channel Signal → HTTP Re-fetch → Immer → Notify (Server Updates)
  * **When to use**: All server-initiated adaptor updates
- * **Flow**: Channel message → validate with Zod → Immer update → React notification
- * **Benefits**: Automatic validation, error handling, type safety
- *
- * ```typescript
- * // Example: Handle server adaptor list update
- * const handleAdaptorsUpdate = (rawData: unknown) => {
- *   const result = AdaptorsListSchema.safeParse(rawData);
- *   if (result.success) {
- *     state = produce(state, (draft) => {
- *       draft.adaptors = result.data;
- *       draft.lastUpdated = Date.now();
- *       draft.error = null;
- *     });
- *     notify();
- *   }
- * };
- * ```
+ * **Flow**: `adaptors_updated` channel push (a name-only signal, no adaptor
+ * data) → re-fetch the catalogue over HTTP → validate the response with Zod
+ * → Immer update → React notification
+ * **Benefits**: Automatic validation, error handling, type safety. Every
+ * update goes through the same HTTP path as the initial load, so
+ * `handleAdaptorsReceived` (below) is the only place that writes
+ * `state.adaptors` from server data.
  *
  * ### Pattern 2: Direct Immer → Notify (Local State)
  * **When to use**: Loading states, errors, local UI state
@@ -181,7 +171,7 @@ export const createAdaptorStore = (): AdaptorStore => {
   const withSelector = createWithSelector(getSnapshot);
 
   // =============================================================================
-  // PATTERN 1: Channel Message → Immer → Notify (Server Updates)
+  // PATTERN 1: Channel Signal → HTTP Re-fetch → Immer → Notify (Server Updates)
   // =============================================================================
 
   /**
@@ -281,9 +271,14 @@ export const createAdaptorStore = (): AdaptorStore => {
    * Connect to Phoenix channel provider for real-time updates
    */
   const connectChannel = (provider: PhoenixChannelProvider) => {
-    const adaptorsUpdatedHandler = (message: unknown) => {
-      logger.debug('Received adaptors_updated message', message);
-      handleAdaptorsReceived(message);
+    // The push only signals that named adaptors changed; it carries no
+    // adaptor data. Always re-fetch the catalogue over HTTP rather than
+    // branching on which names changed -- a brand-new adaptor needs the
+    // fetch regardless, and 304 caching makes re-fetching a known one just
+    // as cheap.
+    const adaptorsUpdatedHandler = () => {
+      logger.debug('Received adaptors_updated signal, refreshing catalogue');
+      void requestAdaptors();
     };
 
     // Set up channel listeners

@@ -15,6 +15,7 @@ import type { AdaptorStoreInstance } from '../../js/collaborative-editor/stores/
 import {
   mockAdaptorsList,
   mockAdaptor,
+  mockAdaptorGmail,
   invalidAdaptorData,
 } from './fixtures/adaptorData.js';
 import {
@@ -225,16 +226,12 @@ describe('createAdaptorStore', () => {
       }
     );
 
-    // CON-128: the server pushes `{ adaptors: [package_meta, ...] }` — wrapped,
-    // and each entry lacks `versions`/`repository`/`icon_urls`. This fails
-    // AdaptorsListSchema, so a live `adaptors_updated` push never actually
-    // updates the catalogue today. This test pins that (broken) behaviour
-    // rather than a hand-built payload the server doesn't send; update it once
-    // CON-128 reconciles the wire shape.
     adaptorTest(
-      'a real-shaped adaptors_updated push fails validation and leaves the catalogue untouched',
+      'an adaptors_updated push for a brand-new adaptor re-fetches over HTTP and adds it to the catalogue',
       async ({ store, mockChannel, mockProvider }) => {
-        getAdaptorCatalogueMock.mockResolvedValue({ data: mockAdaptorsList });
+        getAdaptorCatalogueMock.mockResolvedValueOnce({
+          data: mockAdaptorsList,
+        });
         const cleanup = store._connectChannel(mockProvider as any);
 
         await waitForCondition(() => store.getSnapshot().adaptors.length > 0);
@@ -242,29 +239,67 @@ describe('createAdaptorStore', () => {
           getSortedAdaptors(mockAdaptorsList)
         );
 
-        const wireShapedPush = {
-          adaptors: [
-            {
-              name: '@openfn/language-http',
-              latest_version: '99.0.0',
-              description: null,
-              deprecated: false,
-              updated_at: '2026-08-01T00:00:00Z',
-            },
-          ],
-        };
-        (
-          mockChannel as MockPhoenixChannel & {
-            _test: { emit: (event: string, message: unknown) => void };
-          }
-        )._test.emit('adaptors_updated', wireShapedPush);
+        const catalogueWithGmail = [...mockAdaptorsList, mockAdaptorGmail];
+        getAdaptorCatalogueMock.mockResolvedValueOnce({
+          data: catalogueWithGmail,
+        });
 
-        await waitForCondition(() => store.getSnapshot().error !== null);
+        mockChannel._test.emit('adaptors_updated', {
+          names: ['@openfn/language-gmail'],
+        });
 
-        expect(store.getSnapshot().error).toContain('Invalid adaptors data');
-        expect(store.getSnapshot().adaptors).toEqual(
-          getSortedAdaptors(mockAdaptorsList)
+        await waitForCondition(() =>
+          store
+            .getSnapshot()
+            .adaptors.some(a => a.name === '@openfn/language-gmail')
         );
+
+        expect(getAdaptorCatalogueMock).toHaveBeenCalledTimes(2);
+        expect(store.getSnapshot().adaptors).toEqual(
+          getSortedAdaptors(catalogueWithGmail)
+        );
+        expect(store.getSnapshot().error).toBeNull();
+        cleanup();
+      }
+    );
+
+    adaptorTest(
+      'an adaptors_updated push for an already-shown adaptor re-fetches and updates its version list',
+      async ({ store, mockChannel, mockProvider }) => {
+        getAdaptorCatalogueMock.mockResolvedValueOnce({
+          data: mockAdaptorsList,
+        });
+        const cleanup = store._connectChannel(mockProvider as any);
+
+        await waitForCondition(() => store.getSnapshot().adaptors.length > 0);
+
+        const bumpedHttp = {
+          ...mockAdaptor,
+          versions: ['2.2.0', ...mockAdaptor.versions],
+          latest_version: '2.2.0',
+        };
+        const catalogueWithBump = mockAdaptorsList.map(a =>
+          a.name === mockAdaptor.name ? bumpedHttp : a
+        );
+        getAdaptorCatalogueMock.mockResolvedValueOnce({
+          data: catalogueWithBump,
+        });
+
+        mockChannel._test.emit('adaptors_updated', {
+          names: ['@openfn/language-http'],
+        });
+
+        await waitForCondition(
+          () =>
+            store.findAdaptorByName('@openfn/language-http')?.latest_version !==
+            '2.1.0'
+        );
+
+        expect(getAdaptorCatalogueMock).toHaveBeenCalledTimes(2);
+        expect(store.getSnapshot().adaptors).toEqual(
+          getSortedAdaptors(catalogueWithBump)
+        );
+        expect(store.getSnapshot().error).toBeNull();
         cleanup();
       }
     );
