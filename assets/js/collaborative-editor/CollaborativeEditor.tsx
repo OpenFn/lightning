@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
@@ -8,7 +8,7 @@ import type { WithActionProps } from '../react/lib/with-props';
 import { parseWorkflowYAML, convertWorkflowSpecToState } from '../yaml/util';
 
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
-import { BreadcrumbLink, BreadcrumbText } from './components/Breadcrumbs';
+import { BreadcrumbLink } from './components/Breadcrumbs';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { Header } from './components/Header';
 import { LandingScreen } from './components/LandingScreen';
@@ -26,6 +26,7 @@ import { MonacoRefProvider } from './contexts/MonacoRefContext';
 import { SessionProvider } from './contexts/SessionProvider';
 import { StoreProvider } from './contexts/StoreProvider';
 import { useActionLock } from './hooks/useActionLock';
+import { useHistoryCommands } from './hooks/useHistory';
 import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
@@ -61,7 +62,8 @@ export interface CollaborativeEditorDataProps {
 /**
  * BreadcrumbContent Component
  *
- * Internal component that renders breadcrumbs with store-first, props-fallback pattern.
+ * Renders breadcrumbs with store-first, props-fallback pattern. Exported so it
+ * can be rendered on its own in tests; nothing else should import it.
  * This component must be inside StoreProvider to access sessionContextStore.
  *
  * Migration Strategy:
@@ -82,7 +84,7 @@ interface BreadcrumbContentProps {
   aiAssistantEnabled: boolean;
 }
 
-function BreadcrumbContent({
+export function BreadcrumbContent({
   workflowId,
   workflowName,
   projectIdFallback,
@@ -98,9 +100,36 @@ function BreadcrumbContent({
   const workflowFromStore = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const isRunPanelOpen = useIsRunPanelOpen();
-  const { params } = useURLState();
+  const { closeRunPanel } = useUICommands();
+  const { closeRunViewer } = useHistoryCommands();
+  const { params, updateSearchParams } = useURLState();
   const isIDEOpen = params['panel'] === 'editor';
   const handleVersionSelect = useVersionSelect();
+
+  // Clicking the workflow title returns to the root workflow editor view: it
+  // closes the full IDE (and any other panel), deselects the current node, and
+  // drops any run-viewing context, landing on the bare canvas. This clears more
+  // than the IDE's close ("x") button, which only closes the panel.
+  //
+  // The run panel and the run viewer are held in stores as well as the URL, and
+  // both have sync effects that write their param straight back if only the URL
+  // is cleared: WorkflowEditor restores panel=run while the run panel is open,
+  // and CollaborativeWorkflowDiagram restores run=<id> while a run is active.
+  // Close both at the source first, then clear the params in one update so the
+  // whole reset is a single history entry.
+  const handleTitleClick = useCallback(() => {
+    closeRunPanel();
+    closeRunViewer();
+    updateSearchParams({
+      panel: null,
+      job: null,
+      trigger: null,
+      edge: null,
+      run: null,
+      step: null,
+      runMode: null,
+    });
+  }, [closeRunPanel, closeRunViewer, updateSearchParams]);
 
   const projectId = projectFromStore?.id ?? projectIdFallback;
   const projectName = projectFromStore?.name ?? projectNameFallback;
@@ -126,7 +155,9 @@ function BreadcrumbContent({
         Workflows
       </BreadcrumbLink>,
       <div key="workflow" className="flex items-center gap-2">
-        <BreadcrumbText>{currentWorkflowName}</BreadcrumbText>
+        <BreadcrumbLink onClick={handleTitleClick}>
+          {currentWorkflowName}
+        </BreadcrumbLink>
         <div className="flex items-center gap-1.5">
           <VersionDropdown
             currentVersion={workflowFromStore?.lock_version ?? null}
@@ -159,6 +190,7 @@ function BreadcrumbContent({
     currentWorkflowName,
     workflowFromStore?.lock_version,
     latestSnapshotLockVersion,
+    handleTitleClick,
     handleVersionSelect,
   ]);
 

@@ -17,9 +17,28 @@ and this project adheres to
 
 ### Added
 
+- The workflow title in the editor breadcrumbs is now clickable, returning to
+  the root workflow editor view: it closes the full IDE (equivalent to its close
+  button), closes any other open panel, deselects the current node, and drops
+  any run-viewing context, landing on the bare canvas.
+  [#4984](https://github.com/OpenFn/lightning/pull/4984)
+
 ### Changed
 
+- Remove the unreachable, non-streaming code in the AI assistant
+  [#5046](https://github.com/OpenFn/lightning/issues/5046)
+- The global chat now starts streaming Apollo's response earlier, so users wait
+  less before seeing output. Lightning handles the several streaming event types
+  Apollo sends, including status updates.
+  [#4969](https://github.com/OpenFn/lightning/pull/4969)
+- Bumped bundled worker to version 1.29.2
+
 ### Fixed
+
+- The AI assistant no longer appends " 1" to a workflow's name each time it
+  edits an already-saved workflow. Name-uniqueness validation now excludes the
+  workflow being edited, so its own name isn't treated as a clash.
+  [#5009](https://github.com/OpenFn/lightning/pull/5009)
 
 ## [2.18.1] - 2026-08-28
 
@@ -166,6 +185,10 @@ and this project adheres to
 
 ### Fixed
 
+- The workflows REST API now returns a 422 validation error instead of a 500
+  when a create request omits `edges`, `jobs`, or `triggers` from the body
+  rather than sending them as empty lists.
+  [#4982](https://github.com/OpenFn/lightning/issues/4982)
 - The workflow version dropdown stayed empty after creating and saving a new
   workflow, until the page was refreshed.
   [#4973](https://github.com/OpenFn/lightning/issues/4973)
@@ -395,7 +418,7 @@ Migrations in this release, all in `priv/repo/migrations/`:
   code...") that Apollo streams _after_ the text answer while it generates code,
   displayed below the answer in the same style as the initial "Thinking..."
   indicator. Statuses are surfaced in whatever order Apollo sends them.
-  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+  [#4833](https://github.com/OpenFn/lightning/pull/4833)
 
 ### Changed
 

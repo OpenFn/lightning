@@ -455,8 +455,9 @@ defmodule LightningWeb.WorkflowChannel do
   @impl true
   def handle_in("validate_workflow_name", %{"workflow" => params}, socket) do
     project = socket.assigns.project
+    workflow_id = socket.assigns.workflow_id
 
-    validated_params = ensure_unique_name(params, project)
+    validated_params = ensure_unique_name(params, project, workflow_id)
 
     {:reply, {:ok, %{workflow: validated_params}}, socket}
   end
@@ -1188,11 +1189,13 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  defp ensure_unique_name(params, project) do
+  defp ensure_unique_name(params, project, workflow_id) do
     Map.put(
       params,
       "name",
-      Lightning.Workflows.unique_workflow_name(params["name"], project.id)
+      Lightning.Workflows.unique_workflow_name(params["name"], project.id,
+        exclude_workflow_id: workflow_id
+      )
     )
   end
 

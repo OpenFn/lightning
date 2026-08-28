@@ -20,524 +20,6 @@ defmodule Lightning.AiAssistantTest do
 
   @moduletag :capture_log
 
-  describe "query/3" do
-    test "queries and saves the response", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
-    } do
-      job_expression = "fn(state => state);\n"
-      adaptor = "@openfn/language-http@7.0.6"
-      message_content = "what?"
-
-      session =
-        insert(:chat_session,
-          user: user,
-          job: job_1,
-          expression: job_expression,
-          adaptor: adaptor,
-          messages: [
-            %{
-              role: :user,
-              content: message_content,
-              user: user,
-              status: :pending,
-              # needed to avoid flaky sorting
-              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
-            }
-          ]
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      reply =
-        """
-        {
-          "response": "Based on the provided guide and the API documentation for the OpenFn @openfn/language-common@1.14.0 adaptor, you can create jobs using the functions provided by the API to interact with different data sources and perform various operations.\\n\\nTo create a job using the HTTP adaptor, you can use functions like `get`, `post`, `put`, `patch`, `head`, and `options` to make HTTP requests. Here's an example job code using the HTTP adaptor:\\n\\n```javascript\\nconst { get, post, each, dataValue } = require('@openfn/language-common');\\n\\nexecute(\\n  get('/patients'),\\n  each('$.data.patients[*]', (item, index) => {\\n    item.id = `item-${index}`;\\n  }),\\n  post('/patients', dataValue('patients'))\\n);\\n```\\n\\nIn this example, the job first fetches patient data using a GET request, then iterates over each patient to modify their ID, and finally posts the modified patient data back.\\n\\nYou can similarly create jobs using the Salesforce adaptor or the ODK adaptor by utilizing functions like `upsert`, `create`, `fields`, `field`, etc., as shown in the provided examples.\\n\\nFeel free to ask if you have any specific questions or need help with",
-          "history": [
-            { "role": "user", "content": "what?" },
-            {
-              "role": "assistant",
-              "content": "Based on the provided guide and the API documentation for the OpenFn @openfn/language-common@1.14.0 adaptor, you can create jobs using the functions provided by the API to interact with different data sources and perform various operations.\\n\\nTo create a job using the HTTP adaptor, you can use functions like `get`, `post`, `put`, `patch`, `head`, and `options` to make HTTP requests. Here's an example job code using the HTTP adaptor:\\n\\n```javascript\\nconst { get, post, each, dataValue } = require('@openfn/language-common');\\n\\nexecute(\\n  get('/patients'),\\n  each('$.data.patients[*]', (item, index) => {\\n    item.id = `item-${index}`;\\n  }),\\n  post('/patients', dataValue('patients'))\\n);\\n```\\n\\nIn this example, the job first fetches patient data using a GET request, then iterates over each patient to modify their ID, and finally posts the modified patient data back.\\n\\nYou can similarly create jobs using the Salesforce adaptor or the ODK adaptor by utilizing functions like `upsert`, `create`, `fields`, `field`, etc., as shown in the provided examples.\\n\\nFeel free to ask if you have any specific questions or need help with"
-            }
-          ]
-        }
-        """
-        |> Jason.decode!()
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
-        assert url =~ "/services/job_chat"
-
-        {:ok, %Tesla.Env{status: 200, body: reply}}
-      end)
-
-      {:ok, updated_session} = AiAssistant.query(session, message_content)
-      assert updated_session.expression == job_expression
-      assert updated_session.adaptor == adaptor
-
-      assert Enum.count(updated_session.messages) == Enum.count(reply["history"])
-
-      reply_message = List.last(reply["history"])
-      saved_message = List.last(updated_session.messages)
-
-      assert reply_message["content"] == saved_message.content
-      assert reply_message["role"] == to_string(saved_message.role)
-
-      assert Lightning.Repo.reload!(saved_message)
-    end
-
-    test "handles timeout errors", %{user: user, workflow: %{jobs: [job_1 | _]}} do
-      session = insert(:chat_session, user: user, job: job_1)
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, :timeout}
-      end)
-
-      assert {:error, "Request timed out. Please try again."} =
-               AiAssistant.query(session, "test query")
-    end
-
-    test "handles connection refused errors", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]}
-    } do
-      session = insert(:chat_session, user: user, job: job_1)
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, :econnrefused}
-      end)
-
-      assert {:error, "Unable to reach the AI server. Please try again later."} =
-               AiAssistant.query(session, "test query")
-    end
-
-    test "handles HTTP error responses", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]}
-    } do
-      session = insert(:chat_session, user: user, job: job_1)
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:ok,
-         %Tesla.Env{status: 500, body: %{"message" => "Internal server error"}}}
-      end)
-
-      assert {:error, "Internal server error"} =
-               AiAssistant.query(session, "test query")
-    end
-
-    test "handles unexpected errors", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]}
-    } do
-      session = insert(:chat_session, user: user, job: job_1)
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, %{some: "unexpected error"}}
-      end)
-
-      assert {:error, "Oops! Something went wrong. Please try again."} =
-               AiAssistant.query(session, "test query")
-    end
-
-    test "job code is included in the context by default", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
-    } do
-      job_expression = "fn(state => state);\n"
-      adaptor = "@openfn/language-http@7.0.6"
-
-      session =
-        insert(:chat_session,
-          user: user,
-          job: job_1,
-          expression: job_expression,
-          adaptor: adaptor,
-          messages: [
-            %{role: :user, content: "ping", user: user, status: :pending}
-          ]
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(
-        Lightning.Tesla.Mock,
-        :call,
-        fn %{method: :post, body: json_body}, _opts ->
-          body = Jason.decode!(json_body)
-          assert body["context"]["expression"] == job_expression
-          assert body["context"]["adaptor"] == adaptor
-
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "user", "content" => "Ping"},
-                 %{"role" => "assistant", "content" => "Pong"}
-               ]
-             }
-           }}
-        end
-      )
-
-      {:ok, _updated_session} = AiAssistant.query(session, "Ping")
-    end
-
-    test "job code can be excluded from the context via options", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
-    } do
-      job_expression = "fn(state => state);\n"
-      adaptor = "@openfn/language-http@7.0.6"
-
-      session =
-        insert(:chat_session,
-          user: user,
-          job: job_1,
-          expression: job_expression,
-          adaptor: adaptor,
-          messages: [
-            %{role: :user, content: "ping", user: user, status: :pending}
-          ]
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(
-        Lightning.Tesla.Mock,
-        :call,
-        fn %{method: :post, body: json_body}, _opts ->
-          body = Jason.decode!(json_body)
-          refute Map.has_key?(body["context"], "expression")
-          assert body["context"]["adaptor"] == adaptor
-
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "user", "content" => "Ping"},
-                 %{"role" => "assistant", "content" => "Pong"}
-               ]
-             }
-           }}
-        end
-      )
-
-      {:ok, _updated_session} =
-        AiAssistant.query(session, "Ping", code: false)
-    end
-
-    test "logs can be excluded from the context via options", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          job: job_1,
-          expression: "fn()",
-          adaptor: "@openfn/language-common",
-          logs: "Some log data",
-          messages: []
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(
-        Lightning.Tesla.Mock,
-        :call,
-        fn %{method: :post, body: json_body}, _opts ->
-          body = Jason.decode!(json_body)
-          refute Map.has_key?(body["context"], "log")
-          assert Map.has_key?(body["context"], "expression")
-
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "assistant", "content" => "Response"}
-               ]
-             }
-           }}
-        end
-      )
-
-      {:ok, _updated_session} =
-        AiAssistant.query(session, "Query", logs: false)
-    end
-
-    test "input and output options are included in context", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          job: job_1,
-          expression: "fn(state => state)",
-          adaptor: "@openfn/language-http",
-          messages: []
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      input_data = %{"user" => "john", "age" => 30}
-      output_data = %{"status" => "success", "id" => "123"}
-
-      expect(
-        Lightning.Tesla.Mock,
-        :call,
-        fn %{method: :post, body: json_body}, _opts ->
-          body = Jason.decode!(json_body)
-
-          # Verify input and output are in context
-          assert body["context"]["input"] == input_data
-          assert body["context"]["output"] == output_data
-
-          # Verify other context is still present
-          assert body["context"]["expression"] == "fn(state => state)"
-          assert body["context"]["adaptor"] == "@openfn/language-http"
-
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "user", "content" => "Query"},
-                 %{"role" => "assistant", "content" => "Response"}
-               ]
-             }
-           }}
-        end
-      )
-
-      {:ok, _updated_session} =
-        AiAssistant.query(session, "Query",
-          input: input_data,
-          output: output_data
-        )
-    end
-
-    test "nil input and output options are not included in context", %{
-      user: user,
-      workflow: %{jobs: [job_1 | _]} = _workflow
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          job: job_1,
-          expression: "fn(state => state)",
-          adaptor: "@openfn/language-http",
-          messages: []
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(
-        Lightning.Tesla.Mock,
-        :call,
-        fn %{method: :post, body: json_body}, _opts ->
-          body = Jason.decode!(json_body)
-
-          # Verify input and output are not present when nil
-          refute Map.has_key?(body["context"], "input")
-          refute Map.has_key?(body["context"], "output")
-
-          {:ok,
-           %Tesla.Env{
-             status: 200,
-             body: %{
-               "history" => [
-                 %{"role" => "user", "content" => "Query"},
-                 %{"role" => "assistant", "content" => "Response"}
-               ]
-             }
-           }}
-        end
-      )
-
-      {:ok, _updated_session} =
-        AiAssistant.query(session, "Query", input: nil, output: nil)
-    end
-  end
-
-  describe "query/3 — langfuse metadata" do
-    setup do
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      :ok
-    end
-
-    test "core-contributor user sends metrics_opt_in true and persona core-contributor",
-         %{workflow: %{jobs: [job_1 | _]}} do
-      user = insert(:user, email: "alice@openfn.org")
-      session = insert(:chat_session, user: user, job: job_1, meta: %{})
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
-                                             _opts ->
-        decoded = Jason.decode!(body)
-
-        assert decoded["metrics_opt_in"] == true
-        assert decoded["meta"]["session_id"] == session.id
-
-        assert decoded["meta"]["user"] == %{
-                 "id" => user.id,
-                 "persona" => "core-contributor"
-               }
-
-        {:ok,
-         %Tesla.Env{
-           status: 200,
-           body: %{
-             "history" => [
-               %{"role" => "user", "content" => "hi"},
-               %{"role" => "assistant", "content" => "hello"}
-             ]
-           }
-         }}
-      end)
-
-      assert {:ok, _updated_session} = AiAssistant.query(session, "hi")
-    end
-
-    test "non-openfn user sends metrics_opt_in false and persona user",
-         %{workflow: %{jobs: [job_1 | _]}} do
-      user = insert(:user, email: "ext@example.com")
-      session = insert(:chat_session, user: user, job: job_1, meta: %{})
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
-                                             _opts ->
-        decoded = Jason.decode!(body)
-
-        assert decoded["metrics_opt_in"] == false
-        assert decoded["meta"]["user"]["persona"] == "user"
-        assert decoded["meta"]["user"]["id"] == user.id
-
-        {:ok,
-         %Tesla.Env{
-           status: 200,
-           body: %{
-             "history" => [
-               %{"role" => "user", "content" => "hi"},
-               %{"role" => "assistant", "content" => "hello"}
-             ]
-           }
-         }}
-      end)
-
-      assert {:ok, _updated_session} = AiAssistant.query(session, "hi")
-    end
-
-    test "preserves existing session.meta keys (rag echo regression guard)",
-         %{workflow: %{jobs: [job_1 | _]}} do
-      user = insert(:user, email: "alice@openfn.org")
-
-      session =
-        insert(:chat_session,
-          user: user,
-          job: job_1,
-          meta: %{"rag" => %{"search_results" => ["x"]}}
-        )
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
-                                             _opts ->
-        decoded = Jason.decode!(body)
-
-        assert decoded["meta"]["rag"] == %{"search_results" => ["x"]}
-        assert decoded["meta"]["session_id"] == session.id
-
-        {:ok,
-         %Tesla.Env{
-           status: 200,
-           body: %{
-             "history" => [
-               %{"role" => "user", "content" => "hi"},
-               %{"role" => "assistant", "content" => "hello"}
-             ]
-           }
-         }}
-      end)
-
-      assert {:ok, _updated_session} = AiAssistant.query(session, "hi")
-    end
-  end
-
   describe "query_global_stream/3 — langfuse metadata" do
     setup do
       Mox.stub(Lightning.MockConfig, :apollo, fn key ->
@@ -607,6 +89,342 @@ defmodule Lightning.AiAssistantTest do
 
       assert {:ok, _updated_session} =
                AiAssistant.query_global_stream(session, "help")
+    end
+  end
+
+  describe "query_stream/3 — context options" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "job code is included in the context by default", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      job_expression = "fn(state => state);\n"
+      adaptor = "@openfn/language-http@7.0.6"
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: job_expression,
+          adaptor: adaptor,
+          messages: [
+            %{role: :user, content: "ping", user: user, status: :pending}
+          ]
+        )
+
+      expect(
+        Lightning.Tesla.Mock,
+        :call,
+        fn %{method: :post, url: url, body: json_body}, _opts ->
+          assert url =~ "/services/job_chat/stream"
+          body = Jason.decode!(json_body)
+          assert body["context"]["expression"] == job_expression
+          assert body["context"]["adaptor"] == adaptor
+
+          {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
+        end
+      )
+
+      {:ok, _updated_session} = AiAssistant.query_stream(session, "Ping")
+    end
+
+    test "job code can be excluded from the context via options", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      job_expression = "fn(state => state);\n"
+      adaptor = "@openfn/language-http@7.0.6"
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: job_expression,
+          adaptor: adaptor,
+          messages: [
+            %{role: :user, content: "ping", user: user, status: :pending}
+          ]
+        )
+
+      expect(
+        Lightning.Tesla.Mock,
+        :call,
+        fn %{method: :post, body: json_body}, _opts ->
+          body = Jason.decode!(json_body)
+          refute Map.has_key?(body["context"], "expression")
+          assert body["context"]["adaptor"] == adaptor
+
+          {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
+        end
+      )
+
+      {:ok, _updated_session} =
+        AiAssistant.query_stream(session, "Ping", code: false)
+    end
+
+    test "logs can be excluded from the context via options", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn()",
+          adaptor: "@openfn/language-common",
+          logs: "Some log data",
+          messages: []
+        )
+
+      expect(
+        Lightning.Tesla.Mock,
+        :call,
+        fn %{method: :post, body: json_body}, _opts ->
+          body = Jason.decode!(json_body)
+          refute Map.has_key?(body["context"], "log")
+          assert Map.has_key?(body["context"], "expression")
+
+          {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
+        end
+      )
+
+      {:ok, _updated_session} =
+        AiAssistant.query_stream(session, "Query", logs: false)
+    end
+
+    test "input and output options are included in context", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http",
+          messages: []
+        )
+
+      input_data = %{"user" => "john", "age" => 30}
+      output_data = %{"status" => "success", "id" => "123"}
+
+      expect(
+        Lightning.Tesla.Mock,
+        :call,
+        fn %{method: :post, body: json_body}, _opts ->
+          body = Jason.decode!(json_body)
+
+          # Verify input and output are in context
+          assert body["context"]["input"] == input_data
+          assert body["context"]["output"] == output_data
+
+          # Verify other context is still present
+          assert body["context"]["expression"] == "fn(state => state)"
+          assert body["context"]["adaptor"] == "@openfn/language-http"
+
+          {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
+        end
+      )
+
+      {:ok, _updated_session} =
+        AiAssistant.query_stream(session, "Query",
+          input: input_data,
+          output: output_data
+        )
+    end
+
+    test "nil input and output options are not included in context", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          expression: "fn(state => state)",
+          adaptor: "@openfn/language-http",
+          messages: []
+        )
+
+      expect(
+        Lightning.Tesla.Mock,
+        :call,
+        fn %{method: :post, body: json_body}, _opts ->
+          body = Jason.decode!(json_body)
+
+          # Verify input and output are not present when nil
+          refute Map.has_key?(body["context"], "input")
+          refute Map.has_key?(body["context"], "output")
+
+          {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
+        end
+      )
+
+      {:ok, _updated_session} =
+        AiAssistant.query_stream(session, "Query", input: nil, output: nil)
+    end
+  end
+
+  describe "query_stream/3 — langfuse metadata" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "core-contributor user sends metrics_opt_in true and persona core-contributor",
+         %{workflow: %{jobs: [job_1 | _]}} do
+      user = insert(:user, email: "alice@openfn.org")
+      session = insert(:chat_session, user: user, job: job_1, meta: %{})
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
+                                             _opts ->
+        decoded = Jason.decode!(body)
+
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"]["session_id"] == session.id
+
+        assert decoded["meta"]["user"] == %{
+                 "id" => user.id,
+                 "persona" => "core-contributor"
+               }
+
+        {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
+      end)
+
+      assert {:ok, _updated_session} = AiAssistant.query_stream(session, "hi")
+    end
+
+    test "non-openfn user sends metrics_opt_in false and persona user",
+         %{workflow: %{jobs: [job_1 | _]}} do
+      user = insert(:user, email: "ext@example.com")
+      session = insert(:chat_session, user: user, job: job_1, meta: %{})
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
+                                             _opts ->
+        decoded = Jason.decode!(body)
+
+        assert decoded["metrics_opt_in"] == false
+        assert decoded["meta"]["user"]["persona"] == "user"
+        assert decoded["meta"]["user"]["id"] == user.id
+
+        {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
+      end)
+
+      assert {:ok, _updated_session} = AiAssistant.query_stream(session, "hi")
+    end
+
+    test "preserves existing session.meta keys (rag echo regression guard)",
+         %{workflow: %{jobs: [job_1 | _]}} do
+      user = insert(:user, email: "alice@openfn.org")
+
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          meta: %{"rag" => %{"search_results" => ["x"]}}
+        )
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
+                                             _opts ->
+        decoded = Jason.decode!(body)
+
+        assert decoded["meta"]["rag"] == %{"search_results" => ["x"]}
+        assert decoded["meta"]["session_id"] == session.id
+
+        {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
+      end)
+
+      assert {:ok, _updated_session} = AiAssistant.query_stream(session, "hi")
+    end
+  end
+
+  describe "query_workflow_stream/3 — langfuse metadata" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
+        case key do
+          :endpoint -> "http://localhost:3000"
+          :ai_assistant_api_key -> "api_key"
+          :timeout -> 5_000
+        end
+      end)
+
+      :ok
+    end
+
+    test "forwards meta and metrics_opt_in to workflow_chat_stream", %{
+      project: project,
+      workflow: workflow
+    } do
+      user = insert(:user, email: "alice@openfn.org")
+
+      session =
+        insert(:chat_session,
+          user: user,
+          project: project,
+          workflow: workflow,
+          session_type: "workflow_template",
+          meta: %{"rag" => %{"search_results" => ["z"]}},
+          messages: [
+            %{
+              role: :user,
+              content: "make a workflow",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Here is your workflow",
+          "response_yaml" => "name: test",
+          "usage" => %{}
+        })
+
+      sse_stream = [%{event: "complete", data: complete_payload}]
+
+      expect(Lightning.Tesla.Mock, :call, fn %{
+                                               method: :post,
+                                               url: url,
+                                               body: body
+                                             },
+                                             _opts ->
+        assert url =~ "/services/workflow_chat/stream"
+        decoded = Jason.decode!(body)
+
+        assert decoded["metrics_opt_in"] == true
+        assert decoded["meta"]["session_id"] == session.id
+        assert decoded["meta"]["rag"] == %{"search_results" => ["z"]}
+
+        assert decoded["meta"]["user"] == %{
+                 "id" => user.id,
+                 "persona" => "core-contributor"
+               }
+
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _updated_session} =
+               AiAssistant.query_workflow_stream(session, "make a workflow")
     end
   end
 
@@ -2028,251 +1846,6 @@ defmodule Lightning.AiAssistantTest do
     end
   end
 
-  describe "query_workflow/3" do
-    test "queries workflow chat service", %{user: user, project: project} do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, url: url}, _opts ->
-        assert url =~ "/services/workflow_chat"
-
-        {:ok,
-         %Tesla.Env{
-           status: 200,
-           body: %{
-             "response" => "Workflow created",
-             "response_yaml" => "workflow: example",
-             "usage" => %{}
-           }
-         }}
-      end)
-
-      assert {:ok, updated_session} =
-               AiAssistant.query_workflow(session, "Create workflow")
-
-      assert length(updated_session.messages) == 1
-    end
-
-    test "handles errors from workflow chat service", %{
-      user: user,
-      project: project,
-      workflow: _workflow
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:ok,
-         %Tesla.Env{
-           status: 400,
-           body: %{"message" => "Invalid request"}
-         }}
-      end)
-
-      assert {:error, "Invalid request"} =
-               AiAssistant.query_workflow(session, "Create workflow")
-    end
-
-    test "handles timeout errors in workflow query", %{
-      user: user,
-      project: project,
-      workflow: _workflow
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, :timeout}
-      end)
-
-      assert {:error, "Request timed out. Please try again."} =
-               AiAssistant.query_workflow(session, "Create workflow")
-    end
-
-    test "handles connection refused errors in workflow query", %{
-      user: user,
-      project: project
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, :econnrefused}
-      end)
-
-      assert {:error, "Unable to reach the AI server. Please try again later."} =
-               AiAssistant.query_workflow(session, "Create workflow")
-    end
-
-    test "handles unexpected errors in workflow query", %{
-      user: user,
-      project: project
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
-        {:error, %{unexpected: "error"}}
-      end)
-
-      assert {:error, "Oops! Something went wrong. Please try again."} =
-               AiAssistant.query_workflow(session, "Create workflow")
-    end
-
-    test "passes options to workflow service", %{
-      user: user,
-      project: project
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      validation_errors = "Invalid cron expression: '0 0 * * 8'"
-      existing_code = "name: Test\njobs: []"
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
-                                             _opts ->
-        decoded = Jason.decode!(body)
-        assert decoded["errors"] == validation_errors
-        assert decoded["existing_yaml"] == existing_code
-
-        {:ok,
-         %Tesla.Env{
-           status: 200,
-           body: %{
-             "response" => "Fixed workflow",
-             "response_yaml" => "workflow: fixed"
-           }
-         }}
-      end)
-
-      {:ok, _} =
-        AiAssistant.query_workflow(session, "Fix the errors",
-          errors: validation_errors,
-          code: existing_code
-        )
-    end
-
-    test "passes workflow code as option to workflow service", %{
-      user: user,
-      project: project
-    } do
-      session =
-        insert(:chat_session,
-          user: user,
-          project: project,
-          session_type: "workflow_template"
-        )
-
-      workflow_yaml = """
-      name: Test Workflow
-      jobs: []
-      """
-
-      Mox.stub(Lightning.MockConfig, :apollo, fn key ->
-        case key do
-          :endpoint -> "http://localhost:3000"
-          :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
-        end
-      end)
-
-      expect(Lightning.Tesla.Mock, :call, fn %{method: :post, body: body},
-                                             _opts ->
-        decoded = Jason.decode!(body)
-        assert decoded["existing_yaml"] == workflow_yaml
-
-        {:ok,
-         %Tesla.Env{
-           status: 200,
-           body: %{
-             "response" => "Updated workflow",
-             "response_yaml" => "workflow: updated"
-           }
-         }}
-      end)
-
-      # Pass the YAML as an option
-      {:ok, _} =
-        AiAssistant.query_workflow(
-          session,
-          "Update the workflow",
-          code: workflow_yaml
-        )
-    end
-  end
-
   describe "list_sessions/3" do
     test "lists project workflow sessions with pagination", %{
       user: user,
@@ -3586,7 +3159,10 @@ defmodule Lightning.AiAssistantTest do
         AiAssistant.save_message(session, %{
           role: :user,
           content: "modify workflow",
-          user: user
+          user: user,
+          # needed to avoid flaky sorting: same-second timestamps tie with
+          # the assistant reply saved below
+          inserted_at: DateTime.utc_now() |> DateTime.add(-1)
         })
 
       complete_payload =
@@ -3724,5 +3300,20 @@ defmodule Lightning.AiAssistantTest do
       assert assistant_msg.content == "No artifacts"
       assert is_nil(assistant_msg.code)
     end
+  end
+
+  # Minimal job_chat SSE stream reply: a single `complete` event whose
+  # payload has the same shape as a synchronous job_chat response.
+  defp job_chat_stream_reply do
+    complete_payload =
+      Jason.encode!(%{
+        "history" => [
+          %{"role" => "user", "content" => "Query"},
+          %{"role" => "assistant", "content" => "Response"}
+        ],
+        "usage" => %{}
+      })
+
+    [%{event: "complete", data: complete_payload}]
   end
 end

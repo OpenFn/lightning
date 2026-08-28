@@ -34,140 +34,24 @@ defmodule Lightning.ApolloClient do
   @type opts :: keyword()
 
   @doc """
-  Performs a health check on the Apollo service endpoint.
-
-  Sends a GET request to the root endpoint to verify the service is running
-  and accessible. This should be called before attempting AI operations to
-  ensure graceful degradation when the service is unavailable.
-
-  ## Returns
-
-  - `:ok` - Service responded with 2xx status code
-  - `:error` - Service unavailable, network error, or non-2xx response
-  """
-  @spec test() :: :ok | :error
-  def test do
-    client()
-    |> Tesla.get("/")
-    |> case do
-      {:ok, %{status: status}} when status in 200..299 -> :ok
-      _ -> :error
-    end
-  end
-
-  @doc """
-  Requests AI assistance for job-specific coding tasks and debugging.
-
-  Sends user queries along with job context (expression code and adaptor) to the
-  Apollo job_chat service. The AI provides targeted assistance for coding tasks,
-  error debugging, adaptor-specific guidance, and best practices.
-
-  ## Parameters
-
-  - `content` - User's question or request for assistance
-  - `opts` - Keyword list of options:
-    - `:context` - Job context including expression code and adaptor info (default: %{})
-    - `:history` - Previous conversation messages for context (default: [])
-    - `:meta` - Additional metadata like session IDs or user preferences (default: %{})
-    - `:metrics_opt_in` - Optional boolean enabling Langfuse metrics tracking
-      on the Apollo side. Omitted from the wire payload when not supplied.
-
-  ## Returns
-
-  `Tesla.Env.result()` with response body containing:
-  - `"history"` - Updated conversation including AI response
-  - `"usage"` - Token usage and cost information
-  - `"meta"` - Updated metadata
-  """
-  @spec job_chat(String.t(), opts()) :: Tesla.Env.result()
-  def job_chat(content, opts \\ []) do
-    context = Keyword.get(opts, :context, %{})
-    history = Keyword.get(opts, :history, [])
-    meta = Keyword.get(opts, :meta, %{})
-    metrics_opt_in = Keyword.get(opts, :metrics_opt_in)
-
-    payload =
-      %{
-        "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
-        "content" => content,
-        "context" => context,
-        "history" => history,
-        "meta" => meta,
-        "suggest_code" => true,
-        "metrics_opt_in" => metrics_opt_in
-      }
-      |> Enum.reject(fn {_, v} -> is_nil(v) end)
-      |> Enum.into(%{})
-
-    client()
-    |> Tesla.post("/services/job_chat", payload)
-  end
-
-  @doc """
-  Generates or improves workflow templates using AI assistance.
-
-  Sends requests to the Apollo workflow_chat service to create complete workflow
-  YAML definitions from natural language descriptions. Can also iteratively improve
-  existing workflows based on validation errors or user feedback.
-
-  ## Parameters
-
-  - `content` - Natural language description of desired workflow functionality
-  - `opts` - Keyword list of options:
-    - `:code` - Optional existing workflow YAML to modify or improve
-    - `:errors` - Optional validation errors from previous workflow attempts
-    - `:history` - Previous conversation messages for context (default: [])
-    - `:meta` - Additional metadata (default: %{})
-    - `:metrics_opt_in` - Optional boolean enabling Langfuse metrics tracking
-      on the Apollo side. Omitted from the wire payload when not supplied.
-
-  ## Returns
-
-  `Tesla.Env.result()` with response body containing:
-  - `"response"` - Human-readable explanation of the generated workflow
-  - `"response_yaml"` - Complete workflow YAML definition
-  - `"usage"` - Token usage and cost information
-  """
-  @spec workflow_chat(String.t(), opts()) :: Tesla.Env.result()
-  def workflow_chat(content, opts \\ []) do
-    code = Keyword.get(opts, :code)
-    errors = Keyword.get(opts, :errors)
-    history = Keyword.get(opts, :history, [])
-    meta = Keyword.get(opts, :meta, %{})
-    metrics_opt_in = Keyword.get(opts, :metrics_opt_in)
-
-    payload =
-      %{
-        "api_key" => Lightning.Config.apollo(:ai_assistant_api_key),
-        "content" => content,
-        "existing_yaml" => code,
-        "errors" => errors,
-        "history" => history,
-        "meta" => meta,
-        "metrics_opt_in" => metrics_opt_in
-      }
-      |> Enum.reject(fn {_, v} -> is_nil(v) end)
-      |> Enum.into(%{})
-
-    client() |> Tesla.post("/services/workflow_chat", payload)
-  end
-
-  @doc """
   Requests AI assistance for job-specific tasks with SSE streaming.
 
-  Same as `job_chat/2` but connects to Apollo's streaming endpoint,
-  returning the response body as a lazy `Stream` of parsed SSE data strings.
-  Each element is a raw JSON string that must be decoded with `Jason.decode!/1`.
+  Sends user queries along with job context (expression code and adaptor) to
+  Apollo's streaming job_chat endpoint, returning the response body as a lazy
+  `Stream` of parsed SSE data strings. Each element is a raw JSON string that
+  must be decoded with `Jason.decode!/1`.
 
   The stream emits Anthropic-formatted events (`content_block_delta`, etc.)
   followed by a final `complete` event containing the full response payload
-  (same shape as the synchronous `job_chat/2` response).
+  (`"history"`, `"usage"`, and `"meta"`).
 
   ## Options
 
-  Accepts the same options as `job_chat/2`, including `:metrics_opt_in` which,
-  when supplied, enables Langfuse metrics tracking on the Apollo side. Omitted
-  from the wire payload when not supplied.
+  - `:context` - Job context including expression code and adaptor info (default: %{})
+  - `:history` - Previous conversation messages for context (default: [])
+  - `:meta` - Additional metadata like session IDs or user preferences (default: %{})
+  - `:metrics_opt_in` - Optional boolean enabling Langfuse metrics tracking
+    on the Apollo side. Omitted from the wire payload when not supplied.
   """
   @spec job_chat_stream(String.t(), opts()) :: Tesla.Env.result()
   def job_chat_stream(content, opts \\ []) do
@@ -201,14 +85,21 @@ defmodule Lightning.ApolloClient do
   @doc """
   Generates or improves workflow templates with SSE streaming.
 
-  Same as `workflow_chat/2` but connects to Apollo's streaming endpoint.
-  See `job_chat_stream/2` for details on the stream format.
+  Sends requests to Apollo's streaming workflow_chat endpoint to create
+  complete workflow YAML definitions from natural language descriptions, or
+  to iteratively improve existing workflows based on validation errors or
+  user feedback. See `job_chat_stream/2` for details on the stream format;
+  the final `complete` event carries `"response"`, `"response_yaml"`, and
+  `"usage"`.
 
   ## Options
 
-  Accepts the same options as `workflow_chat/2`, including `:metrics_opt_in`
-  which, when supplied, enables Langfuse metrics tracking on the Apollo side.
-  Omitted from the wire payload when not supplied.
+  - `:code` - Optional existing workflow YAML to modify or improve
+  - `:errors` - Optional validation errors from previous workflow attempts
+  - `:history` - Previous conversation messages for context (default: [])
+  - `:meta` - Additional metadata (default: %{})
+  - `:metrics_opt_in` - Optional boolean enabling Langfuse metrics tracking
+    on the Apollo side. Omitted from the wire payload when not supplied.
   """
   @spec workflow_chat_stream(String.t(), opts()) :: Tesla.Env.result()
   def workflow_chat_stream(content, opts \\ []) do
@@ -288,25 +179,6 @@ defmodule Lightning.ApolloClient do
       headers: [{"content-type", "application/json"}],
       opts: [adapter: [response: :stream]]
     )
-  end
-
-  defp client do
-    client_params = [
-      {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
-      Tesla.Middleware.JSON,
-      Tesla.Middleware.KeepRequest
-    ]
-
-    if match?({Tesla.Adapter.Finch, _}, Application.get_env(:tesla, :adapter)) do
-      Tesla.client(
-        client_params,
-        {Tesla.Adapter.Finch,
-         name: Lightning.Finch,
-         receive_timeout: Lightning.Config.apollo(:timeout)}
-      )
-    else
-      Tesla.client(client_params)
-    end
   end
 
   defp stream_client do

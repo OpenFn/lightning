@@ -20,6 +20,7 @@ import type {
   StreamingApplyState,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
+import { STREAMING_MESSAGE_ID } from '../types/ai-assistant';
 
 import type { AIModeResult } from './useAIMode';
 import { NOT_CONNECTED_ALERT, STILL_CONNECTING_ALERT } from './useWorkflow';
@@ -109,6 +110,7 @@ export function useAIWorkflowApplications({
   currentSession,
   currentUserId,
   aiMode,
+  isGlobalSession,
   isNewWorkflow,
   isSessionConnected,
   isSessionConnecting,
@@ -133,6 +135,12 @@ export function useAIWorkflowApplications({
   } | null;
   currentUserId: string | undefined;
   aiMode: AIModeResult | null;
+  /**
+   * Whether the active session is a global assistant session. Mid-stream
+   * applies (STREAMING_MESSAGE_ID) have no session message to look up, so this
+   * flag decides whether they get the global page-independent treatment.
+   */
+  isGlobalSession: boolean;
   isNewWorkflow: boolean;
   /**
    * Workflow-session socket connectivity (distinct from `connectionState`,
@@ -260,11 +268,16 @@ export function useAIWorkflowApplications({
     ): Promise<'applied' | 'gated' | 'failed'> => {
       if (!aiMode) return 'failed';
       // Global messages carry a full workflow YAML and may be applied even
-      // while a job is open (job_code mode). Non-global workflow chat keeps
-      // the workflow_template-only guard so its Apply stays a no-op when a
-      // job is open.
-      const isGlobal = !!currentSession?.messages.find(m => m.id === messageId)
-        ?.from_global;
+      // while a job is open (job_code mode). Mid-stream applies
+      // (STREAMING_MESSAGE_ID) have no session message to look up, so the caller
+      // tells us via isGlobalSession whether the active session is global.
+      // A non-global workflow chat stream (e.g. the user navigated to a job
+      // mid-stream) keeps the workflow_template-only guard so its Apply
+      // stays a no-op when a job is open.
+      const isGlobal =
+        (messageId === STREAMING_MESSAGE_ID && isGlobalSession) ||
+        !!currentSession?.messages.find(m => m.id === messageId)?.from_global;
+
       if (aiMode.page !== 'workflow_template' && !isGlobal) {
         console.error(
           '[AI Assistant] Cannot apply workflow - not in workflow mode',
@@ -300,7 +313,7 @@ export function useAIWorkflowApplications({
 
       // Any non-streaming apply supersedes a pending streaming apply — the
       // canvas will no longer hold the streamed YAML after this import.
-      if (messageId !== '__streaming__') {
+      if (messageId !== STREAMING_MESSAGE_ID) {
         streamingApplyActions.clear();
       }
 
@@ -327,7 +340,7 @@ export function useAIWorkflowApplications({
         await importWorkflow(workflowStateWithCreds);
         applySucceeded = true;
 
-        if (messageId === '__streaming__') {
+        if (messageId === STREAMING_MESSAGE_ID) {
           // Record the applied YAML so the auto-apply effect can skip the
           // duplicate import when the final new_message carries the same YAML.
           // Set only after a successful import, so failed applies never
@@ -377,6 +390,7 @@ export function useAIWorkflowApplications({
     [
       aiMode,
       currentSession,
+      isGlobalSession,
       importWorkflow,
       startApplyingWorkflow,
       doneApplyingWorkflow,
@@ -414,7 +428,7 @@ export function useAIWorkflowApplications({
    *   re-apply loop); the user can re-apply via the still-enabled manual button
    *   and save failures recover via the shared Retry toast.
    *
-   * The '__streaming__' pseudo-message is deliberately NOT routed through here
+   * The STREAMING_MESSAGE_ID pseudo-message is deliberately NOT routed through here
    * (it calls handleApplyWorkflow directly) so it never lands in
    * appliedMessageIdsRef and can be superseded by the final new_message.
    */
@@ -472,7 +486,7 @@ export function useAIWorkflowApplications({
 
       // If we're previewing from streaming and the real message arrives,
       // just update the message ID without re-rendering the diff
-      if (previewingMessageId === '__streaming__') {
+      if (previewingMessageId === STREAMING_MESSAGE_ID) {
         setPreviewingMessageId(messageId);
         return;
       }
@@ -522,7 +536,7 @@ export function useAIWorkflowApplications({
 
       // Same dedup guards as handlePreviewJobCode
       if (previewingMessageId === messageId) return;
-      if (previewingMessageId === '__streaming__') {
+      if (previewingMessageId === STREAMING_MESSAGE_ID) {
         setPreviewingMessageId(messageId);
         return;
       }
@@ -678,7 +692,16 @@ export function useAIWorkflowApplications({
     if (!currentSession) return;
     const messages = currentSession.messages;
 
-    if (page !== 'workflow_template' || !messages.length) return;
+    // Global sessions apply page-independently (their streaming applies can
+    // finish while a job is open), so they must reconcile here too —
+    // otherwise a streamingApply record would stay stuck and a failed save
+    // would never retry until the user navigated back to the canvas.
+    if (
+      (page !== 'workflow_template' && !isGlobalSession) ||
+      !messages.length
+    ) {
+      return;
+    }
     if (connectionState !== 'connected') return;
     // Don't auto-apply when readonly (except for new workflow creation)
     if (!canApplyChanges) return;
@@ -754,6 +777,7 @@ export function useAIWorkflowApplications({
   }, [
     currentSession,
     page,
+    isGlobalSession,
     sessionId,
     connectionState,
     launchApply,
