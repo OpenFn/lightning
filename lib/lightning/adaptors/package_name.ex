@@ -3,9 +3,9 @@ defmodule Lightning.Adaptors.PackageName do
   NPM-style package-name parsing and worker wire-shape recomposition for
   the `Lightning.Adaptors.*` subsystem.
 
-  This module is the single source of truth for the legacy
-  `AdaptorRegistry.resolve_adaptor/1` and `resolve_package_name/1`
-  contracts, ported to read through the `Lightning.Adaptors` facade.
+  This module is the single source of truth for adaptor package name
+  parsing and wire recomposition, read through the `Lightning.Adaptors`
+  facade.
 
   `parse/1` splits `"name@version"` strings; `to_wire/1` resolves the
   `latest` literal through `Lightning.Adaptors.resolve_version/2`,
@@ -17,6 +17,23 @@ defmodule Lightning.Adaptors.PackageName do
   alias Lightning.Adaptors.Config
 
   @package_name_regex ~r/(@?[\/\d\n\w-]+)(?:@([\d\.\w-]+))?$/
+
+  # Anchored with \A…\z (NOT ^…$, since $ matches before a trailing \n).
+  # Accepts scoped (@scope/name) and unscoped names with an optional
+  # @version (semver, prerelease, or the tokens `latest` / `local`);
+  # excludes newlines and shell metacharacters. For validating untrusted
+  # input (changeset formats, shell-out gates) — `parse/1`'s regex above is
+  # for splitting a string already accepted by this one.
+  @strict_format ~r{\A(@?[\w.-]+(?:/[\w.-]+)?)(?:@([\w.-]+))?\z}
+
+  @doc """
+  The strict, anchored package-name format: name plus optional `@version`,
+  rejecting embedded newlines and shell metacharacters. Shared by
+  `Lightning.Workflows.Job`'s changeset validation and
+  `Lightning.AdaptorService`'s install gate.
+  """
+  @spec strict_format() :: Regex.t()
+  def strict_format, do: @strict_format
 
   @spec parse(nil) :: {nil, nil}
   def parse(nil), do: {nil, nil}

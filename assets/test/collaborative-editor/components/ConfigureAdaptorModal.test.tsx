@@ -29,11 +29,6 @@ import type {
   ProjectCredential,
 } from '../../../js/collaborative-editor/types/credential';
 
-// Mock useAdaptorIcons to avoid fetching icon manifest
-vi.mock('#/workflow-diagram/useAdaptorIcons', () => ({
-  default: () => null,
-}));
-
 // Mock adaptor data
 const mockProjectAdaptors: Adaptor[] = [
   {

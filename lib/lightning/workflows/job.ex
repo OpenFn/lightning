@@ -17,7 +17,9 @@ defmodule Lightning.Workflows.Job do
   """
   use Lightning.Schema
 
-  alias Lightning.AdaptorRegistry
+  alias Lightning.Adaptors.Config, as: AdaptorsConfig
+  alias Lightning.Adaptors.PackageName
+  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.Scoping
@@ -129,7 +131,7 @@ defmodule Lightning.Workflows.Job do
 
   defp validate_adaptor(changeset) do
     changeset =
-      validate_format(changeset, :adaptor, AdaptorRegistry.adaptor_format(),
+      validate_format(changeset, :adaptor, PackageName.strict_format(),
         message: "adaptor has invalid format"
       )
 
@@ -140,8 +142,6 @@ defmodule Lightning.Workflows.Job do
     end
   end
 
-  # Rejects an adaptor the registry doesn't know about, so an unknown package
-  # cannot be persisted on a job.
   defp validate_known_adaptor(changeset) do
     validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
       if adaptor_known?(adaptor) do
@@ -152,11 +152,22 @@ defmodule Lightning.Workflows.Job do
     end)
   end
 
+  # Unlike `Lightning.AdaptorService`'s install gate, an empty catalogue
+  # (e.g. before the Scheduler's first tick) does not reject an
+  # `@openfn/`-scoped name here, only non-@openfn ones.
   defp adaptor_known?(adaptor) do
-    case AdaptorRegistry.resolve_package_name(adaptor) do
-      {name, _version} when is_binary(name) -> AdaptorRegistry.exists?(name)
+    case Regex.run(PackageName.strict_format(), adaptor) do
+      [_, name | _] -> known_or_catalogue_empty?(name)
       _ -> false
     end
+  end
+
+  defp known_or_catalogue_empty?(name) do
+    source = AdaptorsConfig.current_source()
+
+    AdaptorsRepo.get_adaptor(name, source) != nil or
+      (String.starts_with?(name, "@openfn/") and
+         is_nil(AdaptorsRepo.max_checked_at(source)))
   end
 
   defp validate_keychain_credential_project_membership(changeset) do

@@ -136,6 +136,19 @@ and this project adheres to
 - Credential schemas are read from the adaptors registry rather than the on-disk
   `schemas_path`. [#4801](https://github.com/OpenFn/lightning/pull/4801)
 
+### Removed
+
+- The old in-memory `Lightning.AdaptorRegistry`'s `use_cache` option and
+  `ADAPTORS_REGISTRY_JSON_PATH` are gone (`AdaptorRegistry` itself and
+  `Lightning.AdaptorService`, which still backs credential metadata lookups, are
+  not). Booting from a static snapshot instead of npm is now
+  `mix lightning.seed_adaptors_from_file --path <file>` (or, in a release,
+  `bin/lightning eval 'Lightning.Release.seed_adaptors("<file>")'`), which
+  upserts a JSON array of adaptor records (the shape
+  `mix lightning.download_adaptor_registry_cache` writes) straight into the
+  adaptors table; `--replace` makes the file the source's entire contents
+  instead of merging into it.
+
 ### Fixed
 
 - The AI assistant no longer appends " 1" to a workflow's name each time it

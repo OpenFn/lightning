@@ -513,7 +513,7 @@ defmodule Lightning.AiAssistant do
   ## Returns
 
   An updated `ChatSession` struct with `:expression` and `:adaptor` fields populated.
-  The adaptor is resolved through `Lightning.AdaptorRegistry`.
+  The adaptor is resolved through `Lightning.Adaptors.PackageName`.
   """
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()

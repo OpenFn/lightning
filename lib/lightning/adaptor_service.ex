@@ -10,9 +10,6 @@ defmodule Lightning.AdaptorService do
   The service requires at least `:adaptors_path`, which is used to both query
   which adaptors are installed and when to install new adaptors.
 
-  Another optional setting is: `:repo`, which must point at a module that will be
-  used to do the querying and installing.
-
   ## Installing Adaptors
 
   Using the `install/2` function an adaptor can be installed, which will also
@@ -21,6 +18,11 @@ defmodule Lightning.AdaptorService do
   The adaptor is marked as `:installing`, to allow for conditional behaviour
   elsewhere such as delaying or rejecting processing until the adaptor becomes
   available.
+
+  Every install is gated on the adaptor catalogue (`Lightning.Adaptors.Repo`):
+  `install/2` refuses to run `npm install` for a package name the catalogue
+  doesn't recognise, including when the catalogue is empty — unlike
+  `Lightning.Workflows.Job`'s own catalogue check.
 
   ## Looking up adaptors
 
@@ -54,7 +56,9 @@ defmodule Lightning.AdaptorService do
   """
   use Agent
 
-  alias Lightning.AdaptorRegistry
+  alias Lightning.Adaptors.Config, as: AdaptorsConfig
+  alias Lightning.Adaptors.PackageName
+  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
 
   require Logger
 
@@ -195,8 +199,7 @@ defmodule Lightning.AdaptorService do
             name: GenServer.server(),
             adaptors: [Adaptor.t()],
             adaptors_path: binary(),
-            repo: module(),
-            adaptor_registry: GenServer.server()
+            repo: module()
           }
 
     @enforce_keys [:adaptors_path]
@@ -204,8 +207,7 @@ defmodule Lightning.AdaptorService do
                 [
                   :name,
                   adaptors: [],
-                  repo: Repo,
-                  adaptor_registry: Lightning.AdaptorRegistry
+                  repo: Repo
                 ]
 
     def find_adaptor(%{adaptors: adaptors}, fun) when is_function(fun) do
@@ -296,9 +298,7 @@ defmodule Lightning.AdaptorService do
           | {:error, :adaptor_not_permitted}
           | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
   def install(agent, {package_name, _version} = package_spec) do
-    registry = Agent.get(agent, fn state -> state.adaptor_registry end)
-
-    if AdaptorRegistry.exists?(registry, package_name) do
+    if known?(package_name) do
       agent
       |> find_adaptor(package_spec)
       |> case do
@@ -312,6 +312,14 @@ defmodule Lightning.AdaptorService do
 
       {:error, :adaptor_not_permitted}
     end
+  end
+
+  # Fail-closed, unlike `Lightning.Workflows.Job`'s changeset check: an
+  # empty catalogue means "not known", not "permit anything".
+  defp known?(nil), do: false
+
+  defp known?(name) do
+    AdaptorsRepo.get_adaptor(name, AdaptorsConfig.current_source()) != nil
   end
 
   @spec install!(Agent.agent(), package_spec()) ::
@@ -351,7 +359,7 @@ defmodule Lightning.AdaptorService do
   end
 
   def resolve_package_name(package_name) when is_binary(package_name) do
-    AdaptorRegistry.adaptor_format()
+    PackageName.strict_format()
     |> Regex.run(package_name)
     |> case do
       [_, name, version] -> {name, version}

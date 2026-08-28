@@ -4,7 +4,9 @@ defmodule Lightning.Adaptors do
 
   Delegates reads to `Lightning.Adaptors.Store`, refresh calls to
   `Lightning.Adaptors.Scheduler`, and version resolution to
-  `Lightning.Adaptors.Repo`. No logic lives here.
+  `Lightning.Adaptors.Repo`. `seed_from_file/2` owns the snapshot-loading
+  logic used by both `mix lightning.seed_adaptors_from_file` and
+  `Lightning.Release`.
 
   Most functions come in a dual-arity shape: the zero-/single-arg form
   passes the compile-time default supervisor name `@sup`; the extra-arity
@@ -30,9 +32,6 @@ defmodule Lightning.Adaptors do
 
   @spec packages(atom()) :: {:ok, [package_meta()]} | {:error, :timeout | term()}
   def packages(sup), do: Store.packages(sup)
-
-  @spec versions(String.t()) :: {:ok, [version_meta()]} | {:error, term()}
-  def versions(pkg), do: versions(@sup, pkg)
 
   @spec versions(atom(), String.t()) ::
           {:ok, [version_meta()]} | {:error, term()}
@@ -112,4 +111,58 @@ defmodule Lightning.Adaptors do
 
   @doc false
   def icon_meta(sup, name), do: Store.icon_meta(sup, name)
+
+  @doc """
+  Populate the adaptor catalogue from a JSON snapshot file, without
+  reaching npm.
+
+  The file is a JSON array of adaptor records in the shape
+  `Lightning.Adaptors.Repo.upsert_adaptor/1` accepts — the same shape
+  `mix lightning.download_adaptor_registry_cache` writes.
+
+  `opts`:
+
+    * `:source` - `:npm` (default) or `:local`.
+    * `:replace` - when `true`, deletes every existing row for that
+      source before seeding, so the file becomes the source's entire
+      contents rather than a merge. The delete and every upsert run in
+      one transaction, so a bad record aborts the whole seed rather
+      than leaving the source partially replaced.
+  """
+  @spec seed_from_file(Path.t(), keyword()) :: {:ok, non_neg_integer()}
+  def seed_from_file(path, opts \\ []) do
+    source = Keyword.get(opts, :source, :npm)
+    replace? = Keyword.get(opts, :replace, false)
+
+    records =
+      path
+      |> File.read!()
+      |> Jason.decode!()
+      |> Enum.map(&normalize_snapshot_record(&1, source))
+
+    {:ok, _} =
+      Lightning.Repo.transaction(fn ->
+        if replace?, do: Repo.delete_all_for_source(source)
+        Enum.each(records, &Repo.upsert_adaptor/1)
+      end)
+
+    {:ok, length(records)}
+  end
+
+  # Top-level record keys and per-version keys map onto known schema
+  # fields, so they can be turned into existing atoms. `dependencies` and
+  # `peer_dependencies` values are left with string keys — that's the
+  # shape the `:map` columns already store.
+  defp normalize_snapshot_record(record, source) when is_map(record) do
+    record
+    |> atomize_known_keys()
+    |> Map.put(:source, source)
+    |> Map.update(:versions, [], fn versions ->
+      Enum.map(versions, &atomize_known_keys/1)
+    end)
+  end
+
+  defp atomize_known_keys(map) do
+    Map.new(map, fn {k, v} -> {String.to_existing_atom(k), v} end)
+  end
 end

@@ -244,7 +244,33 @@ defmodule Lightning.Workflows.JobTest do
       end)
     end
 
+    test "accepts any well-formed adaptor when the catalogue has no rows for the active source" do
+      errors =
+        Job.changeset(%Job{}, %{
+          name: "job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-totally-unseeded-xyz@1.0.0"
+        })
+        |> errors_on()
+
+      refute errors[:adaptor]
+    end
+
+    test "rejects a well-formed, non-@openfn adaptor when the catalogue has no rows for the active source" do
+      errors =
+        Job.changeset(%Job{}, %{
+          name: "job",
+          body: "fn(state => state)",
+          adaptor: "some-unrelated-npm-package@1.0.0"
+        })
+        |> errors_on()
+
+      assert errors[:adaptor] == ["is not a recognised adaptor"]
+    end
+
     test "rejects a well-formed adaptor that is not in the registry" do
+      insert(:adaptor, name: "@openfn/language-http")
+
       # The registry membership check only runs on an otherwise-valid changeset,
       # so name and body are supplied here.
       [

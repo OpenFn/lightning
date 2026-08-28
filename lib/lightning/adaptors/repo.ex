@@ -172,6 +172,15 @@ defmodule Lightning.Adaptors.Repo do
   end
 
   @doc """
+  Delete every row for `source`.
+  """
+  @spec delete_all_for_source(source()) :: :ok
+  def delete_all_for_source(source) do
+    Lightning.Repo.delete_all(from a in Adaptor, where: a.source == ^source)
+    :ok
+  end
+
+  @doc """
   Advance `checked_at` for a known `(name, source)` row without
   loading it. No-op when no row matches.
 
@@ -188,20 +197,6 @@ defmodule Lightning.Adaptors.Repo do
     )
 
     :ok
-  end
-
-  @doc """
-  The `limit` rows for a given `source` whose `checked_at` is oldest
-  first. Backs the Scheduler's per-tick work list.
-  """
-  @spec stalest(pos_integer(), source()) :: [Adaptor.t()]
-  def stalest(limit, source) when is_integer(limit) and limit > 0 do
-    Lightning.Repo.all(
-      from a in Adaptor,
-        where: a.source == ^source,
-        order_by: [asc: a.checked_at],
-        limit: ^limit
-    )
   end
 
   @doc """

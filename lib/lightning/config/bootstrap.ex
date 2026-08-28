@@ -230,12 +230,6 @@ defmodule Lightning.Config.Bootstrap do
     # strategy below (dual-write). install_schemas.ex:177 still reads this
     # exact key, so it is not moved, only copied.
     config :lightning, Lightning.AdaptorRegistry,
-      use_cache:
-        env!(
-          "ADAPTORS_REGISTRY_JSON_PATH",
-          :string,
-          Utils.get_env([:lightning, Lightning.AdaptorRegistry, :use_cache])
-        ),
       local_adaptors_repos:
         if(use_local_adaptors_repos?, do: local_adaptors_repos, else: [])
 

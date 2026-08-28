@@ -169,6 +169,8 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "rejects a job with an adaptor that is not in the registry" do
+      insert(:adaptor, name: "@openfn/language-common")
+
       %{body: body} = valid_document()
 
       body =
