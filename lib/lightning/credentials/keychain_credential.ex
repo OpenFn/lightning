@@ -6,6 +6,7 @@ defmodule Lightning.Credentials.KeychainCredential do
 
   use Lightning.Schema
   import Ecto.Changeset
+  import Ecto.Query, only: [from: 2]
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials.Credential
@@ -81,30 +82,65 @@ defmodule Lightning.Credentials.KeychainCredential do
     end
   end
 
+  # The default credential must be one the keychain's own project can already
+  # use. Two things matter about how this reads the project:
+  #
+  # It reads `:project_id` first, the field every live construction path
+  # actually sets, and only falls back to the `:project` association. Reading
+  # the association first meant
+  # the check silently passed whenever the struct was built with an id and no
+  # preload - which is precisely how the create paths build it, so the guard
+  # was doing nothing on the paths that needed it most.
+  #
+  # And when the project cannot be determined at all it refuses, rather than
+  # letting the credential through unchecked. A guard that cannot tell should
+  # say no.
   defp validate_default_credential_belongs_to_project(changeset) do
-    project = get_field(changeset, :project)
     default_credential_id = get_field(changeset, :default_credential_id)
+    project_id = keychain_project_id(changeset)
 
-    project_id = if project, do: project.id, else: nil
+    cond do
+      is_nil(default_credential_id) ->
+        changeset
 
-    if project_id && default_credential_id do
-      case Lightning.Repo.get_by(
-             Lightning.Projects.ProjectCredential,
-             project_id: project_id,
-             credential_id: default_credential_id
-           ) do
-        nil ->
-          add_error(
-            changeset,
-            :default_credential_id,
-            "must belong to the same project"
-          )
+      is_nil(project_id) ->
+        add_error(
+          changeset,
+          :default_credential_id,
+          "cannot be checked without knowing the project"
+        )
 
-        _ ->
-          changeset
-      end
-    else
-      changeset
+      shared_with_project?(project_id, default_credential_id) ->
+        changeset
+
+      true ->
+        add_error(
+          changeset,
+          :default_credential_id,
+          "must belong to the same project"
+        )
     end
+  end
+
+  defp keychain_project_id(changeset) do
+    case get_field(changeset, :project_id) do
+      nil ->
+        case get_field(changeset, :project) do
+          %Project{id: id} -> id
+          _ -> nil
+        end
+
+      project_id ->
+        project_id
+    end
+  end
+
+  defp shared_with_project?(project_id, credential_id) do
+    Lightning.Repo.exists?(
+      from(pc in Lightning.Projects.ProjectCredential,
+        where:
+          pc.project_id == ^project_id and pc.credential_id == ^credential_id
+      )
+    )
   end
 end

@@ -44,6 +44,7 @@ defmodule Lightning.Credentials.Resolver do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.ResolvedCredential
   alias Lightning.Projects.Environment
+  alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
   alias Lightning.Run
 
@@ -175,15 +176,34 @@ defmodule Lightning.Credentials.Resolver do
   @spec get_run_credential(Run.t(), String.t()) ::
           Credential.t() | KeychainCredential.t() | nil
   defp get_run_credential(%Run{} = run, id) do
+    # The default credential is joined through the project this run belongs to,
+    # not off what the stored id implies and not through the keychain's own
+    # project. The
+    # write-time guard can only speak for rows written after it; this speaks
+    # for every row, including any already in the database from before the
+    # guard worked, or written by a path that bypasses the changeset entirely.
+    #
+    # Anchoring on the run rather than on the keychain matters. A job holding a
+    # keychain from another project would otherwise satisfy this check, since
+    # that keychain's default really is shared with that other project, and the
+    # worker would be handed a credential its own project was never given. It
+    # is the same project the jsonpath branch above resolves against, so the
+    # two halves cannot disagree.
     from(j in Ecto.assoc(run, [:work_order, :workflow, :jobs]),
+      left_join: w in assoc(j, :workflow),
       left_join: c in assoc(j, :credential),
       left_join: k in assoc(j, :keychain_credential),
       left_join: default_cred in assoc(k, :default_credential),
+      left_join: default_pc in ProjectCredential,
+      on:
+        default_pc.credential_id == default_cred.id and
+          default_pc.project_id == w.project_id,
       where: c.id == ^id or k.id == ^id,
       select: %{
         credential: c,
         keychain: k,
-        default_credential: default_cred
+        default_credential: default_cred,
+        default_credential_in_project?: not is_nil(default_pc.id)
       }
     )
     |> Repo.one()
@@ -194,9 +214,10 @@ defmodule Lightning.Credentials.Resolver do
       %{
         credential: nil,
         keychain: %KeychainCredential{} = keychain,
-        default_credential: default_cred
+        default_credential: default_cred,
+        default_credential_in_project?: in_project?
       } ->
-        %{keychain | default_credential: default_cred}
+        %{keychain | default_credential: (in_project? && default_cred) || nil}
 
       nil ->
         nil

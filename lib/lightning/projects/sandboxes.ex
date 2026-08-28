@@ -187,6 +187,10 @@ defmodule Lightning.Projects.Sandboxes do
   over keychains used by the selected workflows. A keychain whose name already
   exists in the target is left as the target's own.
 
+  Attaching one creates a keychain in the target, which needs owner or admin
+  there. Merging does not. When the actor cannot create one, the keychain is not
+  attached and the job arrives without it, rather than the merge failing.
+
   ## Returns
   * `{:ok, updated_target}` - Merge succeeded
   * `{:error, merge_error}` - Merge failed, classified into a domain reason
@@ -221,7 +225,7 @@ defmodule Lightning.Projects.Sandboxes do
 
       with :ok <-
              attach_selected_credentials(source, target, selected_credential_ids),
-           :ok <- attach_sandbox_keychains(source, target, opts),
+           :ok <- attach_sandbox_keychains(source, target, actor, opts),
            # Re-preload so the credential and keychain remaps see the
            # just-attached associations; merge_project skips the preload if
            # they're already loaded.
@@ -334,7 +338,7 @@ defmodule Lightning.Projects.Sandboxes do
   # KeychainCredential changeset's validate_default_credential_belongs_to_project
   # passes against the target. Returns `{:error, changeset}` on the first genuine
   # insert failure so the merge transaction rolls back.
-  defp attach_sandbox_keychains(source, target, opts) do
+  defp attach_sandbox_keychains(source, target, actor, opts) do
     target_keychain_names =
       from(k in KeychainCredential,
         where: k.project_id == ^target.id,
@@ -343,20 +347,46 @@ defmodule Lightning.Projects.Sandboxes do
       |> Repo.all()
       |> MapSet.new()
 
-    source
-    |> MergeProjects.carried_source_workflows(opts)
-    |> Enum.flat_map(& &1.jobs)
-    |> Enum.map(& &1.keychain_credential_id)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-    |> load_source_keychains(source.id)
-    |> Enum.reject(&MapSet.member?(target_keychain_names, &1.name))
-    |> Enum.reduce_while(:ok, fn keychain, :ok ->
-      case attach_keychain_to_target(keychain, target) do
-        {:ok, _} -> {:cont, :ok}
-        {:error, _} = error -> {:halt, error}
-      end
-    end)
+    to_attach =
+      source
+      |> MergeProjects.carried_source_workflows(opts)
+      |> Enum.flat_map(& &1.jobs)
+      |> Enum.map(& &1.keychain_credential_id)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> load_source_keychains(source.id)
+      |> Enum.reject(&MapSet.member?(target_keychain_names, &1.name))
+
+    # Attaching one of these creates a keychain in the target, which is an
+    # owner/admin action, while merging is not: `:merge_sandbox` allows editors.
+    # Without asking, an editor could make a keychain in a sandbox they own,
+    # where they are allowed to, and carry it into a project where they are not.
+    #
+    # Not attaching it is enough. `build_keychain_remap/2` maps a source
+    # keychain with no counterpart in the target to nil, so the job arrives
+    # without one rather than pointing at the sandbox's. That matches the
+    # collection
+    # deletions gated a few lines up, which an editor also merges without
+    # performing, rather than failing the whole merge over one part of it.
+    if may_create_keychain?(actor, target) do
+      Enum.reduce_while(to_attach, :ok, fn keychain, :ok ->
+        case attach_keychain_to_target(keychain, target) do
+          {:ok, _} -> {:cont, :ok}
+          {:error, _} = error -> {:halt, error}
+        end
+      end)
+    else
+      :ok
+    end
+  end
+
+  defp may_create_keychain?(%User{} = actor, %Project{} = target) do
+    Permissions.can?(
+      :credentials,
+      :create_keychain_credential,
+      actor,
+      %KeychainCredential{project_id: target.id}
+    )
   end
 
   # Only ever loads source-owned keychains: a job could, via changeset bypass,
@@ -374,9 +404,9 @@ defmodule Lightning.Projects.Sandboxes do
   defp attach_keychain_to_target(keychain, target) do
     attach_keychain_default_credential(keychain, target)
 
-    # The project must be on the base struct so that
-    # validate_default_credential_belongs_to_project can see it when
-    # changeset/2 runs; put_assoc after the fact would skip the check.
+    # `project_id` on the base struct is what
+    # validate_default_credential_belongs_to_project reads first, so it is set
+    # here rather than put_assoc'd afterwards, where the guard would not see it.
     %KeychainCredential{
       project: target,
       project_id: target.id,
@@ -866,9 +896,9 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   defp create_keychain_in_sandbox(original_keychain, sandbox, actor) do
-    # The project must be on the base struct so that
-    # validate_default_credential_belongs_to_project can see it when
-    # changeset/2 runs; put_assoc after the fact would skip the check.
+    # `project_id` on the base struct is what
+    # validate_default_credential_belongs_to_project reads first, so it is set
+    # here rather than put_assoc'd afterwards, where the guard would not see it.
     %KeychainCredential{
       project: sandbox,
       project_id: sandbox.id,

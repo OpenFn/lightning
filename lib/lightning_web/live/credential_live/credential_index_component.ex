@@ -316,7 +316,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
       Lightning.Credentials.get_keychain_credential(keychain_credential_id)
 
     if credential && can_delete_credential(current_user, credential) do
-      Lightning.Credentials.delete_keychain_credential(credential)
+      Lightning.Credentials.delete_keychain_credential(credential, current_user)
       |> case do
         {:ok, %{id: id}} ->
           {:noreply,

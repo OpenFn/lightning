@@ -128,6 +128,8 @@ and this project adheres to
   sandbox's credential from the parent project's environment instead of its own.
 - Fixed a signup-gate bypass that let registration be reached even with
   `ALLOW_SIGNUP=false`.
+- Fixed a cross-project scoping issue in keychain default credentials.
+- Fixed an authorization issue in keychain credential writes.
 - Fixed a token-confusion issue that let a personal access token or credential
   transfer token be used as a run token.
 - Fixed a token-validation issue in worker authentication. Workers older than

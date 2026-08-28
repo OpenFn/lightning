@@ -38,6 +38,11 @@ defmodule Lightning.Policies.Credentials do
   end
 
   # KeychainCredential actions - require owner or admin role
+  #
+  # :create_keychain_credential is answerable from either shape. The context
+  # function holds an unsaved keychain rather than a project, and without this
+  # it would fall through to the deny-by-default clause and refuse every
+  # creation, including legitimate ones.
   @spec authorize(
           action :: actions(),
           user :: User.t(),
@@ -49,6 +54,7 @@ defmodule Lightning.Policies.Credentials do
         %KeychainCredential{} = keychain_credential
       )
       when action in [
+             :create_keychain_credential,
              :edit_keychain_credential,
              :delete_keychain_credential,
              :view_keychain_credential

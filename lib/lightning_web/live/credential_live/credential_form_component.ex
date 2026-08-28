@@ -445,7 +445,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   def handle_event("save_keychain", %{"keychain_credential" => params}, socket) do
     case Credentials.create_keychain_credential(
            socket.assigns.keychain_credential,
-           params
+           params,
+           socket.assigns.current_user
          ) do
       {:ok, keychain_credential} ->
         if socket.assigns[:on_save] do
@@ -453,6 +454,14 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
         end
 
         {:noreply, socket}
+
+      {:error, :unauthorized} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "You are not authorized to create a keychain credential here."
+         )}
 
       {:error, changeset} ->
         {:noreply, assign(socket, keychain_changeset: changeset)}

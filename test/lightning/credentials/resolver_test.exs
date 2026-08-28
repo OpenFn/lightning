@@ -538,6 +538,86 @@ defmodule ResolverTest do
       assert resolved.credential.id == default_credential.id
     end
 
+    test "refuses a default credential the keychain's project cannot use", %{
+      default_credential: default_credential,
+      job: job,
+      keychain_credential: keychain_credential,
+      project: project,
+      workflow: workflow
+    } do
+      # The row stays as it is; only the sharing goes away. This is the state a
+      # keychain written before the changeset guard worked would be in, or one
+      # whose credential was later unshared from the project. Checking at write
+      # time cannot help here, so resolution has to check for itself.
+      Repo.delete_all(
+        from(pc in Lightning.Projects.ProjectCredential,
+          where:
+            pc.project_id == ^project.id and
+              pc.credential_id == ^default_credential.id
+        )
+      )
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          dataclip:
+            build(:dataclip, %{
+              body: %{"user_id" => "nobody_matches_this"}
+            }),
+          starting_job: job
+        })
+
+      assert {:ok, nil} =
+               Resolver.resolve_credential(run, keychain_credential.id)
+    end
+
+    test "refuses a keychain belonging to another project entirely", %{
+      workflow: workflow,
+      job: job
+    } do
+      # A job holding a keychain from somewhere else. The keychain's own
+      # default really is shared with its own project, so anchoring the check
+      # on the keychain would pass it and hand this run a credential its
+      # project was never given. Every write path blocks this reference now, so
+      # it takes a row written before those guards existed, which is the case
+      # this half is here for.
+      other_user = insert(:user)
+      other_project = insert(:project)
+
+      other_credential =
+        insert(:credential, name: "Theirs", schema: "raw", user: other_user)
+        |> with_body(%{name: "main", body: %{"secret" => "not yours"}})
+
+      insert(:project_credential,
+        project: other_project,
+        credential: other_credential
+      )
+
+      foreign_keychain =
+        insert(:keychain_credential,
+          name: "Someone else's keychain",
+          path: "$.nothing",
+          default_credential: other_credential,
+          project: other_project,
+          created_by: other_user
+        )
+
+      # Point this project's job at it, the way a stale row would.
+      job
+      |> Ecto.Changeset.change(%{keychain_credential_id: foreign_keychain.id})
+      |> Repo.update!()
+
+      %{runs: [run]} =
+        insert(:workorder, workflow: workflow)
+        |> with_run(%{
+          dataclip: build(:dataclip, %{body: %{"user_id" => "no match"}}),
+          starting_job: job
+        })
+
+      assert {:ok, nil} =
+               Resolver.resolve_credential(run, foreign_keychain.id)
+    end
+
     test "returns nil when there is no matching or default credential", %{
       project: project,
       user: user

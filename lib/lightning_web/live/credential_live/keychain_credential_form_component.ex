@@ -122,13 +122,26 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
     if socket.assigns.can_edit do
       case Credentials.update_keychain_credential(
              socket.assigns.keychain_credential,
-             params
+             params,
+             socket.assigns.current_user
            ) do
         {:ok, _keychain_credential} ->
           {:noreply,
            socket
            |> put_flash(:info, "Keychain credential updated successfully")
            |> push_event("close_modal", %{id: socket.assigns.id})}
+
+        # The gate above asks the same question with the same argument, so the
+        # only way to get here is drift between render and submit: a role
+        # changed, or the project was scheduled for deletion, which `Scope`
+        # refuses. It has to land as a flash rather than an unmatched clause.
+        {:error, :unauthorized} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "You are not authorized to edit this keychain credential."
+           )}
 
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply, assign(socket, :changeset, changeset)}
@@ -150,7 +163,8 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
     if socket.assigns.can_create do
       case Credentials.create_keychain_credential(
              socket.assigns.keychain_credential,
-             params
+             params,
+             socket.assigns.current_user
            ) do
         {:ok, keychain_credential} ->
           socket =
@@ -172,6 +186,18 @@ defmodule LightningWeb.CredentialLive.KeychainCredentialFormComponent do
 
              socket
            end)}
+
+        # The button gate above asks about the project; the context asks about
+        # the record. They can disagree - a project scheduled for deletion
+        # between render and save is refused by `Scope` - so this has to land
+        # as a flash rather than an unmatched clause.
+        {:error, :unauthorized} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "You are not authorized to create this keychain credential."
+           )}
 
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply, assign(socket, :changeset, changeset)}

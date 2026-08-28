@@ -1810,61 +1810,106 @@ defmodule Lightning.Credentials do
   def get_keychain_credential(id), do: Repo.get(KeychainCredential, id)
 
   @doc """
-  Creates a keychain credential.
+  Creates a keychain credential on behalf of an actor.
+
+  The actor is an argument rather than something the caller is trusted to have
+  checked, so a screen cannot create a keychain by forgetting to ask. Returns
+  `{:error, :unauthorized}` when the actor may not create one here.
 
   ## Examples
 
-      iex> create_keychain_credential(%{name: "My Keychain", path: "$.user_id"})
+      iex> create_keychain_credential(keychain, %{name: "My Keychain"}, user)
       {:ok, %KeychainCredential{}}
 
-      iex> create_keychain_credential(%{name: nil})
+      iex> create_keychain_credential(keychain, %{name: nil}, user)
       {:error, %Ecto.Changeset{}}
 
   """
+  @spec create_keychain_credential(KeychainCredential.t(), map(), User.t()) ::
+          {:ok, KeychainCredential.t()}
+          | {:error, Ecto.Changeset.t() | :unauthorized}
   def create_keychain_credential(
         %KeychainCredential{} = keychain_credential,
-        attrs \\ %{}
+        attrs,
+        %User{} = actor
       ) do
-    keychain_credential
-    |> KeychainCredential.changeset(attrs)
-    |> Repo.insert()
+    with :ok <-
+           authorize_keychain(
+             :create_keychain_credential,
+             actor,
+             keychain_credential
+           ) do
+      keychain_credential
+      |> KeychainCredential.changeset(attrs)
+      |> Repo.insert()
+    end
   end
 
   @doc """
-  Updates a keychain credential.
+  Updates a keychain credential on behalf of an actor.
+
+  Returns `{:error, :unauthorized}` when the actor may not edit it.
 
   ## Examples
 
-      iex> update_keychain_credential(keychain_credential, %{name: "Updated"})
+      iex> update_keychain_credential(keychain_credential, %{name: "Updated"}, user)
       {:ok, %KeychainCredential{}}
 
-      iex> update_keychain_credential(keychain_credential, %{name: nil})
-      {:error, %Ecto.Changeset{}}
-
   """
+  @spec update_keychain_credential(KeychainCredential.t(), map(), User.t()) ::
+          {:ok, KeychainCredential.t()}
+          | {:error, Ecto.Changeset.t() | :unauthorized}
   def update_keychain_credential(
         %KeychainCredential{} = keychain_credential,
-        attrs
+        attrs,
+        %User{} = actor
       ) do
-    keychain_credential
-    |> KeychainCredential.changeset(attrs)
-    |> Repo.update()
+    with :ok <-
+           authorize_keychain(
+             :edit_keychain_credential,
+             actor,
+             keychain_credential
+           ) do
+      keychain_credential
+      |> KeychainCredential.changeset(attrs)
+      |> Repo.update()
+    end
   end
 
   @doc """
-  Deletes a keychain credential.
+  Deletes a keychain credential on behalf of an actor.
+
+  Returns `{:error, :unauthorized}` when the actor may not delete it.
 
   ## Examples
 
-      iex> delete_keychain_credential(keychain_credential)
+      iex> delete_keychain_credential(keychain_credential, user)
       {:ok, %KeychainCredential{}}
 
-      iex> delete_keychain_credential(keychain_credential)
-      {:error, %Ecto.Changeset{}}
-
   """
-  def delete_keychain_credential(%KeychainCredential{} = keychain_credential) do
-    Repo.delete(keychain_credential)
+  @spec delete_keychain_credential(KeychainCredential.t(), User.t()) ::
+          {:ok, KeychainCredential.t()}
+          | {:error, Ecto.Changeset.t() | :unauthorized}
+  def delete_keychain_credential(
+        %KeychainCredential{} = keychain_credential,
+        %User{} = actor
+      ) do
+    with :ok <-
+           authorize_keychain(
+             :delete_keychain_credential,
+             actor,
+             keychain_credential
+           ) do
+      Repo.delete(keychain_credential)
+    end
+  end
+
+  defp authorize_keychain(action, %User{} = actor, %KeychainCredential{} = kc) do
+    if Lightning.Policies.Permissions.can?(:credentials, action, actor, kc) do
+      :ok
+    else
+      {:error, :unauthorized}
+    end
   end
 
   @doc """
