@@ -32,12 +32,17 @@ defmodule LightningWeb.UserSocket do
     # user's DB session token, so a deleted session (logout, password reset,
     # disabled account) makes get_user_by_session_token return nil and the
     # connection is refused.
+    #
+    # Refusing here rather than at each join covers every channel on this socket,
+    # including ones added later. A socket opened before the confirmation
+    # deadline is not re-checked, so it keeps working until it reconnects.
     with {:ok, session_token} <-
            Phoenix.Token.decrypt(socket, "user socket", token,
              max_age: 1_209_600
            ),
          %Lightning.Accounts.User{} = user <-
-           Lightning.Accounts.get_user_by_session_token(session_token) do
+           Lightning.Accounts.get_user_by_session_token(session_token),
+         false <- Lightning.Accounts.locked_out?(user) do
       {:ok, assign(socket, :current_user, user)}
     else
       _ -> :error

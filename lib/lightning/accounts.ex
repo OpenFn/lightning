@@ -460,12 +460,8 @@ defmodule Lightning.Accounts do
   def update_user_details(%User{} = user, attrs \\ %{}) do
     changeset = User.details_changeset(user, attrs)
 
-    # A superuser can disable an account or schedule it for deletion from this
-    # form. Scheduling deletion purges every token (the account is leaving); a
-    # plain disable revokes only the sessions (it is reversible, so the user's
-    # personal access tokens stay and are gated at request time instead). Either
-    # way we tear down live sockets; the request-time gate in
-    # get_user_by_session_token covers whatever is still open until it reconnects.
+    # A disable is reversible, so personal access tokens survive it and are
+    # gated at request time instead. A scheduled deletion purges every token.
     revoke_contexts =
       cond do
         not is_nil(Changeset.get_change(changeset, :scheduled_deletion)) -> :all
@@ -643,6 +639,51 @@ defmodule Lightning.Accounts do
     end
   end
 
+  @confirmation_mail_limit 3
+  @confirmation_mail_window :timer.minutes(15)
+
+  # Buckets are separate so spending one route's allowance cannot close another.
+  defp confirmation_mail_allowed?(bucket, %User{id: id}) do
+    case Hammer.check_rate(
+           "#{bucket}::#{id}",
+           @confirmation_mail_window,
+           @confirmation_mail_limit
+         ) do
+      {:allow, _count} ->
+        true
+
+      {:deny, _limit} ->
+        false
+
+      {:error, reason} ->
+        Logger.warning(
+          "Confirmation mail rate limiter unavailable, allowing the send: " <>
+            inspect(reason)
+        )
+
+        true
+    end
+  end
+
+  @doc """
+  Sends confirmation instructions to a corrected address, rate limited per
+  account.
+
+  This is the correction path off `/users/confirm-required`, where an account
+  that cannot log in anywhere else can still send mail to an address it chooses.
+  `request_email_update/2` stays unmetered for `/profile`, which is reached only
+  by an account that is not blocked.
+  """
+  @spec request_email_correction(User.t(), String.t()) ::
+          {:ok, Swoosh.Email.t()} | {:error, :rate_limited} | {:error, term()}
+  def request_email_correction(%User{} = user, new_email) do
+    if confirmation_mail_allowed?("email_change", user) do
+      request_email_update(user, new_email)
+    else
+      {:error, :rate_limited}
+    end
+  end
+
   @doc """
   Validates the changes for updating a user's email address.
 
@@ -692,7 +733,7 @@ defmodule Lightning.Accounts do
   defp validate_current_password(changeset, user) do
     Changeset.validate_change(changeset, :current_password, fn :current_password,
                                                                password ->
-      if Bcrypt.verify_pass(password, user.hashed_password) do
+      if User.valid_password?(user, password) do
         []
       else
         [current_password: "does not match password"]
@@ -840,10 +881,8 @@ defmodule Lightning.Accounts do
     |> reject_blocked_user()
   end
 
-  # A disabled or scheduled-for-deletion user must not keep authenticating
-  # through a session or API bearer token minted before the block. The user
-  # socket resolves through get_user_by_session_token/1, so this also refuses
-  # socket (re)connects.
+  # The user socket resolves through get_user_by_session_token/1, so refusing
+  # here also refuses socket (re)connects.
   defp reject_blocked_user(nil), do: nil
 
   defp reject_blocked_user(%User{} = user) do
@@ -998,14 +1037,24 @@ defmodule Lightning.Accounts do
       {:error, :already_confirmed}
 
   """
+  @spec deliver_user_confirmation_instructions(User.t()) ::
+          {:ok, Swoosh.Email.t()}
+          | {:error, :already_confirmed}
+          | {:error, :rate_limited}
+          | {:error, term()}
   def deliver_user_confirmation_instructions(%User{} = user) do
-    if user.confirmed_at do
-      {:error, :already_confirmed}
-    else
-      UserNotifier.deliver_confirmation_instructions(
-        user,
-        build_email_token(user)
-      )
+    cond do
+      user.confirmed_at ->
+        {:error, :already_confirmed}
+
+      not confirmation_mail_allowed?("confirmation_request", user) ->
+        {:error, :rate_limited}
+
+      true ->
+        UserNotifier.deliver_confirmation_instructions(
+          user,
+          build_email_token(user)
+        )
     end
   end
 
@@ -1024,11 +1073,20 @@ defmodule Lightning.Accounts do
     end
   end
 
+  @doc """
+  Sends the confirmation link again, rate limited per account.
+  """
+  @spec remind_account_confirmation(User.t()) ::
+          {:ok, Swoosh.Email.t()} | {:error, :rate_limited} | {:error, term()}
   def remind_account_confirmation(%User{} = user) do
-    UserNotifier.remind_account_confirmation(
-      user,
-      build_email_token(user)
-    )
+    if confirmation_mail_allowed?("confirmation_resend", user) do
+      UserNotifier.remind_account_confirmation(
+        user,
+        build_email_token(user)
+      )
+    else
+      {:error, :rate_limited}
+    end
   end
 
   @doc """
@@ -1181,12 +1239,19 @@ defmodule Lightning.Accounts do
     |> Repo.all()
   end
 
-  def confirmation_required?(%User{confirmed_at: nil, inserted_at: inserted_at}) do
+  @doc "Is this account shut out pending email confirmation?"
+  @spec locked_out?(User.t()) :: boolean()
+  def locked_out?(%User{} = user), do: confirmation_required?(user)
+
+  defp confirmation_required?(%User{
+         confirmed_at: nil,
+         inserted_at: inserted_at
+       }) do
     Lightning.Config.check_flag?(:require_email_verification) &&
       DateTime.diff(DateTime.utc_now(), inserted_at, :hour) >= 48
   end
 
-  def confirmation_required?(_user), do: false
+  defp confirmation_required?(_user), do: false
 
   @doc """
   Retrieves a specific preference value for a given user.

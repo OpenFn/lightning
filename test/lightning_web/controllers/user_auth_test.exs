@@ -91,6 +91,79 @@ defmodule LightningWeb.UserAuthTest do
     end
   end
 
+  describe "require_authenticated_api_resource/2" do
+    setup %{conn: conn} do
+      # The :api pipeline accepts JSON only, so the refusal renders as JSON.
+      %{conn: Phoenix.Controller.put_format(conn, "json")}
+    end
+
+    test "refuses a request with no resource", %{conn: conn} do
+      conn = UserAuth.require_authenticated_api_resource(conn, [])
+
+      assert conn.halted
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
+    test "refuses a user past their confirmation deadline", %{conn: conn} do
+      stub_email_verification(true)
+
+      conn =
+        conn
+        |> assign(:current_resource, unconfirmed_user(hours_old: 50))
+        |> UserAuth.require_authenticated_api_resource([])
+
+      assert conn.halted
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
+    test "passes a confirmed user, a user inside the grace period, and an unconfirmed user with the flag off",
+         %{conn: conn} do
+      stub_email_verification(true)
+
+      confirmed =
+        build(:user,
+          confirmed_at: DateTime.utc_now(),
+          inserted_at: hours_ago(50)
+        )
+
+      for resource <- [confirmed, unconfirmed_user(hours_old: 1)] do
+        assert %{halted: false, status: nil} =
+                 conn
+                 |> assign(:current_resource, resource)
+                 |> UserAuth.require_authenticated_api_resource([])
+      end
+
+      stub_email_verification(false)
+
+      assert %{halted: false, status: nil} =
+               conn
+               |> assign(
+                 :current_resource,
+                 unconfirmed_user(hours_old: 50)
+               )
+               |> UserAuth.require_authenticated_api_resource([])
+    end
+
+    # A repo connection has no email address to confirm. Handing one to
+    # Accounts.locked_out?/1 would raise, so this pins that it never gets there.
+    test "passes a repo connection with the email verification flag on", %{
+      conn: conn
+    } do
+      stub_email_verification(true)
+
+      conn =
+        conn
+        |> assign(
+          :current_resource,
+          build(:project_repo_connection)
+        )
+        |> UserAuth.require_authenticated_api_resource([])
+
+      refute conn.halted
+      refute conn.status
+    end
+  end
+
   describe "log_in_user/2" do
     test "stores the user token in the session", %{conn: conn, user: user} do
       conn = UserAuth.log_in_user(conn, user)
@@ -403,6 +476,146 @@ defmodule LightningWeb.UserAuthTest do
     end
   end
 
+  describe "require_authenticated_user/2 — email confirmation lockout" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      %{
+        locked_out_user:
+          insert(:user,
+            confirmed_at: nil,
+            inserted_at: Timex.shift(DateTime.utc_now(), hours: -50)
+          )
+      }
+    end
+
+    test "redirects a locked-out account and mints no socket token",
+         %{conn: conn, locked_out_user: user} do
+      conn =
+        %{conn | path_info: ["projects"]}
+        |> put_session(:user_token, Accounts.generate_user_session_token(user))
+        |> fetch_flash()
+        |> assign(:current_user, user)
+        |> UserAuth.require_authenticated_user([])
+
+      assert conn.halted
+      assert redirected_to(conn) == "/users/confirm-required"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "blocked pending email confirmation"
+
+      refute conn.assigns[:user_token]
+    end
+
+    test "returns 401 to a locked-out account on a json request", %{
+      conn: conn,
+      locked_out_user: user
+    } do
+      conn =
+        %{conn | path_info: ["projects"]}
+        |> Phoenix.Controller.put_format("json")
+        |> assign(:current_user, user)
+        |> UserAuth.require_authenticated_user([])
+
+      assert conn.halted
+      assert conn.status == 401
+      assert Jason.decode!(conn.resp_body) == %{"error" => "Unauthorized"}
+    end
+
+    test "serves the paths a locked-out account still needs", %{
+      conn: conn,
+      locked_out_user: user
+    } do
+      user_token = Accounts.generate_user_session_token(user)
+
+      for path_info <- [
+            ["users", "confirm-required"],
+            ["users", "send-confirmation-email"],
+            ["users", "confirm", "sometoken"],
+            ["profile", "confirm_email", "sometoken"]
+          ] do
+        conn =
+          %{conn | path_info: path_info}
+          |> put_session(:user_token, user_token)
+          |> assign(:current_user, user)
+          |> UserAuth.require_authenticated_user([])
+
+        refute conn.halted, "#{Enum.join(path_info, "/")} was refused"
+
+        # Served, but without a socket token: these pages render authenticated,
+        # so one minted here would be a working 14-day socket credential.
+        refute conn.assigns[:user_token],
+               "#{Enum.join(path_info, "/")} minted a socket token"
+      end
+    end
+
+    test "leaves the grace period and a flag-off instance alone", %{
+      conn: conn,
+      user: fresh_user,
+      locked_out_user: user
+    } do
+      conn =
+        %{conn | path_info: ["projects"]}
+        |> put_session(
+          :user_token,
+          Accounts.generate_user_session_token(fresh_user)
+        )
+        |> assign(:current_user, fresh_user)
+        |> UserAuth.require_authenticated_user([])
+
+      refute conn.halted
+      assert conn.assigns[:user_token]
+
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> false
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      conn =
+        %{conn | path_info: ["projects"]}
+        |> put_session(:user_token, Accounts.generate_user_session_token(user))
+        |> assign(:current_user, user)
+        |> UserAuth.require_authenticated_user([])
+
+      refute conn.halted
+      assert conn.assigns[:user_token]
+    end
+
+    test "keeps an error the request is already carrying", %{
+      conn: conn,
+      locked_out_user: user
+    } do
+      conn =
+        %{conn | path_info: ["projects"]}
+        |> fetch_flash()
+        |> put_flash(:error, "Email change link is invalid or it has expired.")
+        |> assign(:current_user, user)
+        |> UserAuth.require_authenticated_user([])
+
+      assert redirected_to(conn) == "/users/confirm-required"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Email change link is invalid or it has expired."
+    end
+
+    test "an expired email-change link still explains itself on the landing page",
+         %{locked_out_user: user} do
+      conn = build_conn() |> log_in_user(user)
+
+      conn = get(conn, ~p"/profile/confirm_email/expired-token")
+      assert redirected_to(conn) == "/projects"
+
+      conn = get(conn, ~p"/projects")
+      assert redirected_to(conn) == "/users/confirm-required"
+
+      html = conn |> get(~p"/users/confirm-required") |> html_response(200)
+      assert html =~ "Email change link is invalid or it has expired."
+    end
+  end
+
   describe "reauth_sudo_mode/2" do
     test "sets sudo mode from session", %{conn: conn, user: user} do
       sudo_token = Accounts.generate_sudo_session_token(user)
@@ -622,4 +835,18 @@ defmodule LightningWeb.UserAuthTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :nav) == nil
     end
   end
+
+  defp stub_email_verification(enabled?) do
+    Mox.stub(Lightning.MockConfig, :check_flag?, fn
+      :require_email_verification -> enabled?
+      flag -> Lightning.Config.API.check_flag?(flag)
+    end)
+  end
+
+  # Never inserted: require_authenticated_api_resource/2 only reads the struct.
+  defp unconfirmed_user(hours_old: hours) do
+    build(:user, confirmed_at: nil, inserted_at: hours_ago(hours))
+  end
+
+  defp hours_ago(hours), do: DateTime.add(DateTime.utc_now(), -hours, :hour)
 end

@@ -54,6 +54,8 @@ and this project adheres to
 
 ### Security
 
+- Fixed a signup-gate bypass that let registration be reached even with
+  `ALLOW_SIGNUP=false`.
 - Fixed a token-confusion issue that let a personal access token or credential
   transfer token be used as a run token.
 - Fixed a token-validation issue in worker authentication. Workers older than

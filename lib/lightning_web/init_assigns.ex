@@ -13,8 +13,17 @@ defmodule LightningWeb.InitAssigns do
         token -> Accounts.get_user_by_session_token(token)
       end
 
-    confirmation_required? = Accounts.confirmation_required?(current_user)
+    if current_user && Accounts.locked_out?(current_user) do
+      {:halt,
+       socket
+       |> put_flash(:error, LightningWeb.ConfirmationLockout.message())
+       |> redirect(to: LightningWeb.ConfirmationLockout.redirect_path())}
+    else
+      {:cont, assign_defaults(socket, current_user)}
+    end
+  end
 
+  defp assign_defaults(socket, current_user) do
     sidebar_collapsed =
       if current_user do
         Accounts.get_preference(current_user, "sidebar_collapsed") || false
@@ -22,27 +31,23 @@ defmodule LightningWeb.InitAssigns do
         false
       end
 
-    {:cont,
-     socket
-     |> assign_new(:current_user, fn ->
-       current_user
-     end)
-     |> assign(:sidebar_collapsed, sidebar_collapsed)
-     |> assign_new(:account_confirmation_required?, fn ->
-       confirmation_required?
-     end)
-     |> assign_new(:banner, fn ->
-       if current_user && Lightning.Config.book_demo_banner_enabled?() &&
-            is_nil(current_user.preferences["demo_banner.dismissed_at"]) do
-         %{
-           function: &LightningWeb.LiveHelpers.book_demo_banner/1,
-           attrs: %{current_user: current_user}
-         }
-       end
-     end)
-     |> assign_new(:gdpr_banner, fn -> Lightning.Config.gdpr_banner() end)
-     |> attach_hook(:sidebar_toggle, :handle_event, &handle_sidebar_toggle/3)
-     |> try_attach_current_path()}
+    socket
+    |> assign_new(:current_user, fn ->
+      current_user
+    end)
+    |> assign(:sidebar_collapsed, sidebar_collapsed)
+    |> assign_new(:banner, fn ->
+      if current_user && Lightning.Config.book_demo_banner_enabled?() &&
+           is_nil(current_user.preferences["demo_banner.dismissed_at"]) do
+        %{
+          function: &LightningWeb.LiveHelpers.book_demo_banner/1,
+          attrs: %{current_user: current_user}
+        }
+      end
+    end)
+    |> assign_new(:gdpr_banner, fn -> Lightning.Config.gdpr_banner() end)
+    |> attach_hook(:sidebar_toggle, :handle_event, &handle_sidebar_toggle/3)
+    |> try_attach_current_path()
   end
 
   # `attach_hook/4` with `:handle_params` requires a LiveView mounted via

@@ -90,8 +90,9 @@ defmodule Lightning.Tokens do
 
   This serves as a central point to verify and validate different types
   of tokens. For user (personal access) tokens it also rejects unusable
-  credentials: a deleted token row yields `{:error, :token_revoked}` and a
-  blocked account yields `{:error, :user_blocked}`.
+  credentials: a deleted token row yields `{:error, :token_revoked}`, a
+  blocked account yields `{:error, :user_blocked}`, and an account past its
+  email-confirmation deadline yields `{:error, :email_unconfirmed}`.
   """
   @spec verify(String.t()) :: {:ok, map()} | {:error, any()}
   def verify(token) do
@@ -110,6 +111,7 @@ defmodule Lightning.Tokens do
           false -> {:error, :token_revoked}
           :missing -> {:error, :token_revoked}
           :blocked -> {:error, :user_blocked}
+          :unconfirmed -> {:error, :email_unconfirmed}
           error -> error
         end
 
@@ -196,13 +198,22 @@ defmodule Lightning.Tokens do
   # A missing user reports :missing (verify/1 maps it to :token_revoked, not
   # :blocked): deleting a user cascades its token rows away, so the credential
   # is genuinely gone rather than merely blocked.
+  #
+  # Only reached on the "user:" branch of verify/1, so a run token can never
+  # trip the email-confirmation check — there is no address for a run to
+  # confirm. `login_blocked?` is answered first: a disabled account that is
+  # also unconfirmed reports the more terminal of the two states.
   defp account_status(user_id) do
     case Lightning.Accounts.get_user(user_id) do
       nil ->
         :missing
 
       user ->
-        if Lightning.Accounts.login_blocked?(user), do: :blocked, else: :active
+        cond do
+          Lightning.Accounts.login_blocked?(user) -> :blocked
+          Lightning.Accounts.locked_out?(user) -> :unconfirmed
+          true -> :active
+        end
     end
   end
 end

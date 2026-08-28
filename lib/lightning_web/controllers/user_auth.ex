@@ -10,6 +10,7 @@ defmodule LightningWeb.UserAuth do
   alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserToken
+  alias Lightning.VersionControl.ProjectRepoConnection
   alias LightningWeb.Router.Helpers, as: Routes
 
   # Make the remember me cookie valid for 60 days.
@@ -119,11 +120,6 @@ defmodule LightningWeb.UserAuth do
     sudo_token && Accounts.delete_sudo_session_token(sudo_token)
     live_socket_id = get_session(conn, :live_socket_id)
 
-    # Only this session is torn down: deleting the session token refuses any
-    # socket reconnect, the live_socket_id broadcast drops this session's
-    # LiveView, and the redirect closes this device's user socket. We do not
-    # broadcast to the per-user topic here, which would disconnect the user's
-    # sockets on every other device they are still logged in on.
     live_socket_id &&
       LightningWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
 
@@ -155,11 +151,8 @@ defmodule LightningWeb.UserAuth do
   def fetch_current_user(conn, _opts) do
     {user_token, conn} = ensure_user_token(conn)
     user = user_token && Accounts.get_user_by_session_token(user_token)
-    confirmation_required? = Accounts.confirmation_required?(user)
 
-    conn
-    |> assign(:current_user, user)
-    |> assign(:account_confirmation_required?, confirmation_required?)
+    assign(conn, :current_user, user)
   end
 
   defp ensure_user_token(conn) do
@@ -211,10 +204,6 @@ defmodule LightningWeb.UserAuth do
 
   def authenticate_bearer(conn, _opts) do
     with {:ok, bearer_token} <- get_bearer(conn),
-         # A blocked user resolves to nil (get_user_by_api_token/1 drops them),
-         # so a blocked PAT fails to match and lands in the else clause,
-         # unauthenticated. Repo-connection tokens resolve separately and are
-         # never gated.
          %{__struct__: type} = resource <- get_current_resource(bearer_token) do
       if type == User do
         update_last_used(bearer_token)
@@ -256,8 +245,9 @@ defmodule LightningWeb.UserAuth do
   @doc """
   Used for routes that require the user to be authenticated.
 
-  If you want to enforce the user email is confirmed before
-  they use the application at all, here would be a good place.
+  Refuses a session whose second factor is still pending, and one whose email
+  address is unconfirmed past the deadline — the latter is confined to the
+  handful of paths in `LightningWeb.ConfirmationLockout`.
   """
   def require_authenticated_user(conn, _opts) do
     cond do
@@ -274,21 +264,53 @@ defmodule LightningWeb.UserAuth do
         end
 
       totp_pending?(conn) && conn.path_info != ["users", "two-factor"] ->
-        case get_format(conn) do
-          "json" ->
-            render_unauthorized(conn)
+        refuse_totp_pending(conn)
 
-          _ ->
-            conn
-            |> redirect(to: Routes.user_totp_path(conn, :new))
-            |> halt()
-        end
+      lockout_applies?(conn) ->
+        refuse_locked_out(conn)
 
       true ->
-        # Assign the user socket token, so we can pick it up in our templates
-        # allowing users to connect to the user socket.
+        put_user_token(conn)
+    end
+  end
+
+  defp refuse_totp_pending(conn) do
+    case get_format(conn) do
+      "json" ->
+        render_unauthorized(conn)
+
+      _ ->
         conn
-        |> put_user_token()
+        |> redirect(to: Routes.user_totp_path(conn, :new))
+        |> halt()
+    end
+  end
+
+  # `current_user` is only safe to dot-access because the nil arm of the cond in
+  # `require_authenticated_user/2` runs first.
+  defp lockout_applies?(conn) do
+    Accounts.locked_out?(conn.assigns.current_user) &&
+      not LightningWeb.ConfirmationLockout.allowed_path?(conn.path_info)
+  end
+
+  defp refuse_locked_out(conn) do
+    case get_format(conn) do
+      "json" ->
+        render_unauthorized(conn)
+
+      _ ->
+        conn
+        |> maybe_put_lockout_flash()
+        |> redirect(to: LightningWeb.ConfirmationLockout.redirect_path())
+        |> halt()
+    end
+  end
+
+  defp maybe_put_lockout_flash(conn) do
+    if Phoenix.Flash.get(conn.assigns[:flash] || %{}, :error) do
+      conn
+    else
+      put_flash(conn, :error, LightningWeb.ConfirmationLockout.message())
     end
   end
 
@@ -297,10 +319,15 @@ defmodule LightningWeb.UserAuth do
   A resource can be a `User` or a `ProjectRepoConnection`
   """
   def require_authenticated_api_resource(conn, _opts) do
-    if is_nil(conn.assigns[:current_resource]) do
-      render_unauthorized(conn)
-    else
-      conn
+    case conn.assigns[:current_resource] do
+      nil ->
+        render_unauthorized(conn)
+
+      %User{} = user ->
+        if Accounts.locked_out?(user), do: render_unauthorized(conn), else: conn
+
+      %ProjectRepoConnection{} ->
+        conn
     end
   end
 
@@ -313,17 +340,14 @@ defmodule LightningWeb.UserAuth do
   end
 
   defp put_user_token(conn, _ \\ nil) do
-    # Don't mint a user socket token before the second factor validates. The
-    # two-factor page is the only authenticated render reachable while pending,
-    # and a token there would let a pre-TOTP session open the socket and join
-    # channels as the full user.
     session_token = get_session(conn, :user_token)
 
-    if conn.assigns[:current_user] && session_token && !totp_pending?(conn) do
-      # Encrypt the revocable DB session token into the socket token so the
-      # socket is bound to that session: deleting it (logout, password reset,
-      # account disable) invalidates the socket token too, rather than leaving
-      # a stateless 14-day token that nothing can revoke.
+    # The two-factor page renders authenticated, so a token minted there would
+    # let a pre-TOTP session join channels as the full user.
+    if conn.assigns[:current_user] && session_token && !totp_pending?(conn) &&
+         !Accounts.locked_out?(conn.assigns.current_user) do
+      # The socket token encrypts the revocable session token rather than the
+      # user id, so deleting the session invalidates the socket token with it.
       token = Phoenix.Token.encrypt(conn, "user socket", session_token)
       assign(conn, :user_token, token)
     else

@@ -70,6 +70,53 @@ defmodule Lightning.TokensTest do
       assert {:error, :user_blocked} = Tokens.verify(token)
     end
 
+    test "rejects a token for an account past its email-confirmation deadline" do
+      stub_email_verification(true)
+
+      user = insert(:user) |> aged_past_deadline()
+      token = Lightning.Accounts.generate_api_token(user)
+
+      assert {:error, :email_unconfirmed} = Tokens.verify(token)
+    end
+
+    # An account that is disabled and unconfirmed reports the more terminal of
+    # the two states.
+    test "a disabled account past the deadline still reports as blocked" do
+      stub_email_verification(true)
+
+      user = insert(:user, disabled: true) |> aged_past_deadline()
+      token = Lightning.Accounts.generate_api_token(user)
+
+      assert {:error, :user_blocked} = Tokens.verify(token)
+    end
+
+    test "accepts a token inside the grace period, once confirmed, and with the flag off" do
+      stub_email_verification(true)
+
+      # Freshly inserted, so unconfirmed but still inside the 48-hour window.
+      in_grace_token = Lightning.Accounts.generate_api_token(insert(:user))
+
+      confirmed_token =
+        insert(:user,
+          confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+        |> aged_past_deadline()
+        |> Lightning.Accounts.generate_api_token()
+
+      unconfirmed_token =
+        insert(:user)
+        |> aged_past_deadline()
+        |> Lightning.Accounts.generate_api_token()
+
+      assert {:ok, _claims} = Tokens.verify(in_grace_token)
+      assert {:ok, _claims} = Tokens.verify(confirmed_token)
+      assert {:error, :email_unconfirmed} = Tokens.verify(unconfirmed_token)
+
+      stub_email_verification(false)
+
+      assert {:ok, _claims} = Tokens.verify(unconfirmed_token)
+    end
+
     test "get_subject resolves the user regardless of account state" do
       user = insert(:user, disabled: true)
 
@@ -158,6 +205,40 @@ defmodule Lightning.TokensTest do
                [message: "Invalid token", claim: "exp", claim_val: 1_704_067_270]
              } = Tokens.verify(token)
     end
+
+    # There is no address for a run to confirm. The email-confirmation check
+    # sits on the "user:" branch of verify/1, so turning the flag on must leave
+    # every run on the instance alone.
+    test "a run token verifies with the email verification flag on" do
+      stub_email_verification(true)
+      Lightning.Stub.freeze_time(~U[2024-01-01 00:00:00Z])
+
+      run_id = Ecto.UUID.generate()
+      token = Lightning.Workers.generate_run_token(%{id: run_id})
+
+      assert {:ok, claims} = Tokens.verify(token)
+      assert claims["sub"] == "run:#{run_id}"
+    end
+  end
+
+  defp stub_email_verification(enabled?) do
+    Mox.stub(Lightning.MockConfig, :check_flag?, fn
+      :require_email_verification -> enabled?
+      flag -> Lightning.Config.API.check_flag?(flag)
+    end)
+  end
+
+  # Backdate the account past the 48-hour confirmation window. Whether it is
+  # locked out then depends only on confirmed_at.
+  defp aged_past_deadline(user) do
+    user
+    |> Ecto.Changeset.change(
+      inserted_at:
+        DateTime.utc_now()
+        |> DateTime.add(-50, :hour)
+        |> DateTime.truncate(:second)
+    )
+    |> Repo.update!()
   end
 
   # LightningWeb.Plugs.ApiAuth.call/2 hands verify/1 the Authorization header

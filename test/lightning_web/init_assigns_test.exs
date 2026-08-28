@@ -2,21 +2,57 @@ defmodule LightningWeb.InitAssignsTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import Lightning.Factories
 
   alias Lightning.Accounts
   alias LightningWeb.InitAssigns
 
   describe "on_mount/4" do
     test "defaults sidebar_collapsed to false when no user" do
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{__changed__: %{}},
-        private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}}
-      }
+      socket = bare_socket()
 
       {:cont, socket} = InitAssigns.on_mount(:default, %{}, %{}, socket)
 
       assert socket.assigns.sidebar_collapsed == false
       assert socket.assigns.current_user == nil
+    end
+
+    # Unit coverage of this callback, not a claim about where the block lives.
+    # On any initial HTTP mount the request is refused before a hook runs, so
+    # this halt only ever fires on a websocket mount — which is why it cannot
+    # be reached through `live/2`. The behavioural claims are made without
+    # naming a module, in confirmation_lockout_live_test.exs.
+    test "halts a mount for an account locked out pending email confirmation" do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      user =
+        insert(:user,
+          confirmed_at: nil,
+          inserted_at: DateTime.utc_now() |> Timex.shift(hours: -50)
+        )
+
+      session = %{"user_token" => Accounts.generate_user_session_token(user)}
+
+      assert {:halt, halted} =
+               InitAssigns.on_mount(:default, %{}, session, bare_socket())
+
+      assert {:redirect, %{to: "/users/confirm-required"}} = halted.redirected
+
+      assert Phoenix.Flash.get(halted.assigns.flash, :error) =~
+               "blocked pending email confirmation"
+
+      # Inside the grace period the same account mounts normally.
+      fresh = insert(:user, confirmed_at: nil, inserted_at: DateTime.utc_now())
+
+      fresh_session = %{
+        "user_token" => Accounts.generate_user_session_token(fresh)
+      }
+
+      assert {:cont, _socket} =
+               InitAssigns.on_mount(:default, %{}, fresh_session, bare_socket())
     end
   end
 
@@ -70,5 +106,12 @@ defmodule LightningWeb.InitAssignsTest do
       # Should be collapsed based on saved preference
       assert %{sidebar_collapsed: true} = :sys.get_state(view.pid).socket.assigns
     end
+  end
+
+  defp bare_socket do
+    %Phoenix.LiveView.Socket{
+      assigns: %{__changed__: %{}, flash: %{}},
+      private: %{live_temp: %{}, lifecycle: %Phoenix.LiveView.Lifecycle{}}
+    }
   end
 end

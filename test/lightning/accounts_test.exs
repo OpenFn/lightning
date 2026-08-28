@@ -18,7 +18,20 @@ defmodule Lightning.AccountsTest do
   import Lightning.Factories
   import Swoosh.TestAssertions
 
-  describe "confirmation_required?/1" do
+  defp user_created_hours_ago(hours, attrs \\ []) do
+    build(
+      :user,
+      Keyword.merge(
+        [
+          confirmed_at: nil,
+          inserted_at: DateTime.utc_now() |> DateTime.add(-hours, :hour)
+        ],
+        attrs
+      )
+    )
+  end
+
+  describe "locked_out?/1" do
     setup do
       Mox.stub(
         Lightning.MockConfig,
@@ -29,40 +42,173 @@ defmodule Lightning.AccountsTest do
       :ok
     end
 
-    test "returns false for users who are already confirmed" do
-      user = insert(:user, confirmed_at: DateTime.utc_now())
-      refute Accounts.confirmation_required?(user)
+    test "is true for an unconfirmed account past the grace period" do
+      assert Accounts.locked_out?(user_created_hours_ago(50))
     end
 
-    test "returns false for users who just created their accounts before 48 hours" do
-      user = insert(:user, confirmed_at: nil, inserted_at: DateTime.utc_now())
-      refute Accounts.confirmation_required?(user)
-    end
+    test "is false inside the grace period, for a confirmed account, and with the flag off" do
+      refute Accounts.locked_out?(user_created_hours_ago(1))
 
-    test "returns true for users who created their accounts more than 48 hours ago and haven't confirmed them" do
-      user =
-        insert(:user,
-          confirmed_at: nil,
-          inserted_at: DateTime.utc_now() |> Timex.shift(hours: -50)
-        )
+      refute Accounts.locked_out?(
+               user_created_hours_ago(50, confirmed_at: DateTime.utc_now())
+             )
 
-      assert Accounts.confirmation_required?(user)
-    end
-
-    test "returns false when :require_email_verification has been set to false" do
-      Mox.expect(
+      Mox.stub(
         Lightning.MockConfig,
         :check_flag?,
         fn :require_email_verification -> false end
       )
 
-      user =
-        insert(:user,
-          confirmed_at: nil,
-          inserted_at: DateTime.utc_now() |> Timex.shift(hours: -50)
-        )
+      refute Accounts.locked_out?(user_created_hours_ago(50))
+    end
 
-      refute Accounts.confirmation_required?(user)
+    test "raises rather than answering for a caller that has not resolved a user" do
+      unresolved_user = Map.get(%{}, :current_user)
+
+      assert_raise FunctionClauseError, fn ->
+        Accounts.locked_out?(unresolved_user)
+      end
+    end
+  end
+
+  describe "remind_account_confirmation/1" do
+    test "sends the link three times per window, then refuses" do
+      user = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..3 do
+        assert {:ok, _email} = Accounts.remind_account_confirmation(user)
+
+        assert_email_sent(
+          subject: "Confirm your OpenFn account",
+          to: user.email
+        )
+      end
+
+      assert {:error, :rate_limited} = Accounts.remind_account_confirmation(user)
+      refute_email_sent(subject: "Confirm your OpenFn account")
+    end
+
+    test "meters each account separately" do
+      spent = insert(:user, confirmed_at: nil)
+      other = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..4, do: Accounts.remind_account_confirmation(spent)
+
+      assert {:ok, _email} = Accounts.remind_account_confirmation(other)
+    end
+  end
+
+  describe "request_email_correction/2" do
+    test "sends the correction three times per window, then refuses" do
+      user = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..3 do
+        assert {:ok, _email} =
+                 Accounts.request_email_correction(user, unique_user_email())
+
+        assert_email_sent(subject: "Your OpenFn email was changed")
+        assert_email_sent(subject: "Please confirm your new email")
+      end
+
+      assert {:error, :rate_limited} =
+               Accounts.request_email_correction(user, unique_user_email())
+
+      refute_email_sent(subject: "Your OpenFn email was changed")
+      refute_email_sent(subject: "Please confirm your new email")
+    end
+
+    test "meters each account separately" do
+      spent = insert(:user, confirmed_at: nil)
+      other = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..4,
+          do: Accounts.request_email_correction(spent, unique_user_email())
+
+      assert {:ok, _email} =
+               Accounts.request_email_correction(other, unique_user_email())
+    end
+
+    test "does not share an allowance with remind_account_confirmation/1" do
+      spent_resends = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..4, do: Accounts.remind_account_confirmation(spent_resends)
+
+      assert {:ok, _email} =
+               Accounts.request_email_correction(
+                 spent_resends,
+                 unique_user_email()
+               )
+
+      spent_corrections = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..4,
+          do:
+            Accounts.request_email_correction(
+              spent_corrections,
+              unique_user_email()
+            )
+
+      assert {:ok, _email} =
+               Accounts.remind_account_confirmation(spent_corrections)
+    end
+  end
+
+  describe "validate_change_user_email/2" do
+    test "accepts a new address authorised by the current password" do
+      user = insert(:user)
+
+      changeset =
+        Accounts.validate_change_user_email(user, %{
+          "email" => "new@example.com",
+          "current_password" => "hello world!"
+        })
+
+      assert changeset.valid?
+    end
+
+    test "refuses a wrong password, an unchanged address and a missing field" do
+      user = insert(:user)
+
+      wrong_password =
+        Accounts.validate_change_user_email(user, %{
+          "email" => "new@example.com",
+          "current_password" => "not the password"
+        })
+
+      refute wrong_password.valid?
+
+      assert {"does not match password", _} =
+               wrong_password.errors[:current_password]
+
+      unchanged =
+        Accounts.validate_change_user_email(user, %{
+          "email" => user.email,
+          "current_password" => "hello world!"
+        })
+
+      refute unchanged.valid?
+      assert {"has not changed", _} = unchanged.errors[:email]
+
+      assert %{errors: errors} = Accounts.validate_change_user_email(user, %{})
+      assert {"can't be blank", _} = errors[:email]
+      assert {"can't be blank", _} = errors[:current_password]
+    end
+
+    test "gives a password-less account a changeset error rather than raising" do
+      # AccountHook is adapter-pluggable, so an SSO-provisioned account can have
+      # no hash at all. This form is the one page such an account can reach.
+      user = build(:user, hashed_password: nil)
+
+      changeset =
+        Accounts.validate_change_user_email(user, %{
+          "email" => "new@example.com",
+          "current_password" => "hello world!"
+        })
+
+      refute changeset.valid?
+
+      assert {"does not match password", _} =
+               changeset.errors[:current_password]
     end
   end
 
@@ -1540,6 +1686,35 @@ defmodule Lightning.AccountsTest do
       assert user_token.user_id == user.id
       assert user_token.sent_to == user.email
       assert user_token.context == "confirm"
+    end
+
+    test "sends the link three times per window, then refuses", %{user: user} do
+      for _ <- 1..3 do
+        assert {:ok, _email} =
+                 Accounts.deliver_user_confirmation_instructions(user)
+
+        assert_email_sent(subject: "Confirm your OpenFn account", to: user)
+      end
+
+      assert {:error, :rate_limited} =
+               Accounts.deliver_user_confirmation_instructions(user)
+
+      refute_email_sent(subject: "Confirm your OpenFn account")
+    end
+
+    test "does not share an allowance with remind_account_confirmation/1", %{
+      user: user
+    } do
+      for _ <- 1..4, do: Accounts.deliver_user_confirmation_instructions(user)
+
+      assert {:ok, _email} = Accounts.remind_account_confirmation(user)
+
+      other = insert(:user)
+
+      for _ <- 1..4, do: Accounts.remind_account_confirmation(other)
+
+      assert {:ok, _email} =
+               Accounts.deliver_user_confirmation_instructions(other)
     end
   end
 

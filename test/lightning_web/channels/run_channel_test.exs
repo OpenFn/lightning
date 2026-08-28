@@ -200,6 +200,33 @@ defmodule LightningWeb.RunChannelTest do
       end
     end
 
+    test "a worker joins regardless of the email verification flag",
+         %{socket: socket} do
+      # A worker arrives on /worker via WorkerSocket, which resolves a run token
+      # rather than a person and carries no confirmation check at all — so this
+      # holds by construction. Pinned anyway because turning the flag on must
+      # never break every run on the instance.
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      run = run_in(insert(:project))
+
+      bearer =
+        Workers.generate_run_token(run, %Lightning.Runs.RunOptions{
+          run_timeout_ms: 2
+        })
+
+      assert {:ok, _reply, _socket} =
+               subscribe_and_join(
+                 socket,
+                 LightningWeb.RunChannel,
+                 "run:#{run.id}",
+                 %{"token" => bearer}
+               )
+    end
+
     test "joining with a valid token but run is not found", %{socket: socket} do
       id = Ecto.UUID.generate()
 
@@ -2771,6 +2798,30 @@ defmodule LightningWeb.RunChannelTest do
     token = Phoenix.Token.encrypt(@endpoint, "user socket", session_token)
     {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
     socket
+  end
+
+  # A run a worker can be handed, with the work order chain it needs.
+  defp run_in(project) do
+    %{triggers: [trigger]} =
+      workflow = insert(:simple_workflow, project: project)
+
+    {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+    dataclip = insert(:dataclip, project: project)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot
+      )
+
+    insert(:run,
+      work_order: work_order,
+      starting_trigger: trigger,
+      dataclip: dataclip,
+      snapshot: snapshot
+    )
   end
 
   # Browser client tests
