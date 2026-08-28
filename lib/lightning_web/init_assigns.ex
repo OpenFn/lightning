@@ -1,35 +1,42 @@
 defmodule LightningWeb.InitAssigns do
   @moduledoc """
-  Ensures common `assigns` are applied to all LiveViews attaching this hook.
+  Refuses a mount whose session token no longer resolves, and applies common
+  `assigns` to the LiveViews attaching this hook.
+
+  `LightningWeb.Router`'s `:confirmation_required` live_session omits the hook on
+  purpose: it is where the lockout redirect below lands, so attaching it there
+  would loop.
   """
+  use LightningWeb, :verified_routes
+
   import Phoenix.Component
   import Phoenix.LiveView
+
   alias Lightning.Accounts
 
   def on_mount(:default, _params, session, socket) do
     current_user =
-      case session["user_token"] do
-        nil -> nil
-        token -> Accounts.get_user_by_session_token(token)
-      end
+      session["user_token"] &&
+        Accounts.get_user_by_session_token(session["user_token"])
 
-    if current_user && Accounts.locked_out?(current_user) do
-      {:halt,
-       socket
-       |> put_flash(:error, LightningWeb.ConfirmationLockout.message())
-       |> redirect(to: LightningWeb.ConfirmationLockout.redirect_path())}
-    else
-      {:cont, assign_defaults(socket, current_user)}
+    cond do
+      is_nil(current_user) ->
+        {:halt, redirect(socket, to: ~p"/users/log_in")}
+
+      Accounts.locked_out?(current_user) ->
+        {:halt,
+         socket
+         |> put_flash(:error, LightningWeb.ConfirmationLockout.message())
+         |> redirect(to: LightningWeb.ConfirmationLockout.redirect_path())}
+
+      true ->
+        {:cont, assign_defaults(socket, current_user)}
     end
   end
 
   defp assign_defaults(socket, current_user) do
     sidebar_collapsed =
-      if current_user do
-        Accounts.get_preference(current_user, "sidebar_collapsed") || false
-      else
-        false
-      end
+      Accounts.get_preference(current_user, "sidebar_collapsed") || false
 
     socket
     |> assign_new(:current_user, fn ->
@@ -37,7 +44,7 @@ defmodule LightningWeb.InitAssigns do
     end)
     |> assign(:sidebar_collapsed, sidebar_collapsed)
     |> assign_new(:banner, fn ->
-      if current_user && Lightning.Config.book_demo_banner_enabled?() &&
+      if Lightning.Config.book_demo_banner_enabled?() &&
            is_nil(current_user.preferences["demo_banner.dismissed_at"]) do
         %{
           function: &LightningWeb.LiveHelpers.book_demo_banner/1,

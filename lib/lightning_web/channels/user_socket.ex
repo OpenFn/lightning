@@ -49,18 +49,9 @@ defmodule LightningWeb.UserSocket do
     end
   end
 
-  # Socket IDs are topics that allow you to identify all sockets for a given user:
-  #
-  #     def id(socket), do: "user_socket:#{socket.assigns.user_id}"
-  #
-  # Would allow you to broadcast a "disconnect" event and terminate
-  # all active sockets and channels for a given user:
-  #
-  #     Elixir.LightningWeb.Endpoint.broadcast("user_socket:#{user.id}", "disconnect", %{})
-  #
-  # Returning `nil` makes this socket anonymous.
   @impl true
-  def id(socket), do: "user_socket:#{socket.assigns.current_user.id}"
+  def id(socket),
+    do: LightningWeb.UserAuth.user_socket_topic(socket.assigns.current_user)
 
   def handle_error(conn, :unauthorized) do
     Plug.Conn.send_resp(conn, 401, "Unauthorized")

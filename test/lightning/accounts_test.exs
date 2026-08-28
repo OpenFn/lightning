@@ -13,6 +13,7 @@ defmodule Lightning.AccountsTest do
   alias Lightning.Projects
   alias Lightning.Accounts
   alias Lightning.Projects.ProjectUser
+  alias LightningWeb.UserAuth
 
   import Lightning.AccountsFixtures
   import Lightning.Factories
@@ -1317,27 +1318,35 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "update_user_details/2" do
-    test "disabling a user revokes sessions but keeps their api tokens" do
-      user = insert(:user)
-      session_token = Accounts.generate_user_session_token(user)
-      api_token = Accounts.generate_api_token(user)
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+    # A disable or a privilege change is reversible, so the PAT stays (the
+    # request-time gate re-reads the user); only the session is dropped.
+    for {change, attrs} <- [
+          {"disabling a user", %{"disabled" => true}},
+          {"resetting a user's password", %{"password" => "new valid password"}},
+          {"changing a user's email", %{"email" => "moved@example.com"}},
+          {"revoking support access", %{"support_user" => false}},
+          {"demoting a superuser", %{"role" => "user"}}
+        ] do
+      test "#{change} revokes their sessions but keeps their api tokens" do
+        user = insert(:user, role: :superuser, support_user: true)
+        session_token = Accounts.generate_user_session_token(user)
+        api_token = Accounts.generate_api_token(user)
+        watch_transports(user)
 
-      {:ok, user} = Accounts.update_user_details(user, %{"disabled" => true})
+        {:ok, user} =
+          Accounts.update_user_details(user, unquote(Macro.escape(attrs)))
 
-      assert user.disabled
-      refute Accounts.get_user_by_session_token(session_token)
-      # A disable is reversible, so the PAT stays (the request-time gate blocks
-      # it while disabled); only the session is dropped.
-      assert Repo.get_by(UserToken, token: api_token, context: "api")
-      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+        refute Accounts.get_user_by_session_token(session_token)
+        assert Repo.get_by(UserToken, token: api_token, context: "api")
+        assert_transports_disconnected(user)
+      end
     end
 
     test "scheduling a user for deletion revokes all of their tokens" do
       user = insert(:user)
       session_token = Accounts.generate_user_session_token(user)
       Accounts.generate_api_token(user)
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+      watch_transports(user)
 
       {:ok, _user} =
         Accounts.update_user_details(user, %{
@@ -1347,13 +1356,13 @@ defmodule Lightning.AccountsTest do
 
       refute Accounts.get_user_by_session_token(session_token)
       assert UserToken.user_and_contexts_query(user, :all) |> Repo.all() == []
-      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+      assert_transports_disconnected(user)
     end
 
     test "editing other fields leaves the user's sessions untouched" do
       user = insert(:user)
       session_token = Accounts.generate_user_session_token(user)
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+      watch_transports(user)
 
       {:ok, _user} =
         Accounts.update_user_details(user, %{"first_name" => "Renamed"})
@@ -1424,14 +1433,14 @@ defmodule Lightning.AccountsTest do
     end
 
     test "disconnects the user's websockets", %{user: user} do
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+      watch_transports(user)
 
       {:ok, _} =
         Accounts.update_user_password(user, valid_user_password(), %{
           password: "new valid password"
         })
 
-      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+      assert_transports_disconnected(user)
     end
   end
 
@@ -1882,12 +1891,12 @@ defmodule Lightning.AccountsTest do
     end
 
     test "disconnects the user's websockets", %{user: user} do
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+      watch_transports(user)
 
       {:ok, _} =
         Accounts.reset_user_password(user, %{password: "new valid password"})
 
-      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+      assert_transports_disconnected(user)
     end
   end
 
@@ -1944,7 +1953,7 @@ defmodule Lightning.AccountsTest do
       user = insert(:user)
       session_token = Accounts.generate_user_session_token(user)
       Accounts.generate_api_token(user)
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+      watch_transports(user)
 
       {:ok, _user} = Accounts.schedule_user_deletion(user, user.email)
 
@@ -1952,7 +1961,7 @@ defmodule Lightning.AccountsTest do
       refute Accounts.get_user_by_session_token(session_token)
       assert UserToken.user_and_contexts_query(user, :all) |> Repo.all() == []
       # ...and any live socket is torn down immediately.
-      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+      assert_transports_disconnected(user)
     end
   end
 
@@ -2065,6 +2074,39 @@ defmodule Lightning.AccountsTest do
 
       assert updated_user.preferences["notifications.enabled"] == true
     end
+  end
+
+  # A bystander is watched alongside the user so that anything left in the
+  # mailbox after the assertions is a broadcast that went to the wrong account.
+  defp watch_transports(user) do
+    bystander = %User{id: Ecto.UUID.generate()}
+
+    for watched <- [user, bystander],
+        topic <- [
+          UserAuth.user_socket_topic(watched),
+          UserAuth.live_socket_topic(watched)
+        ] do
+      LightningWeb.Endpoint.subscribe(topic)
+    end
+
+    :ok
+  end
+
+  defp assert_transports_disconnected(user) do
+    socket_topic = UserAuth.user_socket_topic(user)
+    live_topic = UserAuth.live_socket_topic(user)
+
+    assert_receive %Phoenix.Socket.Broadcast{
+      event: "disconnect",
+      topic: ^socket_topic
+    }
+
+    assert_receive %Phoenix.Socket.Broadcast{
+      event: "disconnect",
+      topic: ^live_topic
+    }
+
+    refute_received %Phoenix.Socket.Broadcast{event: "disconnect"}
   end
 
   defp count_project_credentials_for_user(user) do

@@ -151,6 +151,14 @@ and this project adheres to
 - Fixed a privilege-escalation issue in support-user project role enforcement.
 - Fixed an issue where support staff with an open collaborative session could
   keep saving and publishing in a project scheduled for deletion.
+- Fixed a session-teardown issue where logging out of a remembered ("remember
+  me") session left already-open pages still active.
+- Admin password and email resets now revoke the user's existing sessions.
+  (Personal access tokens are unaffected — disable or delete the account to
+  revoke those.)
+- Fixed a session-teardown issue where revoking an account's sessions
+  (disabling, scheduling deletion, or resetting password/email) left
+  already-open pages running on stale permissions.
 
 ## [2.18.0] - 2026-08-20
 

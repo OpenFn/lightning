@@ -8,13 +8,42 @@ defmodule LightningWeb.InitAssignsTest do
   alias LightningWeb.InitAssigns
 
   describe "on_mount/4" do
-    test "defaults sidebar_collapsed to false when no user" do
-      socket = bare_socket()
+    test "halts a mount whose session token no longer resolves" do
+      user = insert(:user)
+      token = Accounts.generate_user_session_token(user)
+      Accounts.delete_session_token(token)
 
-      {:cont, socket} = InitAssigns.on_mount(:default, %{}, %{}, socket)
+      assert {:halt, halted} =
+               InitAssigns.on_mount(
+                 :default,
+                 %{},
+                 %{"user_token" => token},
+                 bare_socket()
+               )
 
-      assert socket.assigns.sidebar_collapsed == false
-      assert socket.assigns.current_user == nil
+      assert {:redirect, %{to: "/users/log_in"}} = halted.redirected
+      assert Phoenix.Flash.get(halted.assigns.flash, :error) == nil
+    end
+
+    test "halts a mount carrying no session token at all" do
+      assert {:halt, halted} =
+               InitAssigns.on_mount(:default, %{}, %{}, bare_socket())
+
+      assert {:redirect, %{to: "/users/log_in"}} = halted.redirected
+      refute Map.has_key?(halted.assigns, :current_user)
+    end
+
+    test "continues a mount whose session token resolves" do
+      user = insert(:user)
+      session = %{"user_token" => Accounts.generate_user_session_token(user)}
+
+      assert {:cont, socket} =
+               InitAssigns.on_mount(:default, %{}, session, bare_socket())
+
+      assert %{current_user: %{id: id}, sidebar_collapsed: false} =
+               socket.assigns
+
+      assert id == user.id
     end
 
     # Unit coverage of this callback, not a claim about where the block lives.

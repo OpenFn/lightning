@@ -460,13 +460,22 @@ defmodule Lightning.Accounts do
   def update_user_details(%User{} = user, attrs \\ %{}) do
     changeset = User.details_changeset(user, attrs)
 
-    # A disable is reversible, so personal access tokens survive it and are
-    # gated at request time instead. A scheduled deletion purges every token.
     revoke_contexts =
       cond do
-        not is_nil(Changeset.get_change(changeset, :scheduled_deletion)) -> :all
-        Changeset.get_change(changeset, :disabled) == true -> ["session"]
-        true -> nil
+        not is_nil(Changeset.get_change(changeset, :scheduled_deletion)) ->
+          :all
+
+        Changeset.get_change(changeset, :disabled) == true ->
+          ["session"]
+
+        Enum.any?(
+          [:hashed_password, :email, :role, :support_user],
+          &Changeset.changed?(changeset, &1)
+        ) ->
+          ["session"]
+
+        true ->
+          nil
       end
 
     Ecto.Multi.new()

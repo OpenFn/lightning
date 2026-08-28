@@ -50,17 +50,11 @@ defmodule LightningWeb.UserAuth do
   It renews the session ID and clears the whole session
   to avoid fixation attacks. See the renew_session
   function to customize this behaviour.
-
-  It also sets a `:live_socket_id` key in the session,
-  so LiveView sessions are identified and automatically
-  disconnected on log out. The line can be safely removed
-  if you are not using LiveView.
   """
   def new_session(conn, token) do
     conn
     |> renew_session()
     |> put_session(:user_token, token)
-    |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
   end
 
   @doc """
@@ -112,12 +106,20 @@ defmodule LightningWeb.UserAuth do
   Logs the user out.
 
   It clears all session data for safety. See renew_session.
+
+  This hangs up the account's LiveView connections on every device, but revokes
+  only the token it was logged out of, so the other devices reconnect and stay
+  signed in.
   """
   def log_out_user(conn) do
     user_token = get_session(conn, :user_token)
     user_token && Accounts.delete_session_token(user_token)
     sudo_token = get_session(conn, :sudo_token)
     sudo_token && Accounts.delete_sudo_session_token(sudo_token)
+
+    # Read from the session rather than derived from the user: a session still
+    # holding the old token-keyed id can only be reached at the id it was
+    # handed, and it survives for as long as a remember-me cookie (`@max_age`).
     live_socket_id = get_session(conn, :live_socket_id)
 
     live_socket_id &&
@@ -130,29 +132,63 @@ defmodule LightningWeb.UserAuth do
   end
 
   @doc """
-  Tears down every live WebSocket the user has open, on all devices.
+  The `/socket` transport topic addressing every `LightningWeb.UserSocket`
+  connection the user has open.
+  """
+  def user_socket_topic(%User{id: id}), do: "user_socket:#{id}"
+
+  @doc """
+  The `/live` transport topic addressing every LiveView connection the user has
+  open.
+
+  Keyed per user rather than per session token, so an authorisation change
+  reaches pages that are already open. `phx.gen.auth` keys it per token; the
+  LiveView security-model guide keys it per user, and we follow the guide.
+
+  We don't use the guide's name for it, `users_socket:`. That is one character
+  from `user_socket:` above, and both are broadcast from the same function.
+  """
+  def live_socket_topic(%User{id: id}), do: "users_live:#{id}"
+
+  @doc """
+  Tears down both transports for every live WebSocket the user has open, on all
+  devices.
 
   Call this after an account-wide revocation (password change or reset, account
-  disable) has invalidated the user's sessions, so their collaborative editor,
-  AI assistant and run channels drop immediately instead of staying authorised
-  until the socket happens to reconnect.
+  disable) has invalidated the user's sessions, so both drop immediately instead
+  of staying authorised until they happen to reconnect.
 
-  Logout does not use this: `log_out_user/1` tears down only the session being
-  logged out of.
+  Logout does not use this; see `log_out_user/1`.
   """
-  def disconnect_user_sockets(%User{id: id}) do
-    LightningWeb.Endpoint.broadcast("user_socket:#{id}", "disconnect", %{})
+  def disconnect_user_sockets(%User{} = user) do
+    LightningWeb.Endpoint.broadcast(user_socket_topic(user), "disconnect", %{})
+    LightningWeb.Endpoint.broadcast(live_socket_topic(user), "disconnect", %{})
   end
 
   @doc """
   Authenticates the user by looking into the session
   and remember me token.
+
+  This is where `:live_socket_id` is written, so a revocation can reach the pages
+  the user already has open.
   """
   def fetch_current_user(conn, _opts) do
     {user_token, conn} = ensure_user_token(conn)
     user = user_token && Accounts.get_user_by_session_token(user_token)
 
-    assign(conn, :current_user, user)
+    conn
+    |> assign(:current_user, user)
+    |> ensure_live_socket_id(user)
+  end
+
+  defp ensure_live_socket_id(conn, nil), do: conn
+
+  defp ensure_live_socket_id(conn, user) do
+    topic = live_socket_topic(user)
+
+    if get_session(conn, :live_socket_id) == topic,
+      do: conn,
+      else: put_session(conn, :live_socket_id, topic)
   end
 
   defp ensure_user_token(conn) do

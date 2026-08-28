@@ -11,12 +11,7 @@ defmodule LightningWeb.UserAuthTest do
   setup %{conn: conn} do
     conn =
       conn
-      |> Map.replace!(
-        :secret_key_base,
-        LightningWeb.Endpoint.config(:secret_key_base)
-      )
-      |> Plug.Conn.put_private(:phoenix_endpoint, @endpoint)
-      |> init_test_session(%{})
+      |> browser_conn()
       |> Phoenix.Controller.accepts(["html", "json"])
 
     %{user: user_fixture(), conn: conn}
@@ -168,10 +163,7 @@ defmodule LightningWeb.UserAuthTest do
     test "stores the user token in the session", %{conn: conn, user: user} do
       conn = UserAuth.log_in_user(conn, user)
       assert token = get_session(conn, :user_token)
-
-      assert get_session(conn, :live_socket_id) ==
-               "users_sessions:#{Base.url_encode64(token)}"
-
+      refute get_session(conn, :live_socket_id)
       assert Accounts.get_user_by_session_token(token)
     end
 
@@ -255,6 +247,9 @@ defmodule LightningWeb.UserAuthTest do
     end
 
     test "broadcasts to the given live_socket_id", %{conn: conn} do
+      # The literal is the retired token-keyed format on purpose: sessions
+      # written before the per-user change still carry it, and logout has to
+      # keep reaching whatever topic the session holds.
       live_socket_id = "users_sessions:abcdef-token"
       LightningWeb.Endpoint.subscribe(live_socket_id)
 
@@ -268,25 +263,60 @@ defmodule LightningWeb.UserAuthTest do
       }
     end
 
-    test "does not disconnect the user's other devices", %{
+    test "broadcasts to a session revived from the remember me cookie", %{
       conn: conn,
       user: user
     } do
-      # Logout tears down only this session (via live_socket_id and the
-      # redirect). It must not broadcast to the per-user topic, which would
-      # disconnect the user's sockets on every other device.
-      user_token = Accounts.generate_user_session_token(user)
-      topic = "user_socket:#{user.id}"
+      logged_in_conn =
+        conn
+        |> fetch_cookies()
+        |> UserAuth.log_in_user(user)
+        |> UserAuth.redirect_with_return_to(%{"remember_me" => "true"})
+
+      %{value: signed_token} = logged_in_conn.resp_cookies[@remember_me_cookie]
+
+      topic = UserAuth.live_socket_topic(user)
       LightningWeb.Endpoint.subscribe(topic)
 
-      conn
-      |> put_session(:user_token, user_token)
-      |> UserAuth.log_out_user()
+      revived =
+        conn
+        |> put_req_cookie(@remember_me_cookie, signed_token)
+        |> UserAuth.fetch_current_user([])
 
-      refute_receive %Phoenix.Socket.Broadcast{
+      assert get_session(revived, :live_socket_id) == topic
+
+      UserAuth.log_out_user(revived)
+
+      assert_receive %Phoenix.Socket.Broadcast{
         event: "disconnect",
         topic: ^topic
       }
+    end
+
+    test "bounces the account's LiveViews without signing its other devices out",
+         %{conn: conn, user: user} do
+      # A disconnect is not a sign-out: the other devices reconnect on their own
+      # surviving tokens. Their channels are left alone, because the /socket
+      # transport is not broadcast to.
+      other_device_token = Accounts.generate_user_session_token(user)
+      live_topic = UserAuth.live_socket_topic(user)
+      socket_topic = UserAuth.user_socket_topic(user)
+      LightningWeb.Endpoint.subscribe(live_topic)
+      LightningWeb.Endpoint.subscribe(socket_topic)
+
+      conn
+      |> put_session(:user_token, Accounts.generate_user_session_token(user))
+      |> UserAuth.fetch_current_user([])
+      |> UserAuth.log_out_user()
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        event: "disconnect",
+        topic: ^live_topic
+      }
+
+      refute_received %Phoenix.Socket.Broadcast{event: "disconnect"}
+
+      assert Accounts.get_user_by_session_token(other_device_token)
     end
 
     test "works even if user is already logged out", %{conn: conn} do
@@ -297,22 +327,46 @@ defmodule LightningWeb.UserAuthTest do
     end
   end
 
+  describe "socket topics" do
+    test "name the two transports a user's connections live on", %{user: user} do
+      assert UserAuth.user_socket_topic(user) == "user_socket:#{user.id}"
+      assert UserAuth.live_socket_topic(user) == "users_live:#{user.id}"
+    end
+
+    test "UserSocket identifies itself with the user socket topic", %{
+      user: user
+    } do
+      socket = %Phoenix.Socket{assigns: %{current_user: user}}
+
+      assert LightningWeb.UserSocket.id(socket) ==
+               UserAuth.user_socket_topic(user)
+    end
+  end
+
   describe "disconnect_user_sockets/1" do
-    test "broadcasts disconnect to the user's socket topic", %{user: user} do
-      topic = "user_socket:#{user.id}"
-      LightningWeb.Endpoint.subscribe(topic)
+    test "broadcasts disconnect on both of the user's transports", %{user: user} do
+      socket_topic = UserAuth.user_socket_topic(user)
+      live_topic = UserAuth.live_socket_topic(user)
+      LightningWeb.Endpoint.subscribe(socket_topic)
+      LightningWeb.Endpoint.subscribe(live_topic)
 
       UserAuth.disconnect_user_sockets(user)
 
       assert_receive %Phoenix.Socket.Broadcast{
         event: "disconnect",
-        topic: ^topic
+        topic: ^socket_topic
+      }
+
+      assert_receive %Phoenix.Socket.Broadcast{
+        event: "disconnect",
+        topic: ^live_topic
       }
     end
   end
 
   describe "fetch_current_user/2" do
-    test "authenticates user from session", %{conn: conn, user: user} do
+    test "authenticates the user from the session and addresses their LiveView transport",
+         %{conn: conn, user: user} do
       user_token = Accounts.generate_user_session_token(user)
 
       conn =
@@ -321,6 +375,10 @@ defmodule LightningWeb.UserAuthTest do
         |> UserAuth.fetch_current_user([])
 
       assert conn.assigns.current_user.id == user.id
+      assert get_session(conn, :user_token) == user_token
+
+      assert get_session(conn, :live_socket_id) ==
+               UserAuth.live_socket_topic(user)
     end
 
     test "authenticates user from cookies", %{conn: conn, user: user} do
@@ -344,10 +402,57 @@ defmodule LightningWeb.UserAuthTest do
       assert conn.assigns.current_user.id == user.id
     end
 
+    test "revives from cookies into the session it was given", %{
+      conn: conn,
+      user: user
+    } do
+      logged_in_conn =
+        conn
+        |> fetch_cookies()
+        |> UserAuth.log_in_user(user)
+        |> UserAuth.redirect_with_return_to(%{"remember_me" => "true"})
+
+      %{value: signed_token} = logged_in_conn.resp_cookies[@remember_me_cookie]
+
+      conn =
+        conn
+        |> put_req_cookie(@remember_me_cookie, signed_token)
+        |> put_session(:user_return_to, "/hello")
+        |> UserAuth.fetch_current_user([])
+
+      # Revival only runs on a session holding no :user_token, so there is no
+      # prior identity for a renewed session id to protect.
+      refute conn.private[:plug_session_info] == :renew
+      assert get_session(conn, :user_return_to) == "/hello"
+
+      assert get_session(conn, :live_socket_id) ==
+               UserAuth.live_socket_topic(user)
+    end
+
+    test "rewrites a session still carrying the old token-keyed id", %{
+      conn: conn,
+      user: user
+    } do
+      user_token = Accounts.generate_user_session_token(user)
+
+      conn =
+        conn
+        |> put_session(:user_token, user_token)
+        |> put_session(
+          :live_socket_id,
+          "users_sessions:#{Base.url_encode64(user_token)}"
+        )
+        |> UserAuth.fetch_current_user([])
+
+      assert get_session(conn, :live_socket_id) ==
+               UserAuth.live_socket_topic(user)
+    end
+
     test "does not authenticate if data is missing", %{conn: conn, user: user} do
       _ = Accounts.generate_user_session_token(user)
       conn = UserAuth.fetch_current_user(conn, [])
       refute get_session(conn, :user_token)
+      refute get_session(conn, :live_socket_id)
       refute conn.assigns.current_user
     end
   end
