@@ -484,6 +484,29 @@ defmodule Lightning.RunsTest do
       assert Jason.decode!(step.output_dataclip.body) == %{"value" => 42}
     end
 
+    test "raises when output_dataclip is a plain string that isn't valid JSON" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step =
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+
+      assert_raise Jason.DecodeError, fn ->
+        Runs.complete_step(%{
+          step_id: step.id,
+          reason: "success",
+          output_dataclip: "abc-123",
+          output_dataclip_id: Ecto.UUID.generate(),
+          run_id: run.id,
+          project_id: workflow.project_id
+        })
+      end
+    end
+
     # Regression for #4800: dataclip inserts no longer build the search_vector
     # synchronously (the AFTER INSERT trigger was dropped). Saving an output
     # dataclip via the handler must succeed and the row must be retrievable with
