@@ -27,8 +27,7 @@ defmodule Lightning.Projects.AuditTest do
     } do
       attrs = %{
         # dataclip_retention_period: 7,
-        history_retention_period: 30,
-        retention_policy: :retain_with_errors
+        history_retention_period: 30
       }
 
       [{"audit_history_retention_period", {:insert, changeset, []}}] =
@@ -66,10 +65,45 @@ defmodule Lightning.Projects.AuditTest do
                Audit.derive_events(
                  Multi.new(),
                  project
-                 |> Project.changeset(%{retention_policy: :retain_with_errors}),
+                 |> Project.changeset(%{description: "a new description"}),
                  user
                )
                |> Multi.to_list()
+    end
+
+    test "if retention policy is updated, returns multi for update", %{
+      project: %{id: project_id} = project,
+      user: %{id: user_id} = user
+    } do
+      attrs = %{
+        retention_policy: :retain_with_errors
+      }
+
+      [{"audit_retention_policy", {:insert, changeset, []}}] =
+        Audit.derive_events(
+          Multi.new(),
+          Project.changeset(project, attrs),
+          user
+        )
+        |> Multi.to_list()
+
+      assert %{
+               changes: %{
+                 event: "retention_policy_updated",
+                 item_type: "project",
+                 item_id: ^project_id,
+                 actor_id: ^user_id,
+                 changes: %{
+                   changes: audit_changes
+                 }
+               },
+               valid?: true
+             } = changeset
+
+      assert audit_changes == %{
+               before: %{retention_policy: :retain_all},
+               after: %{retention_policy: :retain_with_errors}
+             }
     end
 
     test "if dataclip retention period is updated, returns multi for update", %{
@@ -128,7 +162,8 @@ defmodule Lightning.Projects.AuditTest do
       for {name, change} <- events_multi do
         assert name in [
                  "audit_dataclip_retention_period",
-                 "audit_history_retention_period"
+                 "audit_history_retention_period",
+                 "audit_retention_policy"
                ]
 
         assert {:insert, _, []} = change

@@ -39,6 +39,15 @@ and this project adheres to
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
   [#5009](https://github.com/OpenFn/lightning/pull/5009)
+- Project owner and admins are notified properly when the I/O data retention
+  policy is changed. [#5088](https://github.com/OpenFn/lightning/issues/5088)
+- I/O data retention policy changes are now properly appended to the audit
+  trail. [#5090](https://github.com/OpenFn/lightning/issues/5090)
+- Switching the retention policy to "erase all" without touching the period
+  fields now clears the stale dataclip retention period, instead of leaving the
+  old window active. The notification email also no longer quotes an I/O data
+  retention window when the policy says I/O data is never saved.
+  [#5088](https://github.com/OpenFn/lightning/issues/5088)
 
 ## [2.18.1] - 2026-08-28
 

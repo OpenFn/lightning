@@ -9,7 +9,8 @@ defmodule Lightning.Projects.Audit do
       "allow_support_access_updated",
       "dataclip_retention_period_updated",
       "history_retention_period_updated",
-      "requires_mfa_updated"
+      "requires_mfa_updated",
+      "retention_policy_updated"
     ]
 
   alias Ecto.Multi
@@ -19,7 +20,8 @@ defmodule Lightning.Projects.Audit do
       :allow_support_access,
       :dataclip_retention_period,
       :history_retention_period,
-      :requires_mfa
+      :requires_mfa,
+      :retention_policy
     ]
     |> Enum.reduce(multi, fn field, multi ->
       changeset

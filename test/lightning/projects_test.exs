@@ -2914,6 +2914,44 @@ defmodule Lightning.ProjectsTest do
       end
     end
 
+    test "update_project/3 emails admins and owners when only the retention policy changes" do
+      project =
+        insert(:project,
+          retention_policy: :retain_all,
+          project_users:
+            Enum.map(
+              [:viewer, :editor, :admin, :owner],
+              fn role -> build(:project_user, user: build(:user), role: role) end
+            )
+        )
+
+      assert {:ok, updated_project} =
+               Projects.update_project(project, %{retention_policy: :erase_all})
+
+      assert updated_project.retention_policy == :erase_all
+
+      subject =
+        "The data retention policy for #{updated_project.name} has been modified"
+
+      for %{role: role, user: user} <- project.project_users do
+        email = Swoosh.Email.Recipient.format(user)
+
+        if role in [:admin, :owner] do
+          assert_receive {:email,
+                          %Swoosh.Email{
+                            subject: ^subject,
+                            to: [^email],
+                            text_body: body
+                          }}
+
+          assert body =~
+                   "input/output (I/O) data is not saved for reprocessing"
+        else
+          refute_receive {:email, %Swoosh.Email{to: [^email]}}
+        end
+      end
+    end
+
     test "update_project/3 rejects lowering history below existing dataclip retention" do
       project =
         insert(:project,
