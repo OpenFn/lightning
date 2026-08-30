@@ -106,13 +106,6 @@ defmodule Lightning.Validators do
   end
 
   @doc """
-  The set of codepoints a name may not contain. Exposed for tests and for
-  anything that needs to check a string without building a changeset.
-  """
-  @spec control_chars_regex() :: Regex.t()
-  def control_chars_regex, do: @control_chars_regex
-
-  @doc """
   True when a string is made up entirely of characters that draw nothing.
 
   Exposed so the fixture that keeps the client's copy of this rule in step can

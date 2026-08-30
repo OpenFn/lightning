@@ -168,4 +168,67 @@ defmodule Lightning.ValidatorsTest do
                "regenerate it"
     end
   end
+
+  # Every rule here guards a `:string` field, but a changeset can carry nil, and
+  # the deep jsonb walk meets whatever a map holds. These clauses are what stops
+  # a validator raising on a value it was not written for.
+  describe "values that are not strings" do
+    defmodule Named do
+      use Ecto.Schema
+
+      @primary_key false
+      embedded_schema do
+        field :name, :string
+        field :payload, :map
+      end
+    end
+
+    defp named(attrs) do
+      cast(%Named{}, attrs, [:name, :payload])
+    end
+
+    test "a nil name is left to validate_required rather than refused here" do
+      cs = named(%{name: nil}) |> Validators.validate_name(:name)
+
+      assert cs.errors[:name] == nil
+    end
+
+    test "invisible_only? says no to anything that is not a string" do
+      refute Validators.invisible_only?(nil)
+      refute Validators.invisible_only?(42)
+      refute Validators.invisible_only?(:atom)
+    end
+
+    test "a nil field passes the null byte check" do
+      cs =
+        named(%{name: nil})
+        |> Validators.validate_no_null_bytes(:name, "no null bytes")
+
+      assert cs.errors[:name] == nil
+    end
+
+    test "the deep walk reaches atoms, numbers and nested lists" do
+      cs =
+        named(%{payload: %{a: [1, :ok, %{"b" => "fine"}], c: nil}})
+        |> Validators.validate_no_null_bytes_deep(:payload, "no null bytes")
+
+      assert cs.errors[:payload] == nil
+    end
+
+    test "the deep walk still catches a NUL under all of that" do
+      cs =
+        named(%{payload: %{a: [1, :ok, %{"b" => "bad\0"}]}})
+        |> Validators.validate_no_null_bytes_deep(:payload, "no null bytes")
+
+      refute cs.valid?
+    end
+
+    test "a name that is not valid UTF-8 is left as it is rather than raising" do
+      cs = named(%{name: <<0xFF, 0xFE>>}) |> Validators.validate_name(:name)
+
+      # NFC cannot normalise it, so normalisation returns it untouched and the
+      # charset rule refuses it. The point is that it does not raise.
+      refute cs.valid?
+    end
+  end
 end

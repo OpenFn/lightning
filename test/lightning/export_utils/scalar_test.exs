@@ -723,4 +723,37 @@ defmodule Lightning.ExportUtils.ScalarTest do
       end
     end
   end
+
+  describe "values made of nothing" do
+    test "the empty string is quoted, because bare it reads back as null" do
+      # Value and key take different quoting paths, so pin both.
+      assert Scalar.encode_value("") == "''"
+      assert Scalar.encode_key("") == ~s("")
+
+      assert {:ok, [%{"" => value}]} =
+               YamlElixir.read_all_from_string(
+                 Scalar.encode_key("") <> ": " <> Scalar.encode_value("")
+               )
+
+      assert value == ""
+    end
+
+    test "a value that is only newlines keeps every one of them" do
+      # These have no content line for the reader to measure the block
+      # against, so they need `|+` to stop the newlines being clipped away.
+      # The document's own trailing newline is part of what makes this work,
+      # which is why the assertion builds the whole document rather than
+      # reading the block in isolation.
+      for value <- ["\n", "\n\n", "\n\n\n"] do
+        document = "k: " <> Scalar.encode_block(value, "  ") <> "\n"
+
+        assert {:ok, [%{"k" => got}]} =
+                 YamlElixir.read_all_from_string(document),
+               "#{inspect(value)} did not parse: #{document}"
+
+        assert got == value,
+               "#{inspect(value)} came back as #{inspect(got)}"
+      end
+    end
+  end
 end
