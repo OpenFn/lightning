@@ -79,7 +79,14 @@ export function TriggerPicker({
     if (draft.type !== type) {
       // Drop `enabled` from the defaults so the draft keeps the trigger's
       // current enabled state — a type change must not re-enable a disabled one.
-      const { enabled: _enabled, ...defaults } = createDefaultTrigger(type);
+      // `custom_path` goes the same way: switching to cron and back within one
+      // session would otherwise write a null over a live endpoint's name.
+      const {
+        enabled: _enabled,
+        custom_path: _customPath,
+        ...defaults
+      } = createDefaultTrigger(type);
+
       mergeDraft(defaults as Partial<Workflow.Trigger>);
     }
     onReturnToChoose();

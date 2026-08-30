@@ -760,6 +760,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "enabled" => true,
                "cron_expression" => nil,
                "cron_cursor_job_id" => nil,
+               "custom_path" => nil,
                "kafka_configuration" => nil,
                "webhook_reply" => "before_start",
                "webhook_response_config" => nil
@@ -983,6 +984,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "enabled" => original_trigger.enabled,
                "cron_expression" => original_trigger.cron_expression,
                "cron_cursor_job_id" => original_trigger.cron_cursor_job_id,
+               "custom_path" => nil,
                "kafka_configuration" => nil,
                "webhook_reply" => nil,
                "webhook_response_config" => nil
@@ -1295,6 +1297,7 @@ defmodule Lightning.Collaboration.WorkflowSerializerTest do
                "enabled" => true,
                "cron_expression" => "0 */6 * * *",
                "cron_cursor_job_id" => original_trigger.cron_cursor_job_id,
+               "custom_path" => nil,
                "kafka_configuration" => nil,
                "webhook_reply" => nil,
                "webhook_response_config" => nil

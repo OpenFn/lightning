@@ -641,4 +641,120 @@ describe('YAMLStateToYDoc', () => {
       expect(ydoc.getMap('positions').size).toBe(3);
     });
   });
+
+  describe('custom_path', () => {
+    const stateWith = (trigger: Record<string, unknown>) => ({
+      id: 'workflow-test',
+      name: 'Test',
+      jobs: [],
+      triggers: [trigger],
+      edges: [],
+      positions: null,
+    });
+
+    const triggerMapFrom = (trigger: Record<string, unknown>) => {
+      YAMLStateToYDoc.applyToYDoc(ydoc, stateWith(trigger) as never);
+      return ydoc.getArray('triggers').get(0) as Y.Map<unknown>;
+    };
+
+    test('carries a path the spec states', () => {
+      const map = triggerMapFrom({
+        id: 't1',
+        type: 'webhook',
+        enabled: true,
+        custom_path: 'facility-001',
+        webhook_reply: null,
+      });
+
+      expect(map.get('custom_path')).toBe('facility-001');
+    });
+
+    test('leaves the key absent when the spec never mentions it', () => {
+      // Absent means "unchanged", the way the serializer reads it.
+      const map = triggerMapFrom({
+        id: 't1',
+        type: 'webhook',
+        enabled: true,
+        webhook_reply: null,
+      });
+
+      expect(map.has('custom_path')).toBe(false);
+    });
+
+    test('keeps an existing path when the spec omits it', () => {
+      // An AI answer or a template export need not mention the path.
+      triggerMapFrom({
+        id: 't1',
+        type: 'webhook',
+        enabled: true,
+        custom_path: 'facility-001',
+        webhook_reply: null,
+      });
+
+      const map = triggerMapFrom({
+        id: 't1',
+        type: 'webhook',
+        enabled: true,
+        webhook_reply: null,
+      });
+
+      expect(map.get('custom_path')).toBe('facility-001');
+    });
+
+    test('a stated path beats the one already there', () => {
+      // The guard has to ask the spec, not the freshly built map: reads on a
+      // map that is not in the document yet always answer false, which would
+      // silently drop a rename.
+      triggerMapFrom({
+        id: 't1',
+        type: 'webhook',
+        enabled: true,
+        custom_path: 'facility-001',
+        webhook_reply: null,
+      });
+
+      const map = triggerMapFrom({
+        id: 't1',
+        type: 'webhook',
+        enabled: true,
+        custom_path: 'facility-002',
+        webhook_reply: null,
+      });
+
+      expect(map.get('custom_path')).toBe('facility-002');
+    });
+
+    test('an explicit null clears a path already there', () => {
+      triggerMapFrom({
+        id: 't1',
+        type: 'webhook',
+        enabled: true,
+        custom_path: 'facility-001',
+        webhook_reply: null,
+      });
+
+      const map = triggerMapFrom({
+        id: 't1',
+        type: 'webhook',
+        enabled: true,
+        custom_path: null,
+        webhook_reply: null,
+      });
+
+      expect(map.get('custom_path')).toBeNull();
+    });
+
+    test('carries an explicit null as a clear', () => {
+      const map = triggerMapFrom({
+        id: 't1',
+        type: 'webhook',
+        enabled: true,
+        custom_path: null,
+        webhook_reply: null,
+      });
+
+      expect(map.has('custom_path')).toBe(true);
+      expect(map.get('custom_path')).toBeNull();
+    });
+  });
 });

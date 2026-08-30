@@ -1,9 +1,11 @@
 import { useCallback, useEffect } from 'react';
 
 import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
+import { isValidCustomPath } from '#/collaborative-editor/types/trigger';
 
 import { channelRequest } from '../../../hooks/useChannel';
 import { useSession } from '../../../hooks/useSession';
+import { useProject } from '../../../hooks/useSessionContext';
 import {
   useWorkflowActions,
   useWorkflowState,
@@ -16,7 +18,10 @@ import type { Workflow } from '../../../types/workflow';
  * Return shape of the {@link useWebhookTrigger} hook.
  */
 export interface UseWebhookTriggerResult {
-  /** The webhook ingest URL for this trigger (`<origin>/i/<trigger.id>`). */
+  /**
+   * The webhook ingest URL for this trigger: `<origin>/i/<project.id>/<path>`
+   * when it has a custom path, `<origin>/i/<trigger.id>` otherwise.
+   */
   webhookUrl: string;
   /** Display text for the copy button ('' | 'Copied!' | 'Failed'). */
   copyText: string;
@@ -55,6 +60,7 @@ export function useWebhookTrigger(
   const { requestTriggerAuthMethods } = useWorkflowActions();
   const { copyText, copyToClipboard } = useCopyToClipboard();
   const { provider } = useSession();
+  const project = useProject();
   const channel = provider?.channel;
 
   const activeTriggerAuthMethods = useWorkflowState(
@@ -80,10 +86,25 @@ export function useWebhookTrigger(
     activeTriggerAuthMethods === null ||
     activeTriggerAuthMethods.trigger_id !== trigger.id;
 
-  const webhookUrl = new URL(
-    `/i/${trigger.id}`,
-    window.location.origin
-  ).toString();
+  const customPath =
+    trigger.type === 'webhook' ? (trigger.custom_path ?? null) : null;
+
+  // A refused path is not this trigger's. It stays in the Y.Doc, and a duplicate
+  // resolves to whichever workflow legitimately owns it.
+  const rejected = Boolean(trigger.errors?.['custom_path']?.length);
+
+  // Only a path the lookup can match. A legacy one holding a slash is stored
+  // verbatim but is not addressable, so the generated URL is the one that works.
+  const addressable =
+    !rejected && customPath !== null && isValidCustomPath(customPath);
+
+  // Not encoded: the plug runs before the router and compares raw segments.
+  const path =
+    addressable && project?.id
+      ? `/i/${project.id}/${customPath}`
+      : `/i/${trigger.id}`;
+
+  const webhookUrl = new URL(path, window.location.origin).toString();
 
   const commitAuthMethods = useCallback(
     async (ids: string[]) => {

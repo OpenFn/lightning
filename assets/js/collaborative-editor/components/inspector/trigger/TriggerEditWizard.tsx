@@ -64,6 +64,7 @@ export function TriggerEditWizard({
 
   const {
     draft,
+    pathUnchanged,
     mergeDraft,
     draftAuthMethodIds,
     setDraftAuthMethodIds,
@@ -111,6 +112,7 @@ export function TriggerEditWizard({
         return (
           <WebhookConfigureStep
             draft={draft}
+            pathUnchanged={pathUnchanged}
             mergeDraft={mergeDraft}
             draftAuthMethodIds={draftAuthMethodIds}
             setDraftAuthMethodIds={setDraftAuthMethodIds}
