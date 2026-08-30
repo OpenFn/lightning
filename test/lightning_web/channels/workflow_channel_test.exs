@@ -1489,6 +1489,37 @@ defmodule LightningWeb.WorkflowChannelTest do
         type: "limit_error"
       }
     end
+
+    test "reports the colliding names when the project cannot be exported", %{
+      socket: socket,
+      project: project
+    } do
+      insert(:project_repo_connection,
+        project: project,
+        repo: "openfn/demo",
+        branch: "main"
+      )
+
+      # The export refuses rather than dropping one of the pair, and it refuses
+      # before any GitHub call. No GitHub mocks are set on purpose: verify_on_exit!
+      # turns a dispatch into a failure, so this also asserts we never fired one.
+      for name <- ["My Flow", "My-Flow"] do
+        {:ok, _} =
+          insert(:simple_workflow, name: name, project: project)
+          |> Lightning.Workflows.Snapshot.create()
+      end
+
+      ref = push(socket, "save_and_sync", %{"commit_message" => "Test commit"})
+
+      assert_reply ref, :error, %{
+        errors: %{base: [message]},
+        type: "github_sync_error"
+      }
+
+      assert message =~ "two workflows in this project"
+      assert message =~ ~s("My Flow")
+      assert message =~ ~s("My-Flow")
+    end
   end
 
   describe "validate_workflow_name" do
