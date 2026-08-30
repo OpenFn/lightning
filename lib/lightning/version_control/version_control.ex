@@ -51,8 +51,10 @@ defmodule Lightning.VersionControl do
     end)
   end
 
+  # `binary()` because this reaches `initiate_sync/2`, whose export pre-flight
+  # fails with a plain string naming the colliding entities.
   @spec reconfigure_github_connection(ProjectRepoConnection.t(), map(), User.t()) ::
-          :ok | {:error, UsageLimiting.message() | map()}
+          :ok | {:error, UsageLimiting.message() | map() | binary()}
   def reconfigure_github_connection(repo_connection, params, user) do
     changeset =
       ProjectRepoConnection.reconfigure_changeset(repo_connection, params)
@@ -791,8 +793,10 @@ defmodule Lightning.VersionControl do
     end
   end
 
+  # `binary()` because a `:pull` connection ends in `initiate_sync/2`, whose
+  # export pre-flight fails with a plain string naming the colliding entities.
   @spec configure_github_repo(ProjectRepoConnection.t(), User.t()) ::
-          :ok | {:error, map()}
+          :ok | {:error, map() | binary()}
   defp configure_github_repo(repo_connection, user) do
     with {:ok, user_token} <- fetch_user_access_token(user),
          {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),
