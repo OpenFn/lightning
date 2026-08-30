@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.18.0",
+      version: "2.18.1",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -65,19 +65,22 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # Advisories acknowledged for `mix hex.audit`. cowlib is the only one left, and
-  # it has no patched release (latest is 2.19.0). Note that both EEF records carry
-  # no `fixed` event, while the GitHub twin of CVE-2026-43969
-  # (GHSA-g2wm-735q-3f56) records `last_affected: 2.16.1` -- so 2.19.0 may
-  # already be unaffected and the EEF record simply lacks a fix event. IDs are
-  # matched against an advisory's primary ID or any alias, so the CVE form also
-  # silences the GHSA/EEF variants.
+  # cowlib advisories we have checked and accepted. Each names a function on
+  # cowlib's header-building path, and nothing in our tree calls any of them. The
+  # parse side of two of them is reachable through cowboy_req, so recheck by
+  # function rather than by module. No patched cowlib release exists yet. Hex
+  # matches an advisory's primary ID or any alias, so the CVE form also silences
+  # the GHSA and EEF variants. Detail in #5102.
   defp hex_audit do
     [
       ignore_advisories: [
         # cowlib
+        # cow_http_struct_hd:escape_string/2
         "CVE-2026-43966",
-        "CVE-2026-43969"
+        # cow_cookie:cookie/1
+        "CVE-2026-43969",
+        # cow_link:link/1
+        "CVE-2026-43971"
       ]
     ]
   end

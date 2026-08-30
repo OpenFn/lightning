@@ -59,6 +59,7 @@ and this project adheres to
   less before seeing output. Lightning handles the several streaming event types
   Apollo sends, including status updates.
   [#4969](https://github.com/OpenFn/lightning/pull/4969)
+- Bumped bundled worker to version 1.29.2
 
 ### Fixed
 
@@ -103,6 +104,14 @@ and this project adheres to
   checks the export before firing the Action, so that message reaches the user
   in Lightning rather than dying in an Actions log.
   [#4577](https://github.com/OpenFn/lightning/issues/4577)
+
+## [2.18.1] - 2026-08-28
+
+### Added
+
+- `step:complete` now accepts `output_dataclip` as a decoded value, not just a
+  JSON string, while staying compatible with workers that still send a string.
+  [#5098](https://github.com/OpenFn/lightning/pull/5098)
 
 ## [2.18.0] - 2026-08-20
 
