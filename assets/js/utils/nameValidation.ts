@@ -45,12 +45,27 @@ export const NAME_TOO_WIDE_MESSAGE =
   'Name is too long, please use a shorter one.';
 
 /**
+ * The 25 Unicode White_Space characters, which is exactly what Elixir's
+ * `String.trim/1` strips. JS `.trim()` is not that set in either direction: it
+ * leaves U+0085 (NEL), which Elixir strips, and it eats U+FEFF, which Elixir
+ * keeps. Both mattered. The first made the client reject a name the server
+ * would have accepted, and the second silently rewrote a name the server had
+ * already stored.
+ */
+const TRIM_CHARS =
+  '\u0009\u000a\u000b\u000c\u000d\u0020\u0085\u00a0\u1680\u2000\u2001' +
+  '\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029' +
+  '\u202f\u205f\u3000';
+
+const TRIM_REGEX = new RegExp(`^[${TRIM_CHARS}]+|[${TRIM_CHARS}]+$`, 'gu');
+
+/**
  * NFC, then trim. The server normalises before it validates, so anything that
  * measures or checks a name on the client has to normalise first too,
  * otherwise the two disagree about length and about what counts as blank.
  */
 export const normalizeName = (value: string): string =>
-  value.normalize('NFC').trim();
+  value.normalize('NFC').replace(TRIM_REGEX, '');
 
 export const hasControlChars = (value: string): boolean =>
   CONTROL_CHARS_REGEX.test(value);

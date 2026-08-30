@@ -88,6 +88,24 @@ describe('normalizeName', () => {
     expect(normalizeName(decomposed)).toBe('V\u00E9rifier');
     expect(normalizeName(decomposed).length).toBe(8);
   });
+
+  test('trims the set Elixir trims, not the set JS trims', () => {
+    // These two are where `String.trim/1` and `.trim()` disagree, and they
+    // disagree in opposite directions. Trimming NEL is what stops the client
+    // rejecting a name the server would accept; leaving U+FEFF alone is what
+    // stops the client rewriting a name the server already stored.
+    expect('abc\u0085'.trim()).toBe('abc\u0085');
+    expect(normalizeName('abc\u0085')).toBe('abc');
+
+    expect('abc\uFEFF'.trim()).toBe('abc');
+    expect(normalizeName('abc\uFEFF')).toBe('abc\uFEFF');
+
+    // A sample of the rest of the 25, to catch the set being edited down.
+    expect(normalizeName('\u3000\u00a0\u2028 abc \u205f')).toBe('abc');
+
+    // Not White_Space, so not trimmed by either side.
+    expect(normalizeName('abc\u200b')).toBe('abc\u200b');
+  });
 });
 
 describe('graphemeLength', () => {
