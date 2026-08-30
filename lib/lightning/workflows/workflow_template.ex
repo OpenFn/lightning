@@ -26,14 +26,63 @@ defmodule Lightning.Workflows.WorkflowTemplate do
     template
     |> cast(attrs, [:name, :description, :code, :positions, :tags, :workflow_id])
     |> validate_required([:name, :code, :tags, :workflow_id])
+    |> Lightning.Validators.validate_name(
+      :name,
+      "Name can't contain control characters"
+    )
     |> validate_length(:name,
       max: 255,
       message: "Name must be less than 255 characters"
+    )
+    |> Lightning.Validators.validate_name_fits_column(
+      :name,
+      "Name is too long, please use a shorter one"
     )
     |> validate_length(:description,
       max: 1000,
       message: "Description must be less than 1000 characters"
     )
+    # Everything below is the same class as the name guard above and sits on
+    # the same cast/3. positions is a jsonb map, so a NUL anywhere inside it
+    # raises 22P05; code, description and tags are text columns, where a NUL
+    # raises 22021; and a tag past the column width raises 22001. All four were
+    # uncaught, and publish_template exposes every one of them (#4893).
+    |> Lightning.Validators.validate_no_null_bytes_deep(
+      :positions,
+      "Positions can't contain a null byte"
+    )
+    |> Lightning.Validators.validate_no_null_bytes(
+      :code,
+      "Code can't contain a null byte"
+    )
+    |> Lightning.Validators.validate_no_null_bytes(
+      :description,
+      "Description can't contain a null byte"
+    )
+    |> Lightning.Validators.validate_no_null_bytes_deep(
+      :tags,
+      "Tags can't contain a null byte"
+    )
+    |> validate_tag_lengths()
     |> assoc_constraint(:workflow)
   end
+
+  # tags is a text[] and each element has the same 255 width as a name column,
+  # counted in codepoints. A 300 character tag is plain typed UI input and used
+  # to raise an uncaught 22001.
+  defp validate_tag_lengths(changeset) do
+    validate_change(changeset, :tags, fn :tags, tags ->
+      if Enum.all?(List.wrap(tags), &tag_fits?/1) do
+        []
+      else
+        [tags: "Each tag is too long, please use shorter ones"]
+      end
+    end)
+  end
+
+  defp tag_fits?(tag) when is_binary(tag) do
+    tag |> String.codepoints() |> length() <= 255
+  end
+
+  defp tag_fits?(_tag), do: true
 end

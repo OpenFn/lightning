@@ -30,8 +30,13 @@ import {
   createWorkflowError,
 } from './workflow-errors';
 
+// One space, one hyphen. This has to match ExportUtils.hyphenate/1 on the
+// server exactly, because the server writes the spec the CLI reads back and a
+// key that differs by a hyphen is a different job. The server replaces each
+// single space and leaves every other whitespace character alone, so `a  b`
+// is `a--b`, not `a-b`.
 const hyphenate = (str: string) => {
-  return str.replace(/\s+/g, '-');
+  return str.replace(/ /g, '-');
 };
 
 const roundPosition = (pos: Position): Position => {
@@ -41,6 +46,44 @@ const roundPosition = (pos: Position): Position => {
   };
 };
 
+/**
+ * An edge key is a label. Nothing parses it, and the edge body carries its own
+ * identity in source_job, source_trigger and target_job. That matters because
+ * the key joins two job keys with `->` and a job may legally hold a `>` since
+ * #4577: jobs named `a` and `b->c` produce the same key as `a->b` and `c`.
+ *
+ * This mirrors `disambiguate_edge_keys/1` in lib/lightning/export_utils.ex key
+ * for key, including checking each suffix against the original keys as well as
+ * the ones already handed out. Without it the browser kept the last of a
+ * colliding pair and the spec came out an edge short, while the server wrote
+ * both -- the same workflow, two different specs, into a git-synced repo.
+ */
+const disambiguateEdgeKeys = (
+  entries: [string, SpecEdge][]
+): { [key: string]: SpecEdge } => {
+  const taken = new Set(entries.map(([key]) => key));
+  const used = new Set<string>();
+  const edges = Object.create(null) as { [key: string]: SpecEdge };
+
+  for (const [key, edge] of entries) {
+    let free = key;
+    if (used.has(free)) {
+      let suffix = 2;
+      while (
+        taken.has(`${key}-${String(suffix)}`) ||
+        used.has(`${key}-${String(suffix)}`)
+      ) {
+        suffix += 1;
+      }
+      free = `${key}-${String(suffix)}`;
+    }
+    used.add(free);
+    edges[free] = edge;
+  }
+
+  return edges;
+};
+
 // Note that we don't serialize the project_credential_id or the
 // keychain_credential_id here... Should we? See discussion in
 // https://github.com/OpenFn/lightning/pull/4297
@@ -48,7 +91,11 @@ export const convertWorkflowStateToSpec = (
   workflowState: WorkflowState,
   includeIds: boolean = true
 ): WorkflowSpec => {
-  const jobs: { [key: string]: SpecJob } = {};
+  // Null-prototype: a job named `__proto__` assigned onto a plain object runs
+  // the prototype setter instead of adding a key, so the job vanished from the
+  // spec and hasOwnProperty never saw the collision. Same for `constructor`
+  // and `toString` in the seenNames check below.
+  const jobs = Object.create(null) as { [key: string]: SpecJob };
   workflowState.jobs.forEach(job => {
     const pos = workflowState.positions?.[job.id];
     const jobDetails: SpecJob = {
@@ -58,7 +105,15 @@ export const convertWorkflowStateToSpec = (
       body: job.body,
       pos: pos ? roundPosition(pos) : undefined,
     };
-    jobs[hyphenate(job.name)] = jobDetails;
+    const key = hyphenate(job.name);
+    // Two names that hyphenate to the same key, `a b` and `a-b`, used to
+    // overwrite one another here and the spec came out a job short. The server
+    // refuses the same pair rather than dropping one
+    // (Lightning.ExportUtils.DuplicateKeyError), so this side says so too.
+    if (key in jobs) {
+      throw new DuplicateJobNameError(job.name, key);
+    }
+    jobs[key] = jobDetails;
   });
 
   const triggers: { [key: string]: SpecTrigger } = {};
@@ -114,7 +169,9 @@ export const convertWorkflowStateToSpec = (
     triggers[trigger.type] = triggerDetails;
   });
 
-  const edges: { [key: string]: SpecEdge } = {};
+  // Collected in order first, then disambiguated, because a suffix has to be
+  // checked against every original key and not just the ones seen so far.
+  const edgeEntries: [string, SpecEdge][] = [];
   workflowState.edges.forEach(edge => {
     const edgeDetails: SpecEdge = {
       ...(includeIds && { id: edge.id }),
@@ -154,8 +211,10 @@ export const convertWorkflowStateToSpec = (
     const source_name = edgeDetails.source_trigger || edgeDetails.source_job;
     const target_name = edgeDetails.target_job;
 
-    edges[`${source_name}->${target_name}`] = edgeDetails;
+    edgeEntries.push([`${source_name}->${target_name}`, edgeDetails]);
   });
+
+  const edges = disambiguateEdgeKeys(edgeEntries);
 
   const workflowSpec: WorkflowSpec = {
     ...(includeIds && { id: workflowState.id }),
@@ -172,7 +231,11 @@ export const convertWorkflowSpecToState = (
   workflowSpec: WorkflowSpec
 ): WorkflowState => {
   const positions: Record<string, Position> = {};
-  const stateJobs: Record<string, StateJob> = {};
+  // Null-prototype, same reason as the export side: a spec keyed `__proto__`
+  // assigned onto a plain object runs the prototype setter and the job never
+  // lands, and the edge lookups below resolve `toString` and `constructor`
+  // through the prototype, so JobNotFoundError never fires for them.
+  const stateJobs = Object.create(null) as Record<string, StateJob>;
   Object.entries(workflowSpec.jobs).forEach(([key, specJob]) => {
     const uId = specJob.id || randomUUID();
     stateJobs[key] = {
@@ -184,7 +247,7 @@ export const convertWorkflowSpecToState = (
     if (specJob.pos) positions[uId] = specJob.pos;
   });
 
-  const stateTriggers: Record<string, StateTrigger> = {};
+  const stateTriggers = Object.create(null) as Record<string, StateTrigger>;
   Object.entries(workflowSpec.triggers).forEach(([key, specTrigger]) => {
     const uId = specTrigger.id || randomUUID();
     const enabled =
@@ -238,7 +301,7 @@ export const convertWorkflowSpecToState = (
     stateTriggers[key] = trigger;
   });
 
-  const stateEdges: Record<string, StateEdge> = {};
+  const stateEdges = Object.create(null) as Record<string, StateEdge>;
   Object.entries(workflowSpec.edges).forEach(([key, specEdge]) => {
     const targetJob = stateJobs[specEdge.target_job];
     if (!targetJob) {
@@ -330,14 +393,23 @@ export const parseWorkflowYAML = (yamlString: string): WorkflowSpec => {
       }
     }
 
-    // Validate job names
-    const seenNames: Record<string, boolean> = {};
+    // Validate job names. A Set rather than an object: a job named
+    // `constructor` or `toString` used to hit an inherited property and raise
+    // a duplicate error for a name that appeared once.
+    //
+    // Compared hyphenated, which is what the export side compares. Comparing
+    // raw names let a spec holding `a b` and `a-b` import cleanly and then
+    // throw the moment it was converted back, leaving the user with a workflow
+    // they could not export.
+    const seenKeys = new Set<string>();
     Object.entries(parsedYAML['jobs']).forEach(
       ([key, specJob]: [string, any]) => {
-        if (seenNames[specJob.name]) {
-          throw new DuplicateJobNameError(specJob.name, key);
+        const name = String(specJob.name);
+        const nameKey = hyphenate(name);
+        if (seenKeys.has(nameKey)) {
+          throw new DuplicateJobNameError(name, key);
         }
-        seenNames[specJob.name] = true;
+        seenKeys.add(nameKey);
       }
     );
 

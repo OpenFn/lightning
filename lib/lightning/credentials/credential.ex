@@ -8,6 +8,7 @@ defmodule Lightning.Credentials.Credential do
   alias Lightning.Accounts.User
   alias Lightning.Credentials.OauthClient
   alias Lightning.Projects.ProjectCredential
+  alias Lightning.Validators
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -80,8 +81,25 @@ defmodule Lightning.Credentials.Credential do
     )
     |> assoc_constraint(:user)
     |> assoc_constraint(:oauth_client)
-    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
-      message: "credential name has invalid format"
+    |> Validators.validate_name(
+      :name,
+      "credential name can't contain control characters"
+    )
+    |> Validators.validate_name_fits_column(
+      :name,
+      "credential name is too long, please use a shorter one"
+    )
+    # Two more fields on the same cast/3 with no length guard at all. schema is
+    # varchar(40), not 255, so a 41 character schema was a 500 on plain ASCII
+    # through POST /api/credentials.
+    |> Validators.validate_name_fits_column(
+      :schema,
+      "credential schema is too long, please use a shorter one",
+      40
+    )
+    |> Validators.validate_name_fits_column(
+      :external_id,
+      "credential external ID is too long, please use a shorter one"
     )
   end
 

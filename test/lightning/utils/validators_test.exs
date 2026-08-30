@@ -1,6 +1,8 @@
 defmodule Lightning.ValidatorsTest do
   use ExUnit.Case, async: true
 
+  alias Lightning.Validators
+
   import Ecto.Changeset
   import Lightning.Validators, only: [validate_uuid: 2, valid_uuid?: 1]
 
@@ -59,6 +61,111 @@ defmodule Lightning.ValidatorsTest do
       refute valid_uuid?(:an_atom)
       # raw 16-byte binary
       refute valid_uuid?(<<0::128>>)
+    end
+  end
+
+  describe "invisible_only?/1" do
+    # Replaced a 30 codepoint blocklist that let 406 through. The fixture is
+    # generated from this predicate and asserted against the client's copy in
+    # assets/test/utils/nameValidation.test.ts, so the two cannot drift.
+    @fixture "test/fixtures/invisible_codepoints.json"
+
+    @named [
+      {0x00AD, "soft hyphen"},
+      {0x034F, "combining grapheme joiner"},
+      {0x061C, "arabic letter mark"},
+      {0x115F, "hangul choseong filler"},
+      {0x1160, "hangul jungseong filler"},
+      {0x17B4, "khmer vowel inherent aq"},
+      {0x180B, "mongolian free variation selector one"},
+      {0x180E, "mongolian vowel separator"},
+      {0x200B, "zero width space"},
+      {0x200D, "zero width joiner"},
+      {0x200F, "right-to-left mark"},
+      {0x202E, "right-to-left override"},
+      {0x2060, "word joiner"},
+      {0x2065, "unassigned default ignorable"},
+      {0x206F, "nominal digit shapes"},
+      {0x2800, "braille pattern blank"},
+      {0x3164, "hangul filler"},
+      {0xFE00, "variation selector-1"},
+      {0xFE0D, "variation selector-14"},
+      {0xFE0F, "variation selector-16"},
+      {0xFEFF, "byte order mark"},
+      {0xFFA0, "halfwidth hangul filler"},
+      {0xFFFB, "interlinear annotation terminator"},
+      {0x13430, "egyptian hieroglyph vertical joiner"},
+      {0xE0001, "language tag"},
+      {0xE007F, "cancel tag"},
+      {0xE0100, "variation selector-17"},
+      {0xE01EF, "variation selector-256"}
+    ]
+
+    test "the ones the old hand-written list missed are all caught" do
+      for {codepoint, label} <- @named do
+        name = <<codepoint::utf8>>
+
+        assert Validators.invisible_only?(name),
+               "expected #{label} (U+#{Integer.to_string(codepoint, 16)}) to " <>
+                 "count as invisible"
+      end
+    end
+
+    test "a run of them is caught, not just one" do
+      # A per-grapheme check used to fuse a joiner-led run into one cluster and
+      # miss it.
+      assert Validators.invisible_only?("\u{200D}\u{200D}")
+      assert Validators.invisible_only?("\u{200B}\u{FEFF}\u{00AD}\u{FE0F}")
+      assert Validators.invisible_only?(String.duplicate("\u{200D}", 20))
+    end
+
+    test "a name that merely contains one is left alone" do
+      for {label, name} <- [
+            {"emoji zwj sequence",
+             "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}"},
+            {"devanagari zwnj", "\u{0915}\u{094D}\u{200C}\u{0937}"},
+            {"arabic zwj", "\u{0644}\u{200D}\u{0627}"},
+            {"variation selector on a symbol", "\u{2764}\u{FE0F}"},
+            {"invisible in the middle", "a\u{200B}b"},
+            {"plain", "step"}
+          ] do
+        refute Validators.invisible_only?(name),
+               "expected #{label} to be a real name"
+      end
+    end
+
+    test "the empty string and ordinary whitespace are not this rule's job" do
+      # trim/1 empties these before the check runs.
+      refute Validators.invisible_only?("")
+      refute Validators.invisible_only?(" ")
+      refute Validators.invisible_only?("\t")
+    end
+
+    test "the fixture still matches this predicate" do
+      %{"count" => count, "ranges" => ranges} =
+        @fixture |> File.read!() |> Jason.decode!()
+
+      codepoints =
+        Enum.flat_map(ranges, fn [lo, hi] -> Enum.to_list(lo..hi) end)
+
+      assert length(codepoints) == count
+
+      for codepoint <- codepoints do
+        assert Validators.invisible_only?(<<codepoint::utf8>>),
+               "fixture holds U+#{Integer.to_string(codepoint, 16)} but the " <>
+                 "predicate does not; regenerate it"
+      end
+
+      missing =
+        Enum.reject(0..0x10FFFF, fn codepoint ->
+          codepoint in 0xD800..0xDFFF or
+            not Validators.invisible_only?(<<codepoint::utf8>>) or
+            codepoint in codepoints
+        end)
+
+      assert missing == [],
+             "the predicate now matches codepoints the fixture does not; " <>
+               "regenerate it"
     end
   end
 end

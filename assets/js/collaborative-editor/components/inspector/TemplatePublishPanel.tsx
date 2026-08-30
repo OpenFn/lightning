@@ -12,20 +12,43 @@ import { notifications } from '#/collaborative-editor/lib/notifications';
 import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 import logger from '#/utils/logger';
+import {
+  exceedsGraphemeCap,
+  isNameTooWideForColumn,
+} from '#/utils/nameValidation';
 import type { WorkflowState as YAMLWorkflowState } from '#/yaml/types';
 import { convertWorkflowStateToSpec } from '#/yaml/util';
 
 logger.ns('TemplatePublishPanel').seal();
 
-// Validation schema matching backend constraints
-const TemplatePublishSchema = z.object({
+// Validation schema matching backend constraints, meaning
+// Lightning.Workflows.WorkflowTemplate.changeset/2.
+//
+// Counted in codepoints, which is the unit workflow_templates.name is measured
+// in, not UTF-16 units. `.max(255)` was stricter than the server, and
+// defaultValues below prefills the name from the existing template or the
+// workflow -- both legal to 255 codepoints since #4577 -- so the form could
+// open already holding a value it refused to submit.
+//
+// description is a text column with a 1000 grapheme product cap on the server,
+// so it is counted in graphemes here rather than UTF-16 units: 600 emoji are
+// 600 graphemes the server accepts and 1200 units `.max(1000)` refused, and
+// defaultValues prefills it from the stored template, so it was the same
+// "opens holding a value it will not submit" failure as the name.
+export const TemplatePublishSchema = z.object({
   name: z
     .string()
     .min(1, 'Name is required')
-    .max(255, 'Name must be less than 255 characters'),
+    .refine(
+      val => !isNameTooWideForColumn(val),
+      'Name must be less than 255 characters'
+    ),
   description: z
     .string()
-    .max(1000, 'Description must be less than 1000 characters')
+    .refine(
+      val => !exceedsGraphemeCap(val, 1000),
+      'Description must be less than 1000 characters'
+    )
     .optional()
     .default(''),
   tags: z.string().optional().default(''),

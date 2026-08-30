@@ -25,7 +25,8 @@ defmodule LightningWeb.CredentialLiveTest do
     external_id: "updated-external-id"
   }
 
-  @invalid_attrs %{name: "this won't work"}
+  # An apostrophe is legal now (#4577). A control character is not.
+  @invalid_attrs %{name: "this won't \u{0000} work"}
 
   defp create_credential(%{user: user}) do
     credential = insert(:credential, user: user)
@@ -658,9 +659,20 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form-new", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
-      assert index_live
+      # An apostrophe is a legal credential name now (#4577); a control
+      # character is not.
+      # The rendered HTML escapes the apostrophe, so the refute has to match the
+      # escaped form or it can never fail.
+      refute index_live
              |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
-             |> render_change() =~ "credential name has invalid format"
+             |> render_change() =~ "credential name can&#39;t contain"
+
+      assert index_live
+             |> form("#credential-form-new",
+               credential: %{name: "bad\u{0000}name"}
+             )
+             |> render_change() =~
+               "credential name can&#39;t contain control characters"
 
       # Select second project
       index_live
@@ -771,9 +783,20 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form-new", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
-      assert index_live
+      # An apostrophe is a legal credential name now (#4577); a control
+      # character is not.
+      # The rendered HTML escapes the apostrophe, so the refute has to match the
+      # escaped form or it can never fail.
+      refute index_live
              |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
-             |> render_change() =~ "credential name has invalid format"
+             |> render_change() =~ "credential name can&#39;t contain"
+
+      assert index_live
+             |> form("#credential-form-new",
+               credential: %{name: "bad\u{0000}name"}
+             )
+             |> render_change() =~
+               "credential name can&#39;t contain control characters"
 
       index_live
       |> element("#project-credentials-list-new")
@@ -1134,7 +1157,7 @@ defmodule LightningWeb.CredentialLiveTest do
                @invalid_attrs,
                "#credential-form-#{credential.id}"
              ) =~
-               "credential name has invalid format"
+               "credential name can&#39;t contain control characters"
 
       refute_redirected(index_live, ~p"/credentials")
 
