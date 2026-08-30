@@ -165,6 +165,57 @@ defmodule LightningWeb.WebhooksControllerTest do
                ~s({\"path\": [\"i\", \"#{trigger_id}\"], \"method\": \"POST\", \"headers\": {\"content-type\": \"multipart/mixed; boundary=plug_conn_test\"}, \"query_params\": {}})
     end
 
+    test "creates a pending workorder from a project-namespaced custom path", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      %{triggers: [%{id: trigger_id} = trigger]} =
+        insert(:simple_workflow, project: project)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      {:ok, _} =
+        trigger
+        |> Lightning.Workflows.Trigger.changeset(%{
+          custom_path: "et-emr-facility-001"
+        })
+        |> Repo.update()
+
+      conn =
+        post(conn, "/i/#{project.id}/et-emr-facility-001", %{"foo" => "bar"})
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+
+      assert %{trigger: %{id: ^trigger_id}, state: :pending} =
+               WorkOrders.get(work_order_id, include: [:trigger])
+    end
+
+    test "the generated URL still works once a custom path is set", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      %{triggers: [%{id: trigger_id} = trigger]} =
+        insert(:simple_workflow, project: project)
+        |> Lightning.Repo.preload(:triggers)
+        |> with_snapshot()
+
+      {:ok, _} =
+        trigger
+        |> Lightning.Workflows.Trigger.changeset(%{
+          custom_path: "et-emr-facility-001"
+        })
+        |> Repo.update()
+
+      conn = post(conn, "/i/#{trigger_id}", %{"foo" => "bar"})
+
+      assert %{"work_order_id" => work_order_id} = json_response(conn, 200)
+
+      assert %{trigger: %{id: ^trigger_id}} =
+               WorkOrders.get(work_order_id, include: [:trigger])
+    end
+
     test "creates a pending workorder with a valid trigger and an additional path",
          %{conn: conn} do
       %{triggers: [%{id: trigger_id}]} =

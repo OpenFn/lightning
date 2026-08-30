@@ -850,7 +850,9 @@ defmodule Lightning.Workflows do
     |> Multi.update_all(
       :disable_triggers,
       workflow_triggers_query,
-      set: [enabled: false]
+      # The path goes with the workflow's name, or a hidden row keeps it
+      # reserved against a replacement.
+      set: [enabled: false, custom_path: nil, legacy_bare_path: false]
     )
     |> Repo.transaction()
     |> tap(fn result ->
@@ -937,20 +939,67 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-  Gets a single Webhook Trigger by its `custom_path` or `id`.
-  """
-  def get_webhook_trigger(path, opts \\ []) when is_binary(path) do
-    preloads = opts |> Keyword.get(:include, [])
+  Gets a single Webhook Trigger from the segments of an `/i/` request path.
 
-    from(t in Trigger,
-      where:
-        fragment(
-          "coalesce(?, ?)",
-          t.custom_path,
-          type(t.id, :string)
-        ) == ^path and t.type == :webhook,
-      preload: ^preloads
-    )
+  Tried in order, and no step can match more than one row, so a request can
+  never fail on an ambiguous path:
+
+    1. A project id and a custom path, when there is a second segment.
+    2. The first segment as a trigger id.
+    3. A bare custom path, for the triggers that held one before paths were
+       namespaced. That set is fixed at migration time and never grows.
+
+  Trailing segments are ignored: `/i/<trigger-uuid>/Patient` posts to the same
+  trigger as `/i/<trigger-uuid>`.
+  """
+  @spec get_webhook_trigger([String.t()], keyword()) :: Trigger.t() | nil
+  def get_webhook_trigger(segments, opts \\ [])
+
+  # Ordered so the likely answer is the first query. A request carrying a second
+  # segment is almost always the namespaced form, and one carrying none can only
+  # be an id or a legacy bare path.
+  def get_webhook_trigger([first | rest], opts) do
+    case cast_uuid(first) do
+      {:ok, id} when rest != [] ->
+        by_project_path(id, rest, opts) || by_trigger_id(id, opts) ||
+          by_legacy_path(first, opts)
+
+      {:ok, id} ->
+        by_trigger_id(id, opts) || by_legacy_path(first, opts)
+
+      :error ->
+        by_legacy_path(first, opts)
+    end
+  end
+
+  def get_webhook_trigger(_segments, _opts), do: nil
+
+  # `Ecto.UUID.cast/1` also accepts any 16-byte binary as a raw UUID, which
+  # would swallow a 16-character custom path like `orders_intake_v1`. Only the
+  # 36-character textual form is a URL segment we mean to read as an id.
+  defp cast_uuid(<<_::288>> = segment), do: Ecto.UUID.cast(segment)
+  defp cast_uuid(_segment), do: :error
+
+  defp by_trigger_id(id, opts) do
+    Trigger |> where([t], t.id == ^id) |> fetch_webhook(opts)
+  end
+
+  defp by_project_path(project_id, [custom_path | _rest], opts) do
+    Trigger
+    |> where([t], t.project_id == ^project_id and t.custom_path == ^custom_path)
+    |> fetch_webhook(opts)
+  end
+
+  defp by_legacy_path(custom_path, opts) do
+    Trigger
+    |> where([t], t.legacy_bare_path and t.custom_path == ^custom_path)
+    |> fetch_webhook(opts)
+  end
+
+  defp fetch_webhook(query, opts) do
+    query
+    |> where([t], t.type == :webhook)
+    |> preload(^Keyword.get(opts, :include, []))
     |> Repo.one()
   end
 

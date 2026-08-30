@@ -1598,14 +1598,19 @@ defmodule Lightning.WorkflowsTest do
       %{triggers: [trigger]} =
         insert(:simple_workflow) |> Repo.preload(:triggers)
 
-      assert Workflows.get_webhook_trigger(trigger.id).id == trigger.id
+      assert Workflows.get_webhook_trigger([trigger.id]).id == trigger.id
 
       Ecto.Changeset.change(trigger, custom_path: "foo")
       |> Lightning.Repo.update!()
 
-      assert Workflows.get_webhook_trigger(trigger.id) == nil
+      # Setting a custom path adds a URL rather than replacing one, so anything
+      # already posting to the generated URL keeps working.
+      assert Workflows.get_webhook_trigger([trigger.id]).id == trigger.id
 
-      assert Workflows.get_webhook_trigger("foo").id == trigger.id
+      workflow = Repo.get!(Lightning.Workflows.Workflow, trigger.workflow_id)
+
+      assert Workflows.get_webhook_trigger([workflow.project_id, "foo"]).id ==
+               trigger.id
     end
 
     test "get_webhook_trigger/1 does not return a trigger when type is cron" do
@@ -1617,13 +1622,13 @@ defmodule Lightning.WorkflowsTest do
       |> Lightning.Repo.update!()
 
       # Should not return the trigger even though the ID matches
-      assert Workflows.get_webhook_trigger(trigger.id) == nil
+      assert Workflows.get_webhook_trigger([trigger.id]) == nil
 
       # Set a custom path and verify it still doesn't return
       Ecto.Changeset.change(trigger, custom_path: "cron_path")
       |> Lightning.Repo.update!()
 
-      assert Workflows.get_webhook_trigger("cron_path") == nil
+      assert Workflows.get_webhook_trigger([trigger.id, "cron_path"]) == nil
     end
 
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
@@ -1656,24 +1661,30 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
-  describe "get_webhook_trigger/1" do
+  describe "get_webhook_trigger/2" do
     test "returns a trigger when a matching custom_path is provided" do
-      trigger = insert(:trigger, custom_path: "some_path")
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow, custom_path: "some_path")
 
       assert trigger |> unload_relation(:workflow) ==
-               Workflows.get_webhook_trigger("some_path")
+               Workflows.get_webhook_trigger([project.id, "some_path"])
     end
 
     test "returns a trigger when a matching id is provided" do
       trigger = insert(:trigger)
 
       assert trigger |> unload_relation(:workflow) ==
-               Workflows.get_webhook_trigger(trigger.id)
+               Workflows.get_webhook_trigger([trigger.id])
     end
 
     test "returns nil when no matching trigger is found" do
-      insert(:trigger, custom_path: "some_path")
-      assert Workflows.get_webhook_trigger("non_existent_path") == nil
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      insert(:trigger, workflow: workflow, custom_path: "some_path")
+
+      assert Workflows.get_webhook_trigger([project.id, "non_existent_path"]) ==
+               nil
     end
   end
 
