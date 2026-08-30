@@ -25,6 +25,34 @@ and this project adheres to
 
 ### Changed
 
+> **Before deploying:** run `priv/repo/checks/4577_pre_deploy.sql` against
+> production. Two things in existing data change behaviour and neither has a
+> backfill. First, names that collide once spaces become hyphens (`My Flow` and
+> `My-Flow` in one project) previously exported with one of the pair silently
+> dropped; the export now refuses, which stops GitHub sync for that project
+> until someone renames one. Second, workflow names and edge condition labels
+> holding a control character were never validated before and now are. Editing
+> an unrelated field on such a row still saves, because the rule only fires
+> when the name itself changes; re-submitting an unchanged legacy name saves,
+> and only a different bad name is refused, so this is narrower than it looks.
+> The query lists both; an empty result means nothing to do.
+>
+> The credential half of check 1 is close to dead code, because the unique
+> index on `lower(replace(name, '-', ' '))` already makes same-user collisions
+> impossible and it can only fire on a cross-user case. Running the check ahead
+> of time is optional: a collision otherwise surfaces in the UI at sync time,
+> naming both entities to rename.
+
+- Job and workflow names may now hold any character except a control one.
+  Names were restricted to letters, digits, spaces, underscores and hyphens, so
+  a team working in French, Spanish, Arabic or Japanese could not name a step
+  in their own language. Any script, punctuation, symbol or emoji is accepted
+  now, and names are composed to NFC on save so two spellings of the same
+  accented word are one name. Control characters are refused rather than
+  stripped, because a null byte in a name cannot be written to the workflow
+  snapshot and used to fail the save with a 500. The same rule now covers
+  credential names, workflow template names and edge condition labels.
+  [#4577](https://github.com/OpenFn/lightning/issues/4577)
 - Remove the unreachable, non-streaming code in the AI assistant
   [#5046](https://github.com/OpenFn/lightning/issues/5046)
 - The global chat now starts streaming Apollo's response earlier, so users wait
@@ -38,6 +66,43 @@ and this project adheres to
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
   [#5009](https://github.com/OpenFn/lightning/pull/5009)
+- A workflow name longer than the 255 characters the column holds now comes
+  back as an ordinary validation error instead of a 500, including when the
+  `_del` suffix added on delete is what pushes it over.
+- The provisioning API validated workflow names differently from every other
+  write path, so a control character in a workflow name reached the database
+  and returned a 500 on `POST /api/provision`.
+  [#4893](https://github.com/OpenFn/lightning/issues/4893)
+- A workflow name is no longer rendered as HTML in the dashboard and history
+  tooltips, where markup in a name became live elements for anyone viewing the
+  project.
+  [#4577](https://github.com/OpenFn/lightning/issues/4577)
+- The workflow YAML download in the editor no longer produces a file called
+  `.yaml` when the workflow's name has no ASCII in it.
+  [#4577](https://github.com/OpenFn/lightning/issues/4577)
+- Project YAML export now quotes and escapes names properly. A name containing
+  an apostrophe, such as a credential called `MailChimp June'24`, produced a
+  spec no YAML parser could read; a name of `null` or `42` came back as nil or
+  a number, and a job key of `007` came back as `7`; and a name containing a
+  newline or a control character corrupted the spec around it. What gets quoted
+  is measured against the two parsers we ship against rather than taken from
+  the YAML spec, so a name of `off` or `2026-08-27` is still written plainly.
+  Names that already exported correctly are byte for byte unchanged, so a
+  synced project repo sees no diff.
+  [#2808](https://github.com/OpenFn/lightning/issues/2808)
+  [#4577](https://github.com/OpenFn/lightning/issues/4577)
+- Job bodies, project descriptions and edge condition expressions are now
+  written as block scalars safely. A body whose first line started with a space
+  lost that indentation on the way back, a body containing a carriage return
+  lost it silently or produced a spec that would not parse, and two or more
+  trailing blank lines collapsed to one.
+  [#2966](https://github.com/OpenFn/lightning/issues/2966)
+- Exporting a project where two workflows, credentials, collections or channels
+  share a spec key (`a b` and `a-b` both become `a-b`) now fails with a message
+  naming both, instead of silently dropping one of the pair. A GitHub sync
+  checks the export before firing the Action, so that message reaches the user
+  in Lightning rather than dying in an Actions log.
+  [#4577](https://github.com/OpenFn/lightning/issues/4577)
 
 ## [2.18.0] - 2026-08-20
 

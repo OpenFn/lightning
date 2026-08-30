@@ -229,6 +229,60 @@ describe('CodeViewPanel', () => {
     });
   });
 
+  describe('download filename', () => {
+    const downloadNameFor = async (workflowName: string) => {
+      setMockWorkflowState({
+        workflow: { id: 'w1', name: workflowName },
+        jobs: [],
+        triggers: [],
+        edges: [],
+      });
+
+      // jsdom has no Blob URL support at all, so these are assigned rather
+      // than spied on, and put back afterwards.
+      const urlApi = URL as unknown as Record<string, unknown>;
+      const prevCreate = urlApi['createObjectURL'];
+      const prevRevoke = urlApi['revokeObjectURL'];
+      urlApi['createObjectURL'] = () => 'blob:stub';
+      urlApi['revokeObjectURL'] = () => undefined;
+
+      const createElement = document.createElement.bind(document);
+      const captured: { anchor?: HTMLAnchorElement } = {};
+
+      const spy = vi
+        .spyOn(document, 'createElement')
+        .mockImplementation((tagName: string, ...rest: unknown[]) => {
+          const el = createElement(
+            tagName,
+            ...(rest as [ElementCreationOptions?])
+          );
+          if (tagName === 'a') captured.anchor = el as HTMLAnchorElement;
+          return el;
+        });
+
+      const view = render(<CodeViewPanel />);
+      await userEvent.click(screen.getByRole('button', { name: 'Download' }));
+      view.unmount();
+      spy.mockRestore();
+      urlApi['createObjectURL'] = prevCreate;
+      urlApi['revokeObjectURL'] = prevRevoke;
+
+      return captured.anchor?.download;
+    };
+
+    test('keeps the ASCII-safe part of the name', async () => {
+      expect(await downloadNameFor('My  Workflow')).toBe('My-Workflow.yaml');
+    });
+
+    test('falls back to a usable name when nothing survives sanitising', async () => {
+      // A CJK or Arabic name used to sanitise down to nothing and the browser
+      // was handed a file called ".yaml".
+      expect(await downloadNameFor('患者確認')).toBe('workflow.yaml');
+      expect(await downloadNameFor('تسجيل المريض')).toBe('workflow.yaml');
+      expect(await downloadNameFor('🎉')).toBe('workflow.yaml');
+    });
+  });
+
   describe('template publishing button', () => {
     beforeEach(() => {
       // Need a workflow to be loaded for button to show

@@ -212,6 +212,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       %Tesla.Env{body: body} ->
         error_message(body)
 
+      # A plain string is ours, not GitHub's: the export pre-flight in
+      # initiate_sync/2 returns one naming both colliding entities. Pass it
+      # through rather than swallowing it in the generic message below.
+      message when is_binary(message) ->
+        message
+
       _error ->
         "Oops! An error occurred while connecting to GitHub. Please try again later"
     end

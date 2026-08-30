@@ -4,6 +4,95 @@ defmodule Lightning.Workflows.TriggerTest do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers.KafkaConfiguration
 
+  describe "jsonb-bound trigger fields" do
+    test "a NUL in comment or custom_path is a changeset error" do
+      # Both are copied into the workflow_snapshots.triggers jsonb (#4893).
+      for {field, message} <- [
+            {:comment, "comment can't contain a null byte"},
+            {:custom_path, "custom path can't contain a null byte"}
+          ] do
+        changeset =
+          Trigger.changeset(
+            %Trigger{},
+            Map.put(%{type: :webhook}, field, "bad\u{0000}value")
+          )
+
+        assert errors_on(changeset)[field] == [message],
+               "expected #{field} to reject a null byte"
+      end
+    end
+
+    test "an over-long comment or custom_path is a changeset error, not a 22001" do
+      # Both columns are varchar(255) and neither had a length guard, so a 300
+      # character comment gave valid? == true and then raised on insert.
+      for {field, message} <- [
+            {:comment, "comment is too long, please use a shorter one"},
+            {:custom_path, "custom path is too long, please use a shorter one"}
+          ] do
+        changeset =
+          Trigger.changeset(
+            %Trigger{},
+            Map.put(%{type: :webhook}, field, String.duplicate("a", 300))
+          )
+
+        assert errors_on(changeset)[field] == [message],
+               "expected #{field} to reject an over-long value"
+      end
+    end
+
+    test "an over-long cron_expression is a changeset error, not a 22001" do
+      # The third field on the same cast/3, same varchar(255), and the only one
+      # that had no guard. Crontab parses this happily, so the changeset said
+      # valid? and the insert raised. Reachable through POST /api/provision.
+      expression = "*/1 " <> String.duplicate("1,", 130) <> "1 * * *"
+      assert String.length(expression) > 255
+
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :cron,
+          cron_expression: expression
+        })
+
+      assert errors_on(changeset)[:cron_expression] == [
+               "cron expression is too long, please use a shorter one"
+             ]
+    end
+
+    test "an ordinary cron_expression is untouched" do
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :cron,
+          cron_expression: "0 23 * * *"
+        })
+
+      refute errors_on(changeset)[:cron_expression]
+    end
+
+    test "a comment short in graphemes but too wide for the column is rejected" do
+      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :webhook,
+          comment: String.duplicate(family, 200)
+        })
+
+      assert errors_on(changeset)[:comment] == [
+               "comment is too long, please use a shorter one"
+             ]
+    end
+
+    test "a comment may hold newlines and tabs" do
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :webhook,
+          comment: "line one\nline\ttwo"
+        })
+
+      refute errors_on(changeset)[:comment]
+    end
+  end
+
   describe "synchronous?/1" do
     test "returns true for :after_completion" do
       assert Trigger.synchronous?(%Trigger{webhook_reply: :after_completion})

@@ -193,7 +193,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             >
               <Common.wrapper_tooltip
                 id={"workflow-name-#{@work_order.id}"}
-                tooltip={"#{@workflow_name}<br/><span class=\"text-xs text-gray-500\">Click to view</span>"}
+                allow_html={true}
+                tooltip={"#{escape_html(@workflow_name)}<br/><span class=\"text-xs text-gray-500\">Click to view</span>"}
               >
                 <span
                   class="truncate text-gray-900 workflow-name hover:text-primary-600 cursor-pointer"
@@ -471,6 +472,14 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       </span>
     <% end %>
     """
+  end
+
+  # This tooltip is one of the few that renders as HTML, because it carries its
+  # own <br/> and a styled hint. Anything interpolated into it therefore has to
+  # be escaped by hand: a workflow name is user input and may hold any
+  # character, including markup.
+  defp escape_html(value) do
+    value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
   end
 
   defp wo_dataclip_available?(work_order) do

@@ -57,6 +57,16 @@ defmodule Lightning.Workflows.Triggers.KafkaConfiguration do
     ])
     |> validate_length(:hosts, min: 1)
     |> validate_length(:topics, min: 1)
+    # Both are copied into the workflow_snapshots.triggers jsonb, which cannot
+    # hold a NUL anywhere inside it (#4893).
+    |> Lightning.Validators.validate_no_null_bytes_deep(
+      :hosts,
+      "hosts can't contain a null byte"
+    )
+    |> Lightning.Validators.validate_no_null_bytes_deep(
+      :topics,
+      "topics can't contain a null byte"
+    )
     |> validate_initial_offset_reset_policy()
     |> set_group_id_if_required()
     |> validate_sasl_credentials()

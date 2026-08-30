@@ -6,6 +6,54 @@ defmodule Lightning.Workflows.Triggers.KafkaConfigurationTest do
 
   import Mock
 
+  describe "null bytes in hosts and topics" do
+    # Both are copied into the workflow_snapshots.triggers jsonb, which cannot
+    # hold a NUL anywhere inside it (#4893). These guards shipped with no test
+    # at all: deleting them left the whole suite green.
+    defp kafka_changeset(attrs) do
+      KafkaConfiguration.changeset(
+        %KafkaConfiguration{},
+        Map.merge(
+          %{
+            hosts: [["host1", "9092"]],
+            topics: ["topic"],
+            connect_timeout: 30,
+            initial_offset_reset_policy: "earliest"
+          },
+          attrs
+        )
+      )
+    end
+
+    test "a NUL in a host is a changeset error, not a jsonb crash" do
+      changeset =
+        kafka_changeset(%{hosts: [["host1", "9092"], ["ba\u{0000}d", "9093"]]})
+
+      assert errors_on(changeset)[:hosts] == [
+               "hosts can't contain a null byte"
+             ]
+    end
+
+    test "a NUL in a topic is a changeset error, not a jsonb crash" do
+      changeset = kafka_changeset(%{topics: ["ok", "ba\u{0000}d"]})
+
+      assert errors_on(changeset)[:topics] == [
+               "topics can't contain a null byte"
+             ]
+    end
+
+    test "ordinary hosts and topics are untouched" do
+      changeset =
+        kafka_changeset(%{
+          hosts: [["host-1.example.com", "9092"]],
+          topics: ["orders", "patients-確認"]
+        })
+
+      refute errors_on(changeset)[:hosts]
+      refute errors_on(changeset)[:topics]
+    end
+  end
+
   describe "generate_hosts_string/1" do
     test "adds hosts_string change to changeset" do
       changeset =

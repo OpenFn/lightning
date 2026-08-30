@@ -11,6 +11,7 @@ defmodule Lightning.VersionControl do
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Extensions.UsageLimiting
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.VersionControl.Audit
   alias Lightning.VersionControl.Events
@@ -135,10 +136,30 @@ defmodule Lightning.VersionControl do
     Repo.get_by(ProjectRepoConnection, access_token: token)
   end
 
+  @doc """
+  Fires the GitHub Action that pulls the project spec and commits it.
+
+  The export runs here first and its result is thrown away. That looks
+  wasteful, and it is the point: the Action fetches
+  `/api/provision/:id.yaml`, and if that returns a 400 the failure lands in a
+  GitHub Actions log Lightning cannot read, so the user sees a sync that failed
+  with no reason. Two entities whose names collide once hyphenated now refuse
+  the whole export (`Lightning.ExportUtils.DuplicateKeyError`), which is a
+  failure this branch made loud on a path where the loudness reached nobody.
+
+  It calls the real export rather than a separate collision check on purpose.
+  A second copy of the key-derivation rule here would drift from
+  `put_identity_key!` and `ensure_unique_job_keys!` the first time either
+  moved, and divergent copies of that rule are the whole reason #4577 existed.
+
+  The cost is one extra spec generation on a successful sync, measured at
+  0.13ms over a 66KB production spec with 88 names, against a round trip to
+  GitHub.
+  """
   @spec initiate_sync(
           repo_connection :: ProjectRepoConnection.t(),
           commit_message :: String.t()
-        ) :: :ok | {:error, UsageLimiting.message() | map()}
+        ) :: :ok | {:error, UsageLimiting.message() | map() | binary()}
   def initiate_sync(repo_connection, commit_message) do
     with :ok <-
            VersionControlUsageLimiter.limit_github_sync(
@@ -146,6 +167,12 @@ defmodule Lightning.VersionControl do
            ),
          snapshots <-
            list_snapshots_for_project(repo_connection),
+         {:ok, _spec} <-
+           Projects.export_project(
+             :yaml,
+             repo_connection.project_id,
+             snapshot_ids_for_export(snapshots)
+           ),
          {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
@@ -184,6 +211,12 @@ defmodule Lightning.VersionControl do
 
     Repo.all(current_query) |> Enum.reverse()
   end
+
+  # Mirrors maybe_add_snapshots/2 below: an empty list means the Action fetches
+  # the current workflows rather than a set of snapshots, so the pre-flight has
+  # to ask for the same spec the Action will.
+  defp snapshot_ids_for_export([]), do: nil
+  defp snapshot_ids_for_export(snapshot_ids), do: snapshot_ids
 
   defp maybe_add_snapshots(inputs, snapshot_ids) do
     if Enum.empty?(snapshot_ids) do
