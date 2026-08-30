@@ -273,6 +273,7 @@ defmodule Lightning.WorkflowVersions do
 
     trigger_keys = [
       :type,
+      :custom_path,
       :cron_expression,
       :enabled,
       :webhook_reply,

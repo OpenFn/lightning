@@ -401,6 +401,37 @@ defmodule Lightning.WorkflowVersionsTest do
       assert Regex.match?(~r/^[a-f0-9]{12}$/, hash1)
     end
 
+    test "a webhook custom path moves the hash, and no path leaves it alone" do
+      workflow = insert(:workflow, name: "Test")
+
+      trigger =
+        insert(:trigger, workflow: workflow, type: :webhook, custom_path: nil)
+
+      insert(:job, workflow: workflow, name: "Job A", body: "code")
+
+      without_path =
+        workflow |> Repo.preload([:triggers, :jobs, :edges], force: true)
+
+      # A nil serialises to "" and the parts are concatenated, so hashing the
+      # key costs nothing for the workflows that have no path. @openfn/project
+      # skips undefined for the same reason, which keeps the two sides equal.
+      assert WorkflowVersions.canonical_form(without_path) ==
+               "Testtruewebhookbefore_start@openfn/language-common@latestcodeJob A"
+
+      Repo.update_all(
+        from(x in Lightning.Workflows.Trigger, where: x.id == ^trigger.id),
+        set: [custom_path: "facility-001"]
+      )
+
+      with_path =
+        workflow |> Repo.preload([:triggers, :jobs, :edges], force: true)
+
+      assert WorkflowVersions.canonical_form(with_path) =~ "facility-001"
+
+      refute WorkflowVersions.generate_hash(without_path) ==
+               WorkflowVersions.generate_hash(with_path)
+    end
+
     test "generates different hashes for different workflow structures" do
       project = insert(:project)
 
