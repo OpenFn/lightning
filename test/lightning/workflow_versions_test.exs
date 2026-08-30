@@ -432,6 +432,57 @@ defmodule Lightning.WorkflowVersionsTest do
                WorkflowVersions.generate_hash(with_path)
     end
 
+    test "a path the app would not export is not hashed" do
+      # `ProvisioningJSON` drops a pre-migration path, so the CLI never sees
+      # one. Hashing it would leave the two disagreeing on every pull, forever,
+      # for exactly the rows the grandfathering exists to keep working.
+      workflow = insert(:workflow, name: "Test")
+
+      trigger =
+        insert(:trigger, workflow: workflow, type: :webhook, custom_path: nil)
+
+      insert(:job, workflow: workflow, name: "Job A", body: "code")
+
+      pathless = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      expected = WorkflowVersions.generate_hash(pathless)
+
+      Repo.update_all(
+        from(x in Lightning.Workflows.Trigger, where: x.id == ^trigger.id),
+        set: [custom_path: "Fhir.Patient"]
+      )
+
+      legacy = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+
+      assert WorkflowVersions.generate_hash(legacy) == expected
+    end
+
+    test "a path on a cron trigger is not hashed" do
+      # It never served a URL, so it is not workflow content. Left over from
+      # before the column was validated.
+      workflow = insert(:workflow, name: "Test")
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :cron,
+          cron_expression: "0 0 * * *"
+        )
+
+      insert(:job, workflow: workflow, name: "Job A", body: "code")
+
+      pathless = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+      expected = WorkflowVersions.generate_hash(pathless)
+
+      Repo.update_all(
+        from(x in Lightning.Workflows.Trigger, where: x.id == ^trigger.id),
+        set: [custom_path: "old-name"]
+      )
+
+      stale = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
+
+      assert WorkflowVersions.generate_hash(stale) == expected
+    end
+
     test "generates different hashes for different workflow structures" do
       project = insert(:project)
 
