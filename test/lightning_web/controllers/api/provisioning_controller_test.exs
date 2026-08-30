@@ -1001,6 +1001,49 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     end
   end
 
+  describe "as_json/1 and a trigger's custom path" do
+    setup do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      trigger =
+        insert(:trigger, type: :webhook, workflow: workflow, custom_path: nil)
+
+      %{trigger: trigger, workflow: workflow}
+    end
+
+    defp rendered_trigger(trigger, path) do
+      Lightning.Repo.update_all(
+        from(t in Lightning.Workflows.Trigger, where: t.id == ^trigger.id),
+        set: [custom_path: path]
+      )
+
+      trigger
+      |> Lightning.Repo.reload!()
+      |> ProvisioningJSON.as_json()
+    end
+
+    test "is rendered when it is one the server would accept", %{
+      trigger: trigger
+    } do
+      assert %{custom_path: "facility-001"} =
+               rendered_trigger(trigger, "facility-001")
+    end
+
+    test "is dropped when it predates the naming rules", %{trigger: trigger} do
+      # Deploying this document into another project would fail validation and
+      # take the whole import with it.
+      refute Map.has_key?(
+               rendered_trigger(trigger, "some/legacy/path"),
+               :custom_path
+             )
+    end
+
+    test "is absent when there is none", %{trigger: trigger} do
+      refute Map.has_key?(rendered_trigger(trigger, nil), :custom_path)
+    end
+  end
+
   describe "post (with an API token)" do
     setup [:assign_bearer_for_api]
 

@@ -1,6 +1,8 @@
 defmodule Lightning.ProjectsTest do
   use Lightning.DataCase, async: true
 
+  import Ecto.Query
+
   import Lightning.AccountsFixtures
   import Lightning.Factories
   import Lightning.ProjectsFixtures
@@ -1226,6 +1228,60 @@ defmodule Lightning.ProjectsTest do
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
       assert generated_yaml == expected_yaml
+    end
+
+    test "includes a webhook's custom path, and omits it when unset" do
+      project = insert(:project, name: "et-emr")
+      workflow = insert(:workflow, project: project, name: "facility 1")
+
+      insert(:trigger,
+        workflow: workflow,
+        type: :webhook,
+        enabled: true,
+        custom_path: "et-emr-facility-001"
+      )
+
+      assert {:ok, yaml} = Projects.export_project(:yaml, project.id)
+      assert yaml =~ "custom_path: 'et-emr-facility-001'"
+
+      bare_project = insert(:project, name: "bare")
+      bare_workflow = insert(:workflow, project: bare_project, name: "w")
+      insert(:trigger, workflow: bare_workflow, type: :webhook, enabled: true)
+
+      assert {:ok, bare_yaml} = Projects.export_project(:yaml, bare_project.id)
+      refute bare_yaml =~ "custom_path"
+    end
+
+    test "quotes an all-digit path so it survives a round trip" do
+      project = insert(:project, name: "digits")
+      workflow = insert(:workflow, project: project, name: "w")
+
+      insert(:trigger,
+        workflow: workflow,
+        type: :webhook,
+        enabled: true,
+        custom_path: "12345"
+      )
+
+      assert {:ok, yaml} = Projects.export_project(:yaml, project.id)
+
+      # Unquoted it parses back as an integer and the whole deploy fails.
+      assert yaml =~ "custom_path: '12345'"
+    end
+
+    test "omits a legacy path that would fail a deploy elsewhere" do
+      project = insert(:project, name: "legacy")
+      workflow = insert(:workflow, project: project, name: "w")
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      {1, _} =
+        Lightning.Repo.update_all(
+          from(t in Lightning.Workflows.Trigger, where: t.id == ^trigger.id),
+          set: [custom_path: "orders.v1"]
+        )
+
+      assert {:ok, yaml} = Projects.export_project(:yaml, project.id)
+      refute yaml =~ "orders.v1"
     end
 
     test "adds quotes to values with special charaters" do

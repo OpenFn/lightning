@@ -34,6 +34,7 @@ defmodule Lightning.ExportUtils do
     job: [:name, :adaptor, :credential, :globals, :body],
     trigger: [
       :type,
+      :custom_path,
       :webhook_reply,
       :webhook_response_config,
       :cron_expression,
@@ -127,8 +128,21 @@ defmodule Lightning.ExportUtils do
 
       :webhook ->
         base
+        |> maybe_put_custom_path(trigger.custom_path)
         |> maybe_put_webhook_reply(trigger.webhook_reply)
         |> maybe_put_webhook_response_config(trigger.webhook_response_config)
+    end
+  end
+
+  defp maybe_put_custom_path(map, nil), do: map
+
+  defp maybe_put_custom_path(map, custom_path) do
+    # A pre-migration path would fail validation on deploy elsewhere and take
+    # the whole run with it.
+    if Lightning.Workflows.Trigger.valid_custom_path?(custom_path) do
+      Map.put(map, :custom_path, custom_path)
+    else
+      map
     end
   end
 
@@ -246,6 +260,10 @@ defmodule Lightning.ExportUtils do
         "#{k}: '#{v}'"
 
       :cron_expression ->
+        "#{k}: '#{v}'"
+
+      # Quoted, or an all-digit path round trips as an integer.
+      :custom_path ->
         "#{k}: '#{v}'"
 
       :condition_expression ->
