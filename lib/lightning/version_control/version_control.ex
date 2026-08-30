@@ -152,9 +152,10 @@ defmodule Lightning.VersionControl do
   `put_identity_key!` and `ensure_unique_job_keys!` the first time either
   moved, and divergent copies of that rule are the whole reason #4577 existed.
 
-  The cost is one extra spec generation on a successful sync, measured at
-  0.13ms over a 66KB production spec with 88 names, against a round trip to
-  GitHub.
+  The cost is one extra spec generation on a successful sync, against a round
+  trip to GitHub. That is the preload and the workflow queries as well as the
+  encode, not the 0.13ms the encode alone takes on a 66KB production spec, so
+  read it as a second full export rather than as free.
   """
   @spec initiate_sync(
           repo_connection :: ProjectRepoConnection.t(),

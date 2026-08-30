@@ -6160,6 +6160,103 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "reconnecting a project whose names collide says so, rather than blaming GitHub access",
+         %{conn: conn} do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      # Both hyphenate to `My-Flow`, so the export pre-flight inside
+      # initiate_sync/2 refuses. Snapshotted, because the sync exports the
+      # snapshot set rather than the live workflows.
+      for name <- ["My Flow", "My-Flow"] do
+        {:ok, _} =
+          insert(:simple_workflow, name: name, project: project)
+          |> Lightning.Workflows.Snapshot.create()
+      end
+
+      expected_installation = %{
+        "id" => repo_connection.github_installation_id,
+        "account" => %{"type" => "User", "login" => "username"}
+      }
+
+      expected_repo = %{
+        "full_name" => repo_connection.repo,
+        "default_branch" => "main"
+      }
+
+      expected_access_token_endpoint =
+        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
+
+      [{conn, user}] = setup_project_users(conn, project, [:admin])
+      set_valid_github_oauth_token!(user)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
+        %{url: "https://api.github.com/user/installations"}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{"installations" => [expected_installation]}
+           }}
+
+        %{url: ^expected_access_token_endpoint}, _opts ->
+          {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
+
+        %{url: "https://api.github.com/installation/repositories"}, _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
+
+        %{url: _url}, _opts ->
+          {:error, "something unexpected happened"}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      render_async(view)
+
+      # push pull.yml
+      expect_get_repo(repo_connection.repo, 200, expected_repo)
+      expect_create_blob(repo_connection.repo)
+      expect_get_commit(repo_connection.repo, expected_repo["default_branch"])
+      expect_create_tree(repo_connection.repo)
+      expect_create_commit(repo_connection.repo)
+      expect_update_ref(repo_connection.repo, expected_repo["default_branch"])
+
+      # push deploy.yml + config.json
+      expect_create_blob(repo_connection.repo)
+      expect_create_blob(repo_connection.repo)
+      expect_get_commit(repo_connection.repo, repo_connection.branch)
+      expect_create_tree(repo_connection.repo)
+      expect_create_commit(repo_connection.repo)
+      expect_update_ref(repo_connection.repo, repo_connection.branch)
+
+      # write secret
+      expect_get_public_key(repo_connection.repo)
+      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
+      expect_create_repo_secret(repo_connection.repo, secret_name)
+
+      # No dispatch is mocked on purpose: the pre-flight refuses before any
+      # sync call, so verify_on_exit! also asserts we never fired one.
+
+      view
+      |> form("#reconnect-project-form")
+      |> render_submit(
+        connection: %{"sync_direction" => "pull", "accept" => "true"}
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+      assert flash["error"] =~ "two workflows in this project"
+      assert flash["error"] =~ ~s("My Flow")
+      assert flash["error"] =~ ~s("My-Flow")
+    end
+
     test "authorized users get an error when reconnecting if the usage limiter returns an error",
          %{conn: conn} do
       %{id: project_id} = project = insert(:project)
