@@ -2,13 +2,8 @@
  * The one rule for job and workflow names, shared by every place on the client
  * that checks one.
  *
- * A name may contain anything except a control character: C0 (U+0000-U+001F),
- * DEL (U+007F), C1 (U+0080-U+009F, where NEL lives), the two line separators
- * U+2028 and U+2029, and the two non-characters U+FFFE and U+FFFF. Letters and
- * marks from any script, punctuation, symbols, emoji, slashes, colons, quotes
- * and apostrophes are all fine.
- *
- * U+2028 and U+2029 are line breaks in YAML 1.1, so a name holding one makes a
+ * Anything except a control character. U+2028 and U+2029 are in the rejected
+ * set because they are line breaks in YAML 1.1, so a name holding one makes a
  * spec that some parsers reject and others read differently.
  *
  * This mirrors `Lightning.Validators.validate_name/3` in
@@ -45,12 +40,9 @@ export const NAME_TOO_WIDE_MESSAGE =
   'Name is too long, please use a shorter one.';
 
 /**
- * The 25 Unicode White_Space characters, which is exactly what Elixir's
- * `String.trim/1` strips. JS `.trim()` is not that set in either direction: it
- * leaves U+0085 (NEL), which Elixir strips, and it eats U+FEFF, which Elixir
- * keeps. Both mattered. The first made the client reject a name the server
- * would have accepted, and the second silently rewrote a name the server had
- * already stored.
+ * The 25 Unicode White_Space characters, which is what Elixir's `String.trim/1`
+ * strips. JS `.trim()` differs in both directions: it leaves U+0085, which
+ * Elixir strips, and eats U+FEFF, which Elixir keeps.
  */
 const TRIM_CHARS =
   '\u0009\u000a\u000b\u000c\u000d\u0020\u0085\u00a0\u1680\u2000\u2001' +
@@ -138,14 +130,10 @@ export const graphemeLength = (value: string): number => {
 };
 
 /**
- * The one place a grapheme length decision is made, so the one place that has
- * to degrade safely. Without a Segmenter it says nothing and lets the server
- * answer, rather than guessing high and blocking a legal value in the browser
- * for a reason the user cannot see.
- *
- * Call this rather than `graphemeLength` directly. `graphemeLength` throws when
- * there is no Segmenter, and a throw inside a Zod `.refine()` escapes
- * `safeParse` as an exception instead of becoming a validation error.
+ * Call this rather than `graphemeLength`, which throws without a Segmenter, and
+ * a throw inside a Zod `.refine()` escapes `safeParse` as an exception instead
+ * of becoming a validation error. Without a Segmenter this says nothing and
+ * lets the server answer.
  */
 export const exceedsGraphemeCap = (value: string, max: number): boolean =>
   segmenter !== undefined && graphemeLength(value) > max;
@@ -153,7 +141,6 @@ export const exceedsGraphemeCap = (value: string, max: number): boolean =>
 export const isNameTooLong = (value: string): boolean =>
   exceedsGraphemeCap(value, NAME_MAX_LENGTH);
 
-/** Codepoints, which is the unit the column is measured in. */
 export const codepointLength = (value: string): number =>
   Array.from(value).length;
 
