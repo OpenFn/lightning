@@ -41,6 +41,24 @@ defmodule Lightning.CollectionsTest do
              ]
     end
 
+    test "a value short in graphemes but too wide for the column is rejected" do
+      collection = insert(:collection)
+      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+
+      # 200_000 graphemes, which clears the 1_000_000 grapheme cap, but
+      # 1_400_000 codepoints, which is what varchar(1000000) counts.
+      changeset =
+        Item.changeset(%Item{}, %{
+          collection_id: collection.id,
+          key: "k",
+          value: String.duplicate(family, 200_000)
+        })
+
+      assert errors_on(changeset)[:value] == [
+               "value is too long, please use a shorter one"
+             ]
+    end
+
     test "a key at the column width is accepted" do
       collection = insert(:collection)
 
