@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-E3E71881.js"></script>
+    <script defer src="dist/sidebar_items-DDA61388.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -173,7 +173,7 @@ It verifies the presence of correct API keys or Basic Authentication credentials
       <h1 class="signature" translate="no">call(conn, action)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/plugs/webhook_auth.ex#L42" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/plugs/webhook_auth.ex#L43" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -190,8 +190,9 @@ It verifies the presence of correct API keys or Basic Authentication credentials
 
 <p>Handles webhook auth for <code class="inline">/i/:webhook</code> requests.</p><ul><li><p><strong>CORS preflight:</strong> If the request method is <code class="inline">OPTIONS</code>, this plug is a no-op
 and returns the connection unchanged so upstream CORS handling can respond.
-This avoids doing DB lookups or emitting 401/404 on preflight requests.</p></li><li><p><strong>Auth flow:</strong> For non-<code class="inline">OPTIONS</code> requests whose path matches <code class="inline">/i/:webhook</code>,
-this plug:</p><ol><li>Looks up the webhook trigger (with <code class="inline">workflow</code> and <code class="inline">edges</code>) and its
+This avoids doing DB lookups or emitting 401/404 on preflight requests.</p></li><li><p><strong>Auth flow:</strong> For non-<code class="inline">OPTIONS</code> requests under <code class="inline">/i/</code>, this plug:</p><ol><li>Looks up the webhook trigger from the path segments, either
+<code class="inline">/i/&lt;trigger-uuid&gt;</code> or <code class="inline">/i/&lt;project-uuid&gt;/&lt;custom-path&gt;</code>, (with
+<code class="inline">workflow</code> and <code class="inline">edges</code>) and its
 <code class="inline">webhook_auth_methods</code>, wrapped in <a href="Lightning.Retry.html#with_webhook_retry/2"><code class="inline">Lightning.Retry.with_webhook_retry/2</code></a>
 so transient DB errors are retried.</li><li>If the trigger is missing → responds <strong>404</strong> <code class="inline">{&quot;error&quot;:&quot;webhook_not_found&quot;}</code>.</li><li>If auth methods are configured:<ul><li>If credentials match → assigns <code class="inline">:trigger</code> and continues.</li><li>If credentials are present but wrong → responds <strong>404</strong> (hide existence).</li><li>If credentials are missing → responds <strong>401</strong>.</li></ul></li><li>If retries exhaust due to DB issues → responds <strong>503</strong> with <code class="inline">Retry-After</code>
 based on <code class="inline">WEBHOOK_RETRY_TIMEOUT_MS</code>.</li></ol></li></ul><p>Returns the (possibly halted) connection.</p>

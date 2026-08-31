@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-E3E71881.js"></script>
+    <script defer src="dist/sidebar_items-DDA61388.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -161,6 +161,16 @@ endpoint is called.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#custom_path_shape_error?/1" data-no-tooltip="" translate="no">custom_path_shape_error?(changeset)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Whether a rejected changeset failed only on the shape of its custom path.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#new/1" data-no-tooltip="" translate="no">new(attrs)</a>
 
       </div>
@@ -175,6 +185,16 @@ endpoint is called.</p>
 
         <div class="summary-synopsis"><p>Returns true if the trigger uses a synchronous webhook reply mode
 (i.e., the HTTP connection is held open waiting for a response).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#valid_custom_path?/1" data-no-tooltip="" translate="no">valid_custom_path?(path)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Whether a string is usable as a webhook's custom path.</p></div>
 
     </div>
 
@@ -235,6 +255,8 @@ endpoint is called.</p>
   id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   kafka_configuration: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  legacy_bare_path: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  project_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   type: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   webhook_auth_methods: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -300,7 +322,7 @@ endpoint is called.</p>
       <h1 class="signature" translate="no">cast_changeset(trigger, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L104" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L162" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -310,6 +332,36 @@ endpoint is called.</p>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="custom_path_shape_error?/1">
+
+  <div class="detail-header">
+    <a href="#custom_path_shape_error?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">custom_path_shape_error?(changeset)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L125" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> custom_path_shape_error?(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Whether a rejected changeset failed only on the shape of its custom path.</p><p>A duplicate or a missing project also report against <code class="inline">:custom_path</code>, and
+neither may be answered by inserting without the path, since the path would
+be written back afterwards.</p>
   </section>
 </section>
 <section class="detail" id="new/1">
@@ -322,7 +374,7 @@ endpoint is called.</p>
       <h1 class="signature" translate="no">new(attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L73" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L84" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -344,7 +396,7 @@ endpoint is called.</p>
       <h1 class="signature" translate="no">synchronous?(trigger)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L83" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L141" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -363,6 +415,34 @@ endpoint is called.</p>
 (i.e., the HTTP connection is held open waiting for a response).</p>
   </section>
 </section>
+<section class="detail" id="valid_custom_path?/1">
+
+  <div class="detail-header">
+    <a href="#valid_custom_path?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">valid_custom_path?(path)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L104" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> valid_custom_path?(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Whether a string is usable as a webhook's custom path.</p><p>Asked by anything that copies a path written before these rules existed.</p>
+  </section>
+</section>
 <section class="detail" id="validate/1">
 
   <div class="detail-header">
@@ -373,7 +453,7 @@ endpoint is called.</p>
       <h1 class="signature" translate="no">validate(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L119" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L177" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
