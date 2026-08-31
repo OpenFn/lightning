@@ -180,6 +180,11 @@ defmodule Lightning.Runs.Query do
     |> order_by([r], asc: r.priority, asc: r.inserted_at)
   end
 
+  @spec available_fifo() :: Ecto.Queryable.t()
+  def available_fifo do
+    from(r in Run, order_by: [asc: r.priority, asc: r.inserted_at])
+  end
+
   @doc """
   Query to return available runs that respect concurrency limits.
 

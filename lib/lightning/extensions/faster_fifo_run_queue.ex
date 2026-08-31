@@ -1,0 +1,25 @@
+defmodule Lightning.Extensions.FasterFifoRunQueue do
+  @moduledoc """
+  Allows adding, removing or claiming work to be executed by the Runtime.
+  """
+
+  @behaviour Lightning.Extensions.RunQueue
+
+  alias Ecto.Multi
+  alias Lightning.Repo
+  alias Lightning.Runs.Query
+  alias Lightning.Runs.Queue
+
+  @impl true
+  def enqueue(%Multi{} = multi), do: Repo.transaction(multi)
+
+  @impl true
+  def enqueue_many(%Multi{} = multi), do: Repo.transaction(multi)
+
+  @impl true
+  def claim(demand, worker_name, queues) do
+    fifo_runs_query = Query.available_fifo()
+
+    Queue.claim(demand, fifo_runs_query, worker_name, queues)
+  end
+end
