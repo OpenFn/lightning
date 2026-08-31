@@ -36,14 +36,17 @@ defmodule Lightning.Validators.Hex do
       iex> Lightning.Validators.Hex.valid?("xyz", 3)
       false
 
-      iex> Lightning.Validators.Hex.format()
-      ~r/^[0-9a-f]{12}$/
+  Compared by source: OTP 28 compiles a pattern to a reference, so two
+  identical regexes are never equal to each other.
 
-      iex> Lightning.Validators.Hex.format(8)
-      ~r/^[0-9a-f]{8}$/
+      iex> Lightning.Validators.Hex.format() |> Regex.source()
+      "^[0-9a-f]{12}$"
 
-      iex> Lightning.Validators.Hex.format(8..64, case: :any)
-      ~r/^[0-9A-Fa-f]{8,64}$/
+      iex> Lightning.Validators.Hex.format(8) |> Regex.source()
+      "^[0-9a-f]{8}$"
+
+      iex> Lightning.Validators.Hex.format(8..64, case: :any) |> Regex.source()
+      "^[0-9A-Fa-f]{8,64}$"
 
   ## Ecto usage
 

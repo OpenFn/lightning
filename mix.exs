@@ -14,6 +14,16 @@ defmodule Lightning.MixProject do
       aliases: aliases(),
       deps: deps(),
       dialyzer: [
+        # OTP 28's Dialyzer reworked opaque handling as a side effect of
+        # EEP-69 nominal types (OTP-19364). Elixir inlines `MapSet.new/0` at
+        # compile time, so the caller holds a concrete `%MapSet{map: %{}}`
+        # while the spec says the opaque `MapSet.internal(_)`. Every
+        # `Ecto.Multi` call downstream of that is then flagged: 62 warnings
+        # across 20 files here, all spurious. Ecto declined to change its
+        # internals (elixir-ecto/ecto#4708) and Elixir's own MapSet docs
+        # recommend this flag. Elixir 1.20 drops the opacity, so drop this
+        # with the 1.20 upgrade and see what is left.
+        flags: [:no_opaque],
         plt_add_apps: [:mix],
         plt_local_path: "priv/plts/",
         plt_core_path: "priv/plts/core.plt"
@@ -134,7 +144,7 @@ defmodule Lightning.MixProject do
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.12.0", only: :test},
       {:mint, "~> 1.0"},
-      {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
+      {:mix_test_watch, "~> 1.3", only: [:test, :dev], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},

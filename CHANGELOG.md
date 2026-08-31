@@ -15,6 +15,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27's Unicode normaliser
+  recomposes only at the start of a string, so a Bengali, Tamil, Malayalam or
+  Sinhala vowel came apart and never went back together, and a mark could be
+  reordered across a character meant to block it. OTP 28 fixes both. Nothing in
+  Lightning depended on the old behaviour, but names are about to.
+
 ### Added
 
 - Webhook triggers can be given a custom URL path, so an endpoint's URL is known

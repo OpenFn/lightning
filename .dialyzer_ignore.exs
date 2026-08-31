@@ -1,5 +1,7 @@
 [
-  {"lib/lightning/task_worker.ex", :call_with_opaque},
+  # `task_worker.ex` used to need a `:call_with_opaque` skip here. OTP 28
+  # renamed that category and `flags: [:no_opaque]` in mix.exs now covers it,
+  # so the entry became an Unnecessary Skip. Restore it if that flag goes.
   {"lib/lightning/auth_providers/well_known.ex", :invalid_contract},
   {"lib/mix/tasks/install_schemas.ex", :invalid_contract},
 
