@@ -994,10 +994,7 @@ defmodule Lightning.Projects.Sandboxes do
             end
         }
 
-        {:ok, sandbox_trigger} =
-          %Trigger{}
-          |> Trigger.changeset(sandbox_trigger_attrs)
-          |> Repo.insert()
+        {:ok, sandbox_trigger} = insert_sandbox_trigger(sandbox_trigger_attrs)
 
         if parent_trigger.webhook_auth_methods &&
              parent_trigger.webhook_auth_methods != [] do
@@ -1015,6 +1012,45 @@ defmodule Lightning.Projects.Sandboxes do
       end)
     end)
     |> Map.new()
+  end
+
+  # A parent can hold a pre-migration path the clone's changeset rejects. The
+  # clone is written without it and the value copied in directly. Verbatim
+  # matters: an empty clone would clear the parent's path on promote.
+  defp insert_sandbox_trigger(attrs) do
+    # `mode: :savepoint` so a DB-level failure leaves the retry below usable.
+    %Trigger{}
+    |> Trigger.changeset(attrs)
+    |> Repo.insert(mode: :savepoint)
+    |> case do
+      {:ok, trigger} ->
+        {:ok, trigger}
+
+      {:error, changeset} ->
+        # Only a format failure. The other two rules keyed to `:custom_path`,
+        # a duplicate and a missing project, must not end with the path being
+        # written back. Neither is reachable through a provision today.
+        if Trigger.custom_path_shape_error?(changeset) do
+          insert_with_legacy_custom_path(attrs)
+        else
+          {:error, changeset}
+        end
+    end
+  end
+
+  defp insert_with_legacy_custom_path(attrs) do
+    with {:ok, trigger} <-
+           %Trigger{}
+           |> Trigger.changeset(%{attrs | custom_path: nil})
+           |> Repo.insert() do
+      {1, _} =
+        Repo.update_all(
+          from(t in Trigger, where: t.id == ^trigger.id),
+          set: [custom_path: attrs.custom_path]
+        )
+
+      {:ok, %{trigger | custom_path: attrs.custom_path}}
+    end
   end
 
   defp clone_workflow_edges(sandbox, parent) do

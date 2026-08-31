@@ -225,4 +225,51 @@ describe('WebhookShowPanel', () => {
       });
     });
   });
+
+  describe('a path the server rejected', () => {
+    test('says so, since the wizard closed before the answer arrived', async () => {
+      const trigger = {
+        ...makeWebhookTrigger(),
+        custom_path: 'facility-001',
+        errors: {
+          custom_path: ['is already used by another workflow in this project'],
+        },
+      } as Workflow.Trigger;
+
+      await setup(trigger, createConnectedWorkflowStore(ydoc, []));
+
+      expect(
+        screen.getByText(/already used by another workflow/i)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/custom path was not saved/i)
+      ).toBeInTheDocument();
+    });
+
+    test('offers the generated URL, not the name the server refused', () => {
+      // The refused path is still in the Y.Doc, and for a duplicate it resolves
+      // to whichever workflow legitimately owns it. Offering it would hand out
+      // a URL that posts into the wrong workflow.
+      const trigger = {
+        ...makeWebhookTrigger(),
+        custom_path: 'facility-001',
+        errors: {
+          custom_path: ['is already used by another workflow in this project'],
+        },
+      } as Workflow.Trigger;
+
+      return setup(trigger, createConnectedWorkflowStore(ydoc, [])).then(() => {
+        expect(
+          screen.getByText(`${window.location.origin}/i/${TRIGGER_ID}`)
+        ).toBeInTheDocument();
+        expect(screen.queryByText(/facility-001/)).toBeNull();
+      });
+    });
+
+    test('stays quiet when there is no error', async () => {
+      await setup(makeWebhookTrigger(), createConnectedWorkflowStore(ydoc, []));
+
+      expect(screen.queryByText(/custom path was not saved/i)).toBeNull();
+    });
+  });
 });

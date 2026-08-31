@@ -224,6 +224,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
           "kafka_configuration" => kafka_configuration,
           "cron_expression" => trigger.cron_expression,
           "cron_cursor_job_id" => trigger.cron_cursor_job_id,
+          "custom_path" => trigger.custom_path,
           "enabled" => trigger.enabled,
           "id" => trigger.id,
           "type" => trigger.type |> to_string(),
@@ -285,8 +286,8 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     |> Enum.map(fn trigger ->
       trigger
       |> Map.take(
-        ~w(id type enabled cron_expression cron_cursor_job_id webhook_reply
-           kafka_configuration webhook_response_config)
+        ~w(id type enabled cron_expression cron_cursor_job_id custom_path
+           webhook_reply kafka_configuration webhook_response_config)
       )
       |> normalize_kafka_configuration()
       |> normalize_webhook_response_config()

@@ -155,6 +155,129 @@ describe('convertWorkflowSpecToState', () => {
 
       expect(convertedSpec.triggers.webhook.enabled).toBe(false);
     });
+
+    test('keeps a webhook custom_path through the round trip', () => {
+      // This used to drop the name silently on the way back in.
+      const originalSpec = {
+        name: 'Test Workflow',
+        jobs: {
+          'job-1': {
+            name: 'Job 1',
+            adaptor: '@openfn/language-common@latest',
+            body: 'fn(state => state)',
+          },
+        },
+        triggers: {
+          webhook: {
+            type: 'webhook',
+            enabled: true,
+            custom_path: 'et-emr-facility-001',
+          },
+        },
+        edges: {
+          'webhook->job-1': {
+            source_trigger: 'webhook',
+            target_job: 'job-1',
+            condition_type: 'always',
+          },
+        },
+      };
+
+      const state = convertWorkflowSpecToState(originalSpec);
+      const convertedSpec = convertWorkflowStateToSpec(state, true);
+
+      expect(convertedSpec.triggers.webhook.custom_path).toBe(
+        'et-emr-facility-001'
+      );
+    });
+
+    test('strips custom_path when ids are stripped, as for a template', () => {
+      // A path is per-project identity, so a template must not carry one.
+      const originalSpec = {
+        name: 'Test Workflow',
+        jobs: {
+          'job-1': {
+            name: 'Job 1',
+            adaptor: '@openfn/language-common@latest',
+            body: 'fn(state => state)',
+          },
+        },
+        triggers: {
+          webhook: {
+            type: 'webhook',
+            enabled: true,
+            custom_path: 'et-emr-facility-001',
+          },
+        },
+        edges: {
+          'webhook->job-1': {
+            source_trigger: 'webhook',
+            target_job: 'job-1',
+            condition_type: 'always',
+          },
+        },
+      };
+
+      const state = convertWorkflowSpecToState(originalSpec);
+      const convertedSpec = convertWorkflowStateToSpec(state, false);
+
+      expect('custom_path' in convertedSpec.triggers.webhook).toBe(false);
+    });
+
+    test('does not export a path the server would reject on import', () => {
+      // A pre-migration path would fail the import it is deployed into.
+      const originalSpec = {
+        name: 'Test Workflow',
+        jobs: {
+          'job-1': {
+            name: 'Job 1',
+            adaptor: '@openfn/language-common@latest',
+            body: 'fn(state => state)',
+          },
+        },
+        triggers: {
+          webhook: { type: 'webhook', enabled: true, custom_path: 'Order.v1' },
+        },
+        edges: {
+          'webhook->job-1': {
+            source_trigger: 'webhook',
+            target_job: 'job-1',
+            condition_type: 'always',
+          },
+        },
+      };
+
+      const state = convertWorkflowSpecToState(originalSpec);
+      const convertedSpec = convertWorkflowStateToSpec(state, true);
+
+      expect('custom_path' in convertedSpec.triggers.webhook).toBe(false);
+    });
+
+    test('omits custom_path when there is none', () => {
+      const originalSpec = {
+        name: 'Test Workflow',
+        jobs: {
+          'job-1': {
+            name: 'Job 1',
+            adaptor: '@openfn/language-common@latest',
+            body: 'fn(state => state)',
+          },
+        },
+        triggers: { webhook: { type: 'webhook', enabled: true } },
+        edges: {
+          'webhook->job-1': {
+            source_trigger: 'webhook',
+            target_job: 'job-1',
+            condition_type: 'always',
+          },
+        },
+      };
+
+      const state = convertWorkflowSpecToState(originalSpec);
+      const convertedSpec = convertWorkflowStateToSpec(state, true);
+
+      expect('custom_path' in convertedSpec.triggers.webhook).toBe(false);
+    });
   });
 });
 

@@ -8,6 +8,7 @@ defmodule Lightning.Projects.MergeProjects do
 
   alias Lightning.Projects.Project
   alias Lightning.Repo
+  alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
   alias Lightning.WorkflowVersions
@@ -701,6 +702,9 @@ defmodule Lightning.Projects.MergeProjects do
               :type,
               :kafka_configuration
             ])
+            |> drop_unusable_custom_path(
+              Enum.find(target_triggers, &(&1.id == mapped_id))
+            )
             |> Map.put(:id, mapped_id)
             |> stringify_keys()
 
@@ -977,6 +981,7 @@ defmodule Lightning.Projects.MergeProjects do
           :type,
           :kafka_configuration
         ])
+        |> drop_unusable_custom_path()
         |> Map.put(:id, Map.fetch!(node_mappings, trigger.id))
         |> stringify_keys()
       end)
@@ -1117,4 +1122,30 @@ defmodule Lightning.Projects.MergeProjects do
       fn {_workflow_id, hash} -> hash end
     )
   end
+
+  # A pre-migration path can fail the changeset and take the whole merge with
+  # it, so the merged trigger falls back to its generated URL. A name another
+  # workflow in the target already holds is left to fail on the unique index,
+  # rather than dropped, since dropping it discards the name the user chose.
+  defp drop_unusable_custom_path(trigger, target \\ nil)
+
+  defp drop_unusable_custom_path(%{custom_path: nil} = trigger, _target),
+    do: trigger
+
+  defp drop_unusable_custom_path(%{custom_path: path} = trigger, target) do
+    cond do
+      Trigger.valid_custom_path?(path) ->
+        trigger
+
+      # The target already holds this value, so sending it is not a change.
+      # Dropping it would be, and would take a live URL off the target.
+      target && Map.get(target, :custom_path) == path ->
+        trigger
+
+      true ->
+        %{trigger | custom_path: nil}
+    end
+  end
+
+  defp drop_unusable_custom_path(trigger, _target), do: trigger
 end

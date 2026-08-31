@@ -75,6 +75,31 @@ defmodule Lightning.Projects.ProvisionerTest do
              }
     end
 
+    test "with server-owned trigger fields" do
+      %{body: body} = valid_document()
+
+      for field <- ["project_id", "legacy_bare_path"] do
+        tampered =
+          Map.update!(body, "workflows", fn workflows ->
+            Enum.map(workflows, fn workflow ->
+              Map.update!(workflow, "triggers", fn [trigger] ->
+                [Map.put(trigger, field, "anything")]
+              end)
+            end)
+          end)
+
+        changeset =
+          Provisioner.parse_document(%Lightning.Projects.Project{}, tampered)
+
+        refute changeset.valid?
+
+        assert %{workflows: [%{triggers: [%{base: [error]}]}]} =
+                 flatten_errors(changeset)
+
+        assert error == "extraneous parameters: #{field}"
+      end
+    end
+
     test "with sensitive kafka trigger fields" do
       %{body: body} = valid_document()
 

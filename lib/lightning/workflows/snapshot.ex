@@ -114,8 +114,15 @@ defmodule Lightning.Workflows.Snapshot do
   end
 
   @job_fields Lightning.Workflows.Job.__schema__(:fields) -- [:workflow_id]
+  # `project_id` is denormalised routing state rather than workflow content, and
+  # it is constant for a workflow, so it is excluded like `workflow_id`.
   @trigger_fields Lightning.Workflows.Trigger.__schema__(:fields) --
-                    [:workflow_id, :webhook_response_config]
+                    [
+                      :workflow_id,
+                      :project_id,
+                      :legacy_bare_path,
+                      :webhook_response_config
+                    ]
   @edge_fields Lightning.Workflows.Edge.__schema__(:fields) -- [:workflow_id]
 
   defp job_changeset(schema, params) do

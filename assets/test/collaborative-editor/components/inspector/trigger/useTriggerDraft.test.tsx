@@ -373,4 +373,177 @@ describe('useTriggerDraft', () => {
       expect(result.current.isDirty).toBe(false);
     });
   });
+
+  describe('custom path', () => {
+    test('refuses to commit a path the server would reject', async () => {
+      const { result } = renderDraft();
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: 'orders/intake' });
+      });
+
+      expect(result.current.validationError).toMatch(/highlighted field/i);
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: false });
+      expect(
+        workflowStore.getSnapshot().triggers[0]?.custom_path ?? null
+      ).toBeNull();
+    });
+
+    test('refuses a UUID as a path', async () => {
+      const { result } = renderDraft();
+
+      act(() => {
+        result.current.mergeDraft({
+          custom_path: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+        });
+      });
+
+      expect(result.current.validationError).toMatch(/highlighted field/i);
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: false });
+    });
+
+    test('a path left over from before the rules does not block other edits', async () => {
+      ydoc.getArray('triggers').get(0).set('custom_path', 'orders.v1');
+      const legacyTrigger = workflowStore.getSnapshot().triggers[0];
+
+      const { result } = renderHook(
+        () =>
+          useTriggerDraft(legacyTrigger, {
+            initialAuthMethodIds: [],
+            commitAuthMethods,
+          }),
+        { wrapper: createWrapper(workflowStore) }
+      );
+
+      act(() => {
+        result.current.mergeDraft({ webhook_reply: 'after_completion' });
+      });
+
+      expect(result.current.validationError).toBeNull();
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: true });
+    });
+
+    test('but touching that path still blocks the save', async () => {
+      ydoc.getArray('triggers').get(0).set('custom_path', 'orders.v1');
+      const legacyTrigger = workflowStore.getSnapshot().triggers[0];
+
+      const { result } = renderHook(
+        () =>
+          useTriggerDraft(legacyTrigger, {
+            initialAuthMethodIds: [],
+            commitAuthMethods,
+          }),
+        { wrapper: createWrapper(workflowStore) }
+      );
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: 'orders.v2' });
+      });
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: false });
+    });
+
+    test('refuses to save a name that derives to nothing', async () => {
+      // The regression the display-only fix missed: the field showed an error
+      // while commit still returned ok and wrote the clear.
+      ydoc.getArray('triggers').get(0).set('custom_path', 'facility-001');
+      const seeded = workflowStore.getSnapshot().triggers[0];
+
+      const { result } = renderHook(
+        () =>
+          useTriggerDraft(seeded, {
+            initialAuthMethodIds: [],
+            commitAuthMethods,
+          }),
+        { wrapper: createWrapper(workflowStore) }
+      );
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: '...' });
+      });
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: false });
+      expect(workflowStore.getSnapshot().triggers[0]?.custom_path).toBe(
+        'facility-001'
+      );
+    });
+
+    test('refuses to become a webhook on a path the server would reject', async () => {
+      // A path that meant nothing on a cron row becomes a live URL, and the
+      // server checks it then.
+      ydoc.getArray('triggers').get(0).set('type', 'cron');
+      ydoc.getArray('triggers').get(0).set('cron_expression', '0 0 * * *');
+      ydoc.getArray('triggers').get(0).set('custom_path', 'Orders.v1');
+      const cron = workflowStore.getSnapshot().triggers[0];
+
+      const { result } = renderHook(
+        () =>
+          useTriggerDraft(cron, {
+            initialAuthMethodIds: [],
+            commitAuthMethods,
+          }),
+        { wrapper: createWrapper(workflowStore) }
+      );
+
+      act(() => {
+        result.current.mergeDraft({
+          type: 'webhook',
+          cron_expression: null,
+          webhook_reply: 'before_start',
+        });
+      });
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: false });
+    });
+
+    test('commits a valid path', async () => {
+      const { result } = renderDraft();
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: 'facility-001' });
+      });
+
+      expect(result.current.validationError).toBeNull();
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: true });
+    });
+  });
 });

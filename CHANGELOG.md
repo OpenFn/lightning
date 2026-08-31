@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- Webhook triggers can be given a custom URL path, so an endpoint's URL is known
+  before it is deployed. A trigger with a path of `facility-001` in project
+  `abc-123` answers at `/i/abc-123/facility-001`. Set it in the trigger panel,
+  in `project.yaml`, or through the workflows API. Existing `/i/<trigger-id>`
+  URLs are unchanged. [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - The workflow title in the editor breadcrumbs is now clickable, returning to
   the root workflow editor view: it closes the full IDE (equivalent to its close
   button), closes any other open panel, deselects the current node, and drops

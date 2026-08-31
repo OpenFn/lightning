@@ -1,6 +1,7 @@
 import Ajv, { type ErrorObject } from 'ajv';
 import YAML from 'yaml';
 
+import { isValidCustomPath } from '../collaborative-editor/types/trigger';
 import type { Workflow } from '../collaborative-editor/types/workflow';
 import { randomUUID } from '../common';
 
@@ -11,6 +12,7 @@ import type {
   SpecEdge,
   SpecJob,
   SpecTrigger,
+  SpecWebhookTrigger,
   StateEdge,
   StateJob,
   StateTrigger,
@@ -81,6 +83,18 @@ export const convertWorkflowStateToSpec = (
     }
 
     if (trigger.type === 'webhook') {
+      const webhookDetails = triggerDetails as SpecWebhookTrigger;
+
+      // Per-project identity, so it goes with the ids when stripped for a
+      // template. And only one the server would accept, or the import fails.
+      if (
+        includeIds &&
+        trigger.custom_path &&
+        isValidCustomPath(trigger.custom_path)
+      ) {
+        webhookDetails.custom_path = trigger.custom_path;
+      }
+
       triggerDetails.webhook_reply = trigger.webhook_reply ?? null;
       const config = trigger.webhook_response_config;
       if (
@@ -197,6 +211,11 @@ export const convertWorkflowSpecToState = (
         id: uId,
         type: 'webhook',
         enabled,
+        // Spread, so an absent key stays absent and reads as "unchanged"
+        // rather than as a clear.
+        ...(specTrigger.custom_path !== undefined && {
+          custom_path: specTrigger.custom_path,
+        }),
         webhook_reply: specTrigger.webhook_reply,
         webhook_response_config: specTrigger.webhook_response_config ?? null,
       };
