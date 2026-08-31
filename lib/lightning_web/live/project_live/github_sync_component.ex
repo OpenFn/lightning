@@ -216,9 +216,12 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       %Tesla.Env{body: %{} = body} ->
         error_message(body)
 
-      # A plain string is ours, not GitHub's: the export pre-flight in
-      # initiate_sync/2 returns one naming both colliding entities. Pass it
-      # through rather than swallowing it in the generic message below.
+      # Usually ours. The export pre-flight in initiate_sync/2 fails with a
+      # plain string naming both colliding entities, and swallowing it in the
+      # generic message below would lose the two names to rename. Not
+      # exclusively ours, though: refresh_oauth_token/1 passes GitHub's body
+      # straight through, so a non-JSON response from the token endpoint lands
+      # here too, describing the user's own grant back to them.
       message when is_binary(message) ->
         message
 
