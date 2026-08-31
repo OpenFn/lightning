@@ -231,6 +231,9 @@ defmodule Lightning.Workflows.JobTest do
     end
 
     test "accepts well-formed, registry-listed adaptor strings" do
+      insert(:adaptor, name: "@openfn/language-common")
+      insert(:adaptor, name: "@openfn/language-http")
+
       [
         "@openfn/language-common@latest",
         "@openfn/language-http@1.2.3",
@@ -239,33 +242,34 @@ defmodule Lightning.Workflows.JobTest do
         "@openfn/language-common"
       ]
       |> Enum.each(fn adaptor ->
-        errors = Job.changeset(%Job{}, %{adaptor: adaptor}) |> errors_on()
+        errors =
+          Job.changeset(%Job{}, %{
+            name: "job",
+            body: "fn(state => state)",
+            adaptor: adaptor
+          })
+          |> errors_on()
+
         refute errors[:adaptor], "expected #{inspect(adaptor)} to be accepted"
       end)
     end
 
-    test "accepts any well-formed adaptor when the catalogue has no rows for the active source" do
-      errors =
-        Job.changeset(%Job{}, %{
-          name: "job",
-          body: "fn(state => state)",
-          adaptor: "@openfn/language-totally-unseeded-xyz@1.0.0"
-        })
-        |> errors_on()
+    test "rejects an unrecognised adaptor whether or not the catalogue has rows for the active source" do
+      # `job.adaptor` reaches the worker's install step unfiltered, so an
+      # empty catalogue must permit nothing — not even an `@openfn/` name.
+      params = %{
+        name: "job",
+        body: "fn(state => state)",
+        adaptor: "@openfn/language-totally-unseeded-xyz@1.0.0"
+      }
 
-      refute errors[:adaptor]
-    end
+      assert Job.changeset(%Job{}, params) |> errors_on() |> Map.get(:adaptor) ==
+               ["is not a recognised adaptor"]
 
-    test "rejects a well-formed, non-@openfn adaptor when the catalogue has no rows for the active source" do
-      errors =
-        Job.changeset(%Job{}, %{
-          name: "job",
-          body: "fn(state => state)",
-          adaptor: "some-unrelated-npm-package@1.0.0"
-        })
-        |> errors_on()
+      insert(:adaptor, name: "@openfn/language-http")
 
-      assert errors[:adaptor] == ["is not a recognised adaptor"]
+      assert Job.changeset(%Job{}, params) |> errors_on() |> Map.get(:adaptor) ==
+               ["is not a recognised adaptor"]
     end
 
     test "rejects a well-formed adaptor that is not in the registry" do

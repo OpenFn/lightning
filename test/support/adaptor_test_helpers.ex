@@ -7,7 +7,11 @@ defmodule Lightning.AdaptorTestHelpers do
   application and is shared across the test suite: its Cachex persists
   across the `Ecto.Adapters.SQL.Sandbox` boundary, so tests that seed
   rows via the `:adaptor` factory (`insert(:adaptor, attrs)`) must
-  clear the cache to make them visible to facade reads.
+  clear the cache to make them visible to Cachex-backed facade reads
+  (`packages/1`, `schema/2`, `versions/2`, `icon/3`, via `Store`).
+  `get_adaptor/1` and `resolve_version/2` read `Repo` directly with no
+  Cachex in the path, so seeding for those (see `ensure_adaptor/1`
+  below) doesn't need a cache clear.
 
   For tests that run their own isolated supervisor instead of the
   production one, see `test/lightning/adaptors_test.exs` and
@@ -40,6 +44,28 @@ defmodule Lightning.AdaptorTestHelpers do
     row = insert(:adaptor, attrs)
     clear_global_adaptors_cache()
     row
+  end
+
+  @doc """
+  Seed the catalogue row an adaptor spec needs to clear
+  `Lightning.Workflows.Job`'s validation, unless it's already there.
+
+  Deliberately leaves the Cachex alone: the changeset check reads the DB
+  directly, and clearing a cache shared with other async tests would
+  disturb them.
+  """
+  @spec ensure_adaptor(String.t()) :: :ok
+  def ensure_adaptor(spec) when is_binary(spec) do
+    case Lightning.Adaptors.parse_spec(spec) do
+      {name, _version} when is_binary(name) ->
+        if is_nil(Lightning.Adaptors.get_adaptor(name)),
+          do: insert(:adaptor, name: name)
+
+        :ok
+
+      _ ->
+        raise ArgumentError, "not a well-formed adaptor spec: #{inspect(spec)}"
+    end
   end
 
   @doc """

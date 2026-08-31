@@ -17,9 +17,7 @@ defmodule Lightning.Workflows.Job do
   """
   use Lightning.Schema
 
-  alias Lightning.Adaptors.Config, as: AdaptorsConfig
-  alias Lightning.Adaptors.PackageName
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
+  alias Lightning.Adaptors
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.Scoping
@@ -131,9 +129,11 @@ defmodule Lightning.Workflows.Job do
 
   defp validate_adaptor(changeset) do
     changeset =
-      validate_format(changeset, :adaptor, PackageName.strict_format(),
-        message: "adaptor has invalid format"
-      )
+      validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
+        if Adaptors.valid_format?(adaptor),
+          do: [],
+          else: [adaptor: "adaptor has invalid format"]
+      end)
 
     if changeset.valid? do
       validate_known_adaptor(changeset)
@@ -142,32 +142,18 @@ defmodule Lightning.Workflows.Job do
     end
   end
 
+  # `job.adaptor` reaches the worker's install step unfiltered, so an
+  # adaptor missing from the catalogue is rejected here whatever its name
+  # — an empty catalogue permits nothing.
   defp validate_known_adaptor(changeset) do
     validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
-      if adaptor_known?(adaptor) do
+      with {name, _version} when is_binary(name) <- Adaptors.parse_spec(adaptor),
+           %Adaptors.Package{} <- Adaptors.get_adaptor(name) do
         []
       else
-        [adaptor: "is not a recognised adaptor"]
+        _ -> [adaptor: "is not a recognised adaptor"]
       end
     end)
-  end
-
-  # Unlike `Lightning.AdaptorService`'s install gate, an empty catalogue
-  # (e.g. before the Scheduler's first tick) does not reject an
-  # `@openfn/`-scoped name here, only non-@openfn ones.
-  defp adaptor_known?(adaptor) do
-    case Regex.run(PackageName.strict_format(), adaptor) do
-      [_, name | _] -> known_or_catalogue_empty?(name)
-      _ -> false
-    end
-  end
-
-  defp known_or_catalogue_empty?(name) do
-    source = AdaptorsConfig.current_source()
-
-    AdaptorsRepo.get_adaptor(name, source) != nil or
-      (String.starts_with?(name, "@openfn/") and
-         is_nil(AdaptorsRepo.max_checked_at(source)))
   end
 
   defp validate_keychain_credential_project_membership(changeset) do

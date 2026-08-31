@@ -1,26 +1,68 @@
 defmodule Lightning.Adaptors do
   @moduledoc """
-  Public facade for all adaptor metadata.
+  Public interface to the adaptor catalogue.
 
-  Delegates reads to `Lightning.Adaptors.Store`, refresh calls to
-  `Lightning.Adaptors.Scheduler`, and version resolution to
-  `Lightning.Adaptors.Repo`. `seed_from_file/2` owns the snapshot-loading
-  logic used by both `mix lightning.seed_adaptors_from_file` and
-  `Lightning.Release`.
+  ## Catalogue reads
+
+    * `packages/0,1` - every adaptor for the active source
+    * `versions/2` - published versions of one adaptor
+    * `get_adaptor/1` - one adaptor as a `Lightning.Adaptors.Package`,
+      or `nil`
+    * `catalogue/0` and `catalogue_stamp/0` - the full catalogue and its
+      ETag basis
+    * `schema/1,2` and `icon/2,3` - per-adaptor assets
+
+  ## Adaptor specs
+
+  An adaptor spec is the `"name@version"` string a job stores, where the
+  version may be a semver, `latest`, `local`, or absent.
+
+    * `parse_spec/1` - split a spec into `{name, version}`
+    * `valid_format?/1` - does a string match the strict spec format
+    * `resolve_version/2` - turn `latest`/`local` into a concrete version
+    * `to_wire/1` - render a spec for the worker's install step
+
+  ## Refreshing
+
+    * `refresh_now/0,1`, `refresh_package/1,2`, `refresh_icons/0,1`
+    * `seed_from_file/2` - populate the catalogue from a JSON snapshot,
+      used by `mix lightning.seed_adaptors_from_file` and
+      `Lightning.Release`
 
   Most functions come in a dual-arity shape: the zero-/single-arg form
   passes the compile-time default supervisor name `@sup`; the extra-arity
   form accepts an explicit supervisor name for test isolation.
-  `resolve_version/2`, `catalogue/0`, and `catalogue_stamp/0` are
-  exceptions — they read the global Repo directly, not a running
-  supervisor process, so there is nothing to swap for test isolation.
+  `get_adaptor/1`, `resolve_version/2`, `catalogue/0`, and
+  `catalogue_stamp/0` are exceptions — none of them go through `Store`'s
+  cache process. `get_adaptor/1` and `resolve_version/2` read the active
+  source from `Config.current_source/0` (a process-independent
+  `Application.get_env` read), so there's nothing to swap. `catalogue/0`
+  and `catalogue_stamp/0` read it from `AdaptorsSupervisor.source/1`
+  instead — a boot-time snapshot owned by a running supervisor — so
+  those two are only correct for `@sup`, the default supervisor.
   """
 
   alias Lightning.Adaptors.Config
+  alias Lightning.Adaptors.PackageName
   alias Lightning.Adaptors.Repo
   alias Lightning.Adaptors.Scheduler
   alias Lightning.Adaptors.Store
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
+
+  defmodule Package do
+    @moduledoc """
+    One catalogue adaptor, as seen by callers outside
+    `Lightning.Adaptors`. Not wire-serialised and not an `Ecto.Schema`.
+    """
+
+    @type t :: %__MODULE__{
+            name: String.t(),
+            source: :npm | :local,
+            latest_version: String.t() | nil
+          }
+
+    defstruct [:name, :source, :latest_version]
+  end
 
   @sup Lightning.Adaptors
 
@@ -64,6 +106,57 @@ defmodule Lightning.Adaptors do
   """
   @spec catalogue_stamp() :: {DateTime.t() | nil, non_neg_integer()}
   def catalogue_stamp, do: Repo.catalogue_stamp(AdaptorsSupervisor.source(@sup))
+
+  @doc """
+  One adaptor from the active source's catalogue, by bare package name.
+
+  Takes a name, not a `name@version` spec — use `parse_spec/1` first if
+  you have a spec. Returns `nil` when the catalogue has no such adaptor,
+  including when it is empty.
+  """
+  @spec get_adaptor(String.t()) :: Package.t() | nil
+  def get_adaptor(name) when is_binary(name) do
+    case Repo.get_adaptor(name, Config.current_source()) do
+      nil ->
+        nil
+
+      adaptor ->
+        %Package{
+          name: adaptor.name,
+          source: adaptor.source,
+          latest_version: adaptor.latest_version
+        }
+    end
+  end
+
+  @doc """
+  Split an adaptor spec into `{name, version}`, with `version` `nil` when
+  the spec carries none. Returns `{nil, nil}` for a string that isn't a
+  well-formed spec.
+  """
+  @spec parse_spec(String.t()) :: {String.t() | nil, String.t() | nil}
+  def parse_spec(spec) when is_binary(spec) do
+    case Regex.run(PackageName.strict_format(), spec) do
+      [_, name, version] -> {name, version}
+      [_, name] -> {name, nil}
+      _ -> {nil, nil}
+    end
+  end
+
+  @doc """
+  Whether a string is a well-formed adaptor spec: a package name plus an
+  optional `@version`, with no newlines or shell metacharacters.
+  """
+  @spec valid_format?(String.t()) :: boolean()
+  def valid_format?(spec) when is_binary(spec),
+    do: Regex.match?(PackageName.strict_format(), spec)
+
+  @doc """
+  Render an adaptor spec for the worker's install step, resolving
+  `latest` to a concrete version and preserving `local`.
+  """
+  @spec to_wire(String.t() | nil) :: String.t()
+  defdelegate to_wire(spec), to: PackageName
 
   @spec resolve_version(String.t(), String.t()) ::
           {:ok, String.t()} | {:error, :not_found}

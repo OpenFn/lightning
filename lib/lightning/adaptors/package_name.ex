@@ -7,8 +7,11 @@ defmodule Lightning.Adaptors.PackageName do
   parsing and wire recomposition, read through the `Lightning.Adaptors`
   facade.
 
-  `parse/1` splits `"name@version"` strings; `to_wire/1` resolves the
-  `latest` literal through `Lightning.Adaptors.resolve_version/2`,
+  `parse/1` splits `"name@version"` strings using the same strict,
+  anchored format `strict_format/0` validates against, so a spec that
+  reaches `to_wire/1` after passing changeset validation is guaranteed to
+  parse to the same name — never a truncated or re-derived one. `to_wire/1`
+  resolves the `latest` literal through `Lightning.Adaptors.resolve_version/2`,
   preserves `"name@local"` as a literal regardless of source, and emits
   `"name@local"` under a `:local` strategy source.
   """
@@ -16,21 +19,17 @@ defmodule Lightning.Adaptors.PackageName do
   alias Lightning.Adaptors
   alias Lightning.Adaptors.Config
 
-  @package_name_regex ~r/(@?[\/\d\n\w-]+)(?:@([\d\.\w-]+))?$/
-
   # Anchored with \A…\z (NOT ^…$, since $ matches before a trailing \n).
   # Accepts scoped (@scope/name) and unscoped names with an optional
   # @version (semver, prerelease, or the tokens `latest` / `local`);
-  # excludes newlines and shell metacharacters. For validating untrusted
-  # input (changeset formats, shell-out gates) — `parse/1`'s regex above is
-  # for splitting a string already accepted by this one.
+  # excludes newlines and shell metacharacters.
   @strict_format ~r{\A(@?[\w.-]+(?:/[\w.-]+)?)(?:@([\w.-]+))?\z}
 
   @doc """
   The strict, anchored package-name format: name plus optional `@version`,
-  rejecting embedded newlines and shell metacharacters. Shared by
-  `Lightning.Workflows.Job`'s changeset validation and
-  `Lightning.AdaptorService`'s install gate.
+  rejecting embedded newlines and shell metacharacters. Read through
+  `Lightning.Adaptors.valid_format?/1` and
+  `Lightning.Adaptors.parse_spec/1`.
   """
   @spec strict_format() :: Regex.t()
   def strict_format, do: @strict_format
@@ -40,9 +39,9 @@ defmodule Lightning.Adaptors.PackageName do
 
   @spec parse(String.t()) :: {String.t() | nil, String.t() | nil}
   def parse(package_name) when is_binary(package_name) do
-    case Regex.run(@package_name_regex, package_name) do
+    case Regex.run(@strict_format, package_name) do
       [_, name, version] -> {name, version}
-      [_, _name] -> {package_name, nil}
+      [_, name] -> {name, nil}
       _ -> {nil, nil}
     end
   end
