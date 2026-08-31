@@ -55,7 +55,8 @@ export const HealthContent = ({
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">{workflowName}</h1>
         <p className="text-sm text-gray-500">
-          Last {days} days · {total.toLocaleString()} work orders
+          Last {days} day{days === 1 ? '' : 's'} · {total.toLocaleString()} work
+          order{total === 1 ? '' : 's'}
         </p>
       </div>
 
@@ -63,7 +64,7 @@ export const HealthContent = ({
         <h2 className="mb-4 text-sm font-medium text-gray-900">Outcomes</h2>
         <OutcomesDonut
           counts={outcomes.counts}
-          emptyMessage={`No completed work orders in the last ${days} days`}
+          emptyMessage={`No completed work orders in the last ${days} day${days === 1 ? '' : 's'}`}
         />
       </div>
     </div>
