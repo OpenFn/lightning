@@ -268,6 +268,50 @@ defmodule Lightning.Projects.ProvisionerTest do
   end
 
   describe "import_document/2 with a new project" do
+    test "finds a credential named in a different normal form" do
+      user = insert(:user)
+
+      # The stored name went through validate_name so it is NFC. A spec written
+      # by a client that composes differently asks for the same name in NFD.
+      # The two render identically, so a byte comparison fails with an error
+      # naming a credential the user can see.
+      nfc = "Vérifier"
+      nfd = "Ve" <> <<0x0301::utf8>> <> "rifier"
+      refute nfc == nfd
+
+      credential = insert(:credential, name: nfc, user: user)
+      assert credential.name == nfc
+
+      %{body: %{"workflows" => [workflow]} = body, project_id: _} =
+        valid_document()
+
+      project_credential_id = Ecto.UUID.generate()
+
+      body_with_credentials =
+        body
+        |> Map.put("project_credentials", [
+          %{
+            "id" => project_credential_id,
+            "name" => nfd,
+            "owner" => user.email
+          }
+        ])
+        |> Map.put("workflows", [workflow])
+
+      Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _a, _c ->
+        :ok
+      end)
+
+      assert {:ok, %{project_credentials: [project_credential]}} =
+               Provisioner.import_document(
+                 %Lightning.Projects.Project{},
+                 user,
+                 body_with_credentials
+               )
+
+      assert project_credential.credential_id == credential.id
+    end
+
     test "with valid data" do
       Mox.verify_on_exit!()
       %{id: user_id} = user = insert(:user)
