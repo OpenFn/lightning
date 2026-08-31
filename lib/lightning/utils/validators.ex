@@ -133,6 +133,19 @@ defmodule Lightning.Validators do
   end
 
   @doc """
+  Folds a name to the form used when matching it against a stored one.
+
+  Only NFC and a trim, which is what `validate_name/3` applies on save, so a
+  caller comparing a name that never went through a changeset against one that
+  did is comparing like with like. Not case folding: names are case-sensitive.
+  """
+  @spec normalize_name_for_match(term()) :: term()
+  def normalize_name_for_match(value) when is_binary(value),
+    do: normalize_name(value)
+
+  def normalize_name_for_match(value), do: value
+
+  @doc """
   Rejects a name that will not fit the column it is stored in.
 
   Postgres counts a varchar in codepoints; the product caps above this one
