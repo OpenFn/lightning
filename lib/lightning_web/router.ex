@@ -250,6 +250,7 @@ defmodule LightningWeb.Router do
         live "/w", WorkflowLive.Index, :index
         live "/w/new", WorkflowLive.Collaborate, :new
         live "/w/:id", WorkflowLive.Collaborate, :edit
+        live "/w/:id/health", WorkflowLive.Health, :show
 
         # Redirect retired legacy editor URLs to the collaborative editor,
         # preserving the query string. The collaborative editor uses different

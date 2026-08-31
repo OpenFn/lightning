@@ -12,6 +12,8 @@ declare module 'phoenix' {
     on(event: string, callback: (data: unknown) => void): number;
     off(event: string, callback: (data: unknown) => void): void;
     push(event: string, payload?: object, timeout?: number): Push;
+    join(timeout?: number): Push;
+    leave(timeout?: number): Push;
   }
 
   export class Presence {}
@@ -24,5 +26,6 @@ declare module 'phoenix' {
     onOpen(callback: () => void): number;
     onError(callback: (error: unknown) => void): number;
     onClose(callback: (event?: unknown) => void): number;
+    channel(topic: string, chanParams?: object): Channel;
   }
 }
