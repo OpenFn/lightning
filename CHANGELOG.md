@@ -109,10 +109,9 @@ and this project adheres to
 
 ### Changed
 
-> **Before upgrading.** If one project holds two names that become the same key
-> once spaces turn into hyphens, like `My Flow` and `My-Flow`, sync and export
-> now fail and name both, where they used to silently drop one. Rename one of
-> them.
+> If one project holds two names that become the same key once spaces turn into
+> hyphens, like `My Flow` and `My-Flow`, sync and export now fail and name both,
+> where they used to silently drop one. Rename one of them before upgrading.
 
 - Job and workflow names may now hold any character except a control one.
   Names were restricted to letters, digits, spaces, underscores and hyphens, so
