@@ -63,26 +63,6 @@ defmodule Lightning.Workflows.WorkflowTemplate do
       :tags,
       "Tags can't contain a null byte"
     )
-    |> validate_tag_lengths()
     |> assoc_constraint(:workflow)
   end
-
-  # tags is a text[] and each element has the same 255 width as a name column,
-  # counted in codepoints. A 300 character tag is plain typed UI input and used
-  # to raise an uncaught 22001.
-  defp validate_tag_lengths(changeset) do
-    validate_change(changeset, :tags, fn :tags, tags ->
-      if Enum.all?(List.wrap(tags), &tag_fits?/1) do
-        []
-      else
-        [tags: "Each tag is too long, please use shorter ones"]
-      end
-    end)
-  end
-
-  defp tag_fits?(tag) when is_binary(tag) do
-    tag |> String.codepoints() |> length() <= 255
-  end
-
-  defp tag_fits?(_tag), do: true
 end

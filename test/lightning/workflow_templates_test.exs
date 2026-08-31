@@ -56,24 +56,11 @@ defmodule Lightning.WorkflowTemplatesTest do
       end
     end
 
-    test "an over-long tag is a changeset error, not a 22001" do
-      # Plain typed UI input, and tags is a text[] whose elements have the same
-      # 255 width as a name column.
+    test "a long tag saves, because the column has no width to overflow" do
+      # `tags` is an unbounded character varying[], unlike the name columns.
       changeset = template_changeset(%{tags: ["ok", String.duplicate("a", 300)]})
 
-      assert errors_on(changeset)[:tags] == [
-               "Each tag is too long, please use shorter ones"
-             ]
-    end
-
-    test "a tag short in graphemes but too wide for the column is rejected" do
-      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
-
-      changeset = template_changeset(%{tags: [String.duplicate(family, 200)]})
-
-      assert errors_on(changeset)[:tags] == [
-               "Each tag is too long, please use shorter ones"
-             ]
+      assert errors_on(changeset)[:tags] == nil
     end
 
     test "ordinary values are untouched" do
