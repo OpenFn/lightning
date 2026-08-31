@@ -52,15 +52,25 @@ config :lightning, Lightning.Vault,
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
+#
+# The port is randomized (unless TEST_PORT is set) so `mix test` can run
+# concurrently across multiple git worktrees on the same machine without
+# port clashes.
+test_port =
+  case System.get_env("TEST_PORT") do
+    nil -> Enum.random(4100..4800)
+    port -> String.to_integer(port)
+  end
+
 config :lightning, LightningWeb.Endpoint,
-  http: [port: 4002],
+  http: [port: test_port],
   url: [scheme: "http"],
   secret_key_base:
     "/8zedVJLxvmGGFoRExE3e870g7CGZZQ1Vq11A5MbQGPKOpK57MahVsPW6Wkkv61n",
   server: true
 
 config :lightning, Lightning.Runtime.RuntimeManager,
-  ws_url: "ws://localhost:4002/worker"
+  ws_url: "ws://localhost:#{test_port}/worker"
 
 config :lightning, :workers,
   private_key: """
