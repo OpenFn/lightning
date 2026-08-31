@@ -12,7 +12,7 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
   setup do
     sup = :"cb_test_#{System.unique_integer([:positive])}"
 
-    # :rest_for_one starts the ChannelBroadcaster automatically, registered
+    # The supervisor starts the ChannelBroadcaster automatically, registered
     # under `channel_broadcaster_name(sup)`.
     start_supervised!(
       {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}

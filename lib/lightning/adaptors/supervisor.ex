@@ -2,12 +2,13 @@ defmodule Lightning.Adaptors.Supervisor do
   @moduledoc """
   Per-instance supervisor for the `Lightning.Adaptors.*` subsystem.
 
-  The entire subsystem boots, crashes, and is supervised as a unit
-  under `:rest_for_one`. `Cachex` is the first child: if it crashes,
-  the supervisor restarts it and every child listed after it
-  (`Task.Supervisor`, `Invalidator`, `NodeMonitor`, `ChannelBroadcaster`,
-  and the `HighlanderPG`-wrapped `Scheduler`) so they re-bind to the
-  fresh Cachex name on the way back up.
+  Children boot in list order — `Cachex` and the `Task.Supervisor`
+  before the processes that use them — but are supervised
+  `:one_for_one`. Every child addresses its collaborators by registered
+  name, resolved per call, so a restarted `Cachex` or `Task.Supervisor`
+  re-registers under the same name and nothing has to be rebuilt around
+  it. Cascading a restart would only cost the `HighlanderPG`-wrapped
+  `Scheduler` its advisory lock and force a needless re-election.
 
   No registered name, Cachex table name, PubSub topic, `Task.Supervisor`
   name, or `HighlanderPG` lock key is hardcoded. Every name is derived
@@ -118,7 +119,7 @@ defmodule Lightning.Adaptors.Supervisor do
       )
     ]
 
-    Supervisor.init(children, strategy: :rest_for_one)
+    Supervisor.init(children, strategy: :one_for_one)
   end
 
   @doc """

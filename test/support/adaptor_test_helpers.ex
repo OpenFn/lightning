@@ -106,15 +106,29 @@ defmodule Lightning.AdaptorTestHelpers do
   """
   @spec seed_all_credential_schemas() :: :ok
   def seed_all_credential_schemas do
-    Path.wildcard("test/fixtures/schemas/*.json")
-    |> Enum.each(fn path ->
-      # Skip empty fixture files — some (e.g. `asana.json`,
-      # `primero.json`) are intentional empty placeholders.
-      if File.stat!(path).size > 0 do
+    metas =
+      Path.wildcard("test/fixtures/schemas/*.json")
+      |> Enum.reject(fn path -> File.stat!(path).size == 0 end)
+      |> Enum.map(fn path ->
         short_name = path |> Path.basename(".json")
-        seed_credential_schema(short_name)
-      end
-    end)
+        row = seed_credential_schema(short_name)
+
+        %{
+          name: short_name,
+          latest_version: row.latest_version,
+          description: nil,
+          deprecated: false,
+          icon_square_ext: "png",
+          icon_rectangle_ext: "png",
+          icon_square_sha256: :crypto.hash(:sha256, short_name <> "-square"),
+          icon_rectangle_sha256:
+            :crypto.hash(:sha256, short_name <> "-rectangle")
+        }
+      end)
+
+    cache = AdaptorsSupervisor.cache_name(Lightning.Adaptors)
+    source = AdaptorsSupervisor.source(Lightning.Adaptors)
+    Cachex.put(cache, {:packages, source}, {:ok, metas})
 
     :ok
   end
