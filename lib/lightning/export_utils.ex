@@ -93,7 +93,7 @@ defmodule Lightning.ExportUtils do
 
       {key, [first, second | _rest]} ->
         raise DuplicateKeyError,
-          kind: "job in #{workflow_name}",
+          kind: "jobs in #{workflow_name}",
           key: key,
           first: first.name,
           second: second.name
@@ -415,7 +415,7 @@ defmodule Lightning.ExportUtils do
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.reduce(%{}, fn workflow, acc ->
         ytree = build_workflow_yaml_tree(workflow, project.project_credentials)
-        put_identity_key!(acc, hyphenate(workflow.name), ytree, "workflow")
+        put_identity_key!(acc, hyphenate(workflow.name), ytree, "workflows")
       end)
 
     credentials_map =
@@ -428,7 +428,7 @@ defmodule Lightning.ExportUtils do
           acc,
           project_credential_key(project_credential),
           ytree,
-          "credential"
+          "credentials"
         )
       end)
 
@@ -438,7 +438,7 @@ defmodule Lightning.ExportUtils do
       |> Enum.reduce(%{}, fn collection, acc ->
         ytree = build_collection_yaml_tree(collection)
 
-        put_identity_key!(acc, hyphenate(collection.name), ytree, "collection")
+        put_identity_key!(acc, hyphenate(collection.name), ytree, "collections")
       end)
 
     channels_map =
@@ -447,7 +447,7 @@ defmodule Lightning.ExportUtils do
       |> Enum.reduce(%{}, fn channel, acc ->
         ytree = build_channel_yaml_tree(channel, project.project_credentials)
 
-        put_identity_key!(acc, hyphenate(channel.name), ytree, "channel")
+        put_identity_key!(acc, hyphenate(channel.name), ytree, "channels")
       end)
 
     %{
