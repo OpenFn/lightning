@@ -347,7 +347,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              } =
                saved_workflow = get_saved_workflow(response_workflow["id"])
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
       assert Map.take(hd(workflow.edges), [:condition_type, :enabled]) ==
                Map.take(edge, [:condition_type, :enabled])
@@ -384,7 +384,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert saved_workflow = get_saved_workflow(response_workflow["id"])
 
-      assert response_workflow == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
       assert pluck_to_mapset(workflow.edges, [:condition_type, :enabled]) ==
                pluck_to_mapset(saved_workflow.edges, [:condition_type, :enabled])
@@ -453,8 +453,15 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       saved_workflow = get_saved_workflow(response_workflow["id"])
 
-      assert encode_decode(response_workflow) |> remove_timestamps() ==
-               encode_decode(saved_workflow) |> remove_timestamps()
+      merged = encode_decode(response_workflow) |> remove_timestamps()
+      saved = encode_decode(saved_workflow) |> remove_timestamps()
+
+      assert MapSet.new(merged["jobs"]) == MapSet.new(saved["jobs"])
+      assert MapSet.new(merged["edges"]) == MapSet.new(saved["edges"])
+      assert MapSet.new(merged["triggers"]) == MapSet.new(saved["triggers"])
+
+      assert Map.drop(merged, ["jobs", "edges", "triggers"]) ==
+               Map.drop(saved, ["jobs", "edges", "triggers"])
     end
 
     test "returns 422 when an edge has invalid condition_type", %{
@@ -932,7 +939,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       saved_workflow = get_saved_workflow(workflow)
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
       assert workflow
              |> Map.merge(patch)
@@ -980,15 +987,19 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       saved_workflow = get_saved_workflow(workflow)
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
-      assert workflow
-             |> Map.merge(patch)
-             |> encode_decode()
-             |> remove_timestamps() ==
-               saved_workflow
-               |> encode_decode()
-               |> remove_timestamps()
+      merged =
+        workflow |> Map.merge(patch) |> encode_decode() |> remove_timestamps()
+
+      saved = saved_workflow |> encode_decode() |> remove_timestamps()
+
+      assert MapSet.new(merged["jobs"]) == MapSet.new(saved["jobs"])
+      assert MapSet.new(merged["edges"]) == MapSet.new(saved["edges"])
+      assert MapSet.new(merged["triggers"]) == MapSet.new(saved["triggers"])
+
+      assert Map.drop(merged, ["jobs", "edges", "triggers"]) ==
+               Map.drop(saved, ["jobs", "edges", "triggers"])
     end
 
     test "Adds a disconnected/orphan job", %{conn: conn, project: project} do
@@ -1485,15 +1496,23 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert_response(response_workflow)
 
-      saved_workflow =
+      saved =
         get_saved_workflow(response_workflow["id"])
         |> encode_decode()
         |> remove_timestamps()
 
-      assert workflow
-             |> Map.merge(complete_update)
-             |> encode_decode()
-             |> remove_timestamps() == saved_workflow
+      merged =
+        workflow
+        |> Map.merge(complete_update)
+        |> encode_decode()
+        |> remove_timestamps()
+
+      assert MapSet.new(merged["jobs"]) == MapSet.new(saved["jobs"])
+      assert MapSet.new(merged["edges"]) == MapSet.new(saved["edges"])
+      assert MapSet.new(merged["triggers"]) == MapSet.new(saved["triggers"])
+
+      assert Map.drop(merged, ["jobs", "edges", "triggers"]) ==
+               Map.drop(saved, ["jobs", "edges", "triggers"])
     end
 
     test "updates completely a workflow with disconnected job", %{

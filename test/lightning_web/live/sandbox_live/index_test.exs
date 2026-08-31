@@ -588,12 +588,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
     test "delete modal mentions the configured grace period when no purge window is set",
          %{conn: conn, parent: parent, sb1: sb1} do
-      previous = Application.get_env(:lightning, :purge_deleted_after_days)
-      Application.put_env(:lightning, :purge_deleted_after_days, nil)
-
-      on_exit(fn ->
-        Application.put_env(:lightning, :purge_deleted_after_days, previous)
-      end)
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> nil end)
 
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 
@@ -607,12 +602,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
     test "delete modal uses singular '1 day' when grace period is one day",
          %{conn: conn, parent: parent, sb1: sb1} do
-      previous = Application.get_env(:lightning, :purge_deleted_after_days)
-      Application.put_env(:lightning, :purge_deleted_after_days, 1)
-
-      on_exit(fn ->
-        Application.put_env(:lightning, :purge_deleted_after_days, previous)
-      end)
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> 1 end)
 
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 

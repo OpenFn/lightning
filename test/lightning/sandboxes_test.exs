@@ -2384,12 +2384,7 @@ defmodule Lightning.Projects.SandboxesTest do
     end
 
     test "uses PURGE_DELETED_AFTER_DAYS to compute the grace period" do
-      previous = Application.get_env(:lightning, :purge_deleted_after_days)
-      Application.put_env(:lightning, :purge_deleted_after_days, 7)
-
-      on_exit(fn ->
-        Application.put_env(:lightning, :purge_deleted_after_days, previous)
-      end)
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> 7 end)
 
       actor = insert(:user)
       parent = insert(:project, name: "parent")
@@ -2404,12 +2399,7 @@ defmodule Lightning.Projects.SandboxesTest do
     end
 
     test "schedules at now when PURGE_DELETED_AFTER_DAYS is nil" do
-      previous = Application.get_env(:lightning, :purge_deleted_after_days)
-      Application.put_env(:lightning, :purge_deleted_after_days, nil)
-
-      on_exit(fn ->
-        Application.put_env(:lightning, :purge_deleted_after_days, previous)
-      end)
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> nil end)
 
       actor = insert(:user)
       parent = insert(:project, name: "parent")

@@ -31,7 +31,10 @@ ownership_timeout =
   end
 
 # On certain machines we get db queue timeouts, so we raise `queue_target`
-# from 50 to 100 to give the DBConnection some room to respond.
+# and `queue_interval` to give the DBConnection more room to respond. This
+# matters most for `async: false` tests, where Sandbox's shared-connection
+# mode funnels every process (including a subprocess worker's WebSocket
+# channels) through a single physical connection, so `pool_size` doesn't help.
 config :lightning, Lightning.Repo,
   username: "postgres",
   password: "postgres",
@@ -40,7 +43,8 @@ config :lightning, Lightning.Repo,
     "#{System.get_env("TEST_DATABASE_NAME", "lightning_test")}#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 15,
-  queue_target: 100,
+  queue_target: 200,
+  queue_interval: 2_000,
   ownership_timeout: ownership_timeout
 
 config :lightning, Lightning.Vault,
