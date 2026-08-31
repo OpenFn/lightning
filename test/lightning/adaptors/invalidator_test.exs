@@ -6,7 +6,7 @@ defmodule Lightning.Adaptors.InvalidatorTest do
   setup do
     sup = :"inv_test_#{System.unique_integer([:positive])}"
 
-    # :rest_for_one starts the Invalidator automatically, registered under
+    # The supervisor starts the Invalidator automatically, registered under
     # `invalidator_name(sup)`.
     start_supervised!(
       {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
