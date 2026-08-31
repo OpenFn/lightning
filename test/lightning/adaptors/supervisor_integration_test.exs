@@ -1,10 +1,9 @@
 defmodule Lightning.Adaptors.SupervisorIntegrationTest do
   @moduledoc """
   Integration-level tests for `Lightning.Adaptors.Supervisor`: prove the full
-  child list boots under a single `start_supervised!` call, and that the
-  `:rest_for_one` cascade restarts Invalidator when Cachex restarts (§6.5a).
-  Invalidator subscribes at init, so without that restart the cache would go
-  stale.
+  child list boots under a single `start_supervised!` call, and that a crash in
+  any of the siblings restarts only that sibling, leaving the HighlanderPG
+  Scheduler holding its advisory lock.
   """
 
   use Lightning.DataCase, async: false
@@ -110,8 +109,13 @@ defmodule Lightning.Adaptors.SupervisorIntegrationTest do
     end
   end
 
-  describe ":rest_for_one strategy" do
-    test "Cachex crash cascades to Invalidator / ChannelBroadcaster / Scheduler",
+  describe ":one_for_one strategy" do
+    # Two victims only: the supervisor's default max_restarts is 3 in 5s,
+    # and hitting that ceiling would take the whole instance down for
+    # reasons that have nothing to do with what we're asserting. `:tasks`
+    # is the interesting one — the Scheduler uses it on every tick, and
+    # still doesn't need restarting alongside it.
+    test "a sibling crash restarts only that sibling, leaving the Scheduler's leadership intact",
          %{sup: sup} do
       start_supervised!(
         {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.Local}
@@ -121,71 +125,36 @@ defmodule Lightning.Adaptors.SupervisorIntegrationTest do
       # globally so we have a baseline pid to compare against.
       assert_eventually(is_pid(scheduler_pid(sup)), @scheduler_wait_ms)
 
-      before = pids_by_role(sup)
+      leader = scheduler_pid(sup)
+      highlander = Process.whereis(AdaptorsSupervisor.highlander_name(sup))
 
-      cachex_pid = Map.fetch!(before, :cache)
-      assert is_pid(cachex_pid)
+      for role <- [:tasks, :broadcaster] do
+        victim = Map.fetch!(pids_by_role(sup), role)
+        assert is_pid(victim)
 
-      ref = Process.monitor(cachex_pid)
-      Process.exit(cachex_pid, :kill)
-      assert_receive {:DOWN, ^ref, :process, ^cachex_pid, _}, 1_000
+        ref = Process.monitor(victim)
+        Process.exit(victim, :kill)
+        assert_receive {:DOWN, ^ref, :process, ^victim, _}, 1_000
 
-      after_pids = wait_for_restart(sup, before)
+        assert_eventually(
+          is_pid(current_pid(sup, role)) and current_pid(sup, role) != victim,
+          1_000
+        )
 
-      # Cachex itself comes back under a fresh pid.
-      assert Map.fetch!(after_pids, :cache) != cachex_pid
+        # HighlanderPG holds the advisory lock for as long as its wrapped
+        # child lives, so an unchanged Scheduler pid is an unchanged
+        # leader: no re-election, no lock handover.
+        assert scheduler_pid(sup) == leader,
+               "killing #{role} re-elected the Scheduler " <>
+                 "(before=#{inspect(leader)}, after=#{inspect(scheduler_pid(sup))})"
 
-      # §6.5a: under :rest_for_one, all children that depend on Cachex
-      # (Invalidator, Broadcaster, Scheduler) must restart too so they
-      # re-bind to the fresh cache.
-      for role <- [:invalidator, :broadcaster, :scheduler] do
-        old = Map.fetch!(before, role)
-        new = Map.fetch!(after_pids, role)
-        assert is_pid(old)
-        assert is_pid(new)
+        assert Process.alive?(leader)
 
-        assert new != old,
-               "expected #{role} to restart after Cachex crash " <>
-                 "(before=#{inspect(old)}, after=#{inspect(new)})"
+        assert Process.whereis(AdaptorsSupervisor.highlander_name(sup)) ==
+                 highlander
       end
     end
   end
 
-  # Polls `pids_by_role/1` until the children we expect to be restarted
-  # show new PIDs, or we hit the deadline. Returns the post-restart map.
-  # The Scheduler restart goes through HighlanderPG (lock + poll cycle),
-  # so allow a slightly longer deadline than for the locally-registered
-  # children alone.
-  defp wait_for_restart(sup, before, deadline_ms \\ 3_000) do
-    start = System.monotonic_time(:millisecond)
-    roles_expected = [:invalidator, :broadcaster, :scheduler]
-    do_wait_for_restart(sup, before, roles_expected, start, deadline_ms)
-  end
-
-  defp do_wait_for_restart(sup, before, roles, start, deadline_ms) do
-    current = pids_by_role(sup)
-
-    changed? =
-      Enum.all?(roles, fn role ->
-        case {Map.get(before, role), Map.get(current, role)} do
-          {old, new} when is_pid(old) and is_pid(new) -> old != new
-          _ -> false
-        end
-      end)
-
-    cond do
-      changed? ->
-        current
-
-      System.monotonic_time(:millisecond) - start > deadline_ms ->
-        flunk(
-          "supervisor children did not restart within #{deadline_ms}ms; " <>
-            "before=#{inspect(before)} after=#{inspect(current)}"
-        )
-
-      true ->
-        Process.sleep(20)
-        do_wait_for_restart(sup, before, roles, start, deadline_ms)
-    end
-  end
+  defp current_pid(sup, role), do: Map.get(pids_by_role(sup), role)
 end

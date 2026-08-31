@@ -63,6 +63,13 @@ defmodule Lightning.Adaptors.ConfigTest do
 
       assert Config.cache_timeout_ms() == 15_000
     end
+
+    test "icon_path/0 defaults to a subdirectory of the system temp dir" do
+      delete_parent_key(:icon_path)
+
+      assert Config.icon_path() ==
+               Path.join(System.tmp_dir!(), "lightning/adaptor_icons")
+    end
   end
 
   defp put_parent(key, value) do

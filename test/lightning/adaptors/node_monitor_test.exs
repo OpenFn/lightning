@@ -11,7 +11,7 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
   setup do
     sup = :"nm_test_#{System.unique_integer([:positive])}"
 
-    # :rest_for_one starts the NodeMonitor automatically, registered under
+    # The supervisor starts the NodeMonitor automatically, registered under
     # `node_monitor_name(sup)`.
     start_supervised!(
       {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}

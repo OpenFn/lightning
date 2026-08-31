@@ -16,8 +16,8 @@ defmodule Lightning.Adaptors.SchedulerTest do
   setup :verify_on_exit!
 
   # Each test owns an isolated supervisor. The supervisor starts its own
-  # Scheduler as part of the :rest_for_one child list, but with the
-  # test-env `refresh_interval: 0` it's an inert no-op. Individual tests
+  # Scheduler as part of its child list, but with the test-env
+  # `refresh_interval: 0` it's an inert no-op. Individual tests
   # call `start_scheduler/2` to replace it with a controlled-interval
   # Scheduler under `start_supervised!/1` (so Mox expectations can be
   # registered before init fires).
