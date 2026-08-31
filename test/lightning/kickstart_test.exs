@@ -41,27 +41,47 @@ defmodule Lightning.KickstartTest do
           "workflows" => [
             %{
               "name" => "wf-one",
-              "trigger" => %{
-                "type" => "webhook",
-                "webhook_reply" => "after_completion"
-              },
-              "jobs" => [
-                %{"name" => "job-a", "credential" => "raw-cred"},
-                %{"name" => "job-b", "body" => "fn(s => s);"}
-              ],
-              "edges" => [
-                %{"from" => "trigger", "to" => "job-a"},
-                %{
-                  "from" => "job-a",
-                  "to" => "job-b",
-                  "condition" => "on_job_success"
+              "triggers" => %{
+                "webhook" => %{
+                  "type" => "webhook",
+                  "enabled" => true,
+                  "webhook_reply" => "after_completion"
                 }
-              ]
+              },
+              "jobs" => %{
+                "job-a" => job("job-a", %{"credential" => "raw-cred"}),
+                "job-b" => job("job-b")
+              },
+              "edges" => %{
+                "webhook->job-a" => %{
+                  "source_trigger" => "webhook",
+                  "target_job" => "job-a",
+                  "condition_type" => "always",
+                  "enabled" => true
+                },
+                "job-a->job-b" => %{
+                  "source_job" => "job-a",
+                  "target_job" => "job-b",
+                  "condition_type" => "on_job_success",
+                  "enabled" => true
+                }
+              }
             }
           ]
         }
       ]
     }
+  end
+
+  defp job(name, extra \\ %{}) do
+    Map.merge(
+      %{
+        "name" => name,
+        "adaptor" => "@openfn/language-common@latest",
+        "body" => "fn(state => state);"
+      },
+      extra
+    )
   end
 
   describe "run/1" do
@@ -118,7 +138,8 @@ defmodule Lightning.KickstartTest do
       assert workflow.name == "wf-one"
       assert workflow.project_id == project.id
 
-      trigger = Repo.get!(Trigger, workflow_info.trigger.id)
+      [%{id: trigger_id}] = workflow_info.triggers
+      trigger = Repo.get!(Trigger, trigger_id)
       assert trigger.type == :webhook
       assert trigger.enabled
       assert trigger.webhook_reply == :after_completion
@@ -144,7 +165,7 @@ defmodule Lightning.KickstartTest do
       assert [%{email: "owner@openfn.org", api_token: ^token} | _] =
                Enum.sort_by(manifest.users, & &1.email, :desc)
 
-      assert [%{workflows: [%{trigger: %{webhook_path: webhook_path}}]}] =
+      assert [%{workflows: [%{triggers: [%{webhook_path: webhook_path}]}]}] =
                manifest.projects
 
       assert webhook_path == "/i/#{trigger.id}"
@@ -161,7 +182,7 @@ defmodule Lightning.KickstartTest do
       [%{project: p2, workflows: [w2]}] = second.projects
       assert p1.id == p2.id
       assert w1.id == w2.id
-      assert w1.trigger.id == w2.trigger.id
+      assert Enum.map(w1.triggers, & &1.id) == Enum.map(w2.triggers, & &1.id)
       assert Enum.map(w1.jobs, & &1.id) == Enum.map(w2.jobs, & &1.id)
 
       # api token is reused, not regenerated
@@ -335,7 +356,7 @@ defmodule Lightning.KickstartTest do
             "workflows",
             Access.at(0),
             "jobs",
-            Access.at(1),
+            "job-b",
             "body"
           ],
           body
@@ -347,35 +368,40 @@ defmodule Lightning.KickstartTest do
       assert Repo.get!(Job, job_b.id).body == body
     end
 
-    test "supports trigger-less workflows via trigger: none" do
+    test "supports trigger-less workflows via an empty triggers map" do
       scenario =
         update_in(
           scenario(),
           ["projects", Access.at(0), "workflows", Access.at(0)],
           fn workflow ->
             workflow
-            |> Map.put("trigger", "none")
-            |> Map.put("edges", [
-              %{"from" => "job-a", "to" => "job-b"}
-            ])
+            |> Map.put("triggers", %{})
+            |> Map.put("edges", %{
+              "job-a->job-b" => %{
+                "source_job" => "job-a",
+                "target_job" => "job-b",
+                "condition_type" => "on_job_success",
+                "enabled" => true
+              }
+            })
           end
         )
 
       [%{workflows: [workflow_info]}] = Kickstart.run(scenario).projects
 
-      assert workflow_info.trigger == nil
+      assert workflow_info.triggers == []
       assert Repo.aggregate(Trigger, :count) == 0
     end
 
-    test "rejects duplicate names and raw triggers keys upfront" do
+    test "rejects duplicate names upfront" do
       duplicate_jobs =
         update_in(
           scenario(),
           ["projects", Access.at(0), "workflows", Access.at(0), "jobs"],
-          &[%{"name" => "job-a"} | &1]
+          &Map.put(&1, "job-a-again", job("job-a"))
         )
 
-      assert_raise RuntimeError, ~r/Duplicate name.*job-a/, fn ->
+      assert_raise RuntimeError, ~r/Duplicate job name.*job-a/, fn ->
         Kickstart.run(duplicate_jobs)
       end
 
@@ -388,17 +414,6 @@ defmodule Lightning.KickstartTest do
 
       assert_raise RuntimeError, ~r/Duplicate email/, fn ->
         Kickstart.run(duplicate_users)
-      end
-
-      raw_triggers =
-        update_in(
-          scenario(),
-          ["projects", Access.at(0), "workflows", Access.at(0)],
-          &(&1 |> Map.delete("trigger") |> Map.put("triggers", []))
-        )
-
-      assert_raise RuntimeError, ~r/use the singular "trigger" key/, fn ->
-        Kickstart.run(raw_triggers)
       end
     end
 
@@ -551,7 +566,12 @@ defmodule Lightning.KickstartTest do
         update_in(
           scenario(),
           ["projects", Access.at(0), "workflows", Access.at(0), "edges"],
-          &[%{"from" => "trigger", "to" => "nope"} | &1]
+          &Map.put(&1, "webhook->nope", %{
+            "source_trigger" => "webhook",
+            "target_job" => "nope",
+            "condition_type" => "always",
+            "enabled" => true
+          })
         )
 
       assert_raise RuntimeError, ~r/"nope"/, fn -> Kickstart.run(bad_edge) end
@@ -568,17 +588,23 @@ defmodule Lightning.KickstartTest do
         Kickstart.run(no_owner)
       end
 
-      # unknown provisioner fields fail loudly rather than being dropped
+      # unknown workflow-spec fields fail loudly rather than being dropped
       typo =
         put_in(
           scenario(),
-          ["projects", Access.at(0), "workflows", Access.at(0), "trigger"],
-          %{"type" => "webhook", "webook_replyy" => "yes"}
+          ["projects", Access.at(0), "workflows", Access.at(0), "triggers"],
+          %{
+            "webhook" => %{
+              "type" => "webhook",
+              "enabled" => true,
+              "webook_replyy" => "after_completion"
+            }
+          }
         )
 
-      assert_raise RuntimeError, ~r/extraneous parameters/i, fn ->
-        Kickstart.run(typo)
-      end
+      assert_raise RuntimeError,
+                   ~r/Invalid workflow spec.*additional properties/is,
+                   fn -> Kickstart.run(typo) end
     end
 
     test "raises when kickstarting is disabled" do
@@ -608,18 +634,27 @@ defmodule Lightning.KickstartTest do
             - { email: yaml@openfn.org, role: owner }
           workflows:
             - name: yaml-workflow
-              trigger:
-                type: cron
-                cron_expression: "0 * * * *"
+              triggers:
+                cron:
+                  type: cron
+                  enabled: true
+                  cron_expression: "0 * * * *"
               jobs:
-                - name: yaml-job
+                yaml-job:
+                  name: yaml-job
+                  adaptor: "@openfn/language-common@latest"
+                  body: fn(state => state);
               edges:
-                - { from: trigger, to: yaml-job }
+                cron->yaml-job:
+                  source_trigger: cron
+                  target_job: yaml-job
+                  condition_type: always
+                  enabled: true
       """)
 
       result = Kickstart.run_file(scenario_path, manifest: manifest_path)
 
-      [%{workflows: [%{trigger: %{id: trigger_id}}]}] = result.projects
+      [%{workflows: [%{triggers: [%{id: trigger_id}]}]}] = result.projects
       assert %{type: :cron} = Repo.get!(Trigger, trigger_id)
 
       manifest = manifest_path |> File.read!() |> Jason.decode!()
@@ -630,7 +665,7 @@ defmodule Lightning.KickstartTest do
       assert is_binary(token)
 
       # cron triggers have no webhook path
-      assert [%{"workflows" => [%{"trigger" => %{"webhook_path" => nil}}]}] =
+      assert [%{"workflows" => [%{"triggers" => [%{"webhook_path" => nil}]}]}] =
                manifest["projects"]
     end
 

@@ -31,17 +31,17 @@ behind (pin an explicit `id:` on anything you plan to rename).
 
 `--manifest PATH` (or `manifest: path` on the Elixir APIs) writes a JSON file
 with everything a script or test harness needs to drive the instance: user
-emails and API tokens, project/workflow/job ids, and trigger webhook paths
-(`/i/<trigger-id>`).
+emails and API tokens, project/workflow/job/trigger ids, and webhook paths for
+webhook triggers (`/i/<trigger-id>`).
 
 ## File format
 
 Top-level keys: `users`, `credentials`, `projects`. All lists optional.
 
-Every key at every level (except inside workflow/trigger/job/edge maps, which
-pass through to the provisioner — see below) is checked against an allow-list. A
-typo'd or unsupported key raises immediately, naming the bad key, rather than
-being silently ignored.
+Every key at every level is checked: the scenario's own keys against an
+allow-list, and each workflow against the published workflow-spec JSON Schema
+(see below). A typo'd or unsupported key raises immediately, naming the bad key,
+rather than being silently ignored.
 
 ### users
 
@@ -94,49 +94,61 @@ fails cleanly rather than silently leaving two owners.
 
 ### workflows
 
+Each entry under a project's `workflows` is a **workflow spec** — the same
+hand-writable format the collaborative editor imports and exports (and that
+workflow templates are written in), validated against the same JSON Schema
+(`assets/js/yaml/schema/workflow-spec.json`) and converted to a provisioning
+document by `Lightning.Workflows.Spec`. There's no kickstart-specific workflow
+dialect: anything the editor's YAML import accepts works here, and a workflow
+exported from the editor can be pasted straight in.
+
+Jobs, triggers and edges are **maps keyed by slug**, and reference each other by
+those keys:
+
 ```yaml
 workflows:
-  - name: My Workflow # required
-    trigger: # map, or "none" for a trigger-less workflow
-      type: webhook # webhook (default) | cron | kafka
+  - name: My Workflow # kickstart requires a name (it derives ids from it)
     jobs:
-      - name: Job One # required
-        adaptor: '@openfn/language-common@latest' # default
-        body: 'fn(state => state);' # default
-        credential: my-credential # optional, a credential name
+      transform-data:
+        name: Transform data # required
+        adaptor: '@openfn/language-common@latest' # required
+        body: fn(state => state); # required
+        credential: my-credential # optional, see below
+    triggers:
+      webhook:
+        type: webhook # webhook | cron | kafka — required
+        enabled: true # required
+        webhook_reply: after_completion # optional
     edges:
-      - from: trigger # "trigger" (default) or a job name
-        to: Job One # required, a job name
-        condition:
-          always # default: "always" from trigger,
-          # "on_job_success" from a job
+      webhook->transform-data:
+        source_trigger: webhook # a trigger key
+        target_job: transform-data # a job key — required
+        condition_type: always # required
+        enabled: true # required
+      transform-data->other-job:
+        source_job: transform-data # a job key
+        target_job: other-job
+        condition_type: js_expression
+        condition_expression: state.data.ok
+        condition_label: only when ok
+        enabled: true
 ```
 
-Trigger, job and edge maps are **passed through** to the provisioning document
-after the conveniences above are resolved, so any field the provisioner accepts
-works directly, e.g.:
+`jobs`, `triggers` and `edges` must all be present (use `{}` for none — e.g.
+`triggers: {}` for a trigger-less workflow). A cron trigger requires
+`cron_expression`, and may name a `cron_cursor_job` (a job key).
 
-```yaml
-trigger:
-  type: webhook
-  webhook_reply: after_completion # sync-mode webhook replies
-  custom_path: my-hook
-# or
-trigger:
-  type: cron
-  cron_expression: "0 * * * *"
-  enabled: false
-# and on edges:
-edges:
-  - from: a
-    to: b
-    condition: js_expression
-    condition_expression: "state.data.ok"
-    condition_label: only when ok
-```
+Two kickstart-specific notes:
 
-Unknown fields are rejected by the provisioner's validation, so typos fail
-loudly rather than being silently dropped.
+- A job's `credential` names a credential declared at the scenario's top level;
+  kickstart resolves it to the job's `project_credential_id`. It's part of the
+  published schema, but the editor ignores it.
+- `pos` (node positions) is accepted by the schema but not applied — the
+  provisioning API has no way to set positions.
+
+Unknown or mistyped keys are rejected by the schema, and unknown provisioner
+fields by the provisioner's own validation, so typos fail loudly rather than
+being silently dropped.
 
 ### Environment interpolation
 

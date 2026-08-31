@@ -23,8 +23,9 @@ defmodule Lightning.Kickstart do
     the user's oldest existing API token is reused, and one is generated only
     if none exists. Tokens are surfaced through `manifest/1`.
   * Projects, workflows, triggers, jobs and edges get **deterministic ids**
-    (UUIDv5-style, derived from their names) unless an explicit `id` is given,
-    so the provisioner upserts them on subsequent runs.
+    (UUIDv5-style, derived from a project/workflow's name and from a record's
+    key in the workflow spec) unless an explicit `id` is given, so the
+    provisioner upserts them on subsequent runs.
   * Project members are added or have their role updated, never removed.
 
   Renaming a record changes its derived id: the renamed record is created
@@ -65,27 +66,33 @@ defmodule Lightning.Kickstart do
           credentials: [dhis2-prod]      # optional, exposed to this project
           collections:                   # optional
             - name: my-collection
-          workflows:
+          workflows:                     # workflow-spec documents, see below
             - name: my-workflow
-              trigger:
-                type: webhook            # webhook (default) | cron | kafka
-                # any Trigger field passes through, e.g.:
-                # webhook_reply: after_completion
-                # cron_expression: "0 * * * *"
               jobs:
-                - name: transform
-                  adaptor: "@openfn/language-common@latest"  # default
-                  body: "fn(s => s)"                         # defaults to no-op
-                  credential: dhis2-prod                     # optional
+                transform:
+                  name: transform
+                  adaptor: "@openfn/language-common@latest"
+                  body: "fn(state => state);"
+                  credential: dhis2-prod   # optional, a credential above
+              triggers:
+                webhook:
+                  type: webhook
+                  enabled: true
               edges:
-                - { from: trigger, to: transform }
-                - { from: transform, to: other, condition: on_job_success }
+                webhook->transform:
+                  source_trigger: webhook
+                  target_job: transform
+                  condition_type: always
+                  enabled: true
 
-  Workflow, trigger, job and edge maps are passed through to the provisioning
-  document after the conveniences above are resolved, so any field the
-  provisioner accepts (e.g. `webhook_reply`, `custom_path`, `enabled`,
-  `condition_expression`) can be used directly. Unknown fields there are
-  rejected by the provisioner's own validation.
+  Each entry under `workflows` is a **workflow spec** — the same
+  hand-writable format the collaborative editor imports and exports and that
+  workflow templates are written in, validated against the same JSON Schema
+  and converted by `Lightning.Workflows.Spec`. There is no kickstart-specific
+  workflow dialect: anything you can paste into the editor's YAML import works
+  here, and vice versa. The one extra key kickstart resolves is a job's
+  `credential`, which names a credential declared at the top level (the schema
+  already allows it; the editor ignores it).
 
   Every other key — the scenario itself, and each user, credential, member and
   project — is checked against an explicit allow-list, so a typo (`usres:`) or
@@ -113,10 +120,9 @@ defmodule Lightning.Kickstart do
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects.Provisioner
   alias Lightning.Repo
+  alias Lightning.Workflows.Spec
 
   @default_password "welcome12345"
-  @default_adaptor "@openfn/language-common@latest"
-  @default_body "fn(state => state);"
 
   # Namespace for deterministic (UUIDv5-style) record ids. Changing it changes
   # every derived id, breaking idempotent re-runs against existing databases.
@@ -292,16 +298,14 @@ defmodule Lightning.Kickstart do
     Enum.join(["Kickstarted:" | user_lines ++ project_lines], "\n")
   end
 
-  defp workflow_manifest(%{id: id, name: name, trigger: trigger, jobs: jobs}) do
+  defp workflow_manifest(%{id: id, name: name, triggers: triggers, jobs: jobs}) do
     %{
       id: id,
       name: name,
-      trigger: trigger_manifest(trigger),
+      triggers: Enum.map(triggers, &trigger_manifest/1),
       jobs: Enum.map(jobs, &Map.take(&1, [:id, :name]))
     }
   end
-
-  defp trigger_manifest(nil), do: nil
 
   defp trigger_manifest(%{id: id, type: type}) do
     %{
@@ -599,7 +603,7 @@ defmodule Lightning.Kickstart do
     referenced_names =
       fetch_list(spec, "credentials") ++
         for workflow <- fetch_list(spec, "workflows"),
-            job <- fetch_list(workflow, "jobs"),
+            {_key, job} <- job_specs(workflow),
             name = job["credential"],
             do: name
 
@@ -628,132 +632,35 @@ defmodule Lightning.Kickstart do
 
   defp build_workflow_info(spec, project_scope, pc_ids) do
     name = fetch!(spec, "name")
-
-    if Map.has_key?(spec, "triggers") do
-      raise "Workflow #{inspect(name)} has a \"triggers\" key, which would be " <>
-              "overwritten — use the singular \"trigger\" key instead"
-    end
-
     scope = "#{project_scope}/workflow:#{name}"
-    id = spec["id"] || stable_id(scope)
-
-    trigger = build_trigger(Map.get(spec, "trigger", %{}), scope)
-
-    jobs =
-      spec
-      |> fetch_list("jobs")
-      |> ensure_unique!("name", "jobs in workflow #{inspect(name)}")
-      |> Enum.map(&build_job(&1, scope, pc_ids))
-
-    edges =
-      spec
-      |> fetch_list("edges")
-      |> Enum.map(&build_edge(&1, scope, name, trigger, jobs))
 
     document =
-      spec
-      |> Map.drop(["trigger", "jobs", "edges"])
-      |> Map.merge(%{
-        "id" => id,
-        "name" => name,
-        "triggers" => if(trigger, do: [trigger.document], else: []),
-        "jobs" => Enum.map(jobs, & &1.document),
-        "edges" => edges
-      })
+      case Spec.to_document(spec, credentials: pc_ids, id_fun: id_fun(scope)) do
+        {:ok, document} ->
+          document
+
+        {:error, message} ->
+          raise "Workflow #{inspect(name)}: #{message}"
+      end
 
     %{
       document: document,
-      id: id,
+      id: document["id"],
       name: name,
-      trigger: trigger && Map.take(trigger, [:id, :type]),
-      jobs: Enum.map(jobs, &Map.take(&1, [:id, :name]))
+      triggers:
+        Enum.map(document["triggers"], &%{id: &1["id"], type: &1["type"]}),
+      jobs: Enum.map(document["jobs"], &%{id: &1["id"], name: &1["name"]})
     }
   end
 
-  # `trigger: none` (or false/nil) skips trigger creation; anything else
-  # builds one, defaulting to an enabled webhook trigger. All other keys pass
-  # through to the provisioner (cron_expression, webhook_reply, enabled, ...).
-  defp build_trigger(spec, _scope) when spec in [nil, false, "none"], do: nil
-
-  defp build_trigger(spec, scope) when is_map(spec) do
-    id = spec["id"] || stable_id("#{scope}/trigger")
-    type = spec["type"] || "webhook"
-
-    document =
-      spec
-      |> Map.merge(%{"id" => id, "type" => type})
-      |> Map.put_new("enabled", true)
-
-    %{id: id, type: type, document: document}
-  end
-
-  defp build_trigger(spec, _scope) do
-    raise "Expected a workflow trigger to be a map or \"none\", got: #{inspect(spec)}"
-  end
-
-  defp build_job(spec, scope, pc_ids) do
-    name = fetch!(spec, "name")
-    id = spec["id"] || stable_id("#{scope}/job:#{name}")
-
-    document =
-      spec
-      |> Map.drop(["credential"])
-      |> Map.merge(%{"id" => id, "name" => name})
-      |> Map.put_new("adaptor", @default_adaptor)
-      |> Map.put_new("body", @default_body)
-      |> attach_credential(spec["credential"], pc_ids, name)
-
-    %{id: id, name: name, document: document}
-  end
-
-  defp attach_credential(document, nil, _pc_ids, _job), do: document
-
-  defp attach_credential(document, credential_name, pc_ids, job) do
-    project_credential_id =
-      Map.get(pc_ids, credential_name) ||
-        raise "Job #{job} references unknown credential #{inspect(credential_name)}"
-
-    Map.put(document, "project_credential_id", project_credential_id)
-  end
-
-  defp build_edge(spec, scope, workflow_name, trigger, jobs) do
-    job_ids = Map.new(jobs, &{&1.name, &1.id})
-
-    to = fetch!(spec, "to")
-    from = spec["from"] || "trigger"
-
-    base =
-      spec
-      |> Map.drop(["from", "to", "condition"])
-      |> Map.merge(%{
-        "id" => spec["id"] || stable_id("#{scope}/edge:#{from}->#{to}"),
-        "target_job_id" => edge_job_id!(job_ids, to, workflow_name),
-        "condition_type" =>
-          spec["condition"] || spec["condition_type"] ||
-            default_condition(from)
-      })
-      |> Map.put_new("enabled", true)
-
-    if from == "trigger" do
-      unless trigger do
-        raise "Edge to #{inspect(to)} references the trigger, but workflow " <>
-                "#{inspect(workflow_name)} has no trigger"
-      end
-
-      Map.put(base, "source_trigger_id", trigger.id)
-    else
-      Map.put(base, "source_job_id", edge_job_id!(job_ids, from, workflow_name))
+  # Records without an explicit `id` get one derived from their key in the
+  # spec, so re-running a scenario upserts the same rows.
+  defp id_fun(workflow_scope) do
+    fn
+      :workflow, _name -> stable_id(workflow_scope)
+      kind, key -> stable_id("#{workflow_scope}/#{kind}:#{key}")
     end
   end
-
-  defp edge_job_id!(job_ids, name, workflow_name) do
-    Map.get(job_ids, name) ||
-      raise "Edge references job #{inspect(name)}, which does not exist in " <>
-              "workflow #{inspect(workflow_name)}"
-  end
-
-  defp default_condition("trigger"), do: "always"
-  defp default_condition(_job), do: "on_job_success"
 
   defp lookup_user!(users, email, context) do
     case Map.get(users, String.downcase(email)) do
@@ -822,6 +729,18 @@ defmodule Lightning.Kickstart do
     id = spec["id"] || stable_id("#{project_scope}/collection:#{name}")
     %{"id" => id, "name" => name}
   end
+
+  # A workflow spec's jobs, keyed by slug. A malformed workflow is left alone
+  # here: `Lightning.Workflows.Spec` validates it against the schema further
+  # down and reports the problem naming the workflow it's in.
+  defp job_specs(workflow) when is_map(workflow) do
+    case Map.get(workflow, "jobs") do
+      %{} = jobs -> jobs
+      _other -> %{}
+    end
+  end
+
+  defp job_specs(_workflow), do: %{}
 
   defp fetch_list(map, key) do
     case Map.get(map, key) do

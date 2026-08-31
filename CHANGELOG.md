@@ -20,13 +20,10 @@ and this project adheres to
 - Declarative, idempotent instance kickstarting from a YAML/JSON scenario file
   (users, API tokens, credentials, projects, workflows) via
   `mix lightning.kickstart`, `Lightning.Setup.kickstart/2` for releases (gated
-  behind `ALLOW_KICKSTART=true`), and `bin/e2e --scenario`.
-  [#4974](https://github.com/OpenFn/lightning/issues/4974)
-- The workflow title in the editor breadcrumbs is now clickable, returning to
-  the root workflow editor view: it closes the full IDE (equivalent to its close
-  button), closes any other open panel, deselects the current node, and drops
-  any run-viewing context, landing on the bare canvas.
-  [#4984](https://github.com/OpenFn/lightning/pull/4984)
+  behind `ALLOW_KICKSTART=true`), and `bin/e2e --scenario`. Workflows in a
+  scenario are written in the existing workflow-spec format — the same YAML the
+  collaborative editor imports and exports, validated against the same JSON
+  Schema. [#4974](https://github.com/OpenFn/lightning/issues/4974)
 
 ### Changed
 

@@ -36,14 +36,20 @@ projects:
     members:
       - { email: owner@openfn.org, role: owner }
       - { email: editor@openfn.org, role: editor }
+    # Workflows are workflow-spec documents — the same YAML the editor
+    # imports/exports. Jobs, triggers and edges are keyed by slug and refer
+    # to each other by those keys.
     workflows:
       - name: Example Workflow
-        trigger:
-          type: webhook
-          # any Trigger field passes through, e.g.:
-          # webhook_reply: after_completion
+        triggers:
+          webhook:
+            type: webhook
+            enabled: true
+            # any other spec field works too, e.g.:
+            # webhook_reply: after_completion
         jobs:
-          - name: Transform data
+          transform-data:
+            name: Transform data
             adaptor: "@openfn/language-common@latest"
             credential: example-raw
             body: |
@@ -51,12 +57,18 @@ projects:
                 console.log('transforming');
                 return state;
               });
-          - name: Upload result
+          upload-result:
+            name: Upload result
             adaptor: "@openfn/language-common@latest"
+            body: fn(state => state);
         edges:
-          - { from: trigger, to: Transform data, condition: always }
-          - {
-              from: Transform data,
-              to: Upload result,
-              condition: on_job_success,
-            }
+          webhook->transform-data:
+            source_trigger: webhook
+            target_job: transform-data
+            condition_type: always
+            enabled: true
+          transform-data->upload-result:
+            source_job: transform-data
+            target_job: upload-result
+            condition_type: on_job_success
+            enabled: true
