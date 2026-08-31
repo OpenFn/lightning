@@ -6108,29 +6108,10 @@ defmodule LightningWeb.ProjectLiveTest do
 
       render_async(view)
 
-      # push pull.yml
-      expect_get_repo(repo_connection.repo, 200, expected_repo)
-      expect_create_blob(repo_connection.repo)
-      expect_get_commit(repo_connection.repo, expected_repo["default_branch"])
-      expect_create_tree(repo_connection.repo)
-      expect_create_commit(repo_connection.repo)
-      expect_update_ref(repo_connection.repo, expected_repo["default_branch"])
-
-      # push deploy.yml + config.json
-      expect_create_blob(repo_connection.repo)
-      expect_create_blob(repo_connection.repo)
-      expect_get_commit(repo_connection.repo, repo_connection.branch)
-      expect_create_tree(repo_connection.repo)
-      expect_create_commit(repo_connection.repo)
-      expect_update_ref(repo_connection.repo, repo_connection.branch)
-
-      # write secret
-      expect_get_public_key(repo_connection.repo)
-      secret_name = "OPENFN_#{String.replace(project.id, "-", "_")}_API_KEY"
-      expect_create_repo_secret(repo_connection.repo, secret_name)
-
-      # No dispatch is mocked on purpose: the pre-flight refuses before any
-      # sync call, so verify_on_exit! also asserts we never fired one.
+      # Nothing is mocked past the connection check on purpose. The export
+      # pre-flight refuses before pull.yml, the workflow files or the API
+      # secret are pushed, so verify_on_exit! asserts we never wrote to the
+      # repo at all.
 
       view
       |> form("#reconnect-project-form")

@@ -30,7 +30,7 @@ defmodule Lightning.VersionControl do
   """
   @spec create_github_connection(map(), User.t()) ::
           {:ok, ProjectRepoConnection.t()}
-          | {:error, Ecto.Changeset.t() | UsageLimiting.message()}
+          | {:error, Ecto.Changeset.t() | UsageLimiting.message() | binary()}
   def create_github_connection(attrs, user) do
     changeset =
       ProjectRepoConnection.create_changeset(%ProjectRepoConnection{}, attrs)
@@ -220,6 +220,18 @@ defmodule Lightning.VersionControl do
   # to ask for the same spec the Action will.
   defp snapshot_ids_for_export([]), do: nil
   defp snapshot_ids_for_export(snapshot_ids), do: snapshot_ids
+
+  # Generates the spec and throws it away. A collision raises DuplicateKeyError,
+  # which the export turns into `{:error, binary}` naming both entities.
+  defp export_preflight(repo_connection) do
+    Projects.export_project(
+      :yaml,
+      repo_connection.project_id,
+      repo_connection
+      |> list_snapshots_for_project()
+      |> snapshot_ids_for_export()
+    )
+  end
 
   defp maybe_add_snapshots(inputs, snapshot_ids) do
     if Enum.empty?(snapshot_ids) do
@@ -798,7 +810,13 @@ defmodule Lightning.VersionControl do
   @spec configure_github_repo(ProjectRepoConnection.t(), User.t()) ::
           :ok | {:error, map() | binary()}
   defp configure_github_repo(repo_connection, user) do
-    with {:ok, user_token} <- fetch_user_access_token(user),
+    # Before anything is written to the repo. This path pushes pull.yml, the
+    # workflow files and the API secret before it reaches initiate_sync/2, and
+    # create_github_connection/2 wraps the lot in a transaction, so a project
+    # whose names collide would otherwise leave a modified GitHub repo behind
+    # and no connection row to show for it.
+    with {:ok, _spec} <- export_preflight(repo_connection),
+         {:ok, user_token} <- fetch_user_access_token(user),
          {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),
          {:ok, _} <-
            push_pull_yml_to_default_branch(tesla_client, repo_connection),
