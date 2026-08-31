@@ -25,23 +25,12 @@ and this project adheres to
 
 ### Changed
 
-> **Before deploying:** run `priv/repo/checks/4577_pre_deploy.sql` against
-> production. Two things in existing data change behaviour and neither has a
-> backfill. First, names that collide once spaces become hyphens (`My Flow` and
-> `My-Flow` in one project) previously exported with one of the pair silently
-> dropped; the export now refuses, which stops GitHub sync for that project
-> until someone renames one. Second, workflow names and edge condition labels
-> holding a control character were never validated before and now are. Editing
-> an unrelated field on such a row still saves, because the rule only fires
-> when the name itself changes; re-submitting an unchanged legacy name saves,
-> and only a different bad name is refused, so this is narrower than it looks.
-> The query lists both; an empty result means nothing to do.
->
-> The credential half of check 1 is close to dead code, because the unique
-> index on `lower(replace(name, '-', ' '))` already makes same-user collisions
-> impossible and it can only fire on a cross-user case. Running the check ahead
-> of time is optional: a collision otherwise surfaces in the UI at sync time,
-> naming both entities to rename.
+> **One thing to know before upgrading.** Two names in a project that become
+> the same key once spaces turn into hyphens, `My Flow` and `My-Flow`, used to
+> export with one of the pair silently dropped. The export now refuses instead.
+> If a project is in that state, GitHub sync, the reconnect form and the
+> project export all fail with a message naming both entities, and the fix is
+> to rename one of them.
 
 - Job and workflow names may now hold any character except a control one.
   Names were restricted to letters, digits, spaces, underscores and hyphens, so
