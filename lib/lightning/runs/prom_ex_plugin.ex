@@ -49,6 +49,25 @@ defmodule Lightning.Runs.PromExPlugin do
             tags: [],
             unit: :millisecond
           ),
+          distribution(
+            [:lightning, :run, :queue, :claim, :query, :milliseconds],
+            event_name: [:lightning, :repo, :query],
+            measurement: :query_time,
+            description: "DB execution time of the run-claim query",
+            keep: fn
+              %{query: query} when is_binary(query) ->
+                String.contains?(query, "SKIP LOCKED") and
+                  String.contains?(query, "subset")
+
+              _ ->
+                false
+            end,
+            reporter_options: [
+              buckets: [1, 2, 5, 10, 25, 50, 100, 250, 500, 1_000, 2_000, 5_000]
+            ],
+            tags: [],
+            unit: {:native, :millisecond}
+          ),
           Metrics.counter(
             @lost_run_event ++ [:count],
             description: "A counter of lost runs."
