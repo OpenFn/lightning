@@ -27,12 +27,6 @@ defmodule Lightning.Validators do
     |> update_change(field, &String.downcase/1)
   end
 
-  # A name may contain anything except a control character. Concretely: C0
-  # (U+0000-U+001F), DEL (U+007F), C1 (U+0080-U+009F, which is where NEL lives),
-  # the two line separators U+2028 and U+2029, and the two non-characters
-  # U+FFFE and U+FFFF. Everything else is allowed, including letters and marks
-  # from any script, punctuation, symbols, emoji, quotes and apostrophes.
-  #
   # U+2028 and U+2029 are here because YAML 1.1 counts them as line breaks
   # alongside LF, CR and NEL. A name holding one produces a spec that libyaml
   # and PyYAML reject outright while the npm parser reads it, and a writer that
@@ -42,8 +36,7 @@ defmodule Lightning.Validators do
   # Control characters are out because job names are written into the
   # `workflow_snapshots.jobs` jsonb column, and Postgres refuses a NUL inside
   # jsonb, so a name carrying one crashes the snapshot insert (#4893). We
-  # reject rather than strip: silently rewriting what someone typed is worse
-  # than telling them.
+  # reject rather than strip.
   #
   # `Lightning.LogMessage` keeps a narrower regex that it strips rather than
   # rejects. That is deliberate for log lines, which legitimately hold tabs and
@@ -52,26 +45,19 @@ defmodule Lightning.Validators do
 
   @control_chars_message "can't contain control characters"
 
-  # Characters that take no space and draw nothing. A name made only of these
-  # passes every other check, renders as an empty label everywhere in the UI,
-  # and becomes an invisible key in the project spec. `String.trim/1` already
+  # Characters that take no space and draw nothing. `String.trim/1` already
   # empties a name made only of spaces, tabs, newlines, NBSP or U+3000, so this
   # closes the same hole for the characters trim does not know about.
   #
-  # A property test rather than a list. The list this replaced held 30
-  # codepoints and let 406 through, and the arbitrary part was that it took
-  # U+FE0E and U+FE0F but not U+FE00 to U+FE0D from the same block. `\p{Cf}` is
-  # the bulk of it; the explicit ranges are the codepoints that are
+  # `\p{Cf}` is the bulk of it; the explicit ranges are the codepoints that are
   # Default_Ignorable_Code_Point without being format characters -- the
   # combining grapheme joiner, the Hangul and Khmer fillers, the variation
-  # selectors and their supplement, the tag block -- plus U+2800, the Braille
-  # blank, which is not default-ignorable but still draws nothing. The Egyptian
-  # hieroglyph controls are spelled out because PCRE's tables here predate
-  # their move into Cf.
+  # selectors, the tag block -- plus U+2800, the Braille blank. The Egyptian
+  # hieroglyph controls are spelled out because PCRE's tables predate their
+  # move into Cf.
   #
-  # Only a name that is *nothing but* these is refused. A name that merely
-  # contains one is fine: a joiner is how an emoji sequence, a Devanagari
-  # conjunct and an Arabic ligature are written.
+  # A name that merely contains one of these is fine: a joiner is how an emoji
+  # sequence, a Devanagari conjunct and an Arabic ligature are written.
   # Written on one line on purpose: PCRE's /x does not ignore whitespace inside
   # a character class, so laying this out over several lines silently put a
   # literal space and newline into the set.
@@ -88,9 +74,7 @@ defmodule Lightning.Validators do
   later `validate_required/3` or `validate_length/3` in the same changeset sees
   the value that will actually be stored. Call this straight after `cast/3`.
 
-  A name may hold any other codepoint. See `@control_chars_regex` above for why
-  control characters are the one exception, and `assets/js/utils/nameValidation.ts`
-  for the client-side copy of the same rule.
+  `assets/js/utils/nameValidation.ts` is the client-side copy of the rule.
   """
   @spec validate_name(Ecto.Changeset.t(), atom(), String.t()) ::
           Ecto.Changeset.t()
@@ -122,13 +106,9 @@ defmodule Lightning.Validators do
   @doc """
   Rejects a NUL in a field that ends up inside a jsonb column.
 
-  A job body and an edge's condition expression are both copied into
-  `workflow_snapshots`, and Postgres refuses a NUL anywhere inside a jsonb
-  value (`22P05`). Unlike a name, these fields legitimately hold newlines and
-  tabs, so only the NUL is refused rather than the whole control set.
-
-  Malformed UTF-8 goes the same way, for the same reason it does in
-  `validate_name/3`.
+  Postgres refuses a NUL anywhere inside a jsonb value (`22P05`). Unlike a
+  name, these fields legitimately hold newlines and tabs, so only the NUL is
+  refused rather than the whole control set. Malformed UTF-8 goes the same way.
   """
   @spec validate_no_null_bytes(Ecto.Changeset.t(), atom(), String.t()) ::
           Ecto.Changeset.t()
@@ -141,11 +121,8 @@ defmodule Lightning.Validators do
   @doc """
   Rejects a NUL anywhere inside a map field that ends up in a jsonb column.
 
-  `workflow.positions` and a trigger's `kafka_configuration` are maps written
-  straight into `workflow_snapshots`, and Postgres refuses a NUL anywhere
-  inside a jsonb value, keys included. Walks the whole structure rather than
-  checking the top level, because a NUL in a key is just as fatal as one in a
-  value.
+  Walks the whole structure rather than checking the top level, because a NUL
+  in a key is just as fatal as one in a value.
   """
   @spec validate_no_null_bytes_deep(Ecto.Changeset.t(), atom(), String.t()) ::
           Ecto.Changeset.t()
@@ -158,23 +135,17 @@ defmodule Lightning.Validators do
   @doc """
   Rejects a name that will not fit the column it is stored in.
 
-  Both `jobs.name` and `workflows.name` are `varchar(255)`, and Postgres counts
-  those 255 in codepoints. The product caps above this one count graphemes, so
-  the two disagree on anything built from multi-codepoint clusters: 100 ZWJ
-  family emoji are 100 graphemes and 700 codepoints, which passes a 100
-  grapheme cap and then raises `22001` on insert. Names were ASCII-only until
-  #4577, which is why this never came up before.
+  Postgres counts a varchar in codepoints; the product caps above this one
+  count graphemes, so a name built from multi-codepoint clusters can pass a
+  100 grapheme cap and raise `22001` on insert.
 
   Skipped when the field already has an error, so a plainly over-long name gets
-  the product cap's message and this one stays quiet.
+  the product cap's message and this one stays quiet. `width` defaults to 255,
+  the width of every name column in this schema; pass it for a narrower one
+  such as `credentials.schema`.
 
-  `width` defaults to 255, which is what every name column in this schema is.
-  Pass it explicitly for a narrower one, such as `credentials.schema`.
-
-  The message callers pass should not quote a number. From where the user sits
-  the limit is the product cap, and being told "at most 255" after being told
-  "at most 100" reads as a bug even though both are true. Say it is too long
-  and ask for a shorter one.
+  The message callers pass should not quote a number: from where the user sits
+  the limit is the product cap.
   """
   @spec validate_name_fits_column(
           Ecto.Changeset.t(),

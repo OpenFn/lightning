@@ -30,10 +30,8 @@ defmodule LightningWeb.DownloadsController do
     else
       # Two names that hyphenate to one spec key stop the whole export. This is
       # the only export path with a person on the other end, and the fallback
-      # controller answers a binary error with a 400 JSON body, which in a
-      # browser is a wall of text. The export button opens a new tab, so the
-      # redirect lands there with the reason rather than in the tab they were
-      # reading.
+      # controller answers a binary error with a 400 JSON body. The export
+      # button opens a new tab, so the redirect lands there with the reason.
       {:error, message} when is_binary(message) ->
         conn
         |> put_flash(:error, message)

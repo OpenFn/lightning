@@ -89,9 +89,7 @@ defmodule Lightning.Credentials.Credential do
       :name,
       "credential name is too long, please use a shorter one"
     )
-    # Two more fields on the same cast/3 with no length guard at all. schema is
-    # varchar(40), not 255, so a 41 character schema was a 500 on plain ASCII
-    # through POST /api/credentials.
+    # schema is varchar(40), not 255.
     |> Validators.validate_name_fits_column(
       :schema,
       "credential schema is too long, please use a shorter one",

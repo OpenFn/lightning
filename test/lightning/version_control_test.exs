@@ -541,10 +541,8 @@ defmodule Lightning.VersionControlTest do
       project: project,
       repo_connection: repo_connection
     } do
-      # `My Flow` and `My-Flow` are two names that become one spec key. The
-      # export refuses the whole project rather than dropping one of the pair,
-      # and without this pre-flight the Action would fetch the spec, get a 400
-      # and die in a log Lightning cannot read.
+      # `My Flow` and `My-Flow` are two names that become one spec key, so the
+      # export refuses the whole project.
       #
       # No GitHub mocks are set here on purpose: verify_on_exit! turns any call
       # to the client into a failure, so this also asserts we never dispatched.

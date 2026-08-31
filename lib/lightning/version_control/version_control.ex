@@ -141,23 +141,10 @@ defmodule Lightning.VersionControl do
   @doc """
   Fires the GitHub Action that pulls the project spec and commits it.
 
-  The export runs here first and its result is thrown away. That looks
-  wasteful, and it is the point: the Action fetches
-  `/api/provision/:id.yaml`, and if that returns a 400 the failure lands in a
-  GitHub Actions log Lightning cannot read, so the user sees a sync that failed
-  with no reason. Two entities whose names collide once hyphenated now refuse
-  the whole export (`Lightning.ExportUtils.DuplicateKeyError`), which is a
-  failure this branch made loud on a path where the loudness reached nobody.
-
-  It calls the real export rather than a separate collision check on purpose.
-  A second copy of the key-derivation rule here would drift from
-  `put_identity_key!` and `ensure_unique_job_keys!` the first time either
-  moved, and divergent copies of that rule are the whole reason #4577 existed.
-
-  The cost is one extra spec generation on a successful sync, against a round
-  trip to GitHub. That is the preload and the workflow queries as well as the
-  encode, not the 0.13ms the encode alone takes on a 66KB production spec, so
-  read it as a second full export rather than as free.
+  The export runs here first and its result is thrown away. The Action fetches
+  `/api/provision/:id.yaml`, and a 400 there lands in a GitHub Actions log
+  Lightning cannot read, so the user sees a sync that failed with no reason.
+  Costs one extra full spec generation on every successful sync.
   """
   @spec initiate_sync(
           repo_connection :: ProjectRepoConnection.t(),
@@ -222,8 +209,6 @@ defmodule Lightning.VersionControl do
   defp snapshot_ids_for_export([]), do: nil
   defp snapshot_ids_for_export(snapshot_ids), do: snapshot_ids
 
-  # Generates the spec and throws it away. A collision raises DuplicateKeyError,
-  # which the export turns into `{:error, binary}` naming both entities.
   defp export_preflight(repo_connection) do
     Projects.export_project(
       :yaml,
@@ -806,16 +791,13 @@ defmodule Lightning.VersionControl do
     end
   end
 
-  # `binary()` because a `:pull` connection ends in `initiate_sync/2`, whose
-  # export pre-flight fails with a plain string naming the colliding entities.
   @spec configure_github_repo(ProjectRepoConnection.t(), User.t()) ::
           :ok | {:error, map() | binary()}
   defp configure_github_repo(repo_connection, user) do
     # Before anything is written to the repo. This path pushes pull.yml, the
-    # workflow files and the API secret before it reaches initiate_sync/2, and
-    # create_github_connection/2 wraps the lot in a transaction, so a project
-    # whose names collide would otherwise leave a modified GitHub repo behind
-    # and no connection row to show for it.
+    # workflow files and the API secret before it reaches initiate_sync/2, so a
+    # project whose names collide would otherwise leave a modified GitHub repo
+    # behind and no connection row to show for it.
     with {:ok, _spec} <- export_preflight(repo_connection),
          {:ok, user_token} <- fetch_user_access_token(user),
          {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),

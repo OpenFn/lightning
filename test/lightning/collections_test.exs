@@ -6,10 +6,8 @@ defmodule Lightning.CollectionsTest do
   alias Lightning.Collections.Item
 
   describe "Item.changeset/2 key width" do
-    # collection_items.key is varchar(255) and the changeset capped only
-    # :value, so a 300 character key gave valid? == true and then raised
-    # 22001. This is width, not a null byte, so it is separate from the
-    # Collections jsonb work still outstanding.
+    # Width, not a null byte, so this is separate from the Collections jsonb
+    # work still outstanding.
     test "an over-long key is a changeset error, not a 22001" do
       collection = insert(:collection)
 

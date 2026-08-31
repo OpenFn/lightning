@@ -87,10 +87,8 @@ defmodule Lightning.ExportUtilsTest do
   end
 
   describe "generate_new_yaml/2 for adaptor and cron_expression" do
-    # These two used to be concatenated straight into the spec as
-    # "\#{k}: '\#{v}'", the last unescaped concatenation in the module. They go
-    # through Scalar.encode_quoted_value/1 now, which escapes but never leaves
-    # the value bare, so the output is byte for byte what it always was.
+    # These go through Scalar.encode_quoted_value/1, which escapes but never
+    # leaves the value bare, so the output is byte for byte what it always was.
     test "an adaptor is single-quoted" do
       project = cron_project("0 23 * * *")
 
@@ -216,7 +214,7 @@ defmodule Lightning.ExportUtilsTest do
       edges = parsed["workflows"]["edge-collision"]["edges"]
 
       # Both edges survive, under distinct keys, and each still names its own
-      # source and target in the body, which is what the CLI reads.
+      # source and target, which is what the CLI reads.
       assert Enum.sort(Map.keys(edges)) == [
                "a->b->c",
                "a->b->c-2",
@@ -422,8 +420,6 @@ defmodule Lightning.ExportUtilsTest do
 
       assert keys == jobs |> Enum.map(&elem(&1, 1)) |> Enum.sort()
 
-      # And the key really is the hyphenated name, which is the invariant the
-      # CLI matches on.
       for {name, key} <- jobs do
         assert parsed["workflows"]["hyphenate"]["jobs"][key]["name"] == name
       end

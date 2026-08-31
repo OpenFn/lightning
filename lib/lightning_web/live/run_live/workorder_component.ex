@@ -474,10 +474,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     """
   end
 
-  # This tooltip is one of the few that renders as HTML, because it carries its
-  # own <br/> and a styled hint. Anything interpolated into it therefore has to
-  # be escaped by hand: a workflow name is user input and may hold any
-  # character, including markup.
+  # The tooltip renders as HTML, so anything interpolated into it has to be
+  # escaped by hand: a workflow name is user input and may hold any character,
+  # including markup.
   defp escape_html(value) do
     value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
   end

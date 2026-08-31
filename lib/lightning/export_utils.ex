@@ -57,9 +57,6 @@ defmodule Lightning.ExportUtils do
 
   defp hyphenate(other), do: other
 
-  # Two entities whose names hyphenate to the same key would silently overwrite
-  # one another in the spec, and the CLI addresses them by that key. Refuse,
-  # and name both so whoever hit it knows which two to rename.
   defp put_identity_key!(acc, key, tree, kind) do
     case Map.fetch(acc, key) do
       {:ok, %{name: existing}} ->
@@ -94,13 +91,9 @@ defmodule Lightning.ExportUtils do
   end
 
   # An edge key is a label. Nothing parses it, and the edge body carries its own
-  # identity in source_job, source_trigger and target_job. That matters because
-  # the key is built by joining two job keys with `->`, and a job may legally
-  # hold a `>`: jobs named `a` and `b->c` produce the same key as `a->b` and
-  # `c`. So a collision here is disambiguated rather than refused.
-  #
-  # The suffix is checked against both the original keys and the ones already
-  # handed out, so it cannot collide with a name further down the list.
+  # identity in source_job, source_trigger and target_job, so a collision is
+  # disambiguated rather than refused. The suffix is checked against both the
+  # original keys and the ones already handed out.
   defp disambiguate_edge_keys(edges) do
     taken = MapSet.new(edges, & &1.name)
 
@@ -300,11 +293,6 @@ defmodule Lightning.ExportUtils do
     )
   end
 
-  # These three were hard-coded as "#{k}: '#{v}'", the one place left in this
-  # module that concatenated a value into the spec without escaping it. They
-  # go through Scalar now, but through the forced quote rather than the general
-  # one. A cron with no wildcard in it, such as `5 4 1 1 1`, is bare-legal, and
-  # emitting it bare would be a diff in every synced repo that has one.
   defp handle_binary(k, v, i) do
     case k do
       k when k in [:body, :description, :condition_expression] ->
@@ -537,9 +525,7 @@ defmodule Lightning.ExportUtils do
 
   Returns `{:error, message}` when two entities in the project would be written
   under the same spec key. That is refused rather than exported, because the
-  key is what the CLI addresses the entity by and the export used to drop one
-  of the pair without saying anything. The message names both so the user can
-  go and rename one.
+  key is what the CLI addresses the entity by. The message names both.
   """
   @spec generate_new_yaml(Projects.Project.t(), [Snapshot.t()] | nil) ::
           {:ok, binary()} | {:error, binary()}

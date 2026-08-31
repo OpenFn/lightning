@@ -43,9 +43,8 @@ defmodule Lightning.Collections.Item do
       "value is too long, please use a shorter one",
       1_000_000
     )
-    # key is varchar(255) and had no guard at all, so a 300 character key gave
-    # valid? == true and then raised 22001. Width, not a null byte, so this is
-    # separate from the Collections jsonb work still outstanding.
+    # Width, not a null byte, so this is separate from the Collections jsonb
+    # work still outstanding.
     |> Lightning.Validators.validate_name_fits_column(
       :key,
       "key is too long, please use a shorter one"

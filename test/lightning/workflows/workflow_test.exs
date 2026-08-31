@@ -215,9 +215,8 @@ defmodule Lightning.Workflows.WorkflowTest do
 
     test "a name short in graphemes but too wide for the column is rejected",
          %{project: project} do
-      # workflows.name is varchar(255) and Postgres counts those in codepoints.
-      # 255 ZWJ families are 255 graphemes, so they clear the cap above, but
-      # 1785 codepoints, so the insert used to raise 22001.
+      # 255 ZWJ families clear the cap above at 255 graphemes but are 1785
+      # codepoints, and workflows.name is varchar(255).
       family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
       name = String.duplicate(family, 255)
 
@@ -227,7 +226,6 @@ defmodule Lightning.Workflows.WorkflowTest do
       changeset =
         Workflow.changeset(%Workflow{}, %{name: name, project_id: project.id})
 
-      # No number in this message on purpose, same reasoning as the job one.
       assert errors_on(changeset)[:name] == [
                "workflow name is too long, please use a shorter one"
              ]

@@ -93,9 +93,8 @@ defmodule Lightning.Workflows.EdgeTest do
     end
 
     test "a label short in graphemes but too wide for the column is rejected" do
-      # The cap above counts graphemes, the column counts codepoints. 200 ZWJ
-      # families are 200 characters to Ecto and 1400 to Postgres, so they used
-      # to pass the changeset and raise an uncaught 22001 on insert.
+      # The cap above counts graphemes, the column counts codepoints: 200 ZWJ
+      # families are 200 characters to Ecto and 1400 to Postgres.
       family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
       label = String.duplicate(family, 200)
 

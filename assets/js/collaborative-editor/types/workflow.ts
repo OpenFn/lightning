@@ -26,20 +26,12 @@ import type { Session } from './session';
 import { TriggerSchema, type Trigger as TriggerType } from './trigger';
 
 /**
- * Zod schema for workflow validation
- *
- * Mirrors backend validation from lib/lightning/workflows/workflow.ex:81-103
- */
-/**
  * The workflow name rule, in one place, used by every schema that validates a
- * name the user typed.
+ * name the user typed. Normalise first, then check, which is the order the
+ * server uses. Mirrors `Lightning.Workflows.Workflow.validate/1`.
  *
- * Normalise first, then check, which is the order the server uses, and count
- * graphemes rather than UTF-16 code units so the cap means what Ecto means by
- * it. Mirrors Lightning.Workflows.Workflow.validate/1.
- *
- * This is deliberately not used by BaseWorkflowSchema, which parses what the
- * server sends rather than what the user typed. See the note there.
+ * Deliberately not used by `BaseWorkflowSchema`, which parses what the server
+ * sends rather than what the user typed. See the note there.
  */
 export const workflowNameSchema = z
   .string()
@@ -50,10 +42,7 @@ export const workflowNameSchema = z
       .min(1, "can't be blank")
       .refine(val => !isInvisibleOnly(val), NAME_BLANK_MESSAGE)
       // Codepoints only. A grapheme count is never above a codepoint count, so
-      // a separate grapheme cap at the same 255 could never reject anything
-      // this does not, its message was dead, and it was the one place calling
-      // graphemeLength directly -- which throws without Intl.Segmenter, inside
-      // a refine Zod does not catch.
+      // a grapheme cap at the same 255 could not reject anything this does not.
       .refine(val => !isNameTooWideForColumn(val), NAME_TOO_WIDE_MESSAGE)
       .refine(val => !hasControlChars(val), CONTROL_CHARS_MESSAGE)
   );
@@ -82,18 +71,10 @@ export const BaseWorkflowSchema = z.object({
   triggers: z.array(TriggerSchema),
   edges: z.array(EdgeSchema),
   positions: z.record(z.string(), z.object({}).loose()).nullable(),
-  // This schema parses the workflow arriving FROM the server, and
-  // createSessionContextStore throws the whole session context away when the
-  // parse fails, so a name the server stored happily must never be refused
-  // here. `.max(255)` counted UTF-16 units, so a workflow named 130 emoji --
-  // 130 codepoints, stored fine -- measured 260 and broke the collaborative
-  // editor for everyone in that project.
-  //
-  // Codepoints, deliberately, because that is the unit the column is measured
-  // in; anything the server could store passes. Control characters are not
-  // refused here either: workflow names had no rule before #4577, so a legacy
-  // row may hold a tab, and refusing it inbound would be the same outage in a
-  // different coat. The server is the authority on what may be written.
+  // This schema parses the workflow arriving FROM the server, and one failed
+  // safeParse throws the whole session context away, so a name the server
+  // stored happily must never be refused here. Codepoints, and no control
+  // character check: the server is the authority on what may be written.
   name: z
     .string()
     .min(1)
