@@ -25,12 +25,10 @@ and this project adheres to
 
 ### Changed
 
-> **One thing to know before upgrading.** Two names in a project that become
-> the same key once spaces turn into hyphens, `My Flow` and `My-Flow`, used to
-> export with one of the pair silently dropped. The export now refuses instead.
-> If a project is in that state, GitHub sync, the reconnect form and the
-> project export all fail with a message naming both entities, and the fix is
-> to rename one of them.
+> **Before upgrading.** If one project holds two names that become the same key
+> once spaces turn into hyphens, like `My Flow` and `My-Flow`, sync and export
+> now fail and name both, where they used to silently drop one. Rename one of
+> them.
 
 - Job and workflow names may now hold any character except a control one.
   Names were restricted to letters, digits, spaces, underscores and hyphens, so
