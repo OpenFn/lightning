@@ -35,7 +35,10 @@ function fakeSocket(replies: Record<string, unknown>) {
   return { channel: () => channel, leaveSpy: channel.leave };
 }
 
-function mount(replies: Record<string, unknown>) {
+function mount(
+  replies: Record<string, unknown>,
+  connectionError: string | null = null
+) {
   const socket = fakeSocket(replies);
 
   const rendered = render(
@@ -43,7 +46,7 @@ function mount(replies: Record<string, unknown>) {
       value={{
         socket: socket as never,
         isConnected: true,
-        connectionError: null,
+        connectionError,
         connect: vi.fn(),
         disconnect: vi.fn(),
       }}
@@ -79,6 +82,14 @@ describe('WorkflowHealth', () => {
     mount({ error: { reason: 'something broke' } });
 
     expect(await screen.findByText('something broke')).toBeVisible();
+  });
+
+  test('reports a socket that never connects, rather than loading forever', async () => {
+    mount({}, 'websocket closed');
+
+    expect(
+      await screen.findByText('Could not connect. Refresh to try again.')
+    ).toBeVisible();
   });
 
   test('leaves the channel on unmount', () => {

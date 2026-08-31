@@ -32,7 +32,7 @@ export function useHealthStats(
   workflowId: string,
   projectId: string
 ): HealthState {
-  const { socket, isConnected } = useSocket();
+  const { socket, isConnected, connectionError } = useSocket();
   const [state, setState] = useState<HealthState>({
     outcomes: null,
     error: null,
@@ -86,6 +86,15 @@ export function useHealthStats(
       channel.leave();
     };
   }, [socket, isConnected, workflowId, projectId]);
+
+  // A dropped connection recovers on its own, so don't replace good numbers
+  // with an error — only show it if we never got any.
+  if (connectionError && !state.outcomes) {
+    return {
+      outcomes: null,
+      error: 'Could not connect. Refresh to try again.',
+    };
+  }
 
   return state;
 }
