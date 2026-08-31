@@ -604,16 +604,17 @@ defmodule Lightning.Config.BootstrapTest do
   end
 
   describe "adaptors NPM upstream URLs" do
-    test "default to the production upstreams when nothing is set" do
+    test "no keys are forced when nothing is set, so sub-modules' own @default_* wins" do
       Dotenvy.source([%{}])
       Bootstrap.configure()
 
       npm = get_env(:lightning, Lightning.Adaptors.NPM)
 
-      assert npm[:registry_url] == "https://registry.npmjs.org"
-      assert npm[:jsdelivr_url] == "https://cdn.jsdelivr.net"
-      assert npm[:github_url] == "https://raw.githubusercontent.com"
-      assert npm[:github_ref] == "main"
+      refute Keyword.has_key?(npm, :registry_url)
+      refute Keyword.has_key?(npm, :jsdelivr_url)
+      refute Keyword.has_key?(npm, :github_url)
+      refute Keyword.has_key?(npm, :github_ref)
+      refute Keyword.has_key?(npm, :http_timeout)
     end
 
     test "are overridden by the ADAPTORS_NPM_* env vars" do
@@ -634,6 +635,26 @@ defmodule Lightning.Config.BootstrapTest do
       assert npm[:jsdelivr_url] == "http://localhost:4874/jsdelivr"
       assert npm[:github_url] == "http://localhost:4874/github"
       assert npm[:github_ref] == "some-feature-branch"
+    end
+
+    test "ADAPTORS_NPM_HTTP_TIMEOUT sets http_timeout when present" do
+      Dotenvy.source([%{"ADAPTORS_NPM_HTTP_TIMEOUT" => "5000"}])
+
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      assert npm[:http_timeout] == 5000
+    end
+
+    test "ADAPTORS_NPM_HTTP_TIMEOUT does not force a 0ms timeout when set but empty" do
+      Dotenvy.source([%{"ADAPTORS_NPM_HTTP_TIMEOUT" => ""}])
+
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      refute Keyword.has_key?(npm, :http_timeout)
     end
   end
 

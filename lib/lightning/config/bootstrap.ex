@@ -244,18 +244,18 @@ defmodule Lightning.Config.Bootstrap do
     #
     # Point them at `bin/adaptor_cache` to serve all three from a local disk
     # cache while working on adaptors.
-    config :lightning, Lightning.Adaptors.NPM,
-      registry_url:
-        env!("ADAPTORS_NPM_REGISTRY_URL", :string, "https://registry.npmjs.org"),
-      jsdelivr_url:
-        env!("ADAPTORS_NPM_JSDELIVR_URL", :string, "https://cdn.jsdelivr.net"),
-      github_url:
-        env!(
-          "ADAPTORS_NPM_GITHUB_URL",
-          :string,
-          "https://raw.githubusercontent.com"
-        ),
-      github_ref: env!("ADAPTORS_NPM_GITHUB_REF", :string, "main")
+    # Defaults live in the strategy sub-modules' own @default_* attributes;
+    # bootstrap only maps an env var onto an override when one is set.
+    config :lightning,
+           Lightning.Adaptors.NPM,
+           [
+             registry_url: env!("ADAPTORS_NPM_REGISTRY_URL", :string, nil),
+             jsdelivr_url: env!("ADAPTORS_NPM_JSDELIVR_URL", :string, nil),
+             github_url: env!("ADAPTORS_NPM_GITHUB_URL", :string, nil),
+             github_ref: env!("ADAPTORS_NPM_GITHUB_REF", :string, nil),
+             http_timeout: env!("ADAPTORS_NPM_HTTP_TIMEOUT", :integer?, nil)
+           ]
+           |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
     config :lightning,
       schemas_path:
@@ -994,15 +994,7 @@ defmodule Lightning.Config.Bootstrap do
     adaptors_strategy =
       case adaptors_strategy_value do
         blank when blank in [nil, ""] ->
-          if use_local_adaptors_repos? do
-            Logger.warning(
-              "LOCAL_ADAPTORS is deprecated, use ADAPTORS_STRATEGY=local instead."
-            )
-
-            Lightning.Adaptors.Local
-          else
-            Lightning.Adaptors.NPM
-          end
+          local_adaptors_back_compat_strategy(use_local_adaptors_repos?)
 
         "npm" ->
           Lightning.Adaptors.NPM
@@ -1021,27 +1013,8 @@ defmodule Lightning.Config.Bootstrap do
           """
       end
 
-    # ADAPTORS_LOCAL_REPO wins outright when set. When unset, fall back to
-    # the (ungated) OPENFN_ADAPTORS_REPO parse above, warning only when the
-    # new subsystem is actually running the Local strategy — an operator
-    # who still needs OPENFN_ADAPTORS_REPO for the old registry while
-    # running the new subsystem on npm shouldn't be warned about a var they
-    # legitimately need.
     local_strategy_paths =
-      case env!("ADAPTORS_LOCAL_REPO", :string, nil) |> parse_repo_list() do
-        [] ->
-          if local_adaptors_repos != [] and
-               adaptors_strategy == Lightning.Adaptors.Local do
-            Logger.warning(
-              "OPENFN_ADAPTORS_REPO is deprecated, use ADAPTORS_LOCAL_REPO instead."
-            )
-          end
-
-          local_adaptors_repos
-
-        paths ->
-          paths
-      end
+      resolve_local_strategy_paths(local_adaptors_repos, adaptors_strategy)
 
     if adaptors_strategy == Lightning.Adaptors.Local and
          local_strategy_paths == [] do
@@ -1071,6 +1044,41 @@ defmodule Lightning.Config.Bootstrap do
            |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
     config :lightning, Lightning.Adaptors.Local, paths: local_strategy_paths
+  end
+
+  defp local_adaptors_back_compat_strategy(use_local_adaptors_repos?) do
+    if use_local_adaptors_repos? do
+      Logger.warning(
+        "LOCAL_ADAPTORS is deprecated, use ADAPTORS_STRATEGY=local instead."
+      )
+
+      Lightning.Adaptors.Local
+    else
+      Lightning.Adaptors.NPM
+    end
+  end
+
+  # ADAPTORS_LOCAL_REPO wins outright when set. When unset, fall back to
+  # the (ungated) OPENFN_ADAPTORS_REPO parse above, warning only when the
+  # new subsystem is actually running the Local strategy — an operator
+  # who still needs OPENFN_ADAPTORS_REPO for the old registry while
+  # running the new subsystem on npm shouldn't be warned about a var they
+  # legitimately need.
+  defp resolve_local_strategy_paths(local_adaptors_repos, adaptors_strategy) do
+    case env!("ADAPTORS_LOCAL_REPO", :string, nil) |> parse_repo_list() do
+      [] ->
+        if local_adaptors_repos != [] and
+             adaptors_strategy == Lightning.Adaptors.Local do
+          Logger.warning(
+            "OPENFN_ADAPTORS_REPO is deprecated, use ADAPTORS_LOCAL_REPO instead."
+          )
+        end
+
+        local_adaptors_repos
+
+      paths ->
+        paths
+    end
   end
 
   defp parse_repo_list(nil), do: []

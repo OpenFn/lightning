@@ -62,7 +62,8 @@ and this project adheres to
   Maintenance, or by running `mix lightning.refresh_adaptors`. The npm, jsDelivr
   and GitHub endpoints the registry reads from can be pointed elsewhere with
   `ADAPTORS_NPM_REGISTRY_URL`, `ADAPTORS_NPM_JSDELIVR_URL`,
-  `ADAPTORS_NPM_GITHUB_URL` and `ADAPTORS_NPM_GITHUB_REF`.
+  `ADAPTORS_NPM_GITHUB_URL` and `ADAPTORS_NPM_GITHUB_REF`, and the HTTP receive
+  timeout for those requests with `ADAPTORS_NPM_HTTP_TIMEOUT` (defaults to 30s).
   [#4801](https://github.com/OpenFn/lightning/pull/4801)
 - `ADAPTORS_STRATEGY` (`npm`, default, or `local`) picks which strategy the
   adaptors subsystem serves from. `ADAPTORS_LOCAL_REPO` and
