@@ -78,7 +78,10 @@ export function useHealthStats(
         void load();
       })
       .receive('error', ({ reason }: { reason?: string }) => {
-        fail(reason ?? 'Could not load workflow stats');
+        // The guard's own words — "unauthorized", a params error — describe a
+        // race or a bug, never something the reader can act on.
+        console.error('workflow_health join rejected:', reason);
+        fail('Could not load workflow stats. Refresh to try again.');
       });
 
     return () => {

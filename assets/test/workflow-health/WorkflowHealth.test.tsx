@@ -72,16 +72,33 @@ describe('WorkflowHealth', () => {
     expect(screen.getByText('Last 30 days · 1,284 work orders')).toBeVisible();
   });
 
-  test('surfaces the join error reason', async () => {
+  test('reports a rejected join without echoing the server', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     mount({ join_error: { reason: 'unauthorized' } });
 
-    expect(await screen.findByText('unauthorized')).toBeVisible();
+    expect(
+      await screen.findByText(
+        'Could not load workflow stats. Refresh to try again.'
+      )
+    ).toBeVisible();
+    expect(screen.queryByText('unauthorized')).toBeNull();
   });
 
   test('surfaces a get_outcomes error reason', async () => {
     mount({ error: { reason: 'something broke' } });
 
     expect(await screen.findByText('something broke')).toBeVisible();
+  });
+
+  test('keeps the page around a failed chart', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mount({ join_error: { reason: 'unauthorized' } });
+
+    await screen.findByText(/Could not load workflow stats/);
+    expect(
+      screen.getByRole('heading', { name: 'Sync patients' })
+    ).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Outcomes' })).toBeVisible();
   });
 
   test('reports a socket that never connects, rather than loading forever', async () => {
