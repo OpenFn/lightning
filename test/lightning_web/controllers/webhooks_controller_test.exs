@@ -92,7 +92,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
       assert {:ok, %Tesla.Env{status: 413, body: "Request Entity Too Large"}} =
                [
-                 {Tesla.Middleware.BaseUrl, "http://localhost:4002"},
+                 {Tesla.Middleware.BaseUrl, LightningWeb.Endpoint.url()},
                  Tesla.Middleware.JSON
                ]
                |> Tesla.client()
