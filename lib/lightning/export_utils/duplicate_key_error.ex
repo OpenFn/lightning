@@ -27,7 +27,7 @@ defmodule Lightning.ExportUtils.DuplicateKeyError do
 
   @impl true
   def message(%__MODULE__{kind: kind, key: key, first: first, second: second}) do
-    "two #{kind}s in this project are both written as #{inspect(key)} in the " <>
+    "two #{kind} in this project are both written as #{inspect(key)} in the " <>
       "project spec: #{inspect(first)} and #{inspect(second)}. Rename one of " <>
       "them and export again."
   end

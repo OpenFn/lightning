@@ -162,7 +162,7 @@ defmodule Lightning.ExportUtilsTest do
 
       assert message =~ ~s("a-b")
       assert message =~ ~s("a b")
-      assert message =~ "job in collide"
+      assert message =~ "two jobs in collide"
       assert message =~ "Rename one of them"
     end
 
