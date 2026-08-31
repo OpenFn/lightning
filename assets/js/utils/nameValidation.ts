@@ -1,14 +1,7 @@
 /**
  * The one rule for job and workflow names, shared by every place on the client
- * that checks one.
- *
- * Anything except a control character. U+2028 and U+2029 are in the rejected
- * set because they are line breaks in YAML 1.1, so a name holding one makes a
- * spec that some parsers reject and others read differently.
- *
- * This mirrors `Lightning.Validators.validate_name/3` in
- * `lib/lightning/utils/validators.ex`, so the client refuses exactly what the
- * server would refuse and nothing more. Change one and change the other.
+ * that checks one. Mirrors `Lightning.Validators.validate_name/3` in
+ * `lib/lightning/utils/validators.ex`. Change one and change the other.
  */
 
 export const CONTROL_CHARS_REGEX =
@@ -26,24 +19,20 @@ export const NAME_TOO_LONG_MESSAGE = `Name should not exceed ${String(
 /**
  * The width of the `jobs.name` and `workflows.name` columns. Postgres counts a
  * varchar in codepoints, not graphemes, so a name can clear the cap above and
- * still not fit: 100 ZWJ family emoji are 100 graphemes but 700 codepoints.
- * `Lightning.Validators.validate_name_fits_column/3` is the server half.
+ * still not fit. Server half: `Validators.validate_name_fits_column/3`.
  */
 export const NAME_COLUMN_LIMIT = 255;
 
 /**
- * Deliberately quotes no number. The limit the user was shown is the grapheme
- * cap above; telling them 255 right after telling them 100 reads as a bug.
- * Mirrors the server message in `Lightning.Workflows.Job`.
+ * Deliberately quotes no number: the limit the user was shown is the grapheme
+ * cap above. Mirrors the server message in `Lightning.Workflows.Job`.
  */
 export const NAME_TOO_WIDE_MESSAGE =
   'Name is too long, please use a shorter one.';
 
-/**
- * The 25 Unicode White_Space characters, which is what Elixir's `String.trim/1`
- * strips. JS `.trim()` differs in both directions: it leaves U+0085, which
- * Elixir strips, and eats U+FEFF, which Elixir keeps.
- */
+// The 25 Unicode White_Space characters, which is what Elixir's
+// `String.trim/1` strips. JS `.trim()` differs in both directions: it leaves
+// U+0085, which Elixir strips, and eats U+FEFF, which Elixir keeps.
 const TRIM_CHARS =
   '\u0009\u000a\u000b\u000c\u000d\u0020\u0085\u00a0\u1680\u2000\u2001' +
   '\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029' +
@@ -53,8 +42,7 @@ const TRIM_REGEX = new RegExp(`^[${TRIM_CHARS}]+|[${TRIM_CHARS}]+$`, 'gu');
 
 /**
  * NFC, then trim. The server normalises before it validates, so anything that
- * measures or checks a name on the client has to normalise first too,
- * otherwise the two disagree about length and about what counts as blank.
+ * measures or checks a name on the client has to normalise first too.
  */
 export const normalizeName = (value: string): string =>
   value.normalize('NFC').replace(TRIM_REGEX, '');
@@ -62,22 +50,12 @@ export const normalizeName = (value: string): string =>
 export const hasControlChars = (value: string): boolean =>
   CONTROL_CHARS_REGEX.test(value);
 
-/**
- * True only when the name is nothing but characters that draw nothing.
- *
- * A property test rather than a list, and the same rule as
- * `@invisible_regex` in lib/lightning/utils/validators.ex. JS exposes the
- * `Default_Ignorable_Code_Point` binary property directly; the format category
- * is unioned in for the characters that are Cf without being
- * default-ignorable, and U+2800 because the Braille blank is neither but still
- * draws nothing.
- *
- * `test/fixtures/invisible_codepoints.json` is generated from the server's
- * predicate and asserted against this one, so the two cannot drift.
- *
- * A name that merely contains one of these is fine: a joiner is how an emoji
- * sequence, a Devanagari conjunct and an Arabic ligature are written.
- */
+// True only when the name is nothing but characters that draw nothing. The
+// same rule as `@invisible_regex` in lib/lightning/utils/validators.ex,
+// written as a property test rather than a list. U+2800 is in because the
+// Braille blank is not default-ignorable but still draws nothing.
+// `test/fixtures/invisible_codepoints.json` is generated from the server's
+// predicate and asserted against this one, so the two cannot drift.
 const INVISIBLE_ONLY_REGEX =
   /^[\p{Default_Ignorable_Code_Point}\p{General_Category=Format}\u2800]+$/u;
 
@@ -86,10 +64,8 @@ export const isInvisibleOnly = (value: string): boolean =>
 
 export const NAME_BLANK_MESSAGE = "Name can't be blank.";
 
-/**
- * `Intl.Segmenter` is not declared in the `es2020` lib this project compiles
- * against, hence the local declaration rather than a lib bump.
- */
+// `Intl.Segmenter` is not declared in the `es2020` lib this project compiles
+// against, hence the local declaration rather than a lib bump.
 interface GraphemeSegmenter {
   segment(input: string): Iterable<{ segment: string }>;
 }
@@ -113,9 +89,7 @@ const segmenter = SegmenterCtor
 
 /**
  * Ecto's `validate_length` counts graphemes. A plain `.length` in JS counts
- * UTF-16 code units, so a family emoji is 1 to Elixir and 11 to JS, and the
- * two ends of the wire disagree about a 100 character cap. `Intl.Segmenter`
- * gives us the count Elixir uses.
+ * UTF-16 code units. `Intl.Segmenter` gives us the count Elixir uses.
  */
 export const graphemeLength = (value: string): number => {
   // No fallback on purpose. Counting code points instead would be at least the
@@ -131,9 +105,8 @@ export const graphemeLength = (value: string): number => {
 
 /**
  * Call this rather than `graphemeLength`, which throws without a Segmenter, and
- * a throw inside a Zod `.refine()` escapes `safeParse` as an exception instead
- * of becoming a validation error. Without a Segmenter this says nothing and
- * lets the server answer.
+ * a throw inside a Zod `.refine()` escapes `safeParse` as an exception rather
+ * than becoming a validation error. Without one this lets the server answer.
  */
 export const exceedsGraphemeCap = (value: string, max: number): boolean =>
   segmenter !== undefined && graphemeLength(value) > max;

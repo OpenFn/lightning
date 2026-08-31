@@ -65,9 +65,8 @@ defmodule Lightning.ValidatorsTest do
   end
 
   describe "invisible_only?/1" do
-    # Replaced a 30 codepoint blocklist that let 406 through. The fixture is
-    # generated from this predicate and asserted against the client's copy in
-    # assets/test/utils/nameValidation.test.ts, so the two cannot drift.
+    # The fixture is generated from this predicate and asserted against the
+    # client's copy in assets/test/utils/nameValidation.test.ts.
     @fixture "test/fixtures/invisible_codepoints.json"
 
     @named [

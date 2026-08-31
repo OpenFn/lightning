@@ -139,9 +139,7 @@ defmodule Lightning.ExportUtils.ScalarTest do
   end
 
   describe "YAML typed lookalikes" do
-    # Narrowed in #4577 to what yamerl and yaml@2.7.1 actually resolve. The
-    # measured corpus and the round-trip proof are in the "typed?/1 corpus"
-    # describe at the bottom of this file.
+    # Narrowed in #4577 to what yamerl and yaml@2.7.1 actually resolve.
     @booleans_and_null ~w(true True TRUE false False FALSE null Null NULL ~)
 
     @integers ~w(0 7 08 2026 +5 -5 0x1F 0xff 0o17 007)
@@ -150,9 +148,8 @@ defmodule Lightning.ExportUtils.ScalarTest do
       1.0 0.5 .5 1e3 1E3 1.5e-3 -1.5 .inf .Inf .INF -.Inf +.inf .nan .NaN .NAN
     )
 
-    # Neither parser resolves any of these, in either position, so quoting them
-    # would only churn synced repos. Every one was a legal job name under the
-    # charset rule this branch removed.
+    # Neither parser resolves any of these, in either position, and every one
+    # was a legal job name under the charset rule this branch removed.
     @not_typed ~w(
       y Y n N yes Yes YES no No NO on On ON off Off OFF
       1_000 0b1010 1:30 0X1F 0O17
@@ -634,8 +631,7 @@ defmodule Lightning.ExportUtils.ScalarTest do
     test "the historic shape is kept byte for byte wherever it was not broken" do
       # Anything without a CR, without a leading space on its first content
       # line, and with fewer than two trailing newlines must come out exactly
-      # as this module has always written it. A change here is a diff in every
-      # synced project repo.
+      # as this module has always written it.
       historic = fn value ->
         lines =
           value
@@ -739,11 +735,9 @@ defmodule Lightning.ExportUtils.ScalarTest do
     end
 
     test "a value that is only newlines keeps every one of them" do
-      # These have no content line for the reader to measure the block
-      # against, so they need `|+` to stop the newlines being clipped away.
-      # The document's own trailing newline is part of what makes this work,
-      # which is why the assertion builds the whole document rather than
-      # reading the block in isolation.
+      # These have no content line for the reader to measure the block against,
+      # so they need `|+` to stop the newlines being clipped away. The
+      # document's own trailing newline is part of what makes this work.
       for value <- ["\n", "\n\n", "\n\n\n"] do
         document = "k: " <> Scalar.encode_block(value, "  ") <> "\n"
 

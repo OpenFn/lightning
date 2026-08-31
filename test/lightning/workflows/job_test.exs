@@ -241,10 +241,8 @@ defmodule Lightning.Workflows.JobTest do
     end
 
     test "a name short in graphemes but too wide for the column is rejected" do
-      # jobs.name is varchar(255) and Postgres counts those in codepoints. 100
-      # ZWJ families are 100 graphemes, so they clear the product cap, but 700
-      # codepoints, so the insert used to raise 22001. Only reachable since the
-      # charset was widened.
+      # 100 ZWJ families clear the product cap at 100 graphemes but are 700
+      # codepoints, and jobs.name is varchar(255).
       family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
       name = String.duplicate(family, 100)
 
@@ -259,9 +257,6 @@ defmodule Lightning.Workflows.JobTest do
           workflow_id: insert(:workflow).id
         })
 
-      # No number in this message on purpose. The user was told the limit is
-      # 100 and counts 100 characters; answering "at most 255" is not something
-      # they can act on.
       assert errors_on(changeset)[:name] == [
                "job name is too long, please use a shorter one"
              ]
@@ -323,10 +318,8 @@ defmodule Lightning.Workflows.JobTest do
     end
 
     test "a name made only of invisible characters is blank" do
-      # Each of these takes no space and draws nothing, so the name renders as
-      # an empty label everywhere and becomes an invisible key in the spec.
-      # String.trim/1 does not know about them, which is why the blank check
-      # alone was not enough.
+      # Each of these takes no space and draws nothing, and String.trim/1 does
+      # not know about them.
       for name <- [
             "\u{200B}",
             "\u{FEFF}",
@@ -367,9 +360,8 @@ defmodule Lightning.Workflows.JobTest do
     end
 
     test "a body containing a NUL is a changeset error, not a jsonb crash" do
-      # jobs.body is copied into workflow_snapshots.jobs, and Postgres refuses
-      # a NUL anywhere inside a jsonb value (22P05). Only the NUL: a body is
-      # code and legitimately holds newlines and tabs (#4893).
+      # Only the NUL: a body is code and legitimately holds newlines and tabs
+      # (#4893).
       errors =
         Job.changeset(%Job{}, %{
           name: "step",
@@ -469,9 +461,6 @@ defmodule Lightning.Workflows.JobTest do
     end
 
     test "a NUL in a name is a changeset error, not a crash on the snapshot insert" do
-      # Job names are written into the workflow_snapshots.jobs jsonb column and
-      # Postgres refuses a NUL inside jsonb, so letting one through the
-      # changeset turns into a 500 on save (#4893).
       project = insert(:project)
 
       attrs = %{

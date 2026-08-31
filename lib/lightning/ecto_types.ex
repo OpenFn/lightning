@@ -85,12 +85,10 @@ defmodule Lightning.LogMessage do
   # Regex to match PostgreSQL-incompatible characters
   # Matches: NULL (0x00), control chars (0x01-0x08, 0x0B, 0x0C, 0x0E-0x1F), DEL (0x7F)
   #
-  # Deliberately narrower than `@control_chars_regex` in
-  # `Lightning.Validators`, which is the rule for names. A log line
-  # legitimately holds tabs, newlines
-  # and carriage returns, so those stay, and what is left is stripped rather
-  # than rejected because a worker's output is not something a user can go and
-  # correct. Don't merge the two.
+  # Deliberately narrower than `@control_chars_regex` in `Lightning.Validators`,
+  # which is the rule for names. A log line legitimately holds tabs, newlines
+  # and carriage returns, and a worker's output is not something a user can go
+  # and correct, so what is left is stripped rather than rejected.
   @invalid_chars_regex ~r/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/
 
   @unicode_escape_regex ~r/\\u00[0-8B-CE-F][0-9A-F]|\\u007F/i

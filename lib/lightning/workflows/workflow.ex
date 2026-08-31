@@ -91,9 +91,8 @@ defmodule Lightning.Workflows.Workflow do
   def validate(changeset) do
     changeset
     # First, so the length and presence checks below see the normalised value.
-    # This lives here rather than in changeset/2 because the provisioning API
-    # builds its own changeset and calls validate/1 directly, and used to get
-    # neither the NFC pass nor the control character check (#4893).
+    # Here rather than in changeset/2 because the provisioning API builds its
+    # own changeset and calls validate/1 directly.
     |> Validators.validate_name(
       :name,
       "workflow name can't contain control characters"
@@ -108,10 +107,6 @@ defmodule Lightning.Workflows.Workflow do
     |> assoc_constraint(:project)
     |> validate_number(:concurrency, greater_than_or_equal_to: 1)
     |> validate_required([:name])
-    # 255 is the width of the column. Below that this rejects nothing that is
-    # already stored; above it, the insert used to come back as a Postgrex
-    # 22001 and a 500 rather than something the user could act on. Counted in
-    # graphemes, as the job name cap is.
     |> validate_length(:name,
       max: 255,
       message: "workflow name should be at most %{count} character(s)"

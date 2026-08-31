@@ -24,17 +24,10 @@ logger.ns('TemplatePublishPanel').seal();
 // Validation schema matching backend constraints, meaning
 // Lightning.Workflows.WorkflowTemplate.changeset/2.
 //
-// Counted in codepoints, which is the unit workflow_templates.name is measured
-// in, not UTF-16 units. `.max(255)` was stricter than the server, and
-// defaultValues below prefills the name from the existing template or the
-// workflow -- both legal to 255 codepoints since #4577 -- so the form could
-// open already holding a value it refused to submit.
-//
-// description is a text column with a 1000 grapheme product cap on the server,
-// so it is counted in graphemes here rather than UTF-16 units: 600 emoji are
-// 600 graphemes the server accepts and 1200 units `.max(1000)` refused, and
-// defaultValues prefills it from the stored template, so it was the same
-// "opens holding a value it will not submit" failure as the name.
+// name is counted in codepoints (the unit the column is measured in) and
+// description in graphemes (the unit the server's product cap uses), because
+// defaultValues prefills both and `.max()` on UTF-16 units let the form open
+// holding a value it would refuse to submit.
 export const TemplatePublishSchema = z.object({
   name: z
     .string()

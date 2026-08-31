@@ -651,8 +651,6 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form-new", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
-      # An apostrophe is a legal credential name now (#4577); a control
-      # character is not.
       # The rendered HTML escapes the apostrophe, so the refute has to match the
       # escaped form or it can never fail.
       refute index_live
@@ -775,8 +773,6 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form-new", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
-      # An apostrophe is a legal credential name now (#4577); a control
-      # character is not.
       # The rendered HTML escapes the apostrophe, so the refute has to match the
       # escaped form or it can never fail.
       refute index_live

@@ -153,9 +153,7 @@ defmodule Lightning.Workflows.Edge do
 
   # cast/3 accepts an expression on every condition type, and it is written
   # into the workflow_snapshots.edges jsonb whatever the type is, so this runs
-  # unconditionally. It used to be reachable only through the :js_expression
-  # branch, which left a NUL on an :always edge to raise an uncaught
-  # Postgrex.Error on save (#4893).
+  # unconditionally.
   #
   # There is deliberately no `valid?: false` short circuit: the changeset is
   # invalid for unrelated missing fields on plenty of real save paths, and
@@ -167,9 +165,6 @@ defmodule Lightning.Workflows.Edge do
       "condition expression can't contain a null byte"
     )
     |> validate_length(:condition_expression, max: 255)
-    # The cap above counts graphemes and the column counts codepoints, so 200
-    # ZWJ family emoji are 200 characters to Ecto and 1400 to Postgres, pass
-    # the changeset and raise an uncaught 22001 on insert.
     |> Validators.validate_name_fits_column(
       :condition_expression,
       "condition expression is too long, please use a shorter one"
@@ -177,9 +172,7 @@ defmodule Lightning.Workflows.Edge do
   end
 
   # A label is set on every condition type, not just :js_expression, and it is
-  # written into the workflow_snapshots.edges jsonb either way. This used to
-  # sit inside the :js_expression branch, so an :always edge could carry a NUL
-  # in its label and a label of any length.
+  # written into the workflow_snapshots.edges jsonb either way.
   defp validate_condition_label(changeset) do
     changeset
     |> Validators.validate_name(
@@ -187,7 +180,6 @@ defmodule Lightning.Workflows.Edge do
       "condition label can't contain control characters"
     )
     |> validate_length(:condition_label, max: 255)
-    # Same grapheme-versus-codepoint gap as the expression above.
     |> Validators.validate_name_fits_column(
       :condition_label,
       "condition label is too long, please use a shorter one"

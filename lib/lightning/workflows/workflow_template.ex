@@ -42,11 +42,8 @@ defmodule Lightning.Workflows.WorkflowTemplate do
       max: 1000,
       message: "Description must be less than 1000 characters"
     )
-    # Everything below is the same class as the name guard above and sits on
-    # the same cast/3. positions is a jsonb map, so a NUL anywhere inside it
-    # raises 22P05; code, description and tags are text columns, where a NUL
-    # raises 22021; and a tag past the column width raises 22001. All four were
-    # uncaught, and publish_template exposes every one of them (#4893).
+    # positions is jsonb and code, description and tags are text columns, all
+    # copied into the snapshot. publish_template exposes every one (#4893).
     |> Lightning.Validators.validate_no_null_bytes_deep(
       :positions,
       "Positions can't contain a null byte"

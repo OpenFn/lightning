@@ -25,9 +25,7 @@ export const EdgeSchema = z.object({
 
   // Condition configuration
   condition_type: EdgeConditionType.default('on_job_success'),
-  // Codepoints, like the label below. This had no cap at all, while the
-  // ExprEdgeSchema override nineteen lines down capped it in UTF-16 units;
-  // the server validates it on every condition type, so this side does too.
+  // The server validates this on every condition type, so this side does too.
   condition_expression: z
     .string()
     .refine(
@@ -36,13 +34,7 @@ export const EdgeSchema = z.object({
     )
     .optional()
     .nullable(),
-  // Counted in codepoints, which is the unit the column is measured in, not
-  // UTF-16 units. EdgeSchema sits inside BaseWorkflowSchema and
-  // createSessionContextStore does one safeParse over the whole payload, so a
-  // label the server stored happily must never be refused here: a 128 emoji
-  // label stores fine and measured 256 under `.max(255)`, which killed the
-  // collaborative editor for the whole project. Reachable on legacy rows too,
-  // because the label cap used to live inside the :js_expression branch.
+  // Codepoints, like the expression above.
   condition_label: z
     .string()
     .refine(
@@ -63,9 +55,6 @@ export const EdgeSchema = z.object({
   updated_at: z.string().optional(),
 });
 export const ExprEdgeSchema = EdgeSchema.extend({
-  // Codepoints, not UTF-16 units. This runs on every keystroke through
-  // EdgeForm, so 200 astral emoji -- 200 codepoints the server stores fine --
-  // were refused in the browser at 400.
   condition_expression: z
     .string()
     .trim()

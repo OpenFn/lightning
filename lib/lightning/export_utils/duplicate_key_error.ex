@@ -3,18 +3,11 @@ defmodule Lightning.ExportUtils.DuplicateKeyError do
   Raised when two entities in a project would be written into the project spec
   under the same key.
 
-  A workflow, job, credential, collection or channel key is how the CLI
-  addresses that entity, so two of them landing on the same key is data loss:
-  the second silently replaces the first, and a round trip through the spec
-  comes back with one fewer entity than it started with. The export used to do
-  exactly that, quietly.
+  A key is how the CLI addresses an entity, so two landing on the same key is
+  data loss: the second silently replaces the first. Keys are the entity's name
+  with each space turned into a hyphen, so `a b` and `a-b` collide.
 
-  Keys are the entity's name with each space turned into a hyphen, so `a b` and
-  `a-b` collide even though they read as two different names.
-
-  Edge keys are deliberately not in this list. Nothing parses them and the edge
-  body carries its own identity in `source_job`, `source_trigger` and
-  `target_job`, so a collision there is disambiguated rather than refused.
+  Edge keys are exempt; see `disambiguate_edge_keys/1` in `ExportUtils`.
   """
   defexception [:kind, :key, :first, :second]
 

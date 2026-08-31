@@ -925,10 +925,6 @@ defmodule Lightning.Workflows do
   # `_del` suffix is put on after every validation has run, so a workflow whose
   # name was already at the column width used to raise a bare Postgrex 22001
   # out of the delete button, in a LiveView handler with nothing to rescue it.
-  #
-  # Room is left for the suffix and up to four digits of disambiguation. Names
-  # short enough not to need it are untouched, so this changes nothing for the
-  # ordinary case.
   @suffix_headroom String.length("_del") + 4
 
   defp trim_to_fit_suffix(name) do

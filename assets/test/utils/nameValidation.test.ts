@@ -125,16 +125,13 @@ describe('graphemeLength', () => {
     //
     //   1. GB9c Indic conjuncts. Intl.Segmenter keeps consonant + virama +
     //      consonant together where Elixir's tables split. Malayalam is the
-    //      worst case: 'ന്ദ്ര' is 1 here and 3 to Elixir, so a name at the
-    //      100 grapheme cap on this side can measure near 300 on that side.
+    //      worst case: 'ന്ദ്ര' is 1 here and 3 to Elixir.
     //   2. Break-after-ZWJ, another rule revision Elixir's tables predate.
     //   3. Characters added in Unicode 16, which Elixir has not caught up to.
     //
     // The client is the permissive side every time, which is the safe
-    // direction: the name reaches the server and comes back as an ordinary
-    // changeset error instead of being blocked in the browser for a reason the
-    // user cannot see. The codepoint guard below is what stops any of this
-    // reaching the column.
+    // direction. The codepoint guard below stops any of this reaching the
+    // column.
     expect(graphemeLength('नमस्ते')).toBe(3);
     expect(graphemeLength('ന്ദ്ര')).toBe(1);
   });
@@ -206,8 +203,7 @@ describe('JobSchema name', () => {
     const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}';
 
     // 100 families are 100 graphemes, so they clear the cap above, but 700
-    // codepoints, and the name column is varchar(255). The server rejects this
-    // in Validators.validate_name_fits_column/3; the client says the same.
+    // codepoints, and the name column is varchar(255).
     const name = family.repeat(100);
     expect(graphemeLength(name)).toBe(100);
     expect(Array.from(name).length).toBe(700);
@@ -218,8 +214,7 @@ describe('JobSchema name', () => {
       NAME_TOO_WIDE_MESSAGE
     );
 
-    // Pinned literally, and with no number in it. The user was told the limit
-    // is 100 and counts 100 characters; answering "255" is not actionable.
+    // Pinned literally, and with no number in it.
     expect(NAME_TOO_WIDE_MESSAGE).toBe(
       'Name is too long, please use a shorter one.'
     );
@@ -325,9 +320,7 @@ describe('EdgeSchema condition_label (an inbound schema)', () => {
 
   test('accepts a label long in UTF-16 units but short in codepoints', () => {
     // 128 emoji: 128 codepoints, which the column holds, but 256 UTF-16 units,
-    // which the old `.max(255)` counted. EdgeSchema sits inside
-    // BaseWorkflowSchema and one safeParse covers the whole payload, so this
-    // took the collaborative editor down for the entire project.
+    // which the old `.max(255)` counted.
     const label = '\u{1F600}'.repeat(128);
     expect(label.length).toBe(256);
 
@@ -520,9 +513,6 @@ describe('exceedsGraphemeCap', () => {
   });
 
   test('is the only grapheme length decision application code makes', () => {
-    // graphemeLength itself throws without Intl.Segmenter. Nothing outside
-    // this module may call it directly; everything goes through here so the
-    // no-Segmenter case degrades permissively and the server answers.
     const source = fs.readFileSync(
       path.join(__dirname, '../../js/utils/nameValidation.ts'),
       'utf8'

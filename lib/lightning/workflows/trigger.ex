@@ -120,10 +120,8 @@ defmodule Lightning.Workflows.Trigger do
     changeset
     |> validate_required([:type])
     |> assoc_constraint(:workflow)
-    # Both are copied into the workflow_snapshots.triggers jsonb, which cannot
-    # hold a NUL anywhere inside it (#4893). Only the NUL: a comment is free
-    # text and legitimately holds newlines. kafka_configuration is an embed and
-    # guards its own hosts and topics.
+    # Only the NUL: a comment is free text and legitimately holds newlines.
+    # kafka_configuration is an embed and guards its own hosts and topics.
     |> validate_no_null_bytes(
       :comment,
       "comment can't contain a null byte"
@@ -132,9 +130,6 @@ defmodule Lightning.Workflows.Trigger do
       :custom_path,
       "custom path can't contain a null byte"
     )
-    # All three columns are varchar(255) and none had a length guard, so a 300
-    # character comment passed the changeset and raised an uncaught 22001 on
-    # insert. Reachable through the provisioning API.
     |> validate_name_fits_column(
       :comment,
       "comment is too long, please use a shorter one"
@@ -143,10 +138,6 @@ defmodule Lightning.Workflows.Trigger do
       :custom_path,
       "custom path is too long, please use a shorter one"
     )
-    # Third field on the same cast/3, same varchar(255), and the only one that
-    # had no guard. Crontab parses a 267 character expression happily, so the
-    # changeset said valid? and the insert raised 22001. Reachable through
-    # POST /api/provision.
     |> validate_name_fits_column(
       :cron_expression,
       "cron expression is too long, please use a shorter one"

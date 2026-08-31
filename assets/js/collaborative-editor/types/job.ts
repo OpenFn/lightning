@@ -27,9 +27,6 @@ export const JobSchema = z
   .object({
     // Core required fields
     id: uuidSchema,
-    // Normalise first, then check, which is the order the server uses. The
-    // length check counts graphemes rather than UTF-16 code units so that the
-    // cap means the same thing here as it does in Ecto.
     name: z
       .string()
       .transform(normalizeName)
