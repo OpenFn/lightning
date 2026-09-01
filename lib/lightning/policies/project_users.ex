@@ -16,6 +16,7 @@ defmodule Lightning.Policies.ProjectUsers do
           | :edit_project
           | :delete_project
           | :add_project_user
+          | :edit_project_user_role
           | :remove_project_user
           | :delete_workflow
           | :create_workflow
@@ -87,6 +88,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :edit_project,
              :edit_data_retention,
              :add_project_user,
+             :edit_project_user_role,
              :remove_project_user,
              :edit_run_settings
            ],
@@ -99,6 +101,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :edit_project,
              :edit_data_retention,
              :add_project_user,
+             :edit_project_user_role,
              :remove_project_user,
              :edit_run_settings
            ],

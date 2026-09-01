@@ -128,6 +128,13 @@ defmodule LightningWeb.ProjectLive.Settings do
           current_user,
           project
         ),
+      can_edit_project_user_role:
+        Permissions.can?(
+          :project_users,
+          :edit_project_user_role,
+          current_user,
+          project
+        ),
       can_remove_project_user:
         Permissions.can?(
           :project_users,
@@ -651,6 +658,43 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event(
+        "set_role",
+        %{"project_user_id" => project_user_id, "role" => role},
+        %{assigns: assigns} = socket
+      ) do
+    with {:ok, uuid} <- Ecto.UUID.cast(project_user_id),
+         %{} = project_user <- Projects.get_project_user(uuid),
+         project_user <- Lightning.Repo.preload(project_user, :user),
+         true <- project_user.project_id == assigns.project.id,
+         true <-
+           role_editable?(
+             project_user,
+             assigns.current_user,
+             assigns.can_edit_project_user_role,
+             assigns.project,
+             assigns.sandbox?
+           ),
+         changeset <-
+           {%{role: to_string(project_user.role)}, %{role: :string}}
+           |> Ecto.Changeset.cast(%{role: role}, [:role])
+           |> Ecto.Changeset.validate_inclusion(:role, ~w(viewer editor admin)),
+         true <- changeset.valid? do
+      Projects.update_project_user(project_user, %{
+        role: Ecto.Changeset.get_change(changeset, :role)
+      })
+      |> dispatch_flash(socket)
+    else
+      _ ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "You are not authorized to perform this action"
+         )}
+    end
+  end
+
+  def handle_event(
         "remove_project_user",
         %{"project_user_id" => project_user_id},
         %{assigns: assigns} = socket
@@ -888,9 +932,8 @@ defmodule LightningWeb.ProjectLive.Settings do
          project,
          sandbox?
        ) do
-    can_remove_project_user and project_user.role != :owner and
-      project_user.user_id != current_user.id and
-      not (sandbox? and parent_admin?(project, project_user))
+    can_remove_project_user and
+      project_user_mutable?(project_user, current_user, project, sandbox?)
   end
 
   # Notification prefs are self-only (:edit_failure_alerts / :edit_digest_alerts),
@@ -908,6 +951,23 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   defp parent_admin?(project, %{user: %User{} = user}),
     do: Sandboxes.parent_admin?(project, user)
+
+  defp role_editable?(
+         project_user,
+         current_user,
+         can_edit_project_user_role,
+         project,
+         sandbox?
+       ) do
+    can_edit_project_user_role and
+      project_user_mutable?(project_user, current_user, project, sandbox?)
+  end
+
+  defp project_user_mutable?(project_user, current_user, project, sandbox?) do
+    project_user.role != :owner and
+      project_user.user_id != current_user.id and
+      not (sandbox? and parent_admin?(project, project_user))
+  end
 
   defp user_has_valid_oauth_token(user) do
     VersionControl.oauth_token_valid?(user.github_oauth_token)

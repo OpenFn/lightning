@@ -401,6 +401,7 @@ defmodule LightningWeb.Components.DataTables do
   attr :id, :string, required: true
   attr :project_users, :list, required: true
   attr :current_user, :map, required: true
+  attr :can_edit_project_user_role, :boolean, required: true
   attr :can_remove_project_user, :boolean, required: true
   attr :can_receive_failure_alerts, :boolean, required: true
 
@@ -437,7 +438,11 @@ defmodule LightningWeb.Components.DataTables do
                   </div>
                 </.td>
                 <.td>
-                  <.role project_user={project_user} />
+                  <.role
+                    project_user={project_user}
+                    current_user={@current_user}
+                    can_edit_project_user_role={@can_edit_project_user_role}
+                  />
                 </.td>
                 <.td>
                   <.failure_alert
@@ -471,8 +476,35 @@ defmodule LightningWeb.Components.DataTables do
   end
 
   defp role(assigns) do
+    editable? =
+      assigns.can_edit_project_user_role and
+        assigns.project_user.role != :owner and
+        assigns.project_user.user_id != assigns.current_user.id
+
+    assigns = assign(assigns, :editable?, editable?)
+
     ~H"""
-    {@project_user.role |> Atom.to_string() |> String.capitalize()}
+    <%= if @editable? do %>
+      <.form
+        :let={form}
+        for={%{"role" => @project_user.role}}
+        phx-change="set_role"
+        id={"role-#{@project_user.id}"}
+      >
+        <.input
+          type="hidden"
+          field={form[:project_user_id]}
+          value={@project_user.id}
+        />
+        <.input
+          type="select"
+          field={form[:role]}
+          options={[Viewer: "viewer", Editor: "editor", Admin: "admin"]}
+        />
+      </.form>
+    <% else %>
+      {@project_user.role |> Atom.to_string() |> String.capitalize()}
+    <% end %>
     """
   end
 
