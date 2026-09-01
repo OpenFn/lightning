@@ -123,6 +123,33 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
       assert %{status: 404} = get_outcomes(conn, user, project.id, workflow.id)
     end
 
+    # The LiveView redirects this person to `/mfa_required`; a JSON client has
+    # nothing to do with that, and 404 doesn't confirm the project exists.
+    test "a member who has not enrolled is refused a project requiring MFA", %{
+      conn: conn
+    } do
+      unenrolled = insert(:user, mfa_enabled: false)
+      enrolled = insert(:user, mfa_enabled: true)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [
+            %{user: unenrolled, role: :owner},
+            %{user: enrolled, role: :viewer}
+          ]
+        )
+
+      workflow = insert(:simple_workflow, project: project)
+
+      assert %{status: 404} =
+               get_outcomes(conn, unenrolled, project.id, workflow.id)
+
+      # Not unreadable in general: an enrolled member is still served.
+      assert %{status: 200} =
+               get_outcomes(conn, enrolled, project.id, workflow.id)
+    end
+
     test "a malformed id is refused rather than crashing the request", %{
       conn: conn,
       user: user,
