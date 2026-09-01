@@ -2751,7 +2751,7 @@ defmodule LightningWeb.CredentialLiveTest do
         adaptor_icon = Floki.find(adaptor_label, "object")
         assert length(adaptor_icon) > 0
         img_src = adaptor_icon |> Floki.attribute("data") |> List.first()
-        assert img_src =~ "/images/adaptors/#{adaptor}-square.png"
+        assert img_src =~ "/adaptors/icons/#{adaptor}/square-"
       end
     end
   end
