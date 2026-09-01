@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
 import { OutcomesDonut } from './charts/OutcomesDonut';
 import { TriageTable } from './charts/TriageTable';
-import { type Outcomes, useHealthStats } from './useHealthStats';
+import type { FailureSignatures, Outcomes } from './types';
+import { healthBase, useHealthQuery } from './useHealthQuery';
 
 /**
  * Workflow health page: a 30-day summary of one workflow's runs.
@@ -40,24 +41,27 @@ export const HealthContent = ({
   projectId,
   workflowName,
 }: HealthContentProps) => {
-  const { outcomes, outcomesError, signatures, signaturesError } =
-    useHealthStats(workflowId, projectId);
+  const base = healthBase(projectId, workflowId);
+
+  const outcomes = useHealthQuery<Outcomes>(`${base}/outcomes`);
+  const signatures = useHealthQuery<FailureSignatures>(`${base}/failures`);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">{workflowName}</h1>
-        <Subtitle outcomes={outcomes} />
+        <Subtitle outcomes={outcomes.data} />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card
           title="Outcomes"
           meta={
-            outcomes && `${runTotal(outcomes.counts).toLocaleString()} runs`
+            outcomes.data &&
+            `${runTotal(outcomes.data.counts).toLocaleString()} runs`
           }
         >
-          <Panel data={outcomes} error={outcomesError}>
+          <Panel data={outcomes.data} error={outcomes.error}>
             {({ counts, window }) => (
               <OutcomesDonut
                 counts={counts}
@@ -70,7 +74,7 @@ export const HealthContent = ({
         {/* Same reply as the panel beside it — one aggregate read two ways, so
             the wedge here and the red wedge there cannot disagree. */}
         <Card title="Failure breakdown" meta="by run state">
-          <Panel data={outcomes} error={outcomesError}>
+          <Panel data={outcomes.data} error={outcomes.error}>
             {({ counts, window }) => (
               <FailureBreakdownDonut
                 counts={counts}
@@ -82,7 +86,7 @@ export const HealthContent = ({
       </div>
 
       <Card title="Triage" meta="grouped by failure type">
-        <Panel data={signatures} error={signaturesError}>
+        <Panel data={signatures.data} error={signatures.error}>
           {({ signatures, window }) => (
             <TriageTable
               signatures={signatures}

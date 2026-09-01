@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
 import { TriageTable } from '#/workflow-health/charts/TriageTable';
-import type { FailureSignature } from '#/workflow-health/useHealthStats';
+import type { FailureSignature } from '#/workflow-health/types';
 
 const signature = (
   overrides: Partial<FailureSignature> = {}

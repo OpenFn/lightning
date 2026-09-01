@@ -1,4 +1,4 @@
-import type { RunStateCounts } from '../useHealthStats';
+import type { RunStateCounts } from '../types';
 
 import { Donut } from './Donut';
 

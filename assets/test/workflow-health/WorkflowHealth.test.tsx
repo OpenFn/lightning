@@ -201,4 +201,20 @@ describe('WorkflowHealth', () => {
 
     expect(signals.every(signal => signal.aborted)).toBe(true);
   });
+
+  test('stops showing the old numbers once the request changes', async () => {
+    const { rerender } = mount(both);
+
+    await screen.findByText('Success');
+
+    rerender(
+      <HealthContent
+        workflowId="wf-2"
+        projectId="proj-1"
+        workflowName="Sync households"
+      />
+    );
+
+    expect(screen.queryAllByText('Loading…')).toHaveLength(3);
+  });
 });

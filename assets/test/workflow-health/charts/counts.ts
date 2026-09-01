@@ -1,4 +1,4 @@
-import type { RunStateCounts } from '#/workflow-health/useHealthStats';
+import type { RunStateCounts } from '#/workflow-health/types';
 
 /** Zero-filled run state counts, so a test only names the states it cares about. */
 export const counts = (

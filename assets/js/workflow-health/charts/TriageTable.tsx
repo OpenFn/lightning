@@ -1,4 +1,4 @@
-import type { FailureSignature } from '../useHealthStats';
+import type { FailureSignature } from '../types';
 
 /**
  * Failed runs grouped by error signature, heaviest first.
