@@ -17,11 +17,10 @@ and this project adheres to
 
 ### Changed
 
-- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27's Unicode normaliser
-  recomposes only at the start of a string, so a Bengali, Tamil, Malayalam or
-  Sinhala vowel came apart and never went back together, and a mark could be
-  reordered across a character meant to block it. OTP 28 fixes both. Nothing in
-  Lightning depended on the old behaviour, but names are about to.
+- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising
+  the first character of a string, which breaks names in many languages.
+  Lightning does not normalise anything today, but #4577 adds it on every name,
+  so the runtime moves first.
 
 ### Added
 

@@ -36,8 +36,8 @@ defmodule Lightning.Validators.Hex do
       iex> Lightning.Validators.Hex.valid?("xyz", 3)
       false
 
-  Compared by source: OTP 28 compiles a pattern to a reference, so two
-  identical regexes are never equal to each other.
+  These compare the source rather than the regex. OTP 28 compiles a pattern to
+  a reference, so two identical regexes are never equal to each other.
 
       iex> Lightning.Validators.Hex.format() |> Regex.source()
       "^[0-9a-f]{12}$"
