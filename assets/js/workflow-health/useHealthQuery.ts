@@ -41,7 +41,13 @@ export function useHealthQuery<T>(url: string): Query<T> {
 
         return response.json() as Promise<T>;
       })
-      .then(data => setState({ data, error: null }))
+      .then(data => {
+        // Same reason as the catch below: a reply that lands after the url
+        // changed is an answer to a question nobody is asking any more.
+        if (!controller.signal.aborted) setState({ data, error: null });
+
+        return data;
+      })
       .catch((error: unknown) => {
         // An abort is a teardown, not a failure — there is nobody left to tell.
         if (controller.signal.aborted) return;
