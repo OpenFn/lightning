@@ -629,6 +629,16 @@ defmodule LightningWeb.WorkflowChannel do
     {:reply, {:ok, %{}}, socket}
   end
 
+  # Catch-all for any event this channel doesn't recognise (e.g. a stale
+  # client tab still sending an event removed in a later deploy). Replies
+  # with an error instead of raising FunctionClauseError, which would kill
+  # the channel process and disconnect every collaborator in the room.
+  @impl true
+  def handle_in(event, _payload, socket) do
+    warn_unhandled_message("handle_in", event)
+    {:reply, {:error, %{reason: "unknown event: #{event}"}}, socket}
+  end
+
   @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
@@ -835,12 +845,13 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
+  # Catch-all for any internal message this channel doesn't recognise (e.g. a
+  # PubSub broadcast for an event type removed in a later deploy). Logs and
+  # keeps the channel alive instead of raising FunctionClauseError, which
+  # would kill the process and disconnect every collaborator in the room.
   @impl true
   def handle_info(message, socket) do
-    Logger.warning(fn ->
-      "WorkflowChannel: unhandled message #{inspect(message, limit: 5)} " <>
-        "on workflow #{socket.assigns[:workflow_id]}"
-    end)
+    warn_unhandled_message("handle_info", unhandled_message_type(message))
 
     {:noreply, socket}
   end
@@ -877,6 +888,22 @@ defmodule LightningWeb.WorkflowChannel do
 
     {:noreply, socket}
   end
+
+  # Logs and reports to Sentry that a channel message went unhandled, by
+  # event name only. The full message/payload is never logged since it may
+  # carry user or workflow data.
+  defp warn_unhandled_message(kind, event) do
+    Logger.warning("WorkflowChannel: unhandled #{kind} event: #{event}")
+
+    Sentry.capture_message(
+      "WorkflowChannel: unhandled #{kind} event: #{event}",
+      level: :warning
+    )
+  end
+
+  defp unhandled_message_type(%{event: event}), do: event
+  defp unhandled_message_type(%struct{}), do: inspect(struct)
+  defp unhandled_message_type(_msg), do: "unrecognised"
 
   defp list_all_packages do
     case Lightning.Adaptors.packages() do

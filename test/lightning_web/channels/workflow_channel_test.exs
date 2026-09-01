@@ -2669,12 +2669,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
     end
 
-    test "does not push adaptors_updated for unrelated events on client topic",
-         %{socket: socket} do
-      Process.flag(:trap_exit, true)
-      Process.unlink(socket.channel_pid)
-      ref = Process.monitor(socket.channel_pid)
-
+    test "does not push adaptors_updated for unrelated events on client topic" do
       capture_log(fn ->
         Phoenix.PubSub.broadcast(
           Lightning.PubSub,
@@ -2683,8 +2678,41 @@ defmodule LightningWeb.WorkflowChannelTest do
         )
 
         refute_push "adaptors_updated", _, 50
-        assert_receive {:DOWN, ^ref, :process, _, _}, 200
       end)
+    end
+  end
+
+  describe "unrecognised channel messages" do
+    test "handle_in replies with an error instead of crashing the channel",
+         %{socket: socket} do
+      log =
+        capture_log(fn ->
+          ref = push(socket, "request_project_adaptors", %{})
+
+          assert_reply ref, :error, %{
+            reason: "unknown event: request_project_adaptors"
+          }
+        end)
+
+      assert log =~ "unhandled handle_in event: request_project_adaptors"
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "handle_info logs and stays alive for an unrecognised internal broadcast",
+         %{socket: socket, workflow: workflow} do
+      log =
+        capture_log(fn ->
+          Phoenix.PubSub.broadcast(
+            Lightning.PubSub,
+            "workflow:collaborate:#{workflow.id}",
+            %{event: "some_future_event", payload: %{}}
+          )
+
+          refute_push "some_future_event", _, 50
+        end)
+
+      assert log =~ "unhandled handle_info event: some_future_event"
+      assert Process.alive?(socket.channel_pid)
     end
   end
 
