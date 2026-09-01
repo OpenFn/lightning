@@ -1,91 +1,44 @@
-import {
-  Cell,
-  Label,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
+import type { RunStateCounts } from '../useHealthStats';
+
+import { Donut } from './Donut';
 
 /**
- * Completed work order outcomes as a donut, with the total in the middle.
+ * Finished run outcomes as a donut, with the total in the middle.
  *
- * Takes counts rather than the `Stats` payload, so it renders in a test or on
- * another page without a channel. Pending is not a slice: work still in flight
- * has no outcome yet.
+ * The six failure states are folded into one `failed` slice; the failure
+ * breakdown panel is where they come apart. Pending is not a slice: work still
+ * in flight has no outcome yet.
  */
 
-// Status colors, not a categorical palette — these are states.
-const SLICES = [
-  { key: 'success', label: 'Success', color: '#0ca30c' },
-  { key: 'failed', label: 'Failed', color: '#d03b3b' },
-] as const;
+// Status colors, not a categorical palette — these are states, and these steps
+// are reserved so they never impersonate a series.
+const SUCCESS = '#0ca30c';
+const FAILED = '#d03b3b';
 
 interface OutcomesDonutProps {
-  counts: { success: number; failed: number };
+  counts: RunStateCounts;
   emptyMessage: string;
 }
 
-export const OutcomesDonut = ({ counts, emptyMessage }: OutcomesDonutProps) => {
-  const total = counts.success + counts.failed;
+export const OutcomesDonut = ({ counts, emptyMessage }: OutcomesDonutProps) => (
+  <Donut
+    slices={[
+      {
+        key: 'success',
+        label: 'Success',
+        color: SUCCESS,
+        value: counts.success,
+      },
+      {
+        key: 'failed',
+        label: 'Failed',
+        color: FAILED,
+        value: failureTotal(counts),
+      },
+    ]}
+    emptyMessage={emptyMessage}
+  />
+);
 
-  // A pie of zeroes renders as an empty box in Recharts, which reads as
-  // broken rather than empty.
-  if (total === 0) {
-    return <p className="text-sm text-gray-500">{emptyMessage}</p>;
-  }
-
-  const data = SLICES.map(({ key, label }) => ({
-    name: label,
-    value: counts[key],
-  }));
-
-  return (
-    <>
-      <ResponsiveContainer width="100%" height={220}>
-        <PieChart>
-          <Tooltip
-            formatter={(value, name) => [
-              `${Number(value).toLocaleString()} (${
-                Math.round((Number(value) / total) * 1000) / 10
-              }%)`,
-              name,
-            ]}
-          />
-          <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
-            innerRadius={60}
-            outerRadius={80}
-            stroke="#fff"
-            strokeWidth={2}
-          >
-            {SLICES.map(({ key, color }) => (
-              <Cell key={key} fill={color} />
-            ))}
-            <Label
-              value={total.toLocaleString()}
-              position="center"
-              className="fill-gray-900 text-2xl font-semibold"
-            />
-          </Pie>
-        </PieChart>
-      </ResponsiveContainer>
-
-      {/* A status color never carries meaning alone, so the legend is always on. */}
-      <ul className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-700">
-        {SLICES.map(({ key, label, color }) => (
-          <li key={key} className="flex items-center gap-2">
-            <span
-              aria-hidden="true"
-              className="h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: color }}
-            />
-            {label} {counts[key].toLocaleString()}
-          </li>
-        ))}
-      </ul>
-    </>
-  );
-};
+const failureTotal = (counts: RunStateCounts) =>
+  Object.values(counts).reduce((sum, count) => sum + count, 0) - counts.success;

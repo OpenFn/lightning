@@ -3,43 +3,53 @@ import { describe, expect, test } from 'vitest';
 
 import { OutcomesDonut } from '#/workflow-health/charts/OutcomesDonut';
 
+import { counts } from './counts';
+
 describe('OutcomesDonut', () => {
-  test('labels each completed outcome with its count', () => {
+  test('folds every failure state into one Failed slice', () => {
     render(
       <OutcomesDonut
-        counts={{ success: 1211, failed: 61 }}
-        emptyMessage="No work orders"
+        counts={counts({
+          success: 1146,
+          failed: 98,
+          crashed: 24,
+          killed: 12,
+          lost: 7,
+        })}
+        emptyMessage="No runs"
       />
     );
 
-    expect(screen.getByText('Success 1,211')).toBeVisible();
-    expect(screen.getByText('Failed 61')).toBeVisible();
+    expect(screen.getByText('Success')).toBeVisible();
+    expect(screen.getByText('1,146')).toBeVisible();
+    // 98 + 24 + 12 + 7, and 141 of 1,287 runs.
+    expect(screen.getByText('Failed')).toBeVisible();
+    expect(screen.getByText('141')).toBeVisible();
+    expect(screen.getByText('11.0%')).toBeVisible();
   });
 
   test('gives pending neither a slice nor a legend entry', () => {
     render(
       <OutcomesDonut
-        counts={{ success: 1211, failed: 61, pending: 12 }}
-        emptyMessage="No work orders"
+        counts={counts({ success: 1146, failed: 98 })}
+        emptyMessage="No runs"
       />
     );
 
-    expect(screen.queryByText(/Pending/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/[Pp]ending/)).not.toBeInTheDocument();
   });
 
-  test('is empty when only pending work orders exist', () => {
-    // Also pins that pending is out of the total: were it counted, this would
-    // render a donut instead of the empty message.
+  test('shows the empty message rather than a donut of zeroes', () => {
     render(
       <OutcomesDonut
-        counts={{ success: 0, failed: 0, pending: 12 }}
-        emptyMessage="No completed work orders in the last 30 days"
+        counts={counts()}
+        emptyMessage="No finished runs in the last 30 days"
       />
     );
 
     expect(
-      screen.getByText('No completed work orders in the last 30 days')
+      screen.getByText('No finished runs in the last 30 days')
     ).toBeVisible();
-    expect(screen.queryByText(/Success/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Success')).not.toBeInTheDocument();
   });
 });
