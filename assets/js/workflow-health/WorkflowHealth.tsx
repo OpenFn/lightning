@@ -58,7 +58,7 @@ const Subtitle = ({ outcomes }: { outcomes: Outcomes | null }) => {
   if (!outcomes) return null;
 
   const days = windowDays(outcomes.window);
-  const total = Object.values(outcomes.counts).reduce((a, b) => a + b, 0);
+  const total = outcomes.counts.success + outcomes.counts.failed;
 
   return (
     <p className="text-sm text-gray-500">

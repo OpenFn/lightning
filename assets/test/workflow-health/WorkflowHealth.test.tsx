@@ -69,7 +69,7 @@ describe('WorkflowHealth', () => {
     expect(
       await screen.findByRole('heading', { name: 'Sync patients' })
     ).toBeInTheDocument();
-    expect(screen.getByText('Last 30 days · 1,284 work orders')).toBeVisible();
+    expect(screen.getByText('Last 30 days · 1,272 work orders')).toBeVisible();
   });
 
   test('reports a rejected join without echoing the server', async () => {

@@ -27,8 +27,6 @@ interface OutcomesDonutProps {
 }
 
 export const OutcomesDonut = ({ counts, emptyMessage }: OutcomesDonutProps) => {
-  // Derived here rather than passed in, so the centre total can never disagree
-  // with the slices — the chart excludes pending, the page header doesn't.
   const total = counts.success + counts.failed;
 
   // A pie of zeroes renders as an empty box in Recharts, which reads as
