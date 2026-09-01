@@ -22,10 +22,12 @@ import { deriveWorkflowChanges } from '../utils/workflowDiff';
 const pluralize = (count: number, noun: string): string =>
   `${count} ${noun}${count === 1 ? '' : 's'}`;
 
+// Adds and removes are step lifecycle events rather than code edits, so they
+// say so. An update is only ever a body change, which the diff below shows.
 const stepVerb: Record<StepChange['type'], string> = {
-  add: 'Add',
-  remove: 'Remove',
-  update: 'Update',
+  add: 'Added step',
+  remove: 'Removed step',
+  update: 'Updated',
 };
 
 /**
@@ -57,7 +59,7 @@ const DiffBlockShell = ({
   action,
   children,
 }: {
-  title: string;
+  title: React.ReactNode;
   summary: React.ReactNode;
   defaultExpanded: boolean;
   testId: string;
@@ -92,8 +94,10 @@ const DiffBlockShell = ({
             'cursor-pointer hover:bg-[#f6f8fa]'
           )}
         >
+          {/* Flexed so a long step name truncates on its own rather than
+              pushing the label it belongs to out of the header. */}
           <span
-            className="text-xs text-left font-medium font-mono text-[#1f2328] truncate"
+            className="text-xs text-left font-medium text-[#1f2328] min-w-0 flex items-baseline"
             data-testid="diff-block-header"
           >
             {title}
@@ -313,7 +317,14 @@ export const StepDiffBlock = ({
 
   return (
     <DiffBlockShell
-      title={`${stepVerb[step.type]}(${step.name})`}
+      title={
+        <>
+          {/* Non-breaking: a flex item is blockified, so a plain trailing
+              space would be trimmed and the label would run into the name. */}
+          <span className="shrink-0">{`${stepVerb[step.type]}\u00a0`}</span>
+          <span className="font-mono truncate">{step.name}</span>
+        </>
+      }
       summary={<StepCounts step={step} />}
       defaultExpanded
       testId="diff-block"

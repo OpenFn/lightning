@@ -1017,7 +1017,7 @@ describe('MessageList', () => {
         // made every diff appear at once when the stream ended.
         expect(screen.getByTestId('streaming-message')).toBeInTheDocument();
         expect(screen.getByTestId('diff-block-header')).toHaveTextContent(
-          'Update(Transform data)'
+          'Updated Transform data'
         );
       });
 
@@ -1045,10 +1045,10 @@ describe('MessageList', () => {
         expect(groups).toHaveLength(2);
         expect(
           within(groups[0]!).getByTestId('diff-block-header')
-        ).toHaveTextContent('Update(Transform data)');
+        ).toHaveTextContent('Updated Transform data');
         expect(
           within(groups[1]!).getByTestId('diff-block-header')
-        ).toHaveTextContent('Update(Send to Gmail)');
+        ).toHaveTextContent('Updated Send to Gmail');
       });
 
       it('attributes by snapshot, not by name, when the status never names the step', () => {
@@ -1069,7 +1069,7 @@ describe('MessageList', () => {
         const group = screen.getByTestId('status-step-diffs');
         expect(
           within(group).getByTestId('diff-block-header')
-        ).toHaveTextContent('Update(Transform data)');
+        ).toHaveTextContent('Updated Transform data');
       });
 
       it('holds a snapshot below the timeline until its status arrives', () => {
@@ -1162,7 +1162,7 @@ describe('MessageList', () => {
       expect(screen.getByTestId('workflow-diff-blocks')).toBeInTheDocument();
       expect(screen.getByTestId('diff-block')).toBeInTheDocument();
       expect(screen.getByTestId('diff-block-header')).toHaveTextContent(
-        'Update(Transform data)'
+        'Updated Transform data'
       );
       expect(screen.getByTestId('diff-block-summary')).toHaveTextContent(
         '+1 -1'
@@ -1230,7 +1230,7 @@ describe('MessageList', () => {
 
       // Step block plus a Structure block (trigger + edge adds)
       const headers = screen.getAllByTestId('diff-block-header');
-      expect(headers[0]).toHaveTextContent('Add(Transform data)');
+      expect(headers[0]).toHaveTextContent('Added step Transform data');
       expect(headers[1]).toHaveTextContent('Structure');
       const structureRows = screen.getAllByTestId('structure-row');
       expect(structureRows).toHaveLength(2);
@@ -1343,7 +1343,7 @@ describe('MessageList', () => {
       const headers = screen
         .getAllByTestId('diff-block-header')
         .map(h => h.textContent);
-      expect(headers.some(h => h?.startsWith('Remove('))).toBe(true);
+      expect(headers.some(h => h?.startsWith('Removed step'))).toBe(true);
       // One block is a removal, so there are fewer links than blocks
       expect(
         screen.queryAllByTestId('diff-block-open-step').length
@@ -1476,8 +1476,8 @@ describe('MessageList', () => {
         const inline = screen.getByTestId('status-step-diffs');
         const headers = within(inline).getAllByTestId('diff-block-header');
         expect(headers).toHaveLength(2);
-        expect(headers[0]).toHaveTextContent('Update(Transform data)');
-        expect(headers[1]).toHaveTextContent('Update(Send to Gmail)');
+        expect(headers[0]).toHaveTextContent('Updated Transform data');
+        expect(headers[1]).toHaveTextContent('Updated Send to Gmail');
 
         // ...immediately after the status row that announced the writes
         const statusRow = screen.getByTestId('settled-status');
@@ -1518,7 +1518,7 @@ describe('MessageList', () => {
         ).not.toBeInTheDocument();
         const tail = screen.getByTestId('workflow-diff-blocks');
         expect(within(tail).getByTestId('diff-block-header')).toHaveTextContent(
-          'Update(Transform data)'
+          'Updated Transform data'
         );
       });
 
@@ -1553,12 +1553,12 @@ describe('MessageList', () => {
         const inline = screen.getByTestId('status-step-diffs');
         expect(
           within(inline).getByTestId('diff-block-header')
-        ).toHaveTextContent('Update(Transform data)');
+        ).toHaveTextContent('Updated Transform data');
 
         // ...the unmentioned one falls to the end
         const tail = screen.getByTestId('workflow-diff-blocks');
         expect(within(tail).getByTestId('diff-block-header')).toHaveTextContent(
-          'Update(Send to Gmail)'
+          'Updated Send to Gmail'
         );
       });
     });
