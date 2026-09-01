@@ -1,17 +1,24 @@
 /**
- * Every state a run can finish in. Mirrors `Lightning.Run.final_states/0`;
- * runs still in flight never reach the client, since they have no outcome yet.
+ * Every state a run can finish in other than success. Mirrors the failure half
+ * of `Lightning.Run.final_states/0`; runs still in flight never reach the
+ * client, since they have no outcome yet.
+ *
+ * This list is the single definition both donuts derive from: Outcomes sums it
+ * for its Failed wedge and the failure breakdown keys its palette by it, so a
+ * state added here cannot be counted by one panel and dropped by the other.
  */
-export type RunStateCounts = Record<
-  | 'success'
-  | 'failed'
-  | 'crashed'
-  | 'cancelled'
-  | 'killed'
-  | 'exception'
-  | 'lost',
-  number
->;
+export const FAILURE_STATES = [
+  'failed',
+  'crashed',
+  'cancelled',
+  'killed',
+  'exception',
+  'lost',
+] as const;
+
+export type FailureState = (typeof FAILURE_STATES)[number];
+
+export type RunStateCounts = Record<'success' | FailureState, number>;
 
 /**
  * The `outcomes` response from `LightningWeb.API.WorkflowHealthController`.
