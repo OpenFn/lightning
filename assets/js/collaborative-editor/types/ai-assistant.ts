@@ -253,6 +253,13 @@ export interface AIAssistantState {
    */
   snapshotsByMessageId: Record<string, WorkflowSnapshot[]>;
   streamingApply: StreamingApplyState | null;
+  /**
+   * The canvas as it stood after the assistant's last import, serialized by
+   * `serializeCanvasForComparison`. Undo compares against it to tell whether
+   * the workflow has been edited since, and skip the confirmation when it has
+   * not. Session-scoped: a reload has none, and undo then always confirms.
+   */
+  appliedCanvasYaml: string | null;
 
   sessionList: SessionSummary[];
   sessionListLoading: boolean;
@@ -317,6 +324,7 @@ export interface AIAssistantStore {
   _setStreamingApply: (yaml: string) => void;
   _setStreamingApplySaveFailed: (saveFailed: boolean) => void;
   _clearStreamingApply: () => void;
+  _setAppliedCanvasYaml: (yaml: string | null) => void;
   _connectChannel: (channelProvider: unknown) => () => void;
 }
 

@@ -103,6 +103,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       streamingSnapshots: [],
       snapshotsByMessageId: {},
       streamingApply: null,
+      appliedCanvasYaml: null,
       sessionList: [],
       sessionListLoading: false,
       sessionListPagination: null,
@@ -229,6 +230,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingSnapshots = [];
       draft.snapshotsByMessageId = {};
       draft.streamingApply = null;
+      draft.appliedCanvasYaml = null;
     });
 
     notify('clearSession');
@@ -251,6 +253,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.snapshotsByMessageId = {};
       draft.isLoading = true;
       draft.streamingApply = null;
+      draft.appliedCanvasYaml = null;
     });
 
     notify('loadSession');
@@ -750,6 +753,18 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
+   * Record the canvas as it stands after an assistant import, so undo can
+   * tell whether the workflow has been edited since.
+   * @internal Called by useAppliedCanvas after a successful import
+   */
+  const _setAppliedCanvasYaml = (yaml: string | null) => {
+    state = produce(state, draft => {
+      draft.appliedCanvasYaml = yaml;
+    });
+    notify('_setAppliedCanvasYaml');
+  };
+
+  /**
    * Connect to workflow channel to listen for AI session creation events.
    * When another user creates an AI session, we receive the event and update
    * our session list if it matches the current context.
@@ -829,6 +844,7 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _clearStreaming,
     _setStreamingApply,
     _setStreamingApplySaveFailed,
+    _setAppliedCanvasYaml,
     _clearStreamingApply,
     _connectChannel,
   };

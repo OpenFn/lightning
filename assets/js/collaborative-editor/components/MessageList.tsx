@@ -429,6 +429,30 @@ const WorkflowReplyTimeline = ({
   );
 };
 
+/** Restores the workflow to before a reply's changes, or back to after them */
+const UndoChangesButton = ({
+  undone,
+  onClick,
+}: {
+  undone: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    data-testid="undo-changes-button"
+    onClick={onClick}
+    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-1 text-xs font-medium text-gray-700 inset-ring inset-ring-gray-300 hover:inset-ring-gray-400"
+  >
+    <span
+      className={cn(
+        'h-3.5 w-3.5',
+        undone ? 'hero-arrow-uturn-right' : 'hero-arrow-uturn-left'
+      )}
+    />
+    {undone ? 'Redo these changes' : 'Undo these changes'}
+  </button>
+);
+
 /**
  * Copy text to clipboard using modern Clipboard API
  */
@@ -688,6 +712,12 @@ interface MessageListProps {
    * Apply button back, because a failed import is never retried on its own.
    */
   failedApplyMessageIds?: Set<string>;
+  /** Restores the workflow to before a reply's changes, or back to after them */
+  onUndoChanges?: (messageId: string, yaml: string) => void;
+  /** Reply whose changes are currently undone, so its control offers Redo */
+  undoneMessageId?: string | null;
+  /** An apply is running: undo must not race the import */
+  isApplyInFlight?: boolean;
   /**
    * Whether the global assistant is active. Gates the woven streaming
    * timeline — non-global streams keep the flat content + single scalar
@@ -716,6 +746,9 @@ export function MessageList({
   onOpenStep,
   canOpenStep,
   failedApplyMessageIds,
+  onUndoChanges,
+  undoneMessageId,
+  isApplyInFlight = false,
   isGlobalAssistantActive = false,
 }: MessageListProps) {
   const loadingRef = useRef<HTMLDivElement>(null);
@@ -869,6 +902,28 @@ export function MessageList({
           message.from_global &&
             (message.code || snapshotsByMessageId[message.id]?.length)
         );
+
+  /**
+   * Whether a reply offers to undo the changes it applied. Only the last
+   * settled global reply does: undoing an earlier one would leave the replies
+   * after it describing a workflow that no longer exists.
+   */
+  const canUndoChanges = (message: Message): boolean =>
+    Boolean(
+      onUndoChanges &&
+        !isApplyInFlight &&
+        !isWriteDisabled &&
+        !isStreaming(message) &&
+        displayMessages.at(-1)?.id === message.id &&
+        message.from_global &&
+        // Only a successful reply was auto-applied; an error or cancelled one
+        // can still carry code, and undoing it would offer to "redo" changes
+        // that never landed.
+        message.status === 'success' &&
+        message.code &&
+        !failedApplyMessageIds?.has(message.id) &&
+        beforeYamlByMessageId.get(message.id)
+    );
 
   const snapshotsFor = (message: Message): WorkflowSnapshot[] =>
     isStreaming(message)
@@ -1122,6 +1177,20 @@ export function MessageList({
                           )}
                         </div>
                       )}
+
+                    {canUndoChanges(message) && (
+                      <UndoChangesButton
+                        undone={undoneMessageId === message.id}
+                        onClick={() => {
+                          onUndoChanges?.(
+                            message.id,
+                            undoneMessageId === message.id
+                              ? message.code!
+                              : beforeYamlByMessageId.get(message.id)!
+                          );
+                        }}
+                      />
+                    )}
 
                     {!isStreaming(message) &&
                       message.status === 'error' &&

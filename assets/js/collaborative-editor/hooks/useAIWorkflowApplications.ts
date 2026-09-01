@@ -115,6 +115,7 @@ export function useAIWorkflowApplications({
   isSessionConnected,
   isSessionConnecting,
   onValidationError,
+  onCanvasApplied,
   workflowActions,
   monacoRef,
   jobs,
@@ -154,6 +155,8 @@ export function useAIWorkflowApplications({
    */
   isSessionConnecting: boolean;
   onValidationError?: (message: string) => void;
+  /** Called after a successful import, so undo can record the new canvas */
+  onCanvasApplied?: () => void;
   workflowActions: {
     importWorkflow: (state: YAMLWorkflowState) => Promise<void>;
     startApplyingWorkflow: (messageId: string) => Promise<boolean>;
@@ -339,6 +342,7 @@ export function useAIWorkflowApplications({
 
         await importWorkflow(workflowStateWithCreds);
         applySucceeded = true;
+        onCanvasApplied?.();
 
         if (messageId === STREAMING_MESSAGE_ID) {
           // Record the applied YAML so the auto-apply effect can skip the
@@ -400,6 +404,7 @@ export function useAIWorkflowApplications({
       isSessionConnected,
       isSessionConnecting,
       onValidationError,
+      onCanvasApplied,
       saveNewWorkflow,
       streamingApplyActions,
       monacoRef,

@@ -12,6 +12,7 @@
 
 import { useMemo, useState } from 'react';
 
+import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import { cn } from '#/utils/cn';
 
 import type { Token } from '../utils/highlightJs';
@@ -289,6 +290,25 @@ const DiffHunks = ({ step }: { step: StepChange }) => {
   );
 };
 
+/** Copies a step's body, sized for its feedback label so the header holds still */
+const CopyStepButton = ({ body }: { body: string }) => {
+  const { copyText, copyToClipboard } = useCopyToClipboard();
+
+  return (
+    <button
+      type="button"
+      data-testid="diff-block-copy"
+      onClick={() => void copyToClipboard(body)}
+      className="shrink-0 inline-grid text-xs text-[#0969da] hover:underline px-1 py-0.5"
+    >
+      <span className="col-start-1 row-start-1 invisible" aria-hidden="true">
+        Copied!
+      </span>
+      <span className="col-start-1 row-start-1">{copyText || 'Copy'}</span>
+    </button>
+  );
+};
+
 export const StepDiffBlock = ({
   step,
   onOpenStep,
@@ -315,13 +335,19 @@ export const StepDiffBlock = ({
       (!canOpenStep || canOpenStep({ jobId: step.jobId, name: step.name }))
   );
 
+  // A removed step's new body is empty; the code worth copying is the one
+  // that just went away.
+  const copyBody = step.type === 'remove' ? step.oldBody : step.newBody;
+
   return (
     <DiffBlockShell
       title={
         <>
           {/* Non-breaking: a flex item is blockified, so a plain trailing
-              space would be trimmed and the label would run into the name. */}
-          <span className="shrink-0">{`${stepVerb[step.type]}\u00a0`}</span>
+              space would be trimmed and the label would run into the name.
+              The margin is the visual gap on top of it: a mono name set
+              against sans needs more than a space's width to separate. */}
+          <span className="shrink-0 mr-1">{`${stepVerb[step.type]}\u00a0`}</span>
           <span className="font-mono truncate">{step.name}</span>
         </>
       }
@@ -329,18 +355,21 @@ export const StepDiffBlock = ({
       defaultExpanded
       testId="diff-block"
       action={
-        canOpen ? (
-          <button
-            type="button"
-            data-testid="diff-block-open-step"
-            onClick={() => {
-              onOpenStep?.({ jobId: step.jobId, name: step.name });
-            }}
-            className="shrink-0 text-xs text-[#0969da] hover:underline px-1 py-0.5"
-          >
-            Open
-          </button>
-        ) : undefined
+        <>
+          <CopyStepButton body={copyBody} />
+          {canOpen && (
+            <button
+              type="button"
+              data-testid="diff-block-open-step"
+              onClick={() => {
+                onOpenStep?.({ jobId: step.jobId, name: step.name });
+              }}
+              className="shrink-0 text-xs text-[#0969da] hover:underline px-1 py-0.5"
+            >
+              Open
+            </button>
+          )}
+        </>
       }
     >
       <DiffHunks step={step} />

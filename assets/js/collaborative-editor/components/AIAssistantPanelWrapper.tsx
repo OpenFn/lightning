@@ -44,6 +44,8 @@ import { useAIPanelDiffManager } from '../hooks/useAIPanelDiffManager';
 import { useAIPanelURLSync } from '../hooks/useAIPanelURLSync';
 import { useAISession } from '../hooks/useAISession';
 import { useAIWorkflowApplications } from '../hooks/useAIWorkflowApplications';
+import { useAIWorkflowUndo } from '../hooks/useAIWorkflowUndo';
+import { useAppliedCanvas } from '../hooks/useAppliedCanvas';
 import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
@@ -78,6 +80,7 @@ import {
 } from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
+import { AlertDialog } from './AlertDialog';
 import { MessageList } from './MessageList';
 
 /**
@@ -621,6 +624,24 @@ export function AIAssistantPanelWrapper({
     [aiStore]
   );
 
+  const appliedCanvas = useAppliedCanvas();
+
+  const {
+    undoneMessageId,
+    requestUndoChanges,
+    isConfirmOpen,
+    confirmUndoChanges,
+    cancelUndoChanges,
+  } = useAIWorkflowUndo({
+    jobs,
+    appliedCanvas,
+    workflowActions: {
+      importWorkflow,
+      startApplyingWorkflow,
+      doneApplyingWorkflow,
+    },
+  });
+
   // Hook to handle workflow/job code application logic
   const {
     handleApplyWorkflow,
@@ -646,6 +667,7 @@ export function AIAssistantPanelWrapper({
     isSessionConnected,
     isSessionConnecting,
     onValidationError,
+    onCanvasApplied: appliedCanvas.record,
     workflowActions: {
       importWorkflow,
       startApplyingWorkflow,
@@ -857,12 +879,27 @@ export function AIAssistantPanelWrapper({
                 onOpenStep={handleOpenStep}
                 canOpenStep={canOpenStep}
                 failedApplyMessageIds={failedApplyMessageIds}
+                onUndoChanges={requestUndoChanges}
+                undoneMessageId={undoneMessageId}
+                isApplyInFlight={!!applyingMessageId || isApplyingWorkflow}
                 isGlobalAssistantActive={isGlobalAssistantActive}
               />
             </AIAssistantPanel>
           </div>
         </>
       )}
+
+      <AlertDialog
+        isOpen={isConfirmOpen}
+        onClose={cancelUndoChanges}
+        onConfirm={confirmUndoChanges}
+        title="Overwrite changes to the workflow?"
+        // Neutral about whose changes they are: a collaborator's edits are
+        // taken by the same whole-document replace.
+        description="The workflow has been edited since the assistant applied these changes. Continuing replaces the whole workflow, discarding those edits."
+        confirmLabel="Continue"
+        variant="danger"
+      />
     </div>
   );
 }
