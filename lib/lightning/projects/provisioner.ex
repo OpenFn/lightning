@@ -12,7 +12,6 @@ defmodule Lightning.Projects.Provisioner do
   import Ecto.Query
 
   alias Ecto.Multi
-  alias Lightning.Validators
   alias Lightning.Accounts.User
   alias Lightning.Channels.Audit, as: ChannelAudit
   alias Lightning.Channels.Channel
@@ -30,6 +29,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
 
+  alias Lightning.Validators
   alias Lightning.Workflows
   alias Lightning.Workflows.Audit
   alias Lightning.Workflows.Edge

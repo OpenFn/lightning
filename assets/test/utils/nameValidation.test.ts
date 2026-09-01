@@ -366,18 +366,18 @@ describe('isInvisibleOnly agrees with the server', () => {
     expect(missed).toEqual([]);
   });
 
-  test('the client is stricter only by a known Unicode-version skew', () => {
-    // V8's tables are newer than the PCRE build Elixir uses, so it knows four
-    // Arabic and Kaithi number signs as Format that PCRE does not. Client
-    // stricter means a validation message rather than an outage, and pinning
-    // the list here means a change in either engine shows up as a diff.
+  test('the client is no stricter than the server', () => {
+    // These used to differ. V8's tables were ahead of the PCRE build Elixir
+    // shipped, so the client knew four Arabic and Kaithi number signs as
+    // Format that the server did not. Erlang 28 brought PCRE2 and closed it.
+    // Pinned at zero so a future skew in either engine shows up as a diff.
     const extra: string[] = [];
     for (let c = 0; c <= 0x10ffff; c++) {
       if (c >= 0xd800 && c <= 0xdfff) continue;
       if (serverSet.has(c)) continue;
       if (isInvisibleOnly(String.fromCodePoint(c))) extra.push(c.toString(16));
     }
-    expect(extra).toEqual(['890', '891', '8e2', '110cd']);
+    expect(extra).toEqual([]);
   });
 
   test('a name that merely contains an invisible is still a real name', () => {

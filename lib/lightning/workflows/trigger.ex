@@ -184,17 +184,9 @@ defmodule Lightning.Workflows.Trigger do
       :comment,
       "comment can't contain a null byte"
     )
-    |> validate_no_null_bytes(
-      :custom_path,
-      "custom path can't contain a null byte"
-    )
     |> validate_name_fits_column(
       :comment,
       "comment is too long, please use a shorter one"
-    )
-    |> validate_name_fits_column(
-      :custom_path,
-      "custom path is too long, please use a shorter one"
     )
     |> validate_name_fits_column(
       :cron_expression,

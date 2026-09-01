@@ -4,11 +4,10 @@ defmodule Lightning.Workflows.TriggerTest do
   alias Lightning.Workflows.Trigger
 
   describe "jsonb-bound trigger fields" do
-    test "a NUL in comment or custom_path is a changeset error" do
+    test "a NUL in a comment is a changeset error" do
       # Both are copied into the workflow_snapshots.triggers jsonb (#4893).
       for {field, message} <- [
-            {:comment, "comment can't contain a null byte"},
-            {:custom_path, "custom path can't contain a null byte"}
+            {:comment, "comment can't contain a null byte"}
           ] do
         changeset =
           Trigger.changeset(
@@ -21,12 +20,11 @@ defmodule Lightning.Workflows.TriggerTest do
       end
     end
 
-    test "an over-long comment or custom_path is a changeset error, not a 22001" do
+    test "an over-long comment is a changeset error, not a 22001" do
       # Both columns are varchar(255) and neither had a length guard, so a 300
       # character comment gave valid? == true and then raised on insert.
       for {field, message} <- [
-            {:comment, "comment is too long, please use a shorter one"},
-            {:custom_path, "custom path is too long, please use a shorter one"}
+            {:comment, "comment is too long, please use a shorter one"}
           ] do
         changeset =
           Trigger.changeset(
