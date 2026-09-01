@@ -46,4 +46,9 @@ defmodule LightningWeb.WorkflowHealthChannel do
   def handle_in("get_outcomes", _params, socket) do
     {:reply, {:ok, Workflows.Stats.outcomes(socket.assigns.workflow)}, socket}
   end
+
+  def handle_in("get_failure_signatures", _params, socket) do
+    {:reply, {:ok, Workflows.Stats.failure_signatures(socket.assigns.workflow)},
+     socket}
+  end
 end

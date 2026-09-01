@@ -106,31 +106,41 @@ defmodule LightningWeb.WorkflowHealthChannelTest do
   end
 
   describe "get_outcomes" do
-    test "counts work orders from the last 30 days, grouped by state", %{
+    test "counts runs from the last 30 days, grouped by state", %{
       user: user,
       project: project,
       workflow: workflow
     } do
       %{triggers: [trigger]} = workflow
-      dataclip = insert(:dataclip)
 
-      for state <- [:success, :success, :failed, :pending] do
+      work_order =
         insert(:workorder,
           workflow: workflow,
           trigger: trigger,
-          dataclip: dataclip,
-          state: state
+          dataclip: insert(:dataclip),
+          state: :failed
+        )
+
+      run = fn attrs ->
+        insert(
+          :run,
+          Keyword.merge(
+            [
+              work_order: work_order,
+              starting_trigger: trigger,
+              dataclip: insert(:dataclip)
+            ],
+            attrs
+          )
         )
       end
 
+      for state <- [:success, :success, :crashed, :started] do
+        run.(state: state)
+      end
+
       # Outside the window — must not be counted.
-      insert(:workorder,
-        workflow: workflow,
-        trigger: trigger,
-        dataclip: dataclip,
-        state: :success,
-        inserted_at: Timex.shift(Timex.now(), days: -31)
-      )
+      run.(state: :success, inserted_at: Timex.shift(Timex.now(), days: -31))
 
       {:ok, _reply, socket} = join_health(user, project.id, workflow.id)
 
@@ -141,10 +151,10 @@ defmodule LightningWeb.WorkflowHealthChannelTest do
       assert %{from: from, to: to} = outcomes.window
       assert DateTime.diff(to, from, :day) == 30
 
-      assert outcomes.counts == %{success: 2, failed: 1, pending: 1}
+      assert %{success: 2, crashed: 1, failed: 0} = outcomes.counts
     end
 
-    test "reports zeroes for a workflow with no work orders", %{
+    test "reports zeroes for a workflow with no runs", %{
       user: user,
       project: project,
       workflow: workflow
@@ -155,7 +165,73 @@ defmodule LightningWeb.WorkflowHealthChannelTest do
 
       assert_reply ref, :ok, outcomes
 
-      assert outcomes.counts == %{success: 0, failed: 0, pending: 0}
+      assert outcomes.counts == Map.new(Lightning.Run.final_states(), &{&1, 0})
+    end
+  end
+
+  describe "get_failure_signatures" do
+    test "returns the signature parts and run count for each failure", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      %{triggers: [trigger], jobs: [job | _]} = workflow
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: insert(:dataclip),
+          state: :failed
+        )
+
+      insert(:run,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: :failed,
+        steps: [
+          build(:step,
+            job: job,
+            input_dataclip: build(:dataclip),
+            exit_reason: "fail",
+            error_type: "RuntimeError"
+          )
+        ]
+      )
+
+      {:ok, _reply, socket} = join_health(user, project.id, workflow.id)
+
+      ref = push(socket, "get_failure_signatures", %{})
+
+      assert_reply ref, :ok, reply
+
+      assert DateTime.diff(reply.window.to, reply.window.from, :day) == 30
+
+      assert [
+               %{
+                 count: 1,
+                 exit_reason: "fail",
+                 error_type: "RuntimeError",
+                 step_name: step_name,
+                 adaptor: adaptor
+               }
+             ] = reply.signatures
+
+      assert step_name == job.name
+      assert adaptor == job.adaptor
+    end
+
+    test "returns an empty list for a workflow with no failures", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, _reply, socket} = join_health(user, project.id, workflow.id)
+
+      ref = push(socket, "get_failure_signatures", %{})
+
+      assert_reply ref, :ok, %{signatures: []}
     end
   end
 end
