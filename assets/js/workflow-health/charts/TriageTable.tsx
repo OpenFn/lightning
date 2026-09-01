@@ -112,10 +112,12 @@ const Signature = ({ signature }: { signature: FailureSignature }) => (
   </p>
 );
 
-// A step can finish without reporting a type. The signature still has to say
-// something, and `default` is the tip written for exactly that case.
+// A step can finish without reporting a type, and a worker can report one as an
+// empty string. The signature still has to say something, and `default` is the
+// tip written for exactly that case — hence `||`, which catches '' as well as
+// null, where `??` would render a bare `fail:` and a tip with no sentence.
 const errorTypeOf = ({ error_type }: FailureSignature) =>
-  error_type ?? 'unknown';
+  error_type || 'unknown';
 
 const tipFor = ({ error_type }: FailureSignature) =>
-  (error_type && TIPS[error_type]) ?? TIPS['default'];
+  (error_type && TIPS[error_type]) || TIPS['default'];
