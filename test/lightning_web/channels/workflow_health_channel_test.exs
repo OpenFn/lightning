@@ -49,6 +49,48 @@ defmodule LightningWeb.WorkflowHealthChannelTest do
                join_health(user, other_workflow.project_id, other_workflow.id)
     end
 
+    # Support users have no `project_users` row, so a membership check alone
+    # would refuse them where the rest of the app admits them.
+    test "a support user can join a project that allows support access", %{
+      workflow: workflow
+    } do
+      support_user = insert(:user, support_user: true)
+      opted_in = insert(:project, allow_support_access: true)
+      opted_in_workflow = insert(:simple_workflow, project: opted_in)
+
+      assert {:ok, _reply, _socket} =
+               join_health(support_user, opted_in.id, opted_in_workflow.id)
+
+      # Not a blanket pass: a project that hasn't opted in still refuses them.
+      assert {:error, %{reason: "unauthorized"}} =
+               join_health(support_user, workflow.project_id, workflow.id)
+    end
+
+    test "a member cannot join a project scheduled for deletion", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      project
+      |> Ecto.Changeset.change(scheduled_deletion: ~U[2026-01-01 00:00:00Z])
+      |> Lightning.Repo.update!()
+
+      assert {:error, %{reason: "unauthorized"}} =
+               join_health(user, project.id, workflow.id)
+    end
+
+    test "a malformed id is rejected rather than crashing the join", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      assert {:error, %{reason: "unauthorized"}} =
+               join_health(user, "not-a-uuid", workflow.id)
+
+      assert {:error, %{reason: "unauthorized"}} =
+               join_health(user, project.id, "not-a-uuid")
+    end
+
     test "requires project_id", %{user: user, workflow: workflow} do
       assert {:error, %{reason: reason}} =
                LightningWeb.UserSocket

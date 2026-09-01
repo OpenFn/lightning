@@ -4,11 +4,13 @@ defmodule LightningWeb.WorkflowHealthChannel do
 
   This channel is its own trust boundary — the health LiveView's `on_mount`
   guards do not protect it, since a client can join any topic over the socket.
-  Membership of the project is re-checked here on join.
+  Access to the project is re-checked here on join, via the same policy the rest
+  of the app uses — so support users get in and soft-deleted projects don't.
   """
   use LightningWeb, :channel
 
-  alias Lightning.Projects
+  alias Lightning.Policies.Permissions
+  alias Lightning.Projects.Project
   alias Lightning.Workflows
 
   @impl true
@@ -18,10 +20,15 @@ defmodule LightningWeb.WorkflowHealthChannel do
         socket
       ) do
     with %_{} = user <- socket.assigns[:current_user],
-         %_{} = project <- Projects.get_project(project_id),
-         %_{} <- Projects.get_project_user(project, user),
-         true <- Workflows.workflow_exists_in_project?(project.id, workflow_id) do
-      {:ok, assign(socket, :workflow, Workflows.get_workflow!(workflow_id))}
+         {:ok, project_id} <- Ecto.UUID.cast(project_id),
+         %{project: project} = workflow <-
+           Workflows.get_workflow_for_project(
+             %Project{id: project_id},
+             workflow_id,
+             include: [:project]
+           ),
+         :ok <- Permissions.can(:project_users, :access_project, user, project) do
+      {:ok, assign(socket, :workflow, workflow)}
     else
       _ -> {:error, %{reason: "unauthorized"}}
     end
