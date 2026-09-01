@@ -1,8 +1,4 @@
-import type { Channel } from 'phoenix';
 import { useEffect, useState } from 'react';
-
-import { channelRequest } from '#/collaborative-editor/hooks/useChannel';
-import { useSocket } from '#/react/contexts/SocketProvider';
 
 /**
  * Every state a run can finish in. Mirrors `Lightning.Run.final_states/0`;
@@ -20,12 +16,12 @@ export type RunStateCounts = Record<
 >;
 
 /**
- * The `get_outcomes` reply from `LightningWeb.WorkflowHealthChannel`. Counts
- * only; `Lightning.Workflows.Stats` does the bucketing.
+ * The `outcomes` response from `LightningWeb.API.WorkflowHealthController`.
+ * Counts only; `Lightning.Workflows.Stats` does the bucketing.
  *
- * One reply feeds both donuts: Outcomes folds the failure states together and
- * the failure breakdown slices them apart, and it is the same aggregate either
- * way — a second request would re-run the identical query.
+ * One response feeds both donuts: Outcomes folds the failure states together
+ * and the failure breakdown slices them apart, and it is the same aggregate
+ * either way — a second request would re-run the identical query.
  */
 export interface Outcomes {
   window: { from: string; to: string };
@@ -46,7 +42,7 @@ export interface FailureSignature {
   adaptor: string | null;
 }
 
-/** The `get_failure_signatures` reply, heaviest signature first. */
+/** The `failures` response, heaviest signature first. */
 export interface FailureSignatures {
   window: { from: string; to: string };
   signatures: FailureSignature[];
@@ -59,11 +55,19 @@ interface HealthState {
   signaturesError: string | null;
 }
 
+const getJSON = async <T>(url: string, signal: AbortSignal): Promise<T> => {
+  const response = await fetch(url, { credentials: 'same-origin', signal });
+
+  if (!response.ok) throw new Error('Could not load workflow stats');
+
+  return response.json() as Promise<T>;
+};
+
 /**
- * Joins `workflow_health:<id>` and fetches each chart's slice once.
+ * Fetches each chart's slice of the health stats once.
  *
  * Kept apart from the components so charts stay pure functions of their props —
- * a chart can be rendered in a test without standing up a socket.
+ * a chart can be rendered in a test without stubbing the network.
  *
  * Requests go out together and land independently, so a slow query only holds
  * up its own panel. Errors are per slice for the same reason.
@@ -72,7 +76,6 @@ export function useHealthStats(
   workflowId: string,
   projectId: string
 ): HealthState {
-  const { socket, isConnected, connectionError } = useSocket();
   const [state, setState] = useState<HealthState>({
     outcomes: null,
     outcomesError: null,
@@ -81,71 +84,42 @@ export function useHealthStats(
   });
 
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    // React's strict mode double-invokes this effect in development, so a
+    // response can land after the first pass has been torn down.
+    const controller = new AbortController();
 
-    const channel: Channel = socket.channel(`workflow_health:${workflowId}`, {
-      project_id: projectId,
-    });
+    const base = `/api/projects/${projectId}/workflows/${workflowId}/health`;
 
-    // A reply can still land after `leave()` — and React's strict mode
-    // double-invokes this effect in development, so it does.
-    let live = true;
+    const failed = (patch: Partial<HealthState>) => (error: unknown) => {
+      // An abort is a teardown, not a failure — there is nobody left to tell.
+      if (controller.signal.aborted) return;
 
-    const update = (patch: Partial<HealthState>) => {
-      if (live) setState(current => ({ ...current, ...patch }));
+      console.error('workflow health request failed:', error);
+      setState(current => ({ ...current, ...patch }));
     };
 
-    // `channelRequest` rejects with a `ChannelRequestError` whose message is
-    // already formatted from the server's payload.
-    const reason = (error: unknown) =>
-      error instanceof Error ? error.message : 'Could not load workflow stats';
+    const message = 'Could not load workflow stats. Refresh to try again.';
 
     // Each slice is requested on its own and lands on its own, so a slow query
-    // only holds up its own panel. Typed per event on purpose: a shared helper
-    // would have to erase the payload type to build the patch generically.
-    const load = () => {
-      void channelRequest<Outcomes>(channel, 'get_outcomes', {})
-        .then(outcomes => update({ outcomes, outcomesError: null }))
-        .catch(e => update({ outcomes: null, outcomesError: reason(e) }));
-
-      void channelRequest<FailureSignatures>(
-        channel,
-        'get_failure_signatures',
-        {}
+    // only holds up its own panel. Typed per request on purpose: a shared
+    // helper would have to erase the payload type to build the patch
+    // generically.
+    void getJSON<Outcomes>(`${base}/outcomes`, controller.signal)
+      .then(outcomes =>
+        setState(current => ({ ...current, outcomes, outcomesError: null }))
       )
-        .then(signatures => update({ signatures, signaturesError: null }))
-        .catch(e => update({ signatures: null, signaturesError: reason(e) }));
-    };
+      .catch(failed({ outcomes: null, outcomesError: message }));
 
-    channel
-      .join()
-      .receive('ok', load)
-      .receive('error', ({ reason }: { reason?: string }) => {
-        // The guard's own words — "unauthorized", a params error — describe a
-        // race or a bug, never something the reader can act on.
-        console.error('workflow_health join rejected:', reason);
-
-        const message = 'Could not load workflow stats. Refresh to try again.';
-        update({ outcomesError: message, signaturesError: message });
-      });
+    void getJSON<FailureSignatures>(`${base}/failures`, controller.signal)
+      .then(signatures =>
+        setState(current => ({ ...current, signatures, signaturesError: null }))
+      )
+      .catch(failed({ signatures: null, signaturesError: message }));
 
     return () => {
-      live = false;
-      channel.leave();
+      controller.abort();
     };
-  }, [socket, isConnected, workflowId, projectId]);
-
-  // A dropped connection recovers on its own, so don't replace good numbers
-  // with an error — only show it where nothing ever arrived.
-  if (connectionError) {
-    const message = 'Could not connect. Refresh to try again.';
-
-    return {
-      ...state,
-      outcomesError: state.outcomes ? state.outcomesError : message,
-      signaturesError: state.signatures ? state.signaturesError : message,
-    };
-  }
+  }, [workflowId, projectId]);
 
   return state;
 }

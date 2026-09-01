@@ -11,7 +11,6 @@ defmodule LightningWeb.UserSocket do
   channel "workflow:*", LightningWeb.WorkflowChannel
   channel "run:*", LightningWeb.RunChannel
   channel "ai_assistant:*", LightningWeb.AiAssistantChannel
-  channel "workflow_health:*", LightningWeb.WorkflowHealthChannel
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After

@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { SocketContext } from '#/react/contexts/SocketProvider';
 import { HealthContent } from '#/workflow-health/WorkflowHealth';
 
 const outcomes = {
@@ -30,68 +29,83 @@ const failureSignatures = {
   ],
 };
 
-const both = {
-  get_outcomes: { ok: outcomes },
-  get_failure_signatures: { ok: failureSignatures },
-};
+const both = { outcomes, failures: failureSignatures };
+
+const ERROR = 'Could not load workflow stats. Refresh to try again.';
 
 /**
- * Fake channel whose `push`/`join` replies are driven by a status → payload
- * map, so a test can pick which leg of the request fires. `push` is keyed by
- * event, so one request can fail while the other succeeds — the panels degrade
- * independently and the tests have to be able to say so.
+ * Stubs `fetch`, keyed by the last path segment, so a test can pick which
+ * slice fails. A value is a body to serve; a number is the status to fail
+ * with — the panels degrade independently and the tests have to say so.
  */
-function fakeSocket(replies: Record<string, unknown>) {
-  // Chainable `receive`, so `.receive('ok', ..).receive('error', ..)` both see
-  // their callback. Fires whichever status the test put in `replies`.
-  const chain = (statuses: Record<string, unknown>) => {
-    const receive = (status: string, callback: (r: never) => void) => {
-      if (status in statuses) callback(statuses[status] as never);
-      return { receive };
-    };
-    return { receive };
-  };
+function stubFetch(responses: Record<string, unknown>) {
+  const signals: AbortSignal[] = [];
 
-  const joinStatus = 'join_error' in replies ? 'error' : 'ok';
+  const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+    if (init?.signal) signals.push(init.signal);
 
-  const channel = {
-    join: () => chain({ [joinStatus]: replies['join_error'] ?? {} }),
-    push: (event: string) =>
-      chain((replies[event] as Record<string, unknown>) ?? replies),
-    leave: vi.fn(),
-  };
+    const slice = url.split('/').pop() ?? '';
+    const response = responses[slice];
 
-  return { channel: () => channel, leaveSpy: channel.leave };
+    if (typeof response === 'number' || response === undefined) {
+      return Promise.resolve({
+        ok: false,
+        status: typeof response === 'number' ? response : 404,
+      } as Response);
+    }
+
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(response),
+    } as Response);
+  });
+
+  vi.stubGlobal('fetch', fetchMock);
+
+  return { fetchMock, signals };
 }
 
-function mount(
-  replies: Record<string, unknown>,
-  connectionError: string | null = null
-) {
-  const socket = fakeSocket(replies);
+function mount(responses: Record<string, unknown>) {
+  const stub = stubFetch(responses);
 
   const rendered = render(
-    <SocketContext.Provider
-      value={{
-        socket: socket as never,
-        isConnected: true,
-        connectionError,
-        connect: vi.fn(),
-        disconnect: vi.fn(),
-      }}
-    >
-      <HealthContent
-        workflowId="wf-1"
-        projectId="proj-1"
-        workflowName="Sync patients"
-      />
-    </SocketContext.Provider>
+    <HealthContent
+      workflowId="wf-1"
+      projectId="proj-1"
+      workflowName="Sync patients"
+    />
   );
 
-  return { ...rendered, socket };
+  return { ...rendered, ...stub };
 }
 
+beforeEach(() => {
+  // The hook logs every failed request; the failure tests are deliberate.
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
 describe('WorkflowHealth', () => {
+  test('requests each slice from the project-scoped health path', async () => {
+    const { fetchMock } = mount(both);
+
+    await screen.findByText('Success');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/proj-1/workflows/wf-1/health/outcomes',
+      expect.objectContaining({ credentials: 'same-origin' })
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/proj-1/workflows/wf-1/health/failures',
+      expect.objectContaining({ credentials: 'same-origin' })
+    );
+  });
+
   test('renders the header, deriving the day count from the window', async () => {
     mount(both);
 
@@ -104,7 +118,7 @@ describe('WorkflowHealth', () => {
   test('folds the failure states into the Outcomes donut', async () => {
     mount(both);
 
-    // 98 + 24 + 12 + 7 — one reply feeds both donuts, so the two panels can
+    // 98 + 24 + 12 + 7 — one response feeds both donuts, so the two panels can
     // only disagree if this fold drifts from the breakdown's own total.
     expect(await screen.findByText('Failed')).toBeVisible();
     expect(screen.getByText('141')).toBeVisible();
@@ -136,44 +150,35 @@ describe('WorkflowHealth', () => {
     ).toBeVisible();
   });
 
-  test('reports a rejected join without echoing the server', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    mount({ join_error: { reason: 'unauthorized' } });
+  test('reports a refused request without echoing the server', async () => {
+    mount({ outcomes: 404, failures: 404 });
 
-    // A rejected join takes every panel with it — nothing was ever requested.
-    expect(
-      await screen.findAllByText(
-        'Could not load workflow stats. Refresh to try again.'
-      )
-    ).toHaveLength(3);
-    expect(screen.queryByText('unauthorized')).toBeNull();
+    // Both slices refused takes every panel with it.
+    expect(await screen.findAllByText(ERROR)).toHaveLength(3);
+    expect(screen.queryByText(/404|Not Found/)).toBeNull();
   });
 
-  test('surfaces a get_outcomes error reason', async () => {
-    mount({ get_outcomes: { error: { reason: 'something broke' } } });
+  test('degrades both donuts when the outcomes request fails', async () => {
+    mount({ outcomes: 500, failures: failureSignatures });
 
-    // Both donuts read the same reply, so both degrade.
-    expect(await screen.findAllByText('something broke')).toHaveLength(2);
+    // Both donuts read the same response, so both degrade.
+    expect(await screen.findAllByText(ERROR)).toHaveLength(2);
   });
 
   // The whole point of requesting each slice separately: one failing query
   // must not blank the panels that answered.
   test('keeps the donuts when only the triage query fails', async () => {
-    mount({
-      get_outcomes: { ok: outcomes },
-      get_failure_signatures: { error: { reason: 'triage query timed out' } },
-    });
+    mount({ outcomes, failures: 500 });
 
-    expect(await screen.findByText('triage query timed out')).toBeVisible();
+    expect(await screen.findByText(ERROR)).toBeVisible();
     expect(screen.getByText('Success')).toBeVisible();
     expect(screen.getByText('69.5%')).toBeVisible();
   });
 
   test('keeps the page around a failed chart', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    mount({ join_error: { reason: 'unauthorized' } });
+    mount({ outcomes: 500, failures: 500 });
 
-    await screen.findAllByText(/Could not load workflow stats/);
+    await screen.findAllByText(ERROR);
     expect(
       screen.getByRole('heading', { name: 'Sync patients' })
     ).toBeVisible();
@@ -184,19 +189,16 @@ describe('WorkflowHealth', () => {
     expect(screen.getByRole('heading', { name: 'Triage' })).toBeVisible();
   });
 
-  test('reports a socket that never connects, rather than loading forever', async () => {
-    mount({}, 'websocket closed');
+  test('aborts in-flight requests on unmount', async () => {
+    const { unmount, signals } = mount(both);
 
-    expect(
-      await screen.findAllByText('Could not connect. Refresh to try again.')
-    ).toHaveLength(3);
-  });
+    await screen.findByText('Success');
 
-  test('leaves the channel on unmount', () => {
-    const { unmount, socket } = mount(both);
+    expect(signals).toHaveLength(2);
+    expect(signals.every(signal => signal.aborted)).toBe(false);
 
     unmount();
 
-    expect(socket.leaveSpy).toHaveBeenCalled();
+    expect(signals.every(signal => signal.aborted)).toBe(true);
   });
 });

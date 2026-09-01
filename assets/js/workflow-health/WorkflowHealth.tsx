@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react';
 
-import { SocketProvider } from '#/react/contexts/SocketProvider';
-
 import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
 import { OutcomesDonut } from './charts/OutcomesDonut';
 import { TriageTable } from './charts/TriageTable';
@@ -24,13 +22,11 @@ interface WorkflowHealthProps {
 }
 
 export const WorkflowHealth = (props: WorkflowHealthProps) => (
-  <SocketProvider>
-    <HealthContent
-      workflowId={props['data-workflow-id']}
-      projectId={props['data-project-id']}
-      workflowName={props['data-workflow-name']}
-    />
-  </SocketProvider>
+  <HealthContent
+    workflowId={props['data-workflow-id']}
+    projectId={props['data-project-id']}
+    workflowName={props['data-workflow-name']}
+  />
 );
 
 interface HealthContentProps {
