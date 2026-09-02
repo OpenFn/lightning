@@ -1,19 +1,14 @@
-defmodule Lightning.Adaptors.Repo.AdaptorVersion do
+defmodule Lightning.Adaptors.Catalogue.AdaptorVersion do
   @moduledoc """
-  Ecto schema for one row of the `adaptor_versions` table — per-version
-  metadata for an adaptor package (`integrity`, `tarball_url`,
-  `size_bytes`, `dependencies`, `peer_dependencies`, `published_at`,
-  `deprecated`).
-
-  Belongs to `Lightning.Adaptors.Repo.Adaptor` and cascade-deletes with
-  its parent. Mirrors `Lightning.Adaptors.Strategy.version_record`.
+  Ecto schema for one row of the `adaptor_versions` table. Belongs to
+  `Lightning.Adaptors.Catalogue.Adaptor` and is deleted with it.
   """
 
   use Ecto.Schema
 
   import Ecto.Changeset
 
-  alias Lightning.Adaptors.Repo.Adaptor
+  alias Lightning.Adaptors.Catalogue.Adaptor
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
@@ -55,11 +50,7 @@ defmodule Lightning.Adaptors.Repo.AdaptorVersion do
                published_at deprecated)a
 
   @doc """
-  Build a changeset for inserting an `adaptor_versions` row.
-
-  `Lightning.Adaptors.Repo.upsert_adaptor/1` replaces version rows with
-  a delete-then-insert inside a transaction, so there is no separate
-  update path.
+  Builds the changeset for inserting a version row.
   """
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(struct, attrs) do

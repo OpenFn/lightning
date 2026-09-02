@@ -218,6 +218,8 @@ defmodule Lightning.Collaboration.Session do
   - `{:error, :workflow_deleted}` - Workflow has been deleted
   - `{:error, :snapshot_failed}` - Snapshot creation failed; it shares the
     save's transaction, so the whole save rolled back and nothing persisted
+  - `{:error, :adaptor_catalogue_unavailable}` - The adaptor catalogue's
+    first load did not complete, so no validation could run
   - `{:error, changeset}` - Validation or persistence error
 
   ## Examples
@@ -235,9 +237,14 @@ defmodule Lightning.Collaboration.Session do
              | :snapshot_failed
              | :deserialization_failed
              | :internal_error
+             | :adaptor_catalogue_unavailable
              | Ecto.Changeset.t()}
   def save_workflow(session_pid, user) do
-    GenServer.call(session_pid, {:save_workflow, user}, 10_000)
+    GenServer.call(
+      session_pid,
+      {:save_workflow, user},
+      Lightning.Adaptors.Config.first_load_timeout() + 10_000
+    )
   end
 
   @doc """
@@ -340,8 +347,22 @@ defmodule Lightning.Collaboration.Session do
   end
 
   @impl true
-  def handle_call({:save_workflow, user}, _from, state) do
-    do_save_workflow(state, user, :save)
+  def handle_call({:save_workflow, user}, from, state) do
+    session = self()
+
+    Task.start(fn ->
+      case ensure_catalogue_loaded() do
+        :ok ->
+          send(session, {:resume_save, from, user})
+
+        {:error, reason} ->
+          Logger.info("Adaptor catalogue not ready for save: #{inspect(reason)}")
+
+          GenServer.reply(from, {:error, :adaptor_catalogue_unavailable})
+      end
+    end)
+
+    {:noreply, state}
   end
 
   @impl true
@@ -383,6 +404,23 @@ defmodule Lightning.Collaboration.Session do
         Logger.error("Cannot reset workflow #{state.workflow.id}: no shared doc")
         {:reply, {:error, :internal_error}, state}
     end
+  end
+
+  defp ensure_catalogue_loaded do
+    Lightning.Adaptors.ensure_loaded()
+  rescue
+    error ->
+      {:error, error}
+  catch
+    :exit, reason ->
+      {:error, {:exit, reason}}
+  end
+
+  @impl true
+  def handle_info({:resume_save, from, user}, state) do
+    {:reply, reply, state} = do_save_workflow(state, user, :save)
+    GenServer.reply(from, reply)
+    {:noreply, state}
   end
 
   @impl true

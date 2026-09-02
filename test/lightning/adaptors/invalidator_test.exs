@@ -25,7 +25,7 @@ defmodule Lightning.Adaptors.InvalidatorTest do
   end
 
   describe "handle_info/2 - {:changed, name, source}" do
-    test "evicts all four matching cache keys on broadcast", %{
+    test "evicts all five matching cache keys on broadcast", %{
       sup: sup,
       cache: cache,
       inv_name: inv_name
@@ -44,6 +44,7 @@ defmodule Lightning.Adaptors.InvalidatorTest do
       )
 
       Cachex.put!(cache, {:packages, source}, {:ok, [%{name: name}]})
+      Cachex.put!(cache, {:catalogue, source}, {:ok, {{nil, 0}, []}})
 
       Phoenix.PubSub.broadcast!(
         Lightning.PubSub,
@@ -57,6 +58,7 @@ defmodule Lightning.Adaptors.InvalidatorTest do
       assert {:ok, nil} = Cachex.get(cache, {:versions, name, source})
       assert {:ok, nil} = Cachex.get(cache, {:icon_meta, name, source})
       assert {:ok, nil} = Cachex.get(cache, {:packages, source})
+      assert {:ok, nil} = Cachex.get(cache, {:catalogue, source})
     end
 
     test "does not evict name-scoped keys for a different adaptor", %{

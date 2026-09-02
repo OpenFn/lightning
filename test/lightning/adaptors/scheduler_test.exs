@@ -4,9 +4,10 @@ defmodule Lightning.Adaptors.SchedulerTest do
   # 2. set_mox_global is safe only when tests run serially
   use Lightning.DataCase, async: false
 
+  import Eventually
   import Mox
 
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
+  alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Scheduler
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
@@ -202,7 +203,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       source = AdaptorsSupervisor.source(sup)
       source_topic = AdaptorsSupervisor.source_topic(sup)
 
-      {:ok, existing} = AdaptorsRepo.upsert_adaptor(adaptor_record())
+      {:ok, existing} = Catalogue.upsert_adaptor(adaptor_record())
       checked_at_before = existing.checked_at
 
       expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
@@ -227,7 +228,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       # Allow the spawned task to complete before asserting no broadcast.
       refute_receive {:changed, _, _}, 200
 
-      row = AdaptorsRepo.get_adaptor("@openfn/language-http", source)
+      row = Catalogue.get_adaptor("@openfn/language-http", source)
       assert DateTime.compare(row.checked_at, checked_at_before) == :gt
       assert row.latest_version == "1.0.0"
     end
@@ -237,7 +238,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       source = AdaptorsSupervisor.source(sup)
       source_topic = AdaptorsSupervisor.source_topic(sup)
 
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record())
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 
       expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
         send(test_pid, :list_adaptors_called)
@@ -263,7 +264,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert_receive :list_adaptors_called, 2000
       assert_receive {:changed, "@openfn/language-http", ^source}, 2000
 
-      row = AdaptorsRepo.get_adaptor("@openfn/language-http", source)
+      row = Catalogue.get_adaptor("@openfn/language-http", source)
       assert row.latest_version == "2.0.0"
     end
 
@@ -288,7 +289,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       start_scheduler(sup)
 
       assert_receive {:changed, "@openfn/language-new", ^source}, 2000
-      assert AdaptorsRepo.get_adaptor("@openfn/language-new", source) != nil
+      assert Catalogue.get_adaptor("@openfn/language-new", source) != nil
     end
 
     test "list_adaptors error: no DB writes, no broadcasts", %{sup: sup} do
@@ -361,9 +362,66 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert_receive :tick_ran, 2000
 
       sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      # Let the init tick's cycle clear so refresh_now starts a new one
+      # instead of coalescing.
+      {:global, gname} = sched_name
+      pid = :global.whereis_name(gname)
+      assert_eventually(:sys.get_state(pid).refresh == nil, 2000)
+
       assert :ok = Scheduler.refresh_now(sched_name)
 
       assert_receive :tick_ran, 2000
+    end
+  end
+
+  # Rows are seeded before the Scheduler starts so no init tick fires and
+  # the Mox counts stay exact.
+  describe "await_refresh/2 result" do
+    test "carries the cycle's counts on success, with per-adaptor failures as errors",
+         %{sup: sup} do
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, 1, fn ->
+        {:ok,
+         [
+           %{name: "@openfn/language-http", latest_version: "1.0.0"},
+           %{name: "@openfn/language-new", latest_version: "2.0.0"},
+           %{name: "@openfn/language-bad", latest_version: "1.0.0"}
+         ]}
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 2, fn
+        "@openfn/language-new" ->
+          {:ok,
+           adaptor_record(
+             name: "@openfn/language-new",
+             latest_version: "2.0.0"
+           )}
+
+        "@openfn/language-bad" ->
+          {:error, :upstream_5xx}
+      end)
+
+      start_scheduler(sup)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      assert {:ok, %{listed: 3, changed: 1, fetched: 1, errors: 1}} =
+               Scheduler.await_refresh(sched_name, 5_000)
+    end
+
+    test "returns the upstream listing failure to waiters", %{sup: sup} do
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, 1, fn ->
+        {:error, :upstream_down}
+      end)
+
+      start_scheduler(sup)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      assert {:error, :upstream_down} =
+               Scheduler.await_refresh(sched_name, 5_000)
     end
   end
 
@@ -399,7 +457,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       assert_receive {:changed, "@openfn/language-http", ^source}, 2000
 
-      row = AdaptorsRepo.get_adaptor("@openfn/language-http", source)
+      row = Catalogue.get_adaptor("@openfn/language-http", source)
       assert row.icon_square_ext == "png"
       assert row.icon_square_sha256 == sha
       assert row.icon_rectangle_ext == nil
@@ -439,7 +497,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       assert_receive {:changed, "@openfn/language-http", ^source}, 2000
 
-      row = AdaptorsRepo.get_adaptor("@openfn/language-http", source)
+      row = Catalogue.get_adaptor("@openfn/language-http", source)
       assert row != nil
       assert row.icon_square_ext == nil
       assert row.icon_square_sha256 == nil
@@ -452,9 +510,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       # (so the diff path will :touch instead of :fetch). Without
       # self-heal this row would stay iconless forever.
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
-          adaptor_record(name: "@openfn/language-stale")
-        )
+        Catalogue.upsert_adaptor(adaptor_record(name: "@openfn/language-stale"))
 
       bytes = "STALE_ICON"
       sha = :crypto.hash(:sha256, bytes)
@@ -487,7 +543,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       assert_receive {:changed, "@openfn/language-stale", ^source}, 2000
 
-      row = AdaptorsRepo.get_adaptor("@openfn/language-stale", source)
+      row = Catalogue.get_adaptor("@openfn/language-stale", source)
       assert row.icon_square_ext == "png"
       assert row.icon_square_sha256 == sha
 
@@ -534,7 +590,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert :ok = Scheduler.refresh_package(sched_name, "@openfn/language-http")
       assert_receive {:changed, "@openfn/language-http", ^source}, 2000
 
-      assert AdaptorsRepo.get_adaptor("@openfn/language-http", source) != nil
+      assert Catalogue.get_adaptor("@openfn/language-http", source) != nil
     end
 
     test "returns error tuple when fetch_adaptor fails", %{sup: sup} do
@@ -597,20 +653,67 @@ defmodule Lightning.Adaptors.SchedulerTest do
   end
 
   describe "refresh_icons/1" do
+    test "an in-flight icon refresh does not block the Scheduler loop", %{
+      sup: sup
+    } do
+      test_pid = self()
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:ok, []}
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, 1, fn _opts ->
+        send(test_pid, {:icons_started, self()})
+
+        receive do
+          :finish_icons -> {:ok, %{}}
+        end
+      end)
+
+      start_scheduler(sup, interval: 0)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      icons_task = Task.async(fn -> Scheduler.refresh_icons(sched_name) end)
+      assert_receive {:icons_started, icons_pid}, 2000
+
+      # Completes while the icon fetch is parked, so that fetch is not on
+      # the GenServer loop.
+      assert {:ok, %{listed: 0}} = Scheduler.await_refresh(sched_name, 5_000)
+
+      send(icons_pid, :finish_icons)
+
+      assert {:ok, %{updated: 0, unchanged: 0}} =
+               Task.await(icons_task, 5_000)
+    end
+
+    test "a crash in the icon refresh task replies an error instead of killing the Scheduler",
+         %{sup: sup} do
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, 1, fn _opts ->
+        raise "boom"
+      end)
+
+      start_scheduler(sup, interval: 0)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      assert {:error, {:refresh_failed, _reason}} =
+               Scheduler.refresh_icons(sched_name)
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn -> {:ok, []} end)
+      assert {:ok, _counts} = Scheduler.await_refresh(sched_name, 2_000)
+    end
+
     test "updates rows whose shape sha256 differs from the fetched icon", %{
       sup: sup
     } do
       source = AdaptorsSupervisor.source(sup)
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
-          adaptor_record(name: "@openfn/language-empty")
-        )
+        Catalogue.upsert_adaptor(adaptor_record(name: "@openfn/language-empty"))
 
       old_sha = :crypto.hash(:sha256, "OLD")
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: "@openfn/language-current",
             icon_square_ext: "png",
@@ -642,11 +745,11 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert {:ok, %{updated: 2, unchanged: 0}} =
                Scheduler.refresh_icons(sched_name)
 
-      empty = AdaptorsRepo.get_adaptor("@openfn/language-empty", source)
+      empty = Catalogue.get_adaptor("@openfn/language-empty", source)
       assert empty.icon_square_ext == "png"
       assert empty.icon_square_sha256 == new_sha
 
-      current = AdaptorsRepo.get_adaptor("@openfn/language-current", source)
+      current = Catalogue.get_adaptor("@openfn/language-current", source)
       assert current.icon_square_sha256 == new_sha
 
       for name <- ["@openfn/language-empty", "@openfn/language-current"] do
@@ -662,7 +765,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       etag = ~s("prior-etag-1")
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: "@openfn/language-same",
             icon_square_ext: "png",
@@ -686,7 +789,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert {:ok, %{updated: 0, unchanged: 1}} =
                Scheduler.refresh_icons(sched_name)
 
-      row = AdaptorsRepo.get_adaptor("@openfn/language-same", source)
+      row = Catalogue.get_adaptor("@openfn/language-same", source)
       assert row.icon_square_sha256 == sha
       assert row.icon_square_etag == etag
     end
@@ -700,7 +803,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       new_etag = ~s("etag-B")
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: "@openfn/language-rotated",
             icon_square_ext: "png",
@@ -730,7 +833,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert {:ok, %{updated: 1, unchanged: 0}} =
                Scheduler.refresh_icons(sched_name)
 
-      row = AdaptorsRepo.get_adaptor("@openfn/language-rotated", source)
+      row = Catalogue.get_adaptor("@openfn/language-rotated", source)
       assert row.icon_square_sha256 == new_sha
       assert row.icon_square_etag == new_etag
 
@@ -756,7 +859,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       # Two rows: one returns 200 with etag: nil (NPM-style), the other
       # returns 200 with the :etag key entirely absent (Local-style).
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: "@openfn/language-nil-etag",
             icon_square_ext: "png",
@@ -766,7 +869,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
         )
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: "@openfn/language-no-etag-key",
             icon_square_ext: "png",
@@ -799,11 +902,11 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert {:ok, %{updated: 2, unchanged: 0}} =
                Scheduler.refresh_icons(sched_name)
 
-      row_a = AdaptorsRepo.get_adaptor("@openfn/language-nil-etag", source)
+      row_a = Catalogue.get_adaptor("@openfn/language-nil-etag", source)
       assert row_a.icon_square_sha256 == new_sha_a
       assert row_a.icon_square_etag == prior_etag
 
-      row_b = AdaptorsRepo.get_adaptor("@openfn/language-no-etag-key", source)
+      row_b = Catalogue.get_adaptor("@openfn/language-no-etag-key", source)
       assert row_b.icon_square_sha256 == new_sha_b
       assert row_b.icon_square_etag == prior_etag
 
@@ -826,7 +929,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       current_etag = ~s("etag-current")
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: "@openfn/language-stale-etag",
             icon_square_ext: "png",
@@ -836,7 +939,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
         )
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: "@openfn/language-current-etag",
             icon_square_ext: "png",
@@ -871,12 +974,12 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert {:ok, %{updated: 1, unchanged: 1}} =
                Scheduler.refresh_icons(sched_name)
 
-      stale_row = AdaptorsRepo.get_adaptor("@openfn/language-stale-etag", source)
+      stale_row = Catalogue.get_adaptor("@openfn/language-stale-etag", source)
       assert stale_row.icon_square_sha256 == stale_new_sha
       assert stale_row.icon_square_etag == stale_new_etag
 
       current_row =
-        AdaptorsRepo.get_adaptor("@openfn/language-current-etag", source)
+        Catalogue.get_adaptor("@openfn/language-current-etag", source)
 
       assert current_row.icon_square_sha256 == current_sha
       assert current_row.icon_square_etag == current_etag

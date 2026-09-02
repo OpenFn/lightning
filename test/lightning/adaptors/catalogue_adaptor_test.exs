@@ -1,7 +1,7 @@
-defmodule Lightning.Adaptors.Repo.AdaptorTest do
+defmodule Lightning.Adaptors.Catalogue.AdaptorTest do
   use ExUnit.Case, async: true
 
-  alias Lightning.Adaptors.Repo.Adaptor
+  alias Lightning.Adaptors.Catalogue.Adaptor
 
   @valid_attrs %{
     name: "@openfn/language-http",
@@ -71,6 +71,30 @@ defmodule Lightning.Adaptors.Repo.AdaptorTest do
       ok = String.duplicate("a", 214)
 
       assert Adaptor.changeset(%Adaptor{}, %{@valid_attrs | name: ok}).valid?
+    end
+  end
+
+  describe "changeset/2 — :name format" do
+    test "accepts scoped and unscoped names" do
+      for name <- ["@openfn/language-http", "language-http", "lodash.merge"] do
+        assert Adaptor.changeset(%Adaptor{}, %{@valid_attrs | name: name}).valid?,
+               "expected #{inspect(name)} to be valid"
+      end
+    end
+
+    test "rejects names with shell metacharacters, whitespace, or a version suffix" do
+      for name <- [
+            "@openfn/language-http@1.0.0",
+            "evil; rm -rf /",
+            "name with spaces",
+            "line\nbreak",
+            "$(whoami)"
+          ] do
+        changeset = Adaptor.changeset(%Adaptor{}, %{@valid_attrs | name: name})
+
+        refute changeset.valid?, "expected #{inspect(name)} to be invalid"
+        assert "has invalid format" in errors_on(changeset, :name)
+      end
     end
   end
 

@@ -1,39 +1,30 @@
 defmodule Lightning.Adaptors.PackageName do
   @moduledoc """
-  NPM-style package-name parsing and worker wire-shape recomposition for
-  the `Lightning.Adaptors.*` subsystem.
-
-  This module is the single source of truth for adaptor package name
-  parsing and wire recomposition, read through the `Lightning.Adaptors`
-  facade.
-
-  `parse/1` splits `"name@version"` strings using the same strict,
-  anchored format `strict_format/0` validates against, so a spec that
-  reaches `to_wire/1` after passing changeset validation is guaranteed to
-  parse to the same name — never a truncated or re-derived one. `to_wire/1`
-  resolves the `latest` literal through `Lightning.Adaptors.resolve_version/2`,
-  preserves `"name@local"` as a literal regardless of source, and emits
-  `"name@local"` under a `:local` strategy source.
+  Parses `name@version` adaptor specs and renders them for the worker.
   """
 
-  alias Lightning.Adaptors
-  alias Lightning.Adaptors.Config
-
-  # Anchored with \A…\z (NOT ^…$, since $ matches before a trailing \n).
-  # Accepts scoped (@scope/name) and unscoped names with an optional
-  # @version (semver, prerelease, or the tokens `latest` / `local`);
-  # excludes newlines and shell metacharacters.
+  # `\A…\z` rather than `^…$`: `$` matches before a trailing newline.
   @strict_format ~r{\A(@?[\w.-]+(?:/[\w.-]+)?)(?:@([\w.-]+))?\z}
 
+  @name_format ~r{\A@?[\w.-]+(?:/[\w.-]+)?\z}
+
   @doc """
-  The strict, anchored package-name format: name plus optional `@version`,
-  rejecting embedded newlines and shell metacharacters. Read through
-  `Lightning.Adaptors.valid_format?/1` and
-  `Lightning.Adaptors.parse_spec/1`.
+  Returns the spec format: a package name plus optional `@version`, with
+  no newlines or shell metacharacters.
   """
   @spec strict_format() :: Regex.t()
   def strict_format, do: @strict_format
 
+  @doc """
+  Returns the bare package-name format, with no `@version` suffix.
+  """
+  @spec name_format() :: Regex.t()
+  def name_format, do: @name_format
+
+  @doc """
+  Splits a spec into `{name, version}`; `{nil, nil}` for `nil` or a
+  malformed spec.
+  """
   @spec parse(nil) :: {nil, nil}
   def parse(nil), do: {nil, nil}
 
@@ -46,34 +37,27 @@ defmodule Lightning.Adaptors.PackageName do
     end
   end
 
-  @spec to_wire(String.t() | nil) :: String.t()
-  def to_wire(adaptor) do
+  @doc """
+  Renders a spec for the worker.
+
+  `opts[:source]` of `:local` forces `name@local`. `opts[:latest]` is the
+  concrete version for a `latest` spec, and is required for one under
+  any other source. A `name@local` spec is always kept as is.
+  """
+  @spec to_wire(String.t() | nil, keyword()) :: String.t()
+  def to_wire(adaptor, opts \\ []) do
     case parse(adaptor) do
-      {nil, nil} -> ""
-      {name, version} -> recompose(name, version, adaptor)
-    end
-  end
+      {nil, nil} ->
+        ""
 
-  defp recompose(name, "local", _original), do: "#{name}@local"
-
-  defp recompose(name, version, original) do
-    case Config.current_source() do
-      :local ->
+      {name, "local"} ->
         "#{name}@local"
 
-      _ ->
-        case version do
-          "latest" ->
-            case Adaptors.resolve_version(name, "latest") do
-              {:ok, resolved} -> "#{name}@#{resolved}"
-              {:error, _} -> "#{name}@latest"
-            end
-
-          nil ->
-            original
-
-          _concrete ->
-            original
+      {name, version} ->
+        cond do
+          opts[:source] == :local -> "#{name}@local"
+          version == "latest" -> "#{name}@#{Keyword.fetch!(opts, :latest)}"
+          true -> adaptor
         end
     end
   end

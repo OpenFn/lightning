@@ -10,13 +10,9 @@ defmodule LightningWeb.RunWithOptionsTest do
 
   describe "rendering a run" do
     setup do
-      # Clear the production Adaptors.Supervisor Cachex so each test's seeded
-      # rows are visible (Cachex persists across DB-sandbox boundaries).
       cache = Lightning.Adaptors.Supervisor.cache_name(Lightning.Adaptors)
       Cachex.clear(cache)
 
-      # Seed @openfn/language-common so `@latest` resolves to a concrete
-      # semver via `Lightning.Adaptors.PackageName.to_wire/1`.
       insert(:adaptor,
         name: "@openfn/language-common",
         source: :npm,
@@ -77,10 +73,8 @@ defmodule LightningWeb.RunWithOptionsTest do
 
       run = Runs.get_for_worker(run.id)
 
-      assert RunWithOptions.render(run)
-             |> Jason.encode!()
-             |> Jason.decode!() ==
-               expected_result
+      assert {:ok, plan} = RunWithOptions.render(run)
+      assert plan |> Jason.encode!() |> Jason.decode!() == expected_result
 
       {:ok, workflow} =
         workflow
@@ -130,31 +124,11 @@ defmodule LightningWeb.RunWithOptionsTest do
           }
         }
 
-      assert RunWithOptions.render(run)
-             |> Jason.encode!()
-             |> Jason.decode!() ==
-               expected_result
+      assert {:ok, plan} = RunWithOptions.render(run)
+      assert plan |> Jason.encode!() |> Jason.decode!() == expected_result
     end
 
-    test "renders adaptors with @local when :local strategy source is active" do
-      prev = Application.get_env(:lightning, Lightning.Adaptors, [])
-
-      Application.put_env(
-        :lightning,
-        Lightning.Adaptors,
-        Keyword.put(prev, :strategy, Lightning.Adaptors.Local)
-      )
-
-      on_exit(fn ->
-        Application.put_env(:lightning, Lightning.Adaptors, prev)
-      end)
-
-      insert(:adaptor,
-        name: "@openfn/language-common",
-        source: :local,
-        latest_version: "local"
-      )
-
+    test "returns the adaptor lookup error when a job's @latest cannot be resolved" do
       user = insert(:user)
 
       {:ok, %{triggers: [trigger], jobs: [job]} = workflow} =
@@ -163,28 +137,18 @@ defmodule LightningWeb.RunWithOptionsTest do
         |> Workflows.save_workflow(user)
 
       %{runs: [run]} =
-        work_order_for(trigger,
-          workflow: workflow,
-          dataclip: insert(:dataclip)
-        )
+        work_order_for(trigger, workflow: workflow, dataclip: insert(:dataclip))
         |> insert()
 
-      expected_result =
-        %{
-          "jobs" => [
-            %{
-              "adaptor" => "@openfn/language-common@local",
-              "body" => job.body,
-              "credential_id" => nil,
-              "id" => job.id,
-              "name" => job.name
-            }
-          ]
-        }
+      run = Runs.get_for_worker(run.id)
 
-      result = run.id |> Runs.get_for_worker() |> RunWithOptions.render()
+      snapshot_job =
+        Enum.find(run.snapshot.jobs, &(&1.id == job.id))
+        |> Map.put(:adaptor, "@openfn/language-never-published@latest")
 
-      assert expected_result["jobs"] == result["jobs"]
+      run = put_in(run.snapshot.jobs, [snapshot_job])
+
+      assert {:error, :not_found} = RunWithOptions.render(run)
     end
   end
 

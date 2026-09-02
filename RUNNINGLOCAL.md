@@ -210,11 +210,11 @@ next run!
 ### Caching the adaptor upstreams
 
 Every adaptor registry refresh (background scheduler tick, or a manual
-`mix lightning.refresh_adaptors`) makes a handful of npm, jsDelivr and GitHub
+`mix lightning.adaptors.refresh`) makes a handful of npm, jsDelivr and GitHub
 requests per changed package, which gets chatty fast if you're iterating on the
-subsystem or just running `refresh_adaptors` repeatedly by hand. A local
-record-and-replay reverse proxy under `tooling/adaptor_cache/` makes the second
-and every later run local, with no network needed at all.
+subsystem or just running `lightning.adaptors.refresh` repeatedly by hand. A
+local record-and-replay reverse proxy under `tooling/adaptor_cache/` makes the
+second and every later run local, with no network needed at all.
 
 ```sh
 bin/adaptor_cache up      # start the proxy

@@ -59,6 +59,7 @@ export interface ChannelError {
     | 'optimistic_lock_error'
     | 'limit_error'
     | 'nesting_too_deep'
+    | 'adaptor_catalogue_unavailable'
     | undefined;
 
   /**
@@ -71,11 +72,16 @@ export interface ChannelError {
 export async function channelRequest<T = unknown>(
   channel: Channel,
   message: string,
-  payload: object
+  payload: object,
+  timeout?: number
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    channel
-      .push(message, payload)
+    const push =
+      timeout === undefined
+        ? channel.push(message, payload)
+        : channel.push(message, payload, timeout);
+
+    push
       .receive('ok', (response: T) => {
         resolve(response);
       })

@@ -1,7 +1,5 @@
 defmodule Lightning.Adaptors.PackageNameTest do
-  use Lightning.DataCase, async: false
-
-  import Lightning.Factories
+  use ExUnit.Case, async: true
 
   alias Lightning.Adaptors.PackageName
 
@@ -39,7 +37,7 @@ defmodule Lightning.Adaptors.PackageNameTest do
     end
   end
 
-  describe "to_wire/1" do
+  describe "to_wire/2" do
     test "passes through concrete semver unchanged" do
       assert PackageName.to_wire("@openfn/language-common@1.6.2") ==
                "@openfn/language-common@1.6.2"
@@ -50,24 +48,36 @@ defmodule Lightning.Adaptors.PackageNameTest do
     end
 
     test "preserves @local literal regardless of source" do
-      assert PackageName.to_wire("@openfn/language-common@local") ==
-               "@openfn/language-common@local"
+      assert PackageName.to_wire("@openfn/language-common@local",
+               source: :npm
+             ) == "@openfn/language-common@local"
     end
 
-    test "resolves @latest to the concrete latest_version from Adaptors.Repo" do
-      insert(:adaptor,
-        name: "@openfn/language-common",
-        source: :npm,
-        latest_version: "9.9.9"
-      )
-
-      assert PackageName.to_wire("@openfn/language-common@latest") ==
-               "@openfn/language-common@9.9.9"
+    test "substitutes the caller-resolved version for @latest" do
+      assert PackageName.to_wire("@openfn/language-common@latest",
+               source: :npm,
+               latest: "9.9.9"
+             ) == "@openfn/language-common@9.9.9"
     end
 
-    test "falls back to @latest literal when adaptor is unknown" do
-      assert PackageName.to_wire("@openfn/never-existed@latest") ==
-               "@openfn/never-existed@latest"
+    test "requires a resolved version for @latest under a non-local source" do
+      assert_raise KeyError, fn ->
+        PackageName.to_wire("@openfn/never-existed@latest", source: :npm)
+      end
+    end
+
+    test "forces @local under a :local source, whatever the spec says" do
+      assert PackageName.to_wire("@openfn/language-common@1.6.2",
+               source: :local
+             ) == "@openfn/language-common@local"
+
+      assert PackageName.to_wire("@openfn/language-common@latest",
+               source: :local
+             ) == "@openfn/language-common@local"
+
+      assert PackageName.to_wire("@openfn/language-common",
+               source: :local
+             ) == "@openfn/language-common@local"
     end
   end
 end

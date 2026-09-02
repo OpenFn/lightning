@@ -1,14 +1,8 @@
-defmodule Lightning.Adaptors.Repo.Adaptor do
+defmodule Lightning.Adaptors.Catalogue.Adaptor do
   @moduledoc """
-  Ecto schema for one row of the `adaptors` table — the per-package
-  metadata projection used by the picker and Scheduler.
-
-  Source-tagged via `:source` (`:npm | :local`) so the same package
-  name can coexist across sources; the unique index is
-  `[:name, :source]`.
-
-  Mirrors `Lightning.Adaptors.Strategy.adaptor_record` minus `:versions`,
-  which lives on `Lightning.Adaptors.Repo.AdaptorVersion`.
+  Ecto schema for one row of the `adaptors` table, unique on
+  `[:name, :source]`. Versions live on
+  `Lightning.Adaptors.Catalogue.AdaptorVersion`.
   """
 
   use Ecto.Schema
@@ -17,15 +11,9 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
 
   defmodule JSONBinary do
     @moduledoc """
-    Ecto type backing `schema_data` with a text column while preserving
-    JSON field order on read.
-
-    Storage is a JSON binary in a `text` column. Inputs may be either a
-    binary or a map — maps are encoded with `Jason.encode!/1` at the
-    dumper to keep `Lightning.Factories.adaptor/2` and other direct
-    struct inserts compatible without forcing every caller to encode
-    up-front. Loads always return a binary so credential-form rendering
-    can re-engage `Jason.decode!(_, objects: :ordered_objects)`.
+    Ecto type for `schema_data`: a JSON binary in a `text` column.
+    Accepts a binary or a map on write and always loads a binary, so the
+    reader can decode with ordered objects.
     """
 
     use Ecto.Type
@@ -86,7 +74,7 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
     field :license, :string
     field :latest_version, :string
     field :deprecated, :boolean, default: false
-    field :schema_data, Lightning.Adaptors.Repo.Adaptor.JSONBinary
+    field :schema_data, Lightning.Adaptors.Catalogue.Adaptor.JSONBinary
     field :schema_sha256, :string
     field :icon_square_ext, :string
     field :icon_rectangle_ext, :string
@@ -107,11 +95,7 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
                icon_square_etag icon_rectangle_etag)a
 
   @doc """
-  Build a changeset for upserting a single adaptor row.
-
-  This is the single clause used by every write path on
-  `Lightning.Adaptors.Repo` — there is no separate update path because
-  the writer always rewrites the full row.
+  Builds the changeset for inserting or fully rewriting an adaptor row.
   """
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(struct, attrs) do
@@ -119,6 +103,7 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
     |> cast(attrs, @required ++ @optional)
     |> validate_required(@required)
     |> validate_length(:name, max: 214)
+    |> validate_format(:name, Lightning.Adaptors.PackageName.name_format())
     |> validate_inclusion(:icon_square_ext, ~w(png svg))
     |> validate_inclusion(:icon_rectangle_ext, ~w(png svg))
     |> validate_icon_sha256_pair(:icon_square)
@@ -126,9 +111,6 @@ defmodule Lightning.Adaptors.Repo.Adaptor do
     |> unique_constraint([:name, :source])
   end
 
-  # Enforces the §6.4 invariant: a non-nil `icon_<shape>_ext` requires a
-  # non-nil `icon_<shape>_sha256`, and vice versa. Either both fields
-  # are set or both are nil — half-populated pairs fail the changeset.
   @spec validate_icon_sha256_pair(
           Ecto.Changeset.t(),
           :icon_square | :icon_rectangle

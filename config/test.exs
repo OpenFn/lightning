@@ -108,19 +108,13 @@ config :lightning, :workers,
 # In test we don't send emails.
 config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Test
 
-# Adaptors.Supervisor config for test boot.
-#
-# - `:strategy` — the production `Lightning.Adaptors.Supervisor` mounted in
-#   `application.ex` would default to `Lightning.Adaptors.NPM` and try to
-#   hit the network on the first Scheduler tick. Replace it with the
-#   Mox-backed `StrategyMock` so the application-level supervisor (under
-#   the production name `Lightning.Adaptors`) is a no-op for tests that
-#   exercise the facade directly.
-# - `:refresh_interval` — `0` disables Scheduler tick scheduling entirely.
-#   Per-test isolated supervisors set their own interval as needed.
 config :lightning, Lightning.Adaptors,
   strategy: Lightning.Adaptors.StrategyMock,
   refresh_interval: 0
+
+# `Config.source_for/1` only maps the two real strategies; the mock has to
+# declare its catalogue source like any other third-party strategy would.
+config :lightning, Lightning.Adaptors.StrategyMock, source: :npm
 
 config :hammer,
   backend:

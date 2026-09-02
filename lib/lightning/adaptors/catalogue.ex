@@ -1,30 +1,19 @@
-defmodule Lightning.Adaptors.Repo do
+defmodule Lightning.Adaptors.Catalogue do
   @moduledoc """
-  Query and write helpers over the `adaptors` and `adaptor_versions` tables.
+  Reads and writes for the `adaptors` and `adaptor_versions` tables.
 
-  Despite the name, this is **not** an `Ecto.Repo` — it is a thin
-  data-access module that wraps `Lightning.Repo` (the real
-  `Ecto.Repo`). The two schemas it targets live as siblings:
-  `Lightning.Adaptors.Repo.Adaptor` and
-  `Lightning.Adaptors.Repo.AdaptorVersion`.
-
-  Every read helper takes the desired `:source` (`:npm | :local`)
-  explicitly; the module itself stays source-agnostic. Callers resolve
-  the active source via `Lightning.Adaptors.Config.current_source/0`.
-
-  `upsert_adaptor/1` is the only writer the Scheduler uses. It is
-  idempotent, transactional, and diff-aware: `checked_at` advances on
-  every call, while `updated_at` only advances when the row's
-  meaningful fields differ from what was already in the DB. Version
-  rows are replaced inside the same transaction so a partial failure
-  cannot leave the table half-rewritten.
+  Every read takes the `:source` (`:npm | :local`) explicitly.
+  `upsert_adaptor/1` is idempotent: `checked_at` advances on every call,
+  `updated_at` only when a field actually changed, and version rows are
+  replaced in the same transaction.
   """
 
   import Ecto.Query
 
   alias Ecto.Multi
-  alias Lightning.Adaptors.Repo.Adaptor
-  alias Lightning.Adaptors.Repo.AdaptorVersion
+  alias Lightning.Adaptors.Catalogue.Adaptor
+  alias Lightning.Adaptors.Catalogue.AdaptorVersion
+  alias Lightning.Repo
 
   @type source :: :npm | :local
 
@@ -55,15 +44,25 @@ defmodule Lightning.Adaptors.Repo do
                          size_bytes dependencies peer_dependencies
                          published_at deprecated)a
 
+  # Packages that exist on npm but should never be offered in the picker.
+  # Listing-only: `get_adaptor/2` still resolves them, so jobs already
+  # using one keep validating.
+  @excluded_names ~w(@openfn/language-devtools
+                     @openfn/language-template
+                     @openfn/language-fhir-jembi
+                     @openfn/language-collections)
+
   @doc """
   Picker-facing lean projection for a source. Avoids the heavy JSONB
   columns (`schema_data`, `dependencies`, `peer_dependencies`).
+
+  Excludes the packages listed in `@excluded_names`.
   """
   @spec list_package_metas(source()) :: [package_meta()]
   def list_package_metas(source) do
-    Lightning.Repo.all(
+    Repo.all(
       from a in Adaptor,
-        where: a.source == ^source,
+        where: a.source == ^source and a.name not in ^@excluded_names,
         select: %{
           name: a.name,
           latest_version: a.latest_version,
@@ -84,7 +83,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec list_adaptors(source()) :: [Adaptor.t()]
   def list_adaptors(source) do
-    Lightning.Repo.all(from a in Adaptor, where: a.source == ^source)
+    Repo.all(from a in Adaptor, where: a.source == ^source)
   end
 
   @doc """
@@ -93,7 +92,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec get_adaptor(String.t(), source()) :: Adaptor.t() | nil
   def get_adaptor(name, source) do
-    Lightning.Repo.get_by(Adaptor, name: name, source: source)
+    Repo.get_by(Adaptor, name: name, source: source)
   end
 
   @doc """
@@ -101,7 +100,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec list_versions(String.t(), source()) :: [AdaptorVersion.t()]
   def list_versions(name, source) do
-    Lightning.Repo.all(
+    Repo.all(
       from v in AdaptorVersion,
         join: a in Adaptor,
         on: v.adaptor_id == a.id,
@@ -112,7 +111,8 @@ defmodule Lightning.Adaptors.Repo do
 
   @doc """
   Idempotent, transactional, diff-aware upsert of one adaptor record
-  plus its version rows. The `:source` is read from the record.
+  plus its version rows. The source is read from the record, whose keys
+  may be atoms or strings (as a decoded JSON snapshot gives them).
 
   Behaviour:
 
@@ -134,11 +134,12 @@ defmodule Lightning.Adaptors.Repo do
 
     {versions, adaptor_attrs} =
       record
-      |> Map.put(:checked_at, now)
-      |> Map.pop(:versions, [])
+      |> stringify_keys()
+      |> Map.put("checked_at", now)
+      |> Map.pop("versions", [])
 
-    name = Map.fetch!(adaptor_attrs, :name)
-    source = Map.fetch!(adaptor_attrs, :source)
+    name = Map.fetch!(adaptor_attrs, "name")
+    source = adaptor_attrs |> Map.fetch!("source") |> normalize_source()
 
     multi =
       Multi.new()
@@ -160,13 +161,13 @@ defmodule Lightning.Adaptors.Repo do
         insert_version_rows(repo, adaptor.id, versions, now)
       end)
 
-    case Lightning.Repo.transaction(multi) do
+    case Repo.transaction(multi) do
       {:ok, %{adaptor: adaptor}} ->
         {:ok, adaptor}
 
       {:error, step, reason, _changes} ->
         raise ArgumentError,
-              "Lightning.Adaptors.Repo.upsert_adaptor/1 failed at #{inspect(step)}: " <>
+              "Lightning.Adaptors.Catalogue.upsert_adaptor/1 failed at #{inspect(step)}: " <>
                 inspect(reason)
     end
   end
@@ -176,7 +177,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec delete_all_for_source(source()) :: :ok
   def delete_all_for_source(source) do
-    Lightning.Repo.delete_all(from a in Adaptor, where: a.source == ^source)
+    Repo.delete_all(from a in Adaptor, where: a.source == ^source)
     :ok
   end
 
@@ -191,7 +192,7 @@ defmodule Lightning.Adaptors.Repo do
   def touch_checked_at(name, source) do
     now = DateTime.utc_now()
 
-    Lightning.Repo.update_all(
+    Repo.update_all(
       from(a in Adaptor, where: a.name == ^name and a.source == ^source),
       set: [checked_at: now]
     )
@@ -212,7 +213,7 @@ defmodule Lightning.Adaptors.Repo do
           }
         ]
   def list_missing_icons(source) do
-    Lightning.Repo.all(
+    Repo.all(
       from a in Adaptor,
         where:
           a.source == ^source and
@@ -252,7 +253,7 @@ defmodule Lightning.Adaptors.Repo do
       |> Map.put(:updated_at, DateTime.utc_now())
       |> Enum.into([])
 
-    Lightning.Repo.update_all(
+    Repo.update_all(
       from(a in Adaptor, where: a.name == ^name and a.source == ^source),
       set: allowed
     )
@@ -264,7 +265,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec max_checked_at(source()) :: DateTime.t() | nil
   def max_checked_at(source) do
-    Lightning.Repo.one(
+    Repo.one(
       from a in Adaptor,
         where: a.source == ^source,
         select: max(a.checked_at)
@@ -274,13 +275,15 @@ defmodule Lightning.Adaptors.Repo do
   @doc """
   Full catalogue projection for a source: every adaptor's `name`,
   `latest_version`, `repository`, icon fields, and full version list.
+
+  Excludes the packages listed in `@excluded_names`.
   """
   @spec catalogue(source()) :: [catalogue_entry()]
   def catalogue(source) do
     adaptors =
-      Lightning.Repo.all(
+      Repo.all(
         from a in Adaptor,
-          where: a.source == ^source,
+          where: a.source == ^source and a.name not in ^@excluded_names,
           order_by: [asc: a.name],
           select: %{
             name: a.name,
@@ -294,11 +297,11 @@ defmodule Lightning.Adaptors.Repo do
       )
 
     versions_by_name =
-      Lightning.Repo.all(
+      Repo.all(
         from v in AdaptorVersion,
           join: a in Adaptor,
           on: v.adaptor_id == a.id,
-          where: a.source == ^source,
+          where: a.source == ^source and a.name not in ^@excluded_names,
           order_by: [asc: v.inserted_at, asc: v.version],
           select: {a.name, v.version}
       )
@@ -321,7 +324,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec catalogue_stamp(source()) :: {DateTime.t() | nil, non_neg_integer()}
   def catalogue_stamp(source) do
-    Lightning.Repo.one(
+    Repo.one(
       from a in Adaptor,
         left_join: v in AdaptorVersion,
         on: v.adaptor_id == a.id,
@@ -343,9 +346,7 @@ defmodule Lightning.Adaptors.Repo do
   defp upsert_adaptor_row(repo, %Adaptor{} = existing, attrs, now) do
     changeset = Adaptor.changeset(existing, attrs)
 
-    # `Ecto.Changeset.cast/3` only records a change when the cast value
-    # differs from the underlying struct, so the set of "real" changes
-    # is `:changes` minus the `:checked_at` tick we apply on every call.
+    # `checked_at` changes on every call, so it is excluded from the diff.
     meaningful_changes? =
       changeset.changes
       |> Map.delete(:checked_at)
@@ -380,7 +381,11 @@ defmodule Lightning.Adaptors.Repo do
   defp build_version_rows(adaptor_id, records, now) do
     records
     |> Enum.reduce_while({:ok, []}, fn record, {:ok, acc} ->
-      attrs = Map.put(record, :adaptor_id, adaptor_id)
+      attrs =
+        record
+        |> stringify_keys()
+        |> Map.put("adaptor_id", adaptor_id)
+
       changeset = AdaptorVersion.changeset(%AdaptorVersion{}, attrs)
 
       if changeset.valid? do
@@ -394,6 +399,22 @@ defmodule Lightning.Adaptors.Repo do
       err -> err
     end
   end
+
+  # `Ecto.Changeset.cast/3` raises on a map mixing atom and string keys, so
+  # every map handed to a changeset here is flattened to string keys first —
+  # that is what a JSON snapshot gives us, and what atom-keyed callers
+  # convert cleanly into.
+  defp stringify_keys(map) do
+    Map.new(map, fn {k, v} -> {to_string(k), v} end)
+  end
+
+  # `source` is read outside the changeset (for the existing-row lookup),
+  # so it needs its own cast: `Ecto.Enum` fields accept a string via
+  # `Changeset.cast/3`, but not via `Repo.get_by/3`'s query parameters.
+  defp normalize_source(source) when is_atom(source), do: source
+
+  defp normalize_source(source) when is_binary(source),
+    do: String.to_existing_atom(source)
 
   defp version_row_from_changeset(changeset, now) do
     changeset

@@ -1,10 +1,10 @@
-defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
+defmodule Mix.Tasks.Lightning.Adaptors.ImportTest do
   use Lightning.DataCase
 
   import ExUnit.CaptureIO
 
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
-  alias Mix.Tasks.Lightning.SeedAdaptorsFromFile
+  alias Lightning.Adaptors.Catalogue
+  alias Mix.Tasks.Lightning.Adaptors.Import
 
   @moduletag :tmp_dir
 
@@ -28,13 +28,13 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
         ])
 
       capture_io(fn ->
-        SeedAdaptorsFromFile.run(["--path", path])
+        Import.run(["--path", path])
       end)
 
       assert %{latest_version: "2.1.0"} =
-               AdaptorsRepo.get_adaptor("@openfn/language-http", :npm)
+               Catalogue.get_adaptor("@openfn/language-http", :npm)
 
-      assert length(AdaptorsRepo.list_versions("@openfn/language-http", :npm)) ==
+      assert length(Catalogue.list_versions("@openfn/language-http", :npm)) ==
                2
     end
 
@@ -51,13 +51,13 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
         ])
 
       capture_io(fn ->
-        SeedAdaptorsFromFile.run(["--path", path, "--source", "local"])
+        Import.run(["--path", path, "--source", "local"])
       end)
 
-      assert AdaptorsRepo.get_adaptor("@openfn/language-common", :npm) == nil
+      assert Catalogue.get_adaptor("@openfn/language-common", :npm) == nil
 
       assert %{source: :local} =
-               AdaptorsRepo.get_adaptor("@openfn/language-common", :local)
+               Catalogue.get_adaptor("@openfn/language-common", :local)
     end
 
     test "--replace deletes existing rows for the source before seeding", %{
@@ -71,11 +71,11 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
         ])
 
       capture_io(fn ->
-        SeedAdaptorsFromFile.run(["--path", path, "--replace"])
+        Import.run(["--path", path, "--replace"])
       end)
 
-      assert AdaptorsRepo.get_adaptor("@openfn/language-stale", :npm) == nil
-      assert AdaptorsRepo.get_adaptor("@openfn/language-http", :npm) != nil
+      assert Catalogue.get_adaptor("@openfn/language-stale", :npm) == nil
+      assert Catalogue.get_adaptor("@openfn/language-http", :npm) != nil
     end
 
     test "--replace rolls back the delete when a later record fails to upsert",
@@ -96,18 +96,18 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
 
       assert_raise ArgumentError, fn ->
         capture_io(fn ->
-          SeedAdaptorsFromFile.run(["--path", path, "--replace"])
+          Import.run(["--path", path, "--replace"])
         end)
       end
 
-      assert AdaptorsRepo.get_adaptor("@openfn/language-stale", :npm) != nil
-      assert AdaptorsRepo.get_adaptor("@openfn/language-http", :npm) == nil
+      assert Catalogue.get_adaptor("@openfn/language-stale", :npm) != nil
+      assert Catalogue.get_adaptor("@openfn/language-http", :npm) == nil
     end
 
     test "round-trips a snapshot in the shape the download task emits", %{
       tmp_dir: tmp_dir
     } do
-      # Same shape `mix lightning.download_adaptor_registry_cache` writes:
+      # Same shape `mix lightning.adaptors.snapshot` writes:
       # an atom-keyed adaptor_record (see Lightning.Adaptors.Strategy) plus
       # :source, run through Jason.encode_to_iodata!/1.
       record = %{
@@ -139,11 +139,11 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
       File.write!(path, Jason.encode_to_iodata!([record]))
 
       capture_io(fn ->
-        SeedAdaptorsFromFile.run(["--path", path])
+        Import.run(["--path", path])
       end)
 
       assert [%{name: "@openfn/language-http", versions: ["2.1.0"]}] =
-               Lightning.Adaptors.catalogue()
+               Catalogue.catalogue(:npm)
     end
   end
 end

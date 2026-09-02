@@ -247,18 +247,6 @@ defmodule LightningWeb.RunChannelTest do
     setup :set_google_credential
     setup :create_socket_and_run
 
-    # `@latest` resolves via a direct `Repo.get_adaptor/2` read, so it's
-    # safe to seed here even though this file runs async: true.
-    setup do
-      insert(:adaptor,
-        name: "@openfn/language-common",
-        source: :npm,
-        latest_version: "1.6.2"
-      )
-
-      :ok
-    end
-
     test "fetch:plan success", %{
       socket: socket,
       run: run,
@@ -321,6 +309,33 @@ defmodule LightningWeb.RunChannelTest do
                  "project_id" => workflow.project_id
                }
              }
+    end
+
+    test "fetch:plan replies with an error when a job adaptor cannot be resolved",
+         %{project: project} = context do
+      insert(:adaptor, name: "@openfn/language-readiness-fixture")
+
+      trigger = build(:trigger, type: :webhook, enabled: true)
+      job = build(:job, adaptor: "@openfn/language-never-published-zzz@latest")
+
+      workflow =
+        %{triggers: [trigger]} =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, %{condition_type: :always})
+        |> insert()
+
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
+      %{socket: socket} =
+        context
+        |> Map.merge(%{workflow: workflow, trigger: trigger, snapshot: snapshot})
+        |> merge_setups([:create_run, :create_socket, :join_run_channel])
+
+      ref = push(socket, "fetch:plan", %{})
+
+      assert_reply ref, :error, %{reason: "adaptor_not_found"}
     end
 
     @tag project_retention_policy: :erase_all
@@ -2793,6 +2808,7 @@ defmodule LightningWeb.RunChannelTest do
 
     job =
       build(:job,
+        adaptor: "@openfn/language-common@1.6.2",
         body: ~s[fn(state => { return {...state, extra: "data"} })],
         project_credential: %{credential: credential, project: project}
       )

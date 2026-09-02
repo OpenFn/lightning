@@ -67,7 +67,7 @@ bin/adaptor_cache --help                    # full usage
 ```
 
 With the cache up and the three vars exported, run
-`mix lightning.refresh_adaptors` as usual. The first run records the cache;
+`mix lightning.adaptors.refresh` as usual. The first run records the cache;
 every run after that is local, with no network needed at all.
 
 ### Reading `bin/adaptor_cache logs`
@@ -119,7 +119,7 @@ Either form updates the packument _and_ the search response's `latest_version`
 together in one call — `scheduler.ex`'s change-detection compares the search
 response against the DB to decide whether to bother fetching the packument at
 all, so updating only one is a silent no-op. Run
-`mix lightning.refresh_adaptors` (or reopen the picker) afterwards to see it
+`mix lightning.adaptors.refresh` (or reopen the picker) afterwards to see it
 take effect.
 
 ## Scenarios
