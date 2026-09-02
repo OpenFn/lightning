@@ -252,15 +252,18 @@ defmodule Lightning.Adaptors.Store do
   defp build_catalogue(source) do
     stamp = Catalogue.catalogue_stamp(source)
 
-    {stamp, source |> Catalogue.catalogue() |> Enum.map(&render_entry/1)}
+    {stamp,
+     source |> Catalogue.catalogue() |> Enum.map(&render_entry(&1, source))}
   end
 
-  @spec render_entry(Catalogue.catalogue_entry()) :: catalogue_entry()
-  defp render_entry(entry) do
+  @spec render_entry(Catalogue.catalogue_entry(), Catalogue.source()) ::
+          catalogue_entry()
+  defp render_entry(entry, source) do
     %{
       name: entry.name,
-      latest_version: entry.latest_version,
-      versions: entry.versions,
+      latest_version:
+        if(source == :local, do: "local", else: entry.latest_version),
+      versions: if(source == :local, do: ["local"], else: entry.versions),
       repository: entry.repository,
       icon_urls: %{
         square: AdaptorIconURL.build(entry.name, entry, :square),

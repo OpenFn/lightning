@@ -387,6 +387,47 @@ defmodule Lightning.Adaptors.StoreTest do
 
       assert {:ok, ^first} = Store.catalogue(sup)
     end
+
+    test "local-source entries render latest_version and versions as \"local\", not the real on-disk semver" do
+      local_sup = :"store_test_local_#{System.unique_integer([:positive])}"
+
+      start_supervised!(
+        Supervisor.child_spec(
+          {AdaptorsSupervisor,
+           name: local_sup, strategy: Lightning.Adaptors.Local},
+          id: local_sup
+        )
+      )
+
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            source: :local,
+            latest_version: "1.4.2",
+            versions: [version_record("1.4.2")]
+          )
+        )
+
+      assert {:ok, {_stamp, [entry]}} = Store.catalogue(local_sup)
+
+      assert entry.latest_version == "local"
+      assert entry.versions == ["local"]
+    end
+
+    test "npm-source entries keep the real semver untouched", %{sup: sup} do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            latest_version: "1.4.2",
+            versions: [version_record("1.4.2")]
+          )
+        )
+
+      assert {:ok, {_stamp, [entry]}} = Store.catalogue(sup)
+
+      assert entry.latest_version == "1.4.2"
+      assert entry.versions == ["1.4.2"]
+    end
   end
 
   describe "icon/3" do
