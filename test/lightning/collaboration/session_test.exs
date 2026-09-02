@@ -2,6 +2,7 @@ defmodule Lightning.SessionTest do
   use Lightning.DataCase, async: true
 
   import Eventually
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Lightning.CollaborationHelpers
   import Mox
@@ -25,6 +26,9 @@ defmodule Lightning.SessionTest do
   setup do
     instance = start_collaboration_instance()
     user = insert(:user)
+
+    seed_ready_catalogue()
+
     {:ok, instance: instance, user: user}
   end
 

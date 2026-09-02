@@ -7,11 +7,16 @@ Mox.defmock(Lightning.Tesla.Mock, for: Tesla.Adapter)
 
 Mox.defmock(Lightning.Adaptors.StrategyMock, for: Lightning.Adaptors.Strategy)
 
+Mox.defmock(Lightning.AdaptorService.RepoMock,
+  for: Lightning.AdaptorService.Repo
+)
+
 :ok = Application.ensure_started(:ex_machina)
 
 Mimic.copy(:hackney)
 Mimic.copy(File)
 Mimic.copy(IO)
+Mimic.copy(Lightning.Adaptors.Config)
 Mimic.copy(Lightning.FailureEmail)
 Mimic.copy(Lightning.Projects.Provisioner)
 Mimic.copy(Lightning.MetadataService)

@@ -121,8 +121,6 @@ defmodule Lightning.WebAndWorkerTest do
     @tag :integration
     @tag timeout: 20_000
     test "the whole thing", %{conn: conn, user: user} do
-      # Seed a concrete version so `PackageName.to_wire/1` resolves
-      # `@latest` without hitting the live NPM registry.
       Lightning.AdaptorTestHelpers.seed_adaptor_package(
         "@openfn/language-http",
         "3.1.12"

@@ -5,7 +5,7 @@ defmodule LightningWeb.AdaptorIconControllerTest do
   import Mox
 
   alias Lightning.Adaptors.IconCache
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
+  alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
   alias LightningWeb.AdaptorIconController
   alias LightningWeb.AdaptorIconURL
@@ -41,7 +41,7 @@ defmodule LightningWeb.AdaptorIconControllerTest do
         overrides
       )
 
-    {:ok, _adaptor} = AdaptorsRepo.upsert_adaptor(attrs)
+    {:ok, _adaptor} = Catalogue.upsert_adaptor(attrs)
   end
 
   defp write_icon(name, shape, ext, bytes) do

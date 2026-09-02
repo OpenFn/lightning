@@ -3,11 +3,16 @@ defmodule LightningWeb.AdaptorControllerTest do
 
   import Lightning.Factories
 
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
+  alias Lightning.AdaptorTestHelpers
+  alias Lightning.Adaptors.Catalogue
   alias LightningWeb.AdaptorIconURL
 
   describe "GET /adaptors/catalogue" do
+    # The production cache outlives the SQL sandbox, so an entry another
+    # test committed would otherwise be served here.
     setup %{conn: conn} do
+      AdaptorTestHelpers.clear_global_adaptors_cache()
+
       %{conn: log_in_user(conn, insert(:user))}
     end
 
@@ -16,7 +21,7 @@ defmodule LightningWeb.AdaptorControllerTest do
       square_sha = :crypto.hash(:sha256, "square")
 
       {:ok, _adaptor} =
-        AdaptorsRepo.upsert_adaptor(%{
+        Catalogue.upsert_adaptor(%{
           name: "@openfn/language-http",
           source: :npm,
           latest_version: "2.0.0",
@@ -52,7 +57,7 @@ defmodule LightningWeb.AdaptorControllerTest do
            conn: conn
          } do
       {:ok, _adaptor} =
-        AdaptorsRepo.upsert_adaptor(%{
+        Catalogue.upsert_adaptor(%{
           name: "@openfn/language-http",
           source: :npm,
           latest_version: "1.0.0",
@@ -75,7 +80,7 @@ defmodule LightningWeb.AdaptorControllerTest do
            conn: conn
          } do
       {:ok, _b} =
-        AdaptorsRepo.upsert_adaptor(%{
+        Catalogue.upsert_adaptor(%{
           name: "@openfn/language-b",
           source: :npm,
           latest_version: "1.0.0",
@@ -83,7 +88,7 @@ defmodule LightningWeb.AdaptorControllerTest do
         })
 
       {:ok, _a} =
-        AdaptorsRepo.upsert_adaptor(%{
+        Catalogue.upsert_adaptor(%{
           name: "@openfn/language-a",
           source: :npm,
           latest_version: "1.0.0",
@@ -94,12 +99,16 @@ defmodule LightningWeb.AdaptorControllerTest do
       [first_etag] = get_resp_header(first, "etag")
 
       {:ok, _b} =
-        AdaptorsRepo.upsert_adaptor(%{
+        Catalogue.upsert_adaptor(%{
           name: "@openfn/language-b",
           source: :npm,
           latest_version: "1.0.0",
           versions: []
         })
+
+      # A bare `upsert_adaptor/1` broadcasts nothing, so nothing evicts the
+      # cached stamp; the Scheduler and Seed are what announce a change.
+      AdaptorTestHelpers.clear_global_adaptors_cache()
 
       second = get(conn, ~p"/adaptors/catalogue")
       [second_etag] = get_resp_header(second, "etag")

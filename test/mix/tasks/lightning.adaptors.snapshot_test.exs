@@ -1,9 +1,9 @@
-defmodule Lightning.DownloadAdaptorRegistryCacheTest do
+defmodule Mix.Tasks.Lightning.Adaptors.SnapshotTest do
   use ExUnit.Case, async: false
 
   import ExUnit.CaptureIO
 
-  alias Mix.Tasks.Lightning.DownloadAdaptorRegistryCache
+  alias Mix.Tasks.Lightning.Adaptors.Snapshot
 
   @package "@openfn/language-http"
   @latest_version "2.1.0"
@@ -42,7 +42,7 @@ defmodule Lightning.DownloadAdaptorRegistryCacheTest do
     %{registry: registry, jsdelivr: jsdelivr}
   end
 
-  describe "download_adaptor_registry_cache mix task" do
+  describe "lightning.adaptors.snapshot mix task" do
     @describetag :tmp_dir
     test "does not write file when no adaptors are found", %{
       tmp_dir: tmp_dir,
@@ -56,7 +56,7 @@ defmodule Lightning.DownloadAdaptorRegistryCacheTest do
       refute File.exists?(file_path)
 
       capture_io(fn ->
-        DownloadAdaptorRegistryCache.run(["--path", file_path])
+        Snapshot.run(["--path", file_path])
       end)
 
       refute File.exists?(file_path)
@@ -90,7 +90,7 @@ defmodule Lightning.DownloadAdaptorRegistryCacheTest do
       refute File.exists?(file_path)
 
       capture_io(fn ->
-        DownloadAdaptorRegistryCache.run(["--path", file_path])
+        Snapshot.run(["--path", file_path])
       end)
 
       assert [record] =

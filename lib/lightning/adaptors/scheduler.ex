@@ -1,45 +1,26 @@
 defmodule Lightning.Adaptors.Scheduler do
   @moduledoc """
-  Cluster-singleton GenServer that periodically refreshes the active
-  source's ledger via the configured strategy, persists through
-  `Lightning.Adaptors.Repo`, and broadcasts `{:changed, name, source}`.
+  Cluster-singleton GenServer that refreshes the catalogue from the
+  strategy, on a timer and on demand, persisting through
+  `Lightning.Adaptors.Catalogue` and broadcasting `{:changed, name, source}`
+  on the source topic.
 
-  Wrapped by `HighlanderPG` so only one node in the cluster runs the
-  Scheduler at a time. The inner GenServer registers under
-  `{:global, Lightning.Adaptors.Supervisor.global_scheduler_name(name)}`,
-  so callers on any node reach the leader transparently via Erlang
-  distribution. Peer nodes react to refreshes via
-  `Lightning.Adaptors.Invalidator` and
-  `Lightning.Adaptors.ChannelBroadcaster`.
+  The first tick is due one `refresh_interval` after the catalogue's most
+  recent check, so a restart does not refetch straight away; an empty
+  catalogue ticks at once. An interval of `0` disables the timer and
+  leaves only on-demand refreshes.
 
-  Smart-init timing: the first tick is scheduled at
-  `max(0, last_checked_at + interval - now)` to avoid double-refreshing
-  shortly after a deploy. An empty table or an overdue schedule fires
-  immediately (`delay = 0`). Interval `0` disables scheduling entirely.
-
-  ## Two-pipeline refresh
-
-  A tick runs two parallel pipelines under the per-instance
-  `Task.Supervisor`:
-
-    * **Pipeline A** — `strategy.fetch_icons/1` for every adaptor.
-    * **Pipeline B** — `strategy.list_adaptors/0` followed by a bounded
-      per-adaptor fan-out (`async_stream_nolink`) calling
-      `strategy.fetch_adaptor/1` only for names whose `latest_version`
-      changed since the last tick.
-
-  Once both pipelines complete the join step merges the icons map into
-  each fetched record, writes the icon bytes to disk via
-  `Lightning.Adaptors.IconCache.write!/5`, and upserts each adaptor in
-  one go. `refresh_package/2` deliberately bypasses the icon pipeline —
-  on-demand single-package refreshes do not refetch icons.
+  A tick lists the source, fetches only the adaptors whose
+  `latest_version` changed, fetches icons in parallel, and upserts each
+  changed adaptor with its icons. `refresh_package/2` refetches one
+  adaptor without icons.
   """
 
   use GenServer
 
+  alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Config
   alias Lightning.Adaptors.IconCache
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   require Logger
@@ -48,10 +29,8 @@ defmodule Lightning.Adaptors.Scheduler do
   @icons_task_timeout :timer.seconds(60)
 
   @doc """
-  Start the Scheduler for the given supervisor instance.
-
-  Required opts: `:name`, `:sup`, `:lock_key`, `:cache`, `:tasks`,
-  `:source_topic`.
+  Starts the Scheduler. Required opts: `:name`, `:sup`, `:lock_key`,
+  `:cache`, `:tasks`, `:source_topic`.
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
@@ -65,9 +44,7 @@ defmodule Lightning.Adaptors.Scheduler do
   end
 
   @doc """
-  Trigger an immediate refresh tick.
-
-  Routes via `:global` to the leader-held GenServer.
+  Starts a refresh tick, or lets one already in flight continue.
   """
   @spec refresh_now(GenServer.server()) :: :ok | {:error, term()}
   def refresh_now(scheduler_name) do
@@ -75,10 +52,8 @@ defmodule Lightning.Adaptors.Scheduler do
   end
 
   @doc """
-  Force a single-adaptor refresh, bypassing the diff. 30-second timeout.
-
-  Returns `{:error, :not_found}` or `{:error, term()}` from a failed
-  strategy fetch.
+  Refetches and persists one adaptor whether or not its version changed.
+  Waits up to 30 seconds.
   """
   @spec refresh_package(GenServer.server(), String.t()) ::
           :ok | {:error, :not_found | term()}
@@ -86,13 +61,40 @@ defmodule Lightning.Adaptors.Scheduler do
     GenServer.call(scheduler_name, {:refresh_package, name}, 30_000)
   end
 
-  @doc """
-  Refresh icons only, against every source-scoped adaptor row.
+  @typedoc """
+  One refresh cycle's tallies: adaptors the upstream listing returned,
+  how many of those had a changed `latest_version`, how many were
+  fetched and persisted, and how many per-adaptor fetches failed.
+  """
+  @type refresh_counts :: %{
+          listed: non_neg_integer(),
+          changed: non_neg_integer(),
+          fetched: non_neg_integer(),
+          errors: non_neg_integer()
+        }
 
-  Runs `strategy.fetch_icons/1` and re-applies any shape whose `sha256`
-  differs from what is on the row. Adaptor metadata and version rows
-  are not touched. Returns `{:ok, %{updated: n, unchanged: m}}` on
-  success or `{:error, reason}` if the bulk fetch fails.
+  @doc """
+  Starts a refresh cycle, or joins the one in flight, and waits for it to
+  complete.
+
+  Returns `{:ok, counts}` when the listing succeeded (per-adaptor fetch
+  failures are counted in `counts.errors`), `{:error, reason}` when it
+  failed, or `{:error, {:refresh_failed, reason}}` when the cycle crashed.
+  """
+  @spec await_refresh(GenServer.server(), timeout()) ::
+          {:ok, refresh_counts()}
+          | {:error, {:refresh_failed, term()} | term()}
+  def await_refresh(scheduler_name, timeout) do
+    GenServer.call(scheduler_name, :await_refresh, timeout)
+  end
+
+  @doc """
+  Refetches every adaptor's icons and updates the rows whose icon bytes
+  changed, leaving other fields untouched.
+
+  Returns `{:ok, %{updated: n, unchanged: m}}`, `{:error, reason}` if the
+  fetch fails, or `{:error, {:refresh_failed, reason}}` if the task
+  crashed.
   """
   @spec refresh_icons(GenServer.server()) ::
           {:ok, %{updated: non_neg_integer(), unchanged: non_neg_integer()}}
@@ -113,7 +115,7 @@ defmodule Lightning.Adaptors.Scheduler do
 
     if interval_ms > 0 do
       delay =
-        time_until_next_ms(AdaptorsRepo.max_checked_at(source), interval_ms)
+        time_until_next_ms(Catalogue.max_checked_at(source), interval_ms)
 
       Process.send_after(self(), :tick, delay)
 
@@ -131,7 +133,11 @@ defmodule Lightning.Adaptors.Scheduler do
        interval_ms: interval_ms,
        source_topic: source_topic,
        cache: cache,
-       tasks: tasks
+       tasks: tasks,
+       refresh: nil,
+       waiters: [],
+       package_refreshes: %{},
+       icon_refreshes: %{}
      }}
   end
 
@@ -141,7 +147,91 @@ defmodule Lightning.Adaptors.Scheduler do
       Process.send_after(self(), :tick, state.interval_ms)
     end
 
-    Task.Supervisor.start_child(state.tasks, fn -> do_refresh(state) end)
+    if state.refresh do
+      Logger.debug(
+        "Adaptors[#{state.source}]: tick coalesced into in-flight refresh"
+      )
+
+      {:noreply, state}
+    else
+      {:noreply, start_refresh(state)}
+    end
+  end
+
+  @impl true
+  def handle_info({ref, result}, %{refresh: %Task{ref: ref}} = state) do
+    Process.demonitor(ref, [:flush])
+
+    Logger.info(
+      "Adaptors[#{state.source}]: refresh complete, replying to " <>
+        "#{length(state.waiters)} waiter(s)"
+    )
+
+    Enum.each(state.waiters, &GenServer.reply(&1, result))
+
+    {:noreply, %{state | refresh: nil, waiters: []}}
+  end
+
+  def handle_info(
+        {:DOWN, ref, :process, _pid, reason},
+        %{refresh: %Task{ref: ref}} = state
+      ) do
+    Logger.warning(
+      "Adaptors[#{state.source}]: refresh task crashed: #{inspect(reason)} — " <>
+        "replying error to #{length(state.waiters)} waiter(s)"
+    )
+
+    Enum.each(
+      state.waiters,
+      &GenServer.reply(&1, {:error, {:refresh_failed, reason}})
+    )
+
+    {:noreply, %{state | refresh: nil, waiters: []}}
+  end
+
+  def handle_info({ref, result}, state)
+      when is_map_key(state.package_refreshes, ref) do
+    Process.demonitor(ref, [:flush])
+    {from, package_refreshes} = Map.pop!(state.package_refreshes, ref)
+    GenServer.reply(from, result)
+    {:noreply, %{state | package_refreshes: package_refreshes}}
+  end
+
+  def handle_info({:DOWN, ref, :process, _pid, reason}, state)
+      when is_map_key(state.package_refreshes, ref) do
+    Logger.warning(
+      "Adaptors[#{state.source}]: refresh_package task crashed: #{inspect(reason)}"
+    )
+
+    {from, package_refreshes} = Map.pop!(state.package_refreshes, ref)
+    GenServer.reply(from, {:error, {:refresh_failed, reason}})
+    {:noreply, %{state | package_refreshes: package_refreshes}}
+  end
+
+  def handle_info({ref, result}, state)
+      when is_map_key(state.icon_refreshes, ref) do
+    Process.demonitor(ref, [:flush])
+    {from, icon_refreshes} = Map.pop!(state.icon_refreshes, ref)
+    GenServer.reply(from, result)
+    {:noreply, %{state | icon_refreshes: icon_refreshes}}
+  end
+
+  def handle_info({:DOWN, ref, :process, _pid, reason}, state)
+      when is_map_key(state.icon_refreshes, ref) do
+    Logger.warning(
+      "Adaptors[#{state.source}]: refresh_icons task crashed: #{inspect(reason)}"
+    )
+
+    {from, icon_refreshes} = Map.pop!(state.icon_refreshes, ref)
+    GenServer.reply(from, {:error, {:refresh_failed, reason}})
+    {:noreply, %{state | icon_refreshes: icon_refreshes}}
+  end
+
+  # A late task result must not crash the singleton.
+  def handle_info(msg, state) do
+    Logger.warning(
+      "Adaptors[#{state.source}]: scheduler ignoring unexpected message: #{inspect(msg)}"
+    )
 
     {:noreply, state}
   end
@@ -153,19 +243,43 @@ defmodule Lightning.Adaptors.Scheduler do
     {:reply, :ok, state}
   end
 
-  def handle_call({:refresh_package, name}, _from, state) do
+  def handle_call(:await_refresh, from, state) do
+    Logger.debug(
+      "Adaptors[#{state.source}]: await_refresh attached (#{length(state.waiters) + 1} waiters)"
+    )
+
+    state = %{state | waiters: [from | state.waiters]}
+    state = if state.refresh, do: state, else: start_refresh(state)
+    {:noreply, state}
+  end
+
+  def handle_call({:refresh_package, name}, from, state) do
     Logger.info("Adaptors[#{state.source}]: refresh_package(#{name}) requested")
 
     strategy = AdaptorsSupervisor.strategy(state.sup)
-    result = force_refresh_one(strategy, name, state)
-    {:reply, result, state}
+
+    task =
+      Task.Supervisor.async_nolink(state.tasks, fn ->
+        force_refresh_one(strategy, name, state)
+      end)
+
+    {:noreply, put_in(state.package_refreshes[task.ref], from)}
   end
 
-  def handle_call(:refresh_icons, _from, state) do
+  def handle_call(:refresh_icons, from, state) do
     Logger.info("Adaptors[#{state.source}]: refresh_icons requested")
     strategy = AdaptorsSupervisor.strategy(state.sup)
 
-    existing = AdaptorsRepo.list_adaptors(state.source)
+    task =
+      Task.Supervisor.async_nolink(state.tasks, fn ->
+        do_refresh_icons(strategy, state)
+      end)
+
+    {:noreply, put_in(state.icon_refreshes[task.ref], from)}
+  end
+
+  defp do_refresh_icons(strategy, state) do
+    existing = Catalogue.list_adaptors(state.source)
     prior_etags = prior_etags_from_rows(existing)
 
     case strategy.fetch_icons(prior_etags: prior_etags) do
@@ -178,15 +292,20 @@ defmodule Lightning.Adaptors.Scheduler do
             "updated=#{result.updated} unchanged=#{result.unchanged}"
         )
 
-        {:reply, {:ok, result}, state}
+        {:ok, result}
 
       {:error, reason} ->
         Logger.warning(
           "Adaptors[#{state.source}]: refresh_icons strategy fetch failed: #{inspect(reason)}"
         )
 
-        {:reply, {:error, reason}, state}
+        {:error, reason}
     end
+  end
+
+  defp start_refresh(state) do
+    task = Task.Supervisor.async_nolink(state.tasks, fn -> do_refresh(state) end)
+    %{state | refresh: task}
   end
 
   defp do_refresh(state) do
@@ -195,7 +314,7 @@ defmodule Lightning.Adaptors.Scheduler do
 
     # Single DB round-trip serves both the icons-task input (prior etags)
     # and the version diff used below to decide which adaptors to fetch.
-    existing_rows = AdaptorsRepo.list_adaptors(state.source)
+    existing_rows = Catalogue.list_adaptors(state.source)
     prior_etags = prior_etags_from_rows(existing_rows)
 
     existing_by_name =
@@ -246,6 +365,9 @@ defmodule Lightning.Adaptors.Scheduler do
             "errors=#{errors} duration=#{duration_ms}ms"
         )
 
+        {:ok,
+         %{listed: listed, changed: changed, fetched: persisted, errors: errors}}
+
       {:error, reason} ->
         Logger.warning("Scheduler: list_adaptors failed: #{inspect(reason)}")
         _ = await_icons(icons_task)
@@ -256,7 +378,7 @@ defmodule Lightning.Adaptors.Scheduler do
             "touched=0 fetched=0 icons=0 errors=1 duration=#{duration_ms}ms"
         )
 
-        :ok
+        {:error, reason}
     end
   end
 
@@ -267,7 +389,7 @@ defmodule Lightning.Adaptors.Scheduler do
          state
        ) do
     if Map.get(existing_by_name, name) == version do
-      AdaptorsRepo.touch_checked_at(name, state.source)
+      Catalogue.touch_checked_at(name, state.source)
       :touched
     else
       case strategy.fetch_adaptor(name) do
@@ -383,7 +505,7 @@ defmodule Lightning.Adaptors.Scheduler do
 
   defp heal_missing_icons(icons, state) do
     state.source
-    |> AdaptorsRepo.list_missing_icons()
+    |> Catalogue.list_missing_icons()
     |> Enum.reduce(0, fn row, acc ->
       package_icons = Map.get(icons, row.name, %{})
 
@@ -420,7 +542,7 @@ defmodule Lightning.Adaptors.Scheduler do
       end)
 
     if map_size(changes) > 0 do
-      {1, _} = AdaptorsRepo.update_icons(row.name, state.source, changes)
+      {1, _} = Catalogue.update_icons(row.name, state.source, changes)
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
@@ -522,7 +644,7 @@ defmodule Lightning.Adaptors.Scheduler do
   # log their own success line outside it, so a mistake in that line crashes
   # rather than being reported back as a failed upsert.
   defp upsert_and_broadcast(record, name, state) do
-    {:ok, _} = AdaptorsRepo.upsert_adaptor(record)
+    {:ok, _} = Catalogue.upsert_adaptor(record)
 
     Phoenix.PubSub.broadcast(
       Lightning.PubSub,

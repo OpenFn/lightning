@@ -300,7 +300,7 @@ defmodule AdaptorCache.Cli do
       export ADAPTORS_NPM_JSDELIVR_URL=#{base}/jsdelivr
       export ADAPTORS_NPM_GITHUB_URL=#{base}/github
 
-    Then: mix lightning.refresh_adaptors
+    Then: mix lightning.adaptors.refresh
     Watch it work:  bin/adaptor_cache logs
     Prove it works: bin/adaptor_cache check
     """)

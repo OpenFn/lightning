@@ -11,6 +11,8 @@ defmodule Lightning.AiAssistantTest do
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
     workflow = insert(:simple_workflow, project: project)
+    insert(:adaptor, name: "@openfn/language-common")
+    insert(:adaptor, name: "@openfn/language-http")
     [user: user, project: project, workflow: workflow]
   end
 
@@ -450,7 +452,7 @@ defmodule Lightning.AiAssistantTest do
       assert session.user_id == user.id
       assert session.expression == job_1.body
 
-      assert session.adaptor ==
+      assert {:ok, session.adaptor} ==
                Lightning.Adaptors.to_wire(job_1.adaptor)
 
       assert length(session.messages) == 1
@@ -978,7 +980,7 @@ defmodule Lightning.AiAssistantTest do
 
       assert updated_session.expression == expression
 
-      assert updated_session.adaptor ==
+      assert {:ok, updated_session.adaptor} ==
                Lightning.Adaptors.to_wire(adaptor)
     end
   end
@@ -1102,7 +1104,7 @@ defmodule Lightning.AiAssistantTest do
 
       assert enriched.expression == job.body
 
-      assert enriched.adaptor ==
+      assert {:ok, enriched.adaptor} ==
                Lightning.Adaptors.to_wire(job.adaptor)
     end
 
@@ -1268,7 +1270,7 @@ defmodule Lightning.AiAssistantTest do
       # Verify the job body and adaptor are set correctly
       assert enriched.expression == "console.log('test');"
 
-      assert enriched.adaptor ==
+      assert {:ok, enriched.adaptor} ==
                Lightning.Adaptors.to_wire("@openfn/language-http@latest")
     end
 

@@ -1028,9 +1028,6 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
   end
 
   describe "credential modal interactions" do
-    # `Credentials.get_schema/1` reads through `Lightning.Adaptors.Repo`;
-    # seed the `http` fixture so the JsonSchemaBodyComponent renders
-    # without raising.
     setup do
       Lightning.AdaptorTestHelpers.seed_credential_schema("http")
       :ok

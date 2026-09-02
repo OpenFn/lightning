@@ -1,7 +1,7 @@
-defmodule Lightning.Adaptors.Repo.AdaptorVersionTest do
+defmodule Lightning.Adaptors.Catalogue.AdaptorVersionTest do
   use ExUnit.Case, async: true
 
-  alias Lightning.Adaptors.Repo.AdaptorVersion
+  alias Lightning.Adaptors.Catalogue.AdaptorVersion
 
   @adaptor_id Ecto.UUID.generate()
 
@@ -147,7 +147,7 @@ defmodule Lightning.Adaptors.Repo.AdaptorVersionTest do
   describe "schema" do
     test "belongs_to :adaptor uses binary_id" do
       assoc = AdaptorVersion.__schema__(:association, :adaptor)
-      assert assoc.related == Lightning.Adaptors.Repo.Adaptor
+      assert assoc.related == Lightning.Adaptors.Catalogue.Adaptor
       assert assoc.owner_key == :adaptor_id
     end
 
