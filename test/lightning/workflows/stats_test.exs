@@ -3,7 +3,9 @@ defmodule Lightning.Workflows.StatsTest do
 
   import Lightning.Factories
 
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Stats
+  alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
 
   setup do
@@ -188,14 +190,30 @@ defmodule Lightning.Workflows.StatsTest do
       )
     end
 
+    # The signature reads the job's name and adaptor off the snapshot the step
+    # ran against, so the step has to carry the workflow's own snapshot rather
+    # than the unrelated one `step_factory` builds. Resolved per step, not in
+    # `setup`, because `two_jobs/1` adds a job after the workflow is inserted.
     defp step(job, attrs) do
       build(
         :step,
         Keyword.merge(
-          [job: job, input_dataclip: build(:dataclip), started_at: nil],
+          [
+            job: job,
+            snapshot: current_snapshot(job),
+            input_dataclip: build(:dataclip),
+            started_at: nil
+          ],
           attrs
         )
       )
+    end
+
+    defp current_snapshot(job) do
+      workflow = Repo.get!(Workflow, job.workflow_id)
+
+      Snapshot.get_current_for(workflow) ||
+        workflow |> Snapshot.create() |> elem(1)
     end
 
     test "builds a step-level signature from the step's own reason and type",
@@ -215,6 +233,32 @@ defmodule Lightning.Workflows.StatsTest do
                step_name: job.name,
                adaptor: job.adaptor
              }
+    end
+
+    # The signature describes the run as it happened. Renaming the job or
+    # bumping its adaptor afterwards must not relabel history — matching a
+    # signature on the live adaptor would report a version that never ran.
+    test "names the job as its snapshot recorded it, not as it is now", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      job = hd(workflow.jobs)
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: "RuntimeError")
+      ])
+
+      job
+      |> Ecto.Changeset.change(%{
+        name: "Renamed",
+        adaptor: "@openfn/language-http@9.9.9"
+      })
+      |> Repo.update!()
+
+      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+
+      assert signature.step_name == job.name
+      assert signature.adaptor == job.adaptor
     end
 
     # `mark_steps_lost/1` stamps the step's exit_reason and nothing else, so

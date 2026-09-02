@@ -19,7 +19,7 @@ defmodule Lightning.Workflows.Stats do
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
-  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
 
@@ -123,48 +123,75 @@ defmodule Lightning.Workflows.Stats do
         run_error_type: r.error_type,
         exit_reason: s.exit_reason,
         error_type: s.error_type,
+        snapshot_id: s.snapshot_id,
         job_id: s.job_id
       }
     )
   end
 
-  # The job is joined live, so a rename or an adaptor bump relabels history —
-  # `workflow_snapshots.jobs` holds what the run actually saw, but reading it
-  # means digging through JSONB per row, and the current name is what someone
-  # acting on this table will go looking for.
+  # The job's name and adaptor come off the run's own snapshot, not the live
+  # `jobs` table: a rename or an adaptor bump must not relabel history, and a
+  # job since deleted still has to be nameable. Resolving after the group keeps
+  # the jsonb unnest down to the few snapshots that actually failed in the
+  # window — joining it in would unnest every snapshot the workflow ever had.
   defp group_by_signature(workflow_id, since) do
-    from(a in subquery(attributed_failures(workflow_id, since)),
-      left_join: j in Job,
-      on: j.id == a.job_id,
-      group_by: [
-        a.work_order_state,
-        a.exit_reason,
-        a.error_type,
-        a.run_state,
-        a.run_error_type,
-        j.name,
-        j.adaptor
-      ],
-      select: %{
-        work_order_state: a.work_order_state,
-        exit_reason: a.exit_reason,
-        error_type: a.error_type,
-        run_state: a.run_state,
-        run_error_type: a.run_error_type,
-        step_name: j.name,
-        adaptor: j.adaptor,
-        count: count()
-      }
+    rows =
+      from(a in subquery(attributed_failures(workflow_id, since)),
+        group_by: [
+          a.work_order_state,
+          a.exit_reason,
+          a.error_type,
+          a.run_state,
+          a.run_error_type,
+          a.snapshot_id,
+          a.job_id
+        ],
+        select: %{
+          work_order_state: a.work_order_state,
+          exit_reason: a.exit_reason,
+          error_type: a.error_type,
+          run_state: a.run_state,
+          run_error_type: a.run_error_type,
+          snapshot_id: a.snapshot_id,
+          job_id: a.job_id,
+          count: count()
+        }
+      )
+      |> Repo.all()
+
+    jobs =
+      rows
+      |> Enum.map(& &1.snapshot_id)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> snapshot_jobs()
+
+    rows
+    |> Enum.map(&to_signature(&1, jobs))
+    |> merge_counts()
+  end
+
+  # Keyed by snapshot as well as job, because the same job id carries a
+  # different name in every snapshot that renamed it. Only `name` and `adaptor`
+  # are read out, so the job bodies alongside them never cross the wire.
+  defp snapshot_jobs([]), do: %{}
+
+  defp snapshot_jobs(snapshot_ids) do
+    from(s in Snapshot,
+      where: s.id in ^snapshot_ids,
+      cross_lateral_join: j in fragment("jsonb_array_elements(?)", s.jobs),
+      select:
+        {{s.id, fragment("? ->> ?", j, "id")},
+         {fragment("? ->> ?", j, "name"), fragment("? ->> ?", j, "adaptor")}}
     )
     |> Repo.all()
-    |> Enum.map(&to_signature/1)
-    |> merge_counts()
+    |> Map.new()
   end
 
   # A rejected work order never got a run, so there is no signature to read.
   # `:rejected` has one origin — the run limit refusing a webhook payload — so
   # the label names it outright.
-  defp to_signature(%{work_order_state: :rejected} = row) do
+  defp to_signature(%{work_order_state: :rejected} = row, _jobs) do
     %{
       count: row.count,
       exit_reason: "rejected",
@@ -178,13 +205,16 @@ defmodule Lightning.Workflows.Stats do
   # reported — a lost or reaped run — carries only the reason, and the rest
   # comes off the run. `mark_steps_lost/1` is why: it stamps `exit_reason` and
   # leaves `error_type` alone.
-  defp to_signature(row) do
+  defp to_signature(row, jobs) do
+    {step_name, adaptor} =
+      Map.get(jobs, {row.snapshot_id, row.job_id}, {nil, nil})
+
     %{
       count: row.count,
       exit_reason: row.exit_reason || @state_reasons[row.run_state],
       error_type: row.error_type || row.run_error_type,
-      step_name: row.step_name,
-      adaptor: row.adaptor
+      step_name: step_name,
+      adaptor: adaptor
     }
   end
 

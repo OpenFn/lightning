@@ -3,6 +3,8 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
 
   import Lightning.Factories
 
+  alias Lightning.Workflows.Snapshot
+
   setup %{conn: conn} do
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
@@ -258,6 +260,11 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
     } do
       %{triggers: [trigger], jobs: [job | _]} = workflow
 
+      # The signature names the job as its snapshot recorded it, so the step has
+      # to run against the workflow's own snapshot, not the unrelated one
+      # `step_factory` builds.
+      {:ok, snapshot} = Snapshot.create(workflow)
+
       work_order =
         insert(:workorder,
           workflow: workflow,
@@ -274,6 +281,7 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
         steps: [
           build(:step,
             job: job,
+            snapshot: snapshot,
             input_dataclip: build(:dataclip),
             exit_reason: "fail",
             error_type: "RuntimeError"
