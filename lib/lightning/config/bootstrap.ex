@@ -282,7 +282,7 @@ defmodule Lightning.Config.Bootstrap do
       #  TODO - move this into an ENV?
       {"17 */2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
       {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker},
-      {"* * * * *", Lightning.LogLines.SearchVectorWorker},
+      # {"* * * * *", Lightning.LogLines.SearchVectorWorker},
       {"* * * * *", Lightning.Invocation.DataclipSearchVectorWorker}
     ]
 
