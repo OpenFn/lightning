@@ -393,9 +393,6 @@ defmodule Lightning.Adaptors.Scheduler do
       :touched
     else
       case strategy.fetch_adaptor(name) do
-        # latest_version is bound in the head rather than read inside the
-        # Logger call. A log message is only built when its level is enabled,
-        # so a field read inside one isn't exercised.
         {:ok, %{latest_version: version} = record} ->
           Logger.debug("Adaptors[#{state.source}]: fetched #{name}@#{version}")
 
@@ -601,9 +598,8 @@ defmodule Lightning.Adaptors.Scheduler do
       acc
   end
 
-  # nil → preserve existing etag on the row (do not clobber).
-  # value matching the row's current etag → no-op (avoid no-op write).
-  # value differing → emit the change.
+  # A nil etag never overwrites what's on the row. A value equal to the
+  # row's current etag is skipped too, to avoid a no-op write.
   defp maybe_accumulate_etag(acc, _etag_key, _row, nil), do: acc
 
   defp maybe_accumulate_etag(acc, etag_key, row, etag) when is_binary(etag) do
@@ -662,12 +658,10 @@ defmodule Lightning.Adaptors.Scheduler do
       {:error, {:upsert_failed, Exception.message(e)}}
   end
 
-  # Project a list of adaptor rows to the prior-etag map shape expected
-  # by `Strategy.fetch_icons/1`: `%{name => %{shape => etag}}`. Rows
-  # whose etags are both nil are skipped entirely (no empty inner map);
-  # within a row, only shapes with a non-nil etag are kept. The consumer
-  # treats absence as "no prior etag, send no If-None-Match", so an empty
-  # entry would be wasteful but harmless — we drop it for clarity.
+  # Builds the prior-etag map for `Strategy.fetch_icons/1`. A row or shape
+  # with no etag is left out rather than kept as an empty entry — the
+  # strategy already treats an absent entry as "no prior etag, don't send
+  # If-None-Match".
   @spec prior_etags_from_rows([map()]) :: %{
           String.t() => %{optional(:square | :rectangle) => String.t()}
         }
@@ -691,7 +685,6 @@ defmodule Lightning.Adaptors.Scheduler do
   defp maybe_put_shape_etag(map, shape, etag) when is_binary(etag),
     do: Map.put(map, shape, etag)
 
-  # Used in the tick summary log.
   defp count_not_modified(icons) do
     Enum.reduce(icons, 0, fn {_name, shapes}, acc ->
       Enum.reduce(shapes, acc, fn

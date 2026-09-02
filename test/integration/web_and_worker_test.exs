@@ -406,7 +406,11 @@ defmodule Lightning.WebAndWorkerTest do
   end
 
   describe "webhook with delayed response (after_completion)" do
-    setup [:register_and_log_in_superuser, :stub_rate_limiter_ok]
+    setup [
+      :register_and_log_in_superuser,
+      :stub_rate_limiter_ok,
+      :seed_default_adaptor
+    ]
 
     @tag :integration
     @tag timeout: 120_000
@@ -1012,6 +1016,15 @@ defmodule Lightning.WebAndWorkerTest do
       assert step.output_dataclip.body == nil
       assert step.output_dataclip.wiped_at != nil
     end
+  end
+
+  defp seed_default_adaptor(_context) do
+    Lightning.AdaptorTestHelpers.seed_adaptor_package(
+      "@openfn/language-common",
+      "3.0.2"
+    )
+
+    :ok
   end
 
   # The server side (handle_delayed_response/2) can legitimately wait up to

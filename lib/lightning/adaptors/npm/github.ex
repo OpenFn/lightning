@@ -73,9 +73,9 @@ defmodule Lightning.Adaptors.NPM.GitHub do
   such shape at all.
 
   Fans out via `Task.async_stream` with a bounded concurrency. Transport
-  failures for a single `(name, shape)` are dropped silently — the whole
-  pipeline only fails if every fetch crashes the supervisor, which is
-  not surfaced here.
+  failures for a single `(name, shape)` are dropped silently — they just
+  don't appear in the result map. This function always returns
+  `{:ok, partial_map}`; there is no error return.
   """
   @spec fetch_all([String.t()], %{
           optional(String.t()) => %{
@@ -182,13 +182,9 @@ defmodule Lightning.Adaptors.NPM.GitHub do
     Map.update(acc, name, %{shape => entry}, &Map.put(&1, shape, entry))
   end
 
-  # GitHub raw does not gzip-compress PNG/SVG bodies, so no
-  # `Tesla.Middleware.DecompressResponse` is in play. The sha256 computed
-  # in `fetch_all/2` is therefore over the raw response bytes (which equals
-  # the decompressed bytes in our case — there is no compression layer to
-  # speak of, and no `accept-encoding` middleware is configured). If GitHub
-  # ever starts compressing 200 bodies, Tesla/Finch would need an
-  # accept-encoding/decompress middleware to preserve this invariant.
+  # GitHub raw doesn't compress PNG/SVG responses, so the sha256 computed
+  # in fetch_all/2 is over the exact bytes served. If that ever changes,
+  # this needs a decompress middleware to keep the checksum correct.
   defp do_fetch_one(client, name, shape, prior_etag) do
     suffix = strip_scope(name)
     cond_get? = is_binary(prior_etag)

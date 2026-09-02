@@ -538,9 +538,9 @@ defmodule Lightning.Config.BootstrapTest do
   end
 
   describe "adaptor registry" do
-    test "raises an exception when LOCAL_ADAPTORS is set to true but OPENFN_ADAPTORS_REPO is not set" do
+    test "raises when LOCAL_ADAPTORS is set to true but no repo path is set" do
       assert_raise RuntimeError,
-                   ~r/LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set/,
+                   ~r/ADAPTORS_STRATEGY is set to local, but neither ADAPTORS_LOCAL_REPO nor/,
                    fn ->
                      Dotenvy.source([%{"LOCAL_ADAPTORS" => "true"}])
 
@@ -548,28 +548,34 @@ defmodule Lightning.Config.BootstrapTest do
                    end
     end
 
-    test "local_adaptors_repos defaults to [] when OPENFN_ADAPTORS_REPO is set but LOCAL_ADAPTORS is not set" do
-      Dotenvy.source([%{"OPENFN_ADAPTORS_REPO" => "/path"}])
-      Bootstrap.configure()
+    test "LOCAL_ADAPTORS=true with ADAPTORS_LOCAL_REPO boots the local strategy and only warns" do
+      log =
+        capture_log(fn ->
+          Dotenvy.source([
+            %{"LOCAL_ADAPTORS" => "true", "ADAPTORS_LOCAL_REPO" => "/path"}
+          ])
 
-      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+          Bootstrap.configure()
+        end)
 
-      assert adaptor_registry[:local_adaptors_repos] == []
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.Local
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/path"]
+      assert log =~ "LOCAL_ADAPTORS is deprecated"
     end
 
-    test "local_adaptors_repos is a one-element list when both OPENFN_ADAPTORS_REPO and LOCAL_ADAPTORS are set with a single path" do
+    test "OPENFN_ADAPTORS_REPO with LOCAL_ADAPTORS=true becomes the local strategy's single repo path" do
       Dotenvy.source([
         %{"OPENFN_ADAPTORS_REPO" => "/path", "LOCAL_ADAPTORS" => "true"}
       ])
 
       Bootstrap.configure()
 
-      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
-
-      assert adaptor_registry[:local_adaptors_repos] == ["/path"]
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/path"]
     end
 
-    test "local_adaptors_repos parses comma-separated OPENFN_ADAPTORS_REPO into an ordered list" do
+    test "comma-separated OPENFN_ADAPTORS_REPO parses into an ordered list" do
       Dotenvy.source([
         %{
           "OPENFN_ADAPTORS_REPO" => "/private/repo,/canonical/adaptors",
@@ -579,15 +585,13 @@ defmodule Lightning.Config.BootstrapTest do
 
       Bootstrap.configure()
 
-      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
-
-      assert adaptor_registry[:local_adaptors_repos] == [
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == [
                "/private/repo",
                "/canonical/adaptors"
              ]
     end
 
-    test "local_adaptors_repos drops empty segments and trims whitespace" do
+    test "OPENFN_ADAPTORS_REPO drops empty segments and trims whitespace" do
       Dotenvy.source([
         %{
           "OPENFN_ADAPTORS_REPO" => "  /a  ,  ,/b ",
@@ -597,9 +601,10 @@ defmodule Lightning.Config.BootstrapTest do
 
       Bootstrap.configure()
 
-      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
-
-      assert adaptor_registry[:local_adaptors_repos] == ["/a", "/b"]
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == [
+               "/a",
+               "/b"
+             ]
     end
   end
 
@@ -850,20 +855,6 @@ defmodule Lightning.Config.BootstrapTest do
       Bootstrap.configure()
 
       assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/new"]
-    end
-
-    test "LOCAL_ADAPTORS=true and OPENFN_ADAPTORS_REPO dual-write both the old registry and the new Local strategy" do
-      Dotenvy.source([
-        %{"LOCAL_ADAPTORS" => "true", "OPENFN_ADAPTORS_REPO" => "/path"}
-      ])
-
-      Bootstrap.configure()
-
-      assert get_env(:lightning, Lightning.AdaptorRegistry)[
-               :local_adaptors_repos
-             ] == ["/path"]
-
-      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/path"]
     end
   end
 

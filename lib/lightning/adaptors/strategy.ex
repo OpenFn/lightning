@@ -8,9 +8,9 @@ defmodule Lightning.Adaptors.Strategy do
 
     * `c:fetch_adaptor/1` — given a package name, return a structured
       `t:adaptor_record/0` covering version history, integrity hashes,
-      and dependency metadata. Icon fields are **not** part of this
-      record any more; the Scheduler stamps them on after joining the
-      bulk icon pipeline.
+      and dependency metadata. Icon fields are not part of this
+      record; the Scheduler stamps them on separately after joining
+      the bulk icon pipeline.
     * `c:fetch_icon/2` — given a package name and an icon variant,
       return the raw bytes plus extension. Used by the Store's rare
       lazy-miss fallback.

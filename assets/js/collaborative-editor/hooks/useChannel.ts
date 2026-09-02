@@ -47,6 +47,7 @@ export interface ChannelError {
    * - optimistic_lock_error: Concurrent modification conflict (stale lock_version)
    * - limit_error: Usage limit exceeded (AI assistant, runs, etc.)
    * - nesting_too_deep: Sandbox nesting depth limit exceeded
+   * - adaptor_catalogue_unavailable: Adaptor catalogue hasn't loaded yet, retry shortly
    *
    * Optional for the same reason as `errors`.
    */

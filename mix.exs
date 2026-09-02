@@ -229,8 +229,6 @@ defmodule Lightning.MixProject do
         "tailwind.install --if-missing",
         "esbuild.install --if-missing",
         "lightning.install_runtime",
-        "lightning.install_adaptor_icons",
-        "lightning.install_schemas",
         "ecto.setup"
       ],
       "ecto.setup": ["ecto.create", "ecto.migrate"],
@@ -266,6 +264,7 @@ defmodule Lightning.MixProject do
       extras: [
         "README.md": [title: "Lightning"],
         "RUNNINGLOCAL.md": [title: "Running Locally"],
+        "ADAPTORS.md": [title: "Adaptors"],
         "DEPLOYMENT.md": [title: "Deployment"],
         "tooling/benchmarking/README.md": [
           title: "Benchmarking",

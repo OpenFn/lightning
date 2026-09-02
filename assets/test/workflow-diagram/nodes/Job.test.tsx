@@ -2,8 +2,8 @@
  * Job Node Component Tests
  *
  * Verifies that job nodes read their adaptor icons from the AdaptorStore
- * via useAdaptorIconUrl, with graceful string-label fallback when the URL
- * is null OR no StoreProvider is mounted (LiveView workflow-editor path).
+ * via useAdaptorIconUrl, falling back to a string label when the URL is
+ * null or no StoreProvider is mounted (the LiveView workflow-editor path).
  */
 
 import { render } from '@testing-library/react';

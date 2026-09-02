@@ -20,9 +20,11 @@ defmodule Mix.Tasks.Lightning.Adaptors.Dump do
 
   `--source` defaults to `npm`.
 
-  Icons are left out. Their bytes live in the on-disk icon cache rather
-  than the catalogue, so a hash without them would buy the importing
-  instance nothing; it refetches instead.
+  Icon bytes themselves live in the on-disk icon cache, not the catalogue,
+  so they don't travel in this file. It carries the icon metadata
+  (extension, sha256, etag) so an imported row can serve an icon already
+  present at `ADAPTORS_ICONS_PATH` on the target instance instead of
+  refetching from GitHub; copy that directory across alongside this file.
   """
 
   use Mix.Task
@@ -30,10 +32,15 @@ defmodule Mix.Tasks.Lightning.Adaptors.Dump do
   alias Lightning.Adaptors.Catalogue
 
   @adaptor_fields ~w(name source description homepage repository license
-                     latest_version deprecated schema_data schema_sha256)a
+                     latest_version deprecated schema_data schema_sha256
+                     icon_square_ext icon_rectangle_ext
+                     icon_square_sha256 icon_rectangle_sha256
+                     icon_square_etag icon_rectangle_etag)a
 
   @version_fields ~w(version integrity tarball_url size_bytes dependencies
                      peer_dependencies published_at deprecated)a
+
+  @icon_sha256_fields ~w(icon_square_sha256 icon_rectangle_sha256)a
 
   @impl Mix.Task
   def run(argv) do
@@ -68,7 +75,16 @@ defmodule Mix.Tasks.Lightning.Adaptors.Dump do
     adaptor
     |> Map.from_struct()
     |> Map.take(@adaptor_fields)
+    |> encode_icon_sha256s()
     |> Map.put(:versions, versions)
+  end
+
+  # icon_*_sha256 columns hold raw hash bytes, not valid JSON text; encode
+  # them here, `Seed.normalize_snapshot_record/2` decodes on the way back in.
+  defp encode_icon_sha256s(record) do
+    Enum.reduce(@icon_sha256_fields, record, fn field, acc ->
+      Map.update!(acc, field, &(&1 && Base.encode64(&1)))
+    end)
   end
 
   defp parse_source(nil), do: :npm

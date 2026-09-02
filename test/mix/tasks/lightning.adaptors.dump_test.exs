@@ -20,6 +20,9 @@ defmodule Mix.Tasks.Lightning.Adaptors.DumpTest do
       deprecated: false,
       schema_data: ~s({"type":"object"}),
       schema_sha256: "sha256-schema-http",
+      icon_square_ext: "png",
+      icon_square_sha256: :crypto.hash(:sha256, "square-bytes"),
+      icon_square_etag: "\"square-etag\"",
       versions: [
         %{
           version: "2.0.0",
@@ -69,7 +72,8 @@ defmodule Mix.Tasks.Lightning.Adaptors.DumpTest do
 
   @compared_adaptor_fields ~w(name source description homepage repository
                               license latest_version deprecated schema_data
-                              schema_sha256)a
+                              schema_sha256 icon_square_ext icon_square_sha256
+                              icon_square_etag)a
 
   @compared_version_fields ~w(version integrity tarball_url size_bytes
                               dependencies peer_dependencies published_at
@@ -112,6 +116,10 @@ defmodule Mix.Tasks.Lightning.Adaptors.DumpTest do
       assert http["latest_version"] == "2.1.0"
       assert http["description"] == "HTTP adaptor"
       assert http["schema_data"] == ~s({"type":"object"})
+      assert http["icon_square_ext"] == "png"
+
+      assert http["icon_square_sha256"] ==
+               Base.encode64(:crypto.hash(:sha256, "square-bytes"))
 
       assert http["versions"] |> Enum.map(& &1["version"]) |> Enum.sort() ==
                ["2.0.0", "2.1.0"]

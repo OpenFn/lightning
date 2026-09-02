@@ -10,6 +10,9 @@ defmodule Lightning.AdaptorService do
   The service requires at least `:adaptors_path`, which is used to both query
   which adaptors are installed and when to install new adaptors.
 
+  Another optional setting is `:repo`, which must point at a module that
+  does the actual querying and installing.
+
   ## Installing Adaptors
 
   Using the `install/2` function an adaptor can be installed, which will also
