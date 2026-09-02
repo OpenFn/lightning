@@ -179,7 +179,7 @@ defmodule LightningWeb.Components.Credentials do
             :for={project <- @selected_projects}
             class="inline-flex items-center gap-1 rounded-md bg-blue-100 px-4 mr-1 py-2 mb-2 text-gray-600"
           >
-            {project.name}
+            {project_label(project)}
             <button
               id={"#{@remove_project_id}-#{project.id}"}
               phx-target={@phx_target}
@@ -187,7 +187,7 @@ defmodule LightningWeb.Components.Credentials do
               phx-click="remove_selected_project"
               type="button"
               class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gray-500/20"
-              {if(@workflows_using_credentials[project.id], do: %{"data-confirm": "Warning: This credential is in use by the following workflows: #{Enum.join(@workflows_using_credentials[project.id], ", ")}. If you revoke access to the \"#{project.name}\" project, runs for those workflows will probably fail until you provide a new credential. Are you sure you want to revoke access?"}, else: %{})}
+              {if(@workflows_using_credentials[project.id], do: %{"data-confirm": "Warning: This credential is in use by the following workflows: #{Enum.join(@workflows_using_credentials[project.id], ", ")}. If you revoke access to the \"#{project_label(project)}\" project, runs for those workflows will probably fail until you provide a new credential. Are you sure you want to revoke access?"}, else: %{})}
             >
               <span class="sr-only">Remove</span>
               <Heroicons.x_mark solid class="w-4 h-4" />
@@ -201,10 +201,18 @@ defmodule LightningWeb.Components.Credentials do
   end
 
   defp map_projects_for_select(projects) do
-    Enum.map(projects, fn %{id: id, name: name} ->
-      {name, id}
+    Enum.map(projects, fn %{id: id} = project ->
+      {project_label(project), id}
     end)
   end
+
+  # Sandboxes are labelled with their ancestor chain (`parent/sandbox`) so
+  # they are distinguishable from top-level projects. Falls back to the bare
+  # name when the ancestors are not loaded.
+  defp project_label(%Lightning.Projects.Project{} = project),
+    do: Lightning.Projects.Project.display_name(project)
+
+  defp project_label(%{name: name}), do: name
 
   attr :id, :string, required: true
 

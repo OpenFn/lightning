@@ -43,6 +43,7 @@ defmodule LightningWeb.CredentialLive.OauthClientFormComponent do
       |> Ecto.Changeset.get_assoc(:project_oauth_clients, :struct)
       |> Lightning.Repo.preload(:project)
       |> Enum.map(fn poc -> poc.project end)
+      |> Lightning.Projects.preload_ancestors()
 
     available_projects =
       Helpers.filter_available_projects(

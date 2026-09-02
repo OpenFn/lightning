@@ -4176,6 +4176,42 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "preload_ancestors/1" do
+    test "loads the full parent chain for a single sandbox" do
+      root = insert(:project, name: "root")
+      middle = insert(:project, name: "middle", parent: root)
+      leaf = insert(:project, name: "leaf", parent: middle)
+
+      loaded = Project |> Repo.get!(leaf.id) |> Projects.preload_ancestors()
+
+      assert %Project{parent: %Project{parent: %Project{parent: nil}}} = loaded
+      assert loaded.parent.id == middle.id
+      assert loaded.parent.parent.id == root.id
+      assert Project.display_name(loaded) == "root/middle/leaf"
+    end
+
+    test "loads ancestors for every project in a list" do
+      root = insert(:project, name: "root")
+      middle = insert(:project, name: "middle", parent: root)
+      leaf = insert(:project, name: "leaf", parent: middle)
+      other_root = insert(:project, name: "other")
+      other_sandbox = insert(:project, name: "other-sandbox", parent: other_root)
+
+      [leaf, other_sandbox, root] =
+        [leaf.id, other_sandbox.id, root.id]
+        |> Enum.map(&Repo.get!(Project, &1))
+        |> Projects.preload_ancestors()
+
+      assert Project.display_name(leaf) == "root/middle/leaf"
+      assert Project.display_name(other_sandbox) == "other/other-sandbox"
+      assert Project.display_name(root) == "root"
+    end
+
+    test "returns an empty list unchanged" do
+      assert Projects.preload_ancestors([]) == []
+    end
+  end
+
   describe "display_name_within_access_root/2" do
     test "returns the project name alone when access_root is the project itself" do
       project = insert(:project, name: "acme-workspace")
