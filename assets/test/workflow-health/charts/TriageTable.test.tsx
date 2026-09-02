@@ -78,7 +78,7 @@ describe('TriageTable', () => {
     expect(rowText(/RunLimitExceeded/)).toContain('rejected:RunLimitExceeded');
     expect(
       screen.getByText(
-        'The project was over its run limit, so no run was created for this payload.'
+        'The project was over its run limit, so no run was created for this request.'
       )
     ).toBeVisible();
   });

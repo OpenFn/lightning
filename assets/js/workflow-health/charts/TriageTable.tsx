@@ -45,9 +45,8 @@ const TIPS: Record<string, string> = {
   LostAfterClaim: 'The run was picked up but never started, so nothing ran.',
   LostAfterStart:
     'The run started but never reported back, so how far it got is unknown.',
-  Cancelled: 'This run was manually stopped before it finished.',
   RunLimitExceeded:
-    'The project was over its run limit, so no run was created for this payload.',
+    'The project was over its run limit, so no run was created for this request.',
   default: 'The step failed without a recognised error type; check its logs.',
 };
 
