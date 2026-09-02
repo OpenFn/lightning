@@ -329,8 +329,37 @@ defmodule Lightning.Projects do
   so that `Project.display_name/1` can walk to the root.
 
   Fetches the entire chain in a single recursive CTE query.
+
+  When given a list of projects, the ancestor chains for every project in the
+  list are fetched in a single query.
   """
   @spec preload_ancestors(Project.t()) :: Project.t()
+  @spec preload_ancestors([Project.t()]) :: [Project.t()]
+  def preload_ancestors(projects) when is_list(projects) do
+    parent_ids =
+      projects
+      |> Enum.reject(&(is_nil(&1.parent_id) or match?(%Project{}, &1.parent)))
+      |> Enum.map(& &1.parent_id)
+      |> Enum.uniq()
+
+    ancestors_by_id =
+      case parent_ids do
+        [] -> %{}
+        ids -> ids |> list_ancestors() |> Map.new(&{&1.id, &1})
+      end
+
+    Enum.map(projects, fn
+      %Project{parent_id: nil} = p ->
+        p
+
+      %Project{parent: %Project{}} = p ->
+        preload_ancestors(p)
+
+      %Project{parent_id: parent_id} = p ->
+        %{p | parent: nest_ancestors(parent_id, ancestors_by_id)}
+    end)
+  end
+
   def preload_ancestors(%Project{parent_id: nil} = p), do: p
 
   def preload_ancestors(%Project{parent: %Project{} = parent} = p) do
@@ -340,19 +369,19 @@ defmodule Lightning.Projects do
   def preload_ancestors(%Project{parent_id: parent_id} = p)
       when is_binary(parent_id) do
     ancestors_by_id =
-      parent_id
+      [parent_id]
       |> list_ancestors()
       |> Map.new(&{&1.id, &1})
 
     %{p | parent: nest_ancestors(parent_id, ancestors_by_id)}
   end
 
-  defp list_ancestors(start_id) do
+  defp list_ancestors(start_ids) when is_list(start_ids) do
     max_depth = max_project_tree_depth()
 
     initial =
       from(p in Project,
-        where: p.id == ^start_id,
+        where: p.id in ^start_ids,
         select: %{id: p.id, parent_id: p.parent_id, depth: 0}
       )
 

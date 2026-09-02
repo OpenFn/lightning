@@ -405,11 +405,14 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   end
 
   defp list_credentials(user_or_project) do
-    user_or_project
-    |> Credentials.list_credentials()
-    |> Enum.map(fn credential ->
+    credentials = Credentials.list_credentials(user_or_project)
+    display_names = project_display_names(credentials)
+
+    Enum.map(credentials, fn credential ->
       project_names =
-        Map.get(credential, :projects, []) |> Enum.map(fn p -> p.name end)
+        credential
+        |> Map.get(:projects, [])
+        |> Enum.map(&Map.fetch!(display_names, &1.id))
 
       environment_names =
         credential
@@ -423,18 +426,31 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
   end
 
   defp list_clients(user_or_project) do
-    user_or_project
-    |> OauthClients.list_clients()
-    |> Enum.map(fn c ->
+    clients = OauthClients.list_clients(user_or_project)
+    display_names = project_display_names(clients)
+
+    Enum.map(clients, fn c ->
       project_names =
         if c.global,
           do: ["GLOBAL"],
           else:
-            Map.get(c, :projects, [])
-            |> Enum.map(fn p -> p.name end)
+            c
+            |> Map.get(:projects, [])
+            |> Enum.map(&Map.fetch!(display_names, &1.id))
 
       Map.put(c, :project_names, project_names)
     end)
+  end
+
+  # Sandboxes are shown with their ancestors (e.g. `parent/sandbox`) so they
+  # can be told apart from top-level projects. Ancestors for every project
+  # across all records are loaded in one query.
+  defp project_display_names(records) do
+    records
+    |> Enum.flat_map(&Map.get(&1, :projects, []))
+    |> Enum.uniq_by(& &1.id)
+    |> Lightning.Projects.preload_ancestors()
+    |> Map.new(&{&1.id, Lightning.Projects.Project.display_name(&1)})
   end
 
   defp delete_action(assigns) do

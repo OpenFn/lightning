@@ -126,6 +126,33 @@ defmodule LightningWeb.OauthClientsLiveTest do
   setup :create_project_for_current_user
 
   describe "List" do
+    test "labels sandboxes with their parent project name", %{
+      conn: conn,
+      user: user,
+      project: project
+    } do
+      sandbox = insert(:project, name: "sandy-sandbox", parent: project)
+
+      client =
+        insert(:oauth_client,
+          user: user,
+          project_oauth_clients: [%{project: project}, %{project: sandbox}]
+        )
+
+      {:ok, _view, html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      chips =
+        html
+        |> Floki.parse_document!()
+        |> Floki.find("#oauth-clients-table tr")
+        |> Enum.find(&(Floki.text(&1) =~ client.name))
+        |> Floki.find("td span.bg-primary-50")
+        |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+        |> Enum.sort()
+
+      assert chips == [project.name, "#{project.name}/sandy-sandbox"]
+    end
+
     @tag :skip
     test "list all created oauth clients", %{
       conn: conn,

@@ -1382,6 +1382,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
       |> Ecto.Changeset.get_assoc(:project_credentials, :struct)
       |> Lightning.Repo.preload(:project)
       |> Enum.map(fn poc -> poc.project end)
+      |> Lightning.Projects.preload_ancestors()
 
     workflows_using_credentials =
       changeset

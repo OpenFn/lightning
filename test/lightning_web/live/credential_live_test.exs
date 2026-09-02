@@ -42,6 +42,17 @@ defmodule LightningWeb.CredentialLiveTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
+  # Text of the "Projects with access" chips on the table row for `name`.
+  defp project_chips(html, table_selector, name) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("#{table_selector} tr")
+    |> Enum.find(&(Floki.text(&1) =~ name))
+    |> Floki.find("td span.bg-primary-50")
+    |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+    |> Enum.sort()
+  end
+
   defp get_decoded_state(url) when is_nil(url) do
     [
       "test",
@@ -106,6 +117,80 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Environment"
       assert html =~ credential.schema
       assert html =~ credential.name
+    end
+
+    test "labels sandboxes with their parent project name", %{
+      conn: conn,
+      user: user
+    } do
+      parent =
+        insert(:project,
+          name: "testy-project",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      sandbox = insert(:project, name: "sandy-sandbox", parent: parent)
+
+      credential = insert(:credential, user: user)
+      insert(:project_credential, project: parent, credential: credential)
+      insert(:project_credential, project: sandbox, credential: credential)
+
+      {:ok, view, html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      assert project_chips(html, "#credentials-table", credential.name) == [
+               "testy-project",
+               "testy-project/sandy-sandbox"
+             ]
+
+      open_edit_credential_modal(view, credential.id)
+
+      assert view
+             |> element(
+               "#remove-project-credential-button-#{credential.id}-#{sandbox.id}"
+             )
+             |> has_element?()
+
+      assert render(view) =~ "testy-project/sandy-sandbox"
+    end
+
+    test "keeps soft-deleted sandboxes but hides purged ones", %{
+      conn: conn,
+      user: user
+    } do
+      parent =
+        insert(:project,
+          name: "testy-project",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      sandbox =
+        insert(:project,
+          name: "sandy-sandbox",
+          parent: parent,
+          scheduled_deletion:
+            DateTime.utc_now()
+            |> DateTime.add(7, :day)
+            |> DateTime.truncate(:second)
+        )
+
+      credential = insert(:credential, user: user)
+      insert(:project_credential, project: parent, credential: credential)
+      insert(:project_credential, project: sandbox, credential: credential)
+
+      {:ok, _view, html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      assert project_chips(html, "#credentials-table", credential.name) == [
+               "testy-project",
+               "testy-project/sandy-sandbox"
+             ]
+
+      {:ok, _deleted} = Lightning.Projects.delete_project(sandbox)
+
+      {:ok, _view, html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      assert project_chips(html, "#credentials-table", credential.name) == [
+               "testy-project"
+             ]
     end
 
     test "ensure support user only sees credentials they own on /credentials", %{
