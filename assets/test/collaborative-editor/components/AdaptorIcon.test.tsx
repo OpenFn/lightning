@@ -1,9 +1,9 @@
 /**
  * Tests for AdaptorIcon component
  *
- * Verifies that icon URLs are read from the AdaptorStore (icon_urls.square)
- * with the existing first-letter placeholder fallback when no URL is present
- * or the adaptor is not in the store.
+ * Verifies that icon URLs are read from the AdaptorStore (icon_urls.square),
+ * falling back to a first-letter placeholder when no URL is present or the
+ * adaptor is not in the store.
  */
 
 import { render, screen } from '@testing-library/react';

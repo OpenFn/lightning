@@ -38,9 +38,9 @@ defmodule Lightning.Release do
 
   @doc """
   Populate the adaptor catalogue from a JSON snapshot file, without
-  reaching npm. The release-safe path for `Lightning.Adaptors.seed_from_file/2`
-  — there is no Mix in a release, so `mix lightning.adaptors.import`
-  cannot run there; this is what `bin/lightning eval` calls instead.
+  reaching npm. This is the release equivalent of
+  `mix lightning.adaptors.import` — a release has no Mix, so run this
+  through `bin/lightning eval` instead.
 
   ## Usage
 

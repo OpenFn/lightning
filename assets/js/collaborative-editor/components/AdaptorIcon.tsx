@@ -14,9 +14,10 @@ const sizeClasses = {
   lg: 'h-12 w-12',
 };
 
-// Reads the square icon URL for `name` directly from StoreContext, so callers
-// that mock the `hooks/useAdaptors` module (e.g. FullScreenIDE tests) still get
-// the existing placeholder fallback instead of crashing on a missing mock.
+// Reads the icon URL directly from StoreContext instead of via the
+// useAdaptorIconUrl hook in hooks/useAdaptors, so tests that mock that whole
+// module (e.g. FullScreenIDE) fall back to the placeholder instead of
+// crashing on a missing export.
 function useStoreIconUrl(name: string): string | null {
   const context = useContext(StoreContext);
   const adaptorStore = context?.adaptorStore ?? null;

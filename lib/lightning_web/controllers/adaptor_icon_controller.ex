@@ -2,9 +2,6 @@ defmodule LightningWeb.AdaptorIconURL do
   @moduledoc """
   Single source of truth for content-addressable adaptor-icon URLs.
 
-  Called from `LightningWeb.AdaptorIconController` for redirect targets and
-  from `WorkflowChannel`'s `request_adaptors` payload.
-
   `sha8` is the first 4 raw bytes of the icon's sha256, hex-encoded
   to 8 lowercase characters, yielding a deterministic content-addressable
   path segment.
@@ -13,8 +10,8 @@ defmodule LightningWeb.AdaptorIconURL do
   @doc """
   Build a content-addressable icon URL for `name`/`shape`.
 
-  Returns `nil` when the adaptor row has no ext or sha256 for the
-  requested shape — i.e. when no icon is available.
+  Returns `nil` when `meta` has no ext or sha256 for the requested shape
+  — i.e. when no icon is available.
   """
   @spec build(String.t(), map(), :square | :rectangle) :: String.t() | nil
   def build(name, meta, shape) do

@@ -241,20 +241,6 @@ defmodule Lightning.Config.Bootstrap do
 
     use_local_adaptors_repos? =
       env!("LOCAL_ADAPTORS", &Utils.ensure_boolean/1, false)
-      |> tap(fn v ->
-        if v && local_adaptors_repos == [] do
-          raise """
-          LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set.
-          """
-        end
-      end)
-
-    # local_adaptors_repos also feeds the new Lightning.Adaptors.Local
-    # strategy below (dual-write). install_schemas.ex:177 still reads this
-    # exact key, so it is not moved, only copied.
-    config :lightning, Lightning.AdaptorRegistry,
-      local_adaptors_repos:
-        if(use_local_adaptors_repos?, do: local_adaptors_repos, else: [])
 
     configure_adaptors_strategy(local_adaptors_repos, use_local_adaptors_repos?)
 
@@ -262,13 +248,12 @@ defmodule Lightning.Config.Bootstrap do
     # through Lightning.Adaptors.Config.strategy_opts/1: registry_url is the
     # npm search and packument endpoint (NPM.Registry), jsdelivr_url serves
     # configuration schemas (NPM.Schema), and github_url plus github_ref locate
-    # the raw icon files under OpenFn/adaptors (NPM.GitHub). The defaults match
-    # the @default_* attributes in those modules.
+    # the raw icon files under OpenFn/adaptors (NPM.GitHub). Defaults live in
+    # the @default_* attributes on those modules; bootstrap only overrides one
+    # when its env var is set.
     #
     # Point them at `bin/adaptor_cache` to serve all three from a local disk
     # cache while working on adaptors.
-    # Defaults live in the strategy sub-modules' own @default_* attributes;
-    # bootstrap only maps an env var onto an override when one is set.
     config :lightning,
            Lightning.Adaptors.NPM,
            [
@@ -279,14 +264,6 @@ defmodule Lightning.Config.Bootstrap do
              http_timeout: env!("ADAPTORS_NPM_HTTP_TIMEOUT", :integer?, nil)
            ]
            |> Enum.reject(fn {_key, value} -> is_nil(value) end)
-
-    config :lightning,
-      schemas_path:
-        env!(
-          "SCHEMAS_PATH",
-          :string,
-          Utils.get_env([:lightning, :schemas_path], "./priv")
-        )
 
     config :lightning,
            :purge_deleted_after_days,
@@ -1090,11 +1067,10 @@ defmodule Lightning.Config.Bootstrap do
   end
 
   # ADAPTORS_LOCAL_REPO wins outright when set. When unset, fall back to
-  # the (ungated) OPENFN_ADAPTORS_REPO parse above, warning only when the
-  # new subsystem is actually running the Local strategy — an operator
-  # who still needs OPENFN_ADAPTORS_REPO for the old registry while
-  # running the new subsystem on npm shouldn't be warned about a var they
-  # legitimately need.
+  # the (ungated) OPENFN_ADAPTORS_REPO parse above, warning only when
+  # Lightning.Adaptors is actually running the Local strategy — an operator
+  # running the npm strategy with OPENFN_ADAPTORS_REPO still set for the
+  # ws-worker shouldn't be warned about a var they legitimately need.
   defp resolve_local_strategy_paths(local_adaptors_repos, adaptors_strategy) do
     case env!("ADAPTORS_LOCAL_REPO", :string, nil) |> parse_repo_list() do
       [] ->
