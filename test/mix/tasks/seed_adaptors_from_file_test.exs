@@ -3,7 +3,7 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
 
   import ExUnit.CaptureIO
 
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
+  alias Lightning.Adaptors.Catalogue
   alias Mix.Tasks.Lightning.SeedAdaptorsFromFile
 
   @moduletag :tmp_dir
@@ -32,9 +32,9 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
       end)
 
       assert %{latest_version: "2.1.0"} =
-               AdaptorsRepo.get_adaptor("@openfn/language-http", :npm)
+               Catalogue.get_adaptor("@openfn/language-http", :npm)
 
-      assert length(AdaptorsRepo.list_versions("@openfn/language-http", :npm)) ==
+      assert length(Catalogue.list_versions("@openfn/language-http", :npm)) ==
                2
     end
 
@@ -54,10 +54,10 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
         SeedAdaptorsFromFile.run(["--path", path, "--source", "local"])
       end)
 
-      assert AdaptorsRepo.get_adaptor("@openfn/language-common", :npm) == nil
+      assert Catalogue.get_adaptor("@openfn/language-common", :npm) == nil
 
       assert %{source: :local} =
-               AdaptorsRepo.get_adaptor("@openfn/language-common", :local)
+               Catalogue.get_adaptor("@openfn/language-common", :local)
     end
 
     test "--replace deletes existing rows for the source before seeding", %{
@@ -74,8 +74,8 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
         SeedAdaptorsFromFile.run(["--path", path, "--replace"])
       end)
 
-      assert AdaptorsRepo.get_adaptor("@openfn/language-stale", :npm) == nil
-      assert AdaptorsRepo.get_adaptor("@openfn/language-http", :npm) != nil
+      assert Catalogue.get_adaptor("@openfn/language-stale", :npm) == nil
+      assert Catalogue.get_adaptor("@openfn/language-http", :npm) != nil
     end
 
     test "--replace rolls back the delete when a later record fails to upsert",
@@ -100,8 +100,8 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
         end)
       end
 
-      assert AdaptorsRepo.get_adaptor("@openfn/language-stale", :npm) != nil
-      assert AdaptorsRepo.get_adaptor("@openfn/language-http", :npm) == nil
+      assert Catalogue.get_adaptor("@openfn/language-stale", :npm) != nil
+      assert Catalogue.get_adaptor("@openfn/language-http", :npm) == nil
     end
 
     test "round-trips a snapshot in the shape the download task emits", %{

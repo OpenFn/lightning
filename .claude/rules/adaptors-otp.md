@@ -1,0 +1,42 @@
+---
+paths:
+  - "lib/lightning/adaptors.ex"
+  - "lib/lightning/adaptors/**/*.ex"
+  - "test/lightning/adaptors_test.exs"
+  - "test/lightning/adaptors/**/*.exs"
+---
+
+# Adaptors: naming and dependency injection
+
+Every process in this subsystem derives its name from the single `:name` opt passed
+to `Lightning.Adaptors.Supervisor`. Nothing is hardcoded, which is what lets the
+integration suite run isolated instances in one BEAM under `async: true`. Adding a
+process that breaks this forces the whole suite serial.
+
+When adding or changing a process here:
+
+- Take `:name` from opts (`Keyword.fetch!(opts, :name)`) and derive any child,
+  cache, topic or lock name from it. Follow the helpers at
+  `lib/lightning/adaptors/supervisor.ex:159-205`.
+- Add it to the fixed child list in `init/1` (`supervisor.ex:101-122`) with its
+  collaborators passed in the child spec. Do not add a `Registry`: the child set is
+  fixed and the registered atom already addresses it.
+- Public functions that talk to a running process lead with the server ref,
+  defaulted: `def refresh(sup \\ @sup, name)`. `start_link` takes `name:` in
+  trailing opts.
+- The `Scheduler` is a cluster singleton behind `HighlanderPG` and registers under
+  `global_scheduler_name/1` (`supervisor.ex:196`). `Process.whereis` will not find
+  it.
+
+Known wart, do not copy it: `strategy` and `source` are published to
+`:persistent_term` in `init/1` (`supervisor.ex:74-77`) and re-read at call time by
+`Scheduler` (`scheduler.ex:156-160`, `:166`, `:194`) and `Store`. New code should
+take them from process state or the child spec instead. `Scheduler` already does
+this correctly for `source` (`scheduler.ex:111`, `:127-135`).
+
+In tests, prefer `Mox.allow(StrategyMock, self(), pid)` and keep `async: true`, as
+`test/lightning/adaptors/store_test.exs:115` does. `set_mox_global` costs the file
+its async, and is only justified where the hop graph is genuinely dynamic, as in
+`highlander_integration_test.exs:27`.
+
+Full reasoning: `.claude/guidelines/testable-supervision-trees.md`.

@@ -518,11 +518,13 @@ defmodule Lightning.AiAssistant do
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()
   def put_expression_and_adaptor(session, expression, adaptor) do
-    %{
-      session
-      | expression: expression,
-        adaptor: Lightning.Adaptors.to_wire(adaptor)
-    }
+    wire =
+      case Lightning.Adaptors.to_wire(adaptor) do
+        {:ok, wire} -> wire
+        {:error, _} -> adaptor
+      end
+
+    %{session | expression: expression, adaptor: wire}
   end
 
   @doc """

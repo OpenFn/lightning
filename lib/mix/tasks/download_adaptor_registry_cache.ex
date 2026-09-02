@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Lightning.DownloadAdaptorRegistryCache do
   @moduledoc """
   Fetches every `@openfn/language-*` adaptor from npm via
   `Lightning.Adaptors.NPM` and writes the full records to a JSON file, in
-  the shape `Lightning.Adaptors.Repo.upsert_adaptor/1` accepts.
+  the shape `Lightning.Adaptors.Catalogue.upsert_adaptor/1` accepts.
 
   The file this writes is what `mix lightning.seed_adaptors_from_file`
   reads.

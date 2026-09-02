@@ -1,48 +1,19 @@
 defmodule Lightning.Adaptors.Store do
   @moduledoc """
-  Stateless read facade over `Cachex`, `Lightning.Adaptors.Repo`, and the
-  active `Lightning.Adaptors.Strategy`.
+  Cached reads over `Lightning.Adaptors.Catalogue`.
 
-  Every public read helper wraps a `Cachex.fetch/4` whose fallback first
-  consults the local Postgres projection (`Lightning.Adaptors.Repo`) and
-  only invokes the Strategy as a last resort. Cachex's courier supplies
-  blocking semantics and per-key coalescing of concurrent first-callers
-  for free — there is no GenServer mailbox in front of the reads.
-
-  ## Source tagging
-
-  Each cache key carries the active `:source` (`:npm | :local`) read via
-  `Lightning.Adaptors.Supervisor.source/1`, so the same package name can
-  coexist across deployment modes without manual scrubbing.
-
-  ## Commit vs ignore
-
-  Successful Strategy/Repo lookups commit their projected value to the
-  cache. Failures — empty `packages/1` results, unknown adaptors for
-  `icon_meta/2`, Strategy errors — return `:ignore`, so a subsequent
-  caller retries fresh rather than seeing a poisoned cache entry.
-
-  ## Icons
-
-  `icon/3` returns a `Path.t/0` the controller serves via `send_file/3`
-  — no binary on the BEAM heap. The on-disk `Lightning.Adaptors.IconCache`
-  is the primary cache: a `cached?/4` hit short-circuits before Cachex
-  is touched. On a disk miss the lazy Strategy fetch is wrapped in
-  `Cachex.fetch/4` on `{:icon_bytes, source, name, shape}` so that
-  concurrent first-callers coalesce onto a single courier; the courier
-  returns `{:ignore, _}` so no entry is committed, and subsequent
-  callers re-read the now-populated file from disk.
+  Every read checks the instance's Cachex first and falls back to the
+  catalogue table. `schema/2` and `versions/2` also fetch from the
+  strategy when the row has no data yet and persist what they get; this
+  only fills gaps on adaptors already in the catalogue, and an unknown
+  name returns `{:error, :not_found}`. `icon/3` returns a path on disk,
+  fetching the bytes from the strategy on the first miss.
   """
 
+  alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Config
   alias Lightning.Adaptors.IconCache
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
-
-  # Strategy and source are scoped to the supervisor instance — every
-  # `Store` call resolves both from the per-instance `:persistent_term`
-  # entry the supervisor populated at boot. No `Application.get_env`
-  # reads in the hot path; no global mutable state in tests.
 
   @type sup :: atom()
 
@@ -61,17 +32,10 @@ defmodule Lightning.Adaptors.Store do
           icon_rectangle_sha256: binary() | nil
         }
 
-  @type package_meta :: AdaptorsRepo.package_meta()
+  @type package_meta :: Catalogue.package_meta()
 
   @doc """
-  Read the `schema_data` JSON blob for a single adaptor.
-
-  Cache-then-Repo-then-Strategy. On Strategy success the full adaptor
-  record is upserted into Postgres and the projected schema blob is
-  committed to the cache.
-
-  Returns the schema as a JSON binary so that ordered-objects decoding
-  can re-engage at the credential-form renderer.
+  Returns the adaptor's credential schema as a JSON binary, not decoded.
   """
   @spec schema(sup(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def schema(sup, name) do
@@ -82,7 +46,7 @@ defmodule Lightning.Adaptors.Store do
     |> Cachex.fetch(
       {:schema, name, source},
       fn _key ->
-        case AdaptorsRepo.get_adaptor(name, source) do
+        case Catalogue.get_adaptor(name, source) do
           %{schema_data: data} when not is_nil(data) ->
             {:commit, {:ok, data}}
 
@@ -96,8 +60,7 @@ defmodule Lightning.Adaptors.Store do
   end
 
   @doc """
-  Read the version history for a single adaptor as a list of lean
-  per-version maps. See `t:version_meta/0` for the projected shape.
+  Returns the adaptor's version history as `t:version_meta/0` maps.
   """
   @spec versions(sup(), String.t()) ::
           {:ok, [version_meta()]} | {:error, term()}
@@ -109,7 +72,7 @@ defmodule Lightning.Adaptors.Store do
     |> Cachex.fetch(
       {:versions, name, source},
       fn _key ->
-        case AdaptorsRepo.list_versions(name, source) do
+        case Catalogue.list_versions(name, source) do
           [] -> fetch_and_persist(sup, name, source, :versions)
           rows -> {:commit, {:ok, project_versions(rows)}}
         end
@@ -120,17 +83,8 @@ defmodule Lightning.Adaptors.Store do
   end
 
   @doc """
-  Resolve the on-disk path of one icon variant for an adaptor.
-
-  Disk is the cache: a cache-hit on `IconCache.cached?/4` returns the
-  path immediately. A cache-miss is routed through `Cachex.fetch/4` on
-  `{:icon_bytes, source, name, shape}` so concurrent first-callers
-  coalesce onto one in-flight Strategy fetch — the courier returns
-  `{:ignore, _}` so no cache entry is committed and the next miss reads
-  the freshly-written file from disk.
-
-  Returns `{:error, :not_found}` when the icon variant is absent from
-  the adaptor row (the row is the source of truth).
+  Returns the on-disk path of one icon shape for the adaptor, or
+  `{:error, :not_found}` when the adaptor row has no such icon.
   """
   @spec icon(sup(), String.t(), :square | :rectangle) ::
           {:ok, Path.t()} | {:error, :not_found | term()}
@@ -171,13 +125,8 @@ defmodule Lightning.Adaptors.Store do
   end
 
   @doc """
-  Picker-facing lean projection: every adaptor row for the active
-  source, minus heavy JSONB columns (`schema_data`, `dependencies`,
-  `peer_dependencies`).
-
-  An empty Repo result returns `{:ok, []}` but is **not** committed to
-  the cache — during cold-start the Scheduler will fill the table on
-  its next tick, and the next call will pick that up automatically.
+  Returns every adaptor for the active source, without the `schema_data`,
+  `dependencies` and `peer_dependencies` columns.
   """
   @spec packages(sup()) :: {:ok, [package_meta()]} | {:error, term()}
   def packages(sup) do
@@ -188,7 +137,7 @@ defmodule Lightning.Adaptors.Store do
     |> Cachex.fetch(
       {:packages, source},
       fn _key ->
-        case AdaptorsRepo.list_package_metas(source) do
+        case Catalogue.list_package_metas(source) do
           [] -> {:ignore, {:ok, []}}
           metas -> {:commit, {:ok, metas}}
         end
@@ -199,12 +148,8 @@ defmodule Lightning.Adaptors.Store do
   end
 
   @doc """
-  Cheap `{icon_<shape>_ext, icon_<shape>_sha256}` projection for the
-  icon controller's sha-validation path. Pure metadata — no disk I/O.
-
-  Unknown adaptors return `{:error, :not_found}` and are **not**
-  cached, so a subsequent insert by the Scheduler becomes visible on
-  the very next call.
+  Returns the extension and sha256 of each icon shape for the adaptor,
+  without touching disk, or `{:error, :not_found}` for an unknown name.
   """
   @spec icon_meta(sup(), String.t()) ::
           {:ok, icon_meta()} | {:error, :not_found}
@@ -216,7 +161,7 @@ defmodule Lightning.Adaptors.Store do
     |> Cachex.fetch(
       {:icon_meta, name, source},
       fn _key ->
-        case AdaptorsRepo.get_adaptor(name, source) do
+        case Catalogue.get_adaptor(name, source) do
           nil -> {:ignore, {:error, :not_found}}
           adaptor -> {:commit, {:ok, project_icon_meta(adaptor)}}
         end
@@ -227,23 +172,14 @@ defmodule Lightning.Adaptors.Store do
   end
 
   @doc """
-  Re-warm Cachex from Postgres for the active source.
-
-  Called by `Lightning.Adaptors.NodeMonitor` on `:nodeup` — a peer
-  rejoining after a partition can't know which `{:changed, name, source}`
-  broadcasts it missed, so it treats its entire local Cachex as
-  suspect and overwrites from the DB.
-
-  Uses `Cachex.put_many/2` (never `Cachex.clear/1`-then-fill) so
-  concurrent callers never observe an empty cache and never trigger a
-  spurious cold-miss Strategy fetch during the warm.
+  Overwrites the cached package list and icon metadata from the database.
   """
   @spec warm_from_repo(sup()) :: :ok
   def warm_from_repo(sup) do
     cache = AdaptorsSupervisor.cache_name(sup)
     source = AdaptorsSupervisor.source(sup)
 
-    metas = AdaptorsRepo.list_package_metas(source)
+    metas = Catalogue.list_package_metas(source)
 
     icon_metas =
       Enum.map(metas, fn m ->
@@ -258,23 +194,42 @@ defmodule Lightning.Adaptors.Store do
     :ok
   end
 
+  # Lazy fetches only fill gaps on adaptors already in the catalogue;
+  # they never add one.
   @spec fetch_and_persist(atom(), String.t(), :npm | :local, atom()) ::
           {:commit, {:ok, term()}} | {:ignore, {:error, term()}}
   defp fetch_and_persist(sup, name, source, field) do
+    if Catalogue.get_adaptor(name, source) do
+      fetch_and_persist_known(sup, name, source, field)
+    else
+      {:ignore, {:error, :not_found}}
+    end
+  end
+
+  defp fetch_and_persist_known(sup, name, source, field) do
     case AdaptorsSupervisor.strategy(sup).fetch_adaptor(name) do
-      {:ok, record} ->
+      {:ok, %{name: ^name} = record} ->
         record =
           record
           |> Map.put(:source, source)
           |> normalize_schema_data()
 
-        {:ok, _} = AdaptorsRepo.upsert_adaptor(record)
-        {:commit, {:ok, Map.get(record, field)}}
+        {:ok, _} = Catalogue.upsert_adaptor(record)
+        {:commit, {:ok, record |> Map.get(field) |> project_field(field)}}
+
+      {:ok, %{name: other}} ->
+        {:ignore, {:error, {:name_mismatch, other}}}
 
       {:error, reason} ->
         {:ignore, {:error, reason}}
     end
   end
+
+  # Both cache paths must store the same projected shape.
+  defp project_field(rows, :versions) when is_list(rows),
+    do: project_versions(rows)
+
+  defp project_field(value, _field), do: value
 
   # Strategies should emit `schema_data` as a JSON binary, but legacy
   # call paths (and tests) may still hand us a map. Normalize here so

@@ -23,6 +23,8 @@ defmodule Lightning.Collaboration.NoChangeSnapshotTest do
       # granted access by the owner-anchored startup hook via `owner: self()`.
       Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
 
+      Lightning.AdaptorTestHelpers.seed_ready_catalogue()
+
       instance = start_collaboration_instance()
 
       user = insert(:user)

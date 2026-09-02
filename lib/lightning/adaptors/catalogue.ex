@@ -1,30 +1,19 @@
-defmodule Lightning.Adaptors.Repo do
+defmodule Lightning.Adaptors.Catalogue do
   @moduledoc """
-  Query and write helpers over the `adaptors` and `adaptor_versions` tables.
+  Reads and writes for the `adaptors` and `adaptor_versions` tables.
 
-  Despite the name, this is **not** an `Ecto.Repo` — it is a thin
-  data-access module that wraps `Lightning.Repo` (the real
-  `Ecto.Repo`). The two schemas it targets live as siblings:
-  `Lightning.Adaptors.Repo.Adaptor` and
-  `Lightning.Adaptors.Repo.AdaptorVersion`.
-
-  Every read helper takes the desired `:source` (`:npm | :local`)
-  explicitly; the module itself stays source-agnostic. Callers resolve
-  the active source via `Lightning.Adaptors.Config.current_source/0`.
-
-  `upsert_adaptor/1` is the only writer the Scheduler uses. It is
-  idempotent, transactional, and diff-aware: `checked_at` advances on
-  every call, while `updated_at` only advances when the row's
-  meaningful fields differ from what was already in the DB. Version
-  rows are replaced inside the same transaction so a partial failure
-  cannot leave the table half-rewritten.
+  Every read takes the `:source` (`:npm | :local`) explicitly.
+  `upsert_adaptor/1` is idempotent: `checked_at` advances on every call,
+  `updated_at` only when a field actually changed, and version rows are
+  replaced in the same transaction.
   """
 
   import Ecto.Query
 
   alias Ecto.Multi
-  alias Lightning.Adaptors.Repo.Adaptor
-  alias Lightning.Adaptors.Repo.AdaptorVersion
+  alias Lightning.Adaptors.Catalogue.Adaptor
+  alias Lightning.Adaptors.Catalogue.AdaptorVersion
+  alias Lightning.Repo
 
   @type source :: :npm | :local
 
@@ -61,7 +50,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec list_package_metas(source()) :: [package_meta()]
   def list_package_metas(source) do
-    Lightning.Repo.all(
+    Repo.all(
       from a in Adaptor,
         where: a.source == ^source,
         select: %{
@@ -84,7 +73,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec list_adaptors(source()) :: [Adaptor.t()]
   def list_adaptors(source) do
-    Lightning.Repo.all(from a in Adaptor, where: a.source == ^source)
+    Repo.all(from a in Adaptor, where: a.source == ^source)
   end
 
   @doc """
@@ -93,7 +82,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec get_adaptor(String.t(), source()) :: Adaptor.t() | nil
   def get_adaptor(name, source) do
-    Lightning.Repo.get_by(Adaptor, name: name, source: source)
+    Repo.get_by(Adaptor, name: name, source: source)
   end
 
   @doc """
@@ -101,7 +90,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec list_versions(String.t(), source()) :: [AdaptorVersion.t()]
   def list_versions(name, source) do
-    Lightning.Repo.all(
+    Repo.all(
       from v in AdaptorVersion,
         join: a in Adaptor,
         on: v.adaptor_id == a.id,
@@ -160,13 +149,13 @@ defmodule Lightning.Adaptors.Repo do
         insert_version_rows(repo, adaptor.id, versions, now)
       end)
 
-    case Lightning.Repo.transaction(multi) do
+    case Repo.transaction(multi) do
       {:ok, %{adaptor: adaptor}} ->
         {:ok, adaptor}
 
       {:error, step, reason, _changes} ->
         raise ArgumentError,
-              "Lightning.Adaptors.Repo.upsert_adaptor/1 failed at #{inspect(step)}: " <>
+              "Lightning.Adaptors.Catalogue.upsert_adaptor/1 failed at #{inspect(step)}: " <>
                 inspect(reason)
     end
   end
@@ -176,7 +165,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec delete_all_for_source(source()) :: :ok
   def delete_all_for_source(source) do
-    Lightning.Repo.delete_all(from a in Adaptor, where: a.source == ^source)
+    Repo.delete_all(from a in Adaptor, where: a.source == ^source)
     :ok
   end
 
@@ -191,7 +180,7 @@ defmodule Lightning.Adaptors.Repo do
   def touch_checked_at(name, source) do
     now = DateTime.utc_now()
 
-    Lightning.Repo.update_all(
+    Repo.update_all(
       from(a in Adaptor, where: a.name == ^name and a.source == ^source),
       set: [checked_at: now]
     )
@@ -212,7 +201,7 @@ defmodule Lightning.Adaptors.Repo do
           }
         ]
   def list_missing_icons(source) do
-    Lightning.Repo.all(
+    Repo.all(
       from a in Adaptor,
         where:
           a.source == ^source and
@@ -252,7 +241,7 @@ defmodule Lightning.Adaptors.Repo do
       |> Map.put(:updated_at, DateTime.utc_now())
       |> Enum.into([])
 
-    Lightning.Repo.update_all(
+    Repo.update_all(
       from(a in Adaptor, where: a.name == ^name and a.source == ^source),
       set: allowed
     )
@@ -264,7 +253,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec max_checked_at(source()) :: DateTime.t() | nil
   def max_checked_at(source) do
-    Lightning.Repo.one(
+    Repo.one(
       from a in Adaptor,
         where: a.source == ^source,
         select: max(a.checked_at)
@@ -278,7 +267,7 @@ defmodule Lightning.Adaptors.Repo do
   @spec catalogue(source()) :: [catalogue_entry()]
   def catalogue(source) do
     adaptors =
-      Lightning.Repo.all(
+      Repo.all(
         from a in Adaptor,
           where: a.source == ^source,
           order_by: [asc: a.name],
@@ -294,7 +283,7 @@ defmodule Lightning.Adaptors.Repo do
       )
 
     versions_by_name =
-      Lightning.Repo.all(
+      Repo.all(
         from v in AdaptorVersion,
           join: a in Adaptor,
           on: v.adaptor_id == a.id,
@@ -321,7 +310,7 @@ defmodule Lightning.Adaptors.Repo do
   """
   @spec catalogue_stamp(source()) :: {DateTime.t() | nil, non_neg_integer()}
   def catalogue_stamp(source) do
-    Lightning.Repo.one(
+    Repo.one(
       from a in Adaptor,
         left_join: v in AdaptorVersion,
         on: v.adaptor_id == a.id,
@@ -343,9 +332,7 @@ defmodule Lightning.Adaptors.Repo do
   defp upsert_adaptor_row(repo, %Adaptor{} = existing, attrs, now) do
     changeset = Adaptor.changeset(existing, attrs)
 
-    # `Ecto.Changeset.cast/3` only records a change when the cast value
-    # differs from the underlying struct, so the set of "real" changes
-    # is `:changes` minus the `:checked_at` tick we apply on every call.
+    # `checked_at` changes on every call, so it is excluded from the diff.
     meaningful_changes? =
       changeset.changes
       |> Map.delete(:checked_at)

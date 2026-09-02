@@ -254,9 +254,9 @@ defmodule Lightning.Workflows.JobTest do
       end)
     end
 
-    test "rejects an unrecognised adaptor whether or not the catalogue has rows for the active source" do
-      # `job.adaptor` reaches the worker's install step unfiltered, so an
-      # empty catalogue must permit nothing — not even an `@openfn/` name.
+    test "a never-loaded catalogue refuses the adaptor as not ready, then rejects it once loaded" do
+      # With no expectations the production Scheduler's load fails, as it
+      # would with npm unreachable.
       params = %{
         name: "job",
         body: "fn(state => state)",
@@ -264,7 +264,7 @@ defmodule Lightning.Workflows.JobTest do
       }
 
       assert Job.changeset(%Job{}, params) |> errors_on() |> Map.get(:adaptor) ==
-               ["is not a recognised adaptor"]
+               ["adaptor catalogue is not ready yet, try again shortly"]
 
       insert(:adaptor, name: "@openfn/language-http")
 
@@ -278,7 +278,7 @@ defmodule Lightning.Workflows.JobTest do
       # The registry membership check only runs on an otherwise-valid changeset,
       # so name and body are supplied here.
       [
-        "@openfn/language-foo@1.0.0",
+        "@openfn/language-never-seeded@1.0.0",
         "@evilcorp/language-http@1.0.0",
         "common@1.0.0"
       ]

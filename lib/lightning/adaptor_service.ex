@@ -21,7 +21,7 @@ defmodule Lightning.AdaptorService do
 
   Every install is gated on the adaptor catalogue (`Lightning.Adaptors`):
   `install/2` refuses to run `npm install` for a package name the catalogue
-  doesn't recognise, including when the catalogue is empty.
+  doesn't recognise.
 
   ## Looking up adaptors
 
@@ -314,7 +314,7 @@ defmodule Lightning.AdaptorService do
 
   defp known?(nil), do: false
 
-  defp known?(name), do: Adaptors.get_adaptor(name) != nil
+  defp known?(name), do: match?({:ok, _}, Adaptors.fetch_adaptor(name))
 
   @spec install!(Agent.agent(), package_spec()) ::
           {:ok, InstalledAdaptor.t()}

@@ -1,6 +1,7 @@
 defmodule LightningWeb.WorkflowChannelTest do
   use LightningWeb.ChannelCase
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.CollaborationHelpers
   import Lightning.Factories
   import Lightning.ProjectsHelpers
@@ -19,6 +20,8 @@ defmodule LightningWeb.WorkflowChannelTest do
     Mox.set_mox_global(LightningMock)
     # Stub the broadcast calls that save_workflow makes
     Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
+    seed_ready_catalogue()
 
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
@@ -864,13 +867,9 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   describe "request_adaptors and request_credentials" do
     setup do
-      # The production Adaptors.Supervisor's Cachex persists across tests;
-      # clear it so each test's seeded Adaptors.Repo rows are visible.
       cache = Lightning.Adaptors.Supervisor.cache_name(Lightning.Adaptors)
       Cachex.clear(cache)
 
-      # Seed Adaptors.Repo rows so packages/0 returns a non-empty list.
-      # Individual tests insert additional rows for icon-meta assertions.
       insert(:adaptor, name: "@openfn/language-salesforce", source: :npm)
       insert(:adaptor, name: "@openfn/language-http", source: :npm)
       :ok
@@ -1341,6 +1340,25 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert saved.lock_version == lock_version
     end
 
+    test "replies an error and keeps the channel alive when the session process is dead",
+         %{socket: socket} do
+      # A dead session makes the call exit rather than raise; the reply must
+      # still arrive.
+      session_pid = socket.assigns.session_pid
+      ref_mon = Process.monitor(session_pid)
+      Process.exit(session_pid, :kill)
+      assert_receive {:DOWN, ^ref_mon, :process, ^session_pid, :killed}
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{base: ["An internal error occurred"]},
+        type: "internal_error"
+      }
+
+      assert Process.alive?(socket.channel_pid)
+    end
+
     test "returns validation errors", %{socket: socket} do
       # Set invalid data in Y.Doc (blank name)
       session_pid = socket.assigns.session_pid
@@ -1433,6 +1451,76 @@ defmodule LightningWeb.WorkflowChannelTest do
       # since the transaction rolls back entirely on the snapshot failure.
       refute Lightning.Workflows.get_workflow!(workflow.id).name ==
                "Snapshot Collision"
+    end
+
+    test "handles an adaptor catalogue that is not ready", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      # Global mode: the refresh runs in a Task owned by the production
+      # Scheduler.
+      Lightning.Adaptors.Catalogue.delete_all_for_source(:npm)
+      Mox.set_mox_global(Lightning.Adaptors.StrategyMock)
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:error, :unreachable}
+      end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Blocked By Catalogue")
+      end)
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{
+          base: ["The adaptor catalogue is still loading. Try again shortly."]
+        },
+        type: "adaptor_catalogue_unavailable"
+      }
+
+      refute Lightning.Workflows.get_workflow!(workflow.id).name ==
+               "Blocked By Catalogue"
+    end
+
+    test "does not block other channel traffic while the save is pending", %{
+      socket: socket
+    } do
+      # Slow enough that a synchronous handle_in would still be blocked when
+      # the second push is asserted.
+      Lightning.Adaptors.Catalogue.delete_all_for_source(:npm)
+      Mox.set_mox_global(Lightning.Adaptors.StrategyMock)
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        Process.sleep(300)
+        {:error, :unreachable}
+      end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      save_ref = push(socket, "save_workflow", %{})
+
+      name_ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "Another Name"}
+        })
+
+      assert_reply name_ref, :ok, _payload, 100
+
+      assert_reply save_ref,
+                   :error,
+                   %{type: "adaptor_catalogue_unavailable"},
+                   2000
     end
 
     test "handles deleted workflow", %{socket: socket, workflow: workflow} do

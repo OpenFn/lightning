@@ -3,7 +3,7 @@ defmodule LightningWeb.AdaptorControllerTest do
 
   import Lightning.Factories
 
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
+  alias Lightning.Adaptors.Catalogue
   alias LightningWeb.AdaptorIconURL
 
   describe "GET /adaptors/catalogue" do
@@ -16,7 +16,7 @@ defmodule LightningWeb.AdaptorControllerTest do
       square_sha = :crypto.hash(:sha256, "square")
 
       {:ok, _adaptor} =
-        AdaptorsRepo.upsert_adaptor(%{
+        Catalogue.upsert_adaptor(%{
           name: "@openfn/language-http",
           source: :npm,
           latest_version: "2.0.0",
@@ -52,7 +52,7 @@ defmodule LightningWeb.AdaptorControllerTest do
            conn: conn
          } do
       {:ok, _adaptor} =
-        AdaptorsRepo.upsert_adaptor(%{
+        Catalogue.upsert_adaptor(%{
           name: "@openfn/language-http",
           source: :npm,
           latest_version: "1.0.0",
@@ -75,7 +75,7 @@ defmodule LightningWeb.AdaptorControllerTest do
            conn: conn
          } do
       {:ok, _b} =
-        AdaptorsRepo.upsert_adaptor(%{
+        Catalogue.upsert_adaptor(%{
           name: "@openfn/language-b",
           source: :npm,
           latest_version: "1.0.0",
@@ -83,7 +83,7 @@ defmodule LightningWeb.AdaptorControllerTest do
         })
 
       {:ok, _a} =
-        AdaptorsRepo.upsert_adaptor(%{
+        Catalogue.upsert_adaptor(%{
           name: "@openfn/language-a",
           source: :npm,
           latest_version: "1.0.0",
@@ -94,7 +94,7 @@ defmodule LightningWeb.AdaptorControllerTest do
       [first_etag] = get_resp_header(first, "etag")
 
       {:ok, _b} =
-        AdaptorsRepo.upsert_adaptor(%{
+        Catalogue.upsert_adaptor(%{
           name: "@openfn/language-b",
           source: :npm,
           latest_version: "1.0.0",

@@ -1193,8 +1193,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     |> Enum.sort_by(&String.downcase(elem(&1, 0)), :asc)
   end
 
-  defp adaptor_type_option(%{name: name} = meta) do
-    {name, name, AdaptorIconURL.build(name, meta, :square), nil}
+  defp adaptor_type_option(%Adaptors.Package{name: name} = pkg) do
+    {name, name, AdaptorIconURL.build(name, pkg, :square), nil}
   end
 
   defp list_users do

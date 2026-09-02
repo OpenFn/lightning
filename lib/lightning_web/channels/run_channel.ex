@@ -100,9 +100,13 @@ defmodule LightningWeb.RunChannel do
 
   @impl true
   def handle_in("fetch:plan", _payload, socket) do
-    %{run: run} = socket.assigns
+    case RunWithOptions.render(socket.assigns.run) do
+      {:ok, plan} ->
+        reply_with(socket, {:ok, plan})
 
-    reply_with(socket, {:ok, RunWithOptions.render(run)})
+      {:error, reason} ->
+        reply_with(socket, {:error, %{reason: "adaptor_#{reason}"}})
+    end
   end
 
   def handle_in("run:start", payload, socket) do

@@ -1,23 +1,10 @@
 defmodule Lightning.Adaptors.Config do
   @moduledoc """
-  Stateless runtime configuration for the `Lightning.Adaptors.*` subsystem.
+  Runtime configuration for the adaptors subsystem, read from
+  `config :lightning, Lightning.Adaptors` on every call.
 
-  Every helper is a thin wrapper around `Application.get_env/3`. It is the
-  single runtime source of truth for which strategy is active, how often
-  the scheduler ticks, the per-call cache fetch deadline, the icon cache
-  root, and per-strategy opt blocks.
-
-  ## Application key layout
-
-  Two-tier:
-
-    * `:lightning, Lightning.Adaptors` — subsystem-wide knobs
-      (`:strategy`, `:refresh_interval`, `:cache_timeout_ms`, `:icon_path`).
-    * `:lightning, <strategy_module>` — each strategy owns its own
-      Application key for its own knobs; read via `strategy_opts/1`.
-
-  No GenServer, no ETS, no `:persistent_term` — every call is a fresh
-  `Application.get_env/3`.
+  Strategy-specific options live under the strategy module's own key;
+  see `strategy_opts/1`.
   """
 
   @parent_key Lightning.Adaptors
@@ -26,6 +13,7 @@ defmodule Lightning.Adaptors.Config do
   @default_refresh_interval :timer.hours(1)
   @default_cache_timeout_ms 15_000
   @default_icon_path {:tmp, "lightning/adaptor_icons"}
+  @default_first_load_timeout :timer.seconds(60)
 
   @doc """
   The active strategy module. Defaults to `Lightning.Adaptors.NPM`.
@@ -36,16 +24,12 @@ defmodule Lightning.Adaptors.Config do
   end
 
   @doc """
-  Atom mapping of `strategy/0`: `:local` for `Lightning.Adaptors.Local`,
-  `:npm` for any other strategy module.
+  Returns `:local` for `Lightning.Adaptors.Local` and `:npm` for any
+  other strategy.
   """
-  @spec current_source() :: :local | :npm
-  def current_source do
-    case strategy() do
-      Lightning.Adaptors.Local -> :local
-      _other -> :npm
-    end
-  end
+  @spec source_for(module()) :: :local | :npm
+  def source_for(Lightning.Adaptors.Local), do: :local
+  def source_for(_strategy), do: :npm
 
   @doc """
   Scheduler tick interval in milliseconds. Defaults to one hour.
@@ -56,7 +40,8 @@ defmodule Lightning.Adaptors.Config do
   end
 
   @doc """
-  Per-`Cachex.fetch` courier deadline in milliseconds. Defaults to 15s.
+  How long a read waits for a cache fill, in milliseconds. Defaults to
+  15 seconds.
   """
   @spec cache_timeout_ms() :: non_neg_integer()
   def cache_timeout_ms do
@@ -64,15 +49,8 @@ defmodule Lightning.Adaptors.Config do
   end
 
   @doc """
-  Resolved filesystem path for the icon cache.
-
-  Accepts either:
-
-    * `{:tmp, suffix}` — resolved against `System.tmp_dir!/0` at call
-      time so the default does not bake a container-specific tmp path
-      into a compiled release.
-    * a plain binary path — returned verbatim.
-
+  Filesystem path of the icon cache. A `{:tmp, suffix}` value is joined
+  to `System.tmp_dir!/0` at call time; a binary is returned as is.
   Defaults to `{:tmp, "lightning/adaptor_icons"}`.
   """
   @spec icon_path() :: Path.t()
@@ -84,9 +62,18 @@ defmodule Lightning.Adaptors.Config do
   end
 
   @doc """
-  Per-strategy keyword opts. Parameterised on the strategy module — each
-  strategy is its own Application key, not nested under the parent.
-  Returns `[]` when the strategy's Application key is unset.
+  Bound, in milliseconds, on how long `Lightning.Adaptors.ensure_loaded/1`
+  and `Lightning.Adaptors.fetch_adaptor/2` block waiting for the
+  catalogue's first load. Defaults to 60 seconds.
+  """
+  @spec first_load_timeout() :: non_neg_integer()
+  def first_load_timeout do
+    get(:first_load_timeout, @default_first_load_timeout)
+  end
+
+  @doc """
+  Options configured under the strategy module's own application key, or
+  `[]` when unset.
   """
   @spec strategy_opts(module()) :: keyword()
   def strategy_opts(strategy_mod) when is_atom(strategy_mod) do

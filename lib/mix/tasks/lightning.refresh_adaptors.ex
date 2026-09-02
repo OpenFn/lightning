@@ -1,35 +1,27 @@
 defmodule Mix.Tasks.Lightning.RefreshAdaptors do
   @shortdoc "On-demand adaptor metadata refresh"
   @moduledoc """
-  Trigger an immediate adaptor refresh from the command line.
-
-  Use cases:
-
-    * Dev re-scan — force a re-scan after adding local adaptors
-    * Ops force-pull — pull latest metadata without waiting for the scheduler tick
+  Trigger an adaptor catalogue refresh from the command line.
 
   ## Usage
 
       mix lightning.refresh_adaptors
       mix lightning.refresh_adaptors --name @openfn/language-http
 
-  The first form calls `Lightning.Adaptors.refresh_now/0`, refreshing all
-  adaptors. The second form calls `Lightning.Adaptors.refresh_package/1`
-  to force a single-adaptor refresh, bypassing the ledger diff.
-
-  Both forms block until completion. The Scheduler is wrapped in
-  `HighlanderPG` and registered globally, so the call routes through
-  Erlang distribution to whichever node currently holds the lease — the
-  CLI can be run from any node in the cluster.
+  Without `--name`, starts a refresh cycle (or joins one already running)
+  and waits for it to finish. With `--name`, refetches that one adaptor.
 
   ## Exit codes
 
-    * `0` — success
-    * `1` — package name not found (possible typo)
-    * `2` — other error
+    * `0` - success
+    * `1` - package name not found
+    * `2` - any other error, including a listing that returned no adaptors
+      or a refresh that took longer than 10 minutes
   """
 
   use Mix.Task
+
+  @await_timeout :timer.minutes(10)
 
   @impl Mix.Task
   def run(argv) do
@@ -37,13 +29,45 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptors do
 
     {opts, _args} = OptionParser.parse!(argv, strict: [name: :string])
 
-    result =
-      case opts[:name] do
-        nil -> Lightning.Adaptors.refresh_now()
-        pkg -> Lightning.Adaptors.refresh_package(pkg)
-      end
+    case opts[:name] do
+      nil -> refresh_all()
+      pkg -> refresh_one(pkg)
+    end
+  end
 
-    case result do
+  defp refresh_all do
+    Mix.shell().info("Refreshing adaptors (waiting up to 10 minutes)...")
+    started = System.monotonic_time(:millisecond)
+
+    case Lightning.Adaptors.refresh(Lightning.Adaptors,
+           await: true,
+           timeout: @await_timeout
+         ) do
+      {:ok, %{listed: 0}} ->
+        Mix.shell().error("Refresh completed but the source listed no adaptors.")
+        exit({:shutdown, 2})
+
+      {:ok, counts} ->
+        duration_s = div(System.monotonic_time(:millisecond) - started, 1000)
+
+        Mix.shell().info(
+          "Refresh complete: listed #{counts.listed}, " <>
+            "fetched #{counts.fetched}, errors #{counts.errors} " <>
+            "(#{duration_s}s)."
+        )
+
+      {:error, :timeout} ->
+        Mix.shell().error("Refresh did not complete within 10 minutes.")
+        exit({:shutdown, 2})
+
+      {:error, reason} ->
+        Mix.shell().error("Refresh failed: #{inspect(reason)}")
+        exit({:shutdown, 2})
+    end
+  end
+
+  defp refresh_one(pkg) do
+    case Lightning.Adaptors.refresh_package(pkg) do
       :ok ->
         Mix.shell().info("Adaptors refreshed successfully.")
 

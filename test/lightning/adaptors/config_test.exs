@@ -5,19 +5,14 @@ defmodule Lightning.Adaptors.ConfigTest do
 
   @parent_key Lightning.Adaptors
 
-  describe "current_source/0" do
-    test "returns :local when strategy is Lightning.Adaptors.Local" do
-      put_parent(:strategy, Lightning.Adaptors.Local)
-
-      assert Config.current_source() == :local
+  describe "source_for/1" do
+    test "returns :local for Lightning.Adaptors.Local" do
+      assert Config.source_for(Lightning.Adaptors.Local) == :local
     end
 
     test "returns :npm for any other strategy module" do
-      put_parent(:strategy, Lightning.Adaptors.NPM)
-      assert Config.current_source() == :npm
-
-      put_parent(:strategy, SomeOther.Strategy)
-      assert Config.current_source() == :npm
+      assert Config.source_for(Lightning.Adaptors.NPM) == :npm
+      assert Config.source_for(SomeOther.Strategy) == :npm
     end
   end
 

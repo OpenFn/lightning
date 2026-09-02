@@ -975,6 +975,62 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "save_workflow/3 adaptor validation" do
+    test "allows a job adaptor change to a known adaptor" do
+      user = insert(:user)
+      project = insert(:project)
+      insert(:adaptor, name: "@openfn/language-common")
+
+      changeset =
+        Lightning.Workflows.Workflow.changeset(
+          %Lightning.Workflows.Workflow{},
+          %{
+            name: "ungated",
+            project_id: project.id,
+            jobs: [
+              %{name: "job", body: "fn()", adaptor: "@openfn/language-common"}
+            ]
+          }
+        )
+
+      assert {:ok, _workflow} = Workflows.save_workflow(changeset, user)
+    end
+
+    test "refuses an adaptor the catalogue does not list" do
+      user = insert(:user)
+      project = insert(:project)
+      insert(:adaptor, name: "@openfn/language-common")
+
+      changeset =
+        Lightning.Workflows.Workflow.changeset(
+          %Lightning.Workflows.Workflow{},
+          %{
+            name: "gated",
+            project_id: project.id,
+            jobs: [
+              %{name: "job", body: "fn()", adaptor: "@openfn/language-evil"}
+            ]
+          }
+        )
+
+      assert {:error, %Ecto.Changeset{} = cs} =
+               Workflows.save_workflow(changeset, user)
+
+      assert %{jobs: [%{adaptor: ["is not a recognised adaptor"]}]} =
+               errors_on(cs)
+    end
+
+    test "a save without adaptor changes does not consult the catalogue" do
+      user = insert(:user)
+      workflow = insert(:workflow)
+
+      changeset =
+        Lightning.Workflows.Workflow.changeset(workflow, %{name: "renamed"})
+
+      assert {:ok, _workflow} = Workflows.save_workflow(changeset, user)
+    end
+  end
+
   describe "save_workflow/3 rescue" do
     setup do
       Mimic.copy(Lightning.WorkflowVersions)

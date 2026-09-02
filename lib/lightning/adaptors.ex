@@ -1,138 +1,240 @@
 defmodule Lightning.Adaptors do
   @moduledoc """
-  Public interface to the adaptor catalogue.
+  The adaptor catalogue: which npm adaptors exist, their versions, schemas
+  and icons.
 
-  ## Catalogue reads
-
-    * `packages/0,1` - every adaptor for the active source
-    * `versions/2` - published versions of one adaptor
-    * `get_adaptor/1` - one adaptor as a `Lightning.Adaptors.Package`,
-      or `nil`
-    * `catalogue/0` and `catalogue_stamp/0` - the full catalogue and its
-      ETag basis
-    * `schema/1,2` and `icon/2,3` - per-adaptor assets
+  A scheduler fetches the catalogue from the configured source and
+  persists it. Reads check an in-memory cache first and the database
+  second. The first read against an empty catalogue triggers the initial
+  load and waits for it, bounded by the first-load timeout, and returns an
+  error if the load does not complete in time.
 
   ## Adaptor specs
 
-  An adaptor spec is the `"name@version"` string a job stores, where the
-  version may be a semver, `latest`, `local`, or absent.
+  A spec is the `name@version` string a job stores, where the version is
+  a semver or one of two sentinels: `latest` resolves to the catalogue's
+  current version when the job runs, and `local` points the worker at an
+  adaptor on its own filesystem. The version may also be omitted.
 
-    * `parse_spec/1` - split a spec into `{name, version}`
-    * `valid_format?/1` - does a string match the strict spec format
-    * `resolve_version/2` - turn `latest`/`local` into a concrete version
-    * `to_wire/1` - render a spec for the worker's install step
+  ## Configuration
 
-  ## Refreshing
+  Under `config :lightning, Lightning.Adaptors`:
 
-    * `refresh_now/0,1`, `refresh_package/1,2`, `refresh_icons/0,1`
-    * `seed_from_file/2` - populate the catalogue from a JSON snapshot,
-      used by `mix lightning.seed_adaptors_from_file` and
-      `Lightning.Release`
+    * `:strategy` - the module that fetches from the source
+    * `:refresh_interval` - how often the scheduler re-checks the source,
+      in milliseconds; `0` disables the periodic tick
+    * `:first_load_timeout` - how long a read waits for the initial load
+    * `:cache_timeout_ms` - how long a read waits for a cache fill
+    * `:icon_path` - where fetched icons are written
 
-  Most functions come in a dual-arity shape: the zero-/single-arg form
-  passes the compile-time default supervisor name `@sup`; the extra-arity
-  form accepts an explicit supervisor name for test isolation.
-  `get_adaptor/1`, `resolve_version/2`, `catalogue/0`, and
-  `catalogue_stamp/0` are exceptions — none of them go through `Store`'s
-  cache process. `get_adaptor/1` and `resolve_version/2` read the active
-  source from `Config.current_source/0` (a process-independent
-  `Application.get_env` read), so there's nothing to swap. `catalogue/0`
-  and `catalogue_stamp/0` read it from `AdaptorsSupervisor.source/1`
-  instead — a boot-time snapshot owned by a running supervisor — so
-  those two are only correct for `@sup`, the default supervisor.
+  Defaults are in `Lightning.Adaptors.Config`.
+
+  ## Testing
+
+  Every function that talks to a running process takes the supervisor
+  name as an optional first argument, defaulting to `Lightning.Adaptors`.
+  Start a `Lightning.Adaptors.Supervisor` under another name and pass
+  that name to run a test against its own catalogue and cache.
   """
 
+  alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Config
   alias Lightning.Adaptors.PackageName
-  alias Lightning.Adaptors.Repo
   alias Lightning.Adaptors.Scheduler
   alias Lightning.Adaptors.Store
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   defmodule Package do
     @moduledoc """
-    One catalogue adaptor, as seen by callers outside
-    `Lightning.Adaptors`. Not wire-serialised and not an `Ecto.Schema`.
+    One catalogue adaptor.
     """
+
+    defmodule Version do
+      @moduledoc """
+      One published version of a catalogue adaptor.
+      """
+
+      @type t :: %__MODULE__{
+              version: String.t(),
+              integrity: String.t() | nil,
+              size_bytes: integer() | nil,
+              published_at: DateTime.t() | nil,
+              deprecated: boolean()
+            }
+
+      defstruct [
+        :version,
+        :integrity,
+        :size_bytes,
+        :published_at,
+        deprecated: false
+      ]
+    end
 
     @type t :: %__MODULE__{
             name: String.t(),
             source: :npm | :local,
-            latest_version: String.t() | nil
+            latest_version: String.t() | nil,
+            description: String.t() | nil,
+            deprecated: boolean(),
+            icon_square_ext: String.t() | nil,
+            icon_rectangle_ext: String.t() | nil,
+            icon_square_sha256: binary() | nil,
+            icon_rectangle_sha256: binary() | nil
           }
 
-    defstruct [:name, :source, :latest_version]
+    defstruct [
+      :name,
+      :source,
+      :latest_version,
+      :description,
+      :icon_square_ext,
+      :icon_rectangle_ext,
+      :icon_square_sha256,
+      :icon_rectangle_sha256,
+      deprecated: false
+    ]
   end
 
   @sup Lightning.Adaptors
 
-  @type package_meta :: Store.package_meta()
-  @type version_meta :: Store.version_meta()
-
-  @spec packages() :: {:ok, [package_meta()]} | {:error, :timeout | term()}
-  def packages, do: packages(@sup)
-
-  @spec packages(atom()) :: {:ok, [package_meta()]} | {:error, :timeout | term()}
-  def packages(sup), do: Store.packages(sup)
-
-  @spec versions(atom(), String.t()) ::
-          {:ok, [version_meta()]} | {:error, term()}
-  def versions(sup, pkg), do: Store.versions(sup, pkg)
-
-  @spec schema(String.t()) :: {:ok, String.t()} | {:error, term()}
-  def schema(pkg), do: schema(@sup, pkg)
-
-  @spec schema(atom(), String.t()) :: {:ok, String.t()} | {:error, term()}
-  def schema(sup, pkg), do: Store.schema(sup, pkg)
-
-  @spec icon(String.t(), :square | :rectangle) ::
-          {:ok, Path.t()} | {:error, term()}
-  def icon(pkg, shape), do: icon(@sup, pkg, shape)
-
-  @spec icon(atom(), String.t(), :square | :rectangle) ::
-          {:ok, Path.t()} | {:error, term()}
-  def icon(sup, pkg, shape), do: Store.icon(sup, pkg, shape)
-
   @doc """
-  Full catalogue for the active source: every adaptor's `name`,
-  `latest_version`, `repository`, icon fields, and full version list.
-  Reads `Repo` directly, like `resolve_version/2`.
+  Returns every adaptor in the catalogue as `Package` structs.
   """
-  @spec catalogue() :: [Repo.catalogue_entry()]
-  def catalogue, do: Repo.catalogue(AdaptorsSupervisor.source(@sup))
-
-  @doc """
-  ETag basis for `catalogue/0` — see `Repo.catalogue_stamp/1`.
-  """
-  @spec catalogue_stamp() :: {DateTime.t() | nil, non_neg_integer()}
-  def catalogue_stamp, do: Repo.catalogue_stamp(AdaptorsSupervisor.source(@sup))
-
-  @doc """
-  One adaptor from the active source's catalogue, by bare package name.
-
-  Takes a name, not a `name@version` spec — use `parse_spec/1` first if
-  you have a spec. Returns `nil` when the catalogue has no such adaptor,
-  including when it is empty.
-  """
-  @spec get_adaptor(String.t()) :: Package.t() | nil
-  def get_adaptor(name) when is_binary(name) do
-    case Repo.get_adaptor(name, Config.current_source()) do
-      nil ->
-        nil
-
-      adaptor ->
-        %Package{
-          name: adaptor.name,
-          source: adaptor.source,
-          latest_version: adaptor.latest_version
-        }
+  @spec packages(atom()) :: {:ok, [Package.t()]} | {:error, :timeout | term()}
+  def packages(sup \\ @sup) do
+    with {:ok, metas} <- Store.packages(sup) do
+      source = AdaptorsSupervisor.source(sup)
+      {:ok, Enum.map(metas, &to_package(&1, source))}
     end
   end
 
   @doc """
-  Split an adaptor spec into `{name, version}`, with `version` `nil` when
-  the spec carries none. Returns `{nil, nil}` for a string that isn't a
-  well-formed spec.
+  Returns the credential schema of the adaptor named `pkg`, as a JSON
+  binary.
+  """
+  @spec schema(atom(), String.t()) :: {:ok, String.t()} | {:error, term()}
+  def schema(sup \\ @sup, pkg), do: Store.schema(sup, pkg)
+
+  @doc """
+  Returns the on-disk path of the adaptor's `:square` or `:rectangle`
+  icon, fetching it on the first request.
+  """
+  @spec icon(atom(), String.t(), :square | :rectangle) ::
+          {:ok, Path.t()} | {:error, term()}
+  def icon(sup \\ @sup, pkg, shape), do: Store.icon(sup, pkg, shape)
+
+  @doc """
+  Returns every adaptor with its full version list, uncached.
+  """
+  @spec catalogue(atom()) :: [Catalogue.catalogue_entry()]
+  def catalogue(sup \\ @sup),
+    do: Catalogue.catalogue(AdaptorsSupervisor.source(sup))
+
+  @doc """
+  Returns `{latest_updated_at, count}` for the catalogue, the basis of the
+  ETag served with `catalogue/1`.
+  """
+  @spec catalogue_stamp(atom()) :: {DateTime.t() | nil, non_neg_integer()}
+  def catalogue_stamp(sup \\ @sup),
+    do: Catalogue.catalogue_stamp(AdaptorsSupervisor.source(sup))
+
+  @doc """
+  Returns the adaptor named `name`, or `nil`.
+
+  Takes a bare package name, not a spec; see `parse_spec/1`. Never waits
+  for the catalogue to load; see `fetch_adaptor/2` for that.
+  """
+  @spec get_adaptor(atom(), String.t()) :: Package.t() | nil
+  def get_adaptor(sup \\ @sup, name) when is_binary(name),
+    do: lookup(sup, name)
+
+  @doc """
+  Returns `{:ok, adaptor}` for the adaptor named `name`, waiting for the
+  catalogue's first load if it has never loaded.
+
+  Errors:
+
+    * `{:error, :not_found}` - the loaded catalogue has no such adaptor
+    * `{:error, :timeout}` - the first load did not finish within
+      `Lightning.Adaptors.Config.first_load_timeout/0`
+    * `{:error, :unavailable}` - no Scheduler process is reachable
+    * `{:error, :not_ready}` - the load ran but left the catalogue empty
+  """
+  @spec fetch_adaptor(atom(), String.t()) ::
+          {:ok, Package.t()}
+          | {:error, :not_found | :timeout | :unavailable | :not_ready}
+  def fetch_adaptor(sup \\ @sup, name) when is_binary(name) do
+    case lookup(sup, name) do
+      %Package{} = package ->
+        {:ok, package}
+
+      nil ->
+        if ready?(sup),
+          do: {:error, :not_found},
+          else: load_then_fetch(sup, name)
+    end
+  end
+
+  defp load_then_fetch(sup, name) do
+    with :ok <- load(sup) do
+      case lookup(sup, name) do
+        %Package{} = package -> {:ok, package}
+        nil -> {:error, :not_found}
+      end
+    end
+  end
+
+  # Cache first, then the row itself: the cached list can lag a Scheduler
+  # write until the Invalidator drops it.
+  defp lookup(sup, name) do
+    source = AdaptorsSupervisor.source(sup)
+
+    cached =
+      case Store.packages(sup) do
+        {:ok, metas} -> Enum.find(metas, &(&1.name == name))
+        {:error, _} -> nil
+      end
+
+    case cached || Catalogue.get_adaptor(name, source) do
+      nil -> nil
+      meta -> to_package(meta, source)
+    end
+  end
+
+  defp to_package(meta, source) do
+    struct(Package, meta |> Map.delete(:__struct__) |> Map.put(:source, source))
+  end
+
+  @doc """
+  Waits until the catalogue has loaded at least once, triggering the
+  first load if needed.
+
+  Returns `:ok`, or one of the `fetch_adaptor/2` errors other than
+  `:not_found`.
+  """
+  @spec ensure_loaded(atom()) ::
+          :ok | {:error, :timeout | :unavailable | :not_ready}
+  def ensure_loaded(sup \\ @sup) do
+    if ready?(sup), do: :ok, else: load(sup)
+  end
+
+  defp load(sup) do
+    case refresh(sup, await: true) do
+      {:error, :timeout} -> {:error, :timeout}
+      {:error, :unavailable} -> {:error, :unavailable}
+      # A successful cycle can still leave the source empty, and a failed
+      # one can land on rows a seed already wrote.
+      _ -> if ready?(sup), do: :ok, else: {:error, :not_ready}
+    end
+  end
+
+  defp ready?(sup),
+    do: Catalogue.max_checked_at(AdaptorsSupervisor.source(sup)) != nil
+
+  @doc """
+  Splits an adaptor spec into `{name, version}`, with `version` `nil` when
+  the spec carries none, and `{nil, nil}` for a malformed spec.
   """
   @spec parse_spec(String.t()) :: {String.t() | nil, String.t() | nil}
   def parse_spec(spec) when is_binary(spec) do
@@ -144,118 +246,120 @@ defmodule Lightning.Adaptors do
   end
 
   @doc """
-  Whether a string is a well-formed adaptor spec: a package name plus an
-  optional `@version`, with no newlines or shell metacharacters.
+  Returns whether `spec` is a well-formed adaptor spec: a package name
+  plus an optional `@version`, with no newlines or shell metacharacters.
   """
   @spec valid_format?(String.t()) :: boolean()
   def valid_format?(spec) when is_binary(spec),
     do: Regex.match?(PackageName.strict_format(), spec)
 
   @doc """
-  Render an adaptor spec for the worker's install step, resolving
-  `latest` to a concrete version and preserving `local`.
+  Renders an adaptor spec for the worker: `latest` becomes the
+  catalogue's current version, `local` is kept, and a `:local` source
+  forces `name@local`. A `nil` spec renders as `""`.
   """
-  @spec to_wire(String.t() | nil) :: String.t()
-  defdelegate to_wire(spec), to: PackageName
+  @spec to_wire(atom(), String.t() | nil) ::
+          {:ok, String.t()}
+          | {:error, :not_found | :timeout | :unavailable | :not_ready}
+  def to_wire(sup \\ @sup, spec)
 
-  @spec resolve_version(String.t(), String.t()) ::
-          {:ok, String.t()} | {:error, :not_found}
-  def resolve_version(name, requested) when requested in ["latest", "local"] do
-    case Repo.get_adaptor(name, Config.current_source()) do
-      %{latest_version: v} -> {:ok, v}
-      nil -> {:error, :not_found}
+  def to_wire(_sup, nil), do: {:ok, ""}
+
+  def to_wire(sup, spec) when is_binary(spec) do
+    source = AdaptorsSupervisor.source(sup)
+
+    case parse_spec(spec) do
+      {name, "latest"} when source != :local ->
+        with {:ok, %Package{latest_version: latest}} <- fetch_adaptor(sup, name) do
+          {:ok, PackageName.to_wire(spec, source: source, latest: latest)}
+        end
+
+      _ ->
+        {:ok, PackageName.to_wire(spec, source: source)}
     end
   end
 
-  def resolve_version(_name, version), do: {:ok, version}
+  @doc """
+  Starts a catalogue refresh, or joins one already running.
 
-  @spec refresh_now() :: :ok | {:error, term()}
-  def refresh_now, do: refresh_now(@sup)
+  Returns `:ok` as soon as the refresh is underway. With `await: true`,
+  blocks until the cycle completes, bounded by `:timeout` (default
+  `Lightning.Adaptors.Config.first_load_timeout/0`), and returns
+  `{:ok, counts}` or `{:error, reason}`; see
+  `Lightning.Adaptors.Scheduler.await_refresh/2` for the counts.
+  """
+  @spec refresh(atom(), keyword()) ::
+          :ok | {:ok, Scheduler.refresh_counts()} | {:error, term()}
+  def refresh(sup \\ @sup, opts \\ []) do
+    scheduler = AdaptorsSupervisor.global_scheduler_name(sup)
 
-  @spec refresh_now(atom()) :: :ok | {:error, term()}
-  def refresh_now(sup),
-    do: Scheduler.refresh_now(AdaptorsSupervisor.global_scheduler_name(sup))
+    if opts[:await] do
+      timeout = opts[:timeout] || Config.first_load_timeout()
+      Scheduler.await_refresh(scheduler, timeout)
+    else
+      Scheduler.refresh_now(scheduler)
+    end
+  catch
+    :exit, {:timeout, _} -> {:error, :timeout}
+    :exit, _reason -> {:error, :unavailable}
+  end
 
-  @spec refresh_package(String.t()) :: :ok | {:error, :not_found | term()}
-  def refresh_package(name) when is_binary(name), do: refresh_package(@sup, name)
-
+  @doc """
+  Refetches the adaptor named `name` from the source and persists it,
+  whether or not its version changed.
+  """
   @spec refresh_package(atom(), String.t()) ::
           :ok | {:error, :not_found | term()}
-  def refresh_package(sup, name) when is_binary(name),
-    do:
-      Scheduler.refresh_package(
-        AdaptorsSupervisor.global_scheduler_name(sup),
-        name
-      )
+  def refresh_package(sup \\ @sup, name) when is_binary(name) do
+    Scheduler.refresh_package(
+      AdaptorsSupervisor.global_scheduler_name(sup),
+      name
+    )
+  catch
+    :exit, {:timeout, _} -> {:error, :timeout}
+    :exit, _reason -> {:error, :unavailable}
+  end
 
-  @spec refresh_icons() ::
-          {:ok, %{updated: non_neg_integer(), unchanged: non_neg_integer()}}
-          | {:error, term()}
-  def refresh_icons, do: refresh_icons(@sup)
-
+  @doc """
+  Refetches every adaptor's icons and updates those whose bytes changed.
+  Returns `{:ok, %{updated: n, unchanged: m}}`.
+  """
   @spec refresh_icons(atom()) ::
           {:ok, %{updated: non_neg_integer(), unchanged: non_neg_integer()}}
           | {:error, term()}
-  def refresh_icons(sup),
-    do: Scheduler.refresh_icons(AdaptorsSupervisor.global_scheduler_name(sup))
-
-  @doc false
-  def icon_meta(name), do: icon_meta(@sup, name)
-
-  @doc false
-  def icon_meta(sup, name), do: Store.icon_meta(sup, name)
+  def refresh_icons(sup \\ @sup) do
+    Scheduler.refresh_icons(AdaptorsSupervisor.global_scheduler_name(sup))
+  catch
+    :exit, {:timeout, _} -> {:error, :timeout}
+    :exit, _reason -> {:error, :unavailable}
+  end
 
   @doc """
-  Populate the adaptor catalogue from a JSON snapshot file, without
-  reaching npm.
-
-  The file is a JSON array of adaptor records in the shape
-  `Lightning.Adaptors.Repo.upsert_adaptor/1` accepts — the same shape
-  `mix lightning.download_adaptor_registry_cache` writes.
-
-  `opts`:
-
-    * `:source` - `:npm` (default) or `:local`.
-    * `:replace` - when `true`, deletes every existing row for that
-      source before seeding, so the file becomes the source's entire
-      contents rather than a merge. The delete and every upsert run in
-      one transaction, so a bad record aborts the whole seed rather
-      than leaving the source partially replaced.
+  Returns the stored extension and sha256 of each icon shape for the
+  adaptor named `name`, without touching disk. See
+  `t:Lightning.Adaptors.Store.icon_meta/0`.
   """
-  @spec seed_from_file(Path.t(), keyword()) :: {:ok, non_neg_integer()}
-  def seed_from_file(path, opts \\ []) do
-    source = Keyword.get(opts, :source, :npm)
-    replace? = Keyword.get(opts, :replace, false)
+  @spec icon_meta(atom(), String.t()) ::
+          {:ok, Store.icon_meta()} | {:error, :not_found}
+  def icon_meta(sup \\ @sup, name), do: Store.icon_meta(sup, name)
 
-    records =
-      path
-      |> File.read!()
-      |> Jason.decode!()
-      |> Enum.map(&normalize_snapshot_record(&1, source))
+  @doc """
+  Subscribes the calling process to catalogue update broadcasts.
 
-    {:ok, _} =
-      Lightning.Repo.transaction(fn ->
-        if replace?, do: Repo.delete_all_for_source(source)
-        Enum.each(records, &Repo.upsert_adaptor/1)
-      end)
-
-    {:ok, length(records)}
+  Updates arrive as `%{event: "adaptors_updated", payload: %{names: [...]}}`
+  messages.
+  """
+  @spec subscribe_to_updates(atom()) :: :ok | {:error, term()}
+  def subscribe_to_updates(sup \\ @sup) do
+    Phoenix.PubSub.subscribe(
+      Lightning.PubSub,
+      AdaptorsSupervisor.client_topic(sup)
+    )
   end
 
-  # Top-level record keys and per-version keys map onto known schema
-  # fields, so they can be turned into existing atoms. `dependencies` and
-  # `peer_dependencies` values are left with string keys — that's the
-  # shape the `:map` columns already store.
-  defp normalize_snapshot_record(record, source) when is_map(record) do
-    record
-    |> atomize_known_keys()
-    |> Map.put(:source, source)
-    |> Map.update(:versions, [], fn versions ->
-      Enum.map(versions, &atomize_known_keys/1)
-    end)
-  end
-
-  defp atomize_known_keys(map) do
-    Map.new(map, fn {k, v} -> {String.to_existing_atom(k), v} end)
-  end
+  @doc """
+  Populates the catalogue from a JSON snapshot file. See
+  `Lightning.Adaptors.Seed.seed_from_file/2`.
+  """
+  defdelegate seed_from_file(path, opts \\ []), to: Lightning.Adaptors.Seed
 end

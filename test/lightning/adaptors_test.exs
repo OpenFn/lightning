@@ -1,10 +1,11 @@
 defmodule Lightning.AdaptorsTest do
   use Lightning.DataCase, async: false
 
+  import Eventually
   import Mox
 
   alias Lightning.Adaptors
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
+  alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Scheduler
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
@@ -17,6 +18,8 @@ defmodule Lightning.AdaptorsTest do
     start_supervised!(
       {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
     )
+
+    Lightning.AdaptorTestHelpers.clear_global_adaptors_cache()
 
     {:ok, sup: sup}
   end
@@ -95,10 +98,13 @@ defmodule Lightning.AdaptorsTest do
         {:error, :unreachable}
       end)
 
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record())
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 
-      assert {:ok, [pkg]} = Adaptors.packages(sup)
+      assert {:ok, [%Adaptors.Package{} = pkg]} =
+               Adaptors.packages(sup)
+
       assert pkg.name == "@openfn/language-http"
+      assert pkg.source == :npm
     end
 
     test "returns {:ok, []} when DB is empty", %{sup: sup} do
@@ -113,30 +119,8 @@ defmodule Lightning.AdaptorsTest do
       # `Lightning.Adaptors.StrategyMock` per `config/test.exs`. Both forms
       # resolve to `Store.packages(Lightning.Adaptors)`; equality is always
       # guaranteed regardless of cache state.
-      assert Adaptors.packages() == Adaptors.packages(Lightning.Adaptors)
-    end
-  end
-
-  describe "versions/2" do
-    test "delegates to Store.versions/2 and returns version list", %{sup: sup} do
-      stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
-        {:error, :unreachable}
-      end)
-
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record())
-
-      assert {:ok, [v]} = Adaptors.versions(sup, "@openfn/language-http")
-      assert v.version == "1.0.0"
-    end
-
-    test "returns {:error, _} for unknown adaptor when strategy unavailable", %{
-      sup: sup
-    } do
-      stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
-        {:error, :not_found}
-      end)
-
-      assert {:error, _} = Adaptors.versions(sup, "@openfn/does-not-exist")
+      assert Adaptors.packages() ==
+               Adaptors.packages(Lightning.Adaptors)
     end
   end
 
@@ -147,7 +131,7 @@ defmodule Lightning.AdaptorsTest do
       end)
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(schema_data: ~s({"type":"object"}))
         )
 
@@ -163,47 +147,17 @@ defmodule Lightning.AdaptorsTest do
       ordered_body = ~s({"a":1,"z":2,"m":3})
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(adaptor_record(schema_data: ordered_body))
+        Catalogue.upsert_adaptor(adaptor_record(schema_data: ordered_body))
 
       assert {:ok, ^ordered_body} =
                Adaptors.schema(sup, "@openfn/language-http")
     end
   end
 
-  describe "resolve_version/2" do
-    test "\"latest\" resolves from DB and returns latest_version" do
-      {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(adaptor_record(latest_version: "2.3.4"))
-
-      assert {:ok, "2.3.4"} =
-               Adaptors.resolve_version("@openfn/language-http", "latest")
-    end
-
-    test "\"local\" resolves from DB and returns latest_version" do
-      {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(adaptor_record(latest_version: "1.5.0"))
-
-      assert {:ok, "1.5.0"} =
-               Adaptors.resolve_version("@openfn/language-http", "local")
-    end
-
-    test "\"latest\" returns {:error, :not_found} when adaptor absent from DB" do
-      assert {:error, :not_found} =
-               Adaptors.resolve_version("@openfn/does-not-exist", "latest")
-    end
-
-    test "concrete semver passes through without any DB lookup" do
-      # No adaptor in DB: if a lookup occurred the result would be :not_found.
-      # Pass-through means we get {:ok, version} regardless.
-      assert {:ok, "3.0.0"} =
-               Adaptors.resolve_version("@openfn/language-http", "3.0.0")
-    end
-  end
-
   describe "get_adaptor/1" do
     test "returns a Package for an adaptor in the active source" do
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(adaptor_record(latest_version: "4.1.0"))
+        Catalogue.upsert_adaptor(adaptor_record(latest_version: "4.1.0"))
 
       assert %Adaptors.Package{
                name: "@openfn/language-http",
@@ -213,34 +167,50 @@ defmodule Lightning.AdaptorsTest do
     end
 
     test "returns nil for an adaptor absent from the catalogue" do
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record())
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 
       assert Adaptors.get_adaptor("@openfn/never-existed") == nil
     end
 
-    test "returns nil when the catalogue is empty" do
+    test "returns nil when the catalogue is empty, without triggering a refresh" do
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        flunk("get_adaptor/1 must not trigger a load")
+      end)
+
       assert Adaptors.get_adaptor("@openfn/language-http") == nil
     end
 
     test "returns nil for a row under a different source than the active one" do
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record(source: :local))
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(source: :local))
 
       assert Adaptors.get_adaptor("@openfn/language-http") == nil
     end
   end
 
   describe "to_wire/1" do
-    test "delegates to PackageName.to_wire/1" do
+    test "resolves @latest against the catalogue and passes semver through" do
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(adaptor_record(latest_version: "2.0.0"))
+        Catalogue.upsert_adaptor(adaptor_record(latest_version: "2.0.0"))
 
       assert Adaptors.to_wire("@openfn/language-http@latest") ==
-               "@openfn/language-http@2.0.0"
+               {:ok, "@openfn/language-http@2.0.0"}
 
       assert Adaptors.to_wire("@openfn/language-http@1.0.0") ==
-               "@openfn/language-http@1.0.0"
+               {:ok, "@openfn/language-http@1.0.0"}
 
-      assert Adaptors.to_wire(nil) == ""
+      assert Adaptors.to_wire(nil) == {:ok, ""}
+    end
+
+    test "returns the lookup error for an unresolvable @latest" do
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      assert Adaptors.to_wire("@openfn/never-existed@latest") ==
+               {:error, :not_found}
+    end
+
+    test "preserves the @local literal" do
+      assert Adaptors.to_wire("@openfn/language-http@local") ==
+               {:ok, "@openfn/language-http@local"}
     end
   end
 
@@ -300,7 +270,7 @@ defmodule Lightning.AdaptorsTest do
     end
   end
 
-  describe "refresh_now/1" do
+  describe "refresh/1" do
     test "delegates to Scheduler.refresh_now via global_scheduler_name/1", %{
       sup: sup
     } do
@@ -309,17 +279,43 @@ defmodule Lightning.AdaptorsTest do
       # list_adaptors is called by the background Task that :tick spawns.
       # With an empty DB the scheduler fires an init-tick immediately, so
       # we must stub before start_scheduler and drain that first tick before
-      # calling refresh_now (which triggers a second tick).
+      # calling refresh (which triggers a second tick).
       stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
         send(test_pid, :tick_ran)
         {:ok, []}
       end)
 
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
       start_scheduler(sup)
       assert_receive :tick_ran, 2000
 
-      assert :ok = Adaptors.refresh_now(sup)
+      # Let the init tick's cycle clear so refresh starts a new one instead
+      # of coalescing.
+      {:global, gname} = AdaptorsSupervisor.global_scheduler_name(sup)
+      pid = :global.whereis_name(gname)
+      assert_eventually(:sys.get_state(pid).refresh == nil, 2000)
+
+      assert :ok = Adaptors.refresh(sup)
       assert_receive :tick_ran, 2000
+      assert_eventually(:sys.get_state(pid).refresh == nil, 2000)
+    end
+
+    test "await: true returns the awaited cycle's counts", %{sup: sup} do
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:ok, []}
+      end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      start_scheduler(sup)
+
+      assert {:ok, %{listed: 0, changed: 0, fetched: 0, errors: 0}} =
+               Adaptors.refresh(sup, await: true)
     end
   end
 
@@ -327,18 +323,48 @@ defmodule Lightning.AdaptorsTest do
     test "delegates to Scheduler.refresh_package via global_scheduler_name/1", %{
       sup: sup
     } do
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn -> {:ok, []} end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
       stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _name ->
         {:ok, adaptor_record(latest_version: "2.0.0")}
       end)
 
-      start_scheduler(sup)
+      pid = start_scheduler(sup)
 
-      assert :ok = Adaptors.refresh_package(sup, "@openfn/language-http")
+      assert :ok =
+               Adaptors.refresh_package(sup, "@openfn/language-http")
+
+      assert_eventually(:sys.get_state(pid).refresh == nil, 2000)
+    end
+
+    test "returns {:error, :unavailable} when no Scheduler is running", %{
+      sup: sup
+    } do
+      :ok =
+        Supervisor.terminate_child(sup, AdaptorsSupervisor.highlander_name(sup))
+
+      assert {:error, :unavailable} =
+               Adaptors.refresh_package(sup, "@openfn/language-http")
+    end
+  end
+
+  describe "refresh_icons/1" do
+    test "returns {:error, :unavailable} when no Scheduler is running", %{
+      sup: sup
+    } do
+      :ok =
+        Supervisor.terminate_child(sup, AdaptorsSupervisor.highlander_name(sup))
+
+      assert {:error, :unavailable} = Adaptors.refresh_icons(sup)
     end
   end
 
   describe "icon_meta/1,2" do
-    test "icon_meta is @doc false for all arities" do
+    test "icon_meta is documented (it has callers in lightning_web)" do
       {:docs_v1, _, :elixir, _, _, _, docs} = Code.fetch_docs(Lightning.Adaptors)
 
       icon_meta_docs =
@@ -350,7 +376,7 @@ defmodule Lightning.AdaptorsTest do
       refute Enum.empty?(icon_meta_docs)
 
       Enum.each(icon_meta_docs, fn doc ->
-        assert {{:function, :icon_meta, _}, _, _, :hidden, _} = doc
+        assert {{:function, :icon_meta, _}, _, _, %{"en" => _}, _} = doc
       end)
     end
 
@@ -358,14 +384,16 @@ defmodule Lightning.AdaptorsTest do
       sup: sup
     } do
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             icon_square_ext: "svg",
             icon_square_sha256: :crypto.hash(:sha256, "fake-svg-bytes")
           )
         )
 
-      assert {:ok, meta} = Adaptors.icon_meta(sup, "@openfn/language-http")
+      assert {:ok, meta} =
+               Adaptors.icon_meta(sup, "@openfn/language-http")
+
       assert meta.icon_square_ext == "svg"
     end
 

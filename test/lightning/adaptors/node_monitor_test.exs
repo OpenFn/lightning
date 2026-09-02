@@ -3,7 +3,7 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
 
   import Mox
 
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
+  alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   setup :verify_on_exit!
@@ -52,7 +52,7 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
         :unreachable
       end)
 
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record())
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
       source = AdaptorsSupervisor.source(sup)
 
       send(nm_name, {:nodeup, :node@host, %{node_type: :visible}})
@@ -80,7 +80,7 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
         {:ok, %{"kept" => true}}
       )
 
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record())
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 
       send(nm_name, {:nodeup, :node@host, %{node_type: :visible}})
       :sys.get_state(nm_name)
@@ -94,7 +94,7 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
            cache: cache,
            nm_name: nm_name
          } do
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record())
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 
       send(nm_name, {:nodeup, :node@host, %{node_type: :visible}})
       :sys.get_state(nm_name)

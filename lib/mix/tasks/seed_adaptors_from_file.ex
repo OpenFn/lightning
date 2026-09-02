@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFile do
   Populate the `adaptors` table from a JSON file, without reaching npm.
 
   The file is a JSON array of adaptor records in the shape
-  `Lightning.Adaptors.Repo.upsert_adaptor/1` accepts — the same shape
+  `Lightning.Adaptors.Catalogue.upsert_adaptor/1` accepts — the same shape
   `mix lightning.download_adaptor_registry_cache` writes.
 
   ## Usage

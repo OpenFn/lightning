@@ -154,6 +154,7 @@ const logger = _logger.ns('WorkflowStore').seal();
 
 const JobShape = JobSchema.shape;
 const EdgeShape = EdgeSchema.shape;
+const SAVE_TIMEOUT_MS = 75_000;
 
 // Helper to update derived state (defined first to avoid hoisting issues)
 function updateDerivedState(draft: Workflow.State) {
@@ -1509,7 +1510,7 @@ export const createWorkflowStore = (
         saved_at: string;
         lock_version: number;
         workflow: BaseWorkflow;
-      }>(provider.channel, 'save_workflow', payload);
+      }>(provider.channel, 'save_workflow', payload, SAVE_TIMEOUT_MS);
 
       logger.debug('Saved workflow', response);
 
@@ -1554,7 +1555,7 @@ export const createWorkflowStore = (
         lock_version: number;
         repo: string;
         workflow: BaseWorkflow;
-      }>(provider.channel, 'save_and_sync', payload);
+      }>(provider.channel, 'save_and_sync', payload, SAVE_TIMEOUT_MS);
 
       logger.debug('Saved and synced workflow to GitHub', response);
 

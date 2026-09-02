@@ -57,9 +57,34 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
       assert has_element?(live, "#refresh-icons-button")
     end
 
-    test "clicking the icons button reports the refresh result", %{conn: conn} do
+    test "clicking the icons button starts the refresh and reports the result asynchronously",
+         %{conn: conn} do
       stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
         {:ok, %{}}
+      end)
+
+      {:ok, live, _html} =
+        live(conn, ~p"/settings/maintenance", on_error: :raise)
+
+      html =
+        live
+        |> element("#refresh-icons-button")
+        |> render_click()
+
+      assert html =~ "Icon refresh started."
+
+      render_async(live)
+
+      assert has_element?(
+               live,
+               "p[role=alert][phx-value-key=info]",
+               "Icon refresh complete"
+             )
+    end
+
+    test "the icons button reports a failed refresh", %{conn: conn} do
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:error, :boom}
       end)
 
       {:ok, live, _html} =
@@ -69,10 +94,12 @@ defmodule LightningWeb.MaintenanceLive.IndexTest do
       |> element("#refresh-icons-button")
       |> render_click()
 
+      render_async(live)
+
       assert has_element?(
                live,
-               "p[role=alert][phx-value-key=info]",
-               "Icon refresh complete"
+               "p[role=alert][phx-value-key=error]",
+               "Icon refresh failed"
              )
     end
   end

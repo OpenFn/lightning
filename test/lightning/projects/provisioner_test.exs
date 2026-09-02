@@ -200,6 +200,34 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
   end
 
+  describe "import_document/2 adaptor validation" do
+    test "allows the import when the adaptor is known" do
+      user = insert(:user)
+      insert(:adaptor, name: "@openfn/language-foo")
+      %{body: body} = valid_document()
+
+      body =
+        Map.update!(body, "workflows", fn workflows ->
+          Enum.map(workflows, fn workflow ->
+            Map.update!(workflow, "jobs", fn [first_job | rest] ->
+              [
+                Map.put(first_job, "adaptor", "@openfn/language-foo@1.0.0")
+                | rest
+              ]
+            end)
+          end)
+        end)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      assert {:ok, _project} = Provisioner.import_document(nil, user, body)
+    end
+  end
+
   describe "import_document/2 with a new project" do
     test "with valid data" do
       Mox.verify_on_exit!()

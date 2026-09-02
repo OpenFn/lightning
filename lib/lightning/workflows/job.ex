@@ -142,16 +142,20 @@ defmodule Lightning.Workflows.Job do
     end
   end
 
-  # `job.adaptor` reaches the worker's install step unfiltered, so an
-  # adaptor missing from the catalogue is rejected here whatever its name
-  # — an empty catalogue permits nothing.
   defp validate_known_adaptor(changeset) do
     validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
       with {name, _version} when is_binary(name) <- Adaptors.parse_spec(adaptor),
-           %Adaptors.Package{} <- Adaptors.get_adaptor(name) do
+           {:ok, _package} <- Adaptors.fetch_adaptor(name) do
         []
       else
-        _ -> [adaptor: "is not a recognised adaptor"]
+        {:error, :not_found} ->
+          [adaptor: "is not a recognised adaptor"]
+
+        {:error, _} ->
+          [adaptor: "adaptor catalogue is not ready yet, try again shortly"]
+
+        _ ->
+          [adaptor: "is not a recognised adaptor"]
       end
     end)
   end

@@ -3,7 +3,7 @@ defmodule Lightning.Adaptors.StoreTest do
 
   import Mox
 
-  alias Lightning.Adaptors.Repo, as: AdaptorsRepo
+  alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Store
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
@@ -45,7 +45,7 @@ defmodule Lightning.Adaptors.StoreTest do
       assert {:ok, ~s({"type":"object"})} =
                Store.schema(sup, "@openfn/language-http")
 
-      assert AdaptorsRepo.get_adaptor("@openfn/language-http", source) == nil
+      assert Catalogue.get_adaptor("@openfn/language-http", source) == nil
     end
 
     test "cache miss + DB hit returns DB value without calling Strategy", %{
@@ -56,7 +56,7 @@ defmodule Lightning.Adaptors.StoreTest do
       end)
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(schema_data: ~s({"type":"object"}))
         )
 
@@ -64,12 +64,14 @@ defmodule Lightning.Adaptors.StoreTest do
                Store.schema(sup, "@openfn/language-http")
     end
 
-    test "cache miss + DB miss calls Strategy once, upserts to DB, caches result",
+    test "known adaptor with missing schema calls Strategy once, upserts to DB, caches result",
          %{
            sup: sup,
            cache: cache
          } do
       source = AdaptorsSupervisor.source(sup)
+
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(schema_data: nil))
 
       expect(
         Lightning.Adaptors.StrategyMock,
@@ -84,15 +86,32 @@ defmodule Lightning.Adaptors.StoreTest do
                Store.schema(sup, "@openfn/language-http")
 
       assert %{schema_data: ~s({"type":"object"})} =
-               AdaptorsRepo.get_adaptor("@openfn/language-http", source)
+               Catalogue.get_adaptor("@openfn/language-http", source)
 
       assert {:ok, {:ok, ~s({"type":"object"})}} =
                Cachex.get(cache, {:schema, "@openfn/language-http", source})
     end
 
+    test "unknown adaptor returns {:error, :not_found} without calling Strategy or minting a row",
+         %{sup: sup, cache: cache} do
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 0, fn _ ->
+        :unreachable
+      end)
+
+      source = AdaptorsSupervisor.source(sup)
+
+      assert {:error, :not_found} = Store.schema(sup, "@openfn/never-existed")
+      assert Catalogue.get_adaptor("@openfn/never-existed", source) == nil
+
+      assert {:ok, nil} =
+               Cachex.get(cache, {:schema, "@openfn/never-existed", source})
+    end
+
     test "three concurrent calls coalesce to one Strategy call", %{sup: sup} do
       name = "@openfn/language-http"
       test_pid = self()
+
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(schema_data: nil))
 
       expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 1, fn ^name ->
         # Brief sleep so the other two tasks queue up in Cachex's courier.
@@ -128,6 +147,8 @@ defmodule Lightning.Adaptors.StoreTest do
          } do
       source = AdaptorsSupervisor.source(sup)
 
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(schema_data: nil))
+
       expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 1, fn _ ->
         {:error, :upstream_error}
       end)
@@ -160,7 +181,7 @@ defmodule Lightning.Adaptors.StoreTest do
       ordered_body = ~s({"a":1,"z":2,"m":3})
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(adaptor_record(schema_data: ordered_body))
+        Catalogue.upsert_adaptor(adaptor_record(schema_data: ordered_body))
 
       assert {:ok, ^ordered_body} = Store.schema(sup, "@openfn/language-http")
     end
@@ -174,7 +195,7 @@ defmodule Lightning.Adaptors.StoreTest do
       end)
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             versions: [version_record("1.0.0"), version_record("1.1.0")]
           )
@@ -186,11 +207,14 @@ defmodule Lightning.Adaptors.StoreTest do
       assert Enum.all?(versions, &Map.has_key?(&1, :deprecated))
     end
 
-    test "cache miss + DB miss calls Strategy and caches projected versions", %{
-      sup: sup,
-      cache: cache
-    } do
+    test "known adaptor with no version rows calls Strategy and caches projected versions",
+         %{
+           sup: sup,
+           cache: cache
+         } do
       source = AdaptorsSupervisor.source(sup)
+
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(versions: []))
 
       expect(
         Lightning.Adaptors.StrategyMock,
@@ -211,6 +235,45 @@ defmodule Lightning.Adaptors.StoreTest do
                Cachex.get(cache, {:versions, "@openfn/language-http", source})
 
       assert length(cached_versions) == 2
+
+      for cached <- cached_versions do
+        assert Map.keys(cached) |> Enum.sort() ==
+                 [:deprecated, :integrity, :published_at, :size_bytes, :version]
+      end
+    end
+
+    test "a fetched record whose name differs from the requested name is refused",
+         %{sup: sup} do
+      source = AdaptorsSupervisor.source(sup)
+
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(versions: []))
+
+      expect(
+        Lightning.Adaptors.StrategyMock,
+        :fetch_adaptor,
+        1,
+        fn "@openfn/language-http" ->
+          {:ok, adaptor_record(name: "@openfn/language-impostor")}
+        end
+      )
+
+      assert {:error, {:name_mismatch, "@openfn/language-impostor"}} =
+               Store.versions(sup, "@openfn/language-http")
+
+      assert Catalogue.get_adaptor("@openfn/language-impostor", source) == nil
+      assert Catalogue.list_versions("@openfn/language-http", source) == []
+    end
+
+    test "unknown adaptor returns {:error, :not_found} without calling Strategy or minting a row",
+         %{sup: sup} do
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 0, fn _ ->
+        :unreachable
+      end)
+
+      source = AdaptorsSupervisor.source(sup)
+
+      assert {:error, :not_found} = Store.versions(sup, "@openfn/never-existed")
+      assert Catalogue.get_adaptor("@openfn/never-existed", source) == nil
     end
   end
 
@@ -233,7 +296,7 @@ defmodule Lightning.Adaptors.StoreTest do
       sup: sup,
       cache: cache
     } do
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record())
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 
       assert {:ok, [pkg]} = Store.packages(sup)
       assert pkg.name == "@openfn/language-http"
@@ -258,7 +321,7 @@ defmodule Lightning.Adaptors.StoreTest do
       name = unique_name("disk-hit")
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: name,
             icon_square_ext: "png",
@@ -291,7 +354,7 @@ defmodule Lightning.Adaptors.StoreTest do
       name = unique_name("disk-miss")
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: name,
             icon_square_ext: "png",
@@ -320,7 +383,7 @@ defmodule Lightning.Adaptors.StoreTest do
       name = unique_name("err")
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: name,
             icon_square_ext: "png",
@@ -345,7 +408,7 @@ defmodule Lightning.Adaptors.StoreTest do
       name = unique_name("coalesce")
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: name,
             icon_square_ext: "png",
@@ -381,7 +444,7 @@ defmodule Lightning.Adaptors.StoreTest do
       name_b = unique_name("parB")
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: name_a,
             icon_square_ext: "png",
@@ -390,7 +453,7 @@ defmodule Lightning.Adaptors.StoreTest do
         )
 
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             name: name_b,
             icon_square_ext: "png",
@@ -454,7 +517,7 @@ defmodule Lightning.Adaptors.StoreTest do
       cache: cache
     } do
       {:ok, _} =
-        AdaptorsRepo.upsert_adaptor(
+        Catalogue.upsert_adaptor(
           adaptor_record(
             icon_square_ext: "svg",
             icon_square_sha256: :crypto.hash(:sha256, "fake-svg-bytes")
@@ -478,7 +541,7 @@ defmodule Lightning.Adaptors.StoreTest do
       sup: sup,
       cache: cache
     } do
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record())
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 
       assert :ok = Store.warm_from_repo(sup)
 
@@ -506,7 +569,7 @@ defmodule Lightning.Adaptors.StoreTest do
         {:ok, %{"kept" => true}}
       )
 
-      {:ok, _} = AdaptorsRepo.upsert_adaptor(adaptor_record())
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
       assert :ok = Store.warm_from_repo(sup)
 
       assert {:ok, {:ok, %{"kept" => true}}} =
