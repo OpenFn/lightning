@@ -142,6 +142,11 @@ defmodule Lightning.Workflows.Job do
     end
   end
 
+  # Rejects an adaptor the catalogue doesn't know about, so an unknown
+  # package cannot be persisted on a job. `fetch_adaptor` returns
+  # `:not_found` once the catalogue has loaded and genuinely lacks the
+  # package, but any other error means the catalogue itself isn't ready
+  # yet, so that case gets its own, retry-able message.
   defp validate_known_adaptor(changeset) do
     validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
       with {name, _version} when is_binary(name) <- Adaptors.parse_spec(adaptor),

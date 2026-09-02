@@ -131,7 +131,7 @@ bin/adaptor_cache scenario restore drill-1   # back to exactly that state
 ```
 
 Scenarios live under `tooling/adaptor_cache/scenarios/<name>/` and stay
-untracked (not checked into git) for now.
+untracked (not checked into git).
 
 ## Caveats
 

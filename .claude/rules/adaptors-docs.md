@@ -19,13 +19,16 @@ paths:
 
 Most of `.context/adaptors/` is archaeology from designs that were abandoned before they
 shipped. Grep will find it and it reads convincingly. Everything at the top level of that
-folder is current, and there are five things:
+folder is current, and there are six things:
 
 - `README.md` — the entry point, and the shortest thing to read.
-- `ATLAS.md` — the architecture in seven diagrams, stamped with the commit it describes.
+- `ATLAS.md` — the architecture in eight diagrams, stamped with the commit it describes.
   Start here to understand the shape of the subsystem.
 - `REWRITE-2026-05.md` — the canonical spec. Per-callback contracts and the reasoning behind
   each decision. Grep it, don't read it end to end.
+- `BEHAVIOURS.md` — the subsystem's promises, one section per behaviour, each stating what
+  holds today and what observation would settle it. Read it before treating something as a
+  gap nobody noticed.
 - `07-channel-live-update-findings-2026-06-03.md` — two decisions still open, still blocking.
 - `NOTES.md` — a running log of open questions and irregularities hit while working on the
   subsystem, newest entry on top. Dated entries, none of them acted on yet. Read it before
@@ -42,8 +45,8 @@ Live status is the PR, not the folder: `gh pr view 4801 --json body -q .body`. D
 reconstruct that checklist anywhere else, and don't infer completion state from the archived
 phase-A/phase-B PRDs — both phases shipped, so those describe code that already exists.
 
-If you change the subsystem's shape, update `ATLAS.md` and move its commit stamp. The reason
-that folder needed archiving is that nobody did this last time.
+If you change the subsystem's shape, update `ATLAS.md` and move its commit stamp. A stale
+architecture diagram is worse than none, because it misleads with confidence.
 
 Process and naming conventions for this subsystem are a separate rule:
 `.claude/rules/adaptors-otp.md`.

@@ -168,7 +168,7 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
 
     repos
     |> Enum.flat_map(&local_packages/1)
-    # First occurrence wins, matching AdaptorRegistry's repo precedence.
+    # First occurrence wins, matching Lightning.Adaptors.Local's repo precedence.
     |> Enum.uniq_by(fn {name, _path} -> name end)
     |> Enum.map(fn {name, path} -> persist_local_schema(dir, name, path) end)
   end

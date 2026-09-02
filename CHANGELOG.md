@@ -167,9 +167,7 @@ and this project adheres to
   upserts a JSON array of adaptor records (the shape
   `mix lightning.adaptors.snapshot` or `mix lightning.adaptors.dump` write)
   straight into the adaptors table; `--replace` makes the file the source's
-  entire contents instead of merging into it. `mix lightning.adaptors.dump`
-  writes the current catalogue back out to a file, for mirroring an online
-  instance's catalogue into an airgapped one.
+  entire contents instead of merging into it.
 
 ### Fixed
 

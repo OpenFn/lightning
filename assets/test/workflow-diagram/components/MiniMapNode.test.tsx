@@ -3,7 +3,7 @@
  *
  * Verifies that the minimap renders job icons sourced from the AdaptorStore
  * via useAdaptorIconUrl, with the rect-only placeholder fallback when the
- * URL is null. Trigger rendering is unaffected.
+ * URL is null.
  */
 
 import { render } from '@testing-library/react';

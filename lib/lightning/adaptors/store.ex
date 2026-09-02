@@ -309,9 +309,9 @@ defmodule Lightning.Adaptors.Store do
 
   defp project_field(value, _field), do: value
 
-  # Strategies should emit `schema_data` as a JSON binary, but legacy
-  # call paths (and tests) may still hand us a map. Normalize here so
-  # the cached value matches what subsequent DB-backed reads return.
+  # The real strategies already encode schema_data to a JSON binary, but
+  # a strategy is still free to hand back a map, so normalize here to
+  # keep the cached value consistent with what a DB-backed read returns.
   defp normalize_schema_data(%{schema_data: data} = record)
        when is_map(data) and not is_struct(data) do
     %{record | schema_data: Jason.encode!(data)}

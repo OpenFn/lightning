@@ -561,15 +561,14 @@ defmodule Lightning.Runs.Handlers do
       |> Repo.insert()
     end
 
-    # For back compat: older workers JSON-encode output_dataclip into a string
-    # before sending it (Lightning then decodes it); newer workers send the
-    # value already decoded. A bare string is ambiguous either way — e.g. a
-    # job can legitimately return "24", "true", or "{}" as its literal state
-    # — so we try to parse it as JSON and, if that fails, fall back to the
-    # string as-is. This can misclassify a literal string that happens to
-    # look like JSON (a job returning the string "24" ends up stored as the
-    # number 24), but returning a bare string as step state is already an
-    # edge case we're comfortable accepting the ambiguity on for now.
+    # Older workers JSON-encode output_dataclip into a string before sending
+    # it; newer workers send it already decoded. A bare string is ambiguous
+    # either way — a job can legitimately return "24", "true", or "{}" as
+    # its literal state — so we try to JSON-decode it and fall back to the
+    # raw string if that fails. A literal string that happens to look like
+    # JSON (a job returning the string "24") ends up stored as the decoded
+    # value instead; we accept that ambiguity since returning a bare string
+    # as step state is already rare.
     defp maybe_decode_dataclip(value) when is_binary(value) do
       case Jason.decode(value) do
         {:ok, decoded} -> decoded
