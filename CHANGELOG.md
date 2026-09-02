@@ -139,6 +139,12 @@ and this project adheres to
   ```
 - Credential schemas are read from the adaptors registry rather than the on-disk
   `schemas_path`. [#4801](https://github.com/OpenFn/lightning/pull/4801)
+- The adaptor catalogue the workflow editor's picker reads is cached in memory
+  alongside the ETag that describes it, so an unchanged catalogue is answered
+  without querying Postgres or rebuilding the payload, and a matching
+  `If-None-Match` costs no database work at all. The cache is dropped whenever
+  an adaptor changes, and pre-warmed when a node rejoins the cluster.
+  [#CON-131](https://linear.app/openfn/issue/CON-131)
 
 ### Removed
 
@@ -155,6 +161,11 @@ and this project adheres to
 
 ### Fixed
 
+- Seeding adaptors from a snapshot file (`mix lightning.seed_adaptors_from_file`
+  or `Lightning.Release.seed_adaptors/2`) now announces what it changed once the
+  seed commits, so every node drops its stale adaptor caches instead of serving
+  pre-seed data until the next refresh. With `--replace`, adaptors the file
+  dropped are announced too. [#CON-131](https://linear.app/openfn/issue/CON-131)
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.

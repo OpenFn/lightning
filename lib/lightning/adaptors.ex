@@ -125,19 +125,18 @@ defmodule Lightning.Adaptors do
   def icon(sup \\ @sup, pkg, shape), do: Store.icon(sup, pkg, shape)
 
   @doc """
-  Returns every adaptor with its full version list, uncached.
-  """
-  @spec catalogue(atom()) :: [Catalogue.catalogue_entry()]
-  def catalogue(sup \\ @sup),
-    do: Catalogue.catalogue(AdaptorsSupervisor.source(sup))
+  Returns the picker catalogue as `{{latest_updated_at, count}, entries}`:
+  every adaptor with its full version list and icon URLs, rendered once
+  per change rather than per request, alongside the ETag basis for it.
 
-  @doc """
-  Returns `{latest_updated_at, count}` for the catalogue, the basis of the
-  ETag served with `catalogue/1`.
+  One read, so the stamp always describes the entries it comes with.
   """
-  @spec catalogue_stamp(atom()) :: {DateTime.t() | nil, non_neg_integer()}
-  def catalogue_stamp(sup \\ @sup),
-    do: Catalogue.catalogue_stamp(AdaptorsSupervisor.source(sup))
+  @spec catalogue_with_stamp(atom()) ::
+          {{DateTime.t() | nil, non_neg_integer()}, [Store.catalogue_entry()]}
+  def catalogue_with_stamp(sup \\ @sup) do
+    {:ok, catalogue} = Store.catalogue(sup)
+    catalogue
+  end
 
   @doc """
   Returns the adaptor named `name`, or `nil`.

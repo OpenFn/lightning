@@ -143,7 +143,7 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
       end)
 
       assert [%{name: "@openfn/language-http", versions: ["2.1.0"]}] =
-               Lightning.Adaptors.catalogue()
+               Catalogue.catalogue(:npm)
     end
   end
 end

@@ -3,11 +3,16 @@ defmodule LightningWeb.AdaptorControllerTest do
 
   import Lightning.Factories
 
+  alias Lightning.AdaptorTestHelpers
   alias Lightning.Adaptors.Catalogue
   alias LightningWeb.AdaptorIconURL
 
   describe "GET /adaptors/catalogue" do
+    # The production cache outlives the SQL sandbox, so an entry another
+    # test committed would otherwise be served here.
     setup %{conn: conn} do
+      AdaptorTestHelpers.clear_global_adaptors_cache()
+
       %{conn: log_in_user(conn, insert(:user))}
     end
 
@@ -100,6 +105,10 @@ defmodule LightningWeb.AdaptorControllerTest do
           latest_version: "1.0.0",
           versions: []
         })
+
+      # A bare `upsert_adaptor/1` broadcasts nothing, so nothing evicts the
+      # cached stamp; the Scheduler and Seed are what announce a change.
+      AdaptorTestHelpers.clear_global_adaptors_cache()
 
       second = get(conn, ~p"/adaptors/catalogue")
       [second_etag] = get_resp_header(second, "etag")

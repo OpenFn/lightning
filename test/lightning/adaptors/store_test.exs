@@ -6,6 +6,7 @@ defmodule Lightning.Adaptors.StoreTest do
   alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Store
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
+  alias LightningWeb.AdaptorIconURL
 
   setup :verify_on_exit!
 
@@ -306,6 +307,69 @@ defmodule Lightning.Adaptors.StoreTest do
     end
   end
 
+  describe "catalogue/1" do
+    test "empty DB returns an empty payload but does NOT cache it", %{
+      sup: sup,
+      cache: cache
+    } do
+      assert {:ok, {{nil, 0}, []}} = Store.catalogue(sup)
+
+      source = AdaptorsSupervisor.source(sup)
+      assert {:ok, nil} = Cachex.get(cache, {:catalogue, source})
+    end
+
+    test "caches the stamp and the rendered payload as one entry", %{
+      sup: sup,
+      cache: cache
+    } do
+      square_sha = :crypto.hash(:sha256, "square")
+
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            repository: "https://github.com/openfn/language-http",
+            icon_square_ext: "png",
+            icon_square_sha256: square_sha
+          )
+        )
+
+      assert {:ok, {{%DateTime{}, 1}, [entry]}} = Store.catalogue(sup)
+
+      assert entry == %{
+               name: "@openfn/language-http",
+               latest_version: "1.0.0",
+               versions: ["1.0.0"],
+               repository: "https://github.com/openfn/language-http",
+               icon_urls: %{
+                 square:
+                   AdaptorIconURL.build(
+                     "@openfn/language-http",
+                     %{icon_square_ext: "png", icon_square_sha256: square_sha},
+                     :square
+                   ),
+                 rectangle: nil
+               }
+             }
+
+      source = AdaptorsSupervisor.source(sup)
+
+      assert {:ok, {:ok, {{%DateTime{}, 1}, [^entry]}}} =
+               Cachex.get(cache, {:catalogue, source})
+    end
+
+    test "a second call is served from cache, without re-reading the projection",
+         %{sup: sup} do
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      assert {:ok, first} = Store.catalogue(sup)
+
+      {:ok, _} =
+        Catalogue.upsert_adaptor(adaptor_record(name: "@openfn/language-late"))
+
+      assert {:ok, ^first} = Store.catalogue(sup)
+    end
+  end
+
   describe "icon/3" do
     # Each test uses a unique adaptor name so the on-disk cache (shared
     # default {:tmp, "lightning/adaptor_icons"} path) does not collide
@@ -537,7 +601,7 @@ defmodule Lightning.Adaptors.StoreTest do
   end
 
   describe "warm_from_repo/1" do
-    test "populates {:packages, source} and {:icon_meta, name, source} keys", %{
+    test "populates the {:packages}, {:icon_meta} and {:catalogue} keys", %{
       sup: sup,
       cache: cache
     } do
@@ -555,6 +619,22 @@ defmodule Lightning.Adaptors.StoreTest do
 
       assert Map.has_key?(icon_meta, :icon_square_ext)
       assert Map.has_key?(icon_meta, :icon_rectangle_ext)
+
+      assert {:ok, {:ok, {{%DateTime{}, 1}, [entry]}}} =
+               Cachex.get(cache, {:catalogue, source})
+
+      assert entry.name == "@openfn/language-http"
+      assert entry.icon_urls == %{square: nil, rectangle: nil}
+    end
+
+    test "leaves {:catalogue, source} uncached when the catalogue is empty", %{
+      sup: sup,
+      cache: cache
+    } do
+      assert :ok = Store.warm_from_repo(sup)
+
+      source = AdaptorsSupervisor.source(sup)
+      assert {:ok, nil} = Cachex.get(cache, {:catalogue, source})
     end
 
     test "overwrites existing keys without clearing unrelated ones", %{

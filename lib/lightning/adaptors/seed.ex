@@ -4,6 +4,7 @@ defmodule Lightning.Adaptors.Seed do
   """
 
   alias Lightning.Adaptors.Catalogue
+  alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   @doc """
   Populates the catalogue from a JSON snapshot file and returns the
@@ -13,16 +14,24 @@ defmodule Lightning.Adaptors.Seed do
   `Lightning.Adaptors.Catalogue.upsert_adaptor/1` accepts, as written by
   `mix lightning.download_adaptor_registry_cache`.
 
+  Once the transaction commits, broadcasts `{:changed, name, source}` for
+  every name the seed touched, so each node's
+  `Lightning.Adaptors.Invalidator` drops its now-stale cache entries. In
+  `replace: true` mode that includes names the wipe removed.
+
   Options:
 
     * `:source` - `:npm` (default) or `:local`
     * `:replace` - when `true`, deletes every existing row for the source
       first, in the same transaction as the upserts
+    * `:sup` - supervisor instance whose topic the broadcasts go to,
+      defaulting to `Lightning.Adaptors`
   """
   @spec seed_from_file(Path.t(), keyword()) :: {:ok, non_neg_integer()}
   def seed_from_file(path, opts \\ []) do
     source = Keyword.get(opts, :source, :npm)
     replace? = Keyword.get(opts, :replace, false)
+    sup = Keyword.get(opts, :sup, Lightning.Adaptors)
 
     records =
       path
@@ -30,13 +39,41 @@ defmodule Lightning.Adaptors.Seed do
       |> Jason.decode!()
       |> Enum.map(&normalize_snapshot_record(&1, source))
 
+    replaced_names =
+      if replace?,
+        do: Enum.map(Catalogue.list_package_metas(source), & &1.name),
+        else: []
+
     {:ok, _} =
       Lightning.Repo.transaction(fn ->
         if replace?, do: Catalogue.delete_all_for_source(source)
         Enum.each(records, &Catalogue.upsert_adaptor/1)
       end)
 
+    broadcast_changed(
+      sup,
+      source,
+      Enum.uniq(Enum.map(records, & &1.name) ++ replaced_names)
+    )
+
     {:ok, length(records)}
+  end
+
+  # `Lightning.Release.seed_adaptors/2` seeds through
+  # `Ecto.Migrator.with_repo/2`, which starts the repo without the rest of
+  # the app — there is no PubSub to broadcast on, and no cache to evict.
+  defp broadcast_changed(sup, source, names) do
+    if Process.whereis(Lightning.PubSub) do
+      topic = AdaptorsSupervisor.source_topic(sup)
+
+      Enum.each(names, fn name ->
+        Phoenix.PubSub.broadcast(
+          Lightning.PubSub,
+          topic,
+          {:changed, name, source}
+        )
+      end)
+    end
   end
 
   # `dependencies` and `peer_dependencies` keep string keys; that is how

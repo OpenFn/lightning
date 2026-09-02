@@ -7,13 +7,16 @@ defmodule Lightning.Adaptors.Store do
   strategy when the row has no data yet and persist what they get; this
   only fills gaps on adaptors already in the catalogue, and an unknown
   name returns `{:error, :not_found}`. `icon/3` returns a path on disk,
-  fetching the bytes from the strategy on the first miss.
+  fetching the bytes from the strategy on the first miss. `catalogue/1`
+  caches the picker payload already rendered, together with the ETag
+  stamp that describes it.
   """
 
   alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Config
   alias Lightning.Adaptors.IconCache
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
+  alias LightningWeb.AdaptorIconURL
 
   @type sup :: atom()
 
@@ -33,6 +36,20 @@ defmodule Lightning.Adaptors.Store do
         }
 
   @type package_meta :: Catalogue.package_meta()
+
+  @type catalogue_entry :: %{
+          name: String.t(),
+          latest_version: String.t(),
+          versions: [String.t()],
+          repository: String.t() | nil,
+          icon_urls: %{
+            square: String.t() | nil,
+            rectangle: String.t() | nil
+          }
+        }
+
+  @type catalogue ::
+          {{DateTime.t() | nil, non_neg_integer()}, [catalogue_entry()]}
 
   @doc """
   Returns the adaptor's credential schema as a JSON binary, not decoded.
@@ -148,6 +165,33 @@ defmodule Lightning.Adaptors.Store do
   end
 
   @doc """
+  Returns the picker catalogue for the active source as
+  `{stamp, rendered_entries}`.
+
+  The ETag stamp and the payload it describes are cached as one entry so
+  a 304 can be answered without re-reading the projection, and so the two
+  can never drift apart.
+  """
+  @spec catalogue(sup()) :: {:ok, catalogue()} | {:error, term()}
+  def catalogue(sup) do
+    cache = AdaptorsSupervisor.cache_name(sup)
+    source = AdaptorsSupervisor.source(sup)
+
+    cache
+    |> Cachex.fetch(
+      {:catalogue, source},
+      fn _key ->
+        case build_catalogue(source) do
+          {_stamp, []} = empty -> {:ignore, {:ok, empty}}
+          filled -> {:commit, {:ok, filled}}
+        end
+      end,
+      timeout: Config.cache_timeout_ms()
+    )
+    |> unwrap()
+  end
+
+  @doc """
   Returns the extension and sha256 of each icon shape for the adaptor,
   without touching disk, or `{:error, :not_found}` for an unknown name.
   """
@@ -172,7 +216,8 @@ defmodule Lightning.Adaptors.Store do
   end
 
   @doc """
-  Overwrites the cached package list and icon metadata from the database.
+  Overwrites the cached package list, icon metadata and catalogue from the
+  database. An empty catalogue is left uncached, as `catalogue/1` does.
   """
   @spec warm_from_repo(sup()) :: :ok
   def warm_from_repo(sup) do
@@ -186,12 +231,42 @@ defmodule Lightning.Adaptors.Store do
         {{:icon_meta, m.name, source}, {:ok, project_icon_meta(m)}}
       end)
 
+    catalogue =
+      case build_catalogue(source) do
+        {_stamp, []} -> []
+        filled -> [{{:catalogue, source}, {:ok, filled}}]
+      end
+
     Cachex.put_many(
       cache,
-      [{{:packages, source}, {:ok, metas}} | icon_metas]
+      [{{:packages, source}, {:ok, metas}} | icon_metas] ++ catalogue
     )
 
     :ok
+  end
+
+  # The stamp is read before the projection so it can only ever be older
+  # than the payload it describes, never newer: a lagging stamp costs a
+  # client one extra 200, a leading one would serve a stale 304.
+  @spec build_catalogue(Catalogue.source()) :: catalogue()
+  defp build_catalogue(source) do
+    stamp = Catalogue.catalogue_stamp(source)
+
+    {stamp, source |> Catalogue.catalogue() |> Enum.map(&render_entry/1)}
+  end
+
+  @spec render_entry(Catalogue.catalogue_entry()) :: catalogue_entry()
+  defp render_entry(entry) do
+    %{
+      name: entry.name,
+      latest_version: entry.latest_version,
+      versions: entry.versions,
+      repository: entry.repository,
+      icon_urls: %{
+        square: AdaptorIconURL.build(entry.name, entry, :square),
+        rectangle: AdaptorIconURL.build(entry.name, entry, :rectangle)
+      }
+    }
   end
 
   # Lazy fetches only fill gaps on adaptors already in the catalogue;
