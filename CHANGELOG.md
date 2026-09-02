@@ -47,6 +47,10 @@ and this project adheres to
 - `eligible_for_claim/0` now breaks ties with `id` after `priority` and
   `inserted_at`, so two runs inserted in the same microsecond no longer get
   claimed in a nondeterministic order.
+- Sandboxes in the credentials page's "Projects with access" column and in the
+  credential and OAuth client project pickers are now labelled with their parent
+  project, e.g. `parent/sandbox`, so they can be told apart from top-level
+  projects. [#5110](https://github.com/OpenFn/lightning/pull/5110)
 
 ## [2.18.1] - 2026-08-28
 
