@@ -150,6 +150,22 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
                get_outcomes(conn, enrolled, project.id, workflow.id)
     end
 
+    # The LiveView refuses this through `Query.workflows_for/1`; the API reads
+    # the same query now, so it refuses it too.
+    test "a member cannot read a workflow marked for deletion", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      workflow
+      |> Ecto.Changeset.change(deleted_at: ~U[2026-01-01 00:00:00Z])
+      |> Lightning.Repo.update!()
+
+      assert %{status: 404} = get_outcomes(conn, user, project.id, workflow.id)
+      assert %{status: 404} = get_failures(conn, user, project.id, workflow.id)
+    end
+
     test "a malformed id is refused rather than crashing the request", %{
       conn: conn,
       user: user,
@@ -174,7 +190,7 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
   end
 
   describe "GET /health/outcomes" do
-    test "counts runs from the last 30 days, grouped by state", %{
+    test "counts work orders from the last 30 days, grouped by state", %{
       conn: conn,
       user: user,
       project: project,
@@ -182,21 +198,13 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
     } do
       %{triggers: [trigger]} = workflow
 
-      work_order =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :failed
-        )
-
-      run = fn attrs ->
+      work_order = fn attrs ->
         insert(
-          :run,
+          :workorder,
           Keyword.merge(
             [
-              work_order: work_order,
-              starting_trigger: trigger,
+              workflow: workflow,
+              trigger: trigger,
               dataclip: insert(:dataclip)
             ],
             attrs
@@ -204,12 +212,16 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
         )
       end
 
-      for state <- [:success, :success, :crashed, :started] do
-        run.(state: state)
+      # `:running` has no outcome yet, so it is not counted at all.
+      for state <- [:success, :success, :crashed, :running] do
+        work_order.(state: state)
       end
 
       # Outside the window — must not be counted.
-      run.(state: :success, inserted_at: Timex.shift(Timex.now(), days: -31))
+      work_order.(
+        state: :success,
+        last_activity: Timex.shift(Timex.now(), days: -31)
+      )
 
       outcomes =
         conn |> get_outcomes(user, project.id, workflow.id) |> json_response(200)
@@ -223,7 +235,7 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
                outcomes["counts"]
     end
 
-    test "reports zeroes for a workflow with no runs", %{
+    test "reports zeroes for a workflow with no work orders", %{
       conn: conn,
       user: user,
       project: project,
@@ -233,12 +245,12 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
         conn |> get_outcomes(user, project.id, workflow.id) |> json_response(200)
 
       assert outcomes["counts"] ==
-               Map.new(Lightning.Run.final_states(), &{to_string(&1), 0})
+               Map.new(Lightning.WorkOrder.final_states(), &{to_string(&1), 0})
     end
   end
 
   describe "GET /health/failures" do
-    test "returns the signature parts and run count for each failure", %{
+    test "returns the signature parts and work order count for each failure", %{
       conn: conn,
       user: user,
       project: project,
