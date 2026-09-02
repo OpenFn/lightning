@@ -7,10 +7,12 @@ import type { FailureSignatures, Outcomes } from './types';
 import { healthBase, useHealthQuery } from './useHealthQuery';
 
 /**
- * Workflow health page: a 30-day summary of one workflow's runs.
+ * Workflow health page: a 30-day summary of one workflow's work orders.
  *
- * Runs, not work orders — a retry is its own attempt with its own outcome, and
- * the failure breakdown can only name a state that belongs to an attempt.
+ * Work orders, not runs — the page exists to drive failures down, and only a
+ * work order's state can fall. A run's state is immutable, so a retried
+ * failure would sit here permanently; retry the work order and this page's
+ * numbers actually move.
  *
  * Mounted via `phx-hook="ReactComponent"`, so props arrive as the element's
  * raw kebab-case `data-*` attributes and are always strings.
@@ -58,7 +60,7 @@ export const HealthContent = ({
           title="Outcomes"
           meta={
             outcomes.data &&
-            `${runTotal(outcomes.data.counts).toLocaleString()} runs`
+            `${workOrderTotal(outcomes.data.counts).toLocaleString()} work orders`
           }
         >
           <Panel data={outcomes.data} error={outcomes.error}>
@@ -73,7 +75,7 @@ export const HealthContent = ({
 
         {/* Same reply as the panel beside it — one aggregate read two ways, so
             the wedge here and the red wedge there cannot disagree. */}
-        <Card title="Failure breakdown" meta="by run state">
+        <Card title="Failure breakdown" meta="by work order state">
           <Panel data={outcomes.data} error={outcomes.error}>
             {({ counts, window }) => (
               <FailureBreakdownDonut
@@ -138,20 +140,23 @@ const Subtitle = ({ outcomes }: { outcomes: Outcomes | null }) => {
   if (!outcomes) return null;
 
   const days = windowDays(outcomes.window);
-  const total = runTotal(outcomes.counts);
+  const total = workOrderTotal(outcomes.counts);
 
   return (
     <p className="text-sm text-gray-500">
-      Last {days} day{days === 1 ? '' : 's'} · {total.toLocaleString()} run
-      {total === 1 ? '' : 's'}
+      Last {days} day{days === 1 ? '' : 's'} · {total.toLocaleString()} work
+      order{total === 1 ? '' : 's'}
     </p>
   );
 };
 
-const runTotal = (counts: Outcomes['counts']) =>
+const workOrderTotal = (counts: Outcomes['counts']) =>
   Object.values(counts).reduce((sum, count) => sum + count, 0);
 
-const emptyMessage = (window: Outcomes['window'], noun = 'finished runs') => {
+const emptyMessage = (
+  window: Outcomes['window'],
+  noun = 'finished work orders'
+) => {
   const days = windowDays(window);
 
   return `No ${noun} in the last ${days} day${days === 1 ? '' : 's'}`;

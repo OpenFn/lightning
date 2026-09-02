@@ -1,7 +1,11 @@
 /**
- * Every state a run can finish in other than success. Mirrors the failure half
- * of `Lightning.Run.final_states/0`; runs still in flight never reach the
+ * Every state a work order finishes in that counts as a failure. Mirrors
+ * `Stats`'s `@failure_states`; work orders still in flight never reach the
  * client, since they have no outcome yet.
+ *
+ * `cancelled` is deliberately not here — it is a final state, but someone
+ * stopped that work order on purpose, so it is not a failure to drive down. It
+ * gets its own Outcomes slice instead.
  *
  * This list is the single definition both donuts derive from: Outcomes sums it
  * for its Failed wedge and the failure breakdown keys its palette by it, so a
@@ -10,15 +14,18 @@
 export const FAILURE_STATES = [
   'failed',
   'crashed',
-  'cancelled',
   'killed',
   'exception',
   'lost',
+  'rejected',
 ] as const;
 
 export type FailureState = (typeof FAILURE_STATES)[number];
 
-export type RunStateCounts = Record<'success' | FailureState, number>;
+export type WorkOrderStateCounts = Record<
+  'success' | 'cancelled' | FailureState,
+  number
+>;
 
 /**
  * The `outcomes` response from `LightningWeb.API.WorkflowHealthController`.
@@ -30,14 +37,14 @@ export type RunStateCounts = Record<'success' | FailureState, number>;
  */
 export interface Outcomes {
   window: { from: string; to: string };
-  counts: RunStateCounts;
+  counts: WorkOrderStateCounts;
 }
 
 /**
  * One row of the triage table: the parts of an error signature (CON-31) and
- * the number of runs that carry it. `step_name` and `adaptor` are null for a
- * run that failed before reaching a step; `error_type` is null when nothing
- * reported one.
+ * the number of work orders that carry it. `step_name` and `adaptor` are null
+ * for a work order whose run failed before reaching a step, or never ran at
+ * all; `error_type` is null when nothing reported one.
  */
 export interface FailureSignature {
   count: number;

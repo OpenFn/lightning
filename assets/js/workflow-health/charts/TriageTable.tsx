@@ -1,7 +1,7 @@
 import type { FailureSignature } from '../types';
 
 /**
- * Failed runs grouped by error signature, heaviest first.
+ * Failed work orders grouped by error signature, heaviest first.
  *
  * Purely informational — there is nothing to act on here, so no row is a link
  * or a control. The signature grammar is CON-31:
@@ -46,6 +46,8 @@ const TIPS: Record<string, string> = {
   LostAfterStart:
     'The run started but never reported back, so how far it got is unknown.',
   Cancelled: 'This run was manually stopped before it finished.',
+  RunLimitExceeded:
+    'The project was over its run limit, so no run was created for this payload.',
   default: 'The step failed without a recognised error type; check its logs.',
 };
 
@@ -63,8 +65,8 @@ export const TriageTable = ({ signatures, emptyMessage }: TriageTableProps) => {
     <table className="w-full text-left text-sm">
       <thead>
         <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
-          <th scope="col" className="w-16 py-2 pr-4 font-medium">
-            Runs
+          <th scope="col" className="w-28 py-2 pr-4 font-medium">
+            Work orders
           </th>
           <th scope="col" className="py-2 font-medium">
             Signature

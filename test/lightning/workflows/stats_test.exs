@@ -4,6 +4,7 @@ defmodule Lightning.Workflows.StatsTest do
   import Lightning.Factories
 
   alias Lightning.Workflows.Stats
+  alias Lightning.WorkOrder
 
   setup do
     workflow = insert(:simple_workflow)
@@ -11,23 +12,40 @@ defmodule Lightning.Workflows.StatsTest do
     %{workflow: workflow, trigger: hd(workflow.triggers)}
   end
 
+  defp work_order(workflow, trigger, attrs) do
+    insert(
+      :workorder,
+      Keyword.merge(
+        [
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: insert(:dataclip),
+          state: :success
+        ],
+        attrs
+      )
+    )
+  end
+
+  # A work order carrying one run in the same state — what `state_for/1`
+  # produces, and the shape almost every test here needs. States a run can't be
+  # in (`:pending`, `:running`, `:rejected`) go through `work_order/3` instead.
   defp insert_run(workflow, trigger, state, days_ago \\ 0) do
     work_order =
-      insert(:workorder,
-        workflow: workflow,
-        trigger: trigger,
-        dataclip: insert(:dataclip),
-        state: :success
+      work_order(workflow, trigger,
+        state: state,
+        last_activity: days_ago(days_ago)
       )
 
     insert(:run,
       work_order: work_order,
       starting_trigger: trigger,
       dataclip: insert(:dataclip),
-      state: state,
-      inserted_at: DateTime.add(DateTime.utc_now(), -days_ago, :day)
+      state: state
     )
   end
+
+  defp days_ago(days), do: DateTime.add(DateTime.utc_now(), -days, :day)
 
   test "counts the last 30 days by default", %{
     workflow: workflow,
@@ -55,28 +73,82 @@ defmodule Lightning.Workflows.StatsTest do
     assert DateTime.diff(outcomes.window.to, outcomes.window.from, :day) == 7
   end
 
-  # Retries are the reason the page counts runs: three attempts at one inbound
-  # event are three outcomes, and the failure breakdown has to name each state.
-  test "counts every final state separately and skips runs still in flight", %{
+  # The window is anchored on `last_activity`, not `inserted_at`, so an old work
+  # order someone retried today is counted as the work it currently is.
+  test "counts an old work order that was active inside the window", %{
     workflow: workflow,
     trigger: trigger
   } do
-    for state <- [:success, :success, :failed, :crashed, :lost, :started] do
+    work_order(workflow, trigger,
+      state: :failed,
+      inserted_at: days_ago(60),
+      last_activity: days_ago(1)
+    )
+
+    assert %{failed: 1} = Stats.outcomes(workflow).counts
+  end
+
+  test "counts every final state separately and skips work still in flight", %{
+    workflow: workflow,
+    trigger: trigger
+  } do
+    for state <- [:success, :success, :failed, :crashed, :cancelled, :lost] do
       insert_run(workflow, trigger, state)
+    end
+
+    work_order(workflow, trigger, state: :rejected)
+
+    for state <- [:pending, :running] do
+      work_order(workflow, trigger, state: state)
     end
 
     assert Stats.outcomes(workflow).counts == %{
              success: 2,
              failed: 1,
              crashed: 1,
-             cancelled: 0,
+             cancelled: 1,
              killed: 0,
              exception: 0,
-             lost: 1
+             lost: 1,
+             rejected: 1
            }
   end
 
-  test "ignores runs belonging to another workflow", %{
+  # Cancelling is someone stopping the work order on purpose, so it is a
+  # finished outcome the page still counts but never triages.
+  test "counts a cancelled work order but does not treat it as a failure", %{
+    workflow: workflow,
+    trigger: trigger
+  } do
+    insert_run(workflow, trigger, :cancelled)
+
+    assert %{cancelled: 1, failed: 0} = Stats.outcomes(workflow).counts
+    assert %{signatures: []} = Stats.failure_signatures(workflow)
+  end
+
+  # The review comment this whole unit change is for: retrying a failure until
+  # it works has to make the page's failure count fall, and only a work order's
+  # state can fall — the failed run stays failed forever.
+  test "counts a work order retried to success once, as a success", %{
+    workflow: workflow,
+    trigger: trigger
+  } do
+    work_order = work_order(workflow, trigger, state: :success)
+
+    for state <- [:failed, :success] do
+      insert(:run,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: state
+      )
+    end
+
+    assert %{success: 1, failed: 0} = Stats.outcomes(workflow).counts
+    assert %{signatures: []} = Stats.failure_signatures(workflow)
+  end
+
+  test "ignores work orders belonging to another workflow", %{
     workflow: workflow,
     trigger: trigger
   } do
@@ -87,20 +159,19 @@ defmodule Lightning.Workflows.StatsTest do
     assert %{success: 1, failed: 0} = Stats.outcomes(workflow).counts
   end
 
-  test "reports zeroes for a workflow with no runs", %{workflow: workflow} do
+  test "reports zeroes for a workflow with no work orders", %{
+    workflow: workflow
+  } do
     assert Stats.outcomes(workflow).counts ==
-             Map.new(Lightning.Run.final_states(), &{&1, 0})
+             Map.new(WorkOrder.final_states(), &{&1, 0})
   end
 
   describe "failure_signatures/2" do
     defp failed_run(workflow, trigger, attrs, steps \\ []) do
-      work_order =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :failed
-        )
+      {wo_attrs, run_attrs} = Keyword.split(attrs, [:last_activity])
+      state = Keyword.get(run_attrs, :state, :failed)
+
+      work_order = work_order(workflow, trigger, [state: state] ++ wo_attrs)
 
       insert(
         :run,
@@ -109,10 +180,10 @@ defmodule Lightning.Workflows.StatsTest do
             work_order: work_order,
             starting_trigger: trigger,
             dataclip: insert(:dataclip),
-            state: :failed,
+            state: state,
             steps: steps
           ],
-          attrs
+          run_attrs
         )
       )
     end
@@ -182,7 +253,27 @@ defmodule Lightning.Workflows.StatsTest do
              }
     end
 
-    test "groups matching runs and sorts the heaviest signature first", %{
+    # A rejected work order has no run and no step to read a signature off, so
+    # the label is fixed rather than derived — and it still has to appear, or
+    # the rows stop summing to the failure total the donuts draw.
+    test "names a rejected work order without a run or a step", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      work_order(workflow, trigger, state: :rejected)
+
+      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+
+      assert signature == %{
+               count: 1,
+               exit_reason: "rejected",
+               error_type: "RunLimitExceeded",
+               step_name: nil,
+               adaptor: nil
+             }
+    end
+
+    test "groups matching work orders and sorts the heaviest first", %{
       workflow: workflow,
       trigger: trigger
     } do
@@ -203,8 +294,39 @@ defmodule Lightning.Workflows.StatsTest do
       assert %{count: 1, error_type: "CompileError"} = second
     end
 
-    # Otherwise a run that failed twice would be counted twice, and the rows
-    # would sum past the failure total the outcomes donut draws.
+    # Otherwise a work order that was retried and failed again would be counted
+    # twice, and the rows would sum past the failure total the donuts draw. The
+    # latest run is the one whose completion set the work order's state, so it
+    # is the one that gets to speak for it.
+    test "attributes a retried work order to its latest run", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      [job_a, job_b] = two_jobs(workflow)
+      now = DateTime.utc_now()
+
+      work_order = work_order(workflow, trigger, state: :failed)
+
+      run = fn job, error_type, finished_at ->
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: insert(:dataclip),
+          state: :failed,
+          finished_at: finished_at,
+          steps: [step(job, exit_reason: "fail", error_type: error_type)]
+        )
+      end
+
+      run.(job_a, "FirstAttempt", DateTime.add(now, -60))
+      run.(job_b, "Retry", now)
+
+      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+      assert %{count: 1, error_type: "Retry", step_name: name} = signature
+      assert name == job_b.name
+    end
+
+    # Otherwise a run that failed twice would be counted twice.
     test "attributes a run with two failed steps to the earliest one only", %{
       workflow: workflow,
       trigger: trigger
@@ -230,7 +352,7 @@ defmodule Lightning.Workflows.StatsTest do
       assert name == job_a.name
     end
 
-    test "ignores steps that succeeded and runs that succeeded", %{
+    test "ignores steps that succeeded and work orders that succeeded", %{
       workflow: workflow,
       trigger: trigger
     } do
@@ -270,7 +392,7 @@ defmodule Lightning.Workflows.StatsTest do
       assert name == job.name
     end
 
-    test "skips runs outside the window and other workflows", %{
+    test "skips work orders outside the window and other workflows", %{
       workflow: workflow,
       trigger: trigger
     } do
@@ -279,7 +401,7 @@ defmodule Lightning.Workflows.StatsTest do
 
       failed_run(workflow, trigger,
         error_type: "TooOld",
-        inserted_at: DateTime.add(DateTime.utc_now(), -31, :day)
+        last_activity: days_ago(31)
       )
 
       assert %{signatures: []} = Stats.failure_signatures(workflow)

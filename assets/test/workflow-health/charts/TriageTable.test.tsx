@@ -29,6 +29,9 @@ describe('TriageTable', () => {
       'fail:RuntimeError @ Map-beneficiary [@openfn/language-common@2.0.0]'
     );
     expect(screen.getByRole('cell', { name: '62' })).toBeVisible();
+    expect(
+      screen.getByRole('columnheader', { name: 'Work orders' })
+    ).toBeVisible();
   });
 
   // A run that crashed before any step has no job to name, so the grammar's
@@ -52,6 +55,32 @@ describe('TriageTable', () => {
     expect(text).toContain('crash:CompileError');
     expect(text).not.toContain('@');
     expect(text).not.toContain('[');
+  });
+
+  // A work order the run limit refused has no run and no step to read a
+  // signature off, so the server labels it outright — and the tip has to be
+  // there, or the row reads as a bug in the page.
+  test('names a rejected work order and tips it', () => {
+    render(
+      <TriageTable
+        signatures={[
+          signature({
+            exit_reason: 'rejected',
+            error_type: 'RunLimitExceeded',
+            step_name: null,
+            adaptor: null,
+          }),
+        ]}
+        emptyMessage="No failures"
+      />
+    );
+
+    expect(rowText(/RunLimitExceeded/)).toContain('rejected:RunLimitExceeded');
+    expect(
+      screen.getByText(
+        'The project was over its run limit, so no run was created for this payload.'
+      )
+    ).toBeVisible();
   });
 
   test('shows the tip written for the error type', () => {

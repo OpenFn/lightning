@@ -13,6 +13,7 @@ const outcomes = {
     killed: 12,
     exception: 0,
     lost: 7,
+    rejected: 0,
   },
 };
 
@@ -112,7 +113,7 @@ describe('WorkflowHealth', () => {
     expect(
       await screen.findByRole('heading', { name: 'Sync patients' })
     ).toBeInTheDocument();
-    expect(screen.getByText('Last 30 days · 1,287 runs')).toBeVisible();
+    expect(screen.getByText('Last 30 days · 1,287 work orders')).toBeVisible();
   });
 
   test('folds the failure states into the Outcomes donut', async () => {
@@ -125,7 +126,7 @@ describe('WorkflowHealth', () => {
     expect(screen.getByText('Success')).toBeVisible();
   });
 
-  test('breaks the same failures down by run state', async () => {
+  test('breaks the same failures down by work order state', async () => {
     mount(both);
 
     expect(
