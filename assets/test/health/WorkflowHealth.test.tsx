@@ -1,4 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { HealthContent } from '#/health/WorkflowHealth';
@@ -45,7 +46,7 @@ function stubFetch(responses: Record<string, unknown>) {
   const fetchMock = vi.fn((url: string, init?: RequestInit) => {
     if (init?.signal) signals.push(init.signal);
 
-    const slice = url.split('/').pop() ?? '';
+    const slice = url.split('?')[0].split('/').pop() ?? '';
     const response = responses[slice];
 
     if (typeof response === 'number' || response === undefined) {
@@ -99,11 +100,11 @@ describe('WorkflowHealth', () => {
     await screen.findByText('Success');
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/projects/proj-1/workflows/wf-1/health/outcomes',
+      '/api/projects/proj-1/workflows/wf-1/health/outcomes?days=30',
       expect.objectContaining({ credentials: 'same-origin' })
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/projects/proj-1/workflows/wf-1/health/failures',
+      '/api/projects/proj-1/workflows/wf-1/health/failures?days=30',
       expect.objectContaining({ credentials: 'same-origin' })
     );
   });
@@ -173,6 +174,36 @@ describe('WorkflowHealth', () => {
       await screen.findByRole('heading', { name: 'Sync patients' })
     ).toBeInTheDocument();
     expect(screen.getByText('Last 30 days · 1,287 work orders')).toBeVisible();
+  });
+
+  test('refetches both slices at the selected range', async () => {
+    const { fetchMock } = mount(both);
+
+    await screen.findByText('Success');
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/proj-1/workflows/wf-1/health/outcomes?days=7',
+      expect.objectContaining({ credentials: 'same-origin' })
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/proj-1/workflows/wf-1/health/failures?days=7',
+      expect.objectContaining({ credentials: 'same-origin' })
+    );
+  });
+
+  test('calls a one-day window "Last 24 hours", not "Last 1 day"', async () => {
+    const dayWide = {
+      ...outcomes,
+      window: { from: '2026-08-30T10:00:00Z', to: '2026-08-31T10:00:00Z' },
+    };
+
+    mount({ outcomes: dayWide, failures: failureSignatures });
+
+    expect(
+      await screen.findByText('Last 24 hours · 1,287 work orders')
+    ).toBeVisible();
   });
 
   test('folds the failure states into the Outcomes donut', async () => {

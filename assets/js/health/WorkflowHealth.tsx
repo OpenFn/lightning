@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 
 import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
 import { OutcomesDonut } from './charts/OutcomesDonut';
 import { TriageTable } from './charts/TriageTable';
+import { DEFAULT_DAYS, RangePicker } from './RangePicker';
 import type { FailureSignatures, Outcomes } from './types';
 import type { Query } from './useHealthQuery';
 import { healthBase, useHealthQuery } from './useHealthQuery';
@@ -44,21 +46,30 @@ export const HealthContent = ({
   projectId,
   workflowName,
 }: HealthContentProps) => {
+  const [days, setDays] = useState<string>(DEFAULT_DAYS);
+
   const base = healthBase(projectId, workflowId);
 
-  const outcomes = useHealthQuery<Outcomes>(`${base}/outcomes`);
-  const signatures = useHealthQuery<FailureSignatures>(`${base}/failures`);
+  const outcomes = useHealthQuery<Outcomes>(`${base}/outcomes?days=${days}`);
+  const signatures = useHealthQuery<FailureSignatures>(
+    `${base}/failures?days=${days}`
+  );
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-baseline justify-between gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
             {workflowName}
           </h1>
           <Subtitle outcomes={outcomes.data} />
         </div>
-        <UpdatedAt at={outcomes.fetchedAt} />
+        {/* The picker and the freshness stamp both belong to the whole page,
+            so they stack in the header rather than sitting on any one card. */}
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <RangePicker days={days} onChange={setDays} />
+          <UpdatedAt at={outcomes.fetchedAt} />
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -158,13 +169,11 @@ const UpdatedAt = ({ at }: { at: Query<Outcomes>['fetchedAt'] }) => {
 const Subtitle = ({ outcomes }: { outcomes: Outcomes | null }) => {
   if (!outcomes) return null;
 
-  const days = windowDays(outcomes.window);
   const total = workOrderTotal(outcomes.counts);
 
   return (
     <p className="text-sm text-gray-500">
-      Last {days} day{days === 1 ? '' : 's'} · {total.toLocaleString()} work
-      order{total === 1 ? '' : 's'}
+      Last {windowLabel(outcomes.window)} · {total.toLocaleString()} work orders
     </p>
   );
 };
@@ -175,11 +184,14 @@ const workOrderTotal = (counts: Outcomes['counts']) =>
 const emptyMessage = (
   window: Outcomes['window'],
   noun = 'finished work orders'
-) => {
-  const days = windowDays(window);
-
-  return `No ${noun} in the last ${days} day${days === 1 ? '' : 's'}`;
-};
+) => `No ${noun} in the last ${windowLabel(window)}`;
 
 const windowDays = ({ from, to }: { from: string; to: string }) =>
   Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
+
+// Matches the picker's own wording — "24 hours", not "1 day".
+const windowLabel = (window: Outcomes['window']) => {
+  const days = windowDays(window);
+
+  return days === 1 ? '24 hours' : `${days} days`;
+};
