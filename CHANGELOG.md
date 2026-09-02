@@ -22,6 +22,10 @@ and this project adheres to
   `abc-123` answers at `/i/abc-123/facility-001`. Set it in the trigger panel,
   in `project.yaml`, or through the workflows API. Existing `/i/<trigger-id>`
   URLs are unchanged. [#4952](https://github.com/OpenFn/lightning/issues/4952)
+- A workflow health page at `/projects/:project_id/w/:workflow_id/health`,
+  summarising one workflow's last 30 days: a donut of work order outcomes, a
+  breakdown of the failing ones, and a triage table grouping failures by error
+  signature, heaviest first.
 
 ### Fixed
 
