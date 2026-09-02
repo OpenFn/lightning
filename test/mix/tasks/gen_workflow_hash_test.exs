@@ -30,6 +30,19 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHashTest do
       refute String.match?(output, ~r/^[a-f0-9]{12}$/)
     end
 
+    test "leaves the logger level alone when the repo is already running" do
+      workflow = build_workflow()
+      previous_level = Logger.level()
+      on_exit(fn -> Logger.configure(level: previous_level) end)
+      # Deliberately not the suite level, so a task that quietens the logger
+      # fails here rather than coincidentally restoring what config/test.exs set.
+      Logger.configure(level: :info)
+
+      run([workflow.id])
+
+      assert Logger.level() == :info
+    end
+
     test "raises when the workflow does not exist" do
       id = Ecto.UUID.generate()
 
