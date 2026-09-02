@@ -180,6 +180,19 @@ defmodule Lightning.AdaptorsTest do
       assert Adaptors.get_adaptor("@openfn/language-http") == nil
     end
 
+    test "still resolves a name the catalogue listing excludes" do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(name: "@openfn/language-collections")
+        )
+
+      assert %Adaptors.Package{name: "@openfn/language-collections"} =
+               Adaptors.get_adaptor("@openfn/language-collections")
+
+      assert {:ok, %Adaptors.Package{name: "@openfn/language-collections"}} =
+               Adaptors.fetch_adaptor("@openfn/language-collections")
+    end
+
     test "returns nil for a row under a different source than the active one" do
       {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(source: :local))
 

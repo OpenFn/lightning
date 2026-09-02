@@ -54,6 +54,26 @@ defmodule Lightning.Adaptors.CatalogueListingTest do
 
       assert [%{versions: []}] = Catalogue.catalogue(:npm)
     end
+
+    test "omits the excluded adaptors" do
+      for name <- [
+            "@openfn/language-devtools",
+            "@openfn/language-template",
+            "@openfn/language-fhir-jembi",
+            "@openfn/language-collections",
+            "@openfn/language-http"
+          ] do
+        {:ok, _} =
+          Catalogue.upsert_adaptor(%{
+            name: name,
+            source: :npm,
+            latest_version: "1.0.0",
+            versions: [version_record("1.0.0")]
+          })
+      end
+
+      assert [%{name: "@openfn/language-http"}] = Catalogue.catalogue(:npm)
+    end
   end
 
   describe "catalogue_stamp/1" do

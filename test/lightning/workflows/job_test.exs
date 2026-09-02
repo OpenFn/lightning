@@ -254,6 +254,20 @@ defmodule Lightning.Workflows.JobTest do
       end)
     end
 
+    test "accepts an adaptor the catalogue listing excludes" do
+      insert(:adaptor, name: "@openfn/language-collections")
+
+      errors =
+        Job.changeset(%Job{}, %{
+          name: "job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-collections@1.0.0"
+        })
+        |> errors_on()
+
+      refute errors[:adaptor]
+    end
+
     test "a never-loaded catalogue refuses the adaptor as not ready, then rejects it once loaded" do
       # With no expectations the production Scheduler's load fails, as it
       # would with npm unreachable.

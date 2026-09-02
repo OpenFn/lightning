@@ -24,12 +24,29 @@ defmodule Lightning.Adaptors.Config do
   end
 
   @doc """
-  Returns `:local` for `Lightning.Adaptors.Local` and `:npm` for any
-  other strategy.
+  The catalogue `source` a strategy writes under.
+
+  `Lightning.Adaptors.Local` and `Lightning.Adaptors.NPM` are mapped
+  here; any other strategy must declare a `:source` of `:npm` or
+  `:local` under its own application key, or this raises rather than
+  guessing at `:npm`.
   """
   @spec source_for(module()) :: :local | :npm
   def source_for(Lightning.Adaptors.Local), do: :local
-  def source_for(_strategy), do: :npm
+  def source_for(Lightning.Adaptors.NPM), do: :npm
+
+  def source_for(strategy) when is_atom(strategy) do
+    case Keyword.fetch(strategy_opts(strategy), :source) do
+      {:ok, source} when source in [:npm, :local] ->
+        source
+
+      _ ->
+        raise ArgumentError,
+              "strategy #{inspect(strategy)} has no catalogue source; " <>
+                "map it in Lightning.Adaptors.Config.source_for/1 or set " <>
+                "`config :lightning, #{inspect(strategy)}, source: :npm`"
+    end
+  end
 
   @doc """
   Scheduler tick interval in milliseconds. Defaults to one hour.

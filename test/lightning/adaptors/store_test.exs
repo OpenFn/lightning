@@ -305,6 +305,25 @@ defmodule Lightning.Adaptors.StoreTest do
       source = AdaptorsSupervisor.source(sup)
       assert {:ok, {:ok, [_]}} = Cachex.get(cache, {:packages, source})
     end
+
+    test "the catalogue's excluded adaptors never reach the cache", %{
+      sup: sup,
+      cache: cache
+    } do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(name: "@openfn/language-collections")
+        )
+
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      assert {:ok, [%{name: "@openfn/language-http"}]} = Store.packages(sup)
+
+      source = AdaptorsSupervisor.source(sup)
+
+      assert {:ok, {:ok, [%{name: "@openfn/language-http"}]}} =
+               Cachex.get(cache, {:packages, source})
+    end
   end
 
   describe "catalogue/1" do

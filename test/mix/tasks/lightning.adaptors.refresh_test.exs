@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
+defmodule Mix.Tasks.Lightning.Adaptors.RefreshTest do
   use ExUnit.Case, async: false
   use Mimic
 
@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
         {:ok, %{listed: 109, changed: 4, fetched: 4, errors: 1}}
       end)
 
-      Mix.Tasks.Lightning.RefreshAdaptors.run([])
+      Mix.Tasks.Lightning.Adaptors.Refresh.run([])
       assert_received {:mix_shell, :info, [_]}
       assert_received {:mix_shell, :info, [msg]}
       assert msg =~ "listed 109"
@@ -34,7 +34,7 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
         {:ok, %{listed: 0, changed: 0, fetched: 0, errors: 0}}
       end)
 
-      assert catch_exit(Mix.Tasks.Lightning.RefreshAdaptors.run([])) ==
+      assert catch_exit(Mix.Tasks.Lightning.Adaptors.Refresh.run([])) ==
                {:shutdown, 2}
 
       assert_received {:mix_shell, :error, [_]}
@@ -43,7 +43,7 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
     test "exits 2 on {:error, :timeout}" do
       stub(Lightning.Adaptors, :refresh, fn _sup, _opts -> {:error, :timeout} end)
 
-      assert catch_exit(Mix.Tasks.Lightning.RefreshAdaptors.run([])) ==
+      assert catch_exit(Mix.Tasks.Lightning.Adaptors.Refresh.run([])) ==
                {:shutdown, 2}
 
       assert_received {:mix_shell, :error, [_]}
@@ -54,7 +54,7 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
         {:error, :network_down}
       end)
 
-      assert catch_exit(Mix.Tasks.Lightning.RefreshAdaptors.run([])) ==
+      assert catch_exit(Mix.Tasks.Lightning.Adaptors.Refresh.run([])) ==
                {:shutdown, 2}
 
       assert_received {:mix_shell, :error, [_]}
@@ -65,7 +65,7 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
     test "dispatches to refresh_package/1 with the exact package string" do
       pkg = "@openfn/language-http"
       stub(Lightning.Adaptors, :refresh_package, fn ^pkg -> :ok end)
-      Mix.Tasks.Lightning.RefreshAdaptors.run(["--name", pkg])
+      Mix.Tasks.Lightning.Adaptors.Refresh.run(["--name", pkg])
       assert_received {:mix_shell, :info, [_]}
     end
 
@@ -75,7 +75,7 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
       end)
 
       assert catch_exit(
-               Mix.Tasks.Lightning.RefreshAdaptors.run([
+               Mix.Tasks.Lightning.Adaptors.Refresh.run([
                  "--name",
                  "@openfn/language-http"
                ])
@@ -90,7 +90,7 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
       end)
 
       assert catch_exit(
-               Mix.Tasks.Lightning.RefreshAdaptors.run([
+               Mix.Tasks.Lightning.Adaptors.Refresh.run([
                  "--name",
                  "@openfn/language-http"
                ])
@@ -103,13 +103,13 @@ defmodule Mix.Tasks.Lightning.RefreshAdaptorsTest do
   describe "rejected flags" do
     test "raises on unknown --strategy flag" do
       assert_raise OptionParser.ParseError, fn ->
-        Mix.Tasks.Lightning.RefreshAdaptors.run(["--strategy", "local"])
+        Mix.Tasks.Lightning.Adaptors.Refresh.run(["--strategy", "local"])
       end
     end
 
     test "raises on unknown --source flag" do
       assert_raise OptionParser.ParseError, fn ->
-        Mix.Tasks.Lightning.RefreshAdaptors.run(["--source", "local"])
+        Mix.Tasks.Lightning.Adaptors.Refresh.run(["--source", "local"])
       end
     end
   end

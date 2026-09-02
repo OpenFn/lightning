@@ -75,6 +75,22 @@ defmodule Lightning.Adaptors.SeedTest do
       assert_receive {:changed, "@openfn/language-stale", ^source}
     end
 
+    test "replace: true broadcasts for a removed name even when the catalogue listing excludes it",
+         %{
+           sup: sup,
+           source: source,
+           tmp_dir: tmp_dir
+         } do
+      insert(:adaptor, name: "@openfn/language-collections", source: source)
+
+      path = write_snapshot(tmp_dir, [record("@openfn/language-http")])
+
+      assert {:ok, 1} = Seed.seed_from_file(path, sup: sup, replace: true)
+
+      assert_receive {:changed, "@openfn/language-http", ^source}
+      assert_receive {:changed, "@openfn/language-collections", ^source}
+    end
+
     test "a rolled-back seed broadcasts nothing", %{
       sup: sup,
       tmp_dir: tmp_dir

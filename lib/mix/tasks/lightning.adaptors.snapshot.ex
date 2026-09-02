@@ -1,13 +1,16 @@
-defmodule Mix.Tasks.Lightning.DownloadAdaptorRegistryCache do
-  @shortdoc "Downloads an adaptor catalogue snapshot for offline seeding"
+defmodule Mix.Tasks.Lightning.Adaptors.Snapshot do
+  @shortdoc "Fetch an adaptor catalogue snapshot from npm for offline seeding"
 
   @moduledoc """
-  Fetches every `@openfn/language-*` adaptor from npm via
+  Fetches every `@openfn/language-*` adaptor straight from npm via
   `Lightning.Adaptors.NPM` and writes the full records to a JSON file, in
   the shape `Lightning.Adaptors.Catalogue.upsert_adaptor/1` accepts.
 
-  The file this writes is what `mix lightning.seed_adaptors_from_file`
-  reads.
+  Nothing here touches the catalogue, so this works on an instance with
+  no database yet — it is the cold-start way to produce a snapshot.
+  `mix lightning.adaptors.dump` is the equivalent for an instance whose
+  catalogue is already populated. Either file can be read back by
+  `mix lightning.adaptors.import`.
 
   Use --path to specify the location
   """

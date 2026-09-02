@@ -44,15 +44,25 @@ defmodule Lightning.Adaptors.Catalogue do
                          size_bytes dependencies peer_dependencies
                          published_at deprecated)a
 
+  # Packages that exist on npm but should never be offered in the picker.
+  # Listing-only: `get_adaptor/2` still resolves them, so jobs already
+  # using one keep validating.
+  @excluded_names ~w(@openfn/language-devtools
+                     @openfn/language-template
+                     @openfn/language-fhir-jembi
+                     @openfn/language-collections)
+
   @doc """
   Picker-facing lean projection for a source. Avoids the heavy JSONB
   columns (`schema_data`, `dependencies`, `peer_dependencies`).
+
+  Excludes the packages listed in `@excluded_names`.
   """
   @spec list_package_metas(source()) :: [package_meta()]
   def list_package_metas(source) do
     Repo.all(
       from a in Adaptor,
-        where: a.source == ^source,
+        where: a.source == ^source and a.name not in ^@excluded_names,
         select: %{
           name: a.name,
           latest_version: a.latest_version,
@@ -101,7 +111,8 @@ defmodule Lightning.Adaptors.Catalogue do
 
   @doc """
   Idempotent, transactional, diff-aware upsert of one adaptor record
-  plus its version rows. The `:source` is read from the record.
+  plus its version rows. The source is read from the record, whose keys
+  may be atoms or strings (as a decoded JSON snapshot gives them).
 
   Behaviour:
 
@@ -123,11 +134,12 @@ defmodule Lightning.Adaptors.Catalogue do
 
     {versions, adaptor_attrs} =
       record
-      |> Map.put(:checked_at, now)
-      |> Map.pop(:versions, [])
+      |> stringify_keys()
+      |> Map.put("checked_at", now)
+      |> Map.pop("versions", [])
 
-    name = Map.fetch!(adaptor_attrs, :name)
-    source = Map.fetch!(adaptor_attrs, :source)
+    name = Map.fetch!(adaptor_attrs, "name")
+    source = adaptor_attrs |> Map.fetch!("source") |> normalize_source()
 
     multi =
       Multi.new()
@@ -263,13 +275,15 @@ defmodule Lightning.Adaptors.Catalogue do
   @doc """
   Full catalogue projection for a source: every adaptor's `name`,
   `latest_version`, `repository`, icon fields, and full version list.
+
+  Excludes the packages listed in `@excluded_names`.
   """
   @spec catalogue(source()) :: [catalogue_entry()]
   def catalogue(source) do
     adaptors =
       Repo.all(
         from a in Adaptor,
-          where: a.source == ^source,
+          where: a.source == ^source and a.name not in ^@excluded_names,
           order_by: [asc: a.name],
           select: %{
             name: a.name,
@@ -287,7 +301,7 @@ defmodule Lightning.Adaptors.Catalogue do
         from v in AdaptorVersion,
           join: a in Adaptor,
           on: v.adaptor_id == a.id,
-          where: a.source == ^source,
+          where: a.source == ^source and a.name not in ^@excluded_names,
           order_by: [asc: v.inserted_at, asc: v.version],
           select: {a.name, v.version}
       )
@@ -367,7 +381,11 @@ defmodule Lightning.Adaptors.Catalogue do
   defp build_version_rows(adaptor_id, records, now) do
     records
     |> Enum.reduce_while({:ok, []}, fn record, {:ok, acc} ->
-      attrs = Map.put(record, :adaptor_id, adaptor_id)
+      attrs =
+        record
+        |> stringify_keys()
+        |> Map.put("adaptor_id", adaptor_id)
+
       changeset = AdaptorVersion.changeset(%AdaptorVersion{}, attrs)
 
       if changeset.valid? do
@@ -381,6 +399,22 @@ defmodule Lightning.Adaptors.Catalogue do
       err -> err
     end
   end
+
+  # `Ecto.Changeset.cast/3` raises on a map mixing atom and string keys, so
+  # every map handed to a changeset here is flattened to string keys first —
+  # that is what a JSON snapshot gives us, and what atom-keyed callers
+  # convert cleanly into.
+  defp stringify_keys(map) do
+    Map.new(map, fn {k, v} -> {to_string(k), v} end)
+  end
+
+  # `source` is read outside the changeset (for the existing-row lookup),
+  # so it needs its own cast: `Ecto.Enum` fields accept a string via
+  # `Changeset.cast/3`, but not via `Repo.get_by/3`'s query parameters.
+  defp normalize_source(source) when is_atom(source), do: source
+
+  defp normalize_source(source) when is_binary(source),
+    do: String.to_existing_atom(source)
 
   defp version_row_from_changeset(changeset, now) do
     changeset

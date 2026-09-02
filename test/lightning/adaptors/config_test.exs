@@ -10,9 +10,28 @@ defmodule Lightning.Adaptors.ConfigTest do
       assert Config.source_for(Lightning.Adaptors.Local) == :local
     end
 
-    test "returns :npm for any other strategy module" do
+    test "returns :npm for Lightning.Adaptors.NPM" do
       assert Config.source_for(Lightning.Adaptors.NPM) == :npm
-      assert Config.source_for(SomeOther.Strategy) == :npm
+    end
+
+    test "raises for an unmapped strategy module with no declared source" do
+      assert_raise ArgumentError, ~r/has no catalogue source/, fn ->
+        Config.source_for(SomeOther.Strategy)
+      end
+    end
+
+    test "uses the :source declared under a third-party strategy's own key" do
+      put_strategy_opts(SomeOther.Strategy, source: :local)
+
+      assert Config.source_for(SomeOther.Strategy) == :local
+    end
+
+    test "raises when the declared :source isn't :npm or :local" do
+      put_strategy_opts(SomeOther.Strategy, source: :bogus)
+
+      assert_raise ArgumentError, ~r/has no catalogue source/, fn ->
+        Config.source_for(SomeOther.Strategy)
+      end
     end
   end
 

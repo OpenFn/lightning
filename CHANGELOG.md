@@ -61,7 +61,7 @@ and this project adheres to
   than first-letter placeholders. On a fresh deployment the first job save or
   run waits for the registry's initial load (up to 60 seconds) instead of
   failing. Superusers can force a refresh from Settings → Maintenance, or by
-  running `mix lightning.refresh_adaptors`, which waits for the refresh to
+  running `mix lightning.adaptors.refresh`, which waits for the refresh to
   finish. The npm, jsDelivr and GitHub endpoints the registry reads from can be
   pointed elsewhere with `ADAPTORS_NPM_REGISTRY_URL`,
   `ADAPTORS_NPM_JSDELIVR_URL`, `ADAPTORS_NPM_GITHUB_URL` and
@@ -75,6 +75,10 @@ and this project adheres to
   `OPENFN_ADAPTORS_REPO` still work as deprecated aliases for
   `ADAPTORS_STRATEGY=local` and `ADAPTORS_LOCAL_REPO`, logging a boot warning.
   [#CON-136](https://linear.app/openfn/issue/CON-136)
+- `mix lightning.adaptors.dump` writes the current catalogue out to a JSON file
+  in the shape `mix lightning.adaptors.import` reads, for mirroring an online
+  instance's catalogue into an airgapped one.
+  [#CON-139](https://linear.app/openfn/issue/CON-139)
 
 ### Changed
 
@@ -145,6 +149,12 @@ and this project adheres to
   `If-None-Match` costs no database work at all. The cache is dropped whenever
   an adaptor changes, and pre-warmed when a node rejoins the cluster.
   [#CON-131](https://linear.app/openfn/issue/CON-131)
+- `devtools`, `template`, `fhir-jembi` and `collections` are hidden from the
+  adaptor picker and version list again, matching the old registry's behaviour.
+  An existing job using one of these adaptors still validates and saves normally
+  — the exclusion only applies to the catalogue listing, not job validation —
+  though its version dropdown in the editor is empty until it's moved off the
+  excluded adaptor. [#CON-139](https://linear.app/openfn/issue/CON-139)
 
 ### Removed
 
@@ -152,17 +162,19 @@ and this project adheres to
   `ADAPTORS_REGISTRY_JSON_PATH` are gone (`AdaptorRegistry` itself and
   `Lightning.AdaptorService`, which still backs credential metadata lookups, are
   not). Booting from a static snapshot instead of npm is now
-  `mix lightning.seed_adaptors_from_file --path <file>` (or, in a release,
+  `mix lightning.adaptors.import --path <file>` (or, in a release,
   `bin/lightning eval 'Lightning.Release.seed_adaptors("<file>")'`), which
   upserts a JSON array of adaptor records (the shape
-  `mix lightning.download_adaptor_registry_cache` writes) straight into the
-  adaptors table; `--replace` makes the file the source's entire contents
-  instead of merging into it.
+  `mix lightning.adaptors.snapshot` or `mix lightning.adaptors.dump` write)
+  straight into the adaptors table; `--replace` makes the file the source's
+  entire contents instead of merging into it. `mix lightning.adaptors.dump`
+  writes the current catalogue back out to a file, for mirroring an online
+  instance's catalogue into an airgapped one.
 
 ### Fixed
 
-- Seeding adaptors from a snapshot file (`mix lightning.seed_adaptors_from_file`
-  or `Lightning.Release.seed_adaptors/2`) now announces what it changed once the
+- Seeding adaptors from a snapshot file (`mix lightning.adaptors.import` or
+  `Lightning.Release.seed_adaptors/2`) now announces what it changed once the
   seed commits, so every node drops its stale adaptor caches instead of serving
   pre-seed data until the next refresh. With `--replace`, adaptors the file
   dropped are announced too. [#CON-131](https://linear.app/openfn/issue/CON-131)

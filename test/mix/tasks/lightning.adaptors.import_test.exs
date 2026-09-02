@@ -1,10 +1,10 @@
-defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
+defmodule Mix.Tasks.Lightning.Adaptors.ImportTest do
   use Lightning.DataCase
 
   import ExUnit.CaptureIO
 
   alias Lightning.Adaptors.Catalogue
-  alias Mix.Tasks.Lightning.SeedAdaptorsFromFile
+  alias Mix.Tasks.Lightning.Adaptors.Import
 
   @moduletag :tmp_dir
 
@@ -28,7 +28,7 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
         ])
 
       capture_io(fn ->
-        SeedAdaptorsFromFile.run(["--path", path])
+        Import.run(["--path", path])
       end)
 
       assert %{latest_version: "2.1.0"} =
@@ -51,7 +51,7 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
         ])
 
       capture_io(fn ->
-        SeedAdaptorsFromFile.run(["--path", path, "--source", "local"])
+        Import.run(["--path", path, "--source", "local"])
       end)
 
       assert Catalogue.get_adaptor("@openfn/language-common", :npm) == nil
@@ -71,7 +71,7 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
         ])
 
       capture_io(fn ->
-        SeedAdaptorsFromFile.run(["--path", path, "--replace"])
+        Import.run(["--path", path, "--replace"])
       end)
 
       assert Catalogue.get_adaptor("@openfn/language-stale", :npm) == nil
@@ -96,7 +96,7 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
 
       assert_raise ArgumentError, fn ->
         capture_io(fn ->
-          SeedAdaptorsFromFile.run(["--path", path, "--replace"])
+          Import.run(["--path", path, "--replace"])
         end)
       end
 
@@ -107,7 +107,7 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
     test "round-trips a snapshot in the shape the download task emits", %{
       tmp_dir: tmp_dir
     } do
-      # Same shape `mix lightning.download_adaptor_registry_cache` writes:
+      # Same shape `mix lightning.adaptors.snapshot` writes:
       # an atom-keyed adaptor_record (see Lightning.Adaptors.Strategy) plus
       # :source, run through Jason.encode_to_iodata!/1.
       record = %{
@@ -139,7 +139,7 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFileTest do
       File.write!(path, Jason.encode_to_iodata!([record]))
 
       capture_io(fn ->
-        SeedAdaptorsFromFile.run(["--path", path])
+        Import.run(["--path", path])
       end)
 
       assert [%{name: "@openfn/language-http", versions: ["2.1.0"]}] =

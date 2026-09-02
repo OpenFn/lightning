@@ -1,12 +1,12 @@
-defmodule Mix.Tasks.Lightning.RefreshAdaptors do
+defmodule Mix.Tasks.Lightning.Adaptors.Refresh do
   @shortdoc "On-demand adaptor metadata refresh"
   @moduledoc """
   Trigger an adaptor catalogue refresh from the command line.
 
   ## Usage
 
-      mix lightning.refresh_adaptors
-      mix lightning.refresh_adaptors --name @openfn/language-http
+      mix lightning.adaptors.refresh
+      mix lightning.adaptors.refresh --name @openfn/language-http
 
   Without `--name`, starts a refresh cycle (or joins one already running)
   and waits for it to finish. With `--name`, refetches that one adaptor.

@@ -112,6 +112,10 @@ config :lightning, Lightning.Adaptors,
   strategy: Lightning.Adaptors.StrategyMock,
   refresh_interval: 0
 
+# `Config.source_for/1` only maps the two real strategies; the mock has to
+# declare its catalogue source like any other third-party strategy would.
+config :lightning, Lightning.Adaptors.StrategyMock, source: :npm
+
 config :hammer,
   backend:
     {Hammer.Backend.ETS,

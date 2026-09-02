@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFile do
+defmodule Mix.Tasks.Lightning.Adaptors.Import do
   @shortdoc "Seed the adaptor catalogue from a local JSON snapshot"
 
   @moduledoc """
@@ -6,13 +6,13 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFile do
 
   The file is a JSON array of adaptor records in the shape
   `Lightning.Adaptors.Catalogue.upsert_adaptor/1` accepts — the same shape
-  `mix lightning.download_adaptor_registry_cache` writes.
+  `mix lightning.adaptors.snapshot` writes.
 
   ## Usage
 
-      mix lightning.seed_adaptors_from_file --path snapshot.json
-      mix lightning.seed_adaptors_from_file --path snapshot.json --source local
-      mix lightning.seed_adaptors_from_file --path snapshot.json --replace
+      mix lightning.adaptors.import --path snapshot.json
+      mix lightning.adaptors.import --path snapshot.json --source local
+      mix lightning.adaptors.import --path snapshot.json --replace
 
   `--source` defaults to `npm`. `--replace` deletes every existing row for
   that source first, so the file becomes the source's entire contents
@@ -42,7 +42,7 @@ defmodule Mix.Tasks.Lightning.SeedAdaptorsFromFile do
 
     path =
       opts[:path] ||
-        raise "Usage: mix lightning.seed_adaptors_from_file --path <file>"
+        raise "Usage: mix lightning.adaptors.import --path <file>"
 
     source = parse_source(opts[:source])
 

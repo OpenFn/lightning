@@ -36,6 +36,39 @@ defmodule Lightning.Adaptors.CatalogueTest do
       assert {:ok, %Adaptor{} = adaptor} = Catalogue.upsert_adaptor(record)
       assert Catalogue.list_versions(adaptor.name, :npm) == []
     end
+
+    test "accepts a fully string-keyed record, as read from a JSON snapshot" do
+      record = %{
+        "name" => "@openfn/language-salesforce",
+        "source" => "npm",
+        "latest_version" => "3.0.0",
+        "description" => "Salesforce adaptor",
+        "checked_at" => DateTime.utc_now(),
+        "versions" => [
+          %{
+            "version" => "3.0.0",
+            "integrity" => "sha512-3.0.0",
+            "tarball_url" => "https://example.com/x/-/x-3.0.0.tgz",
+            "size_bytes" => 1024,
+            "dependencies" => %{"axios" => "^1.0.0"},
+            "peer_dependencies" => %{},
+            "deprecated" => false
+          }
+        ]
+      }
+
+      assert {:ok, %Adaptor{} = adaptor} = Catalogue.upsert_adaptor(record)
+
+      assert adaptor.name == "@openfn/language-salesforce"
+      assert adaptor.source == :npm
+      assert adaptor.latest_version == "3.0.0"
+      assert adaptor.description == "Salesforce adaptor"
+
+      assert [version] = Catalogue.list_versions(adaptor.name, :npm)
+      assert version.version == "3.0.0"
+      assert version.adaptor_id == adaptor.id
+      assert version.dependencies == %{"axios" => "^1.0.0"}
+    end
   end
 
   describe "upsert_adaptor/1 — idempotency (§12.2)" do
@@ -268,6 +301,21 @@ defmodule Lightning.Adaptors.CatalogueTest do
 
       assert [%{name: "@openfn/language-http"}] =
                Catalogue.list_package_metas(:local)
+    end
+
+    test "omits the excluded adaptors" do
+      for name <- [
+            "@openfn/language-devtools",
+            "@openfn/language-template",
+            "@openfn/language-fhir-jembi",
+            "@openfn/language-collections",
+            "@openfn/language-http"
+          ] do
+        {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(name: name))
+      end
+
+      assert [%{name: "@openfn/language-http"}] =
+               Catalogue.list_package_metas(:npm)
     end
   end
 

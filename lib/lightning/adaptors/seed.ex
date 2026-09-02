@@ -12,7 +12,7 @@ defmodule Lightning.Adaptors.Seed do
 
   The file is a JSON array of adaptor records in the shape
   `Lightning.Adaptors.Catalogue.upsert_adaptor/1` accepts, as written by
-  `mix lightning.download_adaptor_registry_cache`.
+  `mix lightning.adaptors.snapshot` or `mix lightning.adaptors.dump`.
 
   Once the transaction commits, broadcasts `{:changed, name, source}` for
   every name the seed touched, so each node's
@@ -41,7 +41,7 @@ defmodule Lightning.Adaptors.Seed do
 
     replaced_names =
       if replace?,
-        do: Enum.map(Catalogue.list_package_metas(source), & &1.name),
+        do: Enum.map(Catalogue.list_adaptors(source), & &1.name),
         else: []
 
     {:ok, _} =
@@ -53,7 +53,7 @@ defmodule Lightning.Adaptors.Seed do
     broadcast_changed(
       sup,
       source,
-      Enum.uniq(Enum.map(records, & &1.name) ++ replaced_names)
+      Enum.uniq(Enum.map(records, & &1["name"]) ++ replaced_names)
     )
 
     {:ok, length(records)}
@@ -76,18 +76,7 @@ defmodule Lightning.Adaptors.Seed do
     end
   end
 
-  # `dependencies` and `peer_dependencies` keep string keys; that is how
-  # the `:map` columns store them.
   defp normalize_snapshot_record(record, source) when is_map(record) do
-    record
-    |> atomize_known_keys()
-    |> Map.put(:source, source)
-    |> Map.update(:versions, [], fn versions ->
-      Enum.map(versions, &atomize_known_keys/1)
-    end)
-  end
-
-  defp atomize_known_keys(map) do
-    Map.new(map, fn {k, v} -> {String.to_existing_atom(k), v} end)
+    Map.put(record, "source", source)
   end
 end
