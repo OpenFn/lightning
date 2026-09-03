@@ -78,7 +78,7 @@ mix ecto.gen.migration short_descriptive_name # Generate migration
 ### Workflows Architecture
 
 Workflows are **directed acyclic graphs (DAGs)**:
-- **Triggers**: Webhook, Cron, or Kafka initiation
+- **Triggers**: Webhook or Cron initiation
 - **Jobs**: JavaScript code executed with NPM adaptors
 - **Edges**: Flow control with conditions (`:always`, `:on_job_success`,
   `:on_job_failure`, `:js_expression`)

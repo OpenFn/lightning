@@ -501,39 +501,6 @@ defmodule Lightning.WorkflowVersionsTest do
       refute hash1 == hash2
     end
 
-    test "ignores kafka configuration changes" do
-      workflow = insert(:workflow, name: "Test")
-
-      trigger =
-        insert(:trigger,
-          workflow: workflow,
-          type: :kafka,
-          kafka_configuration:
-            build(:triggers_kafka_configuration, topics: ["1"])
-        )
-
-      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges])
-      hash1 = WorkflowVersions.generate_hash(workflow)
-
-      # Update kafka config
-      updated_trigger =
-        trigger
-        |> Lightning.Workflows.Trigger.changeset(%{
-          kafka_configuration: %{topics: ["22"]}
-        })
-        |> Repo.update!()
-
-      assert updated_trigger.kafka_configuration.topics == ["22"]
-
-      workflow = Repo.preload(workflow, [:triggers, :jobs, :edges], force: true)
-      hash2 = WorkflowVersions.generate_hash(workflow)
-
-      refute updated_trigger.kafka_configuration.topics ==
-               trigger.kafka_configuration.topics
-
-      assert hash1 == hash2
-    end
-
     test "hash changes when job body changes" do
       workflow = insert(:workflow, name: "Test")
       job = insert(:job, workflow: workflow, name: "Job", body: "original")
@@ -671,7 +638,6 @@ defmodule Lightning.WorkflowVersionsTest do
 
       # Insert triggers in reverse order
       insert(:trigger, workflow: workflow, type: :webhook)
-      insert(:trigger, workflow: workflow, type: :kafka)
 
       insert(:trigger,
         workflow: workflow,

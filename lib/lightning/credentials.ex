@@ -58,8 +58,11 @@ defmodule Lightning.Credentials do
 
     deleted_count =
       Enum.reduce(credentials_to_delete, 0, fn credential, acc ->
-        case delete_credential(credential) do
-          :ok -> acc + 1
+        # No actor: this is the scheduled purge finishing a deletion someone
+        # already asked for and was authorised for. Inventing an actor here
+        # would be fiction, so it goes straight to the write.
+        case do_delete_credential(credential) do
+          {:ok, _} -> acc + 1
           _error -> acc
         end
       end)
@@ -188,9 +191,20 @@ defmodule Lightning.Credentials do
     * `{:ok, credential}` - Successfully created credential
     * `{:error, error}` - Error with creation process
   """
-  @spec create_credential(map()) :: {:ok, Credential.t()} | {:error, any()}
-  def create_credential(attrs \\ %{}) do
+  @spec create_credential(map(), User.t()) ::
+          {:ok, Credential.t()} | {:error, any()}
+  def create_credential(attrs, %User{} = actor) do
     attrs = normalize_keys(attrs)
+
+    with :ok <-
+           authorize_credential_owner(actor, %Credential{
+             user_id: attrs["user_id"]
+           }) do
+      do_create_credential(attrs)
+    end
+  end
+
+  defp do_create_credential(attrs) do
     credential_bodies = get_credential_bodies(attrs)
 
     with :ok <- validate_credential_bodies(credential_bodies, attrs),
@@ -236,9 +250,15 @@ defmodule Lightning.Credentials do
     * `{:ok, credential}` - Successfully updated credential
     * `{:error, error}` - Error with update process
   """
-  @spec update_credential(Credential.t(), map()) ::
+  @spec update_credential(Credential.t(), map(), User.t()) ::
           {:ok, Credential.t()} | {:error, any()}
-  def update_credential(%Credential{} = credential, attrs) do
+  def update_credential(%Credential{} = credential, attrs, %User{} = actor) do
+    with :ok <- authorize_credential_owner(actor, credential) do
+      do_update_credential(credential, attrs)
+    end
+  end
+
+  defp do_update_credential(%Credential{} = credential, attrs) do
     credential = Repo.preload(credential, :project_credentials)
     attrs = normalize_keys(attrs)
 
@@ -754,14 +774,20 @@ defmodule Lightning.Credentials do
 
   ## Examples
 
-      iex> delete_credential(credential)
-      {:ok, %Credential{}}
+      iex> delete_credential(credential, actor)
+      {:ok, %{credential: %Credential{}, audit: %Audit{}}}
 
-      iex> delete_credential(credential)
-      {:error, %Ecto.Changeset{}}
+      iex> delete_credential(credential, actor)
+      {:error, :unauthorized}
 
   """
-  def delete_credential(%Credential{} = credential) do
+  def delete_credential(%Credential{} = credential, %User{} = actor) do
+    with :ok <- authorize_credential_owner(actor, credential) do
+      do_delete_credential(credential)
+    end
+  end
+
+  defp do_delete_credential(%Credential{} = credential) do
     Multi.new()
     |> Multi.delete(:credential, credential)
     |> Multi.insert(:audit, fn _ ->
@@ -785,6 +811,7 @@ defmodule Lightning.Credentials do
   ## Parameters
 
     - `credential`: A `Credential` struct that is to be scheduled for deletion.
+    - `actor`: The `User` asking, who must own the credential.
 
   ## Returns
 
@@ -794,14 +821,20 @@ defmodule Lightning.Credentials do
 
   ## Examples
 
-      iex> schedule_credential_deletion(%Credential{id: some_id})
+      iex> schedule_credential_deletion(%Credential{id: some_id}, actor)
       {:ok, %Credential{}}
 
-      iex> schedule_credential_deletion(%Credential{})
+      iex> schedule_credential_deletion(%Credential{}, actor)
       {:error, %Ecto.Changeset{}}
 
   """
-  def schedule_credential_deletion(%Credential{} = credential) do
+  def schedule_credential_deletion(%Credential{} = credential, %User{} = actor) do
+    with :ok <- authorize_credential_owner(actor, credential) do
+      do_schedule_credential_deletion(credential)
+    end
+  end
+
+  defp do_schedule_credential_deletion(%Credential{} = credential) do
     changeset =
       Credential.changeset(credential, %{
         "scheduled_deletion" => scheduled_deletion_date()
@@ -839,11 +872,38 @@ defmodule Lightning.Credentials do
     DateTime.utc_now() |> Timex.shift(days: days)
   end
 
-  def cancel_scheduled_deletion(credential_id) do
-    get_credential!(credential_id)
-    |> update_credential(%{
-      scheduled_deletion: nil
-    })
+  @doc """
+  Clears a credential's scheduled deletion, putting it back in normal use.
+
+  Takes an id rather than a struct because the screen that calls it has only the
+  id to hand. It loads the credential and asks the same ownership question as
+  every other write here, so the id being caller-supplied does not matter.
+  """
+  @spec cancel_scheduled_deletion(Ecto.UUID.t(), User.t()) ::
+          {:ok, Credential.t()} | {:error, :unauthorized | Ecto.Changeset.t()}
+  def cancel_scheduled_deletion(credential_id, %User{} = actor) do
+    credential = get_credential!(credential_id)
+
+    with :ok <- authorize_credential_owner(actor, credential) do
+      do_update_credential(credential, %{scheduled_deletion: nil})
+    end
+  end
+
+  # A credential belongs to the person who made it, and that is the rule the UI
+  # has always drawn its buttons from. Asking here rather than at each screen
+  # means a screen cannot act on someone else's credential by forgetting to
+  # check - the signature will not let it call in without saying who is asking.
+  defp authorize_credential_owner(%User{} = actor, %Credential{} = credential) do
+    if Lightning.Policies.Permissions.can?(
+         :users,
+         :delete_credential,
+         actor,
+         credential
+       ) do
+      :ok
+    else
+      {:error, :unauthorized}
+    end
   end
 
   defp maybe_revoke_oauth_tokens(%Credential{schema: "oauth"} = credential) do
@@ -1456,12 +1516,25 @@ defmodule Lightning.Credentials do
   ```
   """
   @spec initiate_credential_transfer(User.t(), User.t(), Credential.t()) ::
-          :ok | {:error, transfer_error() | Ecto.Changeset.t()}
+          :ok | {:error, :not_owner | transfer_error() | Ecto.Changeset.t()}
   def initiate_credential_transfer(
         %User{} = owner,
         %User{} = receiver,
         %Credential{} = credential
       ) do
+    if credential.user_id == owner.id do
+      do_initiate_credential_transfer(owner, receiver, credential)
+    else
+      {:error, :not_owner}
+    end
+  end
+
+  # `revoke_transfer/2` has always asked this, and this is the same question
+  # about the same pair, so asking it in only one of the two was an oversight
+  # rather than a decision. No screen can reach it: the modal takes the owner
+  # from the session and the credential from the caller's own list. Asked here
+  # so that stays true of whatever calls in next.
+  defp do_initiate_credential_transfer(owner, receiver, credential) do
     token_value = build_transfer_token(owner, receiver, credential)
 
     credential
@@ -1810,61 +1883,106 @@ defmodule Lightning.Credentials do
   def get_keychain_credential(id), do: Repo.get(KeychainCredential, id)
 
   @doc """
-  Creates a keychain credential.
+  Creates a keychain credential on behalf of an actor.
+
+  The actor is an argument rather than something the caller is trusted to have
+  checked, so a screen cannot create a keychain by forgetting to ask. Returns
+  `{:error, :unauthorized}` when the actor may not create one here.
 
   ## Examples
 
-      iex> create_keychain_credential(%{name: "My Keychain", path: "$.user_id"})
+      iex> create_keychain_credential(keychain, %{name: "My Keychain"}, user)
       {:ok, %KeychainCredential{}}
 
-      iex> create_keychain_credential(%{name: nil})
+      iex> create_keychain_credential(keychain, %{name: nil}, user)
       {:error, %Ecto.Changeset{}}
 
   """
+  @spec create_keychain_credential(KeychainCredential.t(), map(), User.t()) ::
+          {:ok, KeychainCredential.t()}
+          | {:error, Ecto.Changeset.t() | :unauthorized}
   def create_keychain_credential(
         %KeychainCredential{} = keychain_credential,
-        attrs \\ %{}
+        attrs,
+        %User{} = actor
       ) do
-    keychain_credential
-    |> KeychainCredential.changeset(attrs)
-    |> Repo.insert()
+    with :ok <-
+           authorize_keychain(
+             :create_keychain_credential,
+             actor,
+             keychain_credential
+           ) do
+      keychain_credential
+      |> KeychainCredential.changeset(attrs)
+      |> Repo.insert()
+    end
   end
 
   @doc """
-  Updates a keychain credential.
+  Updates a keychain credential on behalf of an actor.
+
+  Returns `{:error, :unauthorized}` when the actor may not edit it.
 
   ## Examples
 
-      iex> update_keychain_credential(keychain_credential, %{name: "Updated"})
+      iex> update_keychain_credential(keychain_credential, %{name: "Updated"}, user)
       {:ok, %KeychainCredential{}}
 
-      iex> update_keychain_credential(keychain_credential, %{name: nil})
-      {:error, %Ecto.Changeset{}}
-
   """
+  @spec update_keychain_credential(KeychainCredential.t(), map(), User.t()) ::
+          {:ok, KeychainCredential.t()}
+          | {:error, Ecto.Changeset.t() | :unauthorized}
   def update_keychain_credential(
         %KeychainCredential{} = keychain_credential,
-        attrs
+        attrs,
+        %User{} = actor
       ) do
-    keychain_credential
-    |> KeychainCredential.changeset(attrs)
-    |> Repo.update()
+    with :ok <-
+           authorize_keychain(
+             :edit_keychain_credential,
+             actor,
+             keychain_credential
+           ) do
+      keychain_credential
+      |> KeychainCredential.changeset(attrs)
+      |> Repo.update()
+    end
   end
 
   @doc """
-  Deletes a keychain credential.
+  Deletes a keychain credential on behalf of an actor.
+
+  Returns `{:error, :unauthorized}` when the actor may not delete it.
 
   ## Examples
 
-      iex> delete_keychain_credential(keychain_credential)
+      iex> delete_keychain_credential(keychain_credential, user)
       {:ok, %KeychainCredential{}}
 
-      iex> delete_keychain_credential(keychain_credential)
-      {:error, %Ecto.Changeset{}}
-
   """
-  def delete_keychain_credential(%KeychainCredential{} = keychain_credential) do
-    Repo.delete(keychain_credential)
+  @spec delete_keychain_credential(KeychainCredential.t(), User.t()) ::
+          {:ok, KeychainCredential.t()}
+          | {:error, Ecto.Changeset.t() | :unauthorized}
+  def delete_keychain_credential(
+        %KeychainCredential{} = keychain_credential,
+        %User{} = actor
+      ) do
+    with :ok <-
+           authorize_keychain(
+             :delete_keychain_credential,
+             actor,
+             keychain_credential
+           ) do
+      Repo.delete(keychain_credential)
+    end
+  end
+
+  defp authorize_keychain(action, %User{} = actor, %KeychainCredential{} = kc) do
+    if Lightning.Policies.Permissions.can?(:credentials, action, actor, kc) do
+      :ok
+    else
+      {:error, :unauthorized}
+    end
   end
 
   @doc """

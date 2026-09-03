@@ -8,13 +8,6 @@ defmodule Lightning.ExportUtils do
   alias Lightning.Workflows
   alias Lightning.Workflows.Snapshot
 
-  @kafka_trigger_fields [
-    :hosts,
-    :topics,
-    :initial_offset_reset_policy,
-    :connect_timeout
-  ]
-
   @webhook_response_config_fields [:success_code, :error_code]
 
   @ordering_map %{
@@ -39,8 +32,7 @@ defmodule Lightning.ExportUtils do
       :webhook_response_config,
       :cron_expression,
       :cron_cursor_job,
-      :enabled,
-      :kafka_configuration
+      :enabled
     ],
     edge: [
       :source_trigger,
@@ -105,32 +97,17 @@ defmodule Lightning.ExportUtils do
           end
         end)
 
-      :kafka ->
-        kafka_config =
-          trigger.kafka_configuration
-          |> Map.take(@kafka_trigger_fields)
-          |> Enum.map(fn
-            {:hosts, hosts} when is_list(hosts) ->
-              {:hosts,
-               Enum.map(hosts, fn host_port -> Enum.join(host_port, ":") end)}
-
-            other ->
-              other
-          end)
-          |> Enum.sort_by(
-            fn {key, _val} ->
-              Enum.find_index(@kafka_trigger_fields, &(&1 == key))
-            end,
-            :asc
-          )
-
-        Map.put(base, :kafka_configuration, kafka_config)
-
       :webhook ->
         base
         |> maybe_put_custom_path(trigger.custom_path)
         |> maybe_put_webhook_reply(trigger.webhook_reply)
         |> maybe_put_webhook_response_config(trigger.webhook_response_config)
+
+      # Snapshots keep the trigger types they were taken with, so exporting an
+      # old version of a workflow can still reach a Kafka trigger. Emit what it
+      # was rather than refusing to export the version at all.
+      _ ->
+        base
     end
   end
 

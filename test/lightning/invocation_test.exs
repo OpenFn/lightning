@@ -194,23 +194,6 @@ defmodule Lightning.InvocationTest do
       parsed = Jason.decode!(result.body_json)
       assert parsed == %{"baz" => "qux"}
 
-      # Test with kafka type - should wrap body in {"data": ..., "request": ...}
-      kafka_dataclip =
-        insert(:dataclip,
-          body: %{"kafka" => "data"},
-          request: %{"topic" => "test"},
-          type: :kafka,
-          project: project
-        )
-
-      result = Invocation.get_dataclip_with_body!(kafka_dataclip.id)
-
-      assert result.type == :kafka
-      assert is_binary(result.body_json)
-      parsed = Jason.decode!(result.body_json)
-      assert parsed["data"] == %{"kafka" => "data"}
-      assert parsed["request"] == %{"topic" => "test"}
-
       # Test that it raises when dataclip doesn't exist
       assert_raise Ecto.NoResultsError, fn ->
         Invocation.get_dataclip_with_body!(Ecto.UUID.generate())

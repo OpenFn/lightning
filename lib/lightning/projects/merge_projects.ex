@@ -699,8 +699,7 @@ defmodule Lightning.Projects.MergeProjects do
               :comment,
               :custom_path,
               :cron_expression,
-              :type,
-              :kafka_configuration
+              :type
             ])
             |> drop_unusable_custom_path(
               Enum.find(target_triggers, &(&1.id == mapped_id))
@@ -907,8 +906,7 @@ defmodule Lightning.Projects.MergeProjects do
           :comment,
           :custom_path,
           :cron_expression,
-          :type,
-          :kafka_configuration
+          :type
         ])
         |> Map.put(:id, trigger.id)
         |> stringify_keys()
@@ -978,8 +976,7 @@ defmodule Lightning.Projects.MergeProjects do
           :comment,
           :custom_path,
           :cron_expression,
-          :type,
-          :kafka_configuration
+          :type
         ])
         |> drop_unusable_custom_path()
         |> Map.put(:id, Map.fetch!(node_mappings, trigger.id))

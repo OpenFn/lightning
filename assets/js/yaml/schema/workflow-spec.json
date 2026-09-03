@@ -4,16 +4,10 @@
   "type": "object",
   "properties": {
     "id": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "name": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "jobs": {
       "type": "object",
@@ -22,10 +16,7 @@
           "type": "object",
           "properties": {
             "id": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "name": {
               "type": "string"
@@ -37,10 +28,7 @@
               "type": "string"
             },
             "credential": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "pos": {
               "type": "object",
@@ -54,11 +42,7 @@
               }
             }
           },
-          "required": [
-            "name",
-            "adaptor",
-            "body"
-          ],
+          "required": ["name", "adaptor", "body"],
           "additionalProperties": false
         }
       },
@@ -71,18 +55,11 @@
           "type": "object",
           "properties": {
             "id": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "type": {
               "type": "string",
-              "enum": [
-                "cron",
-                "webhook",
-                "kafka"
-              ]
+              "enum": ["cron", "webhook"]
             },
             "enabled": {
               "type": "boolean"
@@ -91,39 +68,20 @@
               "type": "string"
             },
             "cron_cursor_job": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "webhook_reply": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "enum": [
-                "before_start",
-                "after_completion",
-                null
-              ]
+              "type": ["string", "null"],
+              "enum": ["before_start", "after_completion", null]
             },
             "webhook_response_config": {
-              "type": [
-                "object",
-                "null"
-              ],
+              "type": ["object", "null"],
               "properties": {
                 "success_code": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ]
+                  "type": ["integer", "null"]
                 },
                 "error_code": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ]
+                  "type": ["integer", "null"]
                 }
               },
               "additionalProperties": false
@@ -140,16 +98,10 @@
               }
             },
             "custom_path": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             }
           },
-          "required": [
-            "type",
-            "enabled"
-          ],
+          "required": ["type", "enabled"],
           "additionalProperties": false,
           "oneOf": [
             {
@@ -168,16 +120,7 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "cron_expression"
-              ]
-            },
-            {
-              "properties": {
-                "type": {
-                  "const": "kafka"
-                }
-              }
+              "required": ["cron_expression"]
             }
           ]
         }
@@ -191,10 +134,7 @@
           "type": "object",
           "properties": {
             "id": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "source_trigger": {
               "type": "string"
@@ -212,30 +152,19 @@
               "type": "string"
             },
             "condition_expression": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "enabled": {
               "type": "boolean"
             }
           },
-          "required": [
-            "target_job",
-            "condition_type",
-            "enabled"
-          ],
+          "required": ["target_job", "condition_type", "enabled"],
           "additionalProperties": false
         }
       },
       "additionalProperties": false
     }
   },
-  "required": [
-    "jobs",
-    "triggers",
-    "edges"
-  ],
+  "required": ["jobs", "triggers", "edges"],
   "additionalProperties": false
 }

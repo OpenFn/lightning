@@ -263,7 +263,6 @@ const mockWorkflow: Workflow = {
       enabled: true,
       has_auth_method: false,
       cron_expression: null,
-      kafka_configuration: null,
     },
   ],
   edges: [],

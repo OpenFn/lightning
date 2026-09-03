@@ -54,8 +54,6 @@ export interface TriggerTestHarnessOptions {
    * from general workflow-edit access.
    */
   canWriteWebhookAuthMethod?: boolean;
-  /** Whether the session-context emits kafka_triggers_enabled=true (default: false). */
-  kafkaEnabled?: boolean;
   /**
    * Project-level webhook auth methods emitted in the session_context event.
    * Defaults to an empty array.
@@ -117,7 +115,6 @@ export async function createTriggerTestHarness(
   const {
     canEdit = true,
     canWriteWebhookAuthMethod = canEdit,
-    kafkaEnabled = false,
     webhookAuthMethods = [],
     project = null,
     workflowStore,
@@ -166,7 +163,6 @@ export async function createTriggerTestHarness(
       project,
       config: {
         require_email_verification: false,
-        kafka_triggers_enabled: kafkaEnabled,
       },
       permissions: {
         can_edit_workflow: canEdit,

@@ -64,6 +64,39 @@ defmodule MyAppWeb.Plugs.BlockRoutesTest do
     end
   end
 
+  describe "through the :browser pipeline" do
+    setup do
+      stub(Lightning.MockConfig, :check_flag?, fn _flag -> false end)
+      :ok
+    end
+
+    # Non-normalised spellings that the router still dispatches to the
+    # registration controller must hit the same block, not slip past it.
+    # `/users/%72egister` is the case that exercises the fix's per-segment
+    # decode: the adapter leaves the segment percent-encoded in `path_info` and
+    # the router only decodes it at dispatch, so the gate has to decode too.
+    #
+    # A bare `//users/register` can't be driven through the test client here —
+    # `Plug.Test`'s `URI.parse` reads `users` as the URI authority and rewrites
+    # the target to `/register` — so that spelling is covered by manual
+    # verification against a real cowboy request rather than this test.
+    for path <- [
+          "/users/register",
+          "/users/register/",
+          "///users/register",
+          "/users/%72egister"
+        ] do
+      test "blocks GET #{path} when :allow_signup is false", %{conn: conn} do
+        conn = get(conn, unquote(path))
+
+        assert conn.status == 404
+
+        assert conn.resp_body ==
+                 "Self-signup has been disabled for this instance. Please contact the administrator."
+      end
+    end
+  end
+
   describe "call/2 with all routes enabled" do
     setup do
       expect(Lightning.MockConfig, :check_flag?, fn _flag -> true end)

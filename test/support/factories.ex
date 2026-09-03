@@ -367,26 +367,6 @@ defmodule Lightning.Factories do
     %Lightning.Workflows.Triggers.WebhookResponseConfig{}
   end
 
-  def triggers_kafka_configuration_factory do
-    %Lightning.Workflows.Triggers.KafkaConfiguration{
-      group_id: "arb_group_id",
-      hosts: [
-        ["localhost", "9096"],
-        ["localhost", "9095"],
-        ["localhost", "9094"]
-      ],
-      initial_offset_reset_policy: "earliest",
-      ssl: false,
-      topics: ["arb_topic"]
-    }
-  end
-
-  def trigger_kafka_message_record_factory do
-    %Lightning.KafkaTriggers.TriggerKafkaMessageRecord{
-      topic_partition_offset: "foo_1_1001"
-    }
-  end
-
   def chat_session_factory do
     %Lightning.AiAssistant.ChatSession{
       id: fn -> Ecto.UUID.generate() end,

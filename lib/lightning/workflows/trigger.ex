@@ -15,7 +15,6 @@ defmodule Lightning.Workflows.Trigger do
   import Lightning.Validators
 
   alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
 
@@ -25,7 +24,7 @@ defmodule Lightning.Workflows.Trigger do
         }
   @type trigger_type :: :webhook | :cron
 
-  @trigger_types [:webhook, :cron, :kafka]
+  @trigger_types [:webhook, :cron]
   # `\z` not `$`, which in PCRE also matches before a trailing newline.
   @custom_path_format ~r/\A[a-z0-9_-]+\z/
   @custom_path_max 255
@@ -72,8 +71,6 @@ defmodule Lightning.Workflows.Trigger do
     many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
       join_through: "trigger_webhook_auth_methods",
       on_replace: :delete
-
-    embeds_one :kafka_configuration, KafkaConfiguration, on_replace: :update
 
     embeds_one :webhook_response_config, WebhookResponseConfig,
       on_replace: :update
@@ -136,11 +133,18 @@ defmodule Lightning.Workflows.Trigger do
   @doc """
   Returns true if the trigger uses a synchronous webhook reply mode
   (i.e., the HTTP connection is held open waiting for a response).
+
+  This set must stay in step with the reply modes that actually publish a
+  `{:webhook_response, ...}` message — see
+  `LightningWeb.RunChannel.maybe_send_after_completion_response/2`, which
+  broadcasts for `:after_completion` only. A mode that is synchronous here but
+  has no publisher there parks the request process until the webhook response
+  timeout for a message nobody sends, so `:custom` (accepted by the schema but
+  not implemented, and not offered by the trigger editor) is deliberately
+  excluded.
   """
   @spec synchronous?(t()) :: boolean()
-  def synchronous?(%__MODULE__{webhook_reply: reply})
-      when reply in [:after_completion, :custom],
-      do: true
+  def synchronous?(%__MODULE__{webhook_reply: :after_completion}), do: true
 
   def synchronous?(%__MODULE__{}), do: false
 
@@ -148,10 +152,6 @@ defmodule Lightning.Workflows.Trigger do
   def changeset(trigger, attrs) do
     trigger
     |> cast_changeset(attrs)
-    |> cast_embed(:kafka_configuration,
-      required: false,
-      with: &KafkaConfiguration.changeset/2
-    )
     |> cast_embed(:webhook_response_config,
       required: false,
       with: &WebhookResponseConfig.changeset/2
@@ -326,13 +326,12 @@ defmodule Lightning.Workflows.Trigger do
     changeset
     |> fetch_field!(:type)
     |> case do
-      # A cron or kafka row can hold a never-validated path. Becoming a webhook
+      # A cron row can hold a never-validated path. Becoming a webhook
       # would make it a live URL, so it is checked in and dropped out.
       :webhook ->
         changeset
         |> put_change(:cron_expression, nil)
         |> put_change(:cron_cursor_job_id, nil)
-        |> put_change(:kafka_configuration, nil)
         |> put_default(:webhook_reply, :before_start)
         |> maybe_clear_webhook_response_config()
 
@@ -341,16 +340,6 @@ defmodule Lightning.Workflows.Trigger do
         |> put_change(:custom_path, nil)
         |> put_default(:cron_expression, "0 0 * * *")
         |> validate_cron()
-        |> put_change(:kafka_configuration, nil)
-        |> put_change(:webhook_reply, nil)
-        |> put_change(:webhook_response_config, nil)
-
-      :kafka ->
-        changeset
-        |> put_change(:custom_path, nil)
-        |> put_change(:cron_expression, nil)
-        |> put_change(:cron_cursor_job_id, nil)
-        |> validate_required([:kafka_configuration])
         |> put_change(:webhook_reply, nil)
         |> put_change(:webhook_response_config, nil)
 

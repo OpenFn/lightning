@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.18.1",
+      version: "2.18.2",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -93,7 +93,6 @@ defmodule Lightning.MixProject do
       # {:rexbug, ">= 1.0.0", only: :test},
       {:bcrypt_elixir, "~> 3.3"},
       {:bodyguard, "~> 2.2"},
-      {:broadway_kafka, "~> 0.4.2"},
       {:bypass, "~> 2.1", only: :test},
       {:briefly, "~> 0.5.0"},
       {:cachex, "~> 4.0"},

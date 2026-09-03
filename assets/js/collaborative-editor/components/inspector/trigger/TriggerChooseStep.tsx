@@ -5,12 +5,11 @@ import { WebhookUrlField } from './WebhookUrlField';
 import { WizardBreadcrumb } from './WizardBreadcrumb';
 import { WizardFooter } from './WizardFooter';
 
-type ChooseType = 'webhook' | 'cron' | 'kafka';
+type ChooseType = 'webhook' | 'cron';
 
 const TITLES: Record<ChooseType, string> = {
   webhook: 'On webhook call',
   cron: 'On a schedule',
-  kafka: 'Kafka',
 };
 
 interface TriggerChooseStepProps {
@@ -23,14 +22,14 @@ interface TriggerChooseStepProps {
   /** Advance to the Configure step (Next). */
   onNext: () => void;
   /**
-   * Exit the wizard via the header back arrow. Used by cron/kafka, whose
+   * Exit the wizard via the header back arrow. Used by cron, whose
    * design has a header arrow rather than a footer Cancel. Mutually exclusive
    * with `onCancel` (webhook).
    */
   onBack?: () => void;
   /**
    * Exit the wizard via a footer **Cancel** button. Used by webhook, which has
-   * no header back arrow. Mutually exclusive with `onBack` (cron/kafka).
+   * no header back arrow. Mutually exclusive with `onBack` (cron).
    */
   onCancel?: () => void;
   /** Webhook only: the read-only ingest URL to display below the type chip. */
@@ -45,7 +44,7 @@ interface TriggerChooseStepProps {
  * The wizard's "Choose" step for every trigger type. Shows the current
  * type badge with a **Change** action into the picker, then (webhook only) the
  * read-only ingest URL. Two exit shapes, by type: webhook uses a footer
- * **Cancel** (`onCancel`), cron/kafka use a header back arrow (`onBack`) — the
+ * **Cancel** (`onCancel`), cron uses a header back arrow (`onBack`) — the
  * difference is carried by which handler the wizard passes, not by separate
  * components.
  */

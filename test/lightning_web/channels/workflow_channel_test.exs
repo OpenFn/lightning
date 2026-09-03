@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   import Lightning.CollaborationHelpers
   import Lightning.Factories
+  import Lightning.ProjectsHelpers
   import Mox
   import ExUnit.CaptureLog
 
@@ -136,6 +137,65 @@ defmodule LightningWeb.WorkflowChannelTest do
                )
     end
 
+    # `Policies.ProjectUsers.authorize/3` loads the
+    # ProjectUser and DISCARDS the project before deciding `:create_workflow`,
+    # four lines below the `:access_project` clause that does check
+    # `scheduled_deletion`. Scheduling deletion removes no membership rows, so
+    # the editor below still joins and can build a workflow — with triggers —
+    # inside a project that has been shut down.
+    test "rejects joins on a project scheduled for deletion" do
+      editor = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: editor.id, role: :editor}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.add(7, :day)
+        )
+
+      existing_workflow = insert(:workflow, project: project)
+      new_workflow_id = Ecto.UUID.generate()
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(existing_workflow.id)
+        ensure_doc_supervisor_stopped(new_workflow_id)
+      end)
+
+      join = fn workflow_id, action ->
+        LightningWeb.UserSocket
+        |> socket("user_#{editor.id}", %{current_user: editor})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow_id}",
+          %{"project_id" => project.id, "action" => action}
+        )
+      end
+
+      # Control: "edit" is ALREADY refused. It routes through
+      # `:workflows, :access_read` -> `:access_project`, whose clause reads
+      # `project.scheduled_deletion` off the loaded struct the channel holds.
+      assert {:error, %{reason: "unauthorized"}} =
+               join.(existing_workflow.id, "edit")
+
+      # "new" routes through `:project_users, :create_workflow`, which throws
+      # the project away and decides on the ProjectUser's role alone.
+      # Projected onto the granted permissions so the failure stays readable.
+      result =
+        case join.(new_workflow_id, "new") do
+          {:error, %{reason: reason}} ->
+            {:error, reason}
+
+          {:ok, _reply, joined_socket} ->
+            {:joined,
+             Map.take(joined_socket.assigns, [
+               :can_edit_workflow,
+               :can_run_workflow,
+               :workflow_kind
+             ])}
+        end
+
+      assert result == {:error, "unauthorized"}
+    end
+
     test "does not reveal which snapshot versions exist to a non-member", %{
       workflow: workflow,
       project: project
@@ -179,6 +239,158 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert socket_project.id == project.id
       assert %{session_pid: session_pid} = socket.assigns
       assert is_pid(session_pid)
+    end
+
+    test "grants a support user without a membership row edit rights only while the project allows support access" do
+      support_user = insert(:user, support_user: true)
+      project = insert(:project, allow_support_access: true)
+      workflow = insert(:workflow, project: project)
+
+      join = fn ->
+        LightningWeb.UserSocket
+        |> socket("user_#{support_user.id}", %{current_user: support_user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+      end
+
+      assert {:ok, _, socket} = join.()
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      assert socket.assigns.project_user == nil
+
+      ref = push(socket, "get_context", %{})
+      assert_reply ref, :ok, %{permissions: permissions}
+
+      assert %{
+               can_edit_workflow: true,
+               can_run_workflow: true,
+               can_write_webhook_auth_method: false
+             } = permissions
+
+      project
+      |> Ecto.Changeset.change(allow_support_access: false)
+      |> Lightning.Repo.update!()
+
+      assert {:error, %{reason: "unauthorized"}} = join.()
+    end
+
+    test "refuses a non-member support user joining an existing workflow with action \"new\" when the project has not consented" do
+      # action="new" against an id that already exists just returns the
+      # persisted workflow, so this is the same question as an "edit" join.
+      support_user = insert(:user, support_user: true)
+      project = insert(:project, allow_support_access: false)
+      workflow = insert(:workflow, project: project)
+
+      assert {:error, %{reason: "unauthorized"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{support_user.id}", %{
+                 current_user: support_user
+               })
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}",
+                 %{"project_id" => project.id, "action" => "new"}
+               )
+    end
+
+    test "admits a non-member support user joining an existing workflow with action \"new\" once the project consents" do
+      support_user = insert(:user, support_user: true)
+      project = insert(:project, allow_support_access: true)
+      workflow = insert(:workflow, project: project)
+
+      assert {:ok, _, socket} =
+               LightningWeb.UserSocket
+               |> socket("user_#{support_user.id}", %{
+                 current_user: support_user
+               })
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}",
+                 %{"project_id" => project.id, "action" => "new"}
+               )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      assert socket.assigns.project_user == nil
+      assert socket.assigns.workflow.id == workflow.id
+    end
+
+    # The `/mfa_required` page a blocked member lands on still renders their
+    # session token, so that session can open the socket by hand. The check has
+    # to hold on the join, not only on the LiveView mount.
+    test "rejects a member of an MFA-required project who has not enrolled" do
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      workflow = insert(:workflow, project: project)
+
+      assert {:error, %{reason: "unauthorized"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}",
+                 %{"project_id" => project.id, "action" => "edit"}
+               ),
+             "an unenrolled member joined the collaboration channel of a " <>
+               "project that requires MFA"
+    end
+
+    test "rejects an unenrolled member on the \"new\" action too" do
+      # "new" resolves a fresh workflow into the project, a second way in that
+      # needs no existing workflow id to name.
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      assert {:error, %{reason: "unauthorized"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{Ecto.UUID.generate()}",
+                 %{"project_id" => project.id, "action" => "new"}
+               ),
+             "an unenrolled member reached the project through the `new` branch"
+    end
+
+    # Control: without it, a policy that refuses everybody would pass.
+    test "admits a member of an MFA-required project who has enrolled" do
+      user = insert(:user, mfa_enabled: true)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      workflow = insert(:workflow, project: project)
+
+      assert {:ok, _reply, socket} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}",
+                 %{"project_id" => project.id, "action" => "edit"}
+               )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(socket.assigns.workflow.id)
+      end)
     end
   end
 
@@ -257,6 +469,396 @@ defmodule LightningWeb.WorkflowChannelTest do
       await_channel_processed(socket)
 
       assert workflow_name(session_pid) == "Edited By Owner"
+    end
+  end
+
+  describe "project membership teardown" do
+    setup do
+      # The module-level setup stubs `Lightning.broadcast/2` to a no-op so
+      # `save_workflow` does not fan out. Membership teardown *is* the
+      # broadcast, so put the real implementation back for these tests.
+      Mox.stub(LightningMock, :broadcast, &Lightning.API.broadcast/2)
+
+      Mox.stub(
+        Lightning.Extensions.MockProjectHook,
+        :handle_project_validation,
+        & &1
+      )
+
+      :ok
+    end
+
+    test "demoting the joined user blocks their writes without dropping the channel",
+         %{project: project, workflow: workflow} do
+      editor = insert(:user)
+
+      project_user =
+        insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+      session_pid = socket.assigns.session_pid
+      original_name = workflow_name(session_pid)
+
+      change_role(project, project_user, :viewer)
+
+      assert_push "session_context_updated", %{
+        permissions: %{can_edit_workflow: false}
+      }
+
+      # The broadcast is delivered before this push, so once the channel has
+      # replied it has necessarily already handled the membership event.
+      ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+      assert_reply ref, :ok, %{workflow: _}
+      assert Process.alive?(socket.channel_pid)
+
+      chunk =
+        build_name_mutation(session_pid, :sync_update, "Mutated After Demotion")
+
+      push(socket, "yjs", {:binary, chunk})
+      await_channel_processed(socket)
+
+      assert workflow_name(session_pid) == original_name
+    end
+
+    test "stops the channel when the joined user is removed from the project",
+         %{project: project, workflow: workflow} do
+      editor = insert(:user)
+
+      project_user =
+        insert(:project_user, project: project, user: editor, role: :editor)
+
+      channel_pid = join_as(editor, project, workflow).channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      Lightning.Projects.delete_project_user!(project_user, insert(:user))
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    test "leaves the channel joined when a different user's membership changes",
+         %{project: project, workflow: workflow} do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      other_member = insert(:user)
+
+      other_project_user =
+        insert(:project_user, project: project, user: other_member, role: :admin)
+
+      socket = join_as(editor, project, workflow)
+
+      change_role(project, other_project_user, :viewer)
+
+      # The broadcast is delivered before this push, so once the channel has
+      # replied it has necessarily already handled the membership event.
+      ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+      assert_reply ref, :ok, %{workflow: _}
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "leaves the channel joined when membership changes on another project",
+         %{project: project, workflow: workflow} do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      other_project =
+        insert(:project, project_users: [%{user: insert(:user), role: :owner}])
+
+      other_project_user =
+        insert(:project_user, project: other_project, user: editor, role: :admin)
+
+      socket = join_as(editor, project, workflow)
+
+      change_role(other_project, other_project_user, :viewer)
+
+      ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+      assert_reply ref, :ok, %{workflow: _}
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "adding another collaborator neither logs nor drops the channel", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+
+      log =
+        capture_log(fn ->
+          add_member(project, insert(:user), :editor)
+
+          ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+          assert_reply ref, :ok, %{workflow: _}
+        end)
+
+      refute log =~ "unhandled message"
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "granting a support user a lesser role blocks their writes", %{
+      project: project,
+      workflow: workflow
+    } do
+      project =
+        Lightning.Repo.update!(
+          Ecto.Changeset.change(project, allow_support_access: true)
+        )
+
+      support_user = insert(:user, support_user: true)
+
+      socket = join_as(support_user, project, workflow)
+      assert socket.assigns.can_edit_workflow
+      session_pid = socket.assigns.session_pid
+      original_name = workflow_name(session_pid)
+
+      add_member(project, support_user, :viewer)
+
+      assert_push "session_context_updated", %{
+        permissions: %{can_edit_workflow: false}
+      }
+
+      chunk =
+        build_name_mutation(session_pid, :sync_update, "Mutated After Addition")
+
+      push(socket, "yjs", {:binary, chunk})
+      await_channel_processed(socket)
+
+      assert workflow_name(session_pid) == original_name
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "stops a support-access channel when support access is revoked" do
+      project =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: insert(:user), role: :owner}]
+        )
+
+      workflow = insert(:workflow, project: project)
+      support_user = insert(:user, support_user: true)
+
+      socket = join_as(support_user, project, workflow)
+      assert socket.assigns.project_user == nil
+
+      channel_pid = socket.channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      revoke_support_access(project)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    test "leaves a member's channel joined and quiet when support access is revoked",
+         %{project: project, workflow: workflow} do
+      project =
+        Lightning.Repo.update!(
+          Ecto.Changeset.change(project, allow_support_access: true)
+        )
+
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+
+      log =
+        capture_log(fn ->
+          revoke_support_access(project)
+
+          # The broadcast is delivered before this push, so once the channel has
+          # replied it has necessarily already handled the event.
+          ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+          assert_reply ref, :ok, %{workflow: _}
+        end)
+
+      refute log =~ "unhandled message"
+      assert Process.alive?(socket.channel_pid)
+      refute_received %Phoenix.Socket.Message{event: "session_context_updated"}
+    end
+
+    test "leaves a support user who is also a member joined when support access is revoked" do
+      project =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: insert(:user), role: :owner}]
+        )
+
+      workflow = insert(:workflow, project: project)
+      support_user = insert(:user, support_user: true)
+
+      insert(:project_user, project: project, user: support_user, role: :viewer)
+
+      socket = join_as(support_user, project, workflow)
+      assert socket.assigns.project_user
+
+      revoke_support_access(project)
+
+      ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+      assert_reply ref, :ok, %{workflow: _}
+      assert Process.alive?(socket.channel_pid)
+    end
+  end
+
+  describe "project and workflow deletion teardown" do
+    setup do
+      # The module-level setup stubs `Lightning.broadcast/2` to a no-op so
+      # `save_workflow` does not fan out. The teardown *is* the broadcast, so
+      # put the real implementation back for these tests.
+      Mox.stub(LightningMock, :broadcast, &Lightning.API.broadcast/2)
+
+      Mox.stub(
+        Lightning.Extensions.MockProjectHook,
+        :handle_project_validation,
+        & &1
+      )
+
+      :ok
+    end
+
+    # `save_workflow` already refuses once the project is wound down, but Yjs
+    # frames are gated on the join-time `can_edit_workflow`, so without this the
+    # participant keeps mutating the shared document — and every other
+    # participant keeps seeing those mutations — for the life of the socket.
+    test "stops the channel when the project is scheduled for deletion", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+      session_pid = socket.assigns.session_pid
+
+      # Positive control: this participant's frames do reach the shared document
+      # right up to the moment the project is wound down.
+      chunk = build_name_mutation(session_pid, :sync_update, "Edited While Live")
+      push(socket, "yjs", {:binary, chunk})
+      await_channel_processed(socket)
+      assert workflow_name(session_pid) == "Edited While Live"
+
+      channel_pid = socket.channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      {:ok, _project} = Lightning.Projects.schedule_project_deletion(project)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    # A support user holds the project itself rather than a membership row, so
+    # they take the other route into `Scope` — and they are exactly who a
+    # wind-down is meant to offboard.
+    test "stops a support-access channel when the project is scheduled for deletion" do
+      project =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [%{user: insert(:user), role: :owner}]
+        )
+
+      workflow = insert(:workflow, project: project)
+      support_user = insert(:user, support_user: true)
+
+      socket = join_as(support_user, project, workflow)
+      assert socket.assigns.project_user == nil
+      assert socket.assigns.can_edit_workflow
+
+      channel_pid = socket.channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      {:ok, _project} = Lightning.Projects.schedule_project_deletion(project)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    test "leaves a channel on another project joined", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+
+      other_project =
+        insert(:project, project_users: [%{user: insert(:user), role: :owner}])
+
+      {:ok, _project} =
+        Lightning.Projects.schedule_project_deletion(other_project)
+
+      ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+      assert_reply ref, :ok, %{workflow: _}
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    # A save on the soft-deleted row would write the Y.Doc back over it, so the
+    # deleted workflow's content would reappear.
+    test "stops the channel when its own workflow is deleted", %{
+      project: project,
+      workflow: workflow
+    } do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      channel_pid = join_as(editor, project, workflow).channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      {:ok, _} = Lightning.Workflows.mark_for_deletion(workflow, insert(:user))
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    test "leaves the channel joined when another workflow in the project is deleted",
+         %{project: project, workflow: workflow} do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      other_workflow = insert(:workflow, project: project)
+
+      socket = join_as(editor, project, workflow)
+
+      log =
+        capture_log(fn ->
+          {:ok, _} =
+            Lightning.Workflows.mark_for_deletion(
+              other_workflow,
+              insert(:user)
+            )
+
+          ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+          assert_reply ref, :ok, %{workflow: _}
+        end)
+
+      refute log =~ "unhandled message"
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    # Deletions ride the project's topic precisely so that saves — which are
+    # frequent — do not reach this channel at all. Guard against a future
+    # subscription putting them back.
+    test "leaves the channel joined and quiet when a workflow is saved", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      socket = join_as(editor, project, workflow)
+
+      log =
+        capture_log(fn ->
+          {:ok, _} =
+            Lightning.Workflows.save_workflow(
+              Lightning.Workflows.change_workflow(workflow, %{name: "Renamed"}),
+              user
+            )
+
+          ref = push(socket, "validate_workflow_name", %{"workflow" => %{}})
+          assert_reply ref, :ok, %{workflow: _}
+        end)
+
+      refute log =~ "unhandled message"
+      assert Process.alive?(socket.channel_pid)
     end
   end
 
@@ -406,6 +1008,54 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert job_id == job.id
     end
 
+    test "a sandbox asks for its own environment, not the parent's" do
+      # The bug this closes: metadata was fetched against "main" whatever
+      # project the job belonged to, so a sandbox saw its parent's production
+      # credential. Reverting the fix has to fail here.
+      Mimic.copy(Lightning.MetadataService)
+
+      root = insert(:project)
+      user = insert(:user)
+
+      sandbox =
+        insert(:project,
+          parent: root,
+          env: "staging",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      workflow = insert(:workflow, project: sandbox)
+      credential = insert(:credential, user: user, schema: "http")
+      job = insert(:job, workflow: workflow, credential: credential)
+
+      test_pid = self()
+
+      Mimic.stub(Lightning.MetadataService, :fetch, fn _adaptor,
+                                                       _credential,
+                                                       environment ->
+        send(test_pid, {:metadata_environment, environment})
+        {:ok, %{"name" => "ok"}}
+      end)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn ->
+        ensure_doc_supervisor_stopped(socket.assigns.workflow.id)
+      end)
+
+      ref = push(socket, "request_metadata", %{"job_id" => job.id})
+      assert_reply ref, :ok, %{job_id: _}
+
+      assert_receive {:metadata_environment, "staging"}
+    end
+
     test "returns job_not_found for a job in another project (no cross-tenant credential use)",
          %{socket: socket} do
       # A job outside the session's workflow must be indistinguishable from a
@@ -451,7 +1101,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Config data
       assert %{config: config_data} = response
       assert config_data.require_email_verification == true
-      assert is_boolean(config_data.kafka_triggers_enabled)
 
       # Permissions data
       assert %{permissions: permissions_data} = response
@@ -482,17 +1131,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, response
       assert %{config: config_data} = response
       assert config_data.require_email_verification == false
-    end
-
-    test "returns config with kafka_triggers_enabled based on Lightning.Config",
-         %{socket: socket} do
-      Mox.stub(Lightning.MockConfig, :kafka_triggers_enabled?, fn -> true end)
-
-      ref = push(socket, "get_context", %{})
-
-      assert_reply ref, :ok, response
-      assert %{config: config_data} = response
-      assert config_data.kafka_triggers_enabled == true
     end
 
     test "returns can_edit_workflow false for viewer role", %{
@@ -820,6 +1458,53 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert message =~ "don't have permission to edit"
     end
 
+    # Both subjects are here because they take different routes into Scope: a
+    # member is identified by their ProjectUser, a support user by the project
+    # itself — which the channel holds as it was at join. Only the second could
+    # read its answer off that stale struct.
+    test "blocks saving once the project is scheduled for deletion mid-session" do
+      editor = insert(:user)
+      support_user = insert(:user, support_user: true)
+
+      project =
+        insert(:project,
+          allow_support_access: true,
+          project_users: [
+            %{user: insert(:user), role: :owner},
+            %{user_id: editor.id, role: :editor}
+          ]
+        )
+
+      workflow = insert(:workflow, project: project)
+
+      editor_socket = join_as(editor, project, workflow)
+      support_socket = join_as(support_user, project, workflow)
+
+      assert editor_socket.assigns.can_edit_workflow
+      assert support_socket.assigns.can_edit_workflow
+      assert support_socket.assigns.project_user == nil
+
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(project,
+          scheduled_deletion:
+            DateTime.utc_now()
+            |> DateTime.add(7, :day)
+            |> DateTime.truncate(:second)
+        )
+      )
+
+      for socket <- [editor_socket, support_socket] do
+        ref = push(socket, "save_workflow", %{})
+
+        assert_reply ref, :error, %{
+          errors: %{base: [message]},
+          type: "unauthorized"
+        }
+
+        assert message =~ "don't have permission to edit"
+      end
+    end
+
     test "allows editors to save", %{project: project, workflow: workflow} do
       editor_user = insert(:user)
       insert(:project_user, project: project, user: editor_user, role: :editor)
@@ -850,7 +1535,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
     end
 
-    test "blocks save after user demoted to viewer mid-session", %{
+    test "blocks save on a socket that outlived the demotion", %{
       project: project,
       workflow: workflow
     } do
@@ -859,14 +1544,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       project_user =
         insert(:project_user, project: project, user: editor_user, role: :editor)
 
-      {:ok, _, socket} =
-        LightningWeb.UserSocket
-        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
-        |> subscribe_and_join(
-          LightningWeb.WorkflowChannel,
-          "workflow:collaborate:#{workflow.id}",
-          %{"project_id" => project.id, "action" => "edit"}
-        )
+      socket = join_as(editor_user, project, workflow)
 
       # Verify editor can save initially
       session_pid = socket.assigns.session_pid
@@ -880,9 +1558,10 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref1 = push(socket, "save_workflow", %{})
       assert_reply ref1, :ok, %{saved_at: _, lock_version: _}
 
-      # Demote user to viewer
-      {:ok, _updated_project_user} =
-        Lightning.Projects.update_project_user(project_user, %{role: :viewer})
+      # Demote user to viewer without broadcasting
+      project_user
+      |> Ecto.Changeset.change(%{role: :viewer})
+      |> Lightning.Repo.update!()
 
       # Attempt to save after demotion should fail
       Yex.Doc.transaction(doc, "test_update", fn ->
@@ -1285,7 +1964,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
     end
 
-    test "blocks reset after user demoted mid-session", %{
+    test "blocks reset on a socket that outlived the demotion", %{
       project: project,
       workflow: workflow
     } do
@@ -1294,22 +1973,16 @@ defmodule LightningWeb.WorkflowChannelTest do
       project_user =
         insert(:project_user, project: project, user: editor_user, role: :editor)
 
-      {:ok, _, socket} =
-        LightningWeb.UserSocket
-        |> socket("user_#{editor_user.id}", %{current_user: editor_user})
-        |> subscribe_and_join(
-          LightningWeb.WorkflowChannel,
-          "workflow:collaborate:#{workflow.id}",
-          %{"project_id" => project.id, "action" => "edit"}
-        )
+      socket = join_as(editor_user, project, workflow)
 
       # Verify editor can reset initially
       ref1 = push(socket, "reset_workflow", %{})
       assert_reply ref1, :ok, %{lock_version: _, workflow_id: _}
 
-      # Demote user to viewer
-      {:ok, _} =
-        Lightning.Projects.update_project_user(project_user, %{role: :viewer})
+      # Demote user to viewer without broadcasting
+      project_user
+      |> Ecto.Changeset.change(%{role: :viewer})
+      |> Lightning.Repo.update!()
 
       # Attempt to reset after demotion should fail
       ref2 = push(socket, "reset_workflow", %{})
@@ -4011,5 +4684,40 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   defp await_channel_processed(socket) do
     :sys.get_state(socket.channel_pid)
+  end
+
+  defp join_as(user, project, workflow) do
+    {:ok, _reply, socket} =
+      LightningWeb.UserSocket
+      |> socket("user_#{user.id}", %{current_user: user})
+      |> subscribe_and_join(
+        LightningWeb.WorkflowChannel,
+        "workflow:collaborate:#{workflow.id}",
+        %{"project_id" => project.id, "action" => "edit"}
+      )
+
+    socket
+  end
+
+  defp change_role(project, project_user, role) do
+    project
+    |> membership_params(%{project_user => role})
+    |> submit_membership()
+  end
+
+  defp add_member(project, user, role) do
+    project
+    |> membership_params(%{}, [%{user_id: user.id, role: role}])
+    |> submit_membership()
+  end
+
+  defp submit_membership({project, params}) do
+    {:ok, _project} =
+      Lightning.Projects.update_project_with_users(
+        project,
+        params,
+        insert(:user),
+        false
+      )
   end
 end

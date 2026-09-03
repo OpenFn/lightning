@@ -20,7 +20,6 @@ const webhookTriggerSchema = baseTriggerSchema.extend({
   custom_path: z.string().nullable().default(null),
   cron_expression: z.null().default(null),
   cron_cursor_job_id: z.null().default(null),
-  kafka_configuration: z.null().default(null),
   webhook_reply: z
     .enum(['before_start', 'after_completion'])
     .nullable()
@@ -59,64 +58,6 @@ const cronTriggerSchema = baseTriggerSchema.extend({
       }
     ),
   cron_cursor_job_id: z.string().uuid().nullable().default(null),
-  kafka_configuration: z.null().default(null),
-  webhook_response_config: z.null().default(null),
-  webhook_reply: z.null().default(null).catch(null),
-});
-
-// Kafka configuration sub-schema
-const kafkaConfigSchema = z
-  .object({
-    hosts_string: z
-      .string()
-      .min(1, 'Kafka hosts are required')
-      .regex(
-        /^[^,\s]+(:\d+)?(,\s*[^,\s]+(:\d+)?)*$/,
-        "Hosts must be in format 'host:port, host:port'"
-      ),
-    topics_string: z
-      .string()
-      .min(1, 'At least one topic is required')
-      .regex(/^[^,\s]+(,\s*[^,\s]+)*$/, 'Invalid topic format'),
-    ssl: z.boolean().default(false),
-    sasl: z
-      .enum(['plain', 'scram_sha_256', 'scram_sha_512'])
-      .nullable()
-      .default(null),
-    username: z.string().nullable().optional(),
-    password: z.string().nullable().optional(),
-    initial_offset_reset_policy: z
-      .enum(['earliest', 'latest'])
-      .default('latest'),
-    connect_timeout: z
-      .number()
-      .min(1000, 'Timeout must be at least 1000ms')
-      .default(30000),
-    group_id: z.string().optional(), // Auto-generated as lightning-{uuid}
-  })
-  .refine(
-    data => {
-      // If SASL is not "none", username and password are required
-      if (data.sasl !== null) {
-        return data.username && data.password;
-      }
-      return true;
-    },
-    {
-      message:
-        'Username and password are required when SASL authentication is enabled',
-      path: ['username'], // Show error on username field
-    }
-  );
-
-// Kafka trigger schema
-const kafkaTriggerSchema = baseTriggerSchema.extend({
-  type: z.literal('kafka'),
-  // See the note on the cron schema.
-  custom_path: z.string().nullable().default(null),
-  cron_expression: z.null().default(null),
-  cron_cursor_job_id: z.null().default(null),
-  kafka_configuration: kafkaConfigSchema,
   webhook_response_config: z.null().default(null),
   webhook_reply: z.null().default(null).catch(null),
 });
@@ -128,7 +69,6 @@ const kafkaTriggerSchema = baseTriggerSchema.extend({
 export const TriggerSchema = z.discriminatedUnion('type', [
   webhookTriggerSchema,
   cronTriggerSchema,
-  kafkaTriggerSchema,
 ]);
 
 export type Trigger = z.infer<typeof TriggerSchema>;
@@ -187,7 +127,7 @@ export const TriggerDraftSchema = TriggerSchema.superRefine((trigger, ctx) => {
  * Helper function to create default trigger values by type
  */
 export const createDefaultTrigger = (
-  type: 'webhook' | 'cron' | 'kafka'
+  type: 'webhook' | 'cron'
 ): Partial<Trigger> => {
   const base = {
     enabled: true,
@@ -201,7 +141,6 @@ export const createDefaultTrigger = (
         custom_path: null,
         cron_expression: null,
         cron_cursor_job_id: null,
-        kafka_configuration: null,
         webhook_reply: 'before_start' as const,
         webhook_response_config: null,
       };
@@ -213,27 +152,6 @@ export const createDefaultTrigger = (
         custom_path: null,
         cron_expression: '0 0 * * *', // Daily at midnight default
         cron_cursor_job_id: null,
-        kafka_configuration: null,
-        webhook_reply: null,
-      };
-
-    case 'kafka':
-      return {
-        ...base,
-        type: 'kafka' as const,
-        custom_path: null,
-        cron_expression: null,
-        cron_cursor_job_id: null,
-        kafka_configuration: {
-          hosts_string: '',
-          topics_string: '',
-          ssl: false,
-          sasl: null,
-          username: '',
-          password: '',
-          initial_offset_reset_policy: 'latest' as const,
-          connect_timeout: 30000,
-        },
         webhook_reply: null,
       };
 

@@ -9,7 +9,7 @@ defmodule LightningWeb.API.WorkflowsController do
 
   A workflow consists of:
   - Jobs: JavaScript execution units with adaptors
-  - Triggers: Initiation methods (Webhook, Cron, Kafka)
+  - Triggers: Initiation methods (Webhook, Cron)
   - Edges: Connections between triggers/jobs with conditions
 
   ## Validation Rules

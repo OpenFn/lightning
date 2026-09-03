@@ -941,15 +941,18 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, credential} =
-        Lightning.Credentials.create_credential(%{
-          body: %{},
-          name: "some name",
-          user_id: user.id,
-          schema: "raw",
-          project_credentials: [
-            %{project_id: project.id}
-          ]
-        })
+        Lightning.Credentials.create_credential(
+          %{
+            body: %{},
+            name: "some name",
+            user_id: user.id,
+            schema: "raw",
+            project_credentials: [
+              %{project_id: project.id}
+            ]
+          },
+          user
+        )
 
       credential = Lightning.Repo.preload(credential, :user)
 
@@ -2142,6 +2145,25 @@ defmodule LightningWeb.ProjectLiveTest do
       end)
     end
 
+    # /mfa_required tells the caller the project exists and how it is
+    # configured. Only someone who would otherwise have standing may be told
+    # that; a stranger gets the same not-found they get for any other project
+    # they are not a member of.
+    test "a non-member of an MFA-required project is not told it requires MFA",
+         %{conn: conn} do
+      stranger = insert(:user, mfa_enabled: false)
+      project = insert(:project, requires_mfa: true)
+
+      assert {:error, {:redirect, %{to: "/projects", flash: flash}}} =
+               live(
+                 log_in_user(conn, stranger),
+                 ~p"/projects/#{project}/settings",
+                 on_error: :raise
+               )
+
+      assert flash == %{"nav" => :not_found}
+    end
+
     test "project admin can toggle support access",
          %{
            conn: conn,
@@ -2316,7 +2338,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
-    test "all project users can see the workflows linked to auth methods" do
+    test "all project users can see the workflows and channels linked to auth methods" do
       project = insert(:project)
       workflow = insert(:simple_workflow, project: project)
 
@@ -2326,30 +2348,55 @@ defmodule LightningWeb.ProjectLiveTest do
           triggers: workflow.triggers
         )
 
+      channel =
+        insert(:channel,
+          project: project,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :client,
+              webhook_auth_method: auth_method
+            )
+          ]
+        )
+
       for conn <-
             build_project_user_conns(project, [:editor, :admin, :owner, :viewer]) do
         {:ok, view, html} =
           live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
-        modal_id = "#linked_triggers_for_#{auth_method.id}_modal"
+        modal_id = "#linked_usage_for_#{auth_method.id}_modal"
+        link_id = "#display_linked_usage_link_#{auth_method.id}"
 
         assert html =~ auth_method.name
 
-        assert has_element?(
-                 view,
-                 "#display_linked_triggers_link_#{auth_method.id}"
-               )
+        assert view |> element(link_id) |> render() =~ "1 trigger, 1 channel"
 
         refute has_element?(view, modal_id)
 
-        view
-        |> element("#display_linked_triggers_link_#{auth_method.id}")
-        |> render_click()
+        view |> element(link_id) |> render_click()
 
         assert has_element?(view, modal_id)
 
-        assert view |> element(modal_id) |> render() =~ workflow.name
+        modal_html = view |> element(modal_id) |> render()
+
+        assert modal_html =~ "Workflow triggers (1)"
+        assert modal_html =~ workflow.name
+        assert modal_html =~ "Channels (1)"
+        assert modal_html =~ channel.name
       end
+    end
+
+    test "auth methods with no triggers or channels have no usage link" do
+      project = insert(:project)
+      auth_method = insert(:webhook_auth_method, project: project)
+
+      [conn] = build_project_user_conns(project, [:owner])
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      refute has_element?(view, "#display_linked_usage_link_#{auth_method.id}")
+      assert html =~ "No associated triggers or channels..."
     end
 
     test "owners/admins can add a new project webhook auth method, editors/viewers can't" do
@@ -2586,10 +2633,10 @@ defmodule LightningWeb.ProjectLiveTest do
           refute view |> element("##{modal_id}") |> has_element?()
         end
 
-        # the linked-triggers view (a read with no write gate) is scoped too
+        # the linked-usage view (a read with no write gate) is scoped too
         html =
           render_click(view, "show_modal", %{
-            target: "linked_triggers_for_webhook_auth_method",
+            target: "linked_usage_for_webhook_auth_method",
             id: foreign_auth_method.id
           })
 
@@ -2794,6 +2841,71 @@ defmodule LightningWeb.ProjectLiveTest do
       refute view |> has_element?("##{form_id}_password_action_button", "Show")
       assert view |> has_element?("##{form_id}_password_action_button", "Copy")
       assert render(view) =~ auth_method.password
+    end
+
+    test "the delete modal lists the dependent workflows and channels" do
+      project = insert(:project)
+      workflow = insert(:simple_workflow, project: project, name: "My Workflow")
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          triggers: workflow.triggers
+        )
+
+      channel =
+        insert(:channel,
+          project: project,
+          name: "My Channel",
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :client,
+              webhook_auth_method: auth_method
+            )
+          ]
+        )
+
+      [conn] = build_project_user_conns(project, [:owner])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      view
+      |> element("a#delete_auth_method_link_#{auth_method.id}")
+      |> render_click()
+
+      html = view |> element("#delete_auth_method_#{auth_method.id}") |> render()
+
+      assert html =~ "1 workflow trigger will stop requiring authentication"
+      assert html =~ workflow.name
+
+      assert html =~ "1 channel will accept unauthenticated requests"
+      assert html =~ channel.name
+
+      assert has_element?(
+               view,
+               ~s{a[href="/projects/#{project.id}/channels/#{channel.id}/edit"]},
+               channel.name
+             )
+    end
+
+    test "the delete modal says so when nothing depends on the auth method" do
+      project = insert(:project)
+      auth_method = insert(:webhook_auth_method, project: project)
+
+      [conn] = build_project_user_conns(project, [:owner])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      view
+      |> element("a#delete_auth_method_link_#{auth_method.id}")
+      |> render_click()
+
+      html = view |> element("#delete_auth_method_#{auth_method.id}") |> render()
+
+      assert html =~ "used by no workflows or channels"
+      refute html =~ "will accept unauthenticated requests"
     end
 
     test "owners and admins can delete a project webhook auth method",
@@ -7541,18 +7653,6 @@ defmodule LightningWeb.ProjectLiveTest do
     |> Floki.find(selector)
     |> Enum.map(&Floki.raw_html/1)
     |> Enum.find(fn el -> el =~ "selected=\"true\"" end)
-  end
-
-  defp find_user_index_in_list(view, user) do
-    Floki.parse_fragment!(render(view))
-    |> Floki.find("#project-form tbody tr")
-    |> Enum.find_index(fn el ->
-      el
-      |> Floki.find("td:first-child()")
-      |> Floki.text() =~
-        "#{user.first_name} #{user.last_name}"
-    end)
-    |> to_string()
   end
 
   # Helper to check element order in rendered HTML using proper parsing

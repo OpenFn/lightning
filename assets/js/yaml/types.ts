@@ -36,16 +36,7 @@ export type StateWebhookTrigger = {
   } | null;
 };
 
-export type StateKafkaTrigger = {
-  id: string;
-  enabled: boolean;
-  type: 'kafka';
-};
-
-export type StateTrigger =
-  | StateCronTrigger
-  | StateWebhookTrigger
-  | StateKafkaTrigger;
+export type StateTrigger = StateCronTrigger | StateWebhookTrigger;
 
 export type StateEdge = {
   id: string;
@@ -108,16 +99,7 @@ export type SpecWebhookTrigger = {
   pos: Position | undefined;
 };
 
-export type SpecKafkaTrigger = {
-  id?: string;
-  type: 'kafka';
-  enabled: boolean;
-};
-
-export type SpecTrigger =
-  | SpecCronTrigger
-  | SpecWebhookTrigger
-  | SpecKafkaTrigger;
+export type SpecTrigger = SpecCronTrigger | SpecWebhookTrigger;
 
 export type SpecEdge = {
   id?: string;

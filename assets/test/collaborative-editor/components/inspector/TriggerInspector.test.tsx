@@ -134,7 +134,7 @@ describe('TriggerInspector — show dispatch by type', () => {
   let awarenessStore: AwarenessStoreInstance;
   let uiStore: UIStoreInstance;
 
-  function makeSessionContextStore(triggerType: string): {
+  function makeSessionContextStore(): {
     sessionContextStore: SessionContextStoreInstance;
   } {
     const sessionContextStore = createSessionContextStore();
@@ -152,7 +152,6 @@ describe('TriggerInspector — show dispatch by type', () => {
         project: null,
         config: {
           require_email_verification: false,
-          kafka_triggers_enabled: triggerType === 'kafka',
         },
         permissions: {
           can_edit_workflow: true,
@@ -190,12 +189,6 @@ describe('TriggerInspector — show dispatch by type', () => {
       { enabled: true, cron_expression: '0 9 * * *' },
       'On a schedule',
     ],
-    [
-      'kafka trigger renders KafkaShowPanel',
-      'kafka',
-      { enabled: true },
-      'Kafka',
-    ],
   ])('%s', (_, triggerType, extraFields, expectedHeading) => {
     const triggerId = `trigger-${triggerType}`;
     const ydoc = createWorkflowYDoc({
@@ -206,7 +199,7 @@ describe('TriggerInspector — show dispatch by type', () => {
     ydoc.getMap('workflow').set('lock_version', 1);
 
     const workflowStore = createConnectedWorkflowStore(ydoc);
-    const { sessionContextStore } = makeSessionContextStore(triggerType);
+    const { sessionContextStore } = makeSessionContextStore();
     const trigger = workflowStore.getSnapshot().triggers[0];
 
     render(
