@@ -135,10 +135,6 @@ untracked (not checked into git).
 
 ## Caveats
 
-- **The legacy `Lightning.AdaptorRegistry` and `mix lightning.install_schemas`
-  bypass this entirely.** Both have hardcoded upstream URLs and don't read the
-  `ADAPTORS_NPM_*` env vars, so they'll always hit the real internet regardless
-  of whether the cache is up.
 - **Never set this as your global npm registry in `~/.npmrc`.** The `/npm/`
   prefix is a transparent GET proxy of registry.npmjs.org, so npm would mostly
   work, badly: this cache never expires what it records, so `npm install` could

@@ -10,8 +10,6 @@ config :tesla, adapter: Lightning.Tesla.Mock
 config :tesla, Lightning.AuthProviders.OauthHTTPClient,
   adapter: Lightning.AuthProviders.OauthHTTPClient.Mock
 
-config :tesla, Mix.Tasks.Lightning.InstallAdaptorIcons, adapter: Tesla.Mock
-
 config :tesla, Lightning.UsageTracking.Client, adapter: Tesla.Mock
 config :tesla, Lightning.UsageTracking.GithubClient, adapter: Tesla.Mock
 
@@ -126,8 +124,6 @@ config :lightning, Lightning.FailureAlerter,
   rate_limit: 3
 
 config :lightning,
-  schemas_path: "test/fixtures/schemas",
-  adaptor_icons_path: "test/fixtures/adaptors/icons",
   repo_connection_signing_secret:
     "39h9Qr6+v2wgzjlh4xQoJ90aDe+LY7qIvA5v7QLsTwIwGDfs8el9Z0oFk2Ege33E"
 

@@ -9,9 +9,9 @@ defmodule Lightning.Adaptors.NPM.Registry do
   Base URL via `Lightning.Adaptors.Config.strategy_opts(Lightning.Adaptors.NPM)[:registry_url]`,
   default `https://registry.npmjs.org`.
 
-  Search results are filtered down to `@openfn/language-*` packages,
-  matching the legacy `AdaptorRegistry` semantics; non-language packages
-  in the `@openfn/` scope (e.g. `@openfn/cli`) are rejected.
+  Search results are filtered down to `@openfn/language-*` packages;
+  non-language packages in the `@openfn/` scope (e.g. `@openfn/cli`) are
+  rejected.
   """
 
   alias Lightning.Adaptors.Config

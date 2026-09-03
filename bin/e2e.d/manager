@@ -137,8 +137,8 @@ warm_npm_cache() {
 
     if run_in_project_root "elixir --name $client_node --rpc-eval $server_node '
 try do
-  adaptors = Lightning.AdaptorRegistry.all()
-  IO.puts(\"✅ NPM cache warmed successfully - loaded #{length(adaptors)} adaptors\")
+  :ok = Lightning.Adaptors.ensure_loaded()
+  IO.puts(\"✅ Adaptor catalogue loaded\")
 rescue
   error ->
     IO.puts(\"⚠️  Warning: Failed to warm NPM cache: #{inspect(error)}\")

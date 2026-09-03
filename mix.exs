@@ -222,8 +222,6 @@ defmodule Lightning.MixProject do
         "tailwind.install --if-missing",
         "esbuild.install --if-missing",
         "lightning.install_runtime",
-        "lightning.install_adaptor_icons",
-        "lightning.install_schemas",
         "ecto.setup"
       ],
       "ecto.setup": ["ecto.create", "ecto.migrate"],

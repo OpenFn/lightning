@@ -1,7 +1,6 @@
 [
   {"lib/lightning/task_worker.ex", :call_with_opaque},
   {"lib/lightning/auth_providers/well_known.ex", :invalid_contract},
-  {"lib/mix/tasks/install_schemas.ex", :invalid_contract},
 
   # httpoison 3.0.0 typespec bug, surfaced by hackney 4. Hackney 4 moved to a
   # process-per-connection design, so a client handle is now a pid where it used

@@ -160,16 +160,18 @@ and this project adheres to
 
 ### Removed
 
-- The old in-memory `Lightning.AdaptorRegistry`'s `use_cache` option and
-  `ADAPTORS_REGISTRY_JSON_PATH` are gone (`AdaptorRegistry` itself and
-  `Lightning.AdaptorService`, which still backs credential metadata lookups, are
-  not). Booting from a static snapshot instead of npm is now
+- The old in-memory `Lightning.AdaptorRegistry` is gone, along with its
+  `use_cache` option, `ADAPTORS_REGISTRY_JSON_PATH`, `SCHEMAS_PATH`, and the
+  `mix lightning.install_schemas` and `mix lightning.install_adaptor_icons`
+  tasks that fed it (`Lightning.AdaptorService`, which still backs credential
+  metadata lookups, stays). Booting from a static snapshot instead of npm is now
   `mix lightning.adaptors.import --path <file>` (or, in a release,
   `bin/lightning eval 'Lightning.Release.seed_adaptors("<file>")'`), which
   upserts a JSON array of adaptor records (the shape
   `mix lightning.adaptors.snapshot` or `mix lightning.adaptors.dump` write)
   straight into the adaptors table; `--replace` makes the file the source's
   entire contents instead of merging into it.
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
 
 ### Fixed
 

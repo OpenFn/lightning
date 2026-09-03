@@ -120,8 +120,7 @@ defmodule Lightning.Adaptors.Local do
 
   # First occurrence wins: each root is grouped (highest semver) on its own
   # first, then a name found in more than one root keeps only its earliest
-  # root's record. Matches install_schemas.ex:171-172's precedence for the
-  # same rule.
+  # root's record.
   defp discover_paths(paths) do
     paths
     |> Enum.flat_map(&scan_root/1)
