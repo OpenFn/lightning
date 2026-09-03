@@ -68,7 +68,7 @@ function transformWorkflow(workflow: Workflow) {
         project_credential_id: job.project_credential_id,
         keychain_credential_id: job.keychain_credential_id,
       }))
-      .sort((a, b) => a.id.localeCompare(b.id)),
+      .sort((a, b) => (a.id || '').localeCompare(b.id || '')),
     edges: (workflow.edges || [])
       .map(edge => ({
         id: edge.id,
@@ -80,7 +80,7 @@ function transformWorkflow(workflow: Workflow) {
         condition_label: edge.condition_label?.trim(),
         condition_expression: edge.condition_expression?.trim(),
       }))
-      .sort((a, b) => a.id.localeCompare(b.id)),
+      .sort((a, b) => (a.id || '').localeCompare(b.id || '')),
     triggers: (workflow.triggers || []).map(trigger =>
       transformTrigger(trigger)
     ),
