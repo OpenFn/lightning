@@ -275,6 +275,101 @@ describe('useUnsavedChanges - Basic Detection', () => {
   });
 });
 
+describe('useUnsavedChanges - webhook custom path', () => {
+  let sessionContextStore: SessionContextStoreInstance;
+
+  beforeEach(() => {
+    sessionContextStore = createSessionContextStore();
+  });
+
+  test('detects a custom path change', async () => {
+    // Without this the dot on Save never lights for a renamed webhook, so it
+    // reads as already saved. Starts matching, so the only thing that can move
+    // hasChanges is the path itself.
+    const triggerId = '11111111-1111-4111-8111-111111111111';
+    const { store, ydoc, cleanup } = setupWorkflowStoreTest(
+      createEmptyWorkflowYDoc()
+    );
+
+    const mockChannel = createMockPhoenixChannel();
+    const mockProvider = createMockPhoenixChannelProvider(mockChannel);
+
+    const workflowMap = ydoc.getMap('workflow');
+    workflowMap.set('name', 'Test Workflow');
+    // `false` is not nullish, so leaving this unset reads as a change on its
+    // own and the path would never be what moves the needle.
+    workflowMap.set('enable_job_logs', false);
+
+    const triggers = ydoc.getArray('triggers');
+    const triggerMap = new Y.Map();
+    triggerMap.set('id', triggerId);
+    triggerMap.set('type', 'webhook');
+    triggerMap.set('enabled', true);
+    triggerMap.set('custom_path', 'facility-001');
+    triggerMap.set('webhook_reply', 'before_start');
+    triggerMap.set('webhook_response_config', null);
+    triggers.push([triggerMap]);
+
+    mockChannel.push = (_event: string, _payload: unknown) => {
+      return {
+        receive: (status: string, callback: (response?: unknown) => void) => {
+          if (status === 'ok') {
+            setTimeout(() => {
+              callback(
+                createSessionContext({
+                  workflow: {
+                    name: 'Test Workflow',
+                    jobs: [],
+                    triggers: [
+                      {
+                        id: triggerId,
+                        type: 'webhook',
+                        enabled: true,
+                        custom_path: 'facility-001',
+                        webhook_reply: 'before_start',
+                        webhook_response_config: null,
+                      },
+                    ],
+                    edges: [],
+                    positions: {},
+                  },
+                })
+              );
+            }, 0);
+          }
+          return {
+            receive: () => ({ receive: () => ({ receive: () => ({}) }) }),
+          };
+        },
+      };
+    };
+
+    sessionContextStore._connectChannel(mockProvider);
+
+    const { result } = renderHook(() => useUnsavedChanges(), {
+      wrapper: createWrapper(sessionContextStore, store),
+    });
+
+    await waitFor(() => {
+      expect(sessionContextStore.getSnapshot().workflow).not.toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(result.current.hasChanges).toBe(false);
+    });
+
+    ydoc.transact(() => {
+      (triggers.get(0) as Y.Map<unknown>).set('custom_path', 'facility-002');
+    });
+
+    await waitFor(() => {
+      expect(result.current.hasChanges).toBe(true);
+    });
+
+    cleanup();
+  });
+});
+
 describe('useUnsavedChanges - Edge Cases', () => {
   let sessionContextStore: SessionContextStoreInstance;
 
