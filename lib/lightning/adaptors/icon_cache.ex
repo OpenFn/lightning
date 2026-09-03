@@ -3,14 +3,14 @@ defmodule Lightning.Adaptors.IconCache do
   Pure filesystem helper owning the on-disk adaptor icon cache.
 
   Not a GenServer. Three stateless functions over
-  `Lightning.Adaptors.Config.icon_path/0`, which resolves the
-  `{:tmp, suffix}` default at call time.
+  `Lightning.Adaptors.Config.icon_path/0`, which returns `ADAPTORS_ICONS_PATH`
+  when set and otherwise resolves the `{:tmp, suffix}` default at call time.
 
   Disk layout is **source-partitioned** and **latest-only**:
 
       <Config.icon_path/0>/<source>/<name>/<shape>.<ext>
 
-  Source partitioning means flipping `LOCAL_ADAPTORS` between restarts
+  Source partitioning means flipping `ADAPTORS_STRATEGY` between restarts
   cannot accidentally serve `:npm` bytes from a row that's now resolved
   via `:local` (or vice versa). Latest-only means a subsequent
   `write!/5` for the same key overwrites — content-addressable URLs

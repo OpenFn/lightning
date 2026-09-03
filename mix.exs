@@ -257,6 +257,7 @@ defmodule Lightning.MixProject do
       extras: [
         "README.md": [title: "Lightning"],
         "RUNNINGLOCAL.md": [title: "Running Locally"],
+        "ADAPTORS.md": [title: "Adaptors"],
         "DEPLOYMENT.md": [title: "Deployment"],
         "tooling/benchmarking/README.md": [
           title: "Benchmarking",

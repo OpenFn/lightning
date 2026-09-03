@@ -3,8 +3,8 @@ defmodule Lightning.Adaptors.Local do
   Filesystem implementation of `Lightning.Adaptors.Strategy`.
 
   Serves adaptor metadata, schemas, and icons from an on-disk OpenFn
-  adaptors monorepo checkout. Gated by `LOCAL_ADAPTORS=true` and
-  `OPENFN_ADAPTORS_REPO=/path/to/adaptors` at the runtime-config layer;
+  adaptors monorepo checkout. Selected by `ADAPTORS_STRATEGY=local` with
+  `ADAPTORS_LOCAL_REPO=/path/to/adaptors` at the runtime-config layer;
   this module only reads the resolved paths via
   `Lightning.Adaptors.Config.strategy_opts(__MODULE__)[:paths]`, an
   ordered list of root directories.
@@ -108,7 +108,7 @@ defmodule Lightning.Adaptors.Local do
       paths when paths in [nil, []] or not is_list(paths) ->
         Logger.warning(
           "Lightning.Adaptors.Local: :paths is not configured " <>
-            "(set OPENFN_ADAPTORS_REPO or :lightning, Lightning.Adaptors.Local, paths:)"
+            "(set ADAPTORS_LOCAL_REPO or :lightning, Lightning.Adaptors.Local, paths:)"
         )
 
         {:error, :no_repo_path}
