@@ -124,6 +124,7 @@ defmodule LightningWeb.RunLive.Index do
     ]
 
     params = Map.put_new(params, "filters", init_filters())
+    tz_offset_minutes = browser_tz_offset_minutes(socket)
 
     {:ok,
      socket
@@ -143,7 +144,8 @@ defmodule LightningWeb.RunLive.Index do
        can_run_workflow: can_run_workflow,
        pagination_path: &pagination_path(socket, project, &1),
        filters: params["filters"],
-       channel_logs_params: %{}
+       channel_logs_params: %{},
+       tz_offset_minutes: tz_offset_minutes
      )}
   end
 
@@ -173,7 +175,14 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_params(params, _url, socket) do
     %{project: project} = socket.assigns
+    tz_offset_minutes = socket.assigns.tz_offset_minutes
+
     filters = Map.get(params, "filters", init_filters())
+
+    normalized_params =
+      params
+      |> Map.put("filters", filters)
+      |> Map.put("__tz_offset_minutes", tz_offset_minutes)
 
     {:noreply,
      socket
@@ -187,7 +196,7 @@ defmodule LightningWeb.RunLive.Index do
        async_page: AsyncResult.loading()
      )
      |> start_async(:load_workorders, fn ->
-       perform_search(project, params)
+       perform_search(project, normalized_params)
      end)}
   end
 
@@ -200,9 +209,16 @@ defmodule LightningWeb.RunLive.Index do
         provided_filters: Map.get(page_params, "filters", %{})
       },
       fn ->
-        search_params =
-          Map.get(page_params, "filters", init_filters())
-          |> SearchParams.new()
+        tz_offset_minutes = Map.get(page_params, "__tz_offset_minutes")
+        raw_filters = Map.get(page_params, "filters", init_filters())
+
+        normalized_filters =
+          normalize_history_datetime_filters(
+            raw_filters,
+            tz_offset_minutes
+          )
+
+        search_params = SearchParams.new(normalized_filters)
 
         Invocation.search_workorders(
           project,
@@ -298,10 +314,12 @@ defmodule LightningWeb.RunLive.Index do
         %Events.WorkOrderCreated{work_order: work_order},
         %{assigns: %{live_action: :index}} = socket
       ) do
-    %{project: project, filters: filters} = socket.assigns
+    %{project: project, filters: filters, tz_offset_minutes: tz_offset_minutes} =
+      socket.assigns
 
     params =
       filters
+      |> normalize_history_datetime_filters(tz_offset_minutes)
       |> Map.merge(%{"workorder_id" => work_order.id})
       |> SearchParams.new()
 
@@ -654,7 +672,10 @@ defmodule LightningWeb.RunLive.Index do
       %{filters: filters, project: project, current_user: current_user} =
         socket.assigns
 
-      search_params = SearchParams.new(filters)
+      search_params =
+        filters
+        |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+        |> SearchParams.new()
 
       case Invocation.export_workorders(project, current_user, search_params) do
         {:ok, _} ->
@@ -707,7 +728,10 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all", "job" => job_id}) do
-    filter = SearchParams.new(socket.assigns.filters)
+    filter =
+      socket.assigns.filters
+      |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+      |> SearchParams.new()
 
     socket.assigns.project
     |> Invocation.search_workorders_for_retry(filter)
@@ -740,7 +764,10 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all"}) do
-    filter = SearchParams.new(socket.assigns.filters)
+    filter =
+      socket.assigns.filters
+      |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+      |> SearchParams.new()
 
     socket.assigns.project
     |> Invocation.search_workorders_for_retry(filter)
@@ -756,7 +783,10 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp handle_bulk_cancel(socket, %{"type" => "all"}) do
-    filter = SearchParams.new(socket.assigns.filters)
+    filter =
+      socket.assigns.filters
+      |> normalize_history_datetime_filters(socket.assigns.tz_offset_minutes)
+      |> SearchParams.new()
 
     work_orders =
       socket.assigns.project
@@ -892,6 +922,83 @@ defmodule LightningWeb.RunLive.Index do
       end
     end)
     |> Enum.reverse()
+  end
+
+  @history_datetime_filter_keys ~w(
+    date_after
+    date_before
+    wo_date_after
+    wo_date_before
+  )
+
+  defp browser_tz_offset_minutes(socket) do
+    if connected?(socket) do
+      case socket
+           |> get_connect_params()
+           |> Kernel.||(%{})
+           |> Map.get("tz_offset_minutes") do
+        value when is_binary(value) ->
+          case Integer.parse(value) do
+            {parsed, ""} -> parsed
+            _ -> nil
+          end
+
+        _ ->
+          nil
+      end
+    end
+  end
+
+  defp normalize_history_datetime_filters(filters, nil), do: filters
+
+  defp normalize_history_datetime_filters(filters, offset_minutes)
+       when is_integer(offset_minutes) do
+    Enum.reduce(@history_datetime_filter_keys, filters, fn key, acc ->
+      Map.update(
+        acc,
+        key,
+        nil,
+        &normalize_datetime_filter_value(&1, offset_minutes)
+      )
+    end)
+  end
+
+  defp normalize_datetime_filter_value(value, _offset_minutes)
+       when value in [nil, ""],
+       do: value
+
+  # Convert browser-local wall time to UTC using the browser offset from connect params.
+  defp normalize_datetime_filter_value(value, offset_minutes)
+       when is_binary(value) and is_integer(offset_minutes) do
+    if String.match?(value, ~r/(Z|[+-]\d{2}:?\d{2})$/) do
+      value
+    else
+      with {:ok, naive} <- parse_local_naive_datetime(value) do
+        naive
+        |> DateTime.from_naive!("Etc/UTC")
+        |> DateTime.add(offset_minutes * 60, :second)
+        |> DateTime.to_iso8601()
+      else
+        _ -> value
+      end
+    end
+  end
+
+  defp normalize_datetime_filter_value(value, _offset_minutes), do: value
+
+  # Append seconds before parsing, if the value is in the format "YYYY-MM-DDTHH:MM".
+  defp parse_local_naive_datetime(value) when is_binary(value) do
+    case NaiveDateTime.from_iso8601(value) do
+      {:ok, naive} ->
+        {:ok, naive}
+
+      {:error, _} ->
+        if Regex.match?(~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, value) do
+          NaiveDateTime.from_iso8601(value <> ":00")
+        else
+          {:error, :invalid_format}
+        end
+    end
   end
 
   defp pagination_path(socket, project, route_params, filters \\ %{}) do
