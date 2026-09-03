@@ -356,7 +356,9 @@ describe('WorkflowHealth', () => {
 
     await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
 
-    expect(await screen.findAllByText(ERROR)).toHaveLength(2);
+    // An `alert`, so the failure is read out where the subtitle falls silent.
+    const alerts = await screen.findAllByRole('alert');
+    expect(alerts.map(alert => alert.textContent)).toEqual([ERROR, ERROR]);
     expect(screen.queryByText('Success')).toBeNull();
   });
 

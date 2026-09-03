@@ -57,16 +57,20 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
 
   return (
     <>
-      <div className={FRAME}>
+      <div className={FRAME} aria-hidden="true">
         <ResponsiveContainer width="100%" height={220}>
-          <PieChart>
+          <PieChart accessibilityLayer={false}>
             <Tooltip
               formatter={(value, name) => [
                 `${Number(value).toLocaleString()} (${share(Number(value))})`,
                 name,
               ]}
             />
+            {/* `accessibilityLayer` only governs the svg; the pie's own root
+                group is a tab stop by default (`rootTabIndex` 0), and
+                `aria-hidden` on the frame doesn't take it out of the order. */}
             <Pie
+              rootTabIndex={-1}
               data={slices.map(({ label, value }) => ({ name: label, value }))}
               dataKey="value"
               nameKey="name"
@@ -91,7 +95,9 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
       {/* Neither palette identifies a slice by hue alone — the outcomes pair
           sits 4.1 CVD ΔE apart and the failure palette's tightest pair 6.1, in
           the band that is legal only with secondary encoding. The labels and
-          counts here are that encoding, so the legend is never optional. */}
+          counts here are that encoding, so the legend is never optional. The
+          chart above is hidden from assistive tech; this legend is its
+          accessible representation. */}
       <ul className="mt-2 flex flex-col gap-1 text-sm text-gray-700">
         {slices.map(({ key, label, color, value }) => (
           <li key={key} className="flex items-center gap-2">

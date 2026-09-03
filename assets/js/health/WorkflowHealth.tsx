@@ -151,7 +151,15 @@ const Panel = <T,>({
   error: string | null;
   children: (data: T) => ReactNode;
 }) => {
-  if (error) return <p className="text-sm text-red-700">{error}</p>;
+  // `alert` is the assertive live region: a failure is read out at once,
+  // where the polite subtitle would only fall silent.
+  if (error) {
+    return (
+      <p role="alert" className="text-sm text-red-700">
+        {error}
+      </p>
+    );
+  }
   if (!data) return <ChartLoading />;
 
   return children(data);
