@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { HealthContent } from '#/workflow-health/WorkflowHealth';
+import { HealthContent } from '#/health/WorkflowHealth';
 
 const outcomes = {
   window: { from: '2026-08-01T10:00:00Z', to: '2026-08-31T10:00:00Z' },
