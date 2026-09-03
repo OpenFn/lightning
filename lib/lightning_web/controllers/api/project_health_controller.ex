@@ -11,7 +11,6 @@ defmodule LightningWeb.API.ProjectHealthController do
   use LightningWeb, :controller
 
   alias Lightning.Policies.Permissions
-  alias Lightning.Projects
   alias Lightning.Projects.Project
   alias Lightning.Workflows
 
@@ -26,9 +25,9 @@ defmodule LightningWeb.API.ProjectHealthController do
 
     with %_{} = user <- conn.assigns[:current_user],
          {:ok, project_id} <- Ecto.UUID.cast(project_id),
-         %Project{} = project <- Projects.get_project(project_id),
-         :ok <- Permissions.can(:project_users, :access_project, user, project) do
-      assign(conn, :project, project)
+         :ok <-
+           Permissions.can(:project_users, :access_project, user, project_id) do
+      assign(conn, :project, %Project{id: project_id})
     else
       # 404 for every failure, not 403: a 403 would confirm the project exists
       # to someone who can't see it.
