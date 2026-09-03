@@ -49,6 +49,7 @@ integration at all levels.
   - [Generate the docs pages](#generate-the-docs-pages)
 - [Server Specs for Self-Hosting](#server-specs-for-self-hosting)
 - [Benchmarking](#benchmarking)
+- [Repository analytics](#repository-analytics)
 - [Troubleshooting](#troubleshooting)
   - [Problems with environment variables](#problems-with-environment-variables)
   - [Problems with Postgres](#problems-with-postgres)
@@ -390,6 +391,15 @@ Workflows.
 
 See [Benchmarking](tooling/benchmarking/README.md) for more detailed
 information.
+
+## Repository analytics
+
+Under `tooling/pr-history` there are scripts that scrape this repo's full
+pull-request history and analyse how code review actually works here - what
+reviewers keep asking for, how long review takes, and where review attention
+lands.
+
+See [PR history](tooling/pr-history/README.md) for more detailed information.
 
 ## Troubleshooting
 

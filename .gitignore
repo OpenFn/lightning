@@ -51,6 +51,10 @@ adaptor_registry_cache.json
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log
 /assets/node_modules/
+
+# Python bytecode (tooling/pr-history is the only Python in the repo)
+__pycache__/
+*.py[cod]
 /assets/**/*.tsbuildinfo
 /examples/**/node_modules/
 
