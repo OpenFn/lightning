@@ -24,6 +24,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials.OauthValidation
   alias Lightning.Credentials.SchemaDocument
   alias Lightning.Credentials.SensitiveValues
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Tokens.CredentialTransferToken
@@ -894,7 +895,7 @@ defmodule Lightning.Credentials do
   # means a screen cannot act on someone else's credential by forgetting to
   # check - the signature will not let it call in without saying who is asking.
   defp authorize_credential_owner(%User{} = actor, %Credential{} = credential) do
-    if Lightning.Policies.Permissions.can?(
+    if Permissions.can?(
          :users,
          :delete_credential,
          actor,
@@ -1978,7 +1979,7 @@ defmodule Lightning.Credentials do
   end
 
   defp authorize_keychain(action, %User{} = actor, %KeychainCredential{} = kc) do
-    if Lightning.Policies.Permissions.can?(:credentials, action, actor, kc) do
+    if Permissions.can?(:credentials, action, actor, kc) do
       :ok
     else
       {:error, :unauthorized}
