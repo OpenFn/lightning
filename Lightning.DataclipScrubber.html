@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.DataclipScrubber — Lightning v2.18.1</title>
+    <title>Lightning.DataclipScrubber — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.DataclipScrubber</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -141,6 +141,17 @@ run or earlier steps.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#scrub_dataclip_bodies!/1" data-no-tooltip="" translate="no">scrub_dataclip_bodies!(dataclips)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Scrubs a batch of dataclip bodies, resolving what to scrub with a fixed
+number of queries.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#scrub_dataclip_body!/1" data-no-tooltip="" translate="no">scrub_dataclip_body!(dataclip)</a>
 
       </div>
@@ -155,6 +166,17 @@ run or earlier steps.</p></div>
 
         <div class="summary-synopsis"><p>Returns webhook auth methods for an http_request dataclip by traversing:
 dataclip -&gt; work_order -&gt; trigger -&gt; webhook_auth_methods</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#webhook_auth_methods_for_run/1" data-no-tooltip="" translate="no">webhook_auth_methods_for_run(run_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns webhook auth methods for a run by traversing:
+run -&gt; work_order -&gt; trigger -&gt; webhook_auth_methods</p></div>
 
     </div>
 
@@ -193,7 +215,7 @@ step -&gt; run_step -&gt; run -&gt; work_order -&gt; trigger -&gt; webhook_auth_
       <h1 class="signature" translate="no">credentials_for_step(step_id, started_at)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L103" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L215" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -206,6 +228,43 @@ step -&gt; run_step -&gt; run -&gt; work_order -&gt; trigger -&gt; webhook_auth_
 run or earlier steps.</p><p>Uses a self-join on RunStep to leverage existing indexes.</p>
   </section>
 </section>
+<section class="detail" id="scrub_dataclip_bodies!/1">
+
+  <div class="detail-header">
+    <a href="#scrub_dataclip_bodies!/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">scrub_dataclip_bodies!(dataclips)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L63" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> scrub_dataclip_bodies!([
+  %{body: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil, type: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()}
+]) :: %{
+  optional(<a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) =&gt; <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil
+}</pre>
+
+      </div>
+
+<p>Scrubs a batch of dataclip bodies, resolving what to scrub with a fixed
+number of queries.</p><p><a href="#scrub_dataclip_body!/1"><code class="inline">scrub_dataclip_body!/1</code></a> looks up the step behind a dataclip, then its
+credentials, then its webhook auth methods - three queries per dataclip, two
+of them many-table joins. That is fine for the one dataclip a controller
+renders and an N+1 for the hundreds a page of the history export touches.</p><p>Takes the same <code class="inline">%{id:, type:, body:}</code> maps as <a href="#scrub_dataclip_body!/1"><code class="inline">scrub_dataclip_body!/1</code></a> and
+returns the scrubbed bodies keyed by dataclip id.</p>
+  </section>
+</section>
 <section class="detail" id="scrub_dataclip_body!/1">
 
   <div class="detail-header">
@@ -216,7 +275,7 @@ run or earlier steps.</p><p>Uses a self-join on RunStep to leverage existing ind
       <h1 class="signature" translate="no">scrub_dataclip_body!(dataclip)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L21" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L22" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -245,7 +304,7 @@ run or earlier steps.</p><p>Uses a self-join on RunStep to leverage existing ind
       <h1 class="signature" translate="no">webhook_auth_methods_for_dataclip(dataclip_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L142" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L270" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -258,6 +317,29 @@ run or earlier steps.</p><p>Uses a self-join on RunStep to leverage existing ind
 dataclip -&gt; work_order -&gt; trigger -&gt; webhook_auth_methods</p>
   </section>
 </section>
+<section class="detail" id="webhook_auth_methods_for_run/1">
+
+  <div class="detail-header">
+    <a href="#webhook_auth_methods_for_run/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">webhook_auth_methods_for_run(run_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L254" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns webhook auth methods for a run by traversing:
+run -&gt; work_order -&gt; trigger -&gt; webhook_auth_methods</p>
+  </section>
+</section>
 <section class="detail" id="webhook_auth_methods_for_step/1">
 
   <div class="detail-header">
@@ -268,7 +350,7 @@ dataclip -&gt; work_order -&gt; trigger -&gt; webhook_auth_methods</p>
       <h1 class="signature" translate="no">webhook_auth_methods_for_step(step_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L125" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/dataclip_scrubber.ex#L237" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

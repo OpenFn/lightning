@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Policies.Dataclips — Lightning v2.18.1</title>
+    <title>Lightning.Policies.Dataclips — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Policies.Dataclips</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -111,7 +111,11 @@ Lightning
 
 
     <section id="moduledoc">
-<p>The Bodyguard Policy module for dataclips actions</p>
+<p>The Bodyguard Policy module for dataclips actions.</p><p>A dataclip belongs to a project, and viewing one is exactly project access —
+so this delegates rather than re-deciding. The previous implementation built a
+<code class="inline">%Project{}</code> from the dataclip's <code class="inline">project_id</code> and asked whether the user was a
+member of it, which could not see <code class="inline">scheduled_deletion</code> and so served bodies
+from projects that had been shut down.</p>
     </section>
 
 </div>
@@ -176,7 +180,7 @@ Lightning
       <h1 class="signature" translate="no">actions()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/dataclips.ex#L13" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/dataclips.ex#L17" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -217,7 +221,7 @@ Lightning
       <h1 class="signature" translate="no">authorize(atom, user, dataclip)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/dataclips.ex#L16" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/dataclips.ex#L20" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

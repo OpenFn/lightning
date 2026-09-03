@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.18.2">
+
+
+    <title>Lightning.Projects.Scope — Lightning v2.18.2</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.18.2
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Projects.Scope</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/scope.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>What standing does an actor have in a project, right now.</p><p><a href="#fetch/2"><code class="inline">fetch/2</code></a> establishes facts, not permission: it reports the actor's role, and
+refuses outright for a project that does not exist or is scheduled for
+deletion. Whether that standing is enough for an action is the policy's
+judgement — see <a href="Lightning.Policies.ProjectUsers.html#permitted?/2"><code class="inline">Lightning.Policies.ProjectUsers.permitted?/2</code></a>.</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="9358182917-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9358182917-2">%</span><span class="nc" data-group-id="9358182917-2">Scope</span><span class="p" data-group-id="9358182917-2">{</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="ss">:editor</span><span class="p" data-group-id="9358182917-2">}</span><span class="p" data-group-id="9358182917-1">}</span><span class="w">
+</span><span class="p" data-group-id="9358182917-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9358182917-4">%</span><span class="nc" data-group-id="9358182917-4">Scope</span><span class="p" data-group-id="9358182917-4">{</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="no">nil</span><span class="p" data-group-id="9358182917-4">}</span><span class="p" data-group-id="9358182917-3">}</span><span class="w">                      </span><span class="n">no</span><span class="w"> </span><span class="n">membership</span><span class="w"> </span><span class="n">row</span><span class="w">
+</span><span class="p" data-group-id="9358182917-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:no_such_project</span><span class="p" data-group-id="9358182917-5">}</span><span class="w">
+</span><span class="p" data-group-id="9358182917-6">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:project_scheduled_for_deletion</span><span class="p" data-group-id="9358182917-6">}</span><span class="w">
+</span><span class="p" data-group-id="9358182917-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:connection_not_for_this_project</span><span class="p" data-group-id="9358182917-7">}</span><span class="w">    </span><span class="n">repo</span><span class="o">-</span><span class="n">connection</span><span class="w"> </span><span class="n">actor</span><span class="w"> </span><span class="n">only</span></code></pre><p>So <code class="inline">{:ok, _}</code> is not itself an authorisation result — a non-member of a live
+project gets <code class="inline">role: nil</code>, which support access can still make meaningful.</p><p>Two support fields, deliberately. <code class="inline">support_user?</code> is the raw account flag.
+<code class="inline">support?</code> additionally requires the project's <code class="inline">allow_support_access</code>.
+Anything granting access to a customer's project wants <code class="inline">support?</code>.</p><p>A <code class="inline">%ProjectRepoConnection{}</code> has no membership row, so its standing <em>is</em>
+which project it belongs to; <a href="#fetch/2"><code class="inline">fetch/2</code></a> checks that, and its <code class="inline">role</code> is always
+<code class="inline">nil</code>. Ownership is checked before liveness, so a connection learns nothing
+about a project that is not its own.</p><p>Scheduling deletion removes no membership rows and revokes no token, so this
+refusal is the whole of the offboarding gate during the purge window.</p><h2 id="module-when-not-to-reach-for-it" class="section-heading"><a href="#module-when-not-to-reach-for-it" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">When not to reach for it</span></h2><ul><li><code class="inline">ProjectUsers</code> self-actions — they act on a <em>specific</em> membership row and
+ask whether it is the caller's own, which a scope cannot answer.</li><li><code class="inline">Sandboxes</code> <code class="inline">:cancel_scheduled_deletion</code> — its subject is scheduled by
+definition, so the liveness gate would make restore impossible.</li><li><code class="inline">Provisioning</code>'s <code class="inline">%Project{id: nil}</code> clause — no row to read, no members
+to consult.</li></ul><p>Every other project-scoped decision resolves here; no policy module reads
+<code class="inline">Project.scheduled_deletion</code> directly.</p><p>Likewise, no policy module reads <code class="inline">requires_mfa</code>/<code class="inline">mfa_enabled</code> directly. That
+rule is written once, privately, below; <code class="inline">mfa_satisfied?</code> is the only way to
+reach it.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:actor/0" data-no-tooltip="" translate="no">actor()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Whoever is asking. A <code class="inline">%User{}</code> may hold a role; a <code class="inline">%ProjectRepoConnection{}</code>
+never does.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:error/0" data-no-tooltip="" translate="no">error()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:subject/0" data-no-tooltip="" translate="no">subject()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Anything that identifies a project: a loaded <code class="inline">%Project{}</code>, a project id, or
+any struct or map carrying a <code class="inline">:project_id</code> — a <code class="inline">%Dataclip{}</code>, a
+<code class="inline">%Collection{}</code>, a <code class="inline">%Projects.File{}</code>, a <code class="inline">%ProjectUser{}</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:t/0" data-no-tooltip="" translate="no">t()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#fetch/2" data-no-tooltip="" translate="no">fetch(user, subject)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The actor's standing in the project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#role_in?/3" data-no-tooltip="" translate="no">role_in?(user, subject, roles)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Whether the user holds one of <code class="inline">roles</code> in the project.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:actor/0">
+
+  <div class="detail-header">
+    <a href="#t:actor/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">actor()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/scope.ex#L82" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> actor() ::
+  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()
+  | <a href="Lightning.VersionControl.ProjectRepoConnection.html#t:t/0">Lightning.VersionControl.ProjectRepoConnection.t</a>()</pre>
+
+      </div>
+
+<p>Whoever is asking. A <code class="inline">%User{}</code> may hold a role; a <code class="inline">%ProjectRepoConnection{}</code>
+never does.</p>
+  </section>
+</section>
+<section class="detail" id="t:error/0">
+
+  <div class="detail-header">
+    <a href="#t:error/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">error()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/scope.ex#L97" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> error() ::
+  :no_such_project
+  | :project_scheduled_for_deletion
+  | :connection_not_for_this_project</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:subject/0">
+
+  <div class="detail-header">
+    <a href="#t:subject/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">subject()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/scope.ex#L91" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> subject() ::
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()
+  | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()
+  | %{:project_id =&gt; <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}
+  | nil</pre>
+
+      </div>
+
+<p>Anything that identifies a project: a loaded <code class="inline">%Project{}</code>, a project id, or
+any struct or map carrying a <code class="inline">:project_id</code> — a <code class="inline">%Dataclip{}</code>, a
+<code class="inline">%Collection{}</code>, a <code class="inline">%Projects.File{}</code>, a <code class="inline">%ProjectUser{}</code>.</p>
+  </section>
+</section>
+<section class="detail" id="t:t/0">
+
+  <div class="detail-header">
+    <a href="#t:t/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">t()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/scope.ex#L68" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Projects.Scope{
+  actor: <a href="#t:actor/0">actor</a>(),
+  mfa_satisfied?: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
+  project: <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  project_user: <a href="Lightning.Projects.ProjectUser.html#t:t/0">Lightning.Projects.ProjectUser.t</a>() | nil,
+  role: :owner | :admin | :editor | :viewer | nil,
+  support?: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
+  support_user?: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="fetch/2">
+
+  <div class="detail-header">
+    <a href="#fetch/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">fetch(user, subject)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/scope.ex#L112" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> fetch(<a href="#t:actor/0">actor</a>(), <a href="#t:subject/0">subject</a>()) :: {:ok, <a href="#t:t/0">t</a>()} | {:error, <a href="#t:error/0">error</a>()}</pre>
+
+      </div>
+
+<p>The actor's standing in the project.</p><p>Returns <code class="inline">{:error, :project_scheduled_for_deletion}</code> for a project that is
+winding down, <code class="inline">{:error, :no_such_project}</code> when the subject does not identify
+a project that exists, and — for a <code class="inline">%ProjectRepoConnection{}</code> actor —
+<code class="inline">{:error, :connection_not_for_this_project}</code> when the resolved project is not
+the one the connection belongs to.</p>
+  </section>
+</section>
+<section class="detail" id="role_in?/3">
+
+  <div class="detail-header">
+    <a href="#role_in?/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">role_in?(user, subject, roles)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/scope.ex#L139" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> role_in?(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(), <a href="#t:subject/0">subject</a>(), [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>()]) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Whether the user holds one of <code class="inline">roles</code> in the project.</p><p><code class="inline">false</code> for a project that does not exist or is scheduled for deletion,
+<code class="inline">false</code> for a user with no membership row, and <code class="inline">false</code> for a user who has
+not met the project's MFA requirement. It never consults <code class="inline">support?</code>, so a
+rule that admits a support user has to decide on the <code class="inline">%Scope{}</code> itself.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

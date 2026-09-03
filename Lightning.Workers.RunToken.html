@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Workers.RunToken — Lightning v2.18.1</title>
+    <title>Lightning.Workers.RunToken — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,11 +98,11 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Workers.RunToken</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L27" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L39" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,7 +111,11 @@ Lightning
 
 
     <section id="moduledoc">
-<p>JWT token configuration to verify if workers work is legit.</p>
+<p>JWT token configuration to verify if workers work is legit.</p><p>Verify run tokens through <a href="Lightning.Workers.html#verify_run_token/2"><code class="inline">Lightning.Workers.verify_run_token/2</code></a>, never
+through <a href="#verify_and_validate/3"><code class="inline">verify_and_validate/3</code></a> here. Joken looks up a validator per claim
+the <em>token</em> carries, so the <code class="inline">exp</code> and <code class="inline">sub</code> checks below do not run for a
+token that simply omits them; <code class="inline">verify_run_token/2</code> is where the claims are
+required to be present, and so is the only place those two checks bind.</p>
     </section>
 
 </div>
@@ -196,7 +200,7 @@ Lightning
       <h1 class="signature" translate="no">generate_and_sign(extra_claims \\ %{}, key \\ __default_signer__())</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L31" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L49" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -229,7 +233,7 @@ Lightning
       <h1 class="signature" translate="no">generate_and_sign!(extra_claims \\ %{}, key \\ __default_signer__())</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L31" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L49" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -261,7 +265,7 @@ Lightning
       <h1 class="signature" translate="no">verify_and_validate(bearer_token, key \\ __default_signer__(), context \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L31" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L49" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -294,7 +298,7 @@ Lightning
       <h1 class="signature" translate="no">verify_and_validate!(bearer_token, key \\ __default_signer__(), context \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L31" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L49" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

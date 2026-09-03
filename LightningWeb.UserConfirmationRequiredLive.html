@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Workflows.Triggers.Events — Lightning v2.18.1</title>
+    <title>LightningWeb.UserConfirmationRequiredLive — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">Lightning.Workflows.Triggers.Events</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <span translate="no">LightningWeb.UserConfirmationRequiredLive</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/triggers/events.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/user_confirmation_required_live.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,7 +111,9 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Responsible for the publishing of and subscription to trigger-related events.</p>
+<p>The one page an account locked out pending email confirmation can reach.</p><p>It explains the block and carries both ways out: resend the confirmation link,
+or correct a mistyped address. <code class="inline">Accounts.update_user_email/2</code> sets
+<code class="inline">confirmed_at</code>, so the correction form is a complete escape hatch.</p>
     </section>
 
 </div>
@@ -130,33 +132,11 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#kafka_trigger_notification_sent/2" data-no-tooltip="" translate="no">kafka_trigger_notification_sent(trigger_id, sent_at)</a>
+        <a href="#render/1" data-no-tooltip="" translate="no">render(assigns)</a>
 
       </div>
 
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#kafka_trigger_updated/1" data-no-tooltip="" translate="no">kafka_trigger_updated(trigger_id)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#kafka_trigger_updated_topic/0" data-no-tooltip="" translate="no">kafka_trigger_updated_topic()</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#subscribe_to_kafka_trigger_updated/0" data-no-tooltip="" translate="no">subscribe_to_kafka_trigger_updated()</a>
-
-      </div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/1.0.19/Phoenix.LiveView.html#c:render/1"><code class="inline">Phoenix.LiveView.render/1</code></a>.</p></div>
 
     </div>
 
@@ -174,17 +154,17 @@ Lightning
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="kafka_trigger_notification_sent/2">
+<section class="detail" id="render/1">
 
   <div class="detail-header">
-    <a href="#kafka_trigger_notification_sent/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#render/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">kafka_trigger_notification_sent(trigger_id, sent_at)</h1>
+      <h1 class="signature" translate="no">render(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/triggers/events.ex#L28" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/user_confirmation_required_live.ex#L1" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -193,73 +173,7 @@ Lightning
 
   <section class="docstring">
 
-
-  </section>
-</section>
-<section class="detail" id="kafka_trigger_updated/1">
-
-  <div class="detail-header">
-    <a href="#kafka_trigger_updated/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">kafka_trigger_updated(trigger_id)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/triggers/events.ex#L15" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="kafka_trigger_updated_topic/0">
-
-  <div class="detail-header">
-    <a href="#kafka_trigger_updated_topic/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">kafka_trigger_updated_topic()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/triggers/events.ex#L26" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="subscribe_to_kafka_trigger_updated/0">
-
-  <div class="detail-header">
-    <a href="#subscribe_to_kafka_trigger_updated/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">subscribe_to_kafka_trigger_updated()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/triggers/events.ex#L22" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/1.0.19/Phoenix.LiveView.html#c:render/1"><code class="inline">Phoenix.LiveView.render/1</code></a>.</p>
   </section>
 </section>
 

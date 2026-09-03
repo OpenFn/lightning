@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Policies.Sandboxes — Lightning v2.18.1</title>
+    <title>Lightning.Policies.Sandboxes — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Policies.Sandboxes</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -116,7 +116,9 @@ acting user's role on the project they're acting on (or the workspace
 root, where the cascade applies). <code class="inline">User.role</code> (<code class="inline">:user</code> / <code class="inline">:superuser</code>)
 is a user-type for global user-management screens; it is not a
 project-access bypass and has no effect on sandbox policy decisions, in
-line with <a href="Lightning.Policies.ProjectUsers.html"><code class="inline">Lightning.Policies.ProjectUsers</code></a>.</p><ul><li>Sandbox owners/admins can manage their own sandboxes</li><li>Root project owners/admins can manage any sandbox in their workspace</li><li>Editors (and above) on the parent project can provision sandboxes</li></ul><p>Destructive actions on a sandbox (delete, update, merge) are scoped to
+line with <a href="Lightning.Policies.ProjectUsers.html"><code class="inline">Lightning.Policies.ProjectUsers</code></a>.</p><ul><li>Sandbox owners/admins can manage their own sandboxes</li><li>Root project owners/admins can manage any sandbox in their workspace</li><li>Editors (and above) on the parent project can provision sandboxes</li></ul><p>Every action except provisioning and merging acts on a sandbox, and a
+workspace root is not one. A root is refused before any role is considered,
+which is what keeps the root cascade from admitting the root itself.</p><p>Destructive actions on a sandbox (delete, update, merge) are scoped to
 admin/owner on the sandbox itself (or the root cascade above). This
 matches the rest of Lightning, where destructive actions are admin/owner
 scoped, and it keeps the merge button on the sandboxes list aligned with
@@ -165,7 +167,7 @@ involved.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#check_manage_permissions/3" data-no-tooltip="" translate="no">check_manage_permissions(sandboxes, user, root_project)</a>
+        <a href="#manage_permissions/3" data-no-tooltip="" translate="no">manage_permissions(sandboxes, user, root_project)</a>
 
       </div>
 
@@ -197,7 +199,7 @@ involved.</p></div>
       <h1 class="signature" translate="no">actions()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L29" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L34" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -209,7 +211,11 @@ involved.</p></div>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> actions() ::
-  :delete_sandbox | :update_sandbox | :provision_sandbox | :merge_sandbox</pre>
+  :delete_sandbox
+  | :update_sandbox
+  | :provision_sandbox
+  | :merge_sandbox
+  | :cancel_scheduled_deletion</pre>
 
       </div>
 
@@ -239,7 +245,7 @@ involved.</p></div>
       <h1 class="signature" translate="no">authorize(action, user, parent_project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L66" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L90" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -259,27 +265,30 @@ involved.</p></div>
       </div>
 
 <p>Authorize sandbox operations based on the user's role on the project
-involved.</p><h2 id="authorize/3-authorization-rules" class="section-heading"><a href="#authorize/3-authorization-rules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Authorization Rules</span></h2><h3 id="authorize/3-delete_sandbox-and-update_sandbox" class="section-heading"><a href="#authorize/3-delete_sandbox-and-update_sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><code class="inline">:delete_sandbox</code> and <code class="inline">:update_sandbox</code></span></h3><p>User must be one of:</p><ul><li>Owner/admin of the sandbox itself</li><li>Owner/admin of the root project (workspace)</li></ul><h3 id="authorize/3-provision_sandbox" class="section-heading"><a href="#authorize/3-provision_sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><code class="inline">:provision_sandbox</code></span></h3><p>User must be editor/admin/owner of the parent project they're creating
+involved.</p><h2 id="authorize/3-authorization-rules" class="section-heading"><a href="#authorize/3-authorization-rules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Authorization Rules</span></h2><h3 id="authorize/3-delete_sandbox-update_sandbox-and-cancel_scheduled_deletion" class="section-heading"><a href="#authorize/3-delete_sandbox-update_sandbox-and-cancel_scheduled_deletion" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><code class="inline">:delete_sandbox</code>, <code class="inline">:update_sandbox</code> and <code class="inline">:cancel_scheduled_deletion</code></span></h3><p>The subject must be a sandbox: a project with no parent is refused outright,
+whoever is asking. Beyond that the user must be one of:</p><ul><li>Owner/admin of the sandbox itself</li><li>Owner/admin of the root project (workspace)</li></ul><h3 id="authorize/3-provision_sandbox" class="section-heading"><a href="#authorize/3-provision_sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><code class="inline">:provision_sandbox</code></span></h3><p>User must be editor/admin/owner of the parent project they're creating
 the sandbox under.</p><h3 id="authorize/3-merge_sandbox" class="section-heading"><a href="#authorize/3-merge_sandbox" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text"><code class="inline">:merge_sandbox</code></span></h3><p>This check authorises the <strong>target side</strong> of a merge: the user must be
 editor/admin/owner on the target project (the project being merged
 <em>into</em>). The merge flow also requires admin/owner on the <strong>source
-sandbox</strong> itself, enforced by <a href="#check_manage_permissions/3"><code class="inline">check_manage_permissions/3</code></a> (button
+sandbox</strong> itself, enforced by <a href="#manage_permissions/3"><code class="inline">manage_permissions/3</code></a> (button
 gate) and by the post-merge cleanup, which calls <code class="inline">:delete_sandbox</code>
-to retire the source and so requires admin/owner there.</p><h2 id="authorize/3-parameters" class="section-heading"><a href="#authorize/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">action</code> - The action being attempted</li><li><code class="inline">user</code> - The user attempting the action</li><li><code class="inline">project</code> - The sandbox project (for delete/update), parent project (for provision),
+to retire the source and so requires admin/owner there.</p><h3 id="authorize/3-support-access" class="section-heading"><a href="#authorize/3-support-access" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Support access</span></h3><p>No sandbox action honours it: every clause decides on <code class="inline">role</code> alone, so a
+support user with no membership row is refused even on a consenting project.
+Inherited behaviour, not a ruling.</p><h2 id="authorize/3-parameters" class="section-heading"><a href="#authorize/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">action</code> - The action being attempted</li><li><code class="inline">user</code> - The user attempting the action</li><li><code class="inline">project</code> - The sandbox project (for delete/update), parent project (for provision),
 or target project (for merge)</li></ul>
   </section>
 </section>
-<section class="detail" id="check_manage_permissions/3">
+<section class="detail" id="manage_permissions/3">
 
   <div class="detail-header">
-    <a href="#check_manage_permissions/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#manage_permissions/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">check_manage_permissions(sandboxes, user, root_project)</h1>
+      <h1 class="signature" translate="no">manage_permissions(sandboxes, user, root_project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L103" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/sandboxes.ex#L157" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -290,7 +299,7 @@ or target project (for merge)</li></ul>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> check_manage_permissions(
+          <pre translate="no"><span class="attribute">@spec</span> manage_permissions(
   [<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()],
   <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
   <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()
@@ -299,10 +308,18 @@ or target project (for merge)</li></ul>
       </div>
 
 <p>Bulk manage check for multiple sandboxes, avoiding N+1 queries.</p><p>Returns a map <code class="inline">sandbox_id =&gt; boolean()</code> where <code class="inline">true</code> means the user can
-perform any of the destructive sandbox actions (update, delete, merge)
-on that sandbox. The boolean is <code class="inline">true</code> when the user is an owner/admin
-on the sandbox itself, or an owner/admin on the root project (cascade).</p><p>Assumes <code class="inline">root_project.project_users</code> and each <code class="inline">sandbox.project_users</code>
-are preloaded (as ensured by <code class="inline">Projects.list_workspace_projects/2</code>).</p>
+perform the destructive actions the sandbox list offers on that row: they are
+an owner/admin on the sandbox itself, or an owner/admin on the root project
+(cascade). The workspace root is always <code class="inline">false</code>, which is what the list relies
+on to withhold edit, delete and merge from the root. Note this is the merge
+<em>source</em> side; <code class="inline">:merge_sandbox</code> authorises the target and a root is a legal
+target.</p><p>Assumes <code class="inline">root_project.project_users</code> and each <code class="inline">sandbox.project_users</code>
+are preloaded (as ensured by <code class="inline">Projects.list_workspace_projects/2</code>).</p><p>Reads those preloaded rows rather than resolving a <code class="inline">Scope</code>, so it does not
+hold the actor to the project's MFA requirement. Nothing reaches it that has
+not already been held to it: the list it feeds mounts
+<code class="inline">LightningWeb.Hooks.:project_scope</code>, which redirects an unenrolled member to
+<code class="inline">/mfa_required</code> before the page renders, and every action a <code class="inline">true</code> enables
+refuses on its own.</p>
   </section>
 </section>
 

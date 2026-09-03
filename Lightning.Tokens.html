@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Tokens — Lightning v2.18.1</title>
+    <title>Lightning.Tokens — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Tokens</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -142,6 +142,16 @@ which return <a href="Lightning.Run.html"><code class="inline">Lightning.Run</co
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#require_claims/2" data-no-tooltip="" translate="no">require_claims(token, required)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Asserts every claim in <code class="inline">required</code> is present on the token.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#verify/1" data-no-tooltip="" translate="no">verify(token)</a>
 
       </div>
@@ -174,7 +184,7 @@ which return <a href="Lightning.Run.html"><code class="inline">Lightning.Run</co
       <h1 class="signature" translate="no">get_subject(map)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/tokens.ex#L123" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/tokens.ex#L182" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -189,6 +199,38 @@ which return <a href="Lightning.Run.html"><code class="inline">Lightning.Run</co
 through <a href="#verify/1"><code class="inline">verify/1</code></a> first.</p>
   </section>
 </section>
+<section class="detail" id="require_claims/2">
+
+  <div class="detail-header">
+    <a href="#require_claims/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">require_claims(token, required)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/tokens.ex#L139" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> require_claims(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()]) ::
+  :ok | {:error, {:missing_claims, [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()]} | :token_malformed}</pre>
+
+      </div>
+
+<p>Asserts every claim in <code class="inline">required</code> is present on the token.</p><p>Joken iterates the token's claims and looks each up in the config, so a
+validator for an absent claim never runs — a claim config cannot make a claim
+mandatory on its own. This runs before verification and only ever rejects, so
+peeking at unverified claims is safe.</p>
+  </section>
+</section>
 <section class="detail" id="verify/1">
 
   <div class="detail-header">
@@ -199,7 +241,7 @@ through <a href="#verify/1"><code class="inline">verify/1</code></a> first.</p>
       <h1 class="signature" translate="no">verify(token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/tokens.ex#L85" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/tokens.ex#L98" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -216,8 +258,9 @@ through <a href="#verify/1"><code class="inline">verify/1</code></a> first.</p>
 
 <p>Verify a token and return the claims if successful.</p><p>This serves as a central point to verify and validate different types
 of tokens. For user (personal access) tokens it also rejects unusable
-credentials: a deleted token row yields <code class="inline">{:error, :token_revoked}</code> and a
-blocked account yields <code class="inline">{:error, :user_blocked}</code>.</p>
+credentials: a deleted token row yields <code class="inline">{:error, :token_revoked}</code>, a
+blocked account yields <code class="inline">{:error, :user_blocked}</code>, and an account past its
+email-confirmation deadline yields <code class="inline">{:error, :email_unconfirmed}</code>.</p>
   </section>
 </section>
 

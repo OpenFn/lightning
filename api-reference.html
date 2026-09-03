@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>API Reference — Lightning v2.18.1</title>
+    <title>API Reference — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -96,7 +96,7 @@ Lightning
 
 <div id="top-content">
   <div class="heading-with-actions top-heading">
-    <h1>API Reference <small class="app-vsn">Lightning v#2.18.1</small></h1>
+    <h1>API Reference <small class="app-vsn">Lightning v#2.18.2</small></h1>
 
       <a href="https://github.com/OpenFn/lightning" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -855,7 +855,7 @@ changesets for a given schema.</p></div>
 
   </div>
 
-    <div class="summary-synopsis"><p>Verifies that credential references belong to the project that owns them.</p></div>
+    <div class="summary-synopsis"><p>Verifies that project-scoped references belong to the project that owns them.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1130,6 +1130,15 @@ external metrics.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Invocation.RequestHeaders.html" translate="no">Lightning.Invocation.RequestHeaders</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Prepares inbound HTTP headers for storage in <code class="inline">dataclip.request</code>.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Invocation.Step.html" translate="no">Lightning.Invocation.Step</a>
 
   </div>
@@ -1154,97 +1163,6 @@ communication issues with the worker.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>The Jobs context.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.html" translate="no">Lightning.KafkaTriggers</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Contains the logic to manage kafka trigger and their associated pipelines.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker.html" translate="no">Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Responsible for cleaning up stale TriggerKafkaMessageRecords entries.
-TriggerKafkaMessageRecords are used to deduplicate incoming messages from
-a Kafka cluster.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.EventListener.html" translate="no">Lightning.KafkaTriggers.EventListener</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Listens for events related to Kafka triggers and updates the affected pipeline
-process by enabling, reloading or disabling it.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.MessageHandling.html" translate="no">Lightning.KafkaTriggers.MessageHandling</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Contains the logic to persist a Kafka messages as a WorkOrder, Run and
-Dataclip.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.MessageRecovery.html" translate="no">Lightning.KafkaTriggers.MessageRecovery</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>This module contains functionality to recover Kafka messages that have been
-persisted to the file system. It should only be used to process files that
-originate from a trusted source (i.e. Lightning's Kafka pipeline.)</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.Pipeline.html" translate="no">Lightning.KafkaTriggers.Pipeline</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Broadway pipeline that processes messages from Kafka clusters and persists
-the received messages if they are not duplicating a previous message.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.PipelineSupervisor.html" translate="no">Lightning.KafkaTriggers.PipelineSupervisor</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Supervisor of the BroadwayKafka pipelines that are created for each enabled
-Kafka trigger.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.Supervisor.html" translate="no">Lightning.KafkaTriggers.Supervisor</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Starts all the processes needed to pull data from Kafka clusters and then
-generate work orders based on the messages received.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.KafkaTriggers.TriggerKafkaMessageRecord.html" translate="no">Lightning.KafkaTriggers.TriggerKafkaMessageRecord</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Persists a lightweight represenattion of a message that has been recevied from
-a Kafka cluster, for the purpose of deduplication.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1325,7 +1243,7 @@ their associations with projects and handling audit trails for changes.</p></div
 
   </div>
 
-    <div class="summary-synopsis"><p>The Bodyguard Policy module for dataclips actions</p></div>
+    <div class="summary-synopsis"><p>The Bodyguard Policy module for dataclips actions.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1334,7 +1252,7 @@ their associations with projects and handling audit trails for changes.</p></div
 
   </div>
 
-    <div class="summary-synopsis"><p>The Bodyguard Policy module for Exports</p></div>
+    <div class="summary-synopsis"><p>The Bodyguard Policy module for Exports.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1352,7 +1270,7 @@ their associations with projects and handling audit trails for changes.</p></div
 
   </div>
 
-    <div class="summary-synopsis"><p>The Bodyguard Policy module for projects members roles.</p></div>
+    <div class="summary-synopsis"><p>The Bodyguard Policy module for project members' roles.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1361,7 +1279,7 @@ their associations with projects and handling audit trails for changes.</p></div
 
   </div>
 
-    <div class="summary-synopsis"><p>The Bodyguard Policy module for users roles.</p></div>
+    <div class="summary-synopsis"><p>The Bodyguard Policy module for the provisioning API.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1411,6 +1329,15 @@ their associations with projects and handling audit trails for changes.</p></div
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Projects.Environment.html" translate="no">Lightning.Projects.Environment</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Which environment a project resolves its credentials in.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Projects.Events.html" translate="no">Lightning.Projects.Events</a>
 
   </div>
@@ -1420,11 +1347,75 @@ their associations with projects and handling audit trails for changes.</p></div
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="Lightning.Projects.Events.ProjectDeletionScheduled.html" translate="no">Lightning.Projects.Events.ProjectDeletionScheduled</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The project was scheduled for deletion, so nobody may work in it any more.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.Events.ProjectUserAdded.html" translate="no">Lightning.Projects.Events.ProjectUserAdded</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A user was granted membership of a project.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.Events.ProjectUserRemoved.html" translate="no">Lightning.Projects.Events.ProjectUserRemoved</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A user's membership of a project was revoked.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.Events.ProjectUserRoleChanged.html" translate="no">Lightning.Projects.Events.ProjectUserRoleChanged</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A member's role on a project changed, so their permissions did too.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.Events.SupportAccessUpdated.html" translate="no">Lightning.Projects.Events.SupportAccessUpdated</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The project's allow_support_access flag changed, so every support user's
+standing on the project did too.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.Events.WorkflowDeleted.html" translate="no">Lightning.Projects.Events.WorkflowDeleted</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A workflow in the project was marked deleted.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="Lightning.Projects.File.html" translate="no">Lightning.Projects.File</a>
 
   </div>
 
     <div class="summary-synopsis"><p>The project files module</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.MailRecipients.html" translate="no">Lightning.Projects.MailRecipients</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Whether a person may be sent a project's contents by email.</p></div>
 
 </div>
 <div class="summary-row">
@@ -1541,6 +1532,15 @@ provisioning HTTP API.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>Manage <strong>sandbox projects</strong> - isolated copies of existing projects for safe experimentation.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.Scope.html" translate="no">Lightning.Projects.Scope</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>What standing does an actor have in a project, right now.</p></div>
 
 </div>
 <div class="summary-row">
@@ -2460,24 +2460,6 @@ their cron schedule, and then running them.</p></div>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="Lightning.Workflows.Triggers.Events.html" translate="no">Lightning.Workflows.Triggers.Events</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Responsible for the publishing of and subscription to trigger-related events.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="Lightning.Workflows.Triggers.KafkaConfiguration.html" translate="no">Lightning.Workflows.Triggers.KafkaConfiguration</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>Configuration of Kafka Triggers.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
     <a href="Lightning.Workflows.Triggers.WebhookResponseConfig.html" translate="no">Lightning.Workflows.Triggers.WebhookResponseConfig</a>
 
   </div>
@@ -2644,15 +2626,6 @@ as controllers, views, channels and so on.</p></div>
   </div>
 
     <div class="summary-synopsis"><p>API controller for workflow management.</p></div>
-
-</div>
-<div class="summary-row">
-  <div class="summary-signature">
-    <a href="LightningWeb.AccountConfirmationModal.html" translate="no">LightningWeb.AccountConfirmationModal</a>
-
-  </div>
-
-    <div class="summary-synopsis"><p>A LiveView component for displaying an account confirmation modal.</p></div>
 
 </div>
 <div class="summary-row">
@@ -3170,7 +3143,8 @@ of projects associations to credentials and / or oauth clients.</p></div>
 
   </div>
 
-    <div class="summary-synopsis"><p>Ensures common <code class="inline">assigns</code> are applied to all LiveViews attaching this hook.</p></div>
+    <div class="summary-synopsis"><p>Refuses a mount whose session token no longer resolves, and applies common
+<code class="inline">assigns</code> to the LiveViews attaching this hook.</p></div>
 
 </div>
 <div class="summary-row">
@@ -3588,6 +3562,16 @@ It is mirroring the <code class="inline">Project -&gt; ProjectUser</code> relati
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="LightningWeb.SentryScrubber.html" translate="no">LightningWeb.SentryScrubber</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Request header scrubbing for <a href="https://hexdocs.pm/sentry/13.2.0/Sentry.PlugContext.html"><code class="inline">Sentry.PlugContext</code></a>, wired up in
+<a href="LightningWeb.Endpoint.html"><code class="inline">LightningWeb.Endpoint</code></a>.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="LightningWeb.Telemetry.html" translate="no">LightningWeb.Telemetry</a>
 
   </div>
@@ -3618,6 +3602,15 @@ It is mirroring the <code class="inline">Project -&gt; ProjectUser</code> relati
     <a href="LightningWeb.UserConfirmationController.html" translate="no">LightningWeb.UserConfirmationController</a>
 
   </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserConfirmationRequiredLive.html" translate="no">LightningWeb.UserConfirmationRequiredLive</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The one page an account locked out pending email confirmation can reach.</p></div>
 
 </div>
 <div class="summary-row">

@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>LightningWeb.UserAuth — Lightning v2.18.1</title>
+    <title>LightningWeb.UserAuth — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.UserAuth</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -142,7 +142,8 @@ Lightning
 
       </div>
 
-        <div class="summary-synopsis"><p>Tears down every live WebSocket the user has open, on all devices.</p></div>
+        <div class="summary-synopsis"><p>Tears down both transports for every live WebSocket the user has open, on all
+devices.</p></div>
 
     </div>
 
@@ -162,6 +163,17 @@ and remember me token.</p></div>
         <a href="#get_bearer/1" data-no-tooltip="" translate="no">get_bearer(conn)</a>
 
       </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#live_socket_topic/1" data-no-tooltip="" translate="no">live_socket_topic(user)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The <code class="inline">/live</code> transport topic addressing every LiveView connection the user has
+open.</p></div>
 
     </div>
 
@@ -312,6 +324,17 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#user_socket_topic/1" data-no-tooltip="" translate="no">user_socket_topic(user)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The <code class="inline">/socket</code> transport topic addressing every <a href="LightningWeb.UserSocket.html"><code class="inline">LightningWeb.UserSocket</code></a>
+connection the user has open.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -336,7 +359,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
       <h1 class="signature" translate="no">authenticate_bearer(conn, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L212" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L241" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -358,7 +381,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
       <h1 class="signature" translate="no">disconnect_user_sockets(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L147" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L163" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -367,11 +390,10 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
   <section class="docstring">
 
-<p>Tears down every live WebSocket the user has open, on all devices.</p><p>Call this after an account-wide revocation (password change or reset, account
-disable) has invalidated the user's sessions, so their collaborative editor,
-AI assistant and run channels drop immediately instead of staying authorised
-until the socket happens to reconnect.</p><p>Logout does not use this: <a href="#log_out_user/1"><code class="inline">log_out_user/1</code></a> tears down only the session being
-logged out of.</p>
+<p>Tears down both transports for every live WebSocket the user has open, on all
+devices.</p><p>Call this after an account-wide revocation (password change or reset, account
+disable) has invalidated the user's sessions, so both drop immediately instead
+of staying authorised until they happen to reconnect.</p><p>Logout does not use this; see <a href="#log_out_user/1"><code class="inline">log_out_user/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="fetch_current_user/2">
@@ -384,7 +406,7 @@ logged out of.</p>
       <h1 class="signature" translate="no">fetch_current_user(conn, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L155" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L175" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -394,7 +416,8 @@ logged out of.</p>
   <section class="docstring">
 
 <p>Authenticates the user by looking into the session
-and remember me token.</p>
+and remember me token.</p><p>This is where <code class="inline">:live_socket_id</code> is written, so a revocation can reach the pages
+the user already has open.</p>
   </section>
 </section>
 <section class="detail" id="get_bearer/1">
@@ -407,7 +430,7 @@ and remember me token.</p>
       <h1 class="signature" translate="no">get_bearer(conn)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L229" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L254" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -417,6 +440,32 @@ and remember me token.</p>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="live_socket_topic/1">
+
+  <div class="detail-header">
+    <a href="#live_socket_topic/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">live_socket_topic(user)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L151" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>The <code class="inline">/live</code> transport topic addressing every LiveView connection the user has
+open.</p><p>Keyed per user rather than per session token, so an authorisation change
+reaches pages that are already open. <code class="inline">phx.gen.auth</code> keys it per token; the
+LiveView security-model guide keys it per user, and we follow the guide.</p><p>We don't use the guide's name for it, <code class="inline">users_socket:</code>. That is one character
+from <code class="inline">user_socket:</code> above, and both are broadcast from the same function.</p>
   </section>
 </section>
 <section class="detail" id="log_in_user/2">
@@ -429,7 +478,7 @@ and remember me token.</p>
       <h1 class="signature" translate="no">log_in_user(conn, user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L27" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L28" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -451,7 +500,7 @@ and remember me token.</p>
       <h1 class="signature" translate="no">log_out_user(conn)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L115" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L114" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -460,7 +509,9 @@ and remember me token.</p>
 
   <section class="docstring">
 
-<p>Logs the user out.</p><p>It clears all session data for safety. See renew_session.</p>
+<p>Logs the user out.</p><p>It clears all session data for safety. See renew_session.</p><p>This hangs up the account's LiveView connections on every device, but revokes
+only the token it was logged out of, so the other devices reconnect and stay
+signed in.</p>
   </section>
 </section>
 <section class="detail" id="login_blocked_message/1">
@@ -473,7 +524,7 @@ and remember me token.</p>
       <h1 class="signature" translate="no">login_blocked_message(atom)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L41" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L42" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -504,7 +555,7 @@ SSO login paths so their wording can't drift apart.</p><p>Only the two blocked r
       <h1 class="signature" translate="no">mark_totp_pending(conn)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L418" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L478" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -526,7 +577,7 @@ SSO login paths so their wording can't drift apart.</p><p>Only the two blocked r
       <h1 class="signature" translate="no">new_session(conn, token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L58" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L54" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -537,10 +588,7 @@ SSO login paths so their wording can't drift apart.</p><p>Only the two blocked r
 
 <p>Assigns the token to a new session.</p><p>It renews the session ID and clears the whole session
 to avoid fixation attacks. See the renew_session
-function to customize this behaviour.</p><p>It also sets a <code class="inline">:live_socket_id</code> key in the session,
-so LiveView sessions are identified and automatically
-disconnected on log out. The line can be safely removed
-if you are not using LiveView.</p>
+function to customize this behaviour.</p>
   </section>
 </section>
 <section class="detail" id="on_mount/4">
@@ -553,7 +601,7 @@ if you are not using LiveView.</p>
       <h1 class="signature" translate="no">on_mount(atom, params, session, socket)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L383" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L443" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -575,7 +623,7 @@ if you are not using LiveView.</p>
       <h1 class="signature" translate="no">reauth_sudo_mode(conn, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L182" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L211" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -597,7 +645,7 @@ if you are not using LiveView.</p>
       <h1 class="signature" translate="no">redirect_if_user_is_authenticated(conn, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L246" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L271" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -621,7 +669,7 @@ if you are not using LiveView.</p>
       <h1 class="signature" translate="no">redirect_with_return_to(conn, params \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L68" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L63" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -643,7 +691,7 @@ if you are not using LiveView.</p>
       <h1 class="signature" translate="no">require_authenticated_api_resource(conn, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L299" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L357" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -666,7 +714,7 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
       <h1 class="signature" translate="no">require_authenticated_user(conn, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L262" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L288" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -675,8 +723,9 @@ A resource can be a <code class="inline">User</code> or a <code class="inline">P
 
   <section class="docstring">
 
-<p>Used for routes that require the user to be authenticated.</p><p>If you want to enforce the user email is confirmed before
-they use the application at all, here would be a good place.</p>
+<p>Used for routes that require the user to be authenticated.</p><p>Refuses a session whose second factor is still pending, and one whose email
+address is unconfirmed past the deadline — the latter is confined to the
+handful of paths in <code class="inline">LightningWeb.ConfirmationLockout</code>.</p>
   </section>
 </section>
 <section class="detail" id="require_sudo_user/2">
@@ -689,7 +738,7 @@ they use the application at all, here would be a good place.</p>
       <h1 class="signature" translate="no">require_sudo_user(conn, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L337" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L397" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -711,7 +760,7 @@ they use the application at all, here would be a good place.</p>
       <h1 class="signature" translate="no">require_superuser(conn, opts)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L355" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L415" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -733,7 +782,7 @@ they use the application at all, here would be a good place.</p>
       <h1 class="signature" translate="no">totp_pending?(conn)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L422" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L482" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -755,7 +804,7 @@ they use the application at all, here would be a good place.</p>
       <h1 class="signature" translate="no">totp_validated(conn)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L426" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L486" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -765,6 +814,29 @@ they use the application at all, here would be a good place.</p>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="user_socket_topic/1">
+
+  <div class="detail-header">
+    <a href="#user_socket_topic/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">user_socket_topic(user)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L138" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>The <code class="inline">/socket</code> transport topic addressing every <a href="LightningWeb.UserSocket.html"><code class="inline">LightningWeb.UserSocket</code></a>
+connection the user has open.</p>
   </section>
 </section>
 

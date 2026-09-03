@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Workflows.Trigger — Lightning v2.18.1</title>
+    <title>Lightning.Workflows.Trigger — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Workflows.Trigger</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -230,7 +230,7 @@ endpoint is called.</p>
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L22" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L21" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -254,7 +254,6 @@ endpoint is called.</p>
   has_auth_method: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  kafka_configuration: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   legacy_bare_path: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   type: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -281,7 +280,7 @@ endpoint is called.</p>
       <h1 class="signature" translate="no">trigger_type()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L26" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L25" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -344,7 +343,7 @@ endpoint is called.</p>
       <h1 class="signature" translate="no">custom_path_shape_error?(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L125" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L122" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -374,7 +373,7 @@ be written back afterwards.</p>
       <h1 class="signature" translate="no">new(attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L84" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L81" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -396,7 +395,7 @@ be written back afterwards.</p>
       <h1 class="signature" translate="no">synchronous?(trigger)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L141" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L147" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -412,7 +411,14 @@ be written back afterwards.</p>
       </div>
 
 <p>Returns true if the trigger uses a synchronous webhook reply mode
-(i.e., the HTTP connection is held open waiting for a response).</p>
+(i.e., the HTTP connection is held open waiting for a response).</p><p>This set must stay in step with the reply modes that actually publish a
+<code class="inline">{:webhook_response, ...}</code> message — see
+<code class="inline">LightningWeb.RunChannel.maybe_send_after_completion_response/2</code>, which
+broadcasts for <code class="inline">:after_completion</code> only. A mode that is synchronous here but
+has no publisher there parks the request process until the webhook response
+timeout for a message nobody sends, so <code class="inline">:custom</code> (accepted by the schema but
+not implemented, and not offered by the trigger editor) is deliberately
+excluded.</p>
   </section>
 </section>
 <section class="detail" id="valid_custom_path?/1">
@@ -425,7 +431,7 @@ be written back afterwards.</p>
       <h1 class="signature" translate="no">valid_custom_path?(path)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L104" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/trigger.ex#L101" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

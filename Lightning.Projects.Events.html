@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Projects.Events — Lightning v2.18.1</title>
+    <title>Lightning.Projects.Events — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Projects.Events</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -146,7 +146,65 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#project_deletion_scheduled/1" data-no-tooltip="" translate="no">project_deletion_scheduled(project_id)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#project_user_added/2" data-no-tooltip="" translate="no">project_user_added(project_id, user_id)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#project_user_removed/2" data-no-tooltip="" translate="no">project_user_removed(project_id, user_id)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#project_user_role_changed/2" data-no-tooltip="" translate="no">project_user_role_changed(project_id, user_id)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#subscribe/0" data-no-tooltip="" translate="no">subscribe()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#subscribe/1" data-no-tooltip="" translate="no">subscribe(project_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Subscribes to events scoped to a single project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#support_access_updated/2" data-no-tooltip="" translate="no">support_access_updated(project_id, allowed)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#workflow_deleted/1" data-no-tooltip="" translate="no">workflow_deleted(workflow)</a>
 
       </div>
 
@@ -176,7 +234,7 @@ Lightning
       <h1 class="signature" translate="no">project_created(project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L15" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L81" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -198,7 +256,95 @@ Lightning
       <h1 class="signature" translate="no">project_deleted(project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L22" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L88" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="project_deletion_scheduled/1">
+
+  <div class="detail-header">
+    <a href="#project_deletion_scheduled/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">project_deletion_scheduled(project_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L116" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="project_user_added/2">
+
+  <div class="detail-header">
+    <a href="#project_user_added/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">project_user_added(project_id, user_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L95" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="project_user_removed/2">
+
+  <div class="detail-header">
+    <a href="#project_user_removed/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">project_user_removed(project_id, user_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L102" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="project_user_role_changed/2">
+
+  <div class="detail-header">
+    <a href="#project_user_role_changed/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">project_user_role_changed(project_id, user_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L109" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -220,7 +366,81 @@ Lightning
       <h1 class="signature" translate="no">subscribe()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L29" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L140" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="subscribe/1">
+
+  <div class="detail-header">
+    <a href="#subscribe/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">subscribe(project_id)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L159" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Subscribes to events scoped to a single project.</p><p>Note that every project-scoped LiveView subscribes here via
+<code class="inline">LightningWeb.Hooks.on_mount(:project_scope, ...)</code>, as do
+<a href="LightningWeb.WorkflowChannel.html"><code class="inline">LightningWeb.WorkflowChannel</code></a>, <a href="LightningWeb.AiAssistantChannel.html"><code class="inline">LightningWeb.AiAssistantChannel</code></a> and
+<a href="LightningWeb.RunChannel.html"><code class="inline">LightningWeb.RunChannel</code></a> at join. Anything broadcast on this topic reaches
+all of them, so new event types must be handled (or explicitly halted) in
+<code class="inline">LightningWeb.Hooks.handle_project_user_event/2</code> and named in each channel's
+ignore clause.</p><p>Keep this topic quiet. It exists so that a session can be told its own
+standing changed, and every subscriber is woken for every message on it — a
+frequent event does not belong here.</p>
+  </section>
+</section>
+<section class="detail" id="support_access_updated/2">
+
+  <div class="detail-header">
+    <a href="#support_access_updated/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">support_access_updated(project_id, allowed)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L133" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="workflow_deleted/1">
+
+  <div class="detail-header">
+    <a href="#workflow_deleted/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">workflow_deleted(workflow)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L123" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

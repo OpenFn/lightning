@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Storage.ProjectFileDefinition — Lightning v2.18.1</title>
+    <title>Lightning.Storage.ProjectFileDefinition — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Storage.ProjectFileDefinition</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -111,14 +111,17 @@ Lightning
 
 
     <section id="moduledoc">
-<p>  This module provides functionality for managing the storage and retrieval of project files.</p><p>  It handles operations related to storing project files, generating URLs for accessing these files, and constructing storage paths for exported files. It serves as an abstraction layer over the underlying storage mechanism provided by the <a href="Lightning.Storage.html"><code class="inline">Lightning.Storage</code></a> module.</p><p>  ## Functions</p><ul><li><a href="#store/2"><code class="inline">store/2</code></a>: Stores a file from a given source path into the storage system based on the file's path.</li><li><a href="#get_url/1"><code class="inline">get_url/1</code></a>: Retrieves the URL for accessing a stored file.</li><li><a href="#storage_path_for_exports/2"><code class="inline">storage_path_for_exports/2</code></a>: Constructs a storage path for exported files, defaulting to a <code class="inline">.zip</code> extension.</li></ul><p>  ## Example Usage</p><pre><code class="makeup elixir" translate="no"><span class="w">  </span><span class="c1"># Store a file</span><span class="w">
-  </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">store</span><span class="p" data-group-id="3579892654-1">(</span><span class="s">&quot;/path/to/source&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">project_file</span><span class="p" data-group-id="3579892654-1">)</span><span class="w">
+<p>  This module provides functionality for managing the storage and retrieval of project files.</p><p>  It handles operations related to storing project files, generating URLs for accessing these files, and constructing storage paths for exported files. It serves as an abstraction layer over the underlying storage mechanism provided by the <a href="Lightning.Storage.html"><code class="inline">Lightning.Storage</code></a> module.</p><p>  ## Functions</p><ul><li><a href="#store/2"><code class="inline">store/2</code></a>: Stores a file from a given source path into the storage system based on the file's path.</li><li><a href="#get_url/1"><code class="inline">get_url/1</code></a>: Retrieves the URL for accessing a stored file.</li><li><a href="#delete/1"><code class="inline">delete/1</code></a>: Removes a stored file from the storage system.</li><li><a href="#storage_path_for_exports/2"><code class="inline">storage_path_for_exports/2</code></a>: Constructs a storage path for exported files, defaulting to a <code class="inline">.zip</code> extension.</li></ul><p>  ## Example Usage</p><pre><code class="makeup elixir" translate="no"><span class="w">  </span><span class="c1"># Store a file</span><span class="w">
+  </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">store</span><span class="p" data-group-id="1842707762-1">(</span><span class="s">&quot;/path/to/source&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">project_file</span><span class="p" data-group-id="1842707762-1">)</span><span class="w">
 
   </span><span class="c1"># Get a URL for the stored file</span><span class="w">
-  </span><span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">get_url</span><span class="p" data-group-id="3579892654-2">(</span><span class="n">project_file</span><span class="p" data-group-id="3579892654-2">)</span><span class="w">
+  </span><span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">get_url</span><span class="p" data-group-id="1842707762-2">(</span><span class="n">project_file</span><span class="p" data-group-id="1842707762-2">)</span><span class="w">
+
+  </span><span class="c1"># Delete a stored file</span><span class="w">
+  </span><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">delete</span><span class="p" data-group-id="1842707762-3">(</span><span class="n">project_file</span><span class="p" data-group-id="1842707762-3">)</span><span class="w">
 
   </span><span class="c1"># Get the storage path for an exported file</span><span class="w">
-  </span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">storage_path_for_exports</span><span class="p" data-group-id="3579892654-3">(</span><span class="n">project_file</span><span class="p" data-group-id="3579892654-3">)</span></code></pre>
+  </span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Storage.ProjectFileDefinition</span><span class="o">.</span><span class="n">storage_path_for_exports</span><span class="p" data-group-id="1842707762-4">(</span><span class="n">project_file</span><span class="p" data-group-id="1842707762-4">)</span></code></pre>
     </section>
 
 </div>
@@ -134,6 +137,16 @@ Lightning
   <h2>
     <a href="#functions">Functions</a>
   </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete/1" data-no-tooltip="" translate="no">delete(file)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Deletes a file's object from storage.</p></div>
+
+    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -173,6 +186,39 @@ Lightning
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="delete/1">
+
+  <div class="detail-header">
+    <a href="#delete/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete(file)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/storage/project_file_definition.ex#L55" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> delete(<a href="Lightning.Projects.File.html#t:t/0">Lightning.Projects.File.t</a>()) :: :ok | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Deletes a file's object from storage.</p><p>Returns <code class="inline">:ok</code> once nothing is stored for the file, which includes the cases
+where there never was anything: a file with no path (a failed export never
+wrote one), and a path the backend doesn't recognise. Backends spell that last
+one differently — GCS answers <code class="inline">404</code>, the local backend <code class="inline">:enoent</code> — and callers
+shouldn't have to know which backend they're on.</p><p>Anything else means the object may still be there, and comes back as
+<code class="inline">{:error, reason}</code>.</p>
+  </section>
+</section>
 <section class="detail" id="get_url/1">
 
   <div class="detail-header">
@@ -183,7 +229,7 @@ Lightning
       <h1 class="signature" translate="no">get_url(file)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/storage/project_file_definition.ex#L34" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/storage/project_file_definition.ex#L38" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -207,7 +253,7 @@ Lightning
       <h1 class="signature" translate="no">storage_path_for_exports(file, ext \\ &quot;.zip&quot;)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/storage/project_file_definition.ex#L38" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/storage/project_file_definition.ex#L66" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -229,7 +275,7 @@ Lightning
       <h1 class="signature" translate="no">store(source_path, file)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/storage/project_file_definition.ex#L30" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/storage/project_file_definition.ex#L34" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

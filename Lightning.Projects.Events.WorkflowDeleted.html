@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>LightningWeb.AccountConfirmationModal — Lightning v2.18.1</title>
+    <title>Lightning.Projects.Events.WorkflowDeleted — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">LightningWeb.AccountConfirmationModal</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <span translate="no">Lightning.Projects.Events.WorkflowDeleted</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/account_confirmation_modal.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L53" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,16 +111,16 @@ Lightning
 
 
     <section id="moduledoc">
-<p>A LiveView component for displaying an account confirmation modal.</p><p>This component is responsible for informing users that access to their
-accounts, projects, and workflows is restricted until they confirm
-their account. It provides functionality to resend the confirmation
-email and allows users to update their email address if needed.</p><h2 id="module-features" class="section-heading"><a href="#module-features" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Features</span></h2><ul><li>Displays a modal with instructions for account confirmation.</li><li>Allows users to resend the confirmation email.</li><li>Provides feedback when the confirmation email is successfully sent.</li><li>Allows users to navigate to the profile page to update their email address.</li></ul><h2 id="module-usage" class="section-heading"><a href="#module-usage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage</span></h2><p>Include this component in your LiveView template where you need to prompt
-users to confirm their account. The component determines whether the modal
-should be shown based on the current view context.</p><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">live_component</span><span class="w">
-  </span><span class="n">module</span><span class="o">=</span><span class="p" data-group-id="9102983412-1">{</span><span class="nc">LightningWeb.AccountConfirmationModal</span><span class="p" data-group-id="9102983412-1">}</span><span class="w">
-  </span><span class="n">id</span><span class="o">=</span><span class="s">&quot;account-confirmation-modal&quot;</span><span class="w">
-  </span><span class="n">current_user</span><span class="o">=</span><span class="p" data-group-id="9102983412-2">{</span><span class="na">@current_user</span><span class="p" data-group-id="9102983412-2">}</span><span class="w">
-</span><span class="o">/</span><span class="o">&gt;</span></code></pre><p>The component uses assigns to manage its state, including:</p><ul><li><code class="inline">:show_modal</code> - Determines if the modal should be visible.</li><li><code class="inline">:email_sent</code> - Indicates if the confirmation email was successfully sent.</li></ul>
+<p>A workflow in the project was marked deleted.</p><p>Soft deletion is what &quot;deleted&quot; means to everyone but the purge worker: the
+workflow disappears from the project, no join or mount resolves it again,
+and a session still holding it is holding something that is gone. Sessions
+end rather than being re-permissioned — nothing brings the workflow back
+under the same id.</p><p>Carried here rather than on <code class="inline">Lightning.Workflows.Events</code> deliberately. That
+topic also carries <code class="inline">WorkflowUpdated</code>, which fires on every save in the
+project, so a surface subscribing there to hear about deletions would be
+woken by every keystroke's worth of saved work instead. The surfaces that
+need this already subscribe to the project's topic, and a deletion belongs
+with the other events that change what a session may do.</p>
     </section>
 
 </div>

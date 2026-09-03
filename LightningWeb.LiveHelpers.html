@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>LightningWeb.LiveHelpers — Lightning v2.18.1</title>
+    <title>LightningWeb.LiveHelpers — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.LiveHelpers</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -143,6 +143,16 @@ Lightning
         <a href="#check_limits/2" data-no-tooltip="" translate="no">check_limits(socket, project_id)</a>
 
       </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#deny_collaborator_change/1" data-no-tooltip="" translate="no">deny_collaborator_change(socket)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Refuses a collaborator change the current user is not allowed to make.</p></div>
 
     </div>
 
@@ -232,7 +242,7 @@ Lightning
       <h1 class="signature" translate="no">book_demo_banner(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L153" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L156" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -254,7 +264,7 @@ Lightning
       <h1 class="signature" translate="no">check_limits(socket, project_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L193" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L196" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -264,6 +274,30 @@ Lightning
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="deny_collaborator_change/1">
+
+  <div class="detail-header">
+    <a href="#deny_collaborator_change/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">deny_collaborator_change(socket)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L220" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Refuses a collaborator change the current user is not allowed to make.</p><p>Navigates as well as flashes: a LiveComponent's flash is only rendered by its
+parent LiveView, and the navigation re-runs <code class="inline">:project_scope</code> so a user whose
+standing has been revoked is bounced out.</p>
   </section>
 </section>
 <section class="detail" id="display_short_uuid/1">
@@ -276,7 +310,7 @@ Lightning
       <h1 class="signature" translate="no">display_short_uuid(uuid_string)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L166" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L169" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -306,7 +340,7 @@ Lightning
       <h1 class="signature" translate="no">fade_in(opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L175" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L178" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -330,7 +364,7 @@ Lightning
       <h1 class="signature" translate="no">fade_out(opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L184" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L187" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -352,7 +386,7 @@ Lightning
       <h1 class="signature" translate="no">live_error_block(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L46" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L49" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -374,7 +408,7 @@ Lightning
       <h1 class="signature" translate="no">live_info_block(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L18" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L21" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -396,7 +430,7 @@ Lightning
       <h1 class="signature" translate="no">live_nav_block(assigns)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L75" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L78" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -418,7 +452,7 @@ Lightning
       <h1 class="signature" translate="no">upcase_first(arg)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L170" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L173" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

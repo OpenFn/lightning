@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.KafkaTriggers.TriggerKafkaMessageRecord — Lightning v2.18.1</title>
+    <title>LightningWeb.SentryScrubber — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">Lightning.KafkaTriggers.TriggerKafkaMessageRecord</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <span translate="no">LightningWeb.SentryScrubber</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/trigger_kafka_message_record.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/sentry_scrubber.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,8 +111,8 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Persists a lightweight represenattion of a message that has been recevied from
-a Kafka cluster, for the purpose of deduplication.</p>
+<p>Request header scrubbing for <a href="https://hexdocs.pm/sentry/13.2.0/Sentry.PlugContext.html"><code class="inline">Sentry.PlugContext</code></a>, wired up in
+<a href="LightningWeb.Endpoint.html"><code class="inline">LightningWeb.Endpoint</code></a>.</p>
     </section>
 
 </div>
@@ -131,9 +131,12 @@ a Kafka cluster, for the purpose of deduplication.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#changeset/2" data-no-tooltip="" translate="no">changeset(message_record, params)</a>
+        <a href="#scrub_headers/1" data-no-tooltip="" translate="no">scrub_headers(conn)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Drops Sentry's default sensitive headers, then ours. Returns a map, as
+<a href="https://hexdocs.pm/sentry/13.2.0/Sentry.PlugContext.html#default_header_scrubber/1"><code class="inline">Sentry.PlugContext.default_header_scrubber/1</code></a> does.</p></div>
 
     </div>
 
@@ -151,17 +154,17 @@ a Kafka cluster, for the purpose of deduplication.</p>
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="changeset/2">
+<section class="detail" id="scrub_headers/1">
 
   <div class="detail-header">
-    <a href="#changeset/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#scrub_headers/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">changeset(message_record, params)</h1>
+      <h1 class="signature" translate="no">scrub_headers(conn)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/trigger_kafka_message_record.ex#L18" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/sentry_scrubber.ex#L14" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -170,7 +173,14 @@ a Kafka cluster, for the purpose of deduplication.</p>
 
   <section class="docstring">
 
+      <div class="specs">
 
+          <pre translate="no"><span class="attribute">@spec</span> scrub_headers(<a href="https://hexdocs.pm/plug/1.20.3/Plug.Conn.html#t:t/0">Plug.Conn.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Drops Sentry's default sensitive headers, then ours. Returns a map, as
+<a href="https://hexdocs.pm/sentry/13.2.0/Sentry.PlugContext.html#default_header_scrubber/1"><code class="inline">Sentry.PlugContext.default_header_scrubber/1</code></a> does.</p>
   </section>
 </section>
 

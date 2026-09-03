@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>LightningWeb.ChannelProxyPlug — Lightning v2.18.1</title>
+    <title>LightningWeb.ChannelProxyPlug — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">LightningWeb.ChannelProxyPlug</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -118,7 +118,12 @@ via <a href="https://hexdocs.pm/philter/0.4.0/Philter.html#proxy/2"><code class=
 tracing. If the caller provides one it will be used, but
 <a href="https://hexdocs.pm/plug/1.20.3/Plug.RequestId.html"><code class="inline">Plug.RequestId</code></a> requires it to be between 20 and 200 characters —
 shorter or longer values are discarded and a new ID is generated
-automatically.</p>
+automatically.</p><h2 id="module-response-security-headers" class="section-heading"><a href="#module-response-security-headers" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Response security headers</span></h2><p>This plug is mounted at the endpoint above the router
+(<a href="LightningWeb.Endpoint.html"><code class="inline">LightningWeb.Endpoint</code></a>) so that the raw request body survives for
+proxying, and it halts once the response is sent. The <code class="inline">:browser</code> pipeline —
+and with it <code class="inline">put_secure_browser_headers/2</code> — is therefore never reached, so
+the headers it would have set are applied here instead. See
+<code class="inline">secure_proxy_response/1</code>.</p>
     </section>
 
 </div>

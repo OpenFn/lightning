@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Workers — Lightning v2.18.1</title>
+    <title>Lightning.Workers — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Workers</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -183,7 +183,7 @@ the communication with the workers.</p>
       <h1 class="signature" translate="no">generate_run_token(run, run_options \\ %Lightning.Runs.RunOptions{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L68" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L98" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -214,7 +214,7 @@ the communication with the workers.</p>
       <h1 class="signature" translate="no">verify_run_token(token, context)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L102" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L144" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -225,7 +225,7 @@ the communication with the workers.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> verify_run_token(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: {:ok, <a href="https://hexdocs.pm/joken/2.6.2/Joken.html#t:claims/0">Joken.claims</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> verify_run_token(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: {:ok, <a href="https://hexdocs.pm/joken/2.6.2/Joken.html#t:claims/0">Joken.claims</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
 
       </div>
 
@@ -244,7 +244,7 @@ the communication with the workers.</p>
       <h1 class="signature" translate="no">verify_worker_token(token, context \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L128" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workers.ex#L172" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -255,7 +255,7 @@ the communication with the workers.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> verify_worker_token(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: {:ok, <a href="https://hexdocs.pm/joken/2.6.2/Joken.html#t:claims/0">Joken.claims</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> verify_worker_token(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: {:ok, <a href="https://hexdocs.pm/joken/2.6.2/Joken.html#t:claims/0">Joken.claims</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
 
       </div>
 

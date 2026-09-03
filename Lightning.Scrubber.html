@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Scrubber — Lightning v2.18.1</title>
+    <title>Lightning.Scrubber — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Scrubber</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -111,11 +111,11 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Process used to scrub strings of sensitive information.</p><p>Can be started via <a href="#start_link/1"><code class="inline">start_link/1</code></a>.</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="9835201077-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">scrubber</span><span class="p" data-group-id="9835201077-1">}</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="nc">Lightning.Scrubber</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="9835201077-2">(</span><span class="w">
+<p>Process used to scrub strings of sensitive information.</p><p>Can be started via <a href="#start_link/1"><code class="inline">start_link/1</code></a>.</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="1981199027-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">scrubber</span><span class="p" data-group-id="1981199027-1">}</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="nc">Lightning.Scrubber</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="1981199027-2">(</span><span class="w">
     </span><span class="ss">samples</span><span class="p">:</span><span class="w">
-      </span><span class="nc">Lightning.Credentials</span><span class="o">.</span><span class="n">sensitive_values_for</span><span class="p" data-group-id="9835201077-3">(</span><span class="n">credential</span><span class="p" data-group-id="9835201077-3">)</span><span class="w">
-  </span><span class="p" data-group-id="9835201077-2">)</span></code></pre><p>Takes an optional <code class="inline">:name</code> key, in case you need to name the process.</p>
+      </span><span class="nc">Lightning.Credentials</span><span class="o">.</span><span class="n">sensitive_values_for</span><span class="p" data-group-id="1981199027-3">(</span><span class="n">credential</span><span class="p" data-group-id="1981199027-3">)</span><span class="w">
+  </span><span class="p" data-group-id="1981199027-2">)</span></code></pre><p>Takes an optional <code class="inline">:name</code> key, in case you need to name the process.</p>
     </section>
 
 </div>
@@ -137,6 +137,16 @@ Lightning
         <a href="#add_samples/3" data-no-tooltip="" translate="no">add_samples(agent, new_samples, basic_auth)</a>
 
       </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#build_state/1" data-no-tooltip="" translate="no">build_state(sample_pairs)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Builds the state <a href="#scrub_string/2"><code class="inline">scrub_string/2</code></a> takes, without starting a process.</p></div>
 
     </div>
 
@@ -176,6 +186,16 @@ composed of variations a sample may appear.</p></div>
       </div>
 
         <div class="summary-synopsis"><p>This is used for scrubbing logs (is_list) and JSON (is_binary)</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#scrub_string/2" data-no-tooltip="" translate="no">scrub_string(state, data)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Process-free counterpart to <a href="#scrub/2"><code class="inline">scrub/2</code></a> for a single string.</p></div>
 
     </div>
 
@@ -235,6 +255,36 @@ elements with a &quot;...N more&quot; indicator if truncated.</p></div>
 
   </section>
 </section>
+<section class="detail" id="build_state/1">
+
+  <div class="detail-header">
+    <a href="#build_state/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">build_state(sample_pairs)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/scrubber.ex#L110" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> build_state([{[<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()], [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()]}]) :: Lightning.Scrubber.State.t()</pre>
+
+      </div>
+
+<p>Builds the state <a href="#scrub_string/2"><code class="inline">scrub_string/2</code></a> takes, without starting a process.</p><p><a href="#scrub/2"><code class="inline">scrub/2</code></a> needs an agent because a run accumulates samples as it goes. A
+caller that already knows every sample would otherwise start - and stay
+linked to - an agent per string it scrubs.</p><p>Takes <code class="inline">{samples, basic_auth}</code> pairs, the same shape <a href="#add_samples/3"><code class="inline">add_samples/3</code></a> takes.</p>
+  </section>
+</section>
 <section class="detail" id="child_spec/1">
 
   <div class="detail-header">
@@ -269,7 +319,7 @@ elements with a &quot;...N more&quot; indicator if truncated.</p></div>
       <h1 class="signature" translate="no">encode_samples(samples, basic_auth \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/scrubber.ex#L111" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/scrubber.ex#L135" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -334,6 +384,34 @@ composed of variations a sample may appear.</p>
 <p>This is used for scrubbing logs (is_list) and JSON (is_binary)</p>
   </section>
 </section>
+<section class="detail" id="scrub_string/2">
+
+  <div class="detail-header">
+    <a href="#scrub_string/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">scrub_string(state, data)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/scrubber.ex#L120" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> scrub_string(Lightning.Scrubber.State.t(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil</pre>
+
+      </div>
+
+<p>Process-free counterpart to <a href="#scrub/2"><code class="inline">scrub/2</code></a> for a single string.</p>
+  </section>
+</section>
 <section class="detail" id="scrub_values/2">
 
     <span id="scrub_values/1"></span>
@@ -346,7 +424,7 @@ composed of variations a sample may appear.</p>
       <h1 class="signature" translate="no">scrub_values(value, array_limit \\ 2)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/scrubber.ex#L156" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/scrubber.ex#L180" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -363,11 +441,11 @@ composed of variations a sample may appear.</p>
 
 <p>Recursively scrubs all values from a data structure, replacing them with type placeholders.
 Preserves keys and structure while hiding actual values. Arrays are sampled up to <code class="inline">array_limit</code>
-elements with a &quot;...N more&quot; indicator if truncated.</p><h2 id="scrub_values/2-examples" class="section-heading"><a href="#scrub_values/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">scrub_values</span><span class="p" data-group-id="9528773863-1">(</span><span class="p" data-group-id="9528773863-2">%{</span><span class="s">&quot;name&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;John&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;age&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="mi">30</span><span class="p" data-group-id="9528773863-2">}</span><span class="p" data-group-id="9528773863-1">)</span><span class="w">
-</span><span class="p" data-group-id="9528773863-3">%{</span><span class="s">&quot;name&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;age&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;number&quot;</span><span class="p" data-group-id="9528773863-3">}</span><span class="w">
+elements with a &quot;...N more&quot; indicator if truncated.</p><h2 id="scrub_values/2-examples" class="section-heading"><a href="#scrub_values/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">scrub_values</span><span class="p" data-group-id="6125920388-1">(</span><span class="p" data-group-id="6125920388-2">%{</span><span class="s">&quot;name&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;John&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;age&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="mi">30</span><span class="p" data-group-id="6125920388-2">}</span><span class="p" data-group-id="6125920388-1">)</span><span class="w">
+</span><span class="p" data-group-id="6125920388-3">%{</span><span class="s">&quot;name&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;age&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="s">&quot;number&quot;</span><span class="p" data-group-id="6125920388-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">scrub_values</span><span class="p" data-group-id="9528773863-4">(</span><span class="p" data-group-id="9528773863-5">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="9528773863-5">]</span><span class="p" data-group-id="9528773863-4">)</span><span class="w">
-</span><span class="p" data-group-id="9528773863-6">[</span><span class="s">&quot;number&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;number&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;...1 more&quot;</span><span class="p" data-group-id="9528773863-6">]</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">scrub_values</span><span class="p" data-group-id="6125920388-4">(</span><span class="p" data-group-id="6125920388-5">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p" data-group-id="6125920388-5">]</span><span class="p" data-group-id="6125920388-4">)</span><span class="w">
+</span><span class="p" data-group-id="6125920388-6">[</span><span class="s">&quot;number&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;number&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;...1 more&quot;</span><span class="p" data-group-id="6125920388-6">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="start_link/1">

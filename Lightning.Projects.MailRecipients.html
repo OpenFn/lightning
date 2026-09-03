@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.KafkaTriggers.Supervisor — Lightning v2.18.1</title>
+    <title>Lightning.Projects.MailRecipients — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">Lightning.KafkaTriggers.Supervisor</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <span translate="no">Lightning.Projects.MailRecipients</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/supervisor.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/mail_recipients.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,8 +111,15 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Starts all the processes needed to pull data from Kafka clusters and then
-generate work orders based on the messages received.</p>
+<p>Whether a person may be sent a project's contents by email.</p><p>Being sent a project's contents is the same standing as opening them in the
+app, so this asks <code class="inline">:access_project</code> rather than deciding again — one call
+covering the project existing, it not winding down, the person holding
+standing in it, and the MFA requirement.</p><p>Account state is what <code class="inline">:access_project</code> does not carry. The request path
+learns it at authentication, which a cron job and a run-completion callback
+never reach. An unconfirmed address counts for more here than it does there,
+because nothing has established that the mailbox belongs to the member.</p><p>Only for mail carrying a project's own contents — run logs, digests,
+retention notices. Account mail must not be routed through this: the notice
+that an account is being deleted has to reach an account this refuses.</p>
     </section>
 
 </div>
@@ -131,19 +138,11 @@ generate work orders based on the messages received.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#child_spec/1" data-no-tooltip="" translate="no">child_spec(init_arg)</a>
+        <a href="#may_receive?/2" data-no-tooltip="" translate="no">may_receive?(project, user)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Returns a specification to start this module under a supervisor.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#start_link/1" data-no-tooltip="" translate="no">start_link(init_arg)</a>
-
-      </div>
+        <div class="summary-synopsis"><p>Whether <code class="inline">user</code> may be sent <code class="inline">project</code>'s contents.</p></div>
 
     </div>
 
@@ -161,17 +160,17 @@ generate work orders based on the messages received.</p>
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="child_spec/1">
+<section class="detail" id="may_receive?/2">
 
   <div class="detail-header">
-    <a href="#child_spec/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#may_receive?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">child_spec(init_arg)</h1>
+      <h1 class="signature" translate="no">may_receive?(project, user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/supervisor.ex#L6" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/mail_recipients.ex#L28" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -180,29 +179,14 @@ generate work orders based on the messages received.</p>
 
   <section class="docstring">
 
-<p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
-  </section>
-</section>
-<section class="detail" id="start_link/1">
+      <div class="specs">
 
-  <div class="detail-header">
-    <a href="#start_link/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">start_link(init_arg)</h1>
+          <pre translate="no"><span class="attribute">@spec</span> may_receive?(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(), <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) ::
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
 
+      </div>
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/supervisor.ex#L8" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
+<p>Whether <code class="inline">user</code> may be sent <code class="inline">project</code>'s contents.</p>
   </section>
 </section>
 

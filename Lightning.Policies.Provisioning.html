@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Policies.Provisioning — Lightning v2.18.1</title>
+    <title>Lightning.Policies.Provisioning — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Policies.Provisioning</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -111,7 +111,17 @@ Lightning
 
 
     <section id="moduledoc">
-<p>The Bodyguard Policy module for users roles.</p>
+<p>The Bodyguard Policy module for the provisioning API.</p><p>Two kinds of caller reach this: a person with an API token, and a
+<code class="inline">%ProjectRepoConnection{}</code> — a GitHub connection pushing a project definition
+back to us. Both resolve through <a href="Lightning.Projects.Scope.html"><code class="inline">Lightning.Projects.Scope</code></a>, so both are
+refused on a project scheduled for deletion. A person is additionally held to
+the project's MFA requirement; a repo connection has no MFA concept, and
+<code class="inline">Scope</code> says so for it.</p><p>The repo-connection clauses previously compared
+<code class="inline">repo_connection.project_id == project.id</code>, which is trivially true for the
+project the connection belongs to and asks nothing about the project's state —
+so a push could re-enable the triggers that shutting the project down had
+disabled.</p><p>Only a superuser can provision a project that does not exist yet. Owners and
+admins can update an existing one.</p>
     </section>
 
 </div>
@@ -136,6 +146,14 @@ Lightning
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:actor/0" data-no-tooltip="" translate="no">actor()</a>
+
+      </div>
+
+    </div>
+
 </div>
 <div class="summary-functions summary">
   <h2>
@@ -144,13 +162,11 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#authorize/3" data-no-tooltip="" translate="no">authorize(arg1, user, project)</a>
+        <a href="#authorize/3" data-no-tooltip="" translate="no">authorize(action, user, project)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>authorize/3 takes an action, a user or a project repo connection, and a project. It checks the user's role
-for this project and returns <code class="inline">true</code> if the user can perform the action and
-false if they cannot.</p></div>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/bodyguard/2.4.3/Bodyguard.Policy.html#c:authorize/3"><code class="inline">Bodyguard.Policy.authorize/3</code></a>.</p></div>
 
     </div>
 
@@ -178,7 +194,7 @@ false if they cannot.</p></div>
       <h1 class="signature" translate="no">actions()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L13" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L30" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -190,6 +206,36 @@ false if they cannot.</p></div>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> actions() :: :provision_project | :describe_project</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:actor/0">
+
+  <div class="detail-header">
+    <a href="#t:actor/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">actor()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L29" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> actor() ::
+  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()
+  | <a href="Lightning.VersionControl.ProjectRepoConnection.html#t:t/0">Lightning.VersionControl.ProjectRepoConnection.t</a>()</pre>
 
       </div>
 
@@ -216,10 +262,10 @@ false if they cannot.</p></div>
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">authorize(arg1, user, project)</h1>
+      <h1 class="signature" translate="no">authorize(action, user, project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L30" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L38" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -230,18 +276,12 @@ false if they cannot.</p></div>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> authorize(
-  <a href="#t:actions/0">actions</a>(),
-  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
-  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()
-) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> authorize(<a href="#t:actions/0">actions</a>(), <a href="#t:actor/0">actor</a>(), <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) ::
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>() | {:error, :forbidden}</pre>
 
       </div>
 
-<p>authorize/3 takes an action, a user or a project repo connection, and a project. It checks the user's role
-for this project and returns <code class="inline">true</code> if the user can perform the action and
-false if they cannot.</p><p>Note that permissions are grouped by action.</p><p>We deny by default, so if a user's role is not added to the allow roles list
-for a particular action they are denied.</p><p>Only a superuser can provision a new project.</p><p>Owners and admins can update existing projects.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/bodyguard/2.4.3/Bodyguard.Policy.html#c:authorize/3"><code class="inline">Bodyguard.Policy.authorize/3</code></a>.</p>
   </section>
 </section>
 

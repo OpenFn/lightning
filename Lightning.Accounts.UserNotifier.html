@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Accounts.UserNotifier — Lightning v2.18.1</title>
+    <title>Lightning.Accounts.UserNotifier — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Accounts.UserNotifier</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -234,9 +234,11 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#notify_history_export_completion/2" data-no-tooltip="" translate="no">notify_history_export_completion(user, project_file)</a>
+        <a href="#notify_history_export_completion/3" data-no-tooltip="" translate="no">notify_history_export_completion(project, user, project_file)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Deliver the link to a completed history export.</p></div>
 
     </div>
 
@@ -284,14 +286,6 @@ Lightning
 
     </div>
 
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#send_trigger_failure_mail/3" data-no-tooltip="" translate="no">send_trigger_failure_mail(user, workflow, timestamp)</a>
-
-      </div>
-
-    </div>
-
 </div>
 
   </section>
@@ -316,7 +310,7 @@ Lightning
       <h1 class="signature" translate="no">build_digest_url(workflow, start_date, end_date)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L284" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L330" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -338,7 +332,7 @@ Lightning
       <h1 class="signature" translate="no">deliver_confirmation_instructions(user, token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L61" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L89" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -360,7 +354,7 @@ Lightning
       <h1 class="signature" translate="no">deliver_confirmation_instructions(enroller, user, token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L78" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L106" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -382,7 +376,7 @@ Lightning
       <h1 class="signature" translate="no">deliver_credential_transfer_confirmation_instructions(owner, receiver, credential, token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L420" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L447" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -404,7 +398,7 @@ Lightning
       <h1 class="signature" translate="no">deliver_credential_transfer_notification(receiver, owner, credential)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L454" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L481" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -426,7 +420,7 @@ Lightning
       <h1 class="signature" translate="no">deliver_project_addition_notification(user, project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L109" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L137" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -448,7 +442,7 @@ Lightning
       <h1 class="signature" translate="no">deliver_project_digest(digest_data, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L320" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L370" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -457,7 +451,9 @@ Lightning
 
   <section class="docstring">
 
-<p>Deliver a project digest of daily/weekly or monthly activity to a user.</p>
+<p>Deliver a project digest of daily/weekly or monthly activity to a user.</p><p>Returns <code class="inline">{:ok, :suppressed}</code> without sending to anyone who may not be sent
+this project's contents; <code class="inline">Lightning.DigestEmailWorker</code> keeps those people out
+of its notified list.</p>
   </section>
 </section>
 <section class="detail" id="deliver_project_invitation_email/5">
@@ -470,7 +466,7 @@ Lightning
       <h1 class="signature" translate="no">deliver_project_invitation_email(user, inviter, project, role, token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L380" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L430" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -492,7 +488,7 @@ Lightning
       <h1 class="signature" translate="no">deliver_reset_password_instructions(user, url)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L220" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L250" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -514,7 +510,7 @@ Lightning
       <h1 class="signature" translate="no">deliver_update_email_instructions(user, token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L239" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L269" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -536,7 +532,7 @@ Lightning
       <h1 class="signature" translate="no">deliver_update_email_warning(user, new_email)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L258" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L288" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -548,17 +544,17 @@ Lightning
 <p>Deliver warning to update a user.</p>
   </section>
 </section>
-<section class="detail" id="notify_history_export_completion/2">
+<section class="detail" id="notify_history_export_completion/3">
 
   <div class="detail-header">
-    <a href="#notify_history_export_completion/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#notify_history_export_completion/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">notify_history_export_completion(user, project_file)</h1>
+      <h1 class="signature" translate="no">notify_history_export_completion(project, user, project_file)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L272" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L313" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -567,7 +563,18 @@ Lightning
 
   <section class="docstring">
 
+      <div class="specs">
 
+          <pre translate="no"><span class="attribute">@spec</span> notify_history_export_completion(
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
+  <a href="Lightning.Projects.File.html#t:t/0">Lightning.Projects.File.t</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Deliver the link to a completed history export.</p><p>Returns <code class="inline">{:ok, :suppressed}</code> without sending to anyone who may not be sent
+this project's contents.</p>
   </section>
 </section>
 <section class="detail" id="notify_project_deletion/2">
@@ -580,7 +587,7 @@ Lightning
       <h1 class="signature" translate="no">notify_project_deletion(user, project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L358" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L408" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -602,7 +609,7 @@ Lightning
       <h1 class="signature" translate="no">remind_account_confirmation(user, token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L92" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L120" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -624,7 +631,7 @@ Lightning
       <h1 class="signature" translate="no">send_credential_deletion_notification_email(user, credential)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L195" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L225" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -646,7 +653,7 @@ Lightning
       <h1 class="signature" translate="no">send_data_retention_change_email(user, updated_project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L142" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L171" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -658,13 +665,15 @@ Lightning
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> send_data_retention_change_email(
-  user :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
-  updated_project :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()
-) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()
+) ::
+  {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
 
       </div>
 
-<p>Deliver an email to notify the user about a data retention setting change made in their project</p>
+<p>Deliver an email to notify the user about a data retention setting change made in their project</p><p>Returns <code class="inline">{:ok, :suppressed}</code> without sending to anyone who may not be sent
+this project's contents.</p>
   </section>
 </section>
 <section class="detail" id="send_deletion_notification_email/1">
@@ -677,7 +686,7 @@ Lightning
       <h1 class="signature" translate="no">send_deletion_notification_email(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L174" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L204" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -687,28 +696,6 @@ Lightning
   <section class="docstring">
 
 <p>Deliver an email to notify the user about their account being deleted</p>
-  </section>
-</section>
-<section class="detail" id="send_trigger_failure_mail/3">
-
-  <div class="detail-header">
-    <a href="#send_trigger_failure_mail/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">send_trigger_failure_mail(user, workflow, timestamp)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L394" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
   </section>
 </section>
 

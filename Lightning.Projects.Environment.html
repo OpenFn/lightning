@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.KafkaTriggers.MessageRecovery — Lightning v2.18.1</title>
+    <title>Lightning.Projects.Environment — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">Lightning.KafkaTriggers.MessageRecovery</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <span translate="no">Lightning.Projects.Environment</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_recovery.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/environment.ex#L1" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,22 +111,13 @@ Lightning
 
 
     <section id="moduledoc">
-<p>This module contains functionality to recover Kafka messages that have been
-persisted to the file system. It should only be used to process files that
-originate from a trusted source (i.e. Lightning's Kafka pipeline.)</p><p>It expects to be pointed at a directory structure that looks as follows:</p><p>base<em>path
-|</em> &lt;workflow<em>id&gt;
-  |</em> &lt;trigger<em>id&gt;</em>&lt;topic&gt;<em>&lt;partition&gt;</em>&lt;offset&gt;.json
-  |<em> &lt;trigger_id&gt;</em>&lt;topic&gt;<em>&lt;partition&gt;</em>&lt;offset&gt;.json
-|_ &lt;workflow_id&gt;</p><p>This is the structure that the Kafka pipeline will use when writing the
-messages to the file system. After each message is successfully processed,
-the file extension will be changed from <code class="inline">.json</code> to <code class="inline">json.recovered</code>. Recovered
-files will not be processed again. They are retained for the purposes of 
-double-checking the recovery process and can be deleted once this has been
-done.</p><p>If a file has not had the extension changed, this means that it experienced
-an error during reprocessing. These files can be reprocessed if you think the
-error was transient. </p><p>Usage: </p><p>  alias Lightning.KafkaTriggers.MessageRecovery
-  case MessageRecovery.recover_messages(Lightning.Config.kafka_alternate_storage_file_path) do</p><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="c1"># Success code</span><span class="w">
-</span><span class="p" data-group-id="9984194505-1">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="n">error_count</span><span class="p" data-group-id="9984194505-1">}</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="c1"># Failure code</span></code></pre><p>  end</p>
+<p>Which environment a project resolves its credentials in.</p><p>A credential can hold a body per environment, and the environment name is what
+selects between them. Anything reaching for a credential body therefore has to
+answer this question first, and every caller answering it differently is how
+two of them ended up hard-coding <code class="inline">&quot;main&quot;</code> and handing sandbox members the
+parent project's production secret.</p><p>This is that answer, in one place. It fails closed: a sandbox with no
+environment set gets an error rather than a guess, because guessing here means
+guessing which secret to hand over.</p>
     </section>
 
 </div>
@@ -138,6 +129,28 @@ error was transient. </p><p>Usage: </p><p>  alias Lightning.KafkaTriggers.Messag
       </a>
       <span class="text">Summary</span>
     </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:error/0" data-no-tooltip="" translate="no">error()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:subject/0" data-no-tooltip="" translate="no">subject()</a>
+
+      </div>
+
+    </div>
+
+</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
@@ -145,25 +158,11 @@ error was transient. </p><p>Usage: </p><p>  alias Lightning.KafkaTriggers.Messag
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#build_broadway_message/2" data-no-tooltip="" translate="no">build_broadway_message(data, metadata)</a>
+        <a href="#fetch/1" data-no-tooltip="" translate="no">fetch(project)</a>
 
       </div>
 
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#extract_trigger_id/1" data-no-tooltip="" translate="no">extract_trigger_id(file_path)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#recover_messages/1" data-no-tooltip="" translate="no">recover_messages(base_dir_path)</a>
-
-      </div>
+        <div class="summary-synopsis"><p>The environment for whatever you have in hand.</p></div>
 
     </div>
 
@@ -171,6 +170,80 @@ error was transient. </p><p>Usage: </p><p>  alias Lightning.KafkaTriggers.Messag
 
   </section>
 
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:error/0">
+
+  <div class="detail-header">
+    <a href="#t:error/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">error()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/environment.ex#L29" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> error() :: :environment_not_configured | :project_not_found</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:subject/0">
+
+  <div class="detail-header">
+    <a href="#t:subject/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">subject()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/environment.ex#L22" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> subject() ::
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()
+  | <a href="Lightning.Run.html#t:t/0">Lightning.Run.t</a>()
+  | <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()
+  | %{project_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()}
+  | nil</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
 
   <section id="functions" class="details-list">
     <h1 class="section-heading">
@@ -181,17 +254,17 @@ error was transient. </p><p>Usage: </p><p>  alias Lightning.KafkaTriggers.Messag
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="build_broadway_message/2">
+<section class="detail" id="fetch/1">
 
   <div class="detail-header">
-    <a href="#build_broadway_message/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#fetch/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">build_broadway_message(data, metadata)</h1>
+      <h1 class="signature" translate="no">fetch(project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_recovery.ex#L94" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/environment.ex#L40" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -200,51 +273,16 @@ error was transient. </p><p>Usage: </p><p>  alias Lightning.KafkaTriggers.Messag
 
   <section class="docstring">
 
+      <div class="specs">
 
-  </section>
-</section>
-<section class="detail" id="extract_trigger_id/1">
+          <pre translate="no"><span class="attribute">@spec</span> fetch(<a href="#t:subject/0">subject</a>()) :: {:ok, <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()} | {:error, <a href="#t:error/0">error</a>()}</pre>
 
-  <div class="detail-header">
-    <a href="#extract_trigger_id/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">extract_trigger_id(file_path)</h1>
+      </div>
 
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_recovery.ex#L102" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="recover_messages/1">
-
-  <div class="detail-header">
-    <a href="#recover_messages/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">recover_messages(base_dir_path)</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/message_recovery.ex#L42" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-
+<p>The environment for whatever you have in hand.</p><p>Takes a project, a run, a project id, or any struct carrying a <code class="inline">project_id</code>,
+so a caller does not have to load a project it does not otherwise need. That
+matters at the channel proxy, which holds a channel and never preloads its
+project.</p>
   </section>
 </section>
 

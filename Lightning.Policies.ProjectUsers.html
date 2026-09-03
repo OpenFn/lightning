@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.Policies.ProjectUsers — Lightning v2.18.1</title>
+    <title>Lightning.Policies.ProjectUsers — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ Lightning
   <div class="heading-with-actions top-heading">
     <h1>
       <span translate="no">Lightning.Policies.ProjectUsers</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
@@ -111,7 +111,15 @@ Lightning
 
 
     <section id="moduledoc">
-<p>The Bodyguard Policy module for projects members roles.</p>
+<p>The Bodyguard Policy module for project members' roles.</p><p>Two steps, deliberately separate.</p><p><a href="Lightning.Projects.Scope.html"><code class="inline">Lightning.Projects.Scope</code></a> establishes the <strong>facts</strong>: which project, and what
+standing this actor has in it. It refuses outright for a project that does not
+exist or is scheduled for deletion, so nothing downstream can be handed a
+standing in a wound-down project.</p><p><a href="#permitted?/2"><code class="inline">permitted?/2</code></a> makes the <strong>judgement</strong>: given that standing, is this action
+allowed. It decides on <code class="inline">role</code> and <code class="inline">mfa_satisfied?</code>, and never mentions
+<code class="inline">Project.scheduled_deletion</code> or <code class="inline">Project.requires_mfa</code> — there is no
+shut-down project left for it to see, and the MFA rule reaches it as a fact
+on the scope.</p><p>Adding an action means adding an atom to <code class="inline">@admin_actions</code> or
+<code class="inline">@editor_actions</code>. It inherits the guard; there is nothing to remember.</p><p>We deny by default: an action in none of the lists is refused.</p>
     </section>
 
 </div>
@@ -144,21 +152,44 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#allow_as_support_user?/2" data-no-tooltip="" translate="no">allow_as_support_user?(user, project_id)</a>
+        <a href="#actions/0" data-no-tooltip="" translate="no">actions()</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Every action this policy decides. Read by the recurrence test, so a new action
+is covered the day it is added rather than the day someone remembers.</p></div>
 
     </div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#authorize/3" data-no-tooltip="" translate="no">authorize(action, user, project)</a>
+        <a href="#authorize/3" data-no-tooltip="" translate="no">authorize(action, user, project_user)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>authorize/3 takes an action, a user, and a project. It checks the user's role
-for this project and returns <code class="inline">true</code> if the user can perform the action in
-that project and <code class="inline">false</code> if they cannot.</p></div>
+        <div class="summary-synopsis"><p>Whether <code class="inline">user</code> may perform <code class="inline">action</code>, where the subject is anything that
+identifies a project — see <a href="Lightning.Projects.Scope.html#t:subject/0"><code class="inline">Lightning.Projects.Scope.subject/0</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#blocked_by_mfa?/1" data-no-tooltip="" translate="no">blocked_by_mfa?(scope)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Whether this actor would have standing on the project if not for the
+project's MFA requirement.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#permitted?/2" data-no-tooltip="" translate="no">permitted?(action, scope)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Decide an action against an already-resolved <code class="inline">%Scope{}</code>.</p></div>
 
     </div>
 
@@ -186,7 +217,7 @@ that project and <code class="inline">false</code> if they cannot.</p></div>
       <h1 class="signature" translate="no">actions()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L12" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L55" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -198,26 +229,27 @@ that project and <code class="inline">false</code> if they cannot.</p></div>
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> actions() ::
-  :run_workflow
-  | :edit_workflow
-  | :access_project
-  | :edit_project
+  :access_project
   | :delete_project
-  | :add_project_user
-  | :remove_project_user
+  | :publish_template
+  | :run_workflow
+  | :edit_workflow
   | :delete_workflow
   | :create_workflow
-  | :edit_digest_alerts
-  | :edit_failure_alerts
   | :create_project_credential
-  | :edit_data_retention
-  | :write_webhook_auth_method
-  | :write_github_connection
   | :initiate_github_sync
-  | :publish_template
   | :create_channel
   | :delete_channel
-  | :update_channel</pre>
+  | :update_channel
+  | :edit_project
+  | :edit_data_retention
+  | :edit_run_settings
+  | :add_project_user
+  | :remove_project_user
+  | :write_webhook_auth_method
+  | :write_github_connection
+  | :edit_digest_alerts
+  | :edit_failure_alerts</pre>
 
       </div>
 
@@ -237,17 +269,17 @@ that project and <code class="inline">false</code> if they cannot.</p></div>
     </h1>
 
     <div class="functions-list">
-<section class="detail" id="allow_as_support_user?/2">
+<section class="detail" id="actions/0">
 
   <div class="detail-header">
-    <a href="#allow_as_support_user?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+    <a href="#actions/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">allow_as_support_user?(user, project_id)</h1>
+      <h1 class="signature" translate="no">actions()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L142" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L83" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -256,7 +288,14 @@ that project and <code class="inline">false</code> if they cannot.</p></div>
 
   <section class="docstring">
 
+      <div class="specs">
 
+          <pre translate="no"><span class="attribute">@spec</span> actions() :: [<a href="#t:actions/0">actions</a>()]</pre>
+
+      </div>
+
+<p>Every action this policy decides. Read by the recurrence test, so a new action
+is covered the day it is added rather than the day someone remembers.</p>
   </section>
 </section>
 <section class="detail" id="authorize/3">
@@ -266,10 +305,10 @@ that project and <code class="inline">false</code> if they cannot.</p></div>
       <i class="ri-link-m" aria-hidden="true"></i>
     </a>
     <div class="heading-with-actions">
-      <h1 class="signature" translate="no">authorize(action, user, project)</h1>
+      <h1 class="signature" translate="no">authorize(action, user, project_user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L49" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L96" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -283,15 +322,75 @@ that project and <code class="inline">false</code> if they cannot.</p></div>
           <pre translate="no"><span class="attribute">@spec</span> authorize(
   <a href="#t:actions/0">actions</a>(),
   <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
-  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>() | %{project_id: <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()} | nil
+  <a href="Lightning.Projects.Scope.html#t:subject/0">Lightning.Projects.Scope.subject</a>()
 ) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
 
       </div>
 
-<p>authorize/3 takes an action, a user, and a project. It checks the user's role
-for this project and returns <code class="inline">true</code> if the user can perform the action in
-that project and <code class="inline">false</code> if they cannot.</p><p>Note that permissions are grouped by action, rather than by user role.</p><p>We deny by default, so if a user's role is not added to the allow roles list
-for a particular action they are denied.</p>
+<p>Whether <code class="inline">user</code> may perform <code class="inline">action</code>, where the subject is anything that
+identifies a project — see <a href="Lightning.Projects.Scope.html#t:subject/0"><code class="inline">Lightning.Projects.Scope.subject/0</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="blocked_by_mfa?/1">
+
+  <div class="detail-header">
+    <a href="#blocked_by_mfa?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">blocked_by_mfa?(scope)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L187" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> blocked_by_mfa?(<a href="Lightning.Projects.Scope.html#t:t/0">Lightning.Projects.Scope.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Whether this actor would have standing on the project if not for the
+project's MFA requirement.</p><p>Lets a caller distinguish &quot;no access at all&quot; from &quot;access except MFA&quot; —
+<a href="LightningWeb.Hooks.html"><code class="inline">LightningWeb.Hooks</code></a> sends the first to not-found and the second to
+<code class="inline">/mfa_required</code> — without duplicating what counts as standing. It cannot ask
+<code class="inline">permitted?(:access_project, ...)</code> for that, since the guard above answers
+<code class="inline">false</code> for both cases.</p>
+  </section>
+</section>
+<section class="detail" id="permitted?/2">
+
+  <div class="detail-header">
+    <a href="#permitted?/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">permitted?(action, scope)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L134" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> permitted?(<a href="#t:actions/0">actions</a>(), <a href="Lightning.Projects.Scope.html#t:t/0">Lightning.Projects.Scope.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Decide an action against an already-resolved <code class="inline">%Scope{}</code>.</p><p>Public so a caller needing several answers about one project resolves once
+rather than once per question.</p>
   </section>
 </section>
 

@@ -5,14 +5,14 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.39.3">
-    <meta name="project" content="Lightning v2.18.1">
+    <meta name="project" content="Lightning v2.18.2">
 
 
-    <title>Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker — Lightning v2.18.1</title>
+    <title>Lightning.Projects.Events.ProjectDeletionScheduled — Lightning v2.18.2</title>
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-DDA61388.js"></script>
+    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -41,7 +41,7 @@
 Lightning
         </a>
         <div class="sidebar-projectVersion" translate="no">
-          v2.18.1
+          v2.18.2
         </div>
       </div>
     </div>
@@ -97,12 +97,12 @@ Lightning
 <div id="top-content">
   <div class="heading-with-actions top-heading">
     <h1>
-      <span translate="no">Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker</span> 
-      <small class="app-vsn" translate="no">(Lightning v2.18.1)</small>
+      <span translate="no">Lightning.Projects.Events.ProjectDeletionScheduled</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
 
     </h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kafka_triggers/duplicate_tracking_cleanup_worker.ex#L1" title="View Source" class="icon-action" rel="help">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/events.ex#L36" title="View Source" class="icon-action" rel="help">
         <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         <span class="sr-only">View Source</span>
       </a>
@@ -111,9 +111,13 @@ Lightning
 
 
     <section id="moduledoc">
-<p>Responsible for cleaning up stale TriggerKafkaMessageRecords entries.
-TriggerKafkaMessageRecords are used to deduplicate incoming messages from
-a Kafka cluster.</p>
+<p>The project was scheduled for deletion, so nobody may work in it any more.</p><p>Project-wide rather than user-scoped, like <code class="inline">SupportAccessUpdated</code>:
+scheduling removes no membership row and revokes no token, so that refusal
+is the whole of the offboarding gate during the purge window and it applies
+to every actor in the project at once. Nothing a later change can do makes a
+wound-down project writable again, so sessions holding it end rather than
+being re-permissioned.</p><p>The counterpart restore (<code class="inline">cancel_scheduled_deletion</code>) needs no event:
+sessions were ended, not degraded, and a rejoin resolves permissions fresh.</p>
     </section>
 
 </div>
