@@ -168,6 +168,21 @@ defmodule Lightning.Workflows.StatsTest do
              Map.new(WorkOrder.final_states(), &{&1, 0})
   end
 
+  # The 30 s TTL is what snaps the rolling window and dedupes a burst of viewers
+  # onto one query. Entries key on the workflow, so this cannot leak between
+  # tests.
+  test "serves a repeat call from the cache rather than requerying", %{
+    workflow: workflow,
+    trigger: trigger
+  } do
+    insert_run(workflow, trigger, :success)
+    first = Stats.outcomes(workflow)
+
+    insert_run(workflow, trigger, :failed)
+
+    assert Stats.outcomes(workflow) == first
+  end
+
   describe "failure_signatures/2" do
     defp failed_run(workflow, trigger, attrs, steps \\ []) do
       {wo_attrs, run_attrs} = Keyword.split(attrs, [:last_activity])

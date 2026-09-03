@@ -25,6 +25,10 @@ defmodule Lightning.Workflows.Stats do
 
   @default_days_back 30
 
+  # Short enough that the page stays honest during an incident, long enough to
+  # collapse a burst of viewers into one query.
+  @ttl :timer.seconds(30)
+
   @final_states WorkOrder.final_states()
   @zero_counts Map.new(@final_states, &{&1, 0})
 
@@ -42,13 +46,15 @@ defmodule Lightning.Workflows.Stats do
   """
   def outcomes(%Workflow{id: workflow_id}, days_back \\ @default_days_back)
       when days_back > 0 do
-    to = DateTime.utc_now()
-    since = DateTime.add(to, -days_back, :day)
+    cached({:outcomes, workflow_id, days_back}, fn ->
+      to = DateTime.utc_now()
+      since = DateTime.add(to, -days_back, :day)
 
-    %{
-      window: %{from: since, to: to},
-      counts: count_work_orders(workflow_id, since)
-    }
+      %{
+        window: %{from: since, to: to},
+        counts: count_work_orders(workflow_id, since)
+      }
+    end)
   end
 
   # Every final state is reported and zero-filled, so both donuts read the same
@@ -81,13 +87,25 @@ defmodule Lightning.Workflows.Stats do
         days_back \\ @default_days_back
       )
       when days_back > 0 do
-    to = DateTime.utc_now()
-    since = DateTime.add(to, -days_back, :day)
+    cached({:failures, workflow_id, days_back}, fn ->
+      to = DateTime.utc_now()
+      since = DateTime.add(to, -days_back, :day)
 
-    %{
-      window: %{from: since, to: to},
-      signatures: group_by_signature(workflow_id, since)
-    }
+      %{
+        window: %{from: since, to: to},
+        signatures: group_by_signature(workflow_id, since)
+      }
+    end)
+  end
+
+  # Cached whole, `window` included — that is what stops the window rolling per
+  # request. `Cachex.fetch/4` dedupes concurrent misses on the same key.
+  defp cached(key, fun) do
+    case Cachex.fetch(:workflow_stats, key, fn ->
+           {:commit, fun.(), expire: @ttl}
+         end) do
+      {tag, value} when tag in [:ok, :commit] -> value
+    end
   end
 
   # One row per failed work order — the latest run, which is the one whose
