@@ -159,8 +159,8 @@ External Node.js workers (@openfn/ws-worker) execute JavaScript jobs:
 
 Claude Code injects every agent's name and description each session, so the
 roster is not restated here; the agent files themselves are in
-`.claude/agents/`. Command files (`create-plan.md`, `implement-plan.md`,
-`research-codebase.md`) cross-ref this section rather than repeating it.
+`.claude/agents/`. The `create-plan` skill and the `research-codebase` command
+cross-ref this section rather than repeating it.
 
 One convention that no agent file carries: dispatch `web-search-researcher` on
 request, not by default.
