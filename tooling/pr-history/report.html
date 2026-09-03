@@ -1,0 +1,776 @@
+<title>Review Habits at Lightning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,500;0,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --paper:#f4f6f7; --surface:#fdfdfc; --surface-2:#eef1f3;
+  --ink:#14171c; --ink-2:#4b5259; --muted:#7c848d;
+  --rule:#dfe3e6; --rule-2:#c9cfd4;
+  --accent:#1c5cab;
+  --s1:#2a78d6; --s2:#eb6834;
+  --pos:#d03b3b; --neg:#2a78d6; --mid:#b9c0c6;
+  --seq-1:#cde2fb; --seq-4:#3987e5; --seq-6:#184f95;
+  --shadow:0 1px 2px rgba(20,23,28,.05);
+  --maxw:1080px; --col:66ch;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#0f1113; --surface:#17191c; --surface-2:#1d2024;
+    --ink:#f1f3f5; --ink-2:#b6bdc4; --muted:#8a9299;
+    --rule:#282c31; --rule-2:#3a3f45;
+    --accent:#7fb1ee;
+    --s1:#3987e5; --s2:#d95926;
+    --pos:#e26a6a; --neg:#3987e5; --mid:#4a5057;
+    --seq-1:#184f95; --seq-4:#3987e5; --seq-6:#9ec5f4;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#0f1113; --surface:#17191c; --surface-2:#1d2024;
+  --ink:#f1f3f5; --ink-2:#b6bdc4; --muted:#8a9299;
+  --rule:#282c31; --rule-2:#3a3f45;
+  --accent:#7fb1ee;
+  --s1:#3987e5; --s2:#d95926;
+  --pos:#e26a6a; --neg:#3987e5; --mid:#4a5057;
+  --seq-1:#184f95; --seq-4:#3987e5; --seq-6:#9ec5f4;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 28px}
+/* ---- the gutter rail: echoes a diff gutter, the subject's own instrument ---- */
+.rail{display:grid; grid-template-columns:4.5rem minmax(0,1fr); gap:0 1.75rem}
+.rail > .mark{
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.72rem; font-weight:500;
+  color:var(--muted); text-align:right; padding-top:.55rem; letter-spacing:.04em;
+  border-right:1px solid var(--rule); padding-right:1.75rem; margin-right:-1.75rem;
+  white-space:nowrap;
+}
+@media (max-width:760px){
+  .rail{grid-template-columns:minmax(0,1fr); gap:0}
+  .rail > .mark{text-align:left; border-right:0; padding-right:0; margin-right:0; padding-top:0; margin-bottom:.4rem}
+}
+.col{max-width:var(--col)}
+p{margin:0 0 1.05em}
+h1,h2,h3,h4{font-family:Newsreader,Georgia,"Times New Roman",serif; text-wrap:balance; margin:0}
+a{color:var(--accent)}
+strong{font-weight:600; color:var(--ink)}
+em{font-style:italic}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.875em}
+code{background:var(--surface-2); padding:.1em .34em; border-radius:2px}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace; font-size:.7rem; font-weight:600;
+  letter-spacing:.13em; text-transform:uppercase; color:var(--muted);
+}
+/* ---- masthead ---- */
+header.mast{border-bottom:1px solid var(--rule-2); background:var(--surface)}
+header.mast .wrap{padding-top:52px; padding-bottom:34px}
+h1{font-size:clamp(2.35rem,5.4vw,3.9rem); font-weight:500; line-height:1.02; letter-spacing:-.022em}
+h1 .dim{color:var(--muted)}
+.standfirst{font-size:1.14rem; color:var(--ink-2); max-width:56ch; margin-top:1.1rem}
+.provenance{
+  display:flex; flex-wrap:wrap; gap:0 2.1rem; margin-top:2rem; padding-top:1.1rem;
+  border-top:1px solid var(--rule); font-family:"IBM Plex Mono",monospace; font-size:.76rem;
+  color:var(--muted); font-variant-numeric:tabular-nums;
+}
+.provenance b{color:var(--ink-2); font-weight:500}
+/* ---- sections ---- */
+section{padding:56px 0 8px}
+section + section{border-top:1px solid var(--rule)}
+h2{font-size:clamp(1.6rem,3.2vw,2.1rem); font-weight:500; letter-spacing:-.014em; line-height:1.14}
+h3{font-size:1.16rem; font-weight:600; margin:2.4rem 0 .7rem; letter-spacing:-.006em}
+.lede{font-size:1.06rem; color:var(--ink-2); margin-top:.85rem}
+/* ---- ranked findings ---- */
+ol.findings{list-style:none; margin:1.6rem 0 0; padding:0; display:flex; flex-direction:column; gap:1px;
+  background:var(--rule); border:1px solid var(--rule); border-radius:3px; overflow:hidden}
+ol.findings li{background:var(--surface); padding:1.05rem 1.25rem; display:grid;
+  grid-template-columns:2.6rem minmax(0,1fr); gap:0 .9rem; align-items:start}
+ol.findings .n{font-family:"IBM Plex Mono",monospace; font-size:.74rem; font-weight:600;
+  color:var(--muted); padding-top:.3rem; letter-spacing:.05em}
+ol.findings b{display:block; font-weight:600; margin-bottom:.15rem}
+ol.findings span.t{color:var(--ink-2); font-size:.95rem}
+/* ---- figures ---- */
+figure{margin:2rem 0 0; background:var(--surface); border:1px solid var(--rule);
+  border-radius:3px; padding:1.35rem 1.4rem 1.1rem; box-shadow:var(--shadow)}
+figure.wide{max-width:none}
+figcaption{font-size:.855rem; color:var(--ink-2); margin-top:.95rem; padding-top:.8rem;
+  border-top:1px solid var(--rule); max-width:78ch}
+.fig-title{font-family:Newsreader,Georgia,serif; font-size:1.08rem; font-weight:600; margin-bottom:.15rem}
+.fig-sub{font-size:.8rem; color:var(--muted); margin-bottom:1rem; font-family:"IBM Plex Mono",monospace}
+.chart{width:100%; overflow-x:auto}
+svg{display:block; max-width:100%; height:auto}
+svg text{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.legend{display:flex; flex-wrap:wrap; gap:.4rem 1.3rem; margin-bottom:.9rem;
+  font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--ink-2)}
+.legend i{display:inline-block; width:22px; height:3px; border-radius:2px; margin-right:.45rem;
+  vertical-align:.22em}
+/* ---- two-register term panels ---- */
+.registers{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--rule);
+  border:1px solid var(--rule); border-radius:3px; overflow:hidden; margin-top:1.9rem}
+@media (max-width:700px){.registers{grid-template-columns:1fr}}
+.registers > div{background:var(--surface); padding:1.2rem 1.3rem}
+.reg-h{font-family:"IBM Plex Mono",monospace; font-size:.72rem; font-weight:600;
+  letter-spacing:.06em; text-transform:uppercase; margin-bottom:.25rem}
+.reg-s{font-size:.82rem; color:var(--muted); margin-bottom:1rem; line-height:1.45}
+.terms{display:flex; flex-direction:column; gap:.32rem}
+.term{display:grid; grid-template-columns:7.2rem minmax(0,1fr) 2.3rem; gap:.6rem; align-items:center;
+  font-family:"IBM Plex Mono",monospace; font-size:.79rem}
+.term .w{color:var(--ink)}
+.term .b{height:7px; border-radius:2px; min-width:2px}
+.term .z{color:var(--muted); font-size:.72rem; text-align:right; font-variant-numeric:tabular-nums}
+/* ---- tables ---- */
+.tbl-wrap{overflow-x:auto; margin-top:1.9rem; border:1px solid var(--rule);
+  border-radius:3px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:.875rem}
+th,td{text-align:left; padding:.62rem .85rem; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{font-family:"IBM Plex Mono",monospace; font-size:.71rem; font-weight:600;
+  letter-spacing:.055em; text-transform:uppercase; color:var(--muted); white-space:nowrap;
+  background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; white-space:nowrap}
+.verdict{font-family:"IBM Plex Mono",monospace; font-size:.72rem; font-weight:600; white-space:nowrap}
+.v-auto{color:var(--pos)} .v-gap{color:var(--s2)} .v-ok{color:var(--muted)}
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:.68rem;
+  font-weight:600; padding:.14rem .42rem; border-radius:2px; border:1px solid var(--rule-2);
+  color:var(--ink-2); white-space:nowrap}
+.chip.none{border-color:var(--pos); color:var(--pos)}
+/* ---- pull quotes: real review comments ---- */
+blockquote{margin:1.5rem 0; padding:0 0 0 1.15rem; border-left:2px solid var(--s2);
+  font-family:Newsreader,Georgia,serif; font-size:1.09rem; line-height:1.5; color:var(--ink);
+  font-style:italic; max-width:62ch}
+blockquote p{margin:0 0 .55em}
+blockquote p:last-child{margin:0}
+/* ---- actions ---- */
+ol.actions{margin:1.7rem 0 0; padding:0; list-style:none; counter-reset:a;
+  display:flex; flex-direction:column; gap:.85rem}
+ol.actions li{counter-increment:a; display:grid; grid-template-columns:1.7rem minmax(0,1fr);
+  gap:.85rem; align-items:start}
+ol.actions li::before{content:counter(a); font-family:"IBM Plex Mono",monospace;
+  font-size:.78rem; font-weight:600; color:var(--surface); background:var(--ink);
+  width:1.7rem; height:1.7rem; border-radius:50%; display:grid; place-items:center; margin-top:.12rem}
+ol.actions b{font-weight:600}
+ul.limits{margin:1.5rem 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:.7rem;
+  max-width:74ch}
+ul.limits li{padding-left:1.1rem; position:relative; font-size:.94rem; color:var(--ink-2)}
+ul.limits li::before{content:""; position:absolute; left:0; top:.62em; width:5px; height:5px;
+  background:var(--rule-2); border-radius:50%}
+ul.limits b{color:var(--ink)}
+footer{border-top:1px solid var(--rule-2); background:var(--surface); margin-top:60px}
+footer .wrap{padding:32px 28px 44px; font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--muted)}
+footer p{max-width:74ch}
+.note{background:var(--surface-2); border-left:2px solid var(--rule-2); padding:1rem 1.15rem;
+  margin:1.7rem 0 0; font-size:.92rem; color:var(--ink-2); max-width:72ch; border-radius:0 3px 3px 0}
+.note b{color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){
+  .grow{transform-origin:left center; animation:g .5s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes g{from{transform:scaleX(.55); opacity:.5} to{transform:scaleX(1); opacity:1}}
+}
+</style>
+<header class="mast">
+  <div class="wrap">
+    <div class="eyebrow">OpenFn Lightning &middot; code review audit &middot; September 2026</div>
+    <h1>What our reviewers<br>actually <span class="dim">ask for</span></h1>
+    <p class="standfirst">Four and a half years of review feedback, read in aggregate for the first
+      time. The categories were induced from the corpus rather than guessed at, and the corpus
+      disagreed with the guess.</p>
+    <div class="provenance">
+      <span><b>2,235</b> pull requests</span>
+      <span><b>4,312</b> reviews</span>
+      <span><b>4,282</b> units of human feedback</span>
+      <span><b>2022-02-09</b> to <b>2026-09-02</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section id="findings">
+  <div class="rail">
+    <div class="mark">00</div>
+    <div>
+      <h2>Five things worth knowing</h2>
+      <p class="lede col">Ranked by how much they should change what we do, not by how surprising
+        they are.</p>
+      <ol class="findings">
+        <li><span class="n">F1</span><span><b>Formal change requests are mostly acceptance testing, not code critique.</b>
+          <span class="t">The largest identifiable register in <code>CHANGES_REQUESTED</code> bodies is a
+          reviewer running the feature and reporting what they saw. Code craft feedback lives
+          somewhere else entirely.</span></span></li>
+        <li><span class="n">F2</span><span><b>The asks people comply with silently are exactly the ones a machine could make.</b>
+          <span class="t">Changelog and missing-test asks draw a reply 18&ndash;19% of the time against a
+          43% baseline. Naming, abstraction and diff-hygiene asks draw one 62&ndash;85% of the time.</span></span></li>
+        <li><span class="n">F3</span><span><b>Review coverage regressed sharply in 2026.</b>
+          <span class="t">Merged-without-any-review held at 11&ndash;17% through 2024 and 2025, then roughly
+          doubled to 30% in Q2 and 33% in Q3. Latency moved the same way.</span></span></li>
+        <li><span class="n">F4</span><span><b>PR size predicts how hard review will be, but not whether it happens.</b>
+          <span class="t">An XL PR draws a change request seven times more often than an XS one, yet is
+          no more likely to be reviewed at all.</span></span></li>
+        <li><span class="n">F5</span><span><b>Three reviewers carry 62% of all review.</b>
+          <span class="t">Twenty-two people have reviewed something; five account for 80%.</span></span></li>
+      </ol>
+      <div class="note"><b>This measures process, not people.</b> Review counts track team
+        composition, role and tenure in each period. Nothing here supports a judgement about
+        anyone's diligence, and it should not be used in a performance conversation.</div>
+    </div>
+  </div>
+</section>
+
+<section id="method">
+  <div class="rail">
+    <div class="mark">01</div>
+    <div>
+      <h2>How these categories were arrived at</h2>
+      <p class="lede col">This decides how much to trust everything after it, so it goes near the top
+        rather than in an appendix.</p>
+      <div class="col">
+        <p>The first version of this analysis pre-specified about fifteen plausible categories:
+          tests, naming, error handling, Ecto, authorization, performance. It was abandoned, because
+          counting matches against a list you wrote in advance only measures how good your guess
+          was. The frame decides the finding.</p>
+        <p>What replaced it induces structure from the corpus three ways. Vocabulary frequency across
+          all 4,282 units. A <strong>log-odds ratio with an informative Dirichlet prior</strong>
+          contrasting structural slices against each other, reported as a z-score, so what comes back
+          is what is <em>distinctive</em> rather than what is merely common. And term co-occurrence
+          clustering, so groups form from how reviewers pair concepts. Then a manual read of ~110
+          units from a sample stratified by structure (feedback kind, review state, length, year)
+          and deliberately <em>not</em> by topic, since topic was the thing being discovered.</p>
+        <p>The categories were written down afterwards, as an output. Every count below is a
+          <strong>lower bound</strong>: a reviewer writing <em>&ldquo;this'll blow up on nil&rdquo;</em>
+          is making a failure-mode request no pattern catches. Comments are multi-label, so shares
+          do not sum to 100%.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="registers">
+  <div class="rail">
+    <div class="mark">02<br>F1</div>
+    <div>
+      <h2>Two registers, and they barely share a vocabulary</h2>
+      <p class="lede col">Contrast change-request bodies against approvals, then inline comments
+        against conversation, and two different activities fall out of the same dataset.</p>
+
+      <div class="registers">
+        <div>
+          <div class="reg-h" style="color:var(--s2)">Change-request bodies</div>
+          <div class="reg-s">Terms most distinctive of <code>CHANGES_REQUESTED</code> vs
+            <code>APPROVED</code>. This is the vocabulary of someone clicking through a feature.</div>
+          <div class="terms" id="t-cr"></div>
+        </div>
+        <div>
+          <div class="reg-h" style="color:var(--s1)">Inline code comments</div>
+          <div class="reg-s">Terms most distinctive of inline comments vs PR conversation. This is
+            the vocabulary of someone reading code.</div>
+          <div class="terms" id="t-inline"></div>
+        </div>
+      </div>
+
+      <div class="col">
+        <p style="margin-top:1.6rem">Reading them confirms what the numbers imply. Change-request
+          bodies are full of observed behaviour:</p>
+      </div>
+      <blockquote>
+        <p>I'm getting the following if I attempt to change my email but don't get my current
+          password right&hellip;</p>
+        <p>When you enter the security tab URL in the browser it renders this blank page.</p>
+        <p>I found this UI surprisingly difficult to understand at first, even knowing the platform
+          well.</p>
+      </blockquote>
+      <div class="col">
+        <p>Approvals, by contrast, are almost pure social language: the terms most distinctive of
+          them are <em>nicely, works, tested, happy, perfect, lgtm, clean, tiny, tweaks</em>.</p>
+        <p>One corroboration worth noting, because it was not something the text analysis was looking
+          for. Of the twenty-two reviewers, two have <strong>never opened a pull request</strong>.
+          One of them submitted 78 reviews and 11 change requests while writing only four inline
+          comments. That is a person reviewing by using the product, and it is exactly the shape F1
+          predicts.</p>
+      </div>
+
+      <figure class="wide">
+        <div class="fig-title">Corpus composition</div>
+        <div class="fig-sub">4,282 units after removing bots, self-review and empty bodies</div>
+        <div class="chart" id="c-corpus"></div>
+        <figcaption><strong>The unit is one thing a reviewer wrote.</strong> Three filters build it,
+          and each changes the denominators: bot and GitHub-App authors dropped, self-review dropped
+          (a comment on your own PR is not feedback), empty bodies dropped. So 1,721 inline units
+          here against 2,709 raw inline comments in the dataset. Mixing those two denominators is
+          the easiest mistake to make with this data.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="contest">
+  <div class="rail">
+    <div class="mark">03<br>F2</div>
+    <div>
+      <h2>Compliance and contest are cleanly separated</h2>
+      <p class="lede col">Whether a comment draws a reply turns out to be a good proxy for whether
+        the ask was contested. Sorting categories against the baseline splits them almost perfectly
+        into rule-shaped and judgement-shaped.</p>
+
+      <figure class="wide">
+        <div class="fig-title">Reply rate by category, against the 43.2% baseline</div>
+        <div class="fig-sub">743 of 1,721 inline comments drew a reply &middot; bar length = deviation from baseline</div>
+        <div class="chart" id="c-diverge"></div>
+        <figcaption>Categories with fewer than nine inline comments are omitted. The independent
+          log-odds contrast agrees without being asked: terms distinctive of threads that drew
+          <em>no</em> reply are <em>coverage, refactor, method, note, changelog, edge, validation,
+          test</em>; terms distinctive of those that did are <em>rename, naming, cast, ecto, index,
+          row, hash, structure, nil</em>.</figcaption>
+      </figure>
+
+      <div class="col">
+        <p style="margin-top:1.7rem">This is the most useful result here. The feedback people accept
+          without a word is mechanical and rule-shaped. The feedback they argue about is judgement
+          about design and data modelling, which is what senior review time is actually for. Right
+          now both are delivered the same way: by a person, after the work is finished.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="regression">
+  <div class="rail">
+    <div class="mark">04<br>F3</div>
+    <div>
+      <h2>Review coverage regressed in 2026</h2>
+      <p class="lede col">27% of the 2,151 human-authored PRs received no review at all. The headline
+        number matters less than the trend, and the trend needed a check before it could be trusted.</p>
+
+      <div class="note col"><b>Why this counts only merged PRs.</b> A recent PR might simply not have
+        been reviewed <em>yet</em>, which would manufacture a fake regression out of nothing. A
+        <em>merged</em> PR that went unreviewed is settled: it will never be reviewed. That series is
+        censoring-free, so it is the one plotted.</div>
+
+      <figure class="wide">
+        <div class="fig-title">Merged with zero review, by quarter</div>
+        <div class="fig-sub">share of that quarter's merged PRs, human-authored only</div>
+        <div class="chart" id="c-coverage"></div>
+        <figcaption>The regression is real rather than an artifact. 2026-Q3 is partial (45 merged PRs
+          at the snapshot date) but consistent with Q2, which is settled.</figcaption>
+      </figure>
+
+      <figure class="wide">
+        <div class="fig-title">Median time to first review and to merge</div>
+        <div class="fig-sub">hours, p50, by quarter opened &middot; both series share one scale</div>
+        <div class="legend">
+          <span><i style="background:var(--s1)"></i>to first review</span>
+          <span><i style="background:var(--s2)"></i>to merge</span>
+        </div>
+        <div class="chart" id="c-latency"></div>
+        <figcaption>Latency moved with coverage in the same period. Median time to first review had
+          sat between 5 and 20 hours since 2023; it is 32h in 2026-Q1 and 39h in Q2. Median time to
+          merge went from 18&ndash;27 hours to roughly 2.6 days, with a 2026-Q2 p90 of 33 days.
+          Throughput did not collapse to explain it, which points at review capacity under strain
+          rather than fewer changes arriving.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="size">
+  <div class="rail">
+    <div class="mark">05<br>F4</div>
+    <div>
+      <h2>Size predicts effort, not coverage</h2>
+      <p class="lede col">Every measure of review <em>effort</em> rises monotonically with PR size.
+        The share of PRs getting no review at all is flat.</p>
+
+      <figure class="wide">
+        <div class="fig-title">Review effort against review coverage, by PR size</div>
+        <div class="fig-sub">both series are percentages of PRs in that bucket &middot; one shared axis</div>
+        <div class="legend">
+          <span><i style="background:var(--s2)"></i>drew a change request</span>
+          <span><i style="background:var(--s1)"></i>received no review at all</span>
+        </div>
+        <div class="chart" id="c-size"></div>
+        <figcaption>Buckets are <code>additions + deletions</code>: XS &le;10, S &le;50, M &le;250,
+          L &le;1000, XL &gt;1000. <strong>One caveat that cannot be corrected here:</strong> churn
+          includes <code>mix.lock</code> and <code>package-lock.json</code>, so some XL rows are
+          dependency bumps rather than large human changes. The per-PR files endpoint was out of
+          scope for this scrape.</figcaption>
+      </figure>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Size</th><th>PRs</th><th>Mean rounds<br><span style="font-weight:400;text-transform:none;letter-spacing:0">reviewed PRs</span></th><th>Drew a change request<br><span style="font-weight:400;text-transform:none;letter-spacing:0">of reviewed</span></th><th>No review at all<br><span style="font-weight:400;text-transform:none;letter-spacing:0">of all</span></th><th>Median to merge<br><span style="font-weight:400;text-transform:none;letter-spacing:0">reviewed PRs</span></th></tr></thead>
+          <tbody id="tb-size"></tbody>
+        </table>
+      </div>
+      <p class="col" style="margin-top:1.5rem">Whatever decides that a pull request gets looked at,
+        it is not how much of the system it changes. That reads as unintentional rather than chosen.</p>
+    </div>
+  </div>
+</section>
+
+<section id="attention">
+  <div class="rail">
+    <div class="mark">06<br>F5</div>
+    <div>
+      <h2>Where review attention lands</h2>
+      <figure class="wide">
+        <div class="fig-title">Inline comments by path prefix</div>
+        <div class="fig-sub">top eight of 1,721 inline comments</div>
+        <div class="chart" id="c-paths"></div>
+        <figcaption>Backend and web get near-identical attention; the frontend about half. Tests do
+          get reviewed: 221 inline comments land under <code>test/</code>, 13% of the total, which is
+          worth knowing given how often &ldquo;add a test&rdquo; appears as an ask.
+          <strong>This is where attention went, not where change went</strong> &mdash; it is not
+          normalised by how often each area was modified, so a quiet area may be well understood or
+          may be unwatched, and this cannot tell you which.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="preventable">
+  <div class="rail">
+    <div class="mark">07</div>
+    <div>
+      <h2>Which of these asks are preventable</h2>
+      <p class="lede col">Mapping each induced category against what the repository already documents:
+        twelve files in <code>.claude/guidelines/</code> and two in <code>.claude/rules/</code>.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Recurring ask</th><th>Already written down?</th><th>Verdict</th></tr></thead>
+          <tbody>
+            <tr><td>Changelog</td><td>PR template checkbox, <strong>no CI check</strong></td><td class="verdict v-auto">Automate</td></tr>
+            <tr><td>Diff hygiene</td><td><span class="chip none">nothing</span></td><td class="verdict v-auto">Partly automatable</td></tr>
+            <tr><td>Missing tests / coverage</td><td><span class="chip">testing-essentials.md</span> <span class="chip">+5 more</span></td><td class="verdict v-ok">Compliance, not docs</td></tr>
+            <tr><td>Data model, migrations, queries</td><td><span class="chip none">nothing at all</span></td><td class="verdict v-gap">Biggest gap</td></tr>
+            <tr><td>Naming</td><td><span class="chip none">nothing</span></td><td class="verdict v-ok">Judgement</td></tr>
+            <tr><td>Abstraction pushback</td><td><span class="chip none">nothing</span></td><td class="verdict v-ok">Judgement, and healthy</td></tr>
+            <tr><td>Test design (level, not presence)</td><td>guidelines cover <em>how</em>, not <em>which level</em></td><td class="verdict v-gap">Real gap</td></tr>
+            <tr><td>Correctness and failure modes</td><td>only the <code>security-reviewer</code> agent's remit</td><td class="verdict v-gap">Invisible when it doesn't run</td></tr>
+            <tr><td>Acceptance findings</td><td><span class="chip">e2e-testing.md</span> <span class="chip">+3 guides</span></td><td class="verdict v-ok">Not a docs problem</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>The changelog ask is fully mechanical and completely unautomated</h3>
+      <div class="col">
+        <p>It appears 29 times in change requests across all five years. The PR template already
+          carries <em>&ldquo;I have updated the changelog&rdquo;</em> as a checkbox, and there is no
+          CI check behind it. One review comment in the corpus reads, in full:</p>
+      </div>
+      <blockquote><p>Please update the changelog, you marked it as done on the checklist.</p></blockquote>
+      <div class="col">
+        <p>A job that fails when a PR touches <code>lib/</code> without touching
+          <code>CHANGELOG.md</code> would end this category, and its 18% reply rate says nobody
+          would argue about it.</p>
+      </div>
+
+      <h3>Data modelling is the largest inline category and has no guideline</h3>
+      <div class="col">
+        <p>157 inline comments and 35 change requests concern Ecto schemas, migration structure and
+          query shape, more than any other category, and nothing is written down about any of it. The
+          specific asks recur: collapse several migrations touching one table into one; don't do
+          inserts one at a time inside something shaped like a batch; move validation inside the
+          <code>Multi</code> so check-and-insert share a transaction. That last one caught a real
+          race condition. This is the highest-value thing to write down, and the source material is
+          already in the corpus.</p>
+      </div>
+
+      <h3>Acceptance findings are not a documentation gap</h3>
+      <div class="col">
+        <p>17% of change requests are a reviewer discovering behaviour by using the feature. More
+          prose will not fix that. Either the author exercises their own change before requesting
+          review, or the E2E suite covers the path. The E2E guidance already exists in four files, so
+          the gap is in what gets written, not in knowing how to write it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="actions">
+  <div class="rail">
+    <div class="mark">08</div>
+    <div>
+      <h2>What I'd actually do</h2>
+      <p class="lede col">In order of return on effort.</p>
+      <ol class="actions">
+        <li><span><b>Add a changelog CI check.</b> Smallest change with a guaranteed effect, and the
+          data says it will not be resisted.</span></li>
+        <li><span><b>Write the missing Ecto and migrations guideline.</b> Largest category, zero
+          coverage, and the recurring asks are specific enough to write today.</span></li>
+        <li><span><b>Work out what happened to review coverage in 2026.</b> Merged-without-review
+          doubled and latency rose together. That is a capacity or routing question, and it is the
+          finding most likely to matter beyond code review.</span></li>
+        <li><span><b>Decide deliberately whether large PRs get guaranteed review.</b> Right now an XL
+          PR is as likely to go unreviewed as a one-line one, while costing three times the rounds
+          when it is reviewed.</span></li>
+        <li><span><b>Leave abstraction pushback and naming alone.</b> They are 62&ndash;69% contested
+          because they are genuine judgement, and they read as a healthy norm. The only thing worth
+          changing is <em>when</em> they arrive: on the approach, rather than after the
+          implementation.</span></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section id="limits">
+  <div class="rail">
+    <div class="mark">09</div>
+    <div>
+      <h2>What this cannot tell you</h2>
+      <ul class="limits">
+        <li><b>Nothing about code quality.</b> It measures what reviewers said, not whether they were
+          right, and not whether the code was good.</li>
+        <li><b>AI-assisted reviews are invisible.</b> Reviewer identities are essentially all human
+          accounts &mdash; only <code>copilot-pull-request-reviewer[bot]</code> with 5 reviews and
+          <code>Copilot</code> with 8 comments are agent identities &mdash; but a review drafted with
+          AI help and posted under a person's account cannot be separated. Several sampled 2025&ndash;2026
+          bodies read as AI-assisted. This is why F3 rests on coverage and latency rather than on
+          comment style.</li>
+        <li><b>Review rounds over-count.</b> A reviewer leaving eight inline comments in one pass is
+          one round; returning three times is three.</li>
+        <li><b>Pending reviews are invisible</b>, and deleted comments leave no trace. Three of 2,235
+          PRs already disagree with their own comment counter by one.</li>
+        <li><b>Draft adoption is unmeasurable.</b> <code>draft</code> is current state, so a PR opened
+          as a draft and later marked ready is indistinguishable from one never drafted. 10 of the 52
+          currently-open PRs are in draft, and that is all this supports saying.</li>
+        <li><b>Categories are lower bounds.</b> Treat every percentage as &ldquo;at least this
+          often&rdquo;.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Generated from <code>tooling/pr-history/</code> in OpenFn/lightning. Four stdlib-only Python
+      scripts: <code>scrape.py</code> pulls the history, <code>discover.py</code> induces structure,
+      <code>categories.py</code> holds the derived taxonomy and its provenance,
+      <code>analyze.py</code> renders the process metrics. The full raw aggregates &mdash; every
+      per-quarter series, the complete vocabulary and log-odds tables, the co-occurrence clusters
+      &mdash; are in <code>DATASET-lightning.md</code>, which argues nothing and exists to be
+      re-analysed. Row-level data including every comment body stays in gitignored
+      <code>.scratch/</code> and is never committed.</p>
+    <p style="margin-top:1rem">Snapshot 2026-09-03 &middot; 4,594 API requests &middot; all
+      verification checks passed.</p>
+  </div>
+</footer>
+<script>
+const D={"coverage":[{"q":"2022-Q1","n":10,"unrev":6,"pct":60.0},{"q":"2022-Q2","n":41,"unrev":20,"pct":48.8},{"q":"2022-Q3","n":66,"unrev":20,"pct":30.3},{"q":"2022-Q4","n":70,"unrev":25,"pct":35.7},{"q":"2023-Q1","n":92,"unrev":35,"pct":38.0},{"q":"2023-Q2","n":62,"unrev":20,"pct":32.3},{"q":"2023-Q3","n":85,"unrev":19,"pct":22.4},{"q":"2023-Q4","n":178,"unrev":34,"pct":19.1},{"q":"2024-Q1","n":124,"unrev":24,"pct":19.4},{"q":"2024-Q2","n":123,"unrev":11,"pct":8.9},{"q":"2024-Q3","n":115,"unrev":20,"pct":17.4},{"q":"2024-Q4","n":120,"unrev":20,"pct":16.7},{"q":"2025-Q1","n":104,"unrev":6,"pct":5.8},{"q":"2025-Q2","n":109,"unrev":18,"pct":16.5},{"q":"2025-Q3","n":77,"unrev":13,"pct":16.9},{"q":"2025-Q4","n":217,"unrev":24,"pct":11.1},{"q":"2026-Q1","n":110,"unrev":18,"pct":16.4},{"q":"2026-Q2","n":120,"unrev":36,"pct":30.0},{"q":"2026-Q3","n":45,"unrev":15,"pct":33.3}],"baseline":43.2,"cats":[{"label":"Diff hygiene","inline":13,"reply":84.6,"cr":6},{"label":"Abstraction pushback","inline":62,"reply":69.4,"cr":12},{"label":"Naming","inline":68,"reply":61.8,"cr":26},{"label":"Acceptance testing","inline":86,"reply":57.0,"cr":84},{"label":"Correctness and failure modes","inline":59,"reply":55.9,"cr":25},{"label":"Test design","inline":9,"reply":55.6,"cr":3},{"label":"Data model, migrations and queries","inline":157,"reply":52.9,"cr":35},{"label":"Scope and ownership","inline":11,"reply":45.5,"cr":6},{"label":"Logging and observability","inline":10,"reply":40.0,"cr":4},{"label":"Missing tests and coverage","inline":32,"reply":18.8,"cr":20},{"label":"Changelog","inline":11,"reply":18.2,"cr":29}],"size":[{"size":"XS","prs":279,"unrev":30.5,"cr":6.2,"rounds":1.47,"ttm":10.4},{"size":"S","prs":437,"unrev":29.5,"cr":14.3,"rounds":1.63,"ttm":18.6},{"size":"M","prs":644,"unrev":25.2,"cr":22.0,"rounds":1.9,"ttm":28.0},{"size":"L","prs":501,"unrev":27.3,"cr":39.0,"rounds":2.57,"ttm":86.4},{"size":"XL","prs":290,"unrev":24.8,"cr":44.0,"rounds":3.07,"ttm":126.7}],"latency":[{"q":"2022-Q1","ttfr":null,"ttm":8.8},{"q":"2022-Q2","ttfr":4.7,"ttm":9.1},{"q":"2022-Q3","ttfr":13.2,"ttm":15.9},{"q":"2022-Q4","ttfr":40.2,"ttm":37.7},{"q":"2023-Q1","ttfr":37.0,"ttm":27.4},{"q":"2023-Q2","ttfr":42.6,"ttm":29.4},{"q":"2023-Q3","ttfr":16.6,"ttm":21.0},{"q":"2023-Q4","ttfr":8.6,"ttm":22.1},{"q":"2024-Q1","ttfr":12.5,"ttm":21.3},{"q":"2024-Q2","ttfr":16.9,"ttm":26.9},{"q":"2024-Q3","ttfr":19.2,"ttm":26.8},{"q":"2024-Q4","ttfr":20.2,"ttm":33.1},{"q":"2025-Q1","ttfr":19.4,"ttm":43.2},{"q":"2025-Q2","ttfr":13.1,"ttm":23.1},{"q":"2025-Q3","ttfr":6.4,"ttm":25.3},{"q":"2025-Q4","ttfr":10.0,"ttm":17.9},{"q":"2026-Q1","ttfr":31.5,"ttm":61.5},{"q":"2026-Q2","ttfr":39.2,"ttm":66.5},{"q":"2026-Q3","ttfr":26.7,"ttm":18.6}],"paths":[{"path":"lib/lightning","n":548},{"path":"lib/lightning_web","n":506},{"path":"assets/js","n":272},{"path":"test/lightning","n":136},{"path":"test/lightning_web","n":57},{"path":"priv/repo","n":40},{"path":"CHANGELOG.md","n":28},{"path":"config/runtime.exs","n":22}],"termsCR":[{"t":"button","z":4.67,"a":81,"b":5},{"t":"please","z":4.09,"a":148,"b":33},{"t":"image","z":3.61,"a":46,"b":2},{"t":"input","z":3.48,"a":43,"b":2},{"t":"run","z":3.03,"a":103,"b":26},{"t":"github","z":3.03,"a":34,"b":2},{"t":"user","z":2.99,"a":86,"b":20},{"t":"link","z":2.91,"a":41,"b":5},{"t":"panel","z":2.78,"a":45,"b":7},{"t":"provider","z":2.64,"a":23,"b":0},{"t":"step","z":2.63,"a":27,"b":2},{"t":"error","z":2.6,"a":62,"b":14}],"termsAP":[{"t":"nicely","z":-9.01,"a":19,"b":96},{"t":"works","z":-7.23,"a":17,"b":66},{"t":"tested","z":-5.74,"a":11,"b":42},{"t":"added","z":-4.52,"a":31,"b":48},{"t":"issue","z":-4.38,"a":41,"b":55},{"t":"work","z":-4.26,"a":105,"b":101},{"t":"happy","z":-4.11,"a":19,"b":34},{"t":"perfect","z":-4.0,"a":6,"b":21},{"t":"man","z":-3.98,"a":5,"b":20},{"t":"approved","z":-3.79,"a":0,"b":20},{"t":"made","z":-3.74,"a":26,"b":37},{"t":"clean","z":-3.74,"a":8,"b":21}],"termsInline":[{"t":"function","z":9.65},{"t":"call","z":5.73},{"t":"module","z":5.57},{"t":"avoid","z":4.93},{"t":"functions","z":4.79},{"t":"instead","z":4.58},{"t":"remove","z":4.57},{"t":"calling","z":4.32},{"t":"changeset","z":4.31},{"t":"since","z":4.26},{"t":"inside","z":4.2},{"t":"query","z":4.15}],"corpus":[{"k":"inline code comments","v":1721},{"k":"review summary bodies","v":1516},{"k":"conversation comments","v":1045}],"totals":{"prs":2151,"allPrs":2235,"reviews":4312,"units":4282,"cr":483,"inline":1721,"merged":1868,"closedUnmerged":231,"open":52,"unrevPct":27.2,"selfMerged":32.1,"reviewers":22,"top3":62.2,"testPct":12.8,"first":"2022-02-09","last":"2026-09-02"}};
+const NS="http://www.w3.org/2000/svg";
+const el=(t,a={})=>{const n=document.createElementNS(NS,t);for(const k in a)n.setAttribute(k,a[k]);return n;};
+const txt=(s,x,y,a={})=>{const n=el("text",{x,y,...a});n.textContent=s;return n;};
+const ink=v=>`fill:var(--${v})`;
+
+/* one shared tooltip: an HTML/SVG chart is interactive by default */
+const tip=document.createElement("div");
+tip.style.cssText="position:fixed;z-index:99;pointer-events:none;opacity:0;transition:opacity .1s;"+
+ "background:var(--ink);color:var(--paper);font:500 12px/1.45 'IBM Plex Mono',monospace;"+
+ "padding:.4rem .55rem;border-radius:3px;max-width:250px;box-shadow:0 2px 8px rgba(0,0,0,.22)";
+document.body.appendChild(tip);
+function hover(node,html){
+  const show=e=>{tip.innerHTML=html;tip.style.opacity="1";
+    const r=tip.getBoundingClientRect();
+    let x=e.clientX+12, y=e.clientY-r.height-8;
+    if(x+r.width>innerWidth-8) x=e.clientX-r.width-12;
+    if(y<8) y=e.clientY+16;
+    tip.style.left=x+"px";tip.style.top=y+"px";};
+  node.addEventListener("mouseenter",show);
+  node.addEventListener("mousemove",show);
+  node.addEventListener("mouseleave",()=>tip.style.opacity="0");
+  node.style.cursor="default";
+}
+const mount=(id,svg,minw)=>{const c=document.getElementById(id);if(!c)return;
+  if(minw)svg.style.minWidth=minw+"px";c.appendChild(svg);};
+
+/* ---------- corpus: segmented bar, sequential steps, 2px surface gaps ---------- */
+(function(){
+  const w=900,h=96,pad=0,total=D.corpus.reduce((s,c)=>s+c.v,0);
+  const s=el("svg",{viewBox:`0 0 ${w} ${h}`,role:"img"});
+  const steps=["--seq-6","--seq-4","--seq-1"];
+  let x=0;
+  D.corpus.forEach((c,i)=>{
+    const bw=(c.v/total)*(w-4);
+    const r=el("rect",{x,y:8,width:Math.max(2,bw-2),height:34,rx:2,style:`fill:var(${steps[i]})`});
+    hover(r,`<b>${c.v.toLocaleString()}</b> ${c.k}<br>${(100*c.v/total).toFixed(1)}% of ${total.toLocaleString()} units`);
+    s.appendChild(r);
+    s.appendChild(txt(c.v.toLocaleString(),x,62,{style:ink("ink"),"font-size":"15","font-weight":"600"}));
+    s.appendChild(txt(c.k,x,80,{style:ink("muted"),"font-size":"11.5"}));
+    x+=bw+2;
+  });
+  mount("c-corpus",s,600);
+})();
+
+/* ---------- F2 diverging: reply rate vs baseline ---------- */
+(function(){
+  const rows=D.cats, base=D.baseline;
+  const L=230,R=860,W=940,rowH=30,top=58,h=top+rows.length*rowH+34;
+  const cx=(L+R)/2, dom=45, k=((R-L)/2)/dom;
+  const s=el("svg",{viewBox:`0 0 ${W} ${h}`,role:"img"});
+  /* axis ticks on the same scale the bars use */
+  [-40,-20,0,20,40].forEach(d=>{
+    const x=cx+d*k;
+    s.appendChild(el("line",{x1:x,y1:top-12,x2:x,y2:h-30,style:`stroke:var(--${d===0?"mid":"rule"})`,
+      "stroke-width":d===0?1.5:1,"stroke-dasharray":d===0?"":"2 3"}));
+    if(d!==0) s.appendChild(txt((base+d).toFixed(0)+"%",x,h-14,{style:ink("muted"),"font-size":"10.5","text-anchor":"middle"}));
+  });
+  s.appendChild(txt("baseline 43.2%",cx,20,{style:ink("ink-2"),"font-size":"10.5","text-anchor":"middle","font-weight":"600"}));
+  s.appendChild(txt("← complied with silently",cx-12,40,{style:ink("neg"),"font-size":"10.5","text-anchor":"end","font-weight":"600"}));
+  s.appendChild(txt("argued about →",cx+12,40,{style:ink("pos"),"font-size":"10.5","font-weight":"600"}));
+  rows.forEach((c,i)=>{
+    const y=top+i*rowH, dev=c.reply-base, above=dev>=0;
+    const bw=Math.abs(dev)*k;
+    s.appendChild(txt(c.label,L-16,y+16,{style:ink("ink"),"font-size":"11.5","text-anchor":"end"}));
+    s.appendChild(el("line",{x1:L-8,y1:y+12.5,x2:above?cx-3:cx-bw-4,y2:y+12.5,
+      style:"stroke:var(--rule-2)","stroke-width":1,"stroke-dasharray":"1 3"}));
+    const r=el("rect",{x:above?cx+1:cx-bw-1,y:y+5,width:Math.max(2,bw),height:15,rx:2,
+      style:`fill:var(--${above?"pos":"neg"})`,class:"grow"});
+    r.style.animationDelay=(i*35)+"ms";
+    hover(r,`<b>${c.label}</b><br>${c.reply}% of ${c.inline} inline comments drew a reply<br>`+
+      `${above?"+":""}${dev.toFixed(1)} pts vs baseline<br>${c.cr} in change requests`);
+    s.appendChild(r);
+    s.appendChild(txt(c.reply.toFixed(0)+"%",above?cx+bw+8:cx-bw-8,y+17,
+      {style:ink("ink-2"),"font-size":"11","font-weight":"600","text-anchor":above?"start":"end"}));
+  });
+  mount("c-diverge",s,660);
+})();
+
+/* ---------- F3 coverage: single series area+line ---------- */
+(function(){
+  const d=D.coverage, W=900,H=310,ml=44,mr=18,mt=18,mb=46;
+  const iw=W-ml-mr, ih=H-mt-mb, ymax=60;
+  const X=i=>ml+(iw*i)/(d.length-1), Y=v=>mt+ih-(v/ymax)*ih;
+  const s=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img"});
+  for(let v=0;v<=ymax;v+=15){
+    s.appendChild(el("line",{x1:ml,y1:Y(v),x2:W-mr,y2:Y(v),style:"stroke:var(--rule)","stroke-width":1}));
+    s.appendChild(txt(v+"%",ml-9,Y(v)+4,{style:ink("muted"),"font-size":"10.5","text-anchor":"end"}));
+  }
+  const line=d.map((p,i)=>`${i?"L":"M"}${X(i)} ${Y(p.pct)}`).join(" ");
+  s.appendChild(el("path",{d:`${line} L${X(d.length-1)} ${Y(0)} L${ml} ${Y(0)} Z`,
+    style:"fill:var(--s1)","fill-opacity":".10"}));
+  s.appendChild(el("path",{d:line,style:"stroke:var(--s1);fill:none","stroke-width":2,
+    "stroke-linejoin":"round","stroke-linecap":"round"}));
+  d.forEach((p,i)=>{
+    const last=i>=d.length-2;
+    const c=el("circle",{cx:X(i),cy:Y(p.pct),r:last?5:3.5,
+      style:`fill:var(--${last?"pos":"s1"})`,stroke:"var(--surface)","stroke-width":2});
+    hover(c,`<b>${p.q}</b><br>${p.unrev} of ${p.n} merged PRs unreviewed<br><b>${p.pct}%</b>`);
+    s.appendChild(c);
+    if(i%2===0||last) s.appendChild(txt(p.q.replace("20",""),X(i),H-24,
+      {style:ink("muted"),"font-size":"10","text-anchor":"middle"}));
+  });
+  /* direct-label the two points the finding rests on */
+  const n=d.length-1;
+  s.appendChild(txt(d[n].pct+"%",X(n),Y(d[n].pct)-12,{style:ink("pos"),"font-size":"11.5","font-weight":"600","text-anchor":"end"}));
+  s.appendChild(txt(d[n-1].pct+"%",X(n-1),Y(d[n-1].pct)+19,{style:ink("pos"),"font-size":"11.5","font-weight":"600","text-anchor":"middle"}));
+  const lo=d.reduce((m,p)=>p.pct<m.pct?p:m,d[0]);
+  const li=d.indexOf(lo);
+  s.appendChild(txt(lo.pct+"%",X(li),Y(lo.pct)+18,{style:ink("s1"),"font-size":"11","font-weight":"600","text-anchor":"middle"}));
+  mount("c-coverage",s,660);
+})();
+
+/* ---------- F3 latency: two series, one scale ---------- */
+(function(){
+  const d=D.latency.filter(p=>p.ttfr!==null||p.ttm!==null);
+  const W=900,H=300,ml=44,mr=54,mt=16,mb=44;
+  const iw=W-ml-mr, ih=H-mt-mb, ymax=72;
+  const X=i=>ml+(iw*i)/(d.length-1), Y=v=>mt+ih-(Math.min(v,ymax)/ymax)*ih;
+  const s=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img"});
+  for(let v=0;v<=ymax;v+=18){
+    s.appendChild(el("line",{x1:ml,y1:Y(v),x2:W-mr,y2:Y(v),style:"stroke:var(--rule)","stroke-width":1}));
+    s.appendChild(txt(v+"h",ml-9,Y(v)+4,{style:ink("muted"),"font-size":"10.5","text-anchor":"end"}));
+  }
+  [["ttfr","s1","to first review"],["ttm","s2","to merge"]].forEach(([key,col,lab])=>{
+    const pts=d.map((p,i)=>({i,v:p[key]})).filter(p=>p.v!==null);
+    s.appendChild(el("path",{d:pts.map((p,j)=>`${j?"L":"M"}${X(p.i)} ${Y(p.v)}`).join(" "),
+      style:`stroke:var(--${col});fill:none`,"stroke-width":2,"stroke-linejoin":"round"}));
+    pts.forEach(p=>{
+      const c=el("circle",{cx:X(p.i),cy:Y(p.v),r:3.2,style:`fill:var(--${col})`,
+        stroke:"var(--surface)","stroke-width":1.6});
+      hover(c,`<b>${d[p.i].q}</b><br>median ${lab}: <b>${p.v}h</b>`+(p.v>ymax?" (clipped)":""));
+      s.appendChild(c);
+    });
+    const lp=pts[pts.length-1];
+    s.appendChild(txt(lp.v+"h",X(lp.i)+7,Y(lp.v)+4,{style:ink(col),"font-size":"10.5","font-weight":"600"}));
+  });
+  d.forEach((p,i)=>{if(i%2===0)s.appendChild(txt(p.q.replace("20",""),X(i),H-22,
+    {style:ink("muted"),"font-size":"10","text-anchor":"middle"}));});
+  mount("c-latency",s,660);
+})();
+
+/* ---------- F4 size: grouped bars, both series percentages ---------- */
+(function(){
+  const d=D.size,W=900,H=330,ml=44,mr=18,mt=18,mb=58;
+  const iw=W-ml-mr,ih=H-mt-mb,ymax=50,gw=iw/d.length,bw=gw*0.26;
+  const Y=v=>mt+ih-(v/ymax)*ih;
+  const s=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img"});
+  for(let v=0;v<=ymax;v+=10){
+    s.appendChild(el("line",{x1:ml,y1:Y(v),x2:W-mr,y2:Y(v),style:"stroke:var(--rule)","stroke-width":1}));
+    s.appendChild(txt(v+"%",ml-9,Y(v)+4,{style:ink("muted"),"font-size":"10.5","text-anchor":"end"}));
+  }
+  d.forEach((g,i)=>{
+    const cx=ml+gw*i+gw/2;
+    [["cr","s2","drew a change request"],["unrev","s1","received no review"]].forEach(([k,col,lab],j)=>{
+      const x=cx-bw-2+j*(bw+4), v=g[k];
+      const r=el("rect",{x,y:Y(v),width:bw,height:mt+ih-Y(v),rx:3,style:`fill:var(--${col})`});
+      hover(r,`<b>${g.size}</b> &middot; ${g.prs} PRs<br>${lab}: <b>${v}%</b>`);
+      s.appendChild(r);
+      s.appendChild(txt(v+"%",x+bw/2,Y(v)-6,{style:ink("ink-2"),"font-size":"10.5",
+        "font-weight":"600","text-anchor":"middle"}));
+    });
+    s.appendChild(txt(g.size,cx,H-34,{style:ink("ink"),"font-size":"13","font-weight":"600","text-anchor":"middle"}));
+    s.appendChild(txt(g.prs+" PRs",cx,H-19,{style:ink("muted"),"font-size":"10","text-anchor":"middle"}));
+  });
+  mount("c-size",s,640);
+  const tb=document.getElementById("tb-size");
+  d.forEach(g=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="num"><strong>${g.size}</strong></td><td class="num">${g.prs}</td>`+
+      `<td class="num">${g.rounds}</td><td class="num">${g.cr}%</td><td class="num">${g.unrev}%</td>`+
+      `<td class="num">${g.ttm<48?Math.round(g.ttm)+"h":(g.ttm/24).toFixed(1)+"d"}</td>`;
+    tb.appendChild(tr);
+  });
+})();
+
+/* ---------- F5 paths: horizontal bars, one sequential hue ---------- */
+(function(){
+  const d=D.paths,W=900,rowH=32,H=d.length*rowH+22,L=178,R=820;
+  const max=d[0].n, s=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img"});
+  d.forEach((p,i)=>{
+    const y=i*rowH+8, bw=(p.n/max)*(R-L);
+    s.appendChild(txt(p.path,L-14,y+16,{style:ink("ink"),"font-size":"11.5","text-anchor":"end"}));
+    const r=el("rect",{x:L,y:y+4,width:Math.max(2,bw),height:17,rx:2,
+      style:`fill:var(--${i<3?"seq-4":"seq-1"})`,class:"grow"});
+    r.style.animationDelay=(i*30)+"ms";
+    hover(r,`<b>${p.path}</b><br>${p.n} inline comments<br>${(100*p.n/D.totals.inline).toFixed(1)}% of ${D.totals.inline}`);
+    s.appendChild(r);
+    s.appendChild(txt(p.n,L+bw+9,y+17,{style:ink("ink-2"),"font-size":"11","font-weight":"600"}));
+  });
+  mount("c-paths",s,600);
+})();
+
+/* ---------- term panels: z-score bars ---------- */
+function terms(id,list,col){
+  const host=document.getElementById(id); if(!host)return;
+  const max=Math.max(...list.map(t=>t.z));
+  list.forEach(t=>{
+    const d=document.createElement("div"); d.className="term";
+    const w=Math.round(100*t.z/max);
+    d.innerHTML=`<span class="w">${t.t}</span>`+
+      `<span class="b" style="width:${w}%;background:var(--${col})"></span>`+
+      `<span class="z">${t.z.toFixed(1)}</span>`;
+    if(t.a!==undefined) hover(d,`<b>${t.t}</b><br>z = ${t.z}<br>${t.a} vs ${t.b} units`);
+    host.appendChild(d);
+  });
+}
+terms("t-cr",D.termsCR,"s2");
+terms("t-inline",D.termsInline,"s1");
+</script>

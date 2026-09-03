@@ -221,10 +221,10 @@ bumps rather than large human changes. The per-PR files endpoint was out of scop
 | `config/runtime.exs` | 22 |
 
 Backend and web get near-identical attention; the frontend gets about half.
-Tests do get reviewed: 331 inline comments land on paths under `test/`, which is
-19% of all inline comments and worth knowing given how often "add a test" appears
-as an ask. (The table above lists only the largest prefixes; `test/support`,
-`test/integration` and `test/mix` make up the rest.)
+Tests do get reviewed: 221 inline comments land on paths under `test/`, 13% of
+all inline comments, which is worth knowing given how often "add a test" appears
+as an ask. (The table lists only the largest prefixes; `test/support`,
+`test/integration` and `test/mix` make up the remainder.)
 
 This is where attention *goes*, not where change goes: it is not normalised by how
 often each area is modified. A quiet area may be well understood or may be
