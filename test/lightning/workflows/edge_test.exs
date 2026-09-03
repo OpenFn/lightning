@@ -1,6 +1,8 @@
 defmodule Lightning.Workflows.EdgeTest do
   use Lightning.DataCase, async: true
 
+  import Lightning.AdaptorTestHelpers
+
   alias Lightning.Workflows.Edge
 
   describe "condition_label and condition_expression" do
@@ -181,6 +183,8 @@ defmodule Lightning.Workflows.EdgeTest do
   end
 
   describe "changeset/2" do
+    setup :isolated_adaptors
+
     test "valid changeset" do
       changeset =
         Edge.changeset(%Edge{source_job_id: Ecto.UUID.generate()}, %{

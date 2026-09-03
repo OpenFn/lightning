@@ -58,6 +58,28 @@ defmodule Lightning.Release do
     result
   end
 
+  @doc """
+  Write the adaptor catalogue to a JSON snapshot file, without the rest
+  of the app running. This is the release equivalent of
+  `mix lightning.adaptors.dump` — a release has no Mix, so run this
+  through `bin/lightning eval` instead.
+
+  ## Usage
+
+      bin/lightning eval 'Lightning.Release.dump_adaptors("/path/to/snapshot.json")'
+      bin/lightning eval 'Lightning.Release.dump_adaptors("/path/to/snapshot.json", source: :local)'
+  """
+  def dump_adaptors(path, opts \\ []) do
+    load_app()
+
+    {:ok, result, _apps} =
+      Ecto.Migrator.with_repo(@repo, fn _repo ->
+        Lightning.Adaptors.dump_to_file(path, opts)
+      end)
+
+    result
+  end
+
   def rollback(repo, version) do
     load_app()
 

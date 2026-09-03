@@ -25,13 +25,13 @@ defmodule Lightning.Adaptors.Seed do
     * `:replace` - when `true`, deletes every existing row for the source
       first, in the same transaction as the upserts
     * `:sup` - supervisor instance whose topic the broadcasts go to,
-      defaulting to `Lightning.Adaptors`
+      defaulting to `Lightning.Adaptors.Config.default_instance/0`
   """
   @spec seed_from_file(Path.t(), keyword()) :: {:ok, non_neg_integer()}
   def seed_from_file(path, opts \\ []) do
     source = Keyword.get(opts, :source, :npm)
     replace? = Keyword.get(opts, :replace, false)
-    sup = Keyword.get(opts, :sup, Lightning.Adaptors)
+    sup = Keyword.get(opts, :sup, Lightning.Adaptors.Config.default_instance())
 
     records =
       path

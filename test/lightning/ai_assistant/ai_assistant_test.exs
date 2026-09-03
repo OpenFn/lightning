@@ -1,18 +1,20 @@
 defmodule Lightning.AiAssistantTest do
   use Lightning.DataCase, async: true
+  import Lightning.AdaptorTestHelpers
   import Mox
 
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.ChatMessage
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
     workflow = insert(:simple_workflow, project: project)
-    insert(:adaptor, name: "@openfn/language-common")
-    insert(:adaptor, name: "@openfn/language-http")
+    ensure_adaptor("@openfn/language-common")
+    ensure_adaptor("@openfn/language-http")
     [user: user, project: project, workflow: workflow]
   end
 

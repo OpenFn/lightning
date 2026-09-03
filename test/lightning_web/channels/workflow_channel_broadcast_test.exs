@@ -8,11 +8,13 @@ defmodule LightningWeb.WorkflowChannelBroadcastTest do
   """
   use LightningWeb.ChannelCase
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.CollaborationHelpers
   import Lightning.Factories
   import Mox
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     Mox.stub(Lightning.MockConfig, :check_flag?, fn

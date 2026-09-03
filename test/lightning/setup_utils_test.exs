@@ -1,12 +1,15 @@
 defmodule Lightning.SetupUtilsTest do
   alias Lightning.Invocation
   use Lightning.DataCase, async: true
+  import Lightning.AdaptorTestHelpers
   import Swoosh.TestAssertions
 
   alias Lightning.{Accounts, Projects, Workflows, Jobs, SetupUtils}
   alias Lightning.Projects
   alias Lightning.Accounts.{User, UserToken}
   alias Lightning.Credentials.{Credential}
+
+  setup :isolated_adaptors
 
   # The demo projects' jobs are built through `Job.changeset/2`, which only
   # accepts adaptors present in the catalogue.

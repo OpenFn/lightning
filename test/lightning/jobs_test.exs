@@ -1,6 +1,8 @@
 defmodule Lightning.JobsTest do
   use Lightning.DataCase, async: true
 
+  import Lightning.AdaptorTestHelpers
+
   alias Lightning.Auditing.Audit
   alias Lightning.Jobs
   alias Lightning.Workflows.Job
@@ -191,6 +193,8 @@ defmodule Lightning.JobsTest do
   end
 
   describe "create_job/2" do
+    setup :isolated_adaptors
+
     setup do
       Lightning.AdaptorTestHelpers.ensure_adaptor("@openfn/language-common")
 

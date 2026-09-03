@@ -1,12 +1,16 @@
 defmodule Lightning.MetadataServiceTest do
   use Lightning.DataCase, async: false
 
+  import Lightning.AdaptorTestHelpers
+
   alias Lightning.MetadataService
+
+  setup :isolated_adaptors
 
   # Seeds the one name the "succeeds" cases below use; the "not in the
   # registry" cases rely on their name staying unseeded.
   setup do
-    insert(:adaptor, name: "@openfn/language-common")
+    ensure_adaptor("@openfn/language-common")
     :ok
   end
 

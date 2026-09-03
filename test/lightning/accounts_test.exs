@@ -16,6 +16,7 @@ defmodule Lightning.AccountsTest do
   alias LightningWeb.UserAuth
 
   import Lightning.AccountsFixtures
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Swoosh.TestAssertions
 
@@ -790,6 +791,8 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "purge user" do
+    setup :isolated_adaptors
+
     test "purging a user removes that user from projects they are members of and deletes them from the system" do
       %{project_users: [proj_user1]} =
         insert(:project,

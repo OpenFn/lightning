@@ -15,8 +15,8 @@ defmodule LightningWeb.AdaptorIconURL do
   """
   @spec build(String.t(), map(), :square | :rectangle) :: String.t() | nil
   def build(name, meta, shape) do
-    with ext when not is_nil(ext) <- Map.get(meta, :"icon_#{shape}_ext"),
-         sha when not is_nil(sha) <- Map.get(meta, :"icon_#{shape}_sha256") do
+    with ext when not is_nil(ext) <- ext_for_shape(meta, shape),
+         sha when not is_nil(sha) <- sha_for_shape(meta, shape) do
       sha8 = sha |> binary_part(0, 4) |> Base.encode16(case: :lower)
 
       "/adaptors/icons/#{URI.encode(name, &URI.char_unreserved?/1)}/" <>
@@ -25,6 +25,14 @@ defmodule LightningWeb.AdaptorIconURL do
       _ -> nil
     end
   end
+
+  defp ext_for_shape(meta, :square), do: Map.get(meta, :icon_square_ext)
+  defp ext_for_shape(meta, :rectangle), do: Map.get(meta, :icon_rectangle_ext)
+
+  defp sha_for_shape(meta, :square), do: Map.get(meta, :icon_square_sha256)
+
+  defp sha_for_shape(meta, :rectangle),
+    do: Map.get(meta, :icon_rectangle_sha256)
 end
 
 defmodule LightningWeb.AdaptorIconController do
@@ -83,7 +91,7 @@ defmodule LightningWeb.AdaptorIconController do
 
       {:ok, meta} ->
         cond do
-          ext_for_shape(meta, shape) != ext ->
+          ext_for_shape_param(meta, shape) != ext ->
             send_resp(conn, 404, "")
 
           not has_icon?(meta, shape) ->
@@ -127,19 +135,23 @@ defmodule LightningWeb.AdaptorIconController do
     |> send_resp(302, "")
   end
 
-  defp has_icon?(meta, shape), do: not is_nil(ext_for_shape(meta, shape))
+  defp has_icon?(meta, shape), do: not is_nil(ext_for_shape_param(meta, shape))
 
-  defp ext_for_shape(meta, shape), do: Map.get(meta, :"icon_#{shape}_ext")
+  defp ext_for_shape_param(meta, "square"), do: Map.get(meta, :icon_square_ext)
 
-  defp sha_matches?(meta, shape, sha8) do
-    case Map.get(meta, :"icon_#{shape}_sha256") do
-      <<prefix::binary-size(4), _::binary>> ->
-        Base.encode16(prefix, case: :lower) == String.downcase(sha8)
+  defp ext_for_shape_param(meta, "rectangle"),
+    do: Map.get(meta, :icon_rectangle_ext)
 
-      _ ->
-        false
-    end
-  end
+  defp sha_matches?(meta, "square", sha8),
+    do: sha_prefix_matches?(Map.get(meta, :icon_square_sha256), sha8)
+
+  defp sha_matches?(meta, "rectangle", sha8),
+    do: sha_prefix_matches?(Map.get(meta, :icon_rectangle_sha256), sha8)
+
+  defp sha_prefix_matches?(<<prefix::binary-size(4), _::binary>>, sha8),
+    do: Base.encode16(prefix, case: :lower) == String.downcase(sha8)
+
+  defp sha_prefix_matches?(_, _sha8), do: false
 
   defp content_type_for("png"), do: "image/png"
   defp content_type_for("svg"), do: "image/svg+xml"
