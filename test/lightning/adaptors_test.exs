@@ -2,6 +2,7 @@ defmodule Lightning.AdaptorsTest do
   use Lightning.DataCase, async: false
 
   import Eventually
+  import Lightning.AdaptorTestHelpers
   import Mox
 
   alias Lightning.Adaptors
@@ -11,18 +12,7 @@ defmodule Lightning.AdaptorsTest do
 
   setup :set_mox_global
   setup :verify_on_exit!
-
-  setup do
-    sup = :"adaptors_test_#{System.unique_integer([:positive])}"
-
-    start_supervised!(
-      {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
-    )
-
-    Lightning.AdaptorTestHelpers.clear_global_adaptors_cache()
-
-    {:ok, sup: sup}
-  end
+  setup :isolated_adaptors
 
   defp adaptor_record(overrides \\ []) do
     overrides = Map.new(overrides)
@@ -112,15 +102,31 @@ defmodule Lightning.AdaptorsTest do
     end
   end
 
-  describe "packages/0 delegates to packages(Lightning.Adaptors)" do
-    test "packages/0 and packages(Lightning.Adaptors) return identical results" do
-      # The production `Lightning.Adaptors.Supervisor` is started under the
-      # name `Lightning.Adaptors` in `application.ex`; in test it uses
-      # `Lightning.Adaptors.StrategyMock` per `config/test.exs`. Both forms
-      # resolve to `Store.packages(Lightning.Adaptors)`; equality is always
-      # guaranteed regardless of cache state.
-      assert Adaptors.packages() ==
-               Adaptors.packages(Lightning.Adaptors)
+  describe "default instance resolution" do
+    test "resolves through the stubbed default instance when one is set", %{
+      sup: sup
+    } do
+      source = AdaptorsSupervisor.source(sup)
+
+      fake_meta = %{
+        name: "@openfn/language-stub-fixture",
+        latest_version: "9.9.9",
+        description: nil,
+        deprecated: false,
+        icon_square_ext: nil,
+        icon_rectangle_ext: nil,
+        icon_square_sha256: nil,
+        icon_rectangle_sha256: nil
+      }
+
+      Cachex.put(
+        AdaptorsSupervisor.cache_name(sup),
+        {:packages, source},
+        {:ok, [fake_meta]}
+      )
+
+      assert {:ok, [%Adaptors.Package{name: "@openfn/language-stub-fixture"}]} =
+               Adaptors.packages()
     end
   end
 
@@ -333,16 +339,19 @@ defmodule Lightning.AdaptorsTest do
   end
 
   describe "refresh/1 with a bare keyword list" do
-    test "defaults the supervisor when given only opts" do
+    test "defaults the supervisor when given only opts", %{sup: sup} do
       stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn -> {:ok, []} end)
 
       stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
         {:ok, %{}}
       end)
 
-      assert {:ok, _counts} = Adaptors.refresh(await: true, timeout: 2_000)
+      # The isolated Scheduler sits behind HighlanderPG and only registers
+      # once it holds the advisory lock.
+      {:global, gname} = AdaptorsSupervisor.global_scheduler_name(sup)
+      assert_eventually(is_pid(:global.whereis_name(gname)), 2000)
 
-      Lightning.AdaptorTestHelpers.clear_global_adaptors_cache()
+      assert {:ok, _counts} = Adaptors.refresh(await: true, timeout: 2_000)
     end
   end
 

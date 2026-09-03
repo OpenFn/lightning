@@ -2,6 +2,7 @@ defmodule Lightning.WebAndWorkerTest do
   use LightningWeb.ConnCase, async: false
 
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Mox
 
@@ -41,7 +42,12 @@ defmodule Lightning.WebAndWorkerTest do
   end
 
   describe "webhook triggered runs" do
-    setup [:register_and_log_in_superuser, :stub_rate_limiter_ok]
+    setup [
+      :isolated_adaptors,
+      :register_and_log_in_superuser,
+      :stub_rate_limiter_ok,
+      :seed_default_adaptor
+    ]
 
     @tag :integration
     @tag timeout: 120_000
@@ -119,7 +125,7 @@ defmodule Lightning.WebAndWorkerTest do
     end
 
     @tag :integration
-    @tag timeout: 20_000
+    @tag timeout: 120_000
     test "the whole thing", %{conn: conn, user: user} do
       Lightning.AdaptorTestHelpers.seed_adaptor_package(
         "@openfn/language-http",
@@ -407,6 +413,7 @@ defmodule Lightning.WebAndWorkerTest do
 
   describe "webhook with delayed response (after_completion)" do
     setup [
+      :isolated_adaptors,
       :register_and_log_in_superuser,
       :stub_rate_limiter_ok,
       :seed_default_adaptor
@@ -1103,6 +1110,8 @@ defmodule Lightning.WebAndWorkerTest do
     start_supervised!({RuntimeManager, opts}, restart: :temporary)
   end
 
+  @failure_states Lightning.Run.failure_states()
+
   # A dead RuntimeManager means the Node worker never started (or exited), so
   # fail immediately with its reason instead of blocking for the full window.
   defp await_run_success(run_id, runtime_manager) do
@@ -1111,6 +1120,11 @@ defmodule Lightning.WebAndWorkerTest do
     receive do
       %Events.RunUpdated{run: %{id: ^run_id, state: :success}} ->
         Process.demonitor(ref, [:flush])
+
+      %Events.RunUpdated{run: %{id: ^run_id, state: state} = run}
+      when state in @failure_states ->
+        Process.demonitor(ref, [:flush])
+        flunk("run #{run_id} finished with state #{state}: #{inspect(run)}")
 
       {:DOWN, ^ref, :process, _pid, :noproc} ->
         flunk(

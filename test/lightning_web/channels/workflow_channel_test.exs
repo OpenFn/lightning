@@ -9,6 +9,7 @@ defmodule LightningWeb.WorkflowChannelTest do
   import ExUnit.CaptureLog
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     Mox.stub(Lightning.MockConfig, :check_flag?, fn
@@ -867,9 +868,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   describe "request_adaptors and request_credentials" do
     setup do
-      cache = Lightning.Adaptors.Supervisor.cache_name(Lightning.Adaptors)
-      Cachex.clear(cache)
-
       insert(:adaptor, name: "@openfn/language-salesforce", source: :npm)
       insert(:adaptor, name: "@openfn/language-http", source: :npm)
       :ok
@@ -1455,10 +1453,11 @@ defmodule LightningWeb.WorkflowChannelTest do
 
     test "handles an adaptor catalogue that is not ready", %{
       socket: socket,
-      workflow: workflow
+      workflow: workflow,
+      sup: _sup
     } do
-      # Global mode: the refresh runs in a Task owned by the production
-      # Scheduler.
+      # Global mode: the refresh runs in a Task owned by the isolated
+      # instance's Scheduler.
       Lightning.Adaptors.Catalogue.delete_all_for_source(:npm)
       Mox.set_mox_global(Lightning.Adaptors.StrategyMock)
 
@@ -2837,13 +2836,13 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   describe "PubSub subscription and adaptors broadcasting" do
     test "forwards adaptors_updated envelope from client topic to socket", %{
-      socket: _socket
+      sup: sup
     } do
       payload = %{adaptors: [%{name: "a"}]}
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
-        Lightning.Adaptors.Supervisor.client_topic(Lightning.Adaptors),
+        Lightning.Adaptors.Supervisor.client_topic(sup),
         %{event: "adaptors_updated", payload: payload}
       )
 
@@ -2869,11 +2868,12 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
     end
 
-    test "does not push adaptors_updated for unrelated events on client topic" do
+    test "does not push adaptors_updated for unrelated events on client topic",
+         %{sup: sup} do
       capture_log(fn ->
         Phoenix.PubSub.broadcast(
           Lightning.PubSub,
-          Lightning.Adaptors.Supervisor.client_topic(Lightning.Adaptors),
+          Lightning.Adaptors.Supervisor.client_topic(sup),
           %{event: "something_else", payload: %{}}
         )
 

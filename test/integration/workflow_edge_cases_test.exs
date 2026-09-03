@@ -10,6 +10,7 @@ defmodule Lightning.WorkflowEdgeCasesTest do
   use LightningWeb.ConnCase, async: false
 
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Mox
 
@@ -41,6 +42,7 @@ defmodule Lightning.WorkflowEdgeCasesTest do
   end
 
   setup [
+    :isolated_adaptors,
     :register_and_log_in_superuser,
     :stub_rate_limiter_ok,
     :seed_default_adaptor

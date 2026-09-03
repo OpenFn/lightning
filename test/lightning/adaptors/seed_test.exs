@@ -1,18 +1,16 @@
 defmodule Lightning.Adaptors.SeedTest do
   use Lightning.DataCase, async: true
 
+  import Lightning.AdaptorTestHelpers
+
   alias Lightning.Adaptors.Seed
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   @moduletag :tmp_dir
 
-  setup %{tmp_dir: tmp_dir} do
-    sup = :"seed_test_#{System.unique_integer([:positive])}"
+  setup :isolated_adaptors
 
-    start_supervised!(
-      {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
-    )
-
+  setup %{sup: sup, tmp_dir: tmp_dir} do
     :ok =
       Phoenix.PubSub.subscribe(
         Lightning.PubSub,
@@ -20,7 +18,6 @@ defmodule Lightning.Adaptors.SeedTest do
       )
 
     {:ok,
-     sup: sup,
      source: AdaptorsSupervisor.source(sup),
      cache: AdaptorsSupervisor.cache_name(sup),
      tmp_dir: tmp_dir}

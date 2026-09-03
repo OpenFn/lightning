@@ -3,6 +3,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
   @moduletag :capture_log
   import Mox
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
 
   import Lightning.{
@@ -17,6 +18,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
   alias LightningWeb.AiAssistantChannel
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     Process.put(:oban_testing, :manual)

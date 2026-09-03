@@ -23,6 +23,8 @@ defmodule Lightning.SessionTest do
   # and `start_supervised!`, so the DB-writing SharedDoc/PersistenceWriter
   # children are flushed and stopped — via DocumentSupervisor.terminate/2 — before
   # this test process (the sandbox owner) exits, even if an assertion raises.
+  setup :isolated_adaptors
+
   setup do
     instance = start_collaboration_instance()
     user = insert(:user)

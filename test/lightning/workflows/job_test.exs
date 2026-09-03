@@ -4,6 +4,7 @@ defmodule Lightning.Workflows.JobTest do
   alias Lightning.Workflows.Job
   alias Lightning.Repo
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
 
   # No space in the alphabet on purpose: the changeset trims before it measures,
@@ -17,6 +18,8 @@ defmodule Lightning.Workflows.JobTest do
   end
 
   describe "changeset/2" do
+    setup :isolated_adaptors
+
     test "a malformed id is a changeset error, not an Ecto.ChangeError on save" do
       # An unsubstituted import placeholder reaching :id (a :binary_id field)
       # passes cast/3 and would only raise when dumped on insert. validate_uuid
@@ -494,8 +497,8 @@ defmodule Lightning.Workflows.JobTest do
     end
 
     test "accepts well-formed, registry-listed adaptor strings" do
-      insert(:adaptor, name: "@openfn/language-common")
-      insert(:adaptor, name: "@openfn/language-http")
+      ensure_adaptor("@openfn/language-common")
+      ensure_adaptor("@openfn/language-http")
 
       [
         "@openfn/language-common@latest",
@@ -518,7 +521,7 @@ defmodule Lightning.Workflows.JobTest do
     end
 
     test "accepts an adaptor the catalogue listing excludes" do
-      insert(:adaptor, name: "@openfn/language-collections")
+      ensure_adaptor("@openfn/language-collections")
 
       errors =
         Job.changeset(%Job{}, %{
@@ -543,14 +546,14 @@ defmodule Lightning.Workflows.JobTest do
       assert Job.changeset(%Job{}, params) |> errors_on() |> Map.get(:adaptor) ==
                ["adaptor catalogue is not ready yet, try again shortly"]
 
-      insert(:adaptor, name: "@openfn/language-http")
+      ensure_adaptor("@openfn/language-http")
 
       assert Job.changeset(%Job{}, params) |> errors_on() |> Map.get(:adaptor) ==
                ["is not a recognised adaptor"]
     end
 
     test "rejects a well-formed adaptor that is not in the registry" do
-      insert(:adaptor, name: "@openfn/language-http")
+      ensure_adaptor("@openfn/language-http")
 
       # The registry membership check only runs on an otherwise-valid changeset,
       # so name and body are supplied here.
