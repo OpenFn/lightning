@@ -289,6 +289,8 @@ defmodule Lightning.Adaptors do
   """
   @spec refresh(atom(), keyword()) ::
           :ok | {:ok, Scheduler.refresh_counts()} | {:error, term()}
+  def refresh(opts) when is_list(opts), do: refresh(@sup, opts)
+
   def refresh(sup \\ @sup, opts \\ []) do
     scheduler = AdaptorsSupervisor.global_scheduler_name(sup)
 

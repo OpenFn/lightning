@@ -332,6 +332,20 @@ defmodule Lightning.AdaptorsTest do
     end
   end
 
+  describe "refresh/1 with a bare keyword list" do
+    test "defaults the supervisor when given only opts" do
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn -> {:ok, []} end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      assert {:ok, _counts} = Adaptors.refresh(await: true, timeout: 2_000)
+
+      Lightning.AdaptorTestHelpers.clear_global_adaptors_cache()
+    end
+  end
+
   describe "refresh_package/2" do
     test "delegates to Scheduler.refresh_package via global_scheduler_name/1", %{
       sup: sup
