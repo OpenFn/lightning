@@ -98,7 +98,7 @@ export function useTriggerDraft(
   options: UseTriggerDraftOptions
 ): UseTriggerDraftResult {
   const { initialAuthMethodIds, commitAuthMethods } = options;
-  const { updateTrigger } = useWorkflowActions();
+  const { updateTrigger, clearErrorField } = useWorkflowActions();
 
   const [draft, setDraft] = useState<Workflow.Trigger>(() => trigger);
   const [draftAuthMethodIds, setDraftAuthMethodIdsState] = useState<string[]>(
@@ -221,12 +221,20 @@ export function useTriggerDraft(
       updateTrigger(trigger.id, updates);
     }
 
+    // A server error was raised for the value that was there at the time. Once
+    // the path changes it is about something that is no longer on screen, so it
+    // goes. The next save decides the new one.
+    if ('custom_path' in updates) {
+      clearErrorField(`triggers.${trigger.id}`, 'custom_path');
+    }
+
     return { ok: true };
   }, [
     draft,
     draftIssues,
     trigger.id,
     updateTrigger,
+    clearErrorField,
     authIdsChanged,
     draftAuthMethodIds,
     commitAuthMethods,

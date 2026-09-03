@@ -2164,6 +2164,87 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "check_custom_path" do
+    setup %{socket: socket} do
+      project = socket.assigns.project
+      workflow = insert(:workflow, project: project)
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook,
+          custom_path: "facility-001"
+        )
+
+      %{trigger: trigger}
+    end
+
+    test "reports a path another trigger already holds", %{socket: socket} do
+      ref =
+        push(socket, "check_custom_path", %{
+          "custom_path" => "facility-001",
+          "trigger_id" => Ecto.UUID.generate()
+        })
+
+      assert_reply ref, :ok, %{taken: true}
+    end
+
+    test "reports an unused path as free", %{socket: socket} do
+      ref =
+        push(socket, "check_custom_path", %{
+          "custom_path" => "facility-002",
+          "trigger_id" => Ecto.UUID.generate()
+        })
+
+      assert_reply ref, :ok, %{taken: false}
+    end
+
+    test "does not report a trigger's own path against itself", %{
+      socket: socket,
+      trigger: trigger
+    } do
+      ref =
+        push(socket, "check_custom_path", %{
+          "custom_path" => "facility-001",
+          "trigger_id" => trigger.id
+        })
+
+      assert_reply ref, :ok, %{taken: false}
+    end
+
+    test "only sees the socket's own project", %{socket: socket} do
+      # The project is taken from the socket, never the payload, so a path held
+      # in another project cannot be seen from here.
+      other_workflow = insert(:workflow, project: insert(:project))
+
+      insert(:trigger,
+        workflow: other_workflow,
+        type: :webhook,
+        custom_path: "elsewhere"
+      )
+
+      ref =
+        push(socket, "check_custom_path", %{
+          "custom_path" => "elsewhere",
+          "trigger_id" => Ecto.UUID.generate()
+        })
+
+      assert_reply ref, :ok, %{taken: false}
+    end
+
+    test "a malformed trigger id excludes nothing rather than raising", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "check_custom_path", %{
+          "custom_path" => "facility-001",
+          "trigger_id" => "not-a-uuid"
+        })
+
+      assert_reply ref, :ok, %{taken: true}
+    end
+  end
+
   describe "validate_workflow_name" do
     setup %{socket: socket} do
       project = socket.assigns.project
