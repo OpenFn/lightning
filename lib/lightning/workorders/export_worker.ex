@@ -314,34 +314,31 @@ defmodule Lightning.WorkOrders.ExportWorker do
     Path.join(export_dir.sections_dir, "#{section}.jsonl")
   end
 
-  # `:delayed_write` reports a failed write on the *following* file operation
-  # and clears it, so ignoring return values would let a truncated, unparseable
-  # `export.json` be zipped and marked `:completed`.
   defp assemble_export_json(export_dir) do
     path = Path.join(export_dir.root_dir, "export.json")
     file = File.open!(path, [:write, :binary, {:delayed_write, 512_000, 2_000}])
 
     try do
-      binwrite!(file, path, "{\n")
+      IO.binwrite(file, "{\n")
 
       @export_sections
       |> Enum.with_index()
       |> Enum.each(fn {section, index} ->
-        write_section(file, path, export_dir, section, index)
+        write_section(file, export_dir, section, index)
       end)
 
-      binwrite!(file, path, "\n}\n")
+      IO.binwrite(file, "\n}\n")
     after
-      # Closing flushes the buffer, so a failed last block surfaces here.
-      close!(file, path)
+      # `:delayed_write` clears a failed write after reporting it, so the last
+      # block's failure only surfaces on close, when the buffer is flushed.
+      # Ignoring it would zip a truncated `export.json` and mark it `:completed`.
+      :ok = File.close(file)
     end
-
-    :ok
   end
 
-  defp write_section(file, path, export_dir, section, index) do
+  defp write_section(file, export_dir, section, index) do
     separator = if index == 0, do: "", else: ",\n"
-    binwrite!(file, path, [separator, ~s(  "#{section}": [)])
+    IO.binwrite(file, [separator, ~s(  "#{section}": [)])
 
     section_path = section_path(export_dir, section)
 
@@ -350,30 +347,10 @@ defmodule Lightning.WorkOrders.ExportWorker do
       |> File.stream!()
       |> Stream.map(&String.trim_trailing(&1, "\n"))
       |> Stream.intersperse(",\n")
-      |> Enum.each(&binwrite!(file, path, &1))
+      |> Enum.each(&IO.binwrite(file, &1))
     end
 
-    binwrite!(file, path, "]")
-  end
-
-  defp binwrite!(file, path, iodata) do
-    case IO.binwrite(file, iodata) do
-      :ok ->
-        :ok
-
-      {:error, reason} ->
-        raise File.Error, reason: reason, action: "write to", path: path
-    end
-  end
-
-  defp close!(file, path) do
-    case File.close(file) do
-      :ok ->
-        :ok
-
-      {:error, reason} ->
-        raise File.Error, reason: reason, action: "close", path: path
-    end
+    IO.binwrite(file, "]")
   end
 
   defp finalize_export(export_dir, project_file) do

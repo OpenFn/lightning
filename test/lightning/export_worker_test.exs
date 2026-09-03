@@ -338,14 +338,14 @@ defmodule Lightning.ExportWorkerTest do
       # written, and stubbing every write would break Packmatic's zip writer.
       stub(IO, :binwrite, fn device, iodata ->
         if IO.iodata_to_binary(iodata) == "{\n" do
-          {:error, :enospc}
+          :erlang.error(:enospc)
         else
           Mimic.call_original(IO, :binwrite, [device, iodata])
         end
       end)
 
       capture_log(fn ->
-        assert {:error, %File.Error{reason: :enospc}} =
+        assert {:error, %ErlangError{original: :enospc}} =
                  ExportWorker.perform(%Oban.Job{
                    args: %{
                      "project_id" => project.id,
