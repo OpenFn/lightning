@@ -77,8 +77,10 @@ and this project adheres to
   [#CON-136](https://linear.app/openfn/issue/CON-136)
 - `mix lightning.adaptors.dump` writes the current catalogue out to a JSON file
   in the shape `mix lightning.adaptors.import` reads, for mirroring an online
-  instance's catalogue into an airgapped one.
-  [#CON-139](https://linear.app/openfn/issue/CON-139)
+  instance's catalogue into an airgapped one. The file carries each adaptor's
+  icon metadata too, so copying `ADAPTORS_ICONS_PATH` across alongside it lets
+  the offline instance serve icons it already has cached instead of trying
+  GitHub. [#CON-139](https://linear.app/openfn/issue/CON-139)
 
 ### Changed
 

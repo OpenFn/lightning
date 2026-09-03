@@ -76,7 +76,22 @@ defmodule Lightning.Adaptors.Seed do
     end
   end
 
+  @icon_sha256_fields ~w(icon_square_sha256 icon_rectangle_sha256)
+
   defp normalize_snapshot_record(record, source) when is_map(record) do
-    Map.put(record, "source", source)
+    record
+    |> Map.put("source", source)
+    |> decode_icon_sha256s()
+  end
+
+  # Reverses `Mix.Tasks.Lightning.Adaptors.Dump`'s base64 encoding of the
+  # raw hash bytes those columns hold; a plain-npm snapshot has no such keys.
+  defp decode_icon_sha256s(record) do
+    Enum.reduce(@icon_sha256_fields, record, fn field, acc ->
+      case Map.get(acc, field) do
+        nil -> acc
+        encoded -> Map.put(acc, field, Base.decode64!(encoded))
+      end
+    end)
   end
 end
