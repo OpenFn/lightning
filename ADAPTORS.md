@@ -32,11 +32,13 @@ A package found in more than one root comes from the first root only. Lightning
 logs a warning naming each shadowed package on every catalogue scan, not just at
 boot.
 
-Lightning still accepts the old names for these two settings,
-`LOCAL_ADAPTORS=true` and `OPENFN_ADAPTORS_REPO`. Each warns at boot only when
-Lightning falls back to it: `LOCAL_ADAPTORS=true` when `ADAPTORS_STRATEGY` is
-unset, `OPENFN_ADAPTORS_REPO` when the strategy is local and
-`ADAPTORS_LOCAL_REPO` is not set.
+> #### Note {: .info}
+>
+> Lightning still accepts the old names for these two settings,
+> `LOCAL_ADAPTORS=true` and `OPENFN_ADAPTORS_REPO`. Each warns at boot only when
+> Lightning falls back to it: `LOCAL_ADAPTORS=true` when `ADAPTORS_STRATEGY` is
+> unset, `OPENFN_ADAPTORS_REPO` when the strategy is local and
+> `ADAPTORS_LOCAL_REPO` is not set.
 
 ## Running without internet access
 
@@ -50,7 +52,12 @@ tar czf icons.tar.gz -C "$ADAPTORS_ICONS_PATH" .
 ```
 
 If `ADAPTORS_ICONS_PATH` is not set, the directory is `lightning/adaptor_icons`
-under the system temp directory.
+under the system temp directory. On a release image, which has no Mix, dump
+with:
+
+```sh
+bin/lightning eval 'Lightning.Release.dump_adaptors("/path/to/snapshot.json")'
+```
 
 On the offline instance, unpack the icons where `ADAPTORS_ICONS_PATH` points,
 then import the snapshot:
@@ -61,8 +68,7 @@ tar xzf icons.tar.gz -C "$ADAPTORS_ICONS_PATH"
 mix lightning.adaptors.import --path snapshot.json --replace
 ```
 
-The `mix` commands need a source checkout. A release image has no Mix, so import
-there with:
+On a release image, import with:
 
 ```sh
 bin/lightning eval 'Lightning.Release.seed_adaptors("/path/to/snapshot.json", replace: true)'
@@ -101,6 +107,13 @@ mix lightning.adaptors.refresh --name @openfn/language-http
 Without `--name` it runs a full refresh and waits for it to finish. With
 `--name` it refetches that one adaptor, whether or not its version changed. Exit
 codes are in the task's `mix help` output.
+
+A release image has no Mix. Run the same call against the running node instead:
+
+```sh
+bin/lightning rpc 'Lightning.Adaptors.refresh(await: true)'
+bin/lightning rpc 'Lightning.Adaptors.refresh_package("@openfn/language-http")'
+```
 
 ## Troubleshooting
 

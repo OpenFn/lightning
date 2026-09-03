@@ -363,4 +363,10 @@ defmodule Lightning.Adaptors do
   `Lightning.Adaptors.Seed.seed_from_file/2`.
   """
   defdelegate seed_from_file(path, opts \\ []), to: Lightning.Adaptors.Seed
+
+  @doc """
+  Writes the catalogue to a JSON snapshot file. See
+  `Lightning.Adaptors.Dump.dump_to_file/2`.
+  """
+  defdelegate dump_to_file(path, opts \\ []), to: Lightning.Adaptors.Dump
 end
