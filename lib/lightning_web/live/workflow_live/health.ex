@@ -1,6 +1,7 @@
 defmodule LightningWeb.WorkflowLive.Health do
   @moduledoc """
-  Workflow health page: a 30-day summary of a single workflow's work orders.
+  Workflow health page: a summary of a single workflow's work orders over the
+  window the reader picks.
   """
   use LightningWeb, :live_view
 
