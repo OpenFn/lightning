@@ -364,8 +364,8 @@ export function WebhookConfigureStep({
           {authExpanded && (
             <div className="mt-2 space-y-2">
               <p className="text-xs text-slate-500">
-                Require requests to this webhook to use specific authentication
-                protocols.
+                Require requests to use specific authentication protocols. This
+                applies to every URL above.
               </p>
               <WebhookAuthMethodSelect
                 methods={projectAuthMethods}

@@ -189,7 +189,7 @@ describe('WebhookConfigureStep', () => {
 
       // Collapsed: description text inside the auth body is not visible.
       expect(
-        screen.queryByText(/Require requests to this webhook/i)
+        screen.queryByText(/Require requests to use specific authentication/i)
       ).not.toBeInTheDocument();
 
       await userEvent.click(
@@ -197,7 +197,7 @@ describe('WebhookConfigureStep', () => {
       );
 
       expect(
-        screen.getByText(/Require requests to this webhook/i)
+        screen.getByText(/Require requests to use specific authentication/i)
       ).toBeInTheDocument();
 
       // Clicking again collapses it.
@@ -205,7 +205,7 @@ describe('WebhookConfigureStep', () => {
         screen.getByRole('button', { name: 'Authentication' })
       );
       expect(
-        screen.queryByText(/Require requests to this webhook/i)
+        screen.queryByText(/Require requests to use specific authentication/i)
       ).not.toBeInTheDocument();
     });
 
@@ -231,7 +231,7 @@ describe('WebhookConfigureStep', () => {
 
       // Should already be open — description body visible without any click.
       expect(
-        screen.getByText(/Require requests to this webhook/i)
+        screen.getByText(/Require requests to use specific authentication/i)
       ).toBeInTheDocument();
     });
 
