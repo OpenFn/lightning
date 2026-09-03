@@ -57,6 +57,13 @@ and this project adheres to
 
 ### Changed
 
+- The webhook trigger panel now lists every URL a trigger answers on. The
+  default URL is always there and the custom one sits next to it, editable in
+  place, with add, edit, delete and copy on the row itself. A path already used
+  by another workflow in the project is reported while you type, not after you
+  save. A path the server would reject shows what is wrong and is left as you
+  typed it.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - Remove the unreachable, non-streaming code in the AI assistant
   [#5046](https://github.com/OpenFn/lightning/issues/5046)
 - The global chat now starts streaming Apollo's response earlier, so users wait
@@ -119,6 +126,10 @@ and this project adheres to
 
 ### Fixed
 
+- Changing a webhook trigger's custom path now marks the workflow as unsaved, so
+  the Save button offers to save it. The unsaved-changes check did not look at
+  the field, so the edit could be lost by navigating away.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
