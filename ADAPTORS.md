@@ -28,12 +28,15 @@ separated:
 ADAPTORS_LOCAL_REPO=/path/to/private-adaptors,/path/to/adaptors
 ```
 
-A package found in more than one root comes from the first root only, and a log
-warning names each shadowed package.
+A package found in more than one root comes from the first root only. Lightning
+logs a warning naming each shadowed package on every catalogue scan, not just at
+boot.
 
 Lightning still accepts the old names for these two settings,
-`LOCAL_ADAPTORS=true` and `OPENFN_ADAPTORS_REPO`, and warns at boot when it
-falls back to them.
+`LOCAL_ADAPTORS=true` and `OPENFN_ADAPTORS_REPO`. Each warns at boot only when
+Lightning falls back to it: `LOCAL_ADAPTORS=true` when `ADAPTORS_STRATEGY` is
+unset, `OPENFN_ADAPTORS_REPO` when the strategy is local and
+`ADAPTORS_LOCAL_REPO` is not set.
 
 ## Running without internet access
 
