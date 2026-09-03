@@ -157,6 +157,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               >
                 Enabled
               </.th>
+              <.th>Monitoring</.th>
               <.th>
                 <span class="sr-only">Actions</span>
               </.th>
@@ -257,6 +258,16 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                     on_click="toggle_workflow_state"
                     value_key={workflow.id}
                   />
+                </.td>
+                <.td>
+                  <.link
+                    id={"view-stats-#{workflow.id}"}
+                    class="table-action"
+                    navigate={~p"/projects/#{@project.id}/w/#{workflow.id}/health"}
+                    onclick="event.stopPropagation()"
+                  >
+                    View Stats
+                  </.link>
                 </.td>
                 <.td class="text-right">
                   <%= if @can_delete_workflow do %>

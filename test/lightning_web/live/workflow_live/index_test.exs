@@ -401,6 +401,20 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       refute Lightning.Workflows.get_workflow!(workflow.id, include: [:triggers]).triggers
              |> Enum.any?(& &1.enabled)
     end
+
+    test "each workflow row links to its health page", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert view
+             |> has_element?(
+               ~s{tr#workflow-#{workflow.id} a#view-stats-#{workflow.id}[href="/projects/#{project.id}/w/#{workflow.id}/health"]},
+               "View Stats"
+             )
+    end
   end
 
   describe "creating workflows" do

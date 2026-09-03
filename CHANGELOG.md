@@ -26,7 +26,8 @@ and this project adheres to
   summarising one workflow's last 30 days: a donut of work order outcomes, a
   breakdown of the failing ones, and a triage table grouping failures by error
   signature, heaviest first. The page refreshes itself as that workflow's work
-  orders settle, at most once every 30 seconds.
+  orders settle, at most once every 30 seconds. Reachable from the workflows
+  list via a "View Stats" link on each row.
 
 ### Fixed
 
