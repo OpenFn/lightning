@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
-import { OutcomesDonut } from '#/workflow-health/charts/OutcomesDonut';
+import { OutcomesDonut } from '#/health/charts/OutcomesDonut';
 
 import { counts } from './counts';
 

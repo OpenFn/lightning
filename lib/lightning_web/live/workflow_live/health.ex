@@ -50,7 +50,7 @@ defmodule LightningWeb.WorkflowLive.Health do
           phx-hook="ReactComponent"
           phx-update="ignore"
           data-react-name="WorkflowHealth"
-          data-react-file={~p"/assets/js/workflow-health/WorkflowHealth.js"}
+          data-react-file={~p"/assets/js/health/WorkflowHealth.js"}
           data-workflow-id={@workflow.id}
           data-project-id={@project.id}
           data-workflow-name={@workflow.name}

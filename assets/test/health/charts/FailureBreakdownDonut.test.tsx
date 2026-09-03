@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
-import { FailureBreakdownDonut } from '#/workflow-health/charts/FailureBreakdownDonut';
+import { FailureBreakdownDonut } from '#/health/charts/FailureBreakdownDonut';
 
 import { counts } from './counts';
 

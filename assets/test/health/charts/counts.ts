@@ -1,4 +1,4 @@
-import type { WorkOrderStateCounts } from '#/workflow-health/types';
+import type { WorkOrderStateCounts } from '#/health/types';
 
 /**
  * Zero-filled work order state counts, so a test only names the states it cares
