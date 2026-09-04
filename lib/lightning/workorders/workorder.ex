@@ -38,6 +38,22 @@ defmodule Lightning.WorkOrder do
   """
   def active_states, do: @active_states
 
+  @doc """
+  Returns the list of final states for a work order.
+
+  Every state a work order can settle in: `Run.final_states/0` plus
+  `:rejected`, which is what a work order whose run was never created settles
+  in.
+  """
+  def final_states, do: states() -- active_states()
+
+  @doc """
+  Returns the list of failure states for a work order.
+
+  These are all final states except `:success`.
+  """
+  def failure_states, do: final_states() -- [:success]
+
   @derive {Jason.Encoder,
            only: [
              :id,

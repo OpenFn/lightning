@@ -119,6 +119,7 @@ config :esbuild,
          js/collaborative-editor/CollaborativeEditor.tsx
          js/picker/Picker.tsx
          js/picker/PickerButton.tsx
+         js/health/WorkflowHealth.tsx
          editor.worker=monaco-editor/esm/vs/editor/editor.worker.js
          json.worker=monaco-editor/esm/vs/language/json/json.worker.js
          css.worker=monaco-editor/esm/vs/language/css/css.worker.js

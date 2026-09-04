@@ -34,13 +34,18 @@ and this project adheres to
   offering to redo it. Undo confirms first when the workflow has been edited
   since, because it replaces the whole workflow.
   [#5036](https://github.com/OpenFn/lightning/issues/5036)
-
 - Webhook triggers can be given a custom URL path, so an endpoint's URL is known
   before it is deployed. A trigger with a path of `facility-001` answers at
   `/i/<project-id>/facility-001`, where `<project-id>` is the project's UUID.
   Set it in the trigger panel, in `project.yaml`, or through the workflows API.
   Existing `/i/<trigger-id>` URLs are unchanged.
   [#4952](https://github.com/OpenFn/lightning/issues/4952)
+- A workflow health page at `/projects/:project_id/w/:workflow_id/health`,
+  summarising one workflow's last 30 days: a donut of work order outcomes, a
+  breakdown of the failing ones, and a triage table grouping failures by error
+  signature, heaviest first. The page refreshes itself as that workflow's work
+  orders settle, at most once every 30 seconds. Reachable from the workflows
+  list via a "Health" link in each row's Actions column.
 
 ### Changed
 
@@ -49,8 +54,7 @@ and this project adheres to
   place, with add, edit, delete and copy on the row itself. A path already used
   by another workflow in the project is reported while you type, not after you
   save. A path the server would reject shows what is wrong and is left as you
-  typed it.
-  [#4952](https://github.com/OpenFn/lightning/issues/4952)
+  typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
 
 ### Fixed
 

@@ -103,11 +103,19 @@ defmodule LightningWeb.Router do
     resources "/log_lines", API.LogLinesController, only: [:index]
   end
 
-  ## AI Assistant JSON API (cookie-authenticated)
+  ## Cookie-authenticated JSON, for the app's own React components
   scope "/api", LightningWeb, as: :api do
     pipe_through [:authenticated_json, :require_authenticated_user]
 
     get "/ai_assistant/sessions", API.AiAssistantController, :list_sessions
+
+    get "/projects/:project_id/workflows/:workflow_id/health/outcomes",
+        API.WorkflowHealthController,
+        :outcomes
+
+    get "/projects/:project_id/workflows/:workflow_id/health/failures",
+        API.WorkflowHealthController,
+        :failure_signatures
   end
 
   ## Collections
@@ -250,6 +258,7 @@ defmodule LightningWeb.Router do
         live "/w", WorkflowLive.Index, :index
         live "/w/new", WorkflowLive.Collaborate, :new
         live "/w/:id", WorkflowLive.Collaborate, :edit
+        live "/w/:id/health", WorkflowLive.Health, :show
 
         # Redirect retired legacy editor URLs to the collaborative editor,
         # preserving the query string. The collaborative editor uses different

@@ -61,6 +61,13 @@ defmodule Lightning.Application do
         id: :auth_provider_jwks_cache
       )
 
+    # Workflow health page stats, cached briefly to dedupe bursts on the same
+    # workflow. See `Lightning.Workflows.Stats`.
+    workflow_stats_cache_childspec =
+      Supervisor.child_spec({Cachex, name: :workflow_stats},
+        id: :workflow_stats_cache
+      )
+
     :telemetry.attach_many(
       "oban-errors",
       [
@@ -148,6 +155,7 @@ defmodule Lightning.Application do
         {Finch, name: Lightning.Finch},
         auth_providers_cache_childspec,
         auth_provider_jwks_cache_childspec,
+        workflow_stats_cache_childspec,
         {Lightning.Collaboration.Supervisor, []},
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,

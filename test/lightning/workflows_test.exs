@@ -70,6 +70,18 @@ defmodule Lightning.WorkflowsTest do
       assert Workflows.get_workflow_for_project(project, nil) == nil
     end
 
+    # Built on `Query.workflows_for/1`, so every caller — the health API, the
+    # index's trigger toggle and its delete handler — refuses a workflow on its
+    # way out without checking for itself.
+    test "get_workflow_for_project/3 skips a workflow marked for deletion" do
+      project = insert(:project)
+
+      workflow =
+        insert(:workflow, project: project, deleted_at: DateTime.utc_now())
+
+      assert Workflows.get_workflow_for_project(project, workflow.id) == nil
+    end
+
     test "get_workflow_for_project/3 preloads the requested associations" do
       project = insert(:project)
       workflow = insert(:workflow, project: project)
