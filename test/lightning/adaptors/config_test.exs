@@ -5,6 +5,12 @@ defmodule Lightning.Adaptors.ConfigTest do
 
   @parent_key Lightning.Adaptors
 
+  describe "default_instance/0" do
+    test "defaults to the global Lightning.Adaptors instance" do
+      assert Config.default_instance() == Lightning.Adaptors
+    end
+  end
+
   describe "source_for/1" do
     test "returns :local for Lightning.Adaptors.Local" do
       assert Config.source_for(Lightning.Adaptors.Local) == :local

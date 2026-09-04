@@ -47,30 +47,20 @@ defmodule Lightning.Adaptors.IsolatedAdaptorsTest do
                Adaptors.packages()
     end
 
-    test "seed_credential_schema writes into the isolated cache", %{sup: sup} do
-      other_sup =
-        :"isolated_adaptors_other_#{System.unique_integer([:positive])}"
-
-      ExUnit.Callbacks.start_supervised!(
-        Supervisor.child_spec(
-          {AdaptorsSupervisor,
-           name: other_sup, strategy: Lightning.Adaptors.StrategyMock},
-          id: other_sup
-        )
-      )
-
+    test "seed_credential_schema writes into the isolated cache, not the global one",
+         %{sup: sup} do
       seed_credential_schema("http")
 
       source = AdaptorsSupervisor.source(sup)
 
-      assert Cachex.get(
-               AdaptorsSupervisor.cache_name(sup),
-               {:schema, "http", source}
-             ) !=
-               {:ok, nil}
+      assert {:ok, {:ok, _schema_body}} =
+               Cachex.get(
+                 AdaptorsSupervisor.cache_name(sup),
+                 {:schema, "http", source}
+               )
 
       assert Cachex.get(
-               AdaptorsSupervisor.cache_name(other_sup),
+               AdaptorsSupervisor.cache_name(Lightning.Adaptors),
                {:schema, "http", source}
              ) == {:ok, nil}
     end

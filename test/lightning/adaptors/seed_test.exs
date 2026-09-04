@@ -10,17 +10,7 @@ defmodule Lightning.Adaptors.SeedTest do
 
   setup :isolated_adaptors
 
-  setup %{tmp_dir: tmp_dir} do
-    sup = :"seed_test_#{System.unique_integer([:positive])}"
-
-    start_supervised!(
-      Supervisor.child_spec(
-        {AdaptorsSupervisor,
-         name: sup, strategy: Lightning.Adaptors.StrategyMock},
-        id: sup
-      )
-    )
-
+  setup %{sup: sup, tmp_dir: tmp_dir} do
     :ok =
       Phoenix.PubSub.subscribe(
         Lightning.PubSub,
@@ -28,7 +18,6 @@ defmodule Lightning.Adaptors.SeedTest do
       )
 
     {:ok,
-     sup: sup,
      source: AdaptorsSupervisor.source(sup),
      cache: AdaptorsSupervisor.cache_name(sup),
      tmp_dir: tmp_dir}

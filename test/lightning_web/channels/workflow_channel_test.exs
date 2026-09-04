@@ -7,7 +7,6 @@ defmodule LightningWeb.WorkflowChannelTest do
   import Lightning.ProjectsHelpers
   import Mox
   import ExUnit.CaptureLog
-  import Eventually
 
   setup :verify_on_exit!
   setup :isolated_adaptors
@@ -1455,10 +1454,8 @@ defmodule LightningWeb.WorkflowChannelTest do
     test "handles an adaptor catalogue that is not ready", %{
       socket: socket,
       workflow: workflow,
-      sup: sup
+      sup: _sup
     } do
-      await_scheduler(sup)
-
       # Global mode: the refresh runs in a Task owned by the isolated
       # instance's Scheduler.
       Lightning.Adaptors.Catalogue.delete_all_for_source(:npm)
@@ -1494,11 +1491,8 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
 
     test "does not block other channel traffic while the save is pending", %{
-      socket: socket,
-      sup: sup
+      socket: socket
     } do
-      await_scheduler(sup)
-
       # Slow enough that a synchronous handle_in would still be blocked when
       # the second push is asserted.
       Lightning.Adaptors.Catalogue.delete_all_for_source(:npm)
@@ -4919,12 +4913,5 @@ defmodule LightningWeb.WorkflowChannelTest do
         insert(:user),
         false
       )
-  end
-
-  # The instance's Scheduler only registers once HighlanderPG holds its
-  # advisory lock, which it acquires after `start_supervised!` returns.
-  defp await_scheduler(sup) do
-    {:global, gname} = Lightning.Adaptors.Supervisor.global_scheduler_name(sup)
-    assert_eventually(is_pid(:global.whereis_name(gname)), 2000)
   end
 end

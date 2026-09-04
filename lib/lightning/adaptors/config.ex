@@ -24,7 +24,7 @@ defmodule Lightning.Adaptors.Config do
   `Lightning.AdaptorTestHelpers.isolated_adaptors/1`.
   """
   @spec default_instance() :: atom()
-  def default_instance, do: Lightning.Adaptors
+  def default_instance, do: get(:default_instance, Lightning.Adaptors)
 
   @doc """
   The active strategy module. Defaults to `Lightning.Adaptors.NPM`.
