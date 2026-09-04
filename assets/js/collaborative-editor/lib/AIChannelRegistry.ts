@@ -519,6 +519,39 @@ export class AIChannelRegistry {
    * @param topic - Channel topic
    * @param messageId - Message ID to retry
    */
+  /**
+   * Report that a reply's workflow failed to reach the canvas.
+   *
+   * Sent to the server rather than to the browser's Sentry SDK, which is
+   * disabled. Without this the only trace is an alert and a console line,
+   * both of which die with the tab, so we cannot tell how often this
+   * happens. Carries no workflow content, only which step broke.
+   *
+   * Best effort: a report that does not arrive must never surface to the
+   * user on top of the failure they are already being told about.
+   */
+  reportApplyFailure(
+    topic: string,
+    details: {
+      messageId: string;
+      stage: 'parse' | 'validate_ids' | 'import' | 'save';
+      isNewWorkflow: boolean;
+    }
+  ): void {
+    const entry = this.channels.get(topic);
+    if (!entry) return;
+
+    entry.channel
+      .push('apply_failed', {
+        message_id: details.messageId,
+        stage: details.stage,
+        is_new_workflow: details.isNewWorkflow,
+      })
+      .receive('error', (response: unknown) => {
+        logger.warn('Could not report a failed apply', response);
+      });
+  }
+
   retryMessage(topic: string, messageId: string): void {
     const entry = this.channels.get(topic);
 

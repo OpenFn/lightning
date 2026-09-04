@@ -163,6 +163,17 @@ export const useAISessionCommands = () => {
     registry.retryMessage(topic, messageId);
   };
 
+  const reportApplyFailure = (details: {
+    messageId: string;
+    stage: 'parse' | 'validate_ids' | 'import' | 'save';
+    isNewWorkflow: boolean;
+  }) => {
+    // Best effort: no channel means no report, and never a second problem
+    // on top of the failure the user is already seeing.
+    if (!registry || !topic) return;
+    registry.reportApplyFailure(topic, details);
+  };
+
   const loadSessions = (offset = 0, limit = 20) => {
     if (!registry || !topic) {
       console.warn('Cannot load sessions: registry or topic not available');
@@ -190,6 +201,7 @@ export const useAISessionCommands = () => {
   return {
     sendMessage,
     retryMessage,
+    reportApplyFailure,
     loadSessions,
     updateContext,
     isConnected,

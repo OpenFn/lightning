@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/react';
 import type { RefObject } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -61,6 +60,7 @@ export function useAIWorkflowApplications({
   isSessionConnecting,
   onValidationError,
   onCanvasApplied,
+  onApplyFailure,
   workflowActions,
   monacoRef,
   jobs,
@@ -102,6 +102,15 @@ export function useAIWorkflowApplications({
   onValidationError?: (message: string) => void;
   /** Called after a successful import, so undo can record the new canvas */
   onCanvasApplied?: () => void;
+  /**
+   * Report that a reply's workflow never reached the canvas. Best effort and
+   * never surfaced to the user: they are already being told it failed.
+   */
+  onApplyFailure?: (details: {
+    messageId: string;
+    stage: 'parse' | 'validate_ids' | 'import' | 'save';
+    isNewWorkflow: boolean;
+  }) => void;
   workflowActions: {
     importWorkflow: (state: YAMLWorkflowState) => Promise<void>;
     startApplyingWorkflow: (messageId: string) => Promise<boolean>;
@@ -309,18 +318,12 @@ export function useAIWorkflowApplications({
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
 
-        // Nothing else records this: the alert below is the whole trace, and
-        // it dies with the tab. Reporting it is how we learn whether a failed
-        // apply is rare enough to leave the user re-prompting, or common
-        // enough to be worth a durable retry. Deliberately carries no YAML,
-        // job code or names, only where in the pipeline it broke.
-        Sentry.captureException(error, {
-          tags: {
-            feature: 'ai_assistant_apply',
-            apply_stage: stage,
-            is_new_workflow: String(isNewWorkflow),
-          },
-        });
+        // Reported through the channel rather than the browser's Sentry
+        // SDK, which is disabled (`assets/js/app.js`). Otherwise the alert
+        // below is the whole trace and it dies with the tab, so we cannot
+        // tell how often this happens. Carries no YAML, job code or names,
+        // only where in the pipeline it broke.
+        onApplyFailure?.({ messageId, stage, isNewWorkflow });
 
         const errorMessage =
           error instanceof Error ? error.message : 'Invalid workflow YAML';
@@ -354,12 +357,9 @@ export function useAIWorkflowApplications({
       }
 
       if (applySucceeded && !saveSucceeded) {
-        // The import landed and the save did not, so no exception was raised
-        // and the branch above never ran.
-        Sentry.captureMessage('AI assistant workflow applied but not saved', {
-          level: 'warning',
-          tags: { feature: 'ai_assistant_apply', apply_stage: 'save' },
-        });
+        // The import landed and the save did not, which returns false rather
+        // than raising, so the catch above never ran.
+        onApplyFailure?.({ messageId, stage: 'save', isNewWorkflow });
       }
 
       return applySucceeded && saveSucceeded ? 'applied' : 'failed';
@@ -378,6 +378,7 @@ export function useAIWorkflowApplications({
       isSessionConnecting,
       onValidationError,
       onCanvasApplied,
+      onApplyFailure,
       saveNewWorkflow,
       streamingApplyActions,
       monacoRef,

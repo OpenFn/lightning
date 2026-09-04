@@ -12,18 +12,11 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import * as Sentry from '@sentry/react';
-
 import { useAIWorkflowApplications } from '../../../js/collaborative-editor/hooks/useAIWorkflowApplications';
 import { notifications } from '../../../js/collaborative-editor/lib/notifications';
 import type { ConnectionState } from '../../../js/collaborative-editor/types/ai-assistant';
 
 import { createAIWorkflowApplicationsMocks } from './__helpers__/aiWorkflowApplicationsTestSetup';
-
-vi.mock('@sentry/react', () => ({
-  captureException: vi.fn(),
-  captureMessage: vi.fn(),
-}));
 
 // Mock modules. The mock implementations are dynamically imported from
 // the shared helper (rather than statically imported at the top of this
@@ -98,6 +91,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     });
   });
 
+  const mockOnApplyFailure = vi.fn();
+
   it('validates ID formats and rejects object IDs', async () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
@@ -120,6 +115,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
+        onApplyFailure: mockOnApplyFailure,
       })
     );
 
@@ -137,15 +133,11 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
 
     // Reported with the step that broke, and carrying no workflow content:
     // this is the only durable trace a failed apply leaves.
-    expect(Sentry.captureException).toHaveBeenCalledWith(
-      expect.any(Error),
-      expect.objectContaining({
-        tags: expect.objectContaining({
-          feature: 'ai_assistant_apply',
-          apply_stage: 'validate_ids',
-        }) as unknown,
-      })
-    );
+    expect(mockOnApplyFailure).toHaveBeenCalledWith({
+      messageId: 'msg-1',
+      stage: 'validate_ids',
+      isNewWorkflow: false,
+    });
   });
 
   it('handles YAML parsing errors gracefully', async () => {
@@ -170,6 +162,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
+        onApplyFailure: mockOnApplyFailure,
       })
     );
 

@@ -147,6 +147,7 @@ export function AIAssistantPanelWrapper({
     loadSessions,
     retryMessage: retryMessageViaChannel,
     updateContext: updateContextViaChannel,
+    reportApplyFailure,
   } = useAISessionCommands();
   const messages = useAIMessages();
   const isLoading = useAIIsLoading();
@@ -668,6 +669,7 @@ export function AIAssistantPanelWrapper({
     isSessionConnecting,
     onValidationError,
     onCanvasApplied: appliedCanvas.record,
+    onApplyFailure: reportApplyFailure,
     workflowActions: {
       importWorkflow,
       startApplyingWorkflow,
