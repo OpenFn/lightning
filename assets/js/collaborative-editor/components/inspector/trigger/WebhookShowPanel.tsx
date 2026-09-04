@@ -10,7 +10,7 @@ import { IMMEDIATELY, ON_COMPLETE } from './ResponseTypeSelect';
 import { TriggerTypeBadge } from './TriggerTypeBadge';
 import { useCanEditWorkflow } from './useCanEditWorkflow';
 import { useWebhookTrigger } from './useWebhookTrigger';
-import { WebhookUrlField } from './WebhookUrlField';
+import { WebhookUrlList } from './WebhookUrlList';
 
 /** Backend default webhook response status (success and error) when unset. */
 const DEFAULT_STATUS_CODE = 201;
@@ -54,8 +54,9 @@ export function WebhookShowPanel({
 }: WebhookShowPanelProps) {
   const { canEdit, tooltipMessage } = useCanEditWorkflow();
   const {
-    webhookUrl,
+    endpoints,
     copyText,
+    copiedUrl,
     copyToClipboard,
     triggerAuthMethods,
     loadingAuthMethods,
@@ -97,20 +98,21 @@ export function WebhookShowPanel({
           <TriggerTypeBadge />
         </div>
 
-        {/* Webhook URL */}
-        <WebhookUrlField
-          url={webhookUrl}
+        {/* Webhook URLs */}
+        <WebhookUrlList
+          endpoints={endpoints}
           copyText={copyText}
+          copiedUrl={copiedUrl}
           onCopy={url => void copyToClipboard(url)}
         />
 
         {/* Uniqueness is only knowable on the server, and it answers after the
-            wizard has already closed. The URL above falls back to the generated
-            one while the name is refused, so it is the endpoint that works. */}
+            wizard has already closed. The refused path is listed above, greyed
+            and not copyable, so it is clear which one failed. */}
         {pathError ? (
           <p className="-mt-4 block text-xs text-red-600">
-            The custom path was not saved: {pathError}. The URL above is this
-            trigger's generated one, which does work.
+            The custom path was not saved: {pathError}. The default URL is
+            unaffected.
           </p>
         ) : null}
 

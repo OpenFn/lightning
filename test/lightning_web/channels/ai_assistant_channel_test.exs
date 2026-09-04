@@ -207,6 +207,56 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
+  describe "apply_failed" do
+    setup %{socket: socket, job: job, user: user} do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _response, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      %{joined: socket}
+    end
+
+    test "accepts a report of a failed apply", %{joined: socket} do
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => Ecto.UUID.generate(),
+          "stage" => "validate_ids",
+          "is_new_workflow" => false
+        })
+
+      assert_reply ref, :ok
+    end
+
+    test "accepts a stage it does not recognise without crashing", %{
+      joined: socket
+    } do
+      # The stage comes from the browser, so an unknown one is coerced rather
+      # than passed through into a Sentry tag or allowed to take the channel
+      # down with it.
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => Ecto.UUID.generate(),
+          "stage" => "something-else",
+          "is_new_workflow" => true
+        })
+
+      assert_reply ref, :ok
+    end
+
+    test "accepts a report with fields missing", %{joined: socket} do
+      ref = push(socket, "apply_failed", %{})
+
+      assert_reply ref, :ok
+    end
+  end
+
   describe "message serialization" do
     test "serializes from_global marker with nil job_id", %{
       socket: socket,

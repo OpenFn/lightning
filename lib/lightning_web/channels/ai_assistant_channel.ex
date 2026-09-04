@@ -159,6 +159,35 @@ defmodule LightningWeb.AiAssistantChannel do
     end)
   end
 
+  @doc false
+  # A workflow the assistant produced failed to reach the canvas. Nothing else
+  # records that: the client shows an alert and logs to a console, both of
+  # which die with the tab, and the browser Sentry SDK is disabled. Without a
+  # report we cannot say whether a failed apply is rare enough to leave the
+  # user re-prompting or common enough to be worth a durable retry.
+  #
+  # Carries no workflow content, only which step broke.
+  @impl true
+  def handle_in("apply_failed", params, socket) do
+    with_authorized_frame(socket, :read, fn session ->
+      Lightning.Sentry.capture_message(
+        "AI assistant workflow apply failed",
+        level: :warning,
+        tags: %{
+          feature: "ai_assistant_apply",
+          apply_stage: apply_stage(params["stage"]),
+          is_new_workflow: to_string(params["is_new_workflow"] == true)
+        },
+        extra: %{
+          session_id: session.id,
+          message_id: params["message_id"]
+        }
+      )
+
+      {:reply, :ok, socket}
+    end)
+  end
+
   @impl true
   def handle_in("list_sessions", params, socket) do
     with_authorized_frame(socket, :read, fn _authorized_session ->
@@ -1383,6 +1412,15 @@ defmodule LightningWeb.AiAssistantChannel do
   # The row the decision was made against is handed to the closure: a handler
   # that writes must write from that row rather than from the join-time snapshot
   # in `socket.assigns`, which may have been superseded in between.
+  # The stage names a step in the client's apply pipeline. It arrives from the
+  # browser, so it is matched against what we know rather than passed through
+  # into a Sentry tag.
+  defp apply_stage(stage)
+       when stage in ["parse", "validate_ids", "import", "save"],
+       do: stage
+
+  defp apply_stage(_stage), do: "unknown"
+
   defp with_authorized_frame(socket, mode, fun) do
     case authorize_frame(socket, mode) do
       {:ok, session} ->
