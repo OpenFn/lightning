@@ -20,16 +20,26 @@ mix lightning.kickstart bin/e2e.d/scenarios/example.yaml \
 
 Re-running a scenario is **idempotent**: users are matched by email, credentials
 by owner+name, and projects/workflows/jobs/triggers/edges get deterministic ids
-derived from their names, so everything upserts instead of duplicating. Renames
-are the exception — a renamed record gets a new id and the old record is left
-behind (pin an explicit `id:` on anything you plan to rename).
+derived from their names, so everything upserts instead of duplicating.
+
+Two things a re-run does not do. It never removes records, and the provisioner
+treats the document as the complete set, so a project holding a workflow or
+collection the scenario doesn't declare fails with a message naming it - add it
+to the scenario, or reset the project. And renaming a workflow or collection
+fails for the same reason; pin an explicit `id:` on a workflow you plan to
+rename and its jobs, triggers and edges keep their ids too. Renaming a job,
+trigger or edge deletes the old row and creates a new one, which for a webhook
+trigger means a new `/i/<id>` URL.
 
 ## Manifest
 
 `--manifest PATH` (or `manifest: path` on the Elixir APIs) writes a JSON file
 with everything a script or test harness needs to drive the instance: user
 emails and API tokens, project/workflow/job/trigger ids, and webhook paths for
-webhook triggers (`/i/<trigger-id>`).
+webhook triggers (`/i/<trigger-id>`). It holds live API tokens, so it is written
+`0600`. For a user who already has an API token, `api_token: true` reuses that
+token rather than minting a new one, so pointing a scenario at a real user's
+email puts their existing token in the file.
 
 ## File format
 

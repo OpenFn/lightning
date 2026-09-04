@@ -171,8 +171,9 @@ resolve_scenario() {
     SNAPSHOT_FILE="/tmp/lightning_e2e_snapshot__${slug}-${content_hash}.sql"
   fi
 
-  echo "📋 Using scenario: $SCENARIO_FILE"
-  echo "📸 Snapshot: $SNAPSHOT_FILE"
+  # stderr, so `cmd_reset --quiet` and harnesses parsing stdout stay clean.
+  echo "📋 Using scenario: $SCENARIO_FILE" >&2
+  echo "📸 Snapshot: $SNAPSHOT_FILE" >&2
 }
 
 # Seed either from a scenario (if resolved) or the default demo data.
@@ -362,6 +363,10 @@ cmd_start() {
       shift
       ;;
     --scenario)
+      if [[ -z "${2:-}" ]]; then
+        echo "❌ --scenario needs a scenario name or path"
+        exit 1
+      fi
       SCENARIO="$2"
       shift 2
       ;;
@@ -420,9 +425,13 @@ cmd_start() {
     echo "Truncating existing data..."
     truncate_data >/dev/null 2>&1
 
-    # Seed data (scenario or demo)
+    # Seed data (scenario or demo). A scenario file's own errors are the most
+    # likely failure here, so let them through instead of discarding them.
     echo "Seeding data..."
-    seed_data >/dev/null 2>&1
+    if ! seed_data >/dev/null; then
+      echo "❌ Seeding failed. See the error above."
+      exit 1
+    fi
 
     # Create snapshot
     echo "Creating snapshot for fast resets..."
@@ -431,6 +440,15 @@ cmd_start() {
     echo "✅ Snapshot created successfully"
   else
     echo "✅ Snapshot found at: $SNAPSHOT_FILE"
+
+    # The snapshot has to be restored, not just found. There used to be one
+    # snapshot per database so whatever was already loaded matched it; with a
+    # snapshot per scenario, starting on scenario A after scenario B seeded the
+    # database would otherwise serve B's data under A's name.
+    echo "Restoring from snapshot..."
+    truncate_data >/dev/null 2>&1
+    restore_snapshot >/dev/null 2>&1
+    echo "✅ Snapshot restored"
   fi
 
   # Now start the server
@@ -512,6 +530,10 @@ cmd_reset() {
       shift
       ;;
     --scenario)
+      if [[ -z "${2:-}" ]]; then
+        echo "❌ --scenario needs a scenario name or path"
+        exit 1
+      fi
       SCENARIO="$2"
       shift 2
       ;;
@@ -571,6 +593,10 @@ cmd_setup() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
     --scenario)
+      if [[ -z "${2:-}" ]]; then
+        echo "❌ --scenario needs a scenario name or path"
+        exit 1
+      fi
       SCENARIO="$2"
       shift 2
       ;;

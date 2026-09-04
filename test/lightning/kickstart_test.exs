@@ -2,6 +2,7 @@ defmodule Lightning.KickstartTest do
   use Lightning.DataCase, async: false
 
   alias Lightning.Accounts
+  alias Lightning.Collections.Collection
   alias Lightning.Credentials.Credential
   alias Lightning.Kickstart
   alias Lightning.Projects.Project
@@ -234,9 +235,12 @@ defmodule Lightning.KickstartTest do
           scenario(),
           ["projects", Access.at(0), "members"],
           fn [owner_member, editor_member] ->
+            # The incoming owner is declared FIRST on purpose. Declared in the
+            # other order the handover succeeds even without reconcile_members/2
+            # sorting owners last, so this order is what pins the sort.
             [
-              Map.put(owner_member, "role", "editor"),
-              Map.put(editor_member, "role", "owner")
+              Map.put(editor_member, "role", "owner"),
+              Map.put(owner_member, "role", "editor")
             ]
           end
         )
@@ -607,6 +611,168 @@ defmodule Lightning.KickstartTest do
                    fn -> Kickstart.run(typo) end
     end
 
+    test "a pinned workflow id keeps its jobs and triggers across a rename" do
+      pinned = Ecto.UUID.generate()
+
+      pin = fn scenario, name ->
+        update_in(
+          scenario,
+          ["projects", Access.at(0), "workflows", Access.at(0)],
+          &Map.merge(&1, %{"id" => pinned, "name" => name})
+        )
+      end
+
+      [%{workflows: [before]}] =
+        Kickstart.run(pin.(scenario(), "wf-one")).projects
+
+      [%{workflows: [renamed]}] =
+        Kickstart.run(pin.(scenario(), "wf-two")).projects
+
+      assert renamed.id == before.id
+      assert Repo.get!(Workflow, renamed.id).name == "wf-two"
+
+      # The children must survive the rename: `Workflow` declares
+      # `has_many :jobs, on_replace: :delete`, so a re-derived job id silently
+      # deletes and recreates the job, and a re-derived trigger id changes the
+      # webhook's /i/<id> URL out from under whoever read the manifest.
+      assert Enum.map(renamed.jobs, & &1.id) == Enum.map(before.jobs, & &1.id)
+
+      assert Enum.map(renamed.triggers, & &1.id) ==
+               Enum.map(before.triggers, & &1.id)
+
+      for %{id: id} <- before.jobs, do: assert(Repo.get(Job, id))
+      for %{id: id} <- before.triggers, do: assert(Repo.get(Trigger, id))
+    end
+
+    test "a missing required key is reported without echoing interpolated values" do
+      System.put_env("KICKSTART_TEST_SECRET", "s3kr3t-do-not-log")
+      on_exit(fn -> System.delete_env("KICKSTART_TEST_SECRET") end)
+
+      # "name" omitted, so the entry is reported by fetch!/2 - which used to
+      # inspect the whole map, after ${env:...} had already been resolved.
+      nameless =
+        put_in(scenario(), ["credentials"], [
+          %{
+            "owner" => "owner@openfn.org",
+            "body" => %{"password" => "${env:KICKSTART_TEST_SECRET}"}
+          }
+        ])
+
+      error = assert_raise(RuntimeError, fn -> Kickstart.run(nameless) end)
+      message = Exception.message(error)
+
+      assert message =~ ~s(missing required key "name")
+      assert message =~ "body, owner"
+      refute message =~ "s3kr3t-do-not-log"
+    end
+
+    test "a credential whose validation fails with a non-changeset error still names it" do
+      oauth =
+        put_in(scenario(), ["credentials"], [
+          %{
+            "name" => "oauth-cred",
+            "owner" => "owner@openfn.org",
+            "schema" => "oauth",
+            "body" => %{"token" => "not-a-token"}
+          }
+        ])
+
+      # Credentials.create_credential/1 is specced {:error, any()} and an oauth
+      # body fails with a plain term, which used to reach raise_invalid/2 with
+      # no matching clause.
+      assert_raise RuntimeError,
+                   ~r/Failed to kickstart credential oauth-cred/,
+                   fn -> Kickstart.run(oauth) end
+    end
+
+    test "names a workflow the scenario doesn't declare, instead of an Ecto crash" do
+      [%{project: project}] = Kickstart.run(scenario()).projects
+      insert(:workflow, project: project, name: "made-in-the-editor")
+
+      # `Project` declares `has_many :workflows` with Ecto's default
+      # `on_replace: :raise`, so this used to abort with a bare RuntimeError
+      # about relation :workflows, naming neither the workflow nor the project.
+      error = assert_raise(RuntimeError, fn -> Kickstart.run(scenario()) end)
+      message = Exception.message(error)
+
+      assert message =~ "made-in-the-editor"
+      assert message =~ "kickstart-test"
+      refute message =~ "on_replace"
+    end
+
+    test "names a collection the scenario doesn't declare" do
+      with_collection =
+        put_in(scenario(), ["projects", Access.at(0), "collections"], [
+          %{"name" => "declared"}
+        ])
+
+      [%{project: project}] = Kickstart.run(with_collection).projects
+      insert(:collection, project: project, name: "made-in-the-ui")
+
+      error =
+        assert_raise(RuntimeError, fn -> Kickstart.run(with_collection) end)
+
+      assert Exception.message(error) =~ "made-in-the-ui"
+    end
+
+    test "a project's own collections survive a scenario that declares none" do
+      [%{project: project}] = Kickstart.run(scenario()).projects
+      collection = insert(:collection, project: project, name: "untouched")
+
+      # No `collections:` key, so the document omits it and cast_assoc is a
+      # no-op rather than a request to remove everything.
+      assert Kickstart.run(scenario())
+      assert Repo.get!(Collection, collection.id).name == "untouched"
+    end
+
+    test "names a deleted workflow whose id the scenario still derives" do
+      [%{workflows: [%{id: workflow_id}]}] = Kickstart.run(scenario()).projects
+
+      Repo.update!(
+        Ecto.Changeset.change(Repo.get!(Workflow, workflow_id),
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      # The provisioner's preload filters on deleted_at, so the derived id came
+      # back as an insert and collided on workflows_pkey.
+      error = assert_raise(RuntimeError, fn -> Kickstart.run(scenario()) end)
+      message = Exception.message(error)
+
+      assert message =~ "wf-one"
+      assert message =~ "deleted workflow"
+    end
+
+    test "refuses to declare an existing ordinary user a superuser" do
+      Kickstart.run(scenario())
+      assert Accounts.get_user_by_email("editor@openfn.org").role == :user
+
+      promote =
+        put_in(
+          scenario(),
+          ["users", Access.at(1), "superuser"],
+          true
+        )
+
+      # Lightning only sets the role at registration, so kickstart cannot
+      # promote. It used to hand back the ordinary user and report success.
+      error = assert_raise(RuntimeError, fn -> Kickstart.run(promote) end)
+      message = Exception.message(error)
+
+      assert message =~ "editor@openfn.org"
+      assert message =~ "cannot promote"
+      assert Accounts.get_user_by_email("editor@openfn.org").role == :user
+    end
+
+    test "reuses an existing superuser that the scenario also declares one" do
+      Kickstart.run(scenario())
+      owner = Accounts.get_user_by_email("owner@openfn.org")
+      assert owner.role == :superuser
+
+      assert Kickstart.run(scenario())
+      assert Accounts.get_user_by_email("owner@openfn.org").id == owner.id
+    end
+
     test "refuses to run outside dev and test" do
       Mox.stub(Lightning.MockConfig, :env, fn -> :prod end)
 
@@ -667,6 +833,10 @@ defmodule Lightning.KickstartTest do
       # cron triggers have no webhook path
       assert [%{"workflows" => [%{"triggers" => [%{"webhook_path" => nil}]}]}] =
                manifest["projects"]
+
+      # The manifest holds API tokens, so it must not be world-readable.
+      %File.Stat{mode: mode} = File.stat!(manifest_path)
+      assert Bitwise.band(mode, 0o777) == 0o600
     end
 
     test "the checked-in example scenario stays runnable" do

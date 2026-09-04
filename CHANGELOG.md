@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- The workflow title in the editor breadcrumbs is now clickable, returning to
+  the root workflow editor view: it closes the full IDE (equivalent to its close
+  button), closes any other open panel, deselects the current node, and drops
+  any run-viewing context, landing on the bare canvas.
+  [#4984](https://github.com/OpenFn/lightning/pull/4984)
 - Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
   scenario file (users, API tokens, credentials, projects, workflows) via
   `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and

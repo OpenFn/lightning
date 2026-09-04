@@ -32,10 +32,17 @@ defmodule Lightning.Kickstart do
     provisioner upserts them on subsequent runs.
   * Project members are added or have their role updated, never removed.
 
-  Renaming a record changes its derived id: the renamed record is created
-  fresh and the old one is left in place (the provisioner only deletes records
-  explicitly marked with `delete: true`). Pin an explicit `id` on anything you
-  intend to rename.
+  Renaming a record changes its derived id, and what that costs depends on the
+  record:
+
+  * Renaming a **job, trigger or edge** deletes the old row and creates a new
+    one - `Workflow` declares `has_many :jobs, on_replace: :delete`. A renamed
+    webhook trigger answers at a new `/i/<id>` URL.
+  * Renaming a **workflow or collection** fails, naming the record: the old one
+    is still on the project and the provisioner treats the document as the
+    complete set. Pin an explicit `id` on a workflow you intend to rename and
+    its jobs, triggers and edges keep their ids too.
+  * Renaming a **project** creates a new one and leaves the old one alone.
 
   The whole run happens in a single transaction — a failing scenario leaves
   the database untouched.
@@ -123,6 +130,7 @@ defmodule Lightning.Kickstart do
   alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserToken
+  alias Lightning.Collections.Collection
   alias Lightning.Config
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
@@ -133,6 +141,7 @@ defmodule Lightning.Kickstart do
   alias Lightning.Projects.Provisioner
   alias Lightning.Repo
   alias Lightning.Workflows.Spec
+  alias Lightning.Workflows.Workflow
 
   @default_password "welcome12345"
 
@@ -226,6 +235,8 @@ defmodule Lightning.Kickstart do
 
     if manifest_path = opts[:manifest] do
       File.write!(manifest_path, Jason.encode!(manifest(result), pretty: true))
+      # The manifest carries API tokens, so it must not be world-readable.
+      File.chmod!(manifest_path, 0o600)
     end
 
     result
@@ -379,7 +390,10 @@ defmodule Lightning.Kickstart do
       email = spec |> fetch!("email") |> String.downcase()
 
       user =
-        (Accounts.get_user_by_email(email) || register_user(spec, email))
+        case Accounts.get_user_by_email(email) do
+          nil -> register_user(spec, email)
+          existing -> reuse_user!(existing, spec, email)
+        end
         |> confirm_user()
 
       api_token =
@@ -388,6 +402,27 @@ defmodule Lightning.Kickstart do
 
       {email, %{user: user, api_token: api_token}}
     end)
+  end
+
+  # An existing account is reused as it stands. Nothing in Lightning casts a
+  # user's `role` after registration, so there is no way to promote one, and
+  # handing back an ordinary user while reporting success defeats the point of
+  # booting into a known state. Say so instead.
+  defp reuse_user!(%User{role: :superuser} = user, _spec, _email), do: user
+
+  defp reuse_user!(%User{} = user, spec, email) do
+    if boolean!(spec["superuser"], "superuser for user #{email}") do
+      raise """
+      Scenario declares #{email} as a superuser, but that account already
+      exists and is not one.
+
+      Lightning only sets the superuser role when an account is created, so
+      kickstart cannot promote it. Drop `superuser: true`, use an email that
+      isn't taken, or start from a database without this account.
+      """
+    end
+
+    user
   end
 
   defp register_user(spec, email) do
@@ -491,13 +526,12 @@ defmodule Lightning.Kickstart do
       |> Enum.map(&build_collection(&1, scope))
 
     document =
-      %{
-        "id" => id,
-        "name" => name,
-        "workflows" => Enum.map(workflow_infos, & &1.document),
-        "collections" => collections
-      }
+      %{"id" => id, "name" => name}
       |> maybe_put("description", spec["description"])
+      |> maybe_put_declared("workflows", Enum.map(workflow_infos, & &1.document))
+      |> maybe_put_declared("collections", collections)
+
+    guard_undeclared!(project, document, name)
 
     project = Repo.get!(Project, id)
 
@@ -642,7 +676,7 @@ defmodule Lightning.Kickstart do
 
   defp build_workflow_info(spec, project_scope, pc_ids) do
     name = fetch!(spec, "name")
-    scope = "#{project_scope}/workflow:#{name}"
+    scope = workflow_scope(spec, project_scope, name)
 
     document =
       case Spec.to_document(spec, credentials: pc_ids, id_fun: id_fun(scope)) do
@@ -661,6 +695,20 @@ defmodule Lightning.Kickstart do
         Enum.map(document["triggers"], &%{id: &1["id"], type: &1["type"]}),
       jobs: Enum.map(document["jobs"], &%{id: &1["id"], name: &1["name"]})
     }
+  end
+
+  # A workflow's jobs, triggers and edges derive their ids from this scope, so
+  # anchor it to the workflow's pinned `id` when it has one. Anchoring it to the
+  # name instead meant renaming a workflow re-derived every child id, and since
+  # `Workflow` declares `has_many :jobs, on_replace: :delete` the old jobs and
+  # triggers were silently deleted and recreated - taking each webhook
+  # trigger's `/i/<id>` URL with them. Pinning an `id`, which is what the docs
+  # tell you to do before a rename, now keeps the children too.
+  defp workflow_scope(spec, project_scope, name) do
+    case spec["id"] do
+      nil -> "#{project_scope}/workflow:#{name}"
+      id -> "#{project_scope}/workflow-id:#{id}"
+    end
   end
 
   # Records without an explicit `id` get one derived from their key in the
@@ -693,13 +741,28 @@ defmodule Lightning.Kickstart do
         value
 
       _ ->
-        raise "Scenario entry #{inspect(map)} is missing required key #{inspect(key)}"
+        raise "Scenario entry with keys [#{describe_keys(map)}] is missing " <>
+                "required key #{inspect(key)}"
     end
   end
 
   defp fetch!(other, key) do
-    raise "Expected a map with key #{inspect(key)}, got: #{inspect(other)}"
+    raise "Expected a map with key #{inspect(key)}, got a #{type_name(other)}"
   end
+
+  # Entries reach here after `interpolate_env/1`, so their values can hold
+  # resolved secrets. Name the entry by its keys and never by its values.
+  defp describe_keys(map) do
+    map |> Map.keys() |> Enum.sort() |> Enum.join(", ")
+  end
+
+  defp type_name(value) when is_list(value), do: "list"
+  defp type_name(value) when is_map(value), do: "map"
+  defp type_name(value) when is_binary(value), do: "string"
+  defp type_name(value) when is_number(value), do: "number"
+  defp type_name(value) when is_boolean(value), do: "boolean"
+  defp type_name(nil), do: "nil"
+  defp type_name(_value), do: "value"
 
   # Duplicate names would derive the same deterministic id and surface as
   # opaque provisioner errors (or silently last-win) — fail upfront instead.
@@ -733,6 +796,85 @@ defmodule Lightning.Kickstart do
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
+  # `cast_assoc` is a no-op for a key the document omits, so a scenario that
+  # declares no workflows (or no collections) leaves the project's own alone
+  # rather than looking like it wants them all gone.
+  defp maybe_put_declared(document, _key, []), do: document
+  defp maybe_put_declared(document, key, list), do: Map.put(document, key, list)
+
+  # For an association the document *does* carry, the provisioner treats it as
+  # authoritative: `Project` declares `has_many :workflows` and
+  # `has_many :collections` with Ecto's default `on_replace: :raise`, so a
+  # record that exists on the project but is absent from the document aborts
+  # the run with a bare Ecto error naming neither the record nor the scenario.
+  # Kickstart never removes anything, so name what is in the way instead.
+  defp guard_undeclared!(project, document, project_name) do
+    with {:ok, declared} <- Map.fetch(document, "workflows") do
+      declared_ids = MapSet.new(declared, & &1["id"])
+
+      workflows =
+        Repo.all(
+          from w in Workflow,
+            where: w.project_id == ^project.id,
+            select: {w.id, w.name, not is_nil(w.deleted_at)}
+        )
+
+      # Live and undeclared: the provisioner would try to replace it.
+      undeclared =
+        for {id, name, false} <- workflows,
+            not MapSet.member?(declared_ids, id),
+            do: name
+
+      # Soft-deleted and declared: invisible to the provisioner's preload, so
+      # the same id comes back as an insert and collides on the primary key.
+      resurrected =
+        for {id, name, true} <- workflows,
+            MapSet.member?(declared_ids, id),
+            do: name
+
+      raise_in_the_way!(project_name, "workflow", undeclared)
+
+      unless resurrected == [] do
+        raise """
+        Project #{project_name} has deleted workflow(s) whose ids the scenario \
+        still derives: #{Enum.join(resurrected, ", ")}.
+
+        A deleted workflow keeps its row, so kickstart cannot recreate it under \
+        the same id. Rename it in the scenario (which derives a new id), pin a \
+        different `id`, or purge the deleted workflow first.
+        """
+      end
+    end
+
+    with {:ok, declared} <- Map.fetch(document, "collections") do
+      declared_ids = MapSet.new(declared, & &1["id"])
+
+      undeclared =
+        Repo.all(
+          from c in Collection,
+            where: c.project_id == ^project.id,
+            select: {c.id, c.name}
+        )
+        |> Enum.reject(fn {id, _name} -> MapSet.member?(declared_ids, id) end)
+        |> Enum.map(&elem(&1, 1))
+
+      raise_in_the_way!(project_name, "collection", undeclared)
+    end
+  end
+
+  defp raise_in_the_way!(_project_name, _label, []), do: :ok
+
+  defp raise_in_the_way!(project_name, label, names) do
+    raise """
+    Project #{project_name} already has #{label}(s) the scenario does not \
+    declare: #{Enum.join(names, ", ")}.
+
+    Kickstart never removes records, but the provisioner treats the document as \
+    the complete set, so a re-run cannot leave them out. Either add them to the \
+    scenario, or start from a project holding only what the scenario describes.
+    """
+  end
+
   defp build_collection(spec, project_scope) do
     name = fetch!(spec, "name")
     allowed_keys!(spec, @collection_keys, "collection #{name}")
@@ -761,7 +903,7 @@ defmodule Lightning.Kickstart do
         list
 
       other ->
-        raise "Expected #{inspect(key)} to be a list, got: #{inspect(other)}"
+        raise "Expected #{inspect(key)} to be a list, got a #{type_name(other)}"
     end
   end
 
@@ -775,6 +917,14 @@ defmodule Lightning.Kickstart do
       end)
 
     raise "Failed to kickstart #{what}: #{inspect(errors)}"
+  end
+
+  # Not every context returns a changeset - `Credentials.create_credential/1`
+  # is specced `{:error, any()}` and an `oauth` credential fails validation
+  # with a plain term. Without this clause that surfaced as a
+  # FunctionClauseError instead of the scenario error.
+  defp raise_invalid(what, reason) do
+    raise "Failed to kickstart #{what}: #{inspect(reason)}"
   end
 
   # Real YAML booleans (`true`/`false`) decode to Elixir booleans, but YAML
