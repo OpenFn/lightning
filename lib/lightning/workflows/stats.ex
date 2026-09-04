@@ -98,6 +98,29 @@ defmodule Lightning.Workflows.Stats do
     end)
   end
 
+  @doc """
+  Drops every cached slice and window for a workflow, so the next read
+  recomputes.
+
+  Called when one of its work orders settles. Without it, the refresh the
+  health page just triggered would be answered out of the value cached before
+  the change — the page would make a request and draw the same numbers.
+  """
+  def invalidate(workflow_id) do
+    # Every key is `{slice, workflow_id, days_back}`, so element 2 is the
+    # workflow. The filter runs in ETS: only this workflow's keys cross back
+    # into Elixir, however many other workflows are cached alongside it.
+    query =
+      Cachex.Query.build(
+        where: {:==, {:element, 2, :key}, workflow_id},
+        output: :key
+      )
+
+    :workflow_stats
+    |> Cachex.stream!(query)
+    |> Enum.each(&Cachex.del(:workflow_stats, &1))
+  end
+
   # Cached whole, `window` included — that is what stops the window rolling per
   # request. `Cachex.fetch/4` dedupes concurrent misses on the same key.
   defp cached(key, fun) do

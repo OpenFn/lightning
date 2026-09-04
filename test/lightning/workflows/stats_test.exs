@@ -476,4 +476,36 @@ defmodule Lightning.Workflows.StatsTest do
       end
     end
   end
+
+  describe "invalidate/1" do
+    test "drops every slice and window the workflow has cached", ctx do
+      %{workflow: workflow, trigger: trigger} = ctx
+      insert_run(workflow, trigger, :failed)
+
+      # Two windows, so this fails the moment `invalidate/1` goes back to
+      # deleting a hardcoded list of keys.
+      Stats.outcomes(workflow)
+      Stats.outcomes(workflow, 7)
+      Stats.failure_signatures(workflow)
+
+      other = insert(:simple_workflow)
+      Stats.outcomes(other)
+
+      Stats.invalidate(workflow.id)
+
+      assert {:ok, nil} =
+               Cachex.get(:workflow_stats, {:outcomes, workflow.id, 30})
+
+      assert {:ok, nil} =
+               Cachex.get(:workflow_stats, {:outcomes, workflow.id, 7})
+
+      assert {:ok, nil} =
+               Cachex.get(:workflow_stats, {:failures, workflow.id, 30})
+
+      # Another workflow's numbers did not change, so its cache should not have
+      # been swept up in the scan.
+      assert {:ok, %{counts: _}} =
+               Cachex.get(:workflow_stats, {:outcomes, other.id, 30})
+    end
+  end
 end

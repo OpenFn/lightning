@@ -4,6 +4,7 @@ import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
 import { OutcomesDonut } from './charts/OutcomesDonut';
 import { TriageTable } from './charts/TriageTable';
 import type { FailureSignatures, Outcomes } from './types';
+import type { Query } from './useHealthQuery';
 import { healthBase, useHealthQuery } from './useHealthQuery';
 
 /**
@@ -50,9 +51,14 @@ export const HealthContent = ({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">{workflowName}</h1>
-        <Subtitle outcomes={outcomes.data} />
+      <div className="flex items-baseline justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            {workflowName}
+          </h1>
+          <Subtitle outcomes={outcomes.data} />
+        </div>
+        <UpdatedAt at={outcomes.fetchedAt} />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -134,6 +140,19 @@ const Panel = <T,>({
   if (!data) return <p className="text-sm text-gray-500">Loading…</p>;
 
   return children(data);
+};
+
+// The page runs no timer of its own: this clock moves only when the server says
+// one of the workflow's work orders settled. A time that has just jumped is the
+// page showing that updates are still reaching it.
+const UpdatedAt = ({ at }: { at: Query<Outcomes>['fetchedAt'] }) => {
+  if (!at) return null;
+
+  return (
+    <span className="shrink-0 text-xs text-gray-500">
+      Last Updated {at.toLocaleTimeString()}
+    </span>
+  );
 };
 
 const Subtitle = ({ outcomes }: { outcomes: Outcomes | null }) => {

@@ -1,6 +1,8 @@
 defmodule Lightning.WorkOrders.Events do
   @moduledoc false
 
+  alias Lightning.Workflows.Workflow
+
   defmodule WorkOrderCreated do
     @moduledoc false
     defstruct work_order: nil, project_id: nil
@@ -29,10 +31,10 @@ defmodule Lightning.WorkOrders.Events do
   end
 
   def work_order_updated(project_id, work_order) do
-    Lightning.broadcast(
-      topic(project_id),
-      %WorkOrderUpdated{work_order: work_order}
-    )
+    event = %WorkOrderUpdated{work_order: work_order}
+
+    Lightning.broadcast(topic(project_id), event)
+    Lightning.broadcast(workflow_topic(work_order.workflow_id), event)
   end
 
   def run_created(project_id, run) do
@@ -52,10 +54,19 @@ defmodule Lightning.WorkOrders.Events do
     topic() |> Lightning.subscribe()
   end
 
+  def subscribe(%Workflow{id: workflow_id}) do
+    Lightning.subscribe(workflow_topic(workflow_id))
+  end
+
   def subscribe(project_id) do
     Lightning.subscribe(topic(project_id))
   end
 
   defp topic, do: "all_events"
   defp topic(project_id), do: "project:#{project_id}"
+
+  # Not "workflow:<id>" — that string is already the collaborative editor's
+  # SharedDoc room name (`Lightning.Collaboration`), whose subscribers would
+  # start receiving these structs.
+  defp workflow_topic(workflow_id), do: "work_orders:workflow:#{workflow_id}"
 end

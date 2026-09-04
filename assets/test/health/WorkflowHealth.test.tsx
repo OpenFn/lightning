@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { HealthContent } from '#/health/WorkflowHealth';
@@ -87,6 +87,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -105,6 +106,64 @@ describe('WorkflowHealth', () => {
       '/api/projects/proj-1/workflows/wf-1/health/failures',
       expect.objectContaining({ credentials: 'same-origin' })
     );
+  });
+
+  test('refetches on `health:changed` without blanking the panels', async () => {
+    // Mutable so the second request can answer differently — the point of the
+    // refresh is that the numbers move.
+    const responses: Record<string, unknown> = { ...both };
+    const { fetchMock } = mount(responses);
+
+    expect(
+      await screen.findByText('Last 30 days · 1,287 work orders')
+    ).toBeVisible();
+
+    responses.outcomes = {
+      ...outcomes,
+      counts: { ...outcomes.counts, success: 2146 },
+    };
+
+    act(() => {
+      window.dispatchEvent(new Event('phx:health:changed'));
+    });
+
+    // Still the old numbers, and no "Loading…" — a refresh is the same question
+    // asked again, so the last answer holds until the new one lands.
+    expect(screen.getByText('Last 30 days · 1,287 work orders')).toBeVisible();
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
+
+    expect(
+      await screen.findByText('Last 30 days · 2,287 work orders')
+    ).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  test('moves the updated clock when the numbers arrive', async () => {
+    // Only `Date` is faked — faking timers wholesale would stall the promises
+    // the fetch stub resolves through.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-04T14:32:07Z'));
+
+    const responses: Record<string, unknown> = { ...both };
+    mount(responses);
+
+    const first = (await screen.findByText(/^Last Updated /)).textContent;
+
+    vi.setSystemTime(new Date('2026-09-04T14:32:37Z'));
+    responses.outcomes = {
+      ...outcomes,
+      counts: { ...outcomes.counts, success: 2146 },
+    };
+
+    act(() => {
+      window.dispatchEvent(new Event('phx:health:changed'));
+    });
+
+    await screen.findByText('Last 30 days · 2,287 work orders');
+
+    // Thirty seconds later on the page's own clock — the visible proof that a
+    // push landed and the numbers were re-read.
+    expect(screen.getByText(/^Last Updated /).textContent).not.toEqual(first);
   });
 
   test('renders the header, deriving the day count from the window', async () => {
