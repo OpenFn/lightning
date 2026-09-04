@@ -15,6 +15,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising
+  the first character of a string, which breaks names in many languages.
+  Lightning does not normalise anything today, but #4577 adds it on every name,
+  so the runtime moves first.
+
 ### Added
 
 - The AI assistant now shows what changed as a global reply edits your workflow.

@@ -14,6 +14,12 @@ defmodule Lightning.MixProject do
       aliases: aliases(),
       deps: deps(),
       dialyzer: [
+        # OTP 28 reworked how Dialyzer checks opaque types (OTP-19364).
+        # Elixir inlines `MapSet.new/0`, so every `Ecto.Multi` call downstream
+        # gets flagged, 62 of them here and none real. Ecto declined to change
+        # its internals (elixir-ecto/ecto#4708). Elixir 1.20 removes the
+        # opacity, so this flag goes then.
+        flags: [:no_opaque],
         plt_add_apps: [:mix],
         plt_local_path: "priv/plts/",
         plt_core_path: "priv/plts/core.plt"
@@ -133,7 +139,7 @@ defmodule Lightning.MixProject do
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.12.0", only: :test},
       {:mint, "~> 1.0"},
-      {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
+      {:mix_test_watch, "~> 1.3", only: [:test, :dev], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},

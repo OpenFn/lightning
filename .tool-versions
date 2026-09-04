@@ -1,4 +1,4 @@
-erlang 27.3.3
-elixir 1.18.3-otp-27
+erlang 28.5
+elixir 1.18.4-otp-28
 nodejs 24.18.1
 k6 0.49.0
