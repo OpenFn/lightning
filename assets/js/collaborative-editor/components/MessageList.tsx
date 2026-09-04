@@ -801,11 +801,12 @@ export function MessageList({
     !!streamingSegments?.length ||
     streamingSnapshots.length > 0;
 
-  useEffect(() => {
-    if (isStreamLive) {
-      userScrolledAwayRef.current = false;
-    }
-  }, [isStreamLive]);
+  // Deliberately not reset when a reply goes live. `isStreamLive` dips false
+  // for a frame early on: a thinking status is cleared at network arrival
+  // while its segment is still in the 15ms drain queue, so nothing reads as
+  // live. Re-arming on that rising edge yanked back a user who had scrolled
+  // away. Sending a message is the only thing that clears the flag, and that
+  // is handled where messages arrive.
 
   // Auto-scroll during streaming, but stop if user scrolls away.
   // Uses requestAnimationFrame to coalesce multiple updates per frame
@@ -904,6 +905,11 @@ export function MessageList({
       ? isGlobalAssistantActive
       : Boolean(
           message.from_global &&
+            // Only a successful reply was auto-applied. An errored or
+            // cancelled one can still carry code, and rendering its blocks
+            // would present changes that never reached the canvas as a
+            // record of what happened.
+            message.status === 'success' &&
             (message.code || snapshotsByMessageId[message.id]?.length)
         );
 
@@ -1088,6 +1094,9 @@ export function MessageList({
                       blocks render together at the end of the message */}
                     {!isStreaming(message) &&
                       message.from_global &&
+                      // As above: only a reply that applied gets to present
+                      // its changes as a record of what happened.
+                      message.status === 'success' &&
                       message.code &&
                       !segments && (
                         <WorkflowDiffBlocks

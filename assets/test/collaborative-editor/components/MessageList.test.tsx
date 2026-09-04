@@ -1386,6 +1386,33 @@ describe('MessageList', () => {
       expect(screen.getByTestId('apply-workflow-button')).toBeInTheDocument();
     });
 
+    it('renders no diff blocks for a global reply that errored', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Change it',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Something went wrong.',
+          code: workflowYaml('fn(state => state.data);'),
+          from_global: true,
+          status: 'error',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      // Only a successful reply was applied. Blocks here would present
+      // changes that never reached the canvas as a record of what happened.
+      expect(
+        screen.queryByTestId('workflow-diff-blocks')
+      ).not.toBeInTheDocument();
+    });
+
     it('shows no link when navigation is not wired up', () => {
       const messages = [
         createMockAIMessage({

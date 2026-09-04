@@ -216,9 +216,10 @@ const deriveStepChanges = (
       steps.push(update);
     } else if (added.includes(job)) {
       const { hunks, added: addedLines } = diffBodies('', job.body);
-      // Same guard as updates: a step whose body is empty produces no hunks
-      // and would render a block headed "no changes" with nothing in it.
-      if (addedLines === 0) continue;
+      // No empty-body guard here, unlike updates. An add is a lifecycle
+      // event: nothing else in the change set records that the step came
+      // into existence, so a step added empty would vanish from the record
+      // entirely rather than merely rendering a thin block.
       steps.push({
         type: 'add',
         name: job.name,
@@ -233,7 +234,6 @@ const deriveStepChanges = (
   }
   for (const job of removed) {
     const { hunks, removed: removedLines } = diffBodies(job.body, '');
-    if (removedLines === 0) continue;
     steps.push({
       type: 'remove',
       name: job.name,

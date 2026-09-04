@@ -28,8 +28,12 @@ export function useAppliedCanvas(): AppliedCanvas {
   const aiStore = useAIStore();
   const workflowStore = useWorkflowStoreContext();
 
+  // An empty workflow serializes to nothing, which is a real state to
+  // record, not an absent record. Keeping them distinct matters because
+  // `null` is what says "never recorded": conflating them made Redo always
+  // confirm after undoing a reply that created a workflow's first steps.
   const serialize = useCallback(
-    () => serializeCanvasForComparison(workflowStore.getSnapshot()) ?? null,
+    () => serializeCanvasForComparison(workflowStore.getSnapshot()) ?? '',
     [workflowStore]
   );
 
