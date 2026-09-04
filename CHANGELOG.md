@@ -28,6 +28,9 @@ and this project adheres to
 - `eligible_for_claim/0` now breaks ties with `id` after `priority` and
   `inserted_at`, so two runs inserted in the same microsecond no longer get
   claimed in a nondeterministic order.
+- Dataclip retention wiping now runs in batches instead of one unbatched update,
+  so projects with a large backlog of eligible dataclips no longer time out the
+  retention job.
 
 ## [2.18.2] - 2026-09-02
 
