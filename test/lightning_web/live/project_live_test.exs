@@ -4940,6 +4940,39 @@ defmodule LightningWeb.ProjectLiveTest do
       refute html =~ "Unable to load GitHub installations"
     end
 
+    test "shows reconnect guidance when GitHub rejects OAuth recovery", %{
+      conn: conn
+    } do
+      project = insert(:project)
+      {conn, user} = setup_project_user(conn, project, :admin)
+      set_valid_github_oauth_token!(user)
+
+      expect_get_user_installations(401, %{"message" => "Bad credentials"})
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert env.url == "https://github.com/login/oauth/access_token"
+
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: %{"error" => "bad_refresh_token"}
+         }}
+      end)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      html = render_async(view)
+
+      assert html =~ "Your GitHub authentication has expired or is invalid"
+      assert has_element?(view, "a[href='/profile']", "Settings")
+      assert has_element?(view, "button[disabled] + #select-installations-input")
+      refute html =~ "Refresh the page or contact support"
+    end
+
     test "shows error banner when GitHub API returns an error", %{
       conn: conn
     } do
