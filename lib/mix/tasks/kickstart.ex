@@ -9,9 +9,9 @@ defmodule Mix.Tasks.Lightning.Kickstart do
   API. Idempotent: re-running the same scenario converges instead of
   duplicating. See `Lightning.Kickstart` for the file format and semantics.
 
-  The database must already be migrated (`mix ecto.migrate`). For releases,
-  use `bin/lightning eval 'Lightning.Setup.kickstart("/path/state.yaml")'`
-  with `ALLOW_KICKSTART=true` instead.
+  The database must already be migrated (`mix ecto.migrate`). Kickstarting is
+  a dev/test facility — see `Lightning.Kickstart` — so this task is the only
+  way in; there is no release equivalent.
 
   ## Usage
 
@@ -56,6 +56,17 @@ defmodule Mix.Tasks.Lightning.Kickstart do
 
     Mix.Task.run("app.config")
 
-    Lightning.Setup.kickstart(path, opts)
+    # Start the repo, the vault (credential bodies are encrypted) and a stub
+    # PubSub — but not the endpoint: seeding often runs against an instance
+    # that is already serving traffic, and booting it here would fight the
+    # running server for the port.
+    {:ok, _pid} = Lightning.Setup.ensure_minimum_setup()
+
+    {:ok, result, _apps} =
+      Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
+        Lightning.Kickstart.run_file(path, opts)
+      end)
+
+    Mix.shell().info(Lightning.Kickstart.summary(result))
   end
 end

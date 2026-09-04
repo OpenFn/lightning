@@ -8,10 +8,14 @@ defmodule Lightning.Kickstart do
   `Lightning.Projects.Provisioner` — the same engine that backs the
   `/api/provision` HTTP API.
 
-  It serves local development (`bin/e2e --scenario`), external test harnesses
-  (boot Lightning into a known state, read the manifest, drive the public
-  APIs) and initial-state seeding of real deployments
-  (`bin/lightning eval 'Lightning.Setup.kickstart("/etc/lightning/state.yaml")'`).
+  It serves local development (`bin/e2e --scenario`) and external test
+  harnesses: boot Lightning into a known state, read the manifest, drive the
+  public APIs.
+
+  It is **not** a way to provision a live instance. There is no release entry
+  point, and `run/1` refuses to run outside `dev` and `test` — see "Safety".
+  Deploying state to a running instance is what `/api/provision` and the CLI
+  are for.
 
   ## Idempotency
 
@@ -38,9 +42,16 @@ defmodule Lightning.Kickstart do
 
   ## Safety
 
-  Kickstarting creates users (including superusers) and must be explicitly
-  enabled. It is enabled in `dev` and `test` config; releases opt in with the
-  `ALLOW_KICKSTART=true` environment variable. `run/1` raises otherwise.
+  Kickstarting creates users (including superusers), and applies a scenario as
+  the desired state: records it declares are overwritten from the file, so a
+  job body edited in the editor is reverted on the next run. That is fine for
+  a database that exists to be thrown away, and wrong for one anybody relies
+  on — so it is confined to `dev` and `test`, and `run/1` raises anywhere
+  else.
+
+  Mix tasks aren't shipped in a release, so `mix lightning.kickstart` cannot
+  be reached in production at all; the environment check exists to also stop
+  someone calling this module directly from a remote console.
 
   ## Scenario shape
 
@@ -112,6 +123,7 @@ defmodule Lightning.Kickstart do
   alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.Accounts.UserToken
+  alias Lightning.Config
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
   alias Lightning.Projects
@@ -316,18 +328,16 @@ defmodule Lightning.Kickstart do
   end
 
   defp ensure_enabled! do
-    enabled =
-      :lightning
-      |> Application.get_env(__MODULE__, [])
-      |> Keyword.get(:enabled, false)
+    env = Config.env()
 
-    unless enabled do
+    unless env in [:dev, :test] do
       raise """
-      Lightning.Kickstart is disabled.
+      Lightning.Kickstart is a dev/test facility, but the environment is #{inspect(env)}.
 
-      Kickstarting creates users (including superusers) and must be opted
-      into. Set ALLOW_KICKSTART=true in the environment (for a release), or
-      configure `config :lightning, Lightning.Kickstart, enabled: true`.
+      Kickstarting creates users (including superusers) and overwrites the
+      records a scenario declares, so it is not safe to point at an instance
+      anybody relies on. Use /api/provision or the CLI to deploy state to a
+      live instance.
       """
     end
   end

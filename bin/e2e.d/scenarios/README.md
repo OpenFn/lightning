@@ -16,9 +16,6 @@ bin/e2e reset --scenario example
 # directly, against whatever DATABASE_URL/MIX_ENV is configured
 mix lightning.kickstart bin/e2e.d/scenarios/example.yaml \
   --manifest /tmp/manifest.json
-
-# in a release (docker/k8s), gated behind ALLOW_KICKSTART=true
-bin/lightning eval 'Lightning.Setup.kickstart("/etc/lightning/state.yaml")'
 ```
 
 Re-running a scenario is **idempotent**: users are matched by email, credentials
@@ -162,5 +159,12 @@ Interpolation is explicit — only the `${env:...}` form is replaced. Plain
 
 ## Safety
 
-Kickstarting creates users (including superusers) and is disabled outside
-dev/test. Releases must opt in with `ALLOW_KICKSTART=true`.
+Kickstarting is a **dev/test facility** — `Lightning.Kickstart.run/1` raises in
+any other environment, and mix tasks aren't shipped in a release, so there is no
+way to reach it in production.
+
+That's deliberate: a scenario is the desired state for the records it declares,
+so re-applying one overwrites them — a job body edited in the editor is
+reverted, a disabled trigger is re-enabled. Fine for a database that exists to
+be thrown away; wrong for one anybody relies on. To deploy state to a live
+instance, use `/api/provision` or the CLI.

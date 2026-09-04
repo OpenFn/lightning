@@ -17,13 +17,13 @@ and this project adheres to
 
 ### Added
 
-- Declarative, idempotent instance kickstarting from a YAML/JSON scenario file
-  (users, API tokens, credentials, projects, workflows) via
-  `mix lightning.kickstart`, `Lightning.Setup.kickstart/2` for releases (gated
-  behind `ALLOW_KICKSTART=true`), and `bin/e2e --scenario`. Workflows in a
-  scenario are written in the existing workflow-spec format — the same YAML the
-  collaborative editor imports and exports, validated against the same JSON
-  Schema. [#4974](https://github.com/OpenFn/lightning/issues/4974)
+- Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
+  scenario file (users, API tokens, credentials, projects, workflows) via
+  `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and
+  external test harnesses. Workflows in a scenario are written in the existing
+  workflow-spec format — the same YAML the collaborative editor imports and
+  exports, validated against the same JSON Schema.
+  [#4974](https://github.com/OpenFn/lightning/issues/4974)
 
 ### Changed
 

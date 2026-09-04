@@ -186,6 +186,3 @@ config :git_hooks,
     #   ]
     # ]
   ]
-
-# Allow declarative kickstarting (Lightning.Kickstart) in local development.
-config :lightning, Lightning.Kickstart, enabled: true

@@ -607,14 +607,14 @@ defmodule Lightning.KickstartTest do
                    fn -> Kickstart.run(typo) end
     end
 
-    test "raises when kickstarting is disabled" do
-      original = Application.get_env(:lightning, Kickstart)
-      Application.put_env(:lightning, Kickstart, enabled: false)
-      on_exit(fn -> Application.put_env(:lightning, Kickstart, original) end)
+    test "refuses to run outside dev and test" do
+      Mox.stub(Lightning.MockConfig, :env, fn -> :prod end)
 
-      assert_raise RuntimeError, ~r/Lightning.Kickstart is disabled/, fn ->
+      assert_raise RuntimeError, ~r/dev\/test facility.*:prod/s, fn ->
         Kickstart.run(scenario())
       end
+
+      assert Repo.aggregate(Project, :count) == 0
     end
   end
 
