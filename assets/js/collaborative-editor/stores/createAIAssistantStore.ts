@@ -248,6 +248,9 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.messages = [];
       draft.streamingContent = null;
       draft.streamingStatus = null;
+      // Left behind, the auto-apply effect can re-run against the previous
+      // session's workflow and import it onto this canvas.
+      draft.streamingChanges = null;
       draft.streamingSegments = [];
       draft.streamingSnapshots = [];
       draft.snapshotsByMessageId = {};

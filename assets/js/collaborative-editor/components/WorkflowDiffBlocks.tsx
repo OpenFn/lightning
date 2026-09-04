@@ -471,10 +471,12 @@ export function WorkflowDiffBlocks({
   beforeYaml,
   afterYaml,
   onOpenStep,
+  canOpenStep,
 }: {
   beforeYaml: string | null;
   afterYaml: string;
   onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
 }) {
   // Memoized so YAML parsing/diffing runs once per message, not per render
   const changes = useMemo(
@@ -489,6 +491,7 @@ export function WorkflowDiffBlocks({
       steps={changes.steps}
       structure={changes.structure}
       onOpenStep={onOpenStep}
+      canOpenStep={canOpenStep}
     />
   );
 }
