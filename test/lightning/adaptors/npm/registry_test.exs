@@ -35,9 +35,13 @@ defmodule Lightning.Adaptors.NPM.RegistryTest do
   end
 
   describe "list_adaptors/0" do
-    test "returns an empty list when the search has no results", %{
+    test "returns an empty list when the org has no packages", %{
       bypass: bypass
     } do
+      Bypass.expect(bypass, "GET", "/-/user/openfn/package", fn conn ->
+        json_resp(conn, 200, %{})
+      end)
+
       Bypass.expect(bypass, "GET", "/-/v1/search", fn conn ->
         conn = Plug.Conn.fetch_query_params(conn)
         assert conn.query_params["text"] == "@openfn"
@@ -49,7 +53,16 @@ defmodule Lightning.Adaptors.NPM.RegistryTest do
       assert {:ok, []} = Registry.list_adaptors()
     end
 
-    test "returns name + latest_version for each search hit", %{bypass: bypass} do
+    test "returns name + latest_version for each authoritative name", %{
+      bypass: bypass
+    } do
+      Bypass.expect(bypass, "GET", "/-/user/openfn/package", fn conn ->
+        json_resp(conn, 200, %{
+          "@openfn/language-http" => "write",
+          "@openfn/language-salesforce" => "write"
+        })
+      end)
+
       Bypass.expect(bypass, "GET", "/-/v1/search", fn conn ->
         body = %{
           "objects" => [
@@ -81,6 +94,10 @@ defmodule Lightning.Adaptors.NPM.RegistryTest do
 
     test "filters out @openfn/* packages that aren't language-* adaptors and other scopes",
          %{bypass: bypass} do
+      Bypass.expect(bypass, "GET", "/-/user/openfn/package", fn conn ->
+        json_resp(conn, 200, %{"@openfn/language-http" => "write"})
+      end)
+
       Bypass.expect(bypass, "GET", "/-/v1/search", fn conn ->
         body = %{
           "objects" => [
@@ -122,6 +139,10 @@ defmodule Lightning.Adaptors.NPM.RegistryTest do
     end
 
     test "skips malformed entries that lack name or version", %{bypass: bypass} do
+      Bypass.expect(bypass, "GET", "/-/user/openfn/package", fn conn ->
+        json_resp(conn, 200, %{"@openfn/language-http" => "write"})
+      end)
+
       Bypass.expect(bypass, "GET", "/-/v1/search", fn conn ->
         body = %{
           "objects" => [
@@ -143,17 +164,138 @@ defmodule Lightning.Adaptors.NPM.RegistryTest do
                Registry.list_adaptors()
     end
 
-    test "surfaces 5xx responses as {:error, _}", %{bypass: bypass} do
+    test "degrades a failed search to a full packument fallback", %{
+      bypass: bypass
+    } do
+      Bypass.expect(bypass, "GET", "/-/user/openfn/package", fn conn ->
+        json_resp(conn, 200, %{
+          "@openfn/language-http" => "write",
+          "@openfn/language-salesforce" => "write"
+        })
+      end)
+
       Bypass.expect(bypass, "GET", "/-/v1/search", fn conn ->
+        Plug.Conn.resp(conn, 503, "")
+      end)
+
+      Bypass.expect(bypass, "GET", "/@openfn/language-http", fn conn ->
+        json_resp(conn, 200, %{"dist-tags" => %{"latest" => "2.1.0"}})
+      end)
+
+      Bypass.expect(bypass, "GET", "/@openfn/language-salesforce", fn conn ->
+        json_resp(conn, 200, %{"dist-tags" => %{"latest" => "4.6.3"}})
+      end)
+
+      {:ok, listing} = Registry.list_adaptors()
+
+      assert Enum.sort_by(listing, & &1.name) == [
+               %{name: "@openfn/language-http", latest_version: "2.1.0"},
+               %{name: "@openfn/language-salesforce", latest_version: "4.6.3"}
+             ]
+    end
+
+    test "surfaces 5xx responses from the org package listing as {:error, _}",
+         %{bypass: bypass} do
+      Bypass.expect(bypass, "GET", "/-/user/openfn/package", fn conn ->
         Plug.Conn.resp(conn, 503, "")
       end)
 
       assert {:error, {:http_status, 503}} = Registry.list_adaptors()
     end
 
+    test "propagates a packument-fallback failure for the whole call", %{
+      bypass: bypass
+    } do
+      Bypass.expect(bypass, "GET", "/-/user/openfn/package", fn conn ->
+        json_resp(conn, 200, %{"@openfn/language-eapts" => "write"})
+      end)
+
+      Bypass.expect(bypass, "GET", "/-/v1/search", fn conn ->
+        json_resp(conn, 200, %{"objects" => []})
+      end)
+
+      Bypass.expect(bypass, "GET", "/@openfn/language-eapts", fn conn ->
+        Plug.Conn.resp(conn, 502, "")
+      end)
+
+      assert {:error, {:http_status, 502}} = Registry.list_adaptors()
+    end
+
     test "surfaces network failure as {:error, _}", %{bypass: bypass} do
       Bypass.down(bypass)
       assert {:error, _reason} = Registry.list_adaptors()
+    end
+  end
+
+  describe "list_adaptors/0 registry completeness" do
+    test "includes authoritative names missing from search, via packument fallback",
+         %{bypass: bypass} do
+      authoritative_names = [
+        "@openfn/language-http",
+        "@openfn/language-salesforce",
+        "@openfn/language-dhis2",
+        "@openfn/language-fhir",
+        "@openfn/language-mysql",
+        "@openfn/language-postgresql",
+        "@openfn/language-common",
+        "@openfn/language-asana",
+        "@openfn/language-openmrs",
+        "@openfn/language-eapts"
+      ]
+
+      Bypass.expect_once(bypass, "GET", "/-/user/openfn/package", fn conn ->
+        body = Map.new(authoritative_names, &{&1, "write"})
+        json_resp(conn, 200, body)
+      end)
+
+      Bypass.expect_once(bypass, "GET", "/-/v1/search", fn conn ->
+        objects =
+          authoritative_names
+          |> List.delete("@openfn/language-eapts")
+          |> Enum.map(fn name ->
+            %{"package" => %{"name" => name, "version" => "1.0.0"}}
+          end)
+
+        json_resp(conn, 200, %{"objects" => objects})
+      end)
+
+      Bypass.expect_once(bypass, "GET", "/@openfn/language-eapts", fn conn ->
+        json_resp(conn, 200, %{
+          "name" => "@openfn/language-eapts",
+          "dist-tags" => %{"latest" => "3.2.1"}
+        })
+      end)
+
+      {:ok, listing} = Registry.list_adaptors()
+
+      assert Enum.sort_by(listing, & &1.name) ==
+               Enum.sort_by(
+                 [
+                   %{name: "@openfn/language-http", latest_version: "1.0.0"},
+                   %{
+                     name: "@openfn/language-salesforce",
+                     latest_version: "1.0.0"
+                   },
+                   %{name: "@openfn/language-dhis2", latest_version: "1.0.0"},
+                   %{name: "@openfn/language-fhir", latest_version: "1.0.0"},
+                   %{name: "@openfn/language-mysql", latest_version: "1.0.0"},
+                   %{
+                     name: "@openfn/language-postgresql",
+                     latest_version: "1.0.0"
+                   },
+                   %{name: "@openfn/language-common", latest_version: "1.0.0"},
+                   %{name: "@openfn/language-asana", latest_version: "1.0.0"},
+                   %{
+                     name: "@openfn/language-openmrs",
+                     latest_version: "1.0.0"
+                   },
+                   %{
+                     name: "@openfn/language-eapts",
+                     latest_version: "3.2.1"
+                   }
+                 ],
+                 & &1.name
+               )
     end
   end
 

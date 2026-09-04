@@ -10,9 +10,11 @@ defmodule Lightning.Adaptors.NPM.GitHub do
 
       <github_url>/OpenFn/adaptors/<github_ref>/packages/<name-suffix>/assets/<shape>.<ext>
 
-  where `<name-suffix>` strips the `@openfn/` scope from the package name.
-  Each `(name, shape)` is probed `png` first then `svg` — matching the
-  ext order used by `Lightning.Adaptors.Local`.
+  where `<name-suffix>` strips the `@openfn/` scope and, when present, the
+  `language-` prefix too — `@openfn/language-common` becomes `common`,
+  matching the monorepo's `packages/` directory names. Each `(name,
+  shape)` is probed `png` first then `svg` — matching the ext order used
+  by `Lightning.Adaptors.Local`.
 
   ## Configuration
 

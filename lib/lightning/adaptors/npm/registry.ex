@@ -2,16 +2,33 @@ defmodule Lightning.Adaptors.NPM.Registry do
   @moduledoc """
   NPM registry HTTP client for `Lightning.Adaptors.NPM`.
 
-  Talks to `registry.npmjs.org`. Responsible for the `search` endpoint
-  used by `c:Lightning.Adaptors.Strategy.list_adaptors/0` and the
-  `packument` endpoint used by `fetch_adaptor/1` and `fetch_icon/2`.
+  Talks to `registry.npmjs.org`. Responsible for the `list_adaptors/0`
+  scope listing, and the `packument` endpoint used by `fetch_adaptor/1`
+  and `fetch_icon/2`.
+
+  `list_adaptors/0` deliberately merges two endpoints rather than calling
+  one:
+
+    * `/-/user/openfn/package` is the authoritative name list for the
+      `@openfn` org — the actual trust boundary, since it can't return a
+      name Lightning doesn't already trust. It has no version data.
+    * `/-/v1/search` is used only as a cheap version lookup for whichever
+      of those names it happens to cover. npm's relevance ranking demotes
+      or excludes deprecated packages from search results even on an
+      exact-name query, so search alone silently drops names — it is not
+      a safe source of *scope membership*, only of version data for names
+      already known to be in scope.
+
+  Any authoritative name missing from the search results falls back to a
+  per-name `get_packument/1` + `latest_version/1` call, bounded to the
+  handful of names search doesn't cover. Do not "simplify" this back to a
+  single search call or a pagination bump — search's result count is
+  capped by npm's relevance ranking regardless of `size`/`from`, and
+  deprecated packages are excluded from ranking entirely, so no amount of
+  paging recovers them.
 
   Base URL via `Lightning.Adaptors.Config.strategy_opts(Lightning.Adaptors.NPM)[:registry_url]`,
   default `https://registry.npmjs.org`.
-
-  Search results are filtered down to `@openfn/language-*` packages;
-  non-language packages in the `@openfn/` scope (e.g. `@openfn/cli`) are
-  rejected.
   """
 
   alias Lightning.Adaptors.Config
@@ -25,30 +42,20 @@ defmodule Lightning.Adaptors.NPM.Registry do
   @language_prefix "@openfn/language-"
 
   @doc """
-  Single `/-/v1/search` call returning `name + latest_version` for every
-  `@openfn/language-*` package.
+  Full `@openfn/language-*` scope listing, each with a real `latest_version`.
+
+  Merges `/-/user/openfn/package` (authoritative name list) with
+  `/-/v1/search` (cheap version lookup), falling back to a per-name
+  packument fetch for any name search doesn't cover. See the moduledoc for
+  why this isn't a single call.
   """
   @spec list_adaptors() ::
           {:ok, [%{name: String.t(), latest_version: String.t()}]}
           | {:error, term()}
   def list_adaptors do
-    case Tesla.get(json_client(), "/-/v1/search",
-           query: [text: "@" <> @search_scope, size: @search_size]
-         ) do
-      {:ok, %Tesla.Env{status: 200, body: body}} when is_map(body) ->
-        listing =
-          body
-          |> Map.get("objects", [])
-          |> Enum.map(&extract_listing_entry/1)
-          |> Enum.reject(&is_nil/1)
-
-        {:ok, listing}
-
-      {:ok, %Tesla.Env{status: status}} ->
-        {:error, {:http_status, status}}
-
-      {:error, reason} ->
-        {:error, reason}
+    with {:ok, names} <- scoped_package_names(),
+         {:ok, version_by_name} <- search_versions() do
+      resolve_versions(names, version_by_name)
     end
   end
 
@@ -134,6 +141,71 @@ defmodule Lightning.Adaptors.NPM.Registry do
   def repository_url(%{"url" => url}) when is_binary(url), do: url
   def repository_url(url) when is_binary(url), do: url
   def repository_url(_), do: nil
+
+  defp scoped_package_names do
+    case Tesla.get(json_client(), "/-/user/openfn/package") do
+      {:ok, %Tesla.Env{status: 200, body: body}} when is_map(body) ->
+        names =
+          body
+          |> Map.keys()
+          |> Enum.filter(&String.starts_with?(&1, @language_prefix))
+
+        {:ok, names}
+
+      {:ok, %Tesla.Env{status: status}} ->
+        {:error, {:http_status, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp search_versions do
+    case Tesla.get(json_client(), "/-/v1/search",
+           query: [text: "@" <> @search_scope, size: @search_size]
+         ) do
+      {:ok, %Tesla.Env{status: 200, body: body}} when is_map(body) ->
+        version_by_name =
+          body
+          |> Map.get("objects", [])
+          |> Enum.map(&extract_listing_entry/1)
+          |> Enum.reject(&is_nil/1)
+          |> Map.new(&{&1.name, &1.latest_version})
+
+        {:ok, version_by_name}
+
+      _error_or_non_200 ->
+        {:ok, %{}}
+    end
+  end
+
+  defp resolve_versions(names, version_by_name) do
+    Enum.reduce_while(names, {:ok, []}, fn name, {:ok, acc} ->
+      case Map.fetch(version_by_name, name) do
+        {:ok, version} ->
+          {:cont, {:ok, [%{name: name, latest_version: version} | acc]}}
+
+        :error ->
+          case fetch_latest_version(name) do
+            {:ok, version} ->
+              {:cont, {:ok, [%{name: name, latest_version: version} | acc]}}
+
+            {:error, reason} ->
+              {:halt, {:error, reason}}
+          end
+      end
+    end)
+    |> case do
+      {:ok, entries} -> {:ok, Enum.reverse(entries)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp fetch_latest_version(name) do
+    with {:ok, packument} <- get_packument(name) do
+      latest_version(packument)
+    end
+  end
 
   defp extract_listing_entry(%{
          "package" => %{"name" => name, "version" => version}

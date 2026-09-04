@@ -1005,7 +1005,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
         view |> element("#new-credential-option-menu-item") |> render_click()
 
-        view |> select_credential_type("http")
+        view |> select_credential_type("@openfn/language-http")
         view |> click_continue()
 
         assert view
@@ -1053,7 +1053,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       view |> element("#new-credential-option-menu-item") |> render_click()
-      view |> select_credential_type("http")
+      view |> select_credential_type("@openfn/language-http")
       view |> click_continue()
 
       # Only the active sandbox is pre-selected. Ancestors are attached at
@@ -1103,7 +1103,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       view |> element("#new-credential-option-menu-item") |> render_click()
 
-      view |> select_credential_type("http")
+      view |> select_credential_type("@openfn/language-http")
       view |> click_continue()
 
       assert view

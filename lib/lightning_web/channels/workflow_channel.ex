@@ -598,7 +598,7 @@ defmodule LightningWeb.WorkflowChannel do
   # Catch-all for any event this channel doesn't recognise (e.g. a stale
   # client tab still sending an event removed in a later deploy). Replies
   # with an error instead of raising FunctionClauseError, which would kill
-  # the channel process and disconnect every collaborator in the room.
+  # this client's channel process and drop its connection.
   @impl true
   def handle_in(event, _payload, socket) do
     warn_unhandled_message("handle_in", event)
@@ -619,7 +619,8 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_info({:save_workflow_reply, ref, {:ok, workflow}}, socket) do
-    # Broadcast the new lock_version to all users in the channel so they can
+    # broadcast_from! skips the saving client, which already gets its
+    # lock_version through the reply below; everyone else needs this to
     # update their latestSnapshotLockVersion in SessionContextStore.
     broadcast_from!(socket, "workflow_saved", %{
       latest_snapshot_lock_version: workflow.lock_version,
@@ -906,7 +907,7 @@ defmodule LightningWeb.WorkflowChannel do
   # Catch-all for any internal message this channel doesn't recognise (e.g. a
   # PubSub broadcast for an event type removed in a later deploy). Logs and
   # keeps the channel alive instead of raising FunctionClauseError, which
-  # would kill the process and disconnect every collaborator in the room.
+  # would kill this client's channel process and drop its connection.
   @impl true
   def handle_info(message, socket) do
     warn_unhandled_message("handle_info", unhandled_message_type(message))

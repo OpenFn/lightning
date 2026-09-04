@@ -5,6 +5,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Adaptors
+  alias Lightning.Adaptors.PackageName
   alias Lightning.Credentials
   alias Lightning.OauthClients
   alias LightningWeb.AdaptorIconURL
@@ -1181,7 +1182,7 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
 
     adaptor_options
     |> Enum.reject(fn {_, name, _, _} ->
-      name in ["googlesheets", "gmail", "collections"]
+      name in ["@openfn/language-googlesheets", "@openfn/language-gmail"]
     end)
     |> Enum.concat([
       {"Raw JSON", "raw",
@@ -1194,7 +1195,8 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   end
 
   defp adaptor_type_option(%Adaptors.Package{name: name} = pkg) do
-    {name, name, AdaptorIconURL.build(name, pkg, :square), nil}
+    {PackageName.short_name(name), name,
+     AdaptorIconURL.build(name, pkg, :square), nil}
   end
 
   defp list_users do
@@ -1350,14 +1352,20 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
     assign(socket, oauth_clients: oauth_clients, type_options: type_options)
   end
 
-  defp format_schema_name("raw"), do: "Raw JSON"
-  defp format_schema_name("oauth"), do: "OAuth"
-  defp format_schema_name("http"), do: "HTTP"
-
   defp format_schema_name(schema) when is_binary(schema) do
-    schema
-    |> String.split("_")
-    |> Enum.map_join(" ", &String.capitalize/1)
+    case PackageName.short_name(schema) do
+      "raw" ->
+        "Raw JSON"
+
+      "oauth" ->
+        "OAuth"
+
+      "http" ->
+        "HTTP"
+
+      short ->
+        short |> String.split("_") |> Enum.map_join(" ", &String.capitalize/1)
+    end
   end
 
   defp get_credential_description("raw", _type),

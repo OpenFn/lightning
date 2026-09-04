@@ -1,7 +1,7 @@
 defmodule Lightning.Adaptors.SchedulerTest do
-  # async: false because:
-  # 1. DataCase uses shared sandbox mode (all processes access DB without allow/3)
-  # 2. set_mox_global is safe only when tests run serially
+  # async: false — DataCase's shared sandbox mode means every process can
+  # reach the DB without an allow/3 call, and set_mox_global is only safe
+  # when tests run serially.
   use Lightning.DataCase, async: false
 
   import Eventually

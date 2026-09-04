@@ -53,16 +53,16 @@ defmodule Lightning.Adaptors.Catalogue do
                      @openfn/language-collections)
 
   @doc """
-  Picker-facing lean projection for a source. Avoids the heavy JSONB
-  columns (`schema_data`, `dependencies`, `peer_dependencies`).
+  Picker-facing lean projection for a source. Avoids the heavy
+  `schema_data` JSONB column and skips the version join entirely.
 
-  Excludes the packages listed in `@excluded_names`.
+  Excludes the packages listed in `@excluded_names` and any deprecated
+  adaptor.
   """
   @spec list_package_metas(source()) :: [package_meta()]
   def list_package_metas(source) do
     Repo.all(
-      from a in Adaptor,
-        where: a.source == ^source and a.name not in ^@excluded_names,
+      from a in active_adaptors(source),
         select: %{
           name: a.name,
           latest_version: a.latest_version,
@@ -78,8 +78,9 @@ defmodule Lightning.Adaptors.Catalogue do
   end
 
   @doc """
-  Full structs for a source. Rare — used by debug tools and admin
-  views. Picker traffic goes through `list_package_metas/1`.
+  Full structs for a source. Heavier than `list_package_metas/1`, which is
+  what picker traffic uses — this one is for callers that need the whole
+  row, like the Scheduler's diffing and the dump/seed tooling.
   """
   @spec list_adaptors(source()) :: [Adaptor.t()]
   def list_adaptors(source) do
@@ -276,14 +277,14 @@ defmodule Lightning.Adaptors.Catalogue do
   Full catalogue projection for a source: every adaptor's `name`,
   `latest_version`, `repository`, icon fields, and full version list.
 
-  Excludes the packages listed in `@excluded_names`.
+  Excludes the packages listed in `@excluded_names`, any deprecated
+  adaptor, and — for an otherwise-listed adaptor — any deprecated version.
   """
   @spec catalogue(source()) :: [catalogue_entry()]
   def catalogue(source) do
     adaptors =
       Repo.all(
-        from a in Adaptor,
-          where: a.source == ^source and a.name not in ^@excluded_names,
+        from a in active_adaptors(source),
           order_by: [asc: a.name],
           select: %{
             name: a.name,
@@ -299,9 +300,9 @@ defmodule Lightning.Adaptors.Catalogue do
     versions_by_name =
       Repo.all(
         from v in AdaptorVersion,
-          join: a in Adaptor,
+          join: a in subquery(active_adaptors(source)),
           on: v.adaptor_id == a.id,
-          where: a.source == ^source and a.name not in ^@excluded_names,
+          where: v.deprecated == false,
           order_by: [asc: v.inserted_at, asc: v.version],
           select: {a.name, v.version}
       )
@@ -335,6 +336,16 @@ defmodule Lightning.Adaptors.Catalogue do
              :utc_datetime_usec
            ), count(v.id)}
     )
+  end
+
+  # The adaptor-level predicate shared by every listing query: never a
+  # hard-excluded name, never a deprecated adaptor. Resolve paths
+  # (`get_adaptor/2`, `list_versions/2`) deliberately skip this.
+  defp active_adaptors(source) do
+    from a in Adaptor,
+      where:
+        a.source == ^source and a.name not in ^@excluded_names and
+          a.deprecated == false
   end
 
   defp upsert_adaptor_row(repo, nil, attrs, _now) do

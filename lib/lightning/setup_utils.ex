@@ -110,7 +110,7 @@ defmodule Lightning.SetupUtils do
           },
           name: "DHIS2 play",
           user_id: user_id,
-          schema: "dhis2"
+          schema: "@openfn/language-dhis2"
         },
         user
       )

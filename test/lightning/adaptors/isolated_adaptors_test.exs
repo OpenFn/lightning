@@ -52,16 +52,17 @@ defmodule Lightning.Adaptors.IsolatedAdaptorsTest do
       seed_credential_schema("http")
 
       source = AdaptorsSupervisor.source(sup)
+      full_name = "@openfn/language-http"
 
       assert {:ok, {:ok, _schema_body}} =
                Cachex.get(
                  AdaptorsSupervisor.cache_name(sup),
-                 {:schema, "http", source}
+                 {:schema, full_name, source}
                )
 
       assert Cachex.get(
                AdaptorsSupervisor.cache_name(Lightning.Adaptors),
-               {:schema, "http", source}
+               {:schema, full_name, source}
              ) == {:ok, nil}
     end
   end

@@ -11,6 +11,8 @@ defmodule LightningWeb.CredentialLiveTest do
   import Swoosh.TestAssertions
 
   alias Lightning.Accounts.User
+  alias Lightning.Adaptors.Config
+  alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
 
@@ -837,7 +839,7 @@ defmodule LightningWeb.CredentialLiveTest do
       open_create_credential_modal(index_live)
 
       # Pick a type
-      index_live |> select_credential_type("dhis2")
+      index_live |> select_credential_type("@openfn/language-dhis2")
       index_live |> click_continue()
 
       refute index_live |> has_element?("#credential-type-picker")
@@ -902,7 +904,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       open_create_credential_modal(index_live)
 
-      index_live |> select_credential_type("postgresql")
+      index_live |> select_credential_type("@openfn/language-postgresql")
       index_live |> click_continue()
 
       refute index_live |> has_element?("#credential-type-picker")
@@ -998,7 +1000,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       open_create_credential_modal(index_live)
 
-      index_live |> select_credential_type("http")
+      index_live |> select_credential_type("@openfn/language-http")
       index_live |> click_continue()
 
       assert index_live
@@ -1065,7 +1067,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       open_create_credential_modal(view)
 
-      select_credential_type(view, "godata")
+      select_credential_type(view, "@openfn/language-godata")
       click_continue(view)
 
       assert fill_credential(view, %{body: %{email: ""}}) =~ "can&#39;t be blank"
@@ -1119,7 +1121,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
       open_create_credential_modal(view)
-      select_credential_type(view, "unknownish")
+      select_credential_type(view, "@openfn/language-unknownish")
       click_continue(view)
 
       refute view |> has_element?("#credential-type-picker")
@@ -1137,7 +1139,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
       open_create_credential_modal(view)
-      select_credential_type(view, "dhis2")
+      select_credential_type(view, "@openfn/language-dhis2")
       click_continue(view)
 
       html = view |> element("#credential-form-new") |> render()
@@ -2761,17 +2763,47 @@ defmodule LightningWeb.CredentialLiveTest do
       html_tree = Floki.parse_document!(html)
 
       for adaptor <- ["postgresql", "dhis2", "http"] do
+        full_name = "@openfn/language-#{adaptor}"
+
         adaptor_label =
           Floki.find(
             html_tree,
-            "label[for='credential-schema-picker_selected_#{adaptor}']"
+            "label[for='credential-schema-picker_selected_#{full_name}']"
           )
 
         adaptor_icon = Floki.find(adaptor_label, "object")
         assert length(adaptor_icon) > 0
         img_src = adaptor_icon |> Floki.attribute("data") |> List.first()
-        assert img_src =~ "/adaptors/icons/#{adaptor}/square-"
+
+        assert img_src =~
+                 "/adaptors/icons/#{URI.encode(full_name, &URI.char_unreserved?/1)}/square-"
       end
+    end
+
+    test "omits a deprecated adaptor from the type options", %{conn: conn} do
+      insert(:adaptor, name: "deprecated-adaptor", deprecated: true)
+
+      # `seed_all_credential_schemas/0` primes the packages cache by hand
+      # (bypassing `Catalogue.list_package_metas/1`), so drop it here to
+      # force a fresh DB-backed read that can see the row above.
+      cache = AdaptorsSupervisor.cache_name(Config.default_instance())
+      source = AdaptorsSupervisor.source(Config.default_instance())
+      Cachex.del(cache, {:packages, source})
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      html = open_create_credential_modal(view)
+      html_tree = Floki.parse_document!(html)
+
+      assert Floki.find(
+               html_tree,
+               "label[for='credential-schema-picker_selected_http']"
+             ) != []
+
+      assert Floki.find(
+               html_tree,
+               "label[for='credential-schema-picker_selected_deprecated-adaptor']"
+             ) == []
     end
   end
 
@@ -3792,7 +3824,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
       open_create_credential_modal(view)
-      select_credential_type(view, "dhis2")
+      select_credential_type(view, "@openfn/language-dhis2")
       click_continue(view)
 
       # Fill in values for the main environment

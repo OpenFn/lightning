@@ -317,6 +317,82 @@ defmodule Lightning.Adaptors.CatalogueTest do
       assert [%{name: "@openfn/language-http"}] =
                Catalogue.list_package_metas(:npm)
     end
+
+    test "omits a deprecated adaptor" do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(name: "@openfn/language-deprecated", deprecated: true)
+        )
+
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      assert [%{name: "@openfn/language-http"}] =
+               Catalogue.list_package_metas(:npm)
+    end
+  end
+
+  describe "catalogue/1 — deprecated filtering" do
+    test "omits a deprecated adaptor entirely" do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(name: "@openfn/language-deprecated", deprecated: true)
+        )
+
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      assert [%{name: "@openfn/language-http"}] = Catalogue.catalogue(:npm)
+    end
+
+    test "omits only the deprecated version from a still-listed adaptor" do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            versions: [
+              version_record("1.0.0", deprecated: true),
+              version_record("1.1.0"),
+              version_record("1.2.0")
+            ]
+          )
+        )
+
+      assert [%{name: "@openfn/language-http", versions: versions}] =
+               Catalogue.catalogue(:npm)
+
+      assert Enum.sort(versions) == ["1.1.0", "1.2.0"]
+    end
+  end
+
+  describe "get_adaptor/2 and list_versions/2 — resolve paths stay unfiltered" do
+    test "still return a fully-deprecated adaptor and its versions" do
+      {:ok, adaptor} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(name: "@openfn/language-deprecated", deprecated: true)
+        )
+
+      assert %Adaptor{name: "@openfn/language-deprecated"} =
+               Catalogue.get_adaptor("@openfn/language-deprecated", :npm)
+
+      assert [%AdaptorVersion{version: "1.0.0"}] =
+               Catalogue.list_versions("@openfn/language-deprecated", :npm)
+
+      refute adaptor.id == nil
+    end
+
+    test "still return a deprecated version of an otherwise-normal adaptor" do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            versions: [
+              version_record("1.0.0", deprecated: true),
+              version_record("1.1.0")
+            ]
+          )
+        )
+
+      assert Catalogue.list_versions("@openfn/language-http", :npm)
+             |> Enum.map(& &1.version)
+             |> Enum.sort() == ["1.0.0", "1.1.0"]
+    end
   end
 
   describe "list_adaptors/1" do
@@ -470,7 +546,7 @@ defmodule Lightning.Adaptors.CatalogueTest do
     |> Map.merge(overrides)
   end
 
-  defp version_record(version) do
+  defp version_record(version, overrides \\ []) do
     %{
       version: version,
       integrity: "sha512-#{version}",
@@ -481,6 +557,7 @@ defmodule Lightning.Adaptors.CatalogueTest do
       published_at: nil,
       deprecated: false
     }
+    |> Map.merge(Map.new(overrides))
   end
 
   defp seed_adaptor(opts) do

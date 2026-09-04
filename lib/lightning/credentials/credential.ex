@@ -70,6 +70,7 @@ defmodule Lightning.Credentials.Credential do
 
   defp shared_validations(changeset) do
     changeset
+    |> resolve_schema_name()
     |> normalize_external_id()
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :user_id])
@@ -106,5 +107,12 @@ defmodule Lightning.Credentials.Credential do
       "" -> put_change(changeset, :external_id, nil)
       _ -> changeset
     end
+  end
+
+  defp resolve_schema_name(changeset) do
+    update_change(changeset, :schema, fn
+      schema when is_binary(schema) -> Lightning.Adaptors.resolve_name(schema)
+      schema -> schema
+    end)
   end
 end

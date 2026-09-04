@@ -3,6 +3,7 @@ defmodule LightningWeb.Components.DataTables do
   use LightningWeb, :component
 
   alias Lightning.Accounts.User
+  alias Lightning.Adaptors.PackageName
   alias Lightning.Credentials.Credential
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -272,7 +273,7 @@ defmodule LightningWeb.Components.DataTables do
   end
 
   defp credential_type(%Credential{schema: schema}) do
-    schema
+    PackageName.short_name(schema)
   end
 
   defp missing_oauth_client?(credential) do

@@ -24,7 +24,7 @@ Bandit + Req the first time it runs).
 
 ## Recorded responses have no TTL
 
-A recorded response is authoritative until you `purge` it — there is no expiry.
+A recorded response is authoritative until you `purge` it: there is no expiry.
 That's deliberate: the recorded files double as hand-editable fixtures, so the
 cache is both the everyday dev cache and the mechanism for driving the `publish`
 scenarios below, by editing exactly the files it already wrote.
@@ -42,12 +42,12 @@ export ADAPTORS_NPM_GITHUB_URL=http://localhost:4874/github
 `bin/adaptor_cache up` prints these for you with the right port baked in, so you
 don't have to remember them.
 
-- `ADAPTOR_CACHE_PORT` — host port to bind (default: `4874`). Set it before any
+- `ADAPTOR_CACHE_PORT`: host port to bind (default: `4874`). Set it before any
   `bin/adaptor_cache` command if `4874` is taken, and update the three exports
   above to match.
-- `ADAPTOR_CACHE_DIR` — where recorded responses live (default:
+- `ADAPTOR_CACHE_DIR`: where recorded responses live (default:
   `/tmp/adaptor_cache`). Several distros age-clean `/tmp` (systemd-tmpfiles: 10
-  days on Fedora/Arch) — if a fixture goes missing for no obvious reason, that's
+  days on Fedora/Arch). If a fixture goes missing for no obvious reason, that's
   likely it. Set this to somewhere outside `/tmp` if you want the cache to
   survive indefinitely.
 
@@ -78,17 +78,17 @@ Each line is one proxied request:
 2026-08-31T10:00:00Z status=200 cache=HIT GET /npm/-/v1/search?text=%40openfn&size=250
 ```
 
-- `cache=HIT` — served entirely from disk, no upstream request made.
-- `cache=MISS` — not recorded yet, fetched from the real upstream and saved.
-- `cache=ERROR` — the live fetch itself failed (offline, upstream down); nothing
+- `cache=HIT`: served entirely from disk, no upstream request made.
+- `cache=MISS`: not recorded yet, fetched from the real upstream and saved.
+- `cache=ERROR`: the live fetch itself failed (offline, upstream down); nothing
   is recorded, so the next attempt tries live again.
 
 On a warm cache, MISS should only appear for packages the cache has never seen.
 
-## How the URL mapping works
+## URL mapping
 
 Lightning's `NPM` strategy already builds full paths under each of the three
-base URLs — the proxy fetches the same path from the real upstream and caches it
+base URLs. The proxy fetches the same path from the real upstream and caches it
 under the _original_ request path, following any redirect itself first, so the
 cached entry reflects the final resolved resource, not an intermediate redirect:
 
@@ -101,12 +101,12 @@ cached entry reflects the final resolved resource, not an intermediate redirect:
 ## Recorded files as fixtures
 
 A recorded response is two files: the raw body, plus a `.meta` sidecar with its
-status and content type. The path mirrors the request, so — for example — the
+status and content type. The path mirrors the request. For example, the
 `@openfn/language-http` packument lands at
 `/tmp/adaptor_cache/npm/@openfn/language-http`, and the search response (the one
 query Lightning ever sends) lands at
 `/tmp/adaptor_cache/npm/-/v1/search?text=%40openfn&size=250`. Both are plain
-JSON — open and edit them directly to hand-craft a scenario.
+JSON, so open and edit them directly to hand-craft a scenario.
 
 ## Driving both `publish` scenarios
 
@@ -116,7 +116,7 @@ bin/adaptor_cache publish @openfn/language-http 9.9.9         # new version of a
 ```
 
 Either form updates the packument _and_ the search response's `latest_version`
-together in one call — `scheduler.ex`'s change-detection compares the search
+together in one call. `scheduler.ex`'s change-detection compares the search
 response against the DB to decide whether to bother fetching the packument at
 all, so updating only one is a silent no-op. Run
 `mix lightning.adaptors.refresh` (or reopen the picker) afterwards to see it
@@ -145,7 +145,7 @@ untracked (not checked into git).
 ## Troubleshooting
 
 **`bin/adaptor_cache check` fails on one prefix.** Run `bin/adaptor_cache logs`
-and look for the failing request — a `cache=MISS` on the _second_ identical
+and look for the failing request. A `cache=MISS` on the _second_ identical
 request usually means the upstream is refusing the request outright (check
 status code) rather than a caching problem.
 

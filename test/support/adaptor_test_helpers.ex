@@ -153,13 +153,17 @@ defmodule Lightning.AdaptorTestHelpers do
       |> File.read!()
 
     row =
-      insert(:adaptor, name: short_name, source: :npm, schema_data: schema_body)
+      insert(:adaptor,
+        name: "@openfn/language-#{short_name}",
+        source: :npm,
+        schema_data: schema_body
+      )
 
     # Cachex fills run in its Courier process, which cannot see the sandbox
     # connection, so populate the cache directly.
     cache = AdaptorsSupervisor.cache_name(Config.default_instance())
     source = AdaptorsSupervisor.source(Config.default_instance())
-    Cachex.put(cache, {:schema, short_name, source}, {:ok, schema_body})
+    Cachex.put(cache, {:schema, row.name, source}, {:ok, schema_body})
 
     row
   end
@@ -179,7 +183,7 @@ defmodule Lightning.AdaptorTestHelpers do
         row = seed_credential_schema(short_name)
 
         %{
-          name: short_name,
+          name: row.name,
           latest_version: row.latest_version,
           description: nil,
           deprecated: false,

@@ -43,11 +43,6 @@ and this project adheres to
   does not normalise anything today, but #4577 adds it on every name, so the
   runtime moves first.
 
-- Lightning now keeps its own adaptor registry instead of fetching the list from
-  npm at startup, so new adaptors and versions show up without a rebuild or
-  redeploy. See [ADAPTORS.md](ADAPTORS.md).
-  [#4801](https://github.com/OpenFn/lightning/pull/4801)
-
 ### Removed
 
 - The AI assistant's "Send code" tickbox. The assistant reads your workflow to

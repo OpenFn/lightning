@@ -536,7 +536,6 @@ defmodule Lightning.Collaboration.Session do
           """
         end)
 
-        # Write validation errors to Y.Doc
         write_validation_errors_to_ydoc(state, changeset)
 
         {{:error, changeset}, state}

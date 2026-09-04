@@ -119,6 +119,30 @@ defmodule Lightning.Adaptors do
   def schema(sup \\ Config.default_instance(), pkg), do: Store.schema(sup, pkg)
 
   @doc """
+  Resolves a possibly-legacy short adaptor name (e.g. `"http"`) to its full
+  npm package name (`"@openfn/language-http"`), if the full name resolves in
+  the catalogue. Returns `name` unchanged if it already resolves, or if
+  neither form does.
+
+  `"raw"` and `"oauth"` are sentinels, not adaptor names, and are returned
+  unchanged without consulting the catalogue.
+  """
+  @spec resolve_name(atom(), String.t()) :: String.t()
+  def resolve_name(sup \\ Config.default_instance(), name)
+
+  def resolve_name(_sup, name) when name in ["raw", "oauth"], do: name
+
+  def resolve_name(sup, name) do
+    full = PackageName.full_name(name)
+
+    cond do
+      get_adaptor(sup, name) -> name
+      not String.starts_with?(name, "@") and get_adaptor(sup, full) -> full
+      true -> name
+    end
+  end
+
+  @doc """
   Returns the on-disk path of the adaptor's `:square` or `:rectangle`
   icon, fetching it on the first request.
   """
