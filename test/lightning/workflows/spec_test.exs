@@ -211,6 +211,39 @@ defmodule Lightning.Workflows.SpecTest do
       refute document["jobs"] |> hd() |> Map.has_key?("pos")
     end
 
+    test "carries a webhook trigger's custom_path into the document" do
+      # The editor honours `custom_path` on import, so a spec that sets one has
+      # to reach the provisioner rather than being silently dropped.
+      spec = %{
+        "name" => "Custom path",
+        "jobs" => %{
+          "job-a" => %{
+            "name" => "Job A",
+            "adaptor" => "@openfn/language-common@latest",
+            "body" => "fn(state => state);"
+          }
+        },
+        "triggers" => %{
+          "webhook" => %{
+            "type" => "webhook",
+            "enabled" => true,
+            "custom_path" => "facility-001"
+          }
+        },
+        "edges" => %{
+          "webhook->job-a" => %{
+            "source_trigger" => "webhook",
+            "target_job" => "job-a",
+            "condition_type" => "always",
+            "enabled" => true
+          }
+        }
+      }
+
+      assert {:ok, document} = Spec.to_document(spec)
+      assert [%{"custom_path" => "facility-001"}] = document["triggers"]
+    end
+
     test "omitted optional fields are left out rather than nilled" do
       assert {:ok, %{"triggers" => [trigger], "edges" => [edge]}} =
                Spec.to_document(spec())

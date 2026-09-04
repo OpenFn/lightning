@@ -490,7 +490,7 @@ defmodule Lightning.Kickstart do
       "schema" => spec["schema"] || "raw",
       "credential_bodies" => credential_bodies
     }
-    |> Credentials.create_credential()
+    |> Credentials.create_credential(owner)
     |> case do
       {:ok, credential} -> credential
       {:error, changeset} -> raise_invalid("credential #{name}", changeset)
@@ -508,7 +508,7 @@ defmodule Lightning.Kickstart do
 
     project = Repo.get(Project, id) || create_project_shell(id, name, actor)
 
-    reconcile_members(project, members)
+    reconcile_members(project, members, actor)
 
     pc_ids =
       ensure_project_credentials(project, scope, spec, credentials)
@@ -604,39 +604,32 @@ defmodule Lightning.Kickstart do
   end
 
   # Adds missing members and corrects drifted roles; never removes members.
-  # `members` is validated to have exactly one declared owner, but an
-  # existing owner not mentioned in this scenario may still hold the role —
-  # non-owner changes are applied first so a same-run ownership handover
-  # (demote old owner, promote new owner) doesn't trip the one-owner-per-
-  # project constraint. A conflict with an *undeclared* existing owner still
-  # surfaces, as a friendly changeset error rather than a raw one.
-  defp reconcile_members(project, members) do
-    members
-    |> Enum.sort_by(&if(&1.role == :owner, do: 1, else: 0))
-    |> Enum.each(&reconcile_member(project, &1))
-  end
+  #
+  # A membership write submits the whole list: `Projects.add_project_users/4`
+  # runs the rows through `membership_params/2`, which keeps an entry for every
+  # member already on the project and replaces only the ones named here. So
+  # "never removes" comes for free, the one-owner validation runs across the
+  # whole list at once rather than per row, and an ownership handover no longer
+  # depends on the order the scenario happens to declare members in. `false`
+  # suppresses the project-addition emails, which is what we want for seeding.
+  defp reconcile_members(project, members, actor) do
+    rows =
+      members
+      |> Enum.map(fn %{user: user, role: role} ->
+        case Repo.get_by(ProjectUser, project_id: project.id, user_id: user.id) do
+          nil -> %{user_id: user.id, role: role}
+          %ProjectUser{role: ^role} -> nil
+          project_user -> %{id: project_user.id, role: role}
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
 
-  defp reconcile_member(project, %{user: user, role: role}) do
-    case Repo.get_by(ProjectUser, project_id: project.id, user_id: user.id) do
-      nil ->
-        project
-        |> Projects.add_project_users([%{user_id: user.id, role: role}], false)
-        |> handle_member_result(user)
-
-      %ProjectUser{role: ^role} ->
-        :ok
-
-      project_user ->
-        project_user
-        |> Projects.update_project_user(%{role: role})
-        |> handle_member_result(user)
+    if rows != [] do
+      case Projects.add_project_users(project, rows, actor, false) do
+        {:ok, _project_users} -> :ok
+        {:error, changeset} -> raise_invalid("project members", changeset)
+      end
     end
-  end
-
-  defp handle_member_result({:ok, _}, _user), do: :ok
-
-  defp handle_member_result({:error, changeset}, user) do
-    raise_invalid("project member #{user.email}", changeset)
   end
 
   # Exposes credentials to the project (ProjectCredential), returning a

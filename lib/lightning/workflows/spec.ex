@@ -53,8 +53,7 @@ defmodule Lightning.Workflows.Spec do
 
   `pos` is accepted (it's part of the format, and the editor round-trips it)
   but not carried into the document: the provisioner has no way to set node
-  positions. Kafka trigger configuration isn't part of the format yet, in
-  either implementation.
+  positions.
   """
 
   alias ExJsonSchema.Validator
@@ -220,6 +219,7 @@ defmodule Lightning.Workflows.Spec do
       |> copy_declared(trigger, "cron_expression")
       |> copy_declared(trigger, "webhook_reply")
       |> copy_declared(trigger, "webhook_response_config")
+      |> copy_declared(trigger, "custom_path")
 
     resolve_cron_cursor_job(document, trigger, key, jobs)
   end
