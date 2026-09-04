@@ -337,18 +337,9 @@ defmodule LightningWeb.Components.Common do
   attr :id, :string, required: true
   attr :tooltip, :string, default: nil
 
-  attr :allow_html, :boolean,
-    default: false,
-    doc: """
-    Render the tooltip as HTML rather than text. Off by default: the Tooltip
-    hook reads aria-label off the DOM *property*, which undoes the escaping
-    HEEx applied to the attribute, and hands the result to tippy's setContent.
-    With allowHTML on, anything in the tooltip is live markup, so a workflow
-    name holding an <img onerror> fired for whoever looked at the list.
-
-    Only turn this on for a tooltip whose markup this codebase writes, and
-    escape anything interpolated into it.
-    """
+  attr :subtitle, :string,
+    default: nil,
+    doc: "A second, smaller line under the tooltip text."
 
   slot :inner_block, required: true
 
@@ -359,9 +350,14 @@ defmodule LightningWeb.Components.Common do
       id={"#{@id}-tooltip"}
       phx-hook="Tooltip"
       aria-label={@tooltip}
-      data-allow-html={to_string(@allow_html)}
       data-hide-on-click="false"
     >
+      <%!-- The hook clones this into tippy, so the browser does the escaping
+      and no caller has to decide whether their tooltip is markup. --%>
+      <template data-tooltip-content>
+        {@tooltip}
+        <span :if={@subtitle} class="block text-xs text-gray-500">{@subtitle}</span>
+      </template>
       {render_slot(@inner_block)}
     </span>
     """
@@ -418,8 +414,8 @@ defmodule LightningWeb.Components.Common do
       <%= if @show_tooltip do %>
         <Common.wrapper_tooltip
           id={@id}
-          allow_html={true}
-          tooltip={"#{@iso_timestamp}<br/><span class=\"text-xs text-gray-500\">Click to copy timestamp</span>"}
+          tooltip={@iso_timestamp}
+          subtitle="Click to copy timestamp"
         >
           <span
             id={"#{@id}-outer"}

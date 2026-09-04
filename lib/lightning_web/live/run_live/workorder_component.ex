@@ -193,8 +193,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             >
               <Common.wrapper_tooltip
                 id={"workflow-name-#{@work_order.id}"}
-                allow_html={true}
-                tooltip={"#{escape_html(@workflow_name)}<br/><span class=\"text-xs text-gray-500\">Click to view</span>"}
+                tooltip={@workflow_name}
+                subtitle="Click to view"
               >
                 <span
                   class="truncate text-gray-900 workflow-name hover:text-primary-600 cursor-pointer"
@@ -472,13 +472,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       </span>
     <% end %>
     """
-  end
-
-  # The tooltip renders as HTML, so anything interpolated into it has to be
-  # escaped by hand: a workflow name is user input and may hold any character,
-  # including markup.
-  defp escape_html(value) do
-    value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
   end
 
   defp wo_dataclip_available?(work_order) do

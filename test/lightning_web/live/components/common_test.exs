@@ -4,57 +4,57 @@ defmodule LightningWeb.Components.CommonTest do
   import Phoenix.LiveViewTest
 
   describe "wrapper_tooltip/1 and HTML" do
-    # The Tooltip hook reads aria-label off the DOM *property*, which undoes
-    # the escaping HEEx applied to the attribute, and hands the result to
-    # tippy's setContent. With allowHTML on, a workflow name holding markup
-    # became live elements for anyone viewing the project (#4577).
-    #
-    # This is the only security-relevant change in the branch and it had no
-    # test: flipping data-allow-html back to a hardcoded "true" left the whole
-    # suite green.
-    test "HTML is off by default" do
-      html =
-        render_component(&LightningWeb.Components.Common.wrapper_tooltip/1,
-          id: "t",
-          tooltip: "plain text",
-          inner_block: %{
-            inner_block: fn _, _ -> "child" end,
-            __slot__: :inner_block
-          }
+    # The hook used to read aria-label off the DOM *property*, which undoes the
+    # escaping HEEx applied to the attribute, and hand the result to tippy with
+    # allowHTML on, so a workflow name holding markup became live elements for
+    # anyone viewing the project (#4577). The content now goes in a <template>
+    # that the browser parses, so no caller decides whether a name is markup.
+    defp render_tooltip(assigns) do
+      render_component(
+        &LightningWeb.Components.Common.wrapper_tooltip/1,
+        Keyword.merge(
+          [
+            inner_block: %{
+              inner_block: fn _, _ -> "child" end,
+              __slot__: :inner_block
+            }
+          ],
+          assigns
         )
-
-      assert html =~ ~s(data-allow-html="false")
-      refute html =~ ~s(data-allow-html="true")
+      )
     end
 
-    test "HTML is on only when a caller asks for it" do
-      html =
-        render_component(&LightningWeb.Components.Common.wrapper_tooltip/1,
-          id: "t",
-          tooltip: "a<br/>b",
-          allow_html: true,
-          inner_block: %{
-            inner_block: fn _, _ -> "child" end,
-            __slot__: :inner_block
-          }
-        )
+    test "the tooltip goes in a template rather than an HTML-bearing attribute" do
+      html = render_tooltip(id: "t", tooltip: "plain text")
 
-      assert html =~ ~s(data-allow-html="true")
+      assert html =~ ~s(<template data-tooltip-content>)
+      refute html =~ "data-allow-html"
     end
 
-    test "a name holding markup is inert in the default case" do
-      html =
-        render_component(&LightningWeb.Components.Common.wrapper_tooltip/1,
-          id: "t",
-          tooltip: "<img src=x onerror=alert(1)>",
-          inner_block: %{
-            inner_block: fn _, _ -> "child" end,
-            __slot__: :inner_block
-          }
-        )
+    test "a name holding markup is escaped, not rendered" do
+      html = render_tooltip(id: "t", tooltip: "<img src=x onerror=alert(1)>")
 
-      assert html =~ ~s(data-allow-html="false")
       refute html =~ "<img src=x"
+      assert html =~ "&lt;img src=x onerror=alert(1)&gt;"
+    end
+
+    test "a subtitle is a second line, and is escaped too" do
+      html =
+        render_tooltip(
+          id: "t",
+          tooltip: "My Workflow",
+          subtitle: "<b>Click to view</b>"
+        )
+
+      assert html =~ "My Workflow"
+      refute html =~ "<b>Click to view</b>"
+      assert html =~ "&lt;b&gt;Click to view&lt;/b&gt;"
+    end
+
+    test "no subtitle means no second line" do
+      html = render_tooltip(id: "t", tooltip: "My Workflow")
+
+      refute html =~ "text-xs text-gray-500"
     end
   end
 
