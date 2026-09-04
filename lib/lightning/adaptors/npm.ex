@@ -5,18 +5,21 @@ defmodule Lightning.Adaptors.NPM do
 
   Implements the four `Lightning.Adaptors.Strategy` callbacks:
 
-    * `c:list_adaptors/0` — single search-API call returning
-      `name + latest_version` for every `@openfn/language-*` package.
-    * `c:fetch_adaptor/1` — packument fetch + per-version decode and
-      latest-version schema retrieval via jsDelivr. Icon fields are
-      **not** stamped here; the Scheduler joins them on after a bulk
-      `c:fetch_icons/1` pass.
-    * `c:fetch_icon/2` — single icon raw GET against
-      `raw.githubusercontent.com`, used by the Store's rare lazy-miss
-      fallback.
-    * `c:fetch_icons/1` — bulk fan-out over the search listing, one
-      HTTP request per `(name, shape)`. Threads `:prior_etags` from
-      the caller down into the per-request `If-None-Match` headers.
+    * `c:Lightning.Adaptors.Strategy.list_adaptors/0` — single search-API
+      call returning `name + latest_version` for every
+      `@openfn/language-*` package.
+    * `c:Lightning.Adaptors.Strategy.fetch_adaptor/1` — packument fetch +
+      per-version decode and latest-version schema retrieval via
+      jsDelivr. Icon fields are **not** stamped here; the Scheduler
+      joins them on after a bulk
+      `c:Lightning.Adaptors.Strategy.fetch_icons/1` pass.
+    * `c:Lightning.Adaptors.Strategy.fetch_icon/2` — single icon raw GET
+      against `raw.githubusercontent.com`, used by the Store's rare
+      lazy-miss fallback.
+    * `c:Lightning.Adaptors.Strategy.fetch_icons/1` — bulk fan-out over
+      the search listing, one HTTP request per `(name, shape)`. Threads
+      `:prior_etags` from the caller down into the per-request
+      `If-None-Match` headers.
 
   ## HTTP
 

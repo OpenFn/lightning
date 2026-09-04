@@ -63,7 +63,10 @@ defmodule Lightning.AdaptorService do
   require Logger
 
   defmodule InstalledAdaptor do
-    @moduledoc false
+    @moduledoc """
+    An adaptor installed on disk, as returned by `Lightning.AdaptorService.find_adaptor/2`
+    and `Lightning.AdaptorService.install/2`.
+    """
     @type install_status :: :present | :installing
 
     @type t :: %__MODULE__{
