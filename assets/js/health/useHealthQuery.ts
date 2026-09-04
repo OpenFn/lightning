@@ -5,7 +5,7 @@ interface Query<T> {
   error: string | null;
 }
 
-const MESSAGE = 'Could not load workflow stats. Refresh to try again.';
+const MESSAGE = 'Could not load stats. Refresh to try again.';
 
 /** Base path for one workflow's health endpoints. */
 export const healthBase = (projectId: string, workflowId: string) =>
@@ -37,7 +37,7 @@ export function useHealthQuery<T>(url: string): Query<T> {
 
     fetch(url, { credentials: 'same-origin', signal: controller.signal })
       .then(response => {
-        if (!response.ok) throw new Error('Could not load workflow stats');
+        if (!response.ok) throw new Error('Could not load stats');
 
         return response.json() as Promise<T>;
       })
@@ -52,7 +52,7 @@ export function useHealthQuery<T>(url: string): Query<T> {
         // An abort is a teardown, not a failure — there is nobody left to tell.
         if (controller.signal.aborted) return;
 
-        console.error('workflow health request failed:', error);
+        console.error('health request failed:', error);
         setState({ data: null, error: MESSAGE });
       });
 

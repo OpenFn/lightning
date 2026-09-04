@@ -32,7 +32,7 @@ const failureSignatures = {
 
 const both = { outcomes, failures: failureSignatures };
 
-const ERROR = 'Could not load workflow stats. Refresh to try again.';
+const ERROR = 'Could not load stats. Refresh to try again.';
 
 /**
  * Stubs `fetch`, keyed by the last path segment, so a test can pick which
