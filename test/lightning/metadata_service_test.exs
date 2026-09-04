@@ -32,7 +32,7 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-common", credential) ==
+      assert MetadataService.fetch("@openfn/language-common", credential, "main") ==
                {:ok, %{"foo" => "bar"}}
     end
 
@@ -54,13 +54,14 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-common", credential) == {
-               :error,
-               %Lightning.MetadataService.Error{
-                 type: "no_metadata_result",
-                 __exception__: true
+      assert MetadataService.fetch("@openfn/language-common", credential, "main") ==
+               {
+                 :error,
+                 %Lightning.MetadataService.Error{
+                   type: "no_metadata_result",
+                   __exception__: true
+                 }
                }
-             }
     end
 
     test "returns an error when the adaptor doesn't exist" do
@@ -75,13 +76,14 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-foo", credential) == {
-               :error,
-               %Lightning.MetadataService.Error{
-                 type: "no_matching_adaptor",
-                 __exception__: true
+      assert MetadataService.fetch("@openfn/language-foo", credential, "main") ==
+               {
+                 :error,
+                 %Lightning.MetadataService.Error{
+                   type: "no_matching_adaptor",
+                   __exception__: true
+                 }
                }
-             }
     end
 
     test "returns an error when there's no magic yet for an adaptor" do
@@ -104,13 +106,14 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-common", credential) == {
-               :error,
-               %Lightning.MetadataService.Error{
-                 type: "no_metadata_function",
-                 __exception__: true
+      assert MetadataService.fetch("@openfn/language-common", credential, "main") ==
+               {
+                 :error,
+                 %Lightning.MetadataService.Error{
+                   type: "no_metadata_function",
+                   __exception__: true
+                 }
                }
-             }
     end
 
     test "returns an error when the credential URL is not valid" do
@@ -132,13 +135,14 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-common", credential) == {
-               :error,
-               %Lightning.MetadataService.Error{
-                 type: "no_metadata_result",
-                 __exception__: true
+      assert MetadataService.fetch("@openfn/language-common", credential, "main") ==
+               {
+                 :error,
+                 %Lightning.MetadataService.Error{
+                   type: "no_metadata_result",
+                   __exception__: true
+                 }
                }
-             }
     end
 
     test "returns an error when the credentials are not valid" do
@@ -160,13 +164,14 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-common", credential) == {
-               :error,
-               %Lightning.MetadataService.Error{
-                 type: "no_metadata_result",
-                 __exception__: true
+      assert MetadataService.fetch("@openfn/language-common", credential, "main") ==
+               {
+                 :error,
+                 %Lightning.MetadataService.Error{
+                   type: "no_metadata_result",
+                   __exception__: true
+                 }
                }
-             }
     end
 
     test "refuses a well-formed adaptor that is not in the registry (whitelist)" do
@@ -184,7 +189,11 @@ defmodule Lightning.MetadataServiceTest do
 
       log =
         ExUnit.CaptureLog.capture_log(fn ->
-          assert MetadataService.fetch("@openfn/language-notreal", credential) ==
+          assert MetadataService.fetch(
+                   "@openfn/language-notreal",
+                   credential,
+                   "main"
+                 ) ==
                    {
                      :error,
                      %Lightning.MetadataService.Error{

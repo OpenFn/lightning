@@ -368,7 +368,6 @@ describe('Header - Basic Rendering', () => {
     triggerMap.set('type', 'webhook');
     triggerMap.set('enabled', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     render(
@@ -772,7 +771,6 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     triggerMap.set('enabled', true);
     triggerMap.set('has_auth_method', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     render(
@@ -811,7 +809,6 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     triggerMap.set('enabled', true);
     triggerMap.set('has_auth_method', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     render(
@@ -852,7 +849,6 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     triggerMap.set('enabled', true);
     triggerMap.set('has_auth_method', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     const { rerender } = render(
@@ -916,7 +912,6 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     triggerMap.set('enabled', true);
     triggerMap.set('has_auth_method', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     const { rerender } = render(
@@ -986,7 +981,6 @@ describe('Header - Run Button Tooltip with Panel State', () => {
     triggerMap.set('enabled', true);
     triggerMap.set('has_auth_method', true);
     triggerMap.set('cron_expression', null);
-    triggerMap.set('kafka_configuration', null);
     triggersArray.push([triggerMap]);
 
     render(

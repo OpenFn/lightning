@@ -17,11 +17,23 @@ and this project adheres to
 
 ### Added
 
-- The workflow title in the editor breadcrumbs is now clickable, returning to
-  the root workflow editor view: it closes the full IDE (equivalent to its close
-  button), closes any other open panel, deselects the current node, and drops
-  any run-viewing context, landing on the bare canvas.
-  [#4984](https://github.com/OpenFn/lightning/pull/4984)
+- The AI assistant now shows what changed as a global reply edits your workflow.
+  Each change renders under the status that made it, while the reply is still
+  streaming, as a per-step code diff with syntax highlighting, old and new line
+  numbers and a link to open that step in the editor, alongside a compact
+  summary of structural changes like added or removed paths, trigger changes and
+  step renames. Each diff block copies the step's code, and the latest reply can
+  be undone, restoring the workflow to how it stood before that reply and
+  offering to redo it. Undo confirms first when the workflow has been edited
+  since, because it replaces the whole workflow.
+  [#5036](https://github.com/OpenFn/lightning/issues/5036)
+
+- Webhook triggers can be given a custom URL path, so an endpoint's URL is known
+  before it is deployed. A trigger with a path of `facility-001` answers at
+  `/i/<project-id>/facility-001`, where `<project-id>` is the project's UUID.
+  Set it in the trigger panel, in `project.yaml`, or through the workflows API.
+  Existing `/i/<trigger-id>` URLs are unchanged.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
   scenario file (users, API tokens, credentials, projects, workflows) via
   `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and
@@ -32,6 +44,55 @@ and this project adheres to
 
 ### Changed
 
+- The webhook trigger panel now lists every URL a trigger answers on. The
+  default URL is always there and the custom one sits next to it, editable in
+  place, with add, edit, delete and copy on the row itself. A path already used
+  by another workflow in the project is reported while you type, not after you
+  save. A path the server would reject shows what is wrong and is left as you
+  typed it.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
+
+### Fixed
+
+- Changing a webhook trigger's custom path now marks the workflow as unsaved, so
+  the Save button offers to save it. The unsaved-changes check did not look at
+  the field, so the edit could be lost by navigating away.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
+- `eligible_for_claim/0` now breaks ties with `id` after `priority` and
+  `inserted_at`, so two runs inserted in the same microsecond no longer get
+  claimed in a nondeterministic order.
+- Dataclip retention wiping now runs in batches instead of one unbatched update,
+  so projects with a large backlog of eligible dataclips no longer time out the
+  retention job.
+
+## [2.18.2] - 2026-09-02
+
+## [2.18.2-pre] - 2026-08-28
+
+### Added
+
+- The workflow title in the editor breadcrumbs is now clickable, returning to
+  the root workflow editor view: it closes the full IDE (equivalent to its close
+  button), closes any other open panel, deselects the current node, and drops
+  any run-viewing context, landing on the bare canvas.
+  [#4984](https://github.com/OpenFn/lightning/pull/4984)
+- Workflows scheduled for deletion are now purged permanently once
+  `PURGE_DELETED_AFTER_DAYS` has elapsed and their work orders have been cleared
+  by the project's retention policy, the same way projects, users, credentials
+  and webhook auth methods are already purged.
+  [#4163](https://github.com/OpenFn/lightning/issues/4163)
+- The audit log now records collaborator changes: adding or removing a
+  collaborator, or changing their role, is logged with who made the change and
+  the role before and after.
+- Webhook auth methods now account for channels as well as triggers: the auth
+  methods table shows counts like "2 triggers, 1 channel", each auth method's
+  detail view lists every linked workflow and channel, and deleting one now
+  warns which triggers and channels will lose authentication.
+- Deleting a webhook auth method now logs each trigger and channel it was
+  detached from, in addition to the deletion itself.
+
+### Changed
+
 - Remove the unreachable, non-streaming code in the AI assistant
   [#5046](https://github.com/OpenFn/lightning/issues/5046)
 - The global chat now starts streaming Apollo's response earlier, so users wait
@@ -39,6 +100,58 @@ and this project adheres to
   Apollo sends, including status updates.
   [#4969](https://github.com/OpenFn/lightning/pull/4969)
 - Bumped bundled worker to version 1.29.2
+- A trigger's `custom_path` can no longer be set, and no longer affects webhook
+  routing. The field was never finished or exposed in the UI; a webhook trigger
+  is reached at `/i/<trigger id>`.
+- Webhook requests refused by a rate or usage limit now answer
+  `429 Too Many Requests` rather than `402 Payment Required`. Lightning has no
+  notion of payments — the usage limiter is an extension — and the response body
+  still names the specific limit in `error`.
+
+### Removed
+
+- **[BREAKING CHANGE] Kafka triggers have been removed.** A workflow can no
+  longer be started by consuming from a Kafka cluster, and the `KAFKA_*`
+  environment variables no longer do anything. If you had
+  `KAFKA_TRIGGERS_ENABLED` switched on, take a backup and switch it off before
+  upgrading; stay on the previous release if you still need Kafka.
+
+  Existing Kafka triggers are converted to **disabled webhook triggers** rather
+  than deleted: the trigger keeps its id, so the workflow, its connection to the
+  first job, and its run history all survive intact and retryable. Nothing
+  starts that workflow again until you enable the trigger and set it up as a
+  webhook, or delete the workflow if you no longer want it. The conversion
+  doesn't reverse itself. Until the `kafka_configuration` column and
+  `trigger_kafka_message_records` table are dropped in a later release,
+  `kafka_configuration IS NOT NULL` on `triggers` identifies which webhooks were
+  converted from Kafka, so a rollback can restore their type by hand. Each
+  converted workflow's version also bumps, so it will show as edited even though
+  nobody touched it.
+
+  You can upgrade without downtime: the migration only converts trigger rows, so
+  it holds no lock that inbound webhooks wait on. If you're actively consuming
+  from a broker, expect the previous version's pipelines to keep running until
+  their process restarts.
+
+  Dataclips created from Kafka messages keep their run history, but are no
+  longer exempt from your project's retention policy: the first retention run
+  after upgrading clears the body and request of any unnamed Kafka dataclip
+  already past its retention period. After that they age out like any other
+  dataclip.
+
+  Snapshots still hold each converted trigger's encrypted broker settings, even
+  though nothing reads them any more. To scrub that from existing snapshots:
+  this table can be large, so we'd advise running it after hours, or in batches
+  by `id`.
+
+  ```sql
+  UPDATE workflow_snapshots
+  SET triggers = COALESCE(
+        (SELECT jsonb_agg(t - 'kafka_configuration' ORDER BY ord)
+           FROM jsonb_array_elements(triggers) WITH ORDINALITY AS x(t, ord)),
+        '[]'::jsonb)
+  WHERE triggers::text LIKE '%kafka_configuration%';
+  ```
 
 ### Fixed
 
@@ -46,9 +159,93 @@ and this project adheres to
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
   [#5009](https://github.com/OpenFn/lightning/pull/5009)
-- `eligible_for_claim/0` now breaks ties with `id` after `priority` and
-  `inserted_at`, so two runs inserted in the same microsecond no longer get
-  claimed in a nondeterministic order.
+- Fixed the nightly scheduled-account-deletion job dying on a user who created a
+  keychain credential, which stalled every deletion queued behind them and left
+  that user half-deleted.
+- Fixed permanent project deletion never removing history export archives, which
+  aborted the delete partway through and left the exports in storage
+  indefinitely.
+- Blanking the owner's role on the superuser project form removed the project
+  owner and left the project with none. The owner validation counted members
+  that were marked for deletion, so it saw an owner that was on its way out.
+- Following an export download link for a project you can no longer access now
+  shows a refusal. The download endpoint had no fallback for a refused request,
+  so it never sent a response at all.
+- Opening a dataclip or export link for a project that no longer exists now
+  shows a refusal instead of a server error.
+- Exporting a project's history no longer times out. Past roughly 800 work
+  orders every export was killed partway through, and left showing as in
+  progress forever. Exports are now processed in pages, and one that does fail
+  is marked as failed.
+- The `export.json` in a history export is now a single valid JSON document.
+  Exports of more than 50 work orders could not be parsed past the first 50.
+
+### Security
+
+- Synchronous webhook requests no longer hold connections open for the full
+  response timeout when nothing can answer them.
+- Fixed an MFA-enforcement gap so a project's MFA requirement now applies
+  consistently across pages, channel joins, routes and the API.
+- Fixed a privilege-escalation issue where a project admin could delete an
+  entire workspace through the sandbox-deletion path, bypassing the owner-only
+  recoverable delete flow.
+- Fixed a cross-site-scripting issue in channel proxy responses.
+- Fixed an access-revocation issue in the AI assistant panel: membership and
+  role changes now close open sessions instead of leaving them active.
+- Scheduling a project for deletion, or deleting a workflow, now ends the
+  sessions open on it.
+- Fixed a data-exposure issue in job execution and log output.
+- Sentry error reports no longer include sensitive values from request headers.
+- Fixed an authorization issue in AI assistant session writes. Asking questions
+  is unaffected.
+- Fixed two paths (adaptor metadata lookup, channel proxy) that resolved a
+  sandbox's credential from the parent project's environment instead of its own.
+- Fixed an authorization issue in credential and OAuth client writes.
+- Fixed a privilege-escalation issue where an OAuth client's owner could be
+  changed by an update.
+- Starting a credential transfer now checks that the initiator owns the
+  credential.
+- Fixed a signup-gate bypass that let registration be reached even with
+  `ALLOW_SIGNUP=false`.
+- Fixed a cross-project scoping issue in keychain default credentials.
+- Fixed an authorization issue in keychain credential writes.
+- Fixed a token-confusion issue that let a personal access token or credential
+  transfer token be used as a run token.
+- Fixed a token-validation issue in worker authentication. Workers older than
+  `@openfn/ws-worker` 1.0 (February 2024) will be refused.
+- A malformed or non-JWT bearer token on `/collections` now returns 401 instead
+  of raising an error.
+- Removing a collaborator, or changing their role, now takes effect immediately
+  on their open sessions.
+- Switching off a project's support access now ends the open sessions of support
+  users who were on the project only by virtue of that setting.
+- Removing a collaborator now revokes their project credential links from every
+  screen, including the superuser project form.
+- Fixed an authorization issue where support users retained project permissions
+  on projects with support access switched off.
+- Fixed an access-control issue affecting projects scheduled for deletion.
+- Fixed an issue where a GitHub connection could act on a project scheduled for
+  deletion.
+- Fixed an authorization issue in support staff access to keychain credentials.
+- Keychain credential and sandbox actions (create, merge, edit, delete) are now
+  refused in a project scheduled for deletion.
+- Fixed a privilege-escalation issue in support-user project role enforcement.
+- Fixed an issue where support staff with an open collaborative session could
+  keep saving and publishing in a project scheduled for deletion.
+- Fixed a session-teardown issue where logging out of a remembered ("remember
+  me") session left already-open pages still active.
+- Admin password and email resets now revoke the user's existing sessions.
+  (Personal access tokens are unaffected — disable or delete the account to
+  revoke those.)
+- Deleting a webhook auth method now removes its trigger and channel links
+  immediately, and a method scheduled for deletion is no longer accepted as
+  authentication.
+- Fixed a session-teardown issue where revoking an account's sessions
+  (disabling, scheduling deletion, or resetting password/email) left
+  already-open pages running on stale permissions.
+- Fixed an issue where project emails (failure alerts, digests, retention
+  notices, export links) could reach recipients who could no longer open the
+  project themselves.
 
 ## [2.18.1] - 2026-08-28
 

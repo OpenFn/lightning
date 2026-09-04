@@ -154,7 +154,6 @@ describe('EdgeInspector - Footer Button States', () => {
         project: null,
         config: {
           require_email_verification: false,
-          kafka_triggers_enabled: false,
         },
         permissions: {
           can_edit_workflow: false,
@@ -252,7 +251,6 @@ describe('EdgeInspector - Footer Button States', () => {
         project: null,
         config: {
           require_email_verification: false,
-          kafka_triggers_enabled: false,
         },
         permissions: {
           can_edit_workflow: true,

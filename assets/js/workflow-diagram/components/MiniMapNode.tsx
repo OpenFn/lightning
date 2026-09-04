@@ -8,7 +8,7 @@ import getAdaptorName from '../util/get-adaptor-name';
 
 type Trigger = {
   id: string;
-  type: 'webhook' | 'cron' | 'kafka';
+  type: 'webhook' | 'cron';
 };
 
 type Job = {
@@ -63,12 +63,19 @@ const MiniMapNode = ({
   // For triggers, we'll use the appropriate icon
   if (isTrigger) {
     // Use the same icons as the main Trigger component
+    // A historical snapshot can still hold a trigger type we no longer
+    // support. Drawing it with the cron icon would assert something untrue, so
+    // an unrecognised type gets no icon rather than the wrong one.
+    // Read before narrowing: a snapshot can hold a type the union no longer
+    // lists. Same shape as nodes/Trigger.tsx.
+    const declaredType: string = trigger.type;
+
     const icon =
-      trigger.type === 'webhook' ? (
+      declaredType === 'webhook' ? (
         <GlobeAltIcon className="w-full h-full text-gray-500" />
-      ) : (
+      ) : declaredType === 'cron' ? (
         <ClockIcon className="w-full h-full text-gray-500" />
-      );
+      ) : null;
 
     return (
       <g>

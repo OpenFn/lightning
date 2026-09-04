@@ -923,6 +923,47 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert edit_html =~ "Sandbox not found"
     end
 
+    test "handlers reject the workspace root's own id dispatched via a crafted event",
+         %{conn: conn, user: user} do
+      # The root sits in the same `workspace_tree` the handlers look ids up in,
+      # so it is found. What used to happen next is that a root admin resolved
+      # as admin "on the sandbox" via the cascade and every action went through.
+      root =
+        insert(:project,
+          name: "workspace-root",
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      trigger =
+        insert(:trigger,
+          workflow: insert(:workflow, project: root),
+          enabled: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{root.id}/sandboxes")
+
+      assert render_hook(view, "open-delete-modal", %{"id" => root.id}) =~
+               "You are not authorized to delete this sandbox"
+
+      assert render_hook(view, "open-merge-modal", %{"id" => root.id}) =~
+               "You are not authorized to merge this sandbox"
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      refute assigns.confirm_delete_open?
+      refute assigns.merge_modal_open?
+
+      assert Lightning.Repo.get!(Lightning.Projects.Project, root.id)
+      assert is_nil(Lightning.Repo.reload!(root).scheduled_deletion)
+      assert Lightning.Repo.reload!(trigger).enabled
+
+      # Unlike a hidden sandbox, the root is genuinely in the tree, so the edit
+      # route refuses it on authorisation rather than reporting it missing.
+      assert {:error, {:live_redirect, %{flash: %{"error" => edit_error}}}} =
+               live(conn, ~p"/projects/#{root.id}/sandboxes/#{root.id}/edit")
+
+      assert edit_error =~ "You are not authorized to edit this sandbox"
+    end
+
     test "sandbox-only member sees their access root, not the absolute workspace root",
          %{conn: conn, user: user} do
       hidden_root =
@@ -1205,14 +1246,18 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       conn = log_in_user(conn, other_user)
 
       _ =
-        Lightning.Projects.add_project_users(parent, [
-          %{user_id: other_user.id, role: :viewer}
-        ])
+        Lightning.Projects.add_project_users(
+          parent,
+          [%{user_id: other_user.id, role: :viewer}],
+          other_user
+        )
 
       _ =
-        Lightning.Projects.add_project_users(scheduled, [
-          %{user_id: other_user.id, role: :viewer}
-        ])
+        Lightning.Projects.add_project_users(
+          scheduled,
+          [%{user_id: other_user.id, role: :viewer}],
+          other_user
+        )
 
       {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
 

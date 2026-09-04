@@ -51,41 +51,93 @@ defmodule Lightning.DigestEmailWorker do
       )
       |> Repo.all()
 
-    {notified_users, skipped_users} =
+    %{
+      notified: notified_users,
+      skipped: skipped_users,
+      suppressed: suppressed_users,
+      failed: failed_users
+    } =
       project_users
       |> Enum.group_by(& &1.project.id)
-      |> Enum.reduce({[], []}, fn {_project_id, project_users},
-                                  {notified_acc, skipped_acc} ->
-        [%{project: project} | _other] = project_users
-        workflows = Workflows.get_workflows_for(project)
+      |> Enum.reduce(
+        %{notified: [], skipped: [], suppressed: [], failed: []},
+        fn {_project_id, project_users}, acc ->
+          [%{project: project} | _other] = project_users
+          workflows = Workflows.get_workflows_for(project)
 
-        if length(workflows) > 0 do
-          project_digest_data =
-            Enum.map(workflows, fn workflow ->
-              get_digest_data(workflow, start_date, end_date)
-            end)
+          if length(workflows) > 0 do
+            project_digest_data =
+              Enum.map(workflows, fn workflow ->
+                get_digest_data(workflow, start_date, end_date)
+              end)
 
-          Enum.each(project_users, fn pu ->
-            UserNotifier.deliver_project_digest(
+            project_users
+            |> deliver_digests(
               project_digest_data,
-              %{
-                user: pu.user,
-                project: pu.project,
-                digest: digest,
-                start_date: start_date,
-                end_date: end_date
-              }
+              digest,
+              start_date,
+              end_date
             )
-          end)
-
-          {notified_acc ++ project_users, skipped_acc}
-        else
-          {notified_acc, skipped_acc ++ project_users}
+            |> Map.merge(acc, fn _outcome, delivered, so_far ->
+              so_far ++ delivered
+            end)
+          else
+            Map.update!(acc, :skipped, &(&1 ++ project_users))
+          end
         end
-      end)
+      )
 
-    {:ok, %{notified_users: notified_users, skipped_users: skipped_users}}
+    {:ok,
+     %{
+       notified_users: notified_users,
+       skipped_users: skipped_users,
+       suppressed_users: suppressed_users,
+       failed_users: failed_users
+     }}
   end
+
+  # Sorts a project's digest subscribers by what became of their digest:
+  # `:notified` for one that was sent, `:suppressed` for one withheld, and
+  # `:failed` for one the mailer could not deliver.
+  #
+  # `UserNotifier.deliver_project_digest/2` refuses anyone who may not be sent
+  # the project's contents, and someone refused has not been notified. They are
+  # not `skipped` either: that list means the project had no workflows to report
+  # on, so it says nothing about the recipient. A failed send is kept apart from
+  # both — reporting it as a notification would make a mail outage read as a
+  # successful run.
+  defp deliver_digests(
+         project_users,
+         project_digest_data,
+         digest,
+         start_date,
+         end_date
+       ) do
+    empty = %{notified: [], suppressed: [], failed: []}
+
+    project_users
+    |> Enum.map(fn pu ->
+      result =
+        UserNotifier.deliver_project_digest(
+          project_digest_data,
+          %{
+            user: pu.user,
+            project: pu.project,
+            digest: digest,
+            start_date: start_date,
+            end_date: end_date
+          }
+        )
+
+      {outcome(result), pu}
+    end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> then(&Map.merge(empty, &1))
+  end
+
+  defp outcome({:ok, :suppressed}), do: :suppressed
+  defp outcome({:ok, _email}), do: :notified
+  defp outcome(_error), do: :failed
 
   def digest_to_date(digest) do
     case digest do

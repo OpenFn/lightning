@@ -91,6 +91,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     });
   });
 
+  const mockOnApplyFailure = vi.fn();
+
   it('validates ID formats and rejects object IDs', async () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
@@ -113,6 +115,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
+        onApplyFailure: mockOnApplyFailure,
       })
     );
 
@@ -126,6 +129,14 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         description: expect.stringContaining('Invalid ID format') as string,
       });
       expect(mockImportWorkflow).not.toHaveBeenCalled();
+    });
+
+    // Reported with the step that broke, and carrying no workflow content:
+    // this is the only durable trace a failed apply leaves.
+    expect(mockOnApplyFailure).toHaveBeenCalledWith({
+      messageId: 'msg-1',
+      stage: 'validate_ids',
+      isNewWorkflow: false,
     });
   });
 
@@ -151,6 +162,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
+        onApplyFailure: mockOnApplyFailure,
       })
     );
 

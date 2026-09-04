@@ -1,14 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import { cn } from '#/utils/cn';
 
-import type { Message, ResponseSegment } from '../types/ai-assistant';
+import type {
+  Message,
+  ResponseSegment,
+  WorkflowSnapshot,
+} from '../types/ai-assistant';
 import { STREAMING_MESSAGE_ID } from '../types/ai-assistant';
 
 import { Tooltip } from '../../components/Tooltip';
+
+import type { WorkflowChangeSet } from '../utils/workflowDiff';
+import {
+  assignStepDiffsToStatuses,
+  deriveSnapshotChanges,
+  deriveWorkflowChanges,
+} from '../utils/workflowDiff';
+
+import {
+  StepDiffBlock,
+  StructureBlock,
+  WorkflowChangeBlocks,
+  WorkflowDiffBlocks,
+} from './WorkflowDiffBlocks';
 
 const PROSE_CLASSES =
   'text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4';
@@ -181,23 +199,58 @@ const SegmentTimeline = ({
   streaming = false,
   showAddButtons = false,
   isWriteDisabled = false,
+  changesByStatusIndex,
+  onOpenStep,
+  canOpenStep,
 }: {
   segments: ResponseSegment[];
   streaming?: boolean;
   showAddButtons?: boolean;
   isWriteDisabled?: boolean;
+  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
+  /**
+   * Per-status change sets (segment index → what that action changed),
+   * rendered right under the status row that announced it. Passed while
+   * streaming and after settling alike, so no blocks appear or move when
+   * the reply finalizes.
+   */
+  changesByStatusIndex?: Map<number, WorkflowChangeSet>;
 }) => (
   <>
     {segments.map((segment, index) => {
       const isLast = index === segments.length - 1;
 
       if (segment.type === 'status') {
+        const changes = changesByStatusIndex?.get(index);
         return (
-          <StatusSegmentRow
-            // Timeline is append-only, so index keys are stable
-            key={index}
-            content={segment.content}
-          />
+          // Timeline is append-only, so index keys are stable
+          <Fragment key={index}>
+            <StatusSegmentRow
+              content={
+                // When the steps render as blocks right below, the shorter
+                // summary avoids naming them twice. Apollo versions that
+                // send no summary keep their full sentence.
+                changes && segment.summary ? segment.summary : segment.content
+              }
+            />
+            {changes &&
+              (changes.steps.length > 0 || changes.structure.length > 0) && (
+                <div className="space-y-2" data-testid="status-step-diffs">
+                  {changes.steps.map((step, stepIndex) => (
+                    <StepDiffBlock
+                      key={`${step.type}-${step.name}-${stepIndex}`}
+                      step={step}
+                      onOpenStep={onOpenStep}
+                      canOpenStep={canOpenStep}
+                    />
+                  ))}
+                  {changes.structure.length > 0 && (
+                    <StructureBlock rows={changes.structure} />
+                  )}
+                </div>
+              )}
+          </Fragment>
         );
       }
 
@@ -216,6 +269,188 @@ const SegmentTimeline = ({
       );
     })}
   </>
+);
+
+/**
+ * Merge change sets that landed under the same status row (two `changes`
+ * events with no status between them).
+ */
+const mergeChangeSets = (sets: WorkflowChangeSet[]): WorkflowChangeSet => ({
+  steps: sets.flatMap(set => set.steps),
+  structure: sets.flatMap(set => set.structure),
+});
+
+/**
+ * Timeline of a global assistant reply with its workflow diff blocks woven
+ * in, used unchanged while the reply streams and after it settles.
+ *
+ * Two ways to get there, in preference order:
+ *
+ * 1. Streamed snapshots. Apollo sends the workflow YAML each time it
+ *    mutates it, followed by the status describing that mutation, so each
+ *    consecutive pair of snapshots is exactly one action. Diffing them
+ *    gives what that action did, and the snapshot's pinned segment index
+ *    says which status it belongs under. This is the live path, and it
+ *    survives into the settled message so nothing shifts on finalize.
+ *
+ * 2. Whole-message fallback, for a reply reloaded from history where the
+ *    snapshots are gone. One diff of the message's final YAML against the
+ *    workflow as it stood before, with blocks attributed to statuses by
+ *    name. Less precise, and the reason persisting snapshots server-side
+ *    is worth doing.
+ */
+const WorkflowReplyTimeline = ({
+  segments,
+  snapshots,
+  baselineYaml,
+  finalYaml,
+  streaming = false,
+  showAddButtons = false,
+  isWriteDisabled = false,
+  onOpenStep,
+  canOpenStep,
+}: {
+  segments: ResponseSegment[];
+  snapshots: WorkflowSnapshot[];
+  baselineYaml: string | null;
+  finalYaml: string | null;
+  streaming?: boolean;
+  showAddButtons?: boolean;
+  isWriteDisabled?: boolean;
+  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
+}) => {
+  // The snapshot path only needs to know how many segments have drained,
+  // never their contents, and the store rebuilds `segments` on every streamed
+  // character. Depending on the array itself would reparse every snapshot
+  // (compiling a fresh Ajv validator each time) and re-diff every job body
+  // ~66 times a second for the length of the reply, so the two paths get
+  // separate memos with the dependencies each actually reads.
+  // A stable key for the only thing the snapshot memo reads about segments:
+  // how many there are and which are statuses. Depending on the array itself
+  // would churn per character; this string does not change while the drained
+  // timeline does not.
+  const segmentTypeKey = segments
+    .map(segment => (segment.type === 'status' ? 's' : 't'))
+    .join('');
+
+  const snapshotAssignment = useMemo(() => {
+    if (snapshots.length === 0) return null;
+
+    const grouped = new Map<number, WorkflowChangeSet[]>();
+    const after: WorkflowChangeSet[] = [];
+
+    for (const { segmentIndex, changes } of deriveSnapshotChanges(
+      baselineYaml,
+      snapshots
+    )) {
+      // The index a snapshot was pinned to only carries its diff if a status
+      // actually landed there. A text chunk draining between the snapshot and
+      // its status pushes the status one row later, and the timeline only
+      // reads this map for status rows, so anything else would render
+      // nowhere at all. Fall back to the tail rather than lose it.
+      // The pinned index only carries the diff if a status landed there. A
+      // text chunk draining between the snapshot and its status pushes the
+      // status one row later, and that shift is permanent, so look forward
+      // for the status this snapshot was describing before giving up.
+      const statusIndex = segmentTypeKey.indexOf('s', segmentIndex);
+      if (statusIndex === -1) {
+        after.push(changes);
+        continue;
+      }
+      const existing = grouped.get(statusIndex);
+      if (existing) existing.push(changes);
+      else grouped.set(statusIndex, [changes]);
+    }
+
+    return {
+      byStatusIndex: new Map(
+        [...grouped].map(([index, sets]) => [index, mergeChangeSets(sets)])
+      ),
+      trailing: after.length > 0 ? mergeChangeSets(after) : null,
+    };
+  }, [snapshots, baselineYaml, segmentTypeKey]);
+
+  const fallbackAssignment = useMemo(() => {
+    if (snapshots.length > 0) return null;
+
+    const changes = finalYaml
+      ? deriveWorkflowChanges(baselineYaml, finalYaml)
+      : null;
+    if (!changes) {
+      return {
+        byStatusIndex: new Map<number, WorkflowChangeSet>(),
+        trailing: null,
+      };
+    }
+
+    const assignment = assignStepDiffsToStatuses(changes.steps, segments);
+    return {
+      byStatusIndex: new Map(
+        [...assignment.byStatusIndex].map(([index, steps]) => [
+          index,
+          { steps, structure: [] },
+        ])
+      ),
+      trailing: {
+        steps: assignment.unmatched,
+        structure: changes.structure,
+      },
+    };
+  }, [snapshots.length, baselineYaml, finalYaml, segments]);
+
+  const { byStatusIndex, trailing } = snapshotAssignment ??
+    fallbackAssignment ?? {
+      byStatusIndex: new Map<number, WorkflowChangeSet>(),
+      trailing: null,
+    };
+
+  return (
+    <>
+      <SegmentTimeline
+        segments={segments}
+        streaming={streaming}
+        showAddButtons={showAddButtons}
+        isWriteDisabled={isWriteDisabled}
+        changesByStatusIndex={byStatusIndex}
+        onOpenStep={onOpenStep}
+        canOpenStep={canOpenStep}
+      />
+      {trailing &&
+        (trailing.steps.length > 0 || trailing.structure.length > 0) && (
+          <WorkflowChangeBlocks
+            steps={trailing.steps}
+            structure={trailing.structure}
+            onOpenStep={onOpenStep}
+            canOpenStep={canOpenStep}
+          />
+        )}
+    </>
+  );
+};
+
+/** Restores the workflow to before a reply's changes, or back to after them */
+const UndoChangesButton = ({
+  undone,
+  onClick,
+}: {
+  undone: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    data-testid="undo-changes-button"
+    onClick={onClick}
+    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-1 text-xs font-medium text-gray-700 inset-ring inset-ring-gray-300 hover:inset-ring-gray-400"
+  >
+    <span
+      className={cn(
+        'h-3.5 w-3.5',
+        undone ? 'hero-arrow-uturn-right' : 'hero-arrow-uturn-left'
+      )}
+    />
+    {undone ? 'Redo these changes' : 'Undo these changes'}
+  </button>
 );
 
 /**
@@ -455,10 +690,6 @@ interface MessageListProps {
   onApplyWorkflow?: ((yaml: string, messageId: string) => void) | undefined;
   onApplyJobCode?: ((code: string, messageId: string) => void) | undefined;
   onPreviewJobCode?: ((code: string, messageId: string) => void) | undefined;
-  /** Per-step diff preview for global messages (extracts the open job's body from the YAML) */
-  onPreviewGlobalStep?: ((yaml: string, messageId: string) => void) | undefined;
-  /** Whether a job is open in the IDE, enabling preview for global messages */
-  canPreviewGlobalStep?: boolean;
   applyingMessageId?: string | null | undefined;
   previewingMessageId?: string | null | undefined;
   showAddButtons?: boolean;
@@ -469,6 +700,30 @@ interface MessageListProps {
   streamingStatus?: string | null;
   /** Woven text/status timeline built while a reply streams in */
   streamingSegments?: ResponseSegment[] | null;
+  /** Workflow snapshots streamed so far for the in-flight reply */
+  streamingSnapshots?: WorkflowSnapshot[];
+  /** Snapshots retained per finalized assistant message id */
+  snapshotsByMessageId?: Record<string, WorkflowSnapshot[]>;
+  /** Id of the viewer, so a collaborator's message is not mistaken for theirs */
+  currentUserId?: string;
+  /** Opens a step in the IDE from a diff block */
+  onOpenStep?: (step: { jobId?: string; name: string }) => void;
+  canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
+  /**
+   * Global replies whose auto-apply failed. They get the code panel and its
+   * Apply button back, because a failed import is never retried on its own.
+   */
+  failedApplyMessageIds?: Set<string>;
+  /** Restores the workflow to before a reply's changes, or back to after them */
+  onUndoChanges?: (
+    messageId: string,
+    yaml: string,
+    options?: { fromModel?: boolean }
+  ) => void;
+  /** Reply whose changes are currently undone, so its control offers Redo */
+  undoneMessageId?: string | null;
+  /** An apply is running: undo must not race the import */
+  isApplyInFlight?: boolean;
   /**
    * Whether the global assistant is active. Gates the woven streaming
    * timeline — non-global streams keep the flat content + single scalar
@@ -483,8 +738,6 @@ export function MessageList({
   onApplyWorkflow,
   onApplyJobCode,
   onPreviewJobCode,
-  onPreviewGlobalStep,
-  canPreviewGlobalStep = false,
   applyingMessageId,
   previewingMessageId,
   showAddButtons = false,
@@ -494,6 +747,15 @@ export function MessageList({
   streamingContent,
   streamingStatus,
   streamingSegments,
+  streamingSnapshots = [],
+  snapshotsByMessageId = {},
+  onOpenStep,
+  canOpenStep,
+  failedApplyMessageIds,
+  currentUserId,
+  onUndoChanges,
+  undoneMessageId,
+  isApplyInFlight = false,
   isGlobalAssistantActive = false,
 }: MessageListProps) {
   const loadingRef = useRef<HTMLDivElement>(null);
@@ -503,30 +765,60 @@ export function MessageList({
   const [expandedYaml, setExpandedYaml] = useState<Set<string>>(new Set());
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
+  // Sessions are shared, so "the last message is from a user" is not the
+  // same as "this viewer just sent something". Without the id check a
+  // collaborator's question, or a page of history loading in, drags a reader
+  // who had scrolled up back to the bottom.
+  const lastMessage = messages.at(-1);
+  const viewerJustSent = Boolean(
+    lastMessage?.role === 'user' &&
+      currentUserId &&
+      lastMessage.user?.id === currentUserId
+  );
+
   useEffect(() => {
-    if (messagesEndRef.current) {
+    // Sending is an explicit request to be at the bottom, so it clears any
+    // earlier decision to stay put. Without this, scrolling up to read
+    // history meant your own next message did not scroll into view.
+    if (viewerJustSent) {
+      userScrolledAwayRef.current = false;
+    }
+    if (messagesEndRef.current && !userScrolledAwayRef.current) {
+      // Instant, not smooth: a smooth animation emits scroll events at
+      // every intermediate position, and the handler below reads each of
+      // those as the user scrolling away, which kills auto-scroll for the
+      // rest of the reply.
       messagesEndRef.current.scrollIntoView({
-        behavior: 'smooth',
+        behavior: 'instant',
         block: 'end',
       });
     }
-  }, [messages.length]);
+  }, [messages.length, viewerJustSent]);
 
   useEffect(() => {
-    if (isLoading && loadingRef.current) {
+    if (isLoading && loadingRef.current && !userScrolledAwayRef.current) {
       loadingRef.current.scrollIntoView({
-        behavior: 'smooth',
+        behavior: 'instant',
         block: 'end',
       });
     }
   }, [isLoading]);
 
-  // Reset scroll tracking when streaming starts
-  useEffect(() => {
-    if (streamingContent) {
-      userScrolledAwayRef.current = false;
-    }
-  }, [!!streamingContent]);
+  // A reply is live from its first status, well before any prose: a global
+  // reply streams its statuses, workflow and diff blocks first. Scroll
+  // tracking has to cover that whole window, not just the text part.
+  const isStreamLive =
+    !!streamingContent ||
+    !!streamingStatus ||
+    !!streamingSegments?.length ||
+    streamingSnapshots.length > 0;
+
+  // Deliberately not reset when a reply goes live. `isStreamLive` dips false
+  // for a frame early on: a thinking status is cleared at network arrival
+  // while its segment is still in the 15ms drain queue, so nothing reads as
+  // live. Re-arming on that rising edge yanked back a user who had scrolled
+  // away. Sending a message is the only thing that clears the flag, and that
+  // is handled where messages arrive.
 
   // Auto-scroll during streaming, but stop if user scrolls away.
   // Uses requestAnimationFrame to coalesce multiple updates per frame
@@ -534,14 +826,23 @@ export function MessageList({
   const scrollRafRef = useRef<number>(0);
 
   useEffect(() => {
-    if (streamingContent && !userScrolledAwayRef.current) {
+    // Follows the whole reply, not just its prose. A global reply emits its
+    // statuses, snapshots and diff blocks before writing a word, so gating on
+    // text alone left those mounting below the fold with no scroll until the
+    // first chunk landed.
+    if (isStreamLive && !userScrolledAwayRef.current) {
       if (!scrollRafRef.current) {
         scrollRafRef.current = requestAnimationFrame(() => {
+          scrollRafRef.current = 0;
+          // Re-check on the frame it actually runs. Text arrives every 15ms
+          // and a frame is ~16ms, so a scroll is almost always already
+          // queued; without this a scroll scheduled before the user moved
+          // still fires afterwards and drags them back down.
+          if (userScrolledAwayRef.current) return;
           messagesEndRef.current?.scrollIntoView({
             behavior: 'instant',
             block: 'end',
           });
-          scrollRafRef.current = 0;
         });
       }
     }
@@ -551,7 +852,7 @@ export function MessageList({
         scrollRafRef.current = 0;
       }
     };
-  }, [streamingContent]);
+  }, [isStreamLive, streamingContent, streamingSegments, streamingSnapshots]);
 
   // Build a unified message list: real messages + optional streaming placeholder.
   // The streaming message renders in the same loop as finalized messages,
@@ -581,6 +882,91 @@ export function MessageList({
   }, [messages, streamingContent, streamingSegments, isGlobalAssistantActive]);
 
   const isStreaming = (message: Message) => message.id === STREAMING_MESSAGE_ID;
+
+  // Before-workflow YAML for each global assistant reply: the nearest
+  // preceding user message's `code` (the client serialized the doc at send
+  // time). Missing code → null → the diff treats before as an empty
+  // workflow. Cheap index walk only; YAML parsing is memoized inside
+  // WorkflowDiffBlocks.
+  const beforeYamlByMessageId = useMemo(() => {
+    const map = new Map<string, string | null>();
+    messages.forEach((message, index) => {
+      if (message.role !== 'assistant' || !message.from_global) {
+        return;
+      }
+      let before: string | null = null;
+      for (let i = index - 1; i >= 0; i--) {
+        if (messages[i]!.role === 'user') {
+          before = messages[i]!.code ?? null;
+          break;
+        }
+      }
+      map.set(message.id, before);
+    });
+    return map;
+  }, [messages]);
+
+  /**
+   * Whether this message renders as a global reply with workflow diffs.
+   * The streaming placeholder has no `from_global` flag of its own, so the
+   * active-assistant prop stands in for it; a settled message needs either
+   * its final YAML or retained snapshots to have anything to show.
+   */
+  const isGlobalReply = (message: Message): boolean =>
+    isStreaming(message)
+      ? isGlobalAssistantActive
+      : Boolean(
+          message.from_global &&
+            // Only a successful reply was auto-applied. An errored or
+            // cancelled one can still carry code, and rendering its blocks
+            // would present changes that never reached the canvas as a
+            // record of what happened.
+            message.status === 'success' &&
+            (message.code || snapshotsByMessageId[message.id]?.length)
+        );
+
+  /**
+   * Whether a reply offers to undo the changes it applied. Only the last
+   * settled global reply does: undoing an earlier one would leave the replies
+   * after it describing a workflow that no longer exists.
+   */
+  const canUndoChanges = (message: Message): boolean =>
+    Boolean(
+      onUndoChanges &&
+        !isApplyInFlight &&
+        !isWriteDisabled &&
+        !isStreaming(message) &&
+        displayMessages.at(-1)?.id === message.id &&
+        message.from_global &&
+        // Only a successful reply was auto-applied; an error or cancelled one
+        // can still carry code, and undoing it would offer to "redo" changes
+        // that never landed.
+        message.status === 'success' &&
+        message.code &&
+        !failedApplyMessageIds?.has(message.id) &&
+        beforeYamlByMessageId.get(message.id)
+    );
+
+  const snapshotsFor = (message: Message): WorkflowSnapshot[] =>
+    isStreaming(message)
+      ? streamingSnapshots
+      : (snapshotsByMessageId[message.id] ?? []);
+
+  /**
+   * The workflow as it stood before this reply started: for a settled
+   * message the indexed lookup below, for the in-flight one the last user
+   * message's serialized doc, which is what the request was built from.
+   */
+  const baselineYamlFor = (message: Message): string | null => {
+    if (!isStreaming(message)) {
+      return beforeYamlByMessageId.get(message.id) ?? null;
+    }
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const candidate = messages[i];
+      if (candidate?.role === 'user') return candidate.code ?? null;
+    }
+    return null;
+  };
 
   // Woven text/status timeline to render instead of flat content, or null.
   // - Completed messages: persisted `response_segments` (global replies).
@@ -619,8 +1005,12 @@ export function MessageList({
       className="h-full overflow-y-auto"
       data-testid="message-list"
       onScroll={() => {
+        // Tracked unconditionally, not just mid-reply: gated on a live
+        // stream, scrolling back to the bottom between replies never cleared
+        // the flag, so the next reply (and the user's own message) would not
+        // scroll into view.
         const el = containerRef.current;
-        if (el && streamingContent) {
+        if (el) {
           const isNearBottom =
             el.scrollHeight - el.scrollTop - el.clientHeight < 100;
           userScrolledAwayRef.current = !isNearBottom;
@@ -663,12 +1053,26 @@ export function MessageList({
                         </div>
                       </div>
                     ) : segments ? (
-                      <SegmentTimeline
-                        segments={segments}
-                        streaming={isStreaming(message)}
-                        showAddButtons={showMessageAddButtons}
-                        isWriteDisabled={isWriteDisabled}
-                      />
+                      isGlobalReply(message) ? (
+                        <WorkflowReplyTimeline
+                          segments={segments}
+                          snapshots={snapshotsFor(message)}
+                          baselineYaml={baselineYamlFor(message)}
+                          finalYaml={message.code ?? null}
+                          streaming={isStreaming(message)}
+                          showAddButtons={showMessageAddButtons}
+                          isWriteDisabled={isWriteDisabled}
+                          onOpenStep={onOpenStep}
+                          canOpenStep={canOpenStep}
+                        />
+                      ) : (
+                        <SegmentTimeline
+                          segments={segments}
+                          streaming={isStreaming(message)}
+                          showAddButtons={showMessageAddButtons}
+                          isWriteDisabled={isWriteDisabled}
+                        />
+                      )
                     ) : (
                       <MarkdownContent
                         content={
@@ -698,85 +1102,125 @@ export function MessageList({
                       </div>
                     )}
 
-                    {!isStreaming(message) && message.code && (
-                      <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
-                        <div
-                          className={cn(
-                            'w-full px-4 py-2 bg-gray-50 flex items-center justify-between gap-2',
-                            expandedYaml.has(message.id) &&
-                              'border-b border-gray-200'
-                          )}
-                        >
-                          <button
-                            type="button"
-                            data-testid="expand-code-button"
-                            onClick={() => {
-                              setExpandedYaml(prev => {
-                                const next = new Set(prev);
-                                if (next.has(message.id)) {
-                                  next.delete(message.id);
-                                } else {
-                                  next.add(message.id);
-                                }
-                                return next;
-                              });
-                            }}
-                            className="flex items-center gap-2 hover:opacity-75 transition-opacity"
+                    {/* Legacy/flat global replies (no timeline): all diff
+                      blocks render together at the end of the message */}
+                    {!isStreaming(message) &&
+                      message.from_global &&
+                      // As above: only a reply that applied gets to present
+                      // its changes as a record of what happened.
+                      message.status === 'success' &&
+                      message.code &&
+                      !segments && (
+                        <WorkflowDiffBlocks
+                          beforeYaml={
+                            beforeYamlByMessageId.get(message.id) ?? null
+                          }
+                          afterYaml={message.code}
+                          onOpenStep={onOpenStep}
+                          canOpenStep={canOpenStep}
+                        />
+                      )}
+
+                    {/* The panel and the diff blocks are alternatives, never
+                      both and never neither. A global reply that applied is
+                      told by its blocks alone. Anything else with code gets
+                      the panel: a reply that errored or was cancelled, whose
+                      blocks are withheld because its changes never landed,
+                      and a reply whose import failed, for which the Apply
+                      button is the only way out. */}
+                    {!isStreaming(message) &&
+                      message.code &&
+                      (!isGlobalReply(message) ||
+                        failedApplyMessageIds?.has(message.id)) && (
+                        <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
+                          <div
+                            className={cn(
+                              'w-full px-4 py-2 bg-gray-50 flex items-center justify-between gap-2',
+                              expandedYaml.has(message.id) &&
+                                'border-b border-gray-200'
+                            )}
                           >
-                            <span
-                              className={cn(
-                                'transition-transform duration-200',
-                                expandedYaml.has(message.id) ? 'rotate-90' : ''
-                              )}
+                            <button
+                              type="button"
+                              data-testid="expand-code-button"
+                              onClick={() => {
+                                setExpandedYaml(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(message.id)) {
+                                    next.delete(message.id);
+                                  } else {
+                                    next.add(message.id);
+                                  }
+                                  return next;
+                                });
+                              }}
+                              className="flex items-center gap-2 hover:opacity-75 transition-opacity"
                             >
-                              <span className="hero-chevron-right h-4 w-4 text-gray-500" />
-                            </span>
-                            <span className="text-xs text-left font-medium text-gray-700">
-                              {message.job_id
-                                ? 'Generated Job Code'
-                                : 'Generated Workflow'}
-                            </span>
-                          </button>
-                          <CodeActionButtons
-                            code={message.code}
-                            showAdd={showAddButtons}
-                            showApply={showApplyButton}
-                            showPreview={
-                              !!message.job_id ||
-                              (!!message.from_global && canPreviewGlobalStep)
-                            }
-                            onApply={() => {
-                              if (message.job_id) {
-                                onApplyJobCode?.(message.code!, message.id);
-                              } else {
-                                onApplyWorkflow?.(message.code!, message.id);
-                              }
-                            }}
-                            onPreview={() => {
-                              if (message.from_global) {
-                                // Per-step diff from the full workflow YAML
-                                onPreviewGlobalStep?.(
-                                  message.code!,
-                                  message.id
-                                );
-                              } else {
+                              <span
+                                className={cn(
+                                  'transition-transform duration-200',
+                                  expandedYaml.has(message.id)
+                                    ? 'rotate-90'
+                                    : ''
+                                )}
+                              >
+                                <span className="hero-chevron-right h-4 w-4 text-gray-500" />
+                              </span>
+                              <span className="text-xs text-left font-medium text-gray-700">
+                                {message.job_id
+                                  ? 'Generated Job Code'
+                                  : 'Generated Workflow'}
+                              </span>
+                            </button>
+                            <CodeActionButtons
+                              code={message.code}
+                              showAdd={showAddButtons}
+                              showApply={showApplyButton}
+                              showPreview={!!message.job_id}
+                              onApply={() => {
+                                if (message.job_id) {
+                                  onApplyJobCode?.(message.code!, message.id);
+                                } else {
+                                  onApplyWorkflow?.(message.code!, message.id);
+                                }
+                              }}
+                              onPreview={() => {
                                 onPreviewJobCode?.(message.code!, message.id);
+                              }}
+                              isApplying={!!applyingMessageId}
+                              isPreviewActive={
+                                previewingMessageId === message.id
                               }
-                            }}
-                            isApplying={!!applyingMessageId}
-                            isPreviewActive={previewingMessageId === message.id}
-                            isWriteDisabled={isWriteDisabled}
-                          />
+                              isWriteDisabled={isWriteDisabled}
+                            />
+                          </div>
+                          {expandedYaml.has(message.id) && (
+                            <pre
+                              className="bg-slate-100 text-slate-800 p-3 overflow-x-auto text-xs font-mono"
+                              data-testid="generated-code"
+                            >
+                              <code>{message.code}</code>
+                            </pre>
+                          )}
                         </div>
-                        {expandedYaml.has(message.id) && (
-                          <pre
-                            className="bg-slate-100 text-slate-800 p-3 overflow-x-auto text-xs font-mono"
-                            data-testid="generated-code"
-                          >
-                            <code>{message.code}</code>
-                          </pre>
-                        )}
-                      </div>
+                      )}
+
+                    {canUndoChanges(message) && (
+                      <UndoChangesButton
+                        undone={undoneMessageId === message.id}
+                        onClick={() => {
+                          const redoing = undoneMessageId === message.id;
+                          onUndoChanges?.(
+                            message.id,
+                            redoing
+                              ? message.code!
+                              : beforeYamlByMessageId.get(message.id)!,
+                            // Redo restores the reply's own YAML, which the
+                            // model wrote; undo restores our own serializer's.
+                            { fromModel: redoing }
+                          );
+                        }}
+                      />
                     )}
 
                     {!isStreaming(message) &&

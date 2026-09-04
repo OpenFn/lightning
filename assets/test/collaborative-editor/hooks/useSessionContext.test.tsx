@@ -71,7 +71,6 @@ function createMockProject(): ProjectContext {
 function createMockAppConfig(): AppConfig {
   return {
     require_email_verification: false,
-    kafka_triggers_enabled: false,
   };
 }
 

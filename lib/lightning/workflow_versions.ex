@@ -21,6 +21,7 @@ defmodule Lightning.WorkflowVersions do
   alias Ecto.Multi
   alias Lightning.Repo
   alias Lightning.Validators.Hex
+  alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowVersion
@@ -273,6 +274,7 @@ defmodule Lightning.WorkflowVersions do
 
     trigger_keys = [
       :type,
+      :custom_path,
       :cron_expression,
       :enabled,
       :webhook_reply,
@@ -300,6 +302,7 @@ defmodule Lightning.WorkflowVersions do
       |> Enum.reduce([], fn trigger, acc ->
         hash_list =
           trigger
+          |> hashable_custom_path()
           |> Map.take(trigger_keys)
           |> Enum.sort_by(fn {k, _v} -> k end)
           |> Enum.map(fn {_k, v} -> serialize_value(v) end)
@@ -344,6 +347,20 @@ defmodule Lightning.WorkflowVersions do
       jobs_hash_list,
       edges_hash_list
     ])
+  end
+
+  # Only a path the app would export. `ProvisioningJSON` and `ExportUtils` drop
+  # one the naming rules reject, so the CLI never sees it, and hashing it here
+  # would leave the two disagreeing forever on a grandfathered row. A path on a
+  # cron or kafka trigger never served a URL, so it is not content either.
+  defp hashable_custom_path(trigger) do
+    webhook? = Map.get(trigger, :type) in [:webhook, "webhook"]
+
+    if webhook? and Trigger.valid_custom_path?(Map.get(trigger, :custom_path)) do
+      trigger
+    else
+      Map.put(trigger, :custom_path, nil)
+    end
   end
 
   defp serialize_value(%WebhookResponseConfig{} = val) do

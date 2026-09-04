@@ -3,8 +3,11 @@ defmodule Lightning.FailureAlerter do
 
   use LightningWeb, :verified_routes
 
+  alias Lightning.Projects.MailRecipients
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Run
+
+  require Logger
 
   def alert_on_failure(nil), do: nil
 
@@ -24,10 +27,9 @@ defmodule Lightning.FailureAlerter do
         %{
           "workflow_id" => workflow.id,
           "workflow_name" => workflow.name,
-          "project_name" => project.name,
+          "project" => project,
           "work_order_id" => run.work_order_id,
           "run_id" => run.id,
-          "project_id" => workflow.project_id,
           "run_logs" => run.log_lines,
           "recipient" => user
         }
@@ -36,29 +38,46 @@ defmodule Lightning.FailureAlerter do
     end
   end
 
-  def alert(%{
-        "workflow_id" => workflow_id,
-        "workflow_name" => workflow_name,
-        "project_name" => project_name,
-        "work_order_id" => work_order_id,
-        "run_id" => run_id,
-        "project_id" => project_id,
-        "run_logs" => run_logs,
-        "recipient" => recipient
-      }) do
+  # A recipient who may not be sent this project's contents is refused before
+  # the rate limiter is consulted, so an allowance is only ever spent on mail
+  # that is actually sent. Charging a slot for a refused recipient would make
+  # the alert budget depend on who is refused rather than on how often the
+  # workflow failed.
+  def alert(%{"project" => project, "recipient" => recipient} = attrs) do
+    if MailRecipients.may_receive?(project, recipient) do
+      deliver_alert(attrs)
+    else
+      Logger.info(
+        "Withheld failure alert from user #{recipient.id} in project " <>
+          "#{project.id}: they may not be sent this project's contents"
+      )
+
+      nil
+    end
+  end
+
+  defp deliver_alert(%{
+         "workflow_id" => workflow_id,
+         "workflow_name" => workflow_name,
+         "project" => project,
+         "work_order_id" => work_order_id,
+         "run_id" => run_id,
+         "run_logs" => run_logs,
+         "recipient" => recipient
+       }) do
     [time_scale: time_scale, rate_limit: rate_limit] =
       Application.fetch_env!(:lightning, __MODULE__)
 
     run_url =
       url(
         LightningWeb.Endpoint,
-        ~p"/projects/#{project_id}/runs/#{run_id}"
+        ~p"/projects/#{project.id}/runs/#{run_id}"
       )
 
     work_order_url =
       url(
         LightningWeb.Endpoint,
-        ~p"/projects/#{project_id}/history?filters[workorder_id]=#{work_order_id}"
+        ~p"/projects/#{project.id}/history?filters[workorder_id]=#{work_order_id}"
       )
 
     # rate limiting per workflow AND user
@@ -82,7 +101,7 @@ defmodule Lightning.FailureAlerter do
           run_id: run_id,
           run_url: run_url,
           run_logs: ordered_logs,
-          project_name: project_name,
+          project_name: project.name,
           workflow_name: workflow_name,
           workflow_id: workflow_id,
           recipient: recipient

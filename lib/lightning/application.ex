@@ -158,8 +158,7 @@ defmodule Lightning.Application do
         {Lightning.TaskWorker, name: :cli_task_worker},
         {Lightning.Runtime.RuntimeManager,
          worker_secret: Lightning.Config.worker_secret(),
-         endpoint: LightningWeb.Endpoint},
-        {Lightning.KafkaTriggers.Supervisor, type: :supervisor}
+         endpoint: LightningWeb.Endpoint}
         # Start a worker by calling: Lightning.Worker.start_link(arg)
         # {Lightning.Worker, arg}
       ]
