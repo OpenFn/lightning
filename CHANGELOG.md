@@ -17,6 +17,17 @@ and this project adheres to
 
 ### Added
 
+- The AI assistant now shows what changed as a global reply edits your workflow.
+  Each change renders under the status that made it, while the reply is still
+  streaming, as a per-step code diff with syntax highlighting, old and new line
+  numbers and a link to open that step in the editor, alongside a compact
+  summary of structural changes like added or removed paths, trigger changes and
+  step renames. Each diff block copies the step's code, and the latest reply can
+  be undone, restoring the workflow to how it stood before that reply and
+  offering to redo it. Undo confirms first when the workflow has been edited
+  since, because it replaces the whole workflow.
+  [#5036](https://github.com/OpenFn/lightning/issues/5036)
+
 - Webhook triggers can be given a custom URL path, so an endpoint's URL is known
   before it is deployed. A trigger with a path of `facility-001` in project
   `abc-123` answers at `/i/abc-123/facility-001`. Set it in the trigger panel,
