@@ -880,6 +880,7 @@ export function AIAssistantPanelWrapper({
                 snapshotsByMessageId={snapshotsByMessageId}
                 onOpenStep={handleOpenStep}
                 canOpenStep={canOpenStep}
+                currentUserId={user?.id}
                 failedApplyMessageIds={failedApplyMessageIds}
                 onUndoChanges={requestUndoChanges}
                 undoneMessageId={undoneMessageId}

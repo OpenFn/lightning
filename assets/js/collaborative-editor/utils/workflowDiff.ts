@@ -592,6 +592,27 @@ export interface SnapshotChangeSet {
  */
 const diffedPairs = new Map<string, WorkflowChangeSet | null>();
 
+/**
+ * A short stable id per distinct document, so the pair cache can key on two
+ * of those instead of two whole YAML files. Bounded alongside the caches it
+ * serves, and reset with them.
+ */
+let nextDocumentId = 0;
+const documentIds = new Map<string, number>();
+
+const documentId = (yaml: string): number => {
+  const existing = documentIds.get(yaml);
+  if (existing !== undefined) return existing;
+
+  if (documentIds.size >= MAX_CACHED_STATES) {
+    const oldest = documentIds.keys().next().value;
+    if (oldest !== undefined) documentIds.delete(oldest);
+  }
+  const id = nextDocumentId++;
+  documentIds.set(yaml, id);
+  return id;
+};
+
 /** Change set for one before/after pair, computed once per pair */
 const cachedDiff = (
   beforeYaml: string,
@@ -599,7 +620,10 @@ const cachedDiff = (
   before: DiffState,
   after: DiffState
 ): WorkflowChangeSet | null => {
-  const key = `${beforeYaml}\u0000${afterYaml}`;
+  // Keyed on short ids rather than the documents themselves. A workflow can
+  // be hundreds of KB, and pairing two of them per entry meant this cache
+  // retained more text than the parse cache it sits beside.
+  const key = `${documentId(beforeYaml)}:${documentId(afterYaml)}`;
   if (diffedPairs.has(key)) {
     const cached = diffedPairs.get(key) ?? null;
     diffedPairs.delete(key);
@@ -626,6 +650,7 @@ const cachedDiff = (
 export const clearWorkflowDiffCaches = (): void => {
   parsedStates.clear();
   diffedPairs.clear();
+  documentIds.clear();
 };
 
 export const deriveSnapshotChanges = (

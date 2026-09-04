@@ -704,6 +704,8 @@ interface MessageListProps {
   streamingSnapshots?: WorkflowSnapshot[];
   /** Snapshots retained per finalized assistant message id */
   snapshotsByMessageId?: Record<string, WorkflowSnapshot[]>;
+  /** Id of the viewer, so a collaborator's message is not mistaken for theirs */
+  currentUserId?: string;
   /** Opens a step in the IDE from a diff block */
   onOpenStep?: (step: { jobId?: string; name: string }) => void;
   canOpenStep?: (step: { jobId?: string; name: string }) => boolean;
@@ -750,6 +752,7 @@ export function MessageList({
   onOpenStep,
   canOpenStep,
   failedApplyMessageIds,
+  currentUserId,
   onUndoChanges,
   undoneMessageId,
   isApplyInFlight = false,
@@ -762,13 +765,22 @@ export function MessageList({
   const [expandedYaml, setExpandedYaml] = useState<Set<string>>(new Set());
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
-  const lastMessageRole = messages.at(-1)?.role;
+  // Sessions are shared, so "the last message is from a user" is not the
+  // same as "this viewer just sent something". Without the id check a
+  // collaborator's question, or a page of history loading in, drags a reader
+  // who had scrolled up back to the bottom.
+  const lastMessage = messages.at(-1);
+  const viewerJustSent = Boolean(
+    lastMessage?.role === 'user' &&
+      currentUserId &&
+      lastMessage.user?.id === currentUserId
+  );
 
   useEffect(() => {
     // Sending is an explicit request to be at the bottom, so it clears any
     // earlier decision to stay put. Without this, scrolling up to read
     // history meant your own next message did not scroll into view.
-    if (lastMessageRole === 'user') {
+    if (viewerJustSent) {
       userScrolledAwayRef.current = false;
     }
     if (messagesEndRef.current && !userScrolledAwayRef.current) {
@@ -781,7 +793,7 @@ export function MessageList({
         block: 'end',
       });
     }
-  }, [messages.length, lastMessageRole]);
+  }, [messages.length, viewerJustSent]);
 
   useEffect(() => {
     if (isLoading && loadingRef.current && !userScrolledAwayRef.current) {
@@ -1109,14 +1121,16 @@ export function MessageList({
                         />
                       )}
 
-                    {/* Global replies render no "Generated Workflow" panel
-                      and no action buttons while the apply worked: the diff
-                      blocks above are the whole representation of the change.
-                      A failed import is never retried automatically, so those
-                      replies get the panel back as the only way out. */}
+                    {/* The panel and the diff blocks are alternatives, never
+                      both and never neither. A global reply that applied is
+                      told by its blocks alone. Anything else with code gets
+                      the panel: a reply that errored or was cancelled, whose
+                      blocks are withheld because its changes never landed,
+                      and a reply whose import failed, for which the Apply
+                      button is the only way out. */}
                     {!isStreaming(message) &&
                       message.code &&
-                      (!message.from_global ||
+                      (!isGlobalReply(message) ||
                         failedApplyMessageIds?.has(message.id)) && (
                         <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
                           <div
