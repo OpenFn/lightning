@@ -7,6 +7,8 @@ import {
   Tooltip,
 } from 'recharts';
 
+import { cn } from '#/utils/cn';
+
 /**
  * A part-to-whole donut with the total in the middle and an always-on legend.
  *
@@ -28,52 +30,74 @@ interface DonutProps {
   emptyMessage: string;
 }
 
+// The chart's box, drawn whether or not there is a chart to put in it, so an
+// empty window is as tall as a full one and the page holds still on a range
+// switch. Only the legend below it follows the data.
+export const FRAME = 'h-55';
+
 export const Donut = ({ slices, emptyMessage }: DonutProps) => {
   const total = slices.reduce((sum, { value }) => sum + value, 0);
 
   // A pie of zeroes renders as an empty box in Recharts, which reads as
   // broken rather than empty.
   if (total === 0) {
-    return <p className="text-sm text-gray-500">{emptyMessage}</p>;
+    return (
+      <p
+        className={cn(
+          FRAME,
+          'flex items-center justify-center text-sm text-gray-500'
+        )}
+      >
+        {emptyMessage}
+      </p>
+    );
   }
 
   const share = (value: number) => `${((value / total) * 100).toFixed(1)}%`;
 
   return (
     <>
-      <ResponsiveContainer width="100%" height={220}>
-        <PieChart>
-          <Tooltip
-            formatter={(value, name) => [
-              `${Number(value).toLocaleString()} (${share(Number(value))})`,
-              name,
-            ]}
-          />
-          <Pie
-            data={slices.map(({ label, value }) => ({ name: label, value }))}
-            dataKey="value"
-            nameKey="name"
-            innerRadius={60}
-            outerRadius={80}
-            stroke="#fff"
-            strokeWidth={2}
-          >
-            {slices.map(({ key, color }) => (
-              <Cell key={key} fill={color} />
-            ))}
-            <Label
-              value={total.toLocaleString()}
-              position="center"
-              className="fill-gray-900 text-2xl font-semibold"
+      <div className={FRAME} aria-hidden="true">
+        <ResponsiveContainer width="100%" height={220}>
+          <PieChart accessibilityLayer={false}>
+            <Tooltip
+              formatter={(value, name) => [
+                `${Number(value).toLocaleString()} (${share(Number(value))})`,
+                name,
+              ]}
             />
-          </Pie>
-        </PieChart>
-      </ResponsiveContainer>
+            {/* `accessibilityLayer` only governs the svg; the pie's own root
+                group is a tab stop by default (`rootTabIndex` 0), and
+                `aria-hidden` on the frame doesn't take it out of the order. */}
+            <Pie
+              rootTabIndex={-1}
+              data={slices.map(({ label, value }) => ({ name: label, value }))}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={60}
+              outerRadius={80}
+              stroke="#fff"
+              strokeWidth={2}
+            >
+              {slices.map(({ key, color }) => (
+                <Cell key={key} fill={color} />
+              ))}
+              <Label
+                value={total.toLocaleString()}
+                position="center"
+                className="fill-gray-900 text-2xl font-semibold"
+              />
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
 
       {/* Neither palette identifies a slice by hue alone — the outcomes pair
           sits 4.1 CVD ΔE apart and the failure palette's tightest pair 6.1, in
           the band that is legal only with secondary encoding. The labels and
-          counts here are that encoding, so the legend is never optional. */}
+          counts here are that encoding, so the legend is never optional. The
+          chart above is hidden from assistive tech; this legend is its
+          accessible representation. */}
       <ul className="mt-2 flex flex-col gap-1 text-sm text-gray-700">
         {slices.map(({ key, label, color, value }) => (
           <li key={key} className="flex items-center gap-2">

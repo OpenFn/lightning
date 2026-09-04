@@ -1,4 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { HealthContent } from '#/health/WorkflowHealth';
@@ -37,7 +38,8 @@ const ERROR = 'Could not load workflow stats. Refresh to try again.';
 /**
  * Stubs `fetch`, keyed by the last path segment, so a test can pick which
  * slice fails. A value is a body to serve; a number is the status to fail
- * with — the panels degrade independently and the tests have to say so.
+ * with — the panels degrade independently and the tests have to say so. A
+ * pending promise as the body is a request that never lands.
  */
 function stubFetch(responses: Record<string, unknown>) {
   const signals: AbortSignal[] = [];
@@ -45,7 +47,7 @@ function stubFetch(responses: Record<string, unknown>) {
   const fetchMock = vi.fn((url: string, init?: RequestInit) => {
     if (init?.signal) signals.push(init.signal);
 
-    const slice = url.split('/').pop() ?? '';
+    const slice = url.split('?')[0].split('/').pop() ?? '';
     const response = responses[slice];
 
     if (typeof response === 'number' || response === undefined) {
@@ -99,11 +101,11 @@ describe('WorkflowHealth', () => {
     await screen.findByText('Success');
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/projects/proj-1/workflows/wf-1/health/outcomes',
+      '/api/projects/proj-1/workflows/wf-1/health/outcomes?days=30',
       expect.objectContaining({ credentials: 'same-origin' })
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/projects/proj-1/workflows/wf-1/health/failures',
+      '/api/projects/proj-1/workflows/wf-1/health/failures?days=30',
       expect.objectContaining({ credentials: 'same-origin' })
     );
   });
@@ -173,6 +175,36 @@ describe('WorkflowHealth', () => {
       await screen.findByRole('heading', { name: 'Sync patients' })
     ).toBeInTheDocument();
     expect(screen.getByText('Last 30 days · 1,287 work orders')).toBeVisible();
+  });
+
+  test('refetches both slices at the selected range', async () => {
+    const { fetchMock } = mount(both);
+
+    await screen.findByText('Success');
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/proj-1/workflows/wf-1/health/outcomes?days=7',
+      expect.objectContaining({ credentials: 'same-origin' })
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/proj-1/workflows/wf-1/health/failures?days=7',
+      expect.objectContaining({ credentials: 'same-origin' })
+    );
+  });
+
+  test('calls a one-day window "Last 24 hours", not "Last 1 day"', async () => {
+    const dayWide = {
+      ...outcomes,
+      window: { from: '2026-08-30T10:00:00Z', to: '2026-08-31T10:00:00Z' },
+    };
+
+    mount({ outcomes: dayWide, failures: failureSignatures });
+
+    expect(
+      await screen.findByText('Last 24 hours · 1,287 work orders')
+    ).toBeVisible();
   });
 
   test('folds the failure states into the Outcomes donut', async () => {
@@ -262,19 +294,81 @@ describe('WorkflowHealth', () => {
     expect(signals.every(signal => signal.aborted)).toBe(true);
   });
 
-  test('stops showing the old numbers once the request changes', async () => {
-    const { rerender } = mount(both);
+  // The opposite of the `health:changed` case above, and deliberately so. A
+  // tick re-asks the same question, so the last answer holds; a range switch is
+  // a new question, so every panel drops its answer at the same moment.
+  test('drops every panel on a range switch', async () => {
+    const responses: Record<string, unknown> = { ...both };
+
+    mount(responses);
 
     await screen.findByText('Success');
 
-    rerender(
-      <HealthContent
-        workflowId="wf-2"
-        projectId="proj-1"
-        workflowName="Sync households"
-      />
-    );
+    // A body that never resolves: the range request stays in flight.
+    responses['outcomes'] = new Promise(() => {});
+    responses['failures'] = new Promise(() => {});
 
-    expect(screen.queryAllByText('Loading…')).toHaveLength(3);
+    await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
+
+    expect(screen.queryByText('Success')).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
+  });
+
+  // Why the panels drop together rather than each keeping its own last answer:
+  // `outcomes` is a group-by and `failures` a three-way join, so the cheap one
+  // lands first. Keeping stale data would put the new window in the subtitle
+  // while the Triage card below still named the old one.
+  test('never names two windows at once during a range switch', async () => {
+    const quiet = { window: outcomes.window, signatures: [] };
+    const responses: Record<string, unknown> = { outcomes, failures: quiet };
+
+    mount(responses);
+
+    expect(
+      await screen.findByText('No failures in the last 30 days')
+    ).toBeVisible();
+
+    // The cheap slice answers the new range; the heavy join never lands.
+    responses['outcomes'] = {
+      ...outcomes,
+      window: { from: '2026-08-24T10:00:00Z', to: '2026-08-31T10:00:00Z' },
+    };
+    responses['failures'] = new Promise(() => {});
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
+
+    await screen.findByText('Last 7 days · 1,287 work orders');
+
+    expect(screen.queryByText('No failures in the last 30 days')).toBeNull();
+  });
+
+  // The one case where the kept numbers are dropped: nothing is coming to
+  // replace them, so leaving them up would strand one window's counts under
+  // another window's label.
+  test('drops the stale numbers when the new request fails', async () => {
+    const responses: Record<string, unknown> = { ...both };
+
+    mount(responses);
+
+    await screen.findByText('Success');
+
+    responses['outcomes'] = 500;
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
+
+    // An `alert`, so the failure is read out where the subtitle falls silent.
+    const alerts = await screen.findAllByRole('alert');
+    expect(alerts.map(alert => alert.textContent)).toEqual([ERROR, ERROR]);
+    expect(screen.queryByText('Success')).toBeNull();
+  });
+
+  // One announcement for the page, from the subtitle; the cards say it too,
+  // but only to a reader who lands inside them. jsdom does no layout, so the
+  // reserved height itself can only be checked in a browser.
+  test('announces loading once, not once per panel', () => {
+    mount(both);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
+    expect(screen.getAllByText('Loading…')).toHaveLength(4);
   });
 });
