@@ -603,15 +603,10 @@ defmodule Lightning.Kickstart do
     user
   end
 
-  # Adds missing members and corrects drifted roles; never removes members.
-  #
-  # A membership write submits the whole list: `Projects.add_project_users/4`
-  # runs the rows through `membership_params/2`, which keeps an entry for every
-  # member already on the project and replaces only the ones named here. So
-  # "never removes" comes for free, the one-owner validation runs across the
-  # whole list at once rather than per row, and an ownership handover no longer
-  # depends on the order the scenario happens to declare members in. `false`
-  # suppresses the project-addition emails, which is what we want for seeding.
+  # One whole-list write: `add_project_users/4` keeps an entry for every member
+  # already on the project and replaces only the ones named here, so both
+  # "never removes members" and the one-owner check come from the API rather
+  # than from this function. `false` suppresses the project-addition emails.
   defp reconcile_members(project, members, actor) do
     rows =
       members
@@ -690,13 +685,10 @@ defmodule Lightning.Kickstart do
     }
   end
 
-  # A workflow's jobs, triggers and edges derive their ids from this scope, so
-  # anchor it to the workflow's pinned `id` when it has one. Anchoring it to the
-  # name instead meant renaming a workflow re-derived every child id, and since
-  # `Workflow` declares `has_many :jobs, on_replace: :delete` the old jobs and
-  # triggers were silently deleted and recreated - taking each webhook
-  # trigger's `/i/<id>` URL with them. Pinning an `id`, which is what the docs
-  # tell you to do before a rename, now keeps the children too.
+  # Anchored to a pinned `id` when the workflow has one. Anchoring to the name
+  # meant a rename re-derived every child id, and `Workflow` declares
+  # `has_many :jobs, on_replace: :delete`, so the old jobs and triggers were
+  # deleted and recreated under new webhook URLs.
   defp workflow_scope(spec, project_scope, name) do
     case spec["id"] do
       nil -> "#{project_scope}/workflow:#{name}"
