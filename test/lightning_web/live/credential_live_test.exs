@@ -4,6 +4,7 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import LightningWeb.CredentialLiveHelpers
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
 
   import Ecto.Query
@@ -41,6 +42,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
+  setup :isolated_adaptors
 
   setup do
     Lightning.AdaptorTestHelpers.seed_all_credential_schemas()

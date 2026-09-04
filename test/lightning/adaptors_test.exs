@@ -112,6 +112,36 @@ defmodule Lightning.AdaptorsTest do
     end
   end
 
+  describe "default instance resolution" do
+    test "resolves through the stubbed default instance when one is set", %{
+      sup: sup
+    } do
+      source = AdaptorsSupervisor.source(sup)
+
+      fake_meta = %{
+        name: "@openfn/language-stub-fixture",
+        latest_version: "9.9.9",
+        description: nil,
+        deprecated: false,
+        icon_square_ext: nil,
+        icon_rectangle_ext: nil,
+        icon_square_sha256: nil,
+        icon_rectangle_sha256: nil
+      }
+
+      Cachex.put(
+        AdaptorsSupervisor.cache_name(sup),
+        {:packages, source},
+        {:ok, [fake_meta]}
+      )
+
+      Mimic.stub(Lightning.Adaptors.Config, :default_instance, fn -> sup end)
+
+      assert {:ok, [%Adaptors.Package{name: "@openfn/language-stub-fixture"}]} =
+               Adaptors.packages()
+    end
+  end
+
   describe "packages/0 delegates to packages(Lightning.Adaptors)" do
     test "packages/0 and packages(Lightning.Adaptors) return identical results" do
       # The production `Lightning.Adaptors.Supervisor` is started under the

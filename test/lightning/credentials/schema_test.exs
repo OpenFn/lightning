@@ -2,6 +2,7 @@ defmodule Lightning.Credentials.SchemaTest do
   use Lightning.DataCase, async: true
 
   import ExUnit.CaptureLog
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Mox
 
@@ -10,6 +11,7 @@ defmodule Lightning.Credentials.SchemaTest do
   alias Lightning.Credentials.SchemaDocument
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     Mox.stub(Lightning.MockConfig, :sentry, fn -> Lightning.MockSentry end)
@@ -314,11 +316,6 @@ defmodule Lightning.Credentials.SchemaTest do
   end
 
   describe "Credentials.get_schema/1" do
-    setup do
-      Lightning.AdaptorTestHelpers.clear_global_adaptors_cache()
-      :ok
-    end
-
     test "preserves JSON property order from the persisted schema body" do
       ordered_body = ~s({
         "properties": {
@@ -334,8 +331,6 @@ defmodule Lightning.Credentials.SchemaTest do
         source: :npm,
         schema_data: ordered_body
       )
-
-      Lightning.AdaptorTestHelpers.clear_global_adaptors_cache()
 
       stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
         {:error, :unreachable}

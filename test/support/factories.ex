@@ -5,6 +5,8 @@ defmodule Lightning.Factories do
   alias Lightning.Workflows.Snapshot
 
   def adaptor_factory do
+    Lightning.AdaptorTestHelpers.assert_isolated!()
+
     %Lightning.Adaptors.Catalogue.Adaptor{
       name: sequence(:adaptor_name, &"@openfn/language-test-#{&1}"),
       source: :npm,

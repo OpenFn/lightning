@@ -32,5 +32,18 @@
   {"lib/lightning/auth_providers/oauth_http_client/pinned_adapter.ex",
    :pattern_match},
   {"lib/lightning/auth_providers/oauth_http_client/pinned_adapter.ex",
-   :unused_fun}
+   :unused_fun},
+
+  # `assert_isolated!/0` (test/support/adaptor_test_helpers.ex) compares
+  # `Config.default_instance/0`'s return against the literal `Lightning.Adaptors`
+  # to catch tests that skipped `setup :isolated_adaptors`. Mimic replaces
+  # `default_instance/0` at runtime for stubbed tests, but dialyzer only sees
+  # the real module body, which always returns that one literal atom -- so it
+  # proves the comparison is always true and infers the guard, and everything
+  # that calls it, can never return normally. That's the guard doing its job
+  # against a value only Mimic can change at runtime; there is no static fix.
+  {"test/support/adaptor_test_helpers.ex", :no_return},
+  {"test/support/adaptor_test_helpers.ex", :pattern_match},
+  {"test/support/factories.ex", :no_return},
+  {"test/support/fixtures/jobs_fixtures.ex", :no_return}
 ]

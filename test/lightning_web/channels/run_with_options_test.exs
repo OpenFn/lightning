@@ -1,6 +1,7 @@
 defmodule LightningWeb.RunWithOptionsTest do
   use Lightning.DataCase, async: false
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
 
   alias Lightning.Runs
@@ -9,10 +10,9 @@ defmodule LightningWeb.RunWithOptionsTest do
   alias LightningWeb.RunWithOptions
 
   describe "rendering a run" do
-    setup do
-      cache = Lightning.Adaptors.Supervisor.cache_name(Lightning.Adaptors)
-      Cachex.clear(cache)
+    setup :isolated_adaptors
 
+    setup do
       insert(:adaptor,
         name: "@openfn/language-common",
         source: :npm,

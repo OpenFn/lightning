@@ -8,10 +8,13 @@ defmodule Lightning.Projects.ProvisionerTest do
   alias Lightning.Workflows.Snapshot
 
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
   describe "parse_document/2 with a new project" do
+    setup :isolated_adaptors
+
     test "with invalid data" do
       Mox.verify_on_exit!()
 
@@ -169,7 +172,7 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "rejects a job with an adaptor that is not in the registry" do
-      insert(:adaptor, name: "@openfn/language-common")
+      ensure_adaptor("@openfn/language-common")
 
       %{body: body} = valid_document()
 
@@ -201,9 +204,11 @@ defmodule Lightning.Projects.ProvisionerTest do
   end
 
   describe "import_document/2 adaptor validation" do
+    setup :isolated_adaptors
+
     test "allows the import when the adaptor is known" do
       user = insert(:user)
-      insert(:adaptor, name: "@openfn/language-foo")
+      ensure_adaptor("@openfn/language-foo")
       %{body: body} = valid_document()
 
       body =

@@ -22,8 +22,14 @@ When adding or changing a process here:
   collaborators passed in the child spec. Do not add a `Registry`: the child set is
   fixed and the registered atom already addresses it.
 - Public functions that talk to a running process lead with the server ref,
-  defaulted: `def refresh(sup \\ @sup, name)`. `start_link` takes `name:` in
-  trailing opts.
+  defaulted: `def refresh(sup \\ Config.default_instance(), name)`. `start_link`
+  takes `name:` in trailing opts.
+- `Lightning.Adaptors.Config.default_instance/0` is what production code and
+  every public `Lightning.Adaptors` function default their `sup` argument
+  through, not a hardcoded module attribute. Tests get a private instance with
+  `setup :isolated_adaptors` (from `Lightning.AdaptorTestHelpers`), which
+  starts a fresh supervisor and stubs `default_instance/0` to it, instead of
+  touching the global instance.
 - The `Scheduler` is a cluster singleton behind `HighlanderPG` and registers under
   `global_scheduler_name/1` (`supervisor.ex:149`). `Process.whereis` will not find
   it.

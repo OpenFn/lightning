@@ -32,9 +32,13 @@ defmodule Lightning.Adaptors do
   ## Testing
 
   Every function that talks to a running process takes the supervisor
-  name as an optional first argument, defaulting to `Lightning.Adaptors`.
-  Start a `Lightning.Adaptors.Supervisor` under another name and pass
-  that name to run a test against its own catalogue and cache.
+  name as an optional first argument, defaulting to
+  `Lightning.Adaptors.Config.default_instance/0`. Start a
+  `Lightning.Adaptors.Supervisor` under another name and pass that name
+  to run a test against its own catalogue and cache, or stub
+  `default_instance/0` to make it the default for the test. The
+  recommended way to get a private instance is `setup :isolated_adaptors`
+  from `Lightning.AdaptorTestHelpers`, which does both.
   """
 
   alias Lightning.Adaptors.Catalogue
@@ -96,13 +100,11 @@ defmodule Lightning.Adaptors do
     ]
   end
 
-  @sup Lightning.Adaptors
-
   @doc """
   Returns every adaptor in the catalogue as `Package` structs.
   """
   @spec packages(atom()) :: {:ok, [Package.t()]} | {:error, :timeout | term()}
-  def packages(sup \\ @sup) do
+  def packages(sup \\ Config.default_instance()) do
     with {:ok, metas} <- Store.packages(sup) do
       source = AdaptorsSupervisor.source(sup)
       {:ok, Enum.map(metas, &to_package(&1, source))}
@@ -114,7 +116,7 @@ defmodule Lightning.Adaptors do
   binary.
   """
   @spec schema(atom(), String.t()) :: {:ok, String.t()} | {:error, term()}
-  def schema(sup \\ @sup, pkg), do: Store.schema(sup, pkg)
+  def schema(sup \\ Config.default_instance(), pkg), do: Store.schema(sup, pkg)
 
   @doc """
   Returns the on-disk path of the adaptor's `:square` or `:rectangle`
@@ -122,7 +124,8 @@ defmodule Lightning.Adaptors do
   """
   @spec icon(atom(), String.t(), :square | :rectangle) ::
           {:ok, Path.t()} | {:error, term()}
-  def icon(sup \\ @sup, pkg, shape), do: Store.icon(sup, pkg, shape)
+  def icon(sup \\ Config.default_instance(), pkg, shape),
+    do: Store.icon(sup, pkg, shape)
 
   @doc """
   Returns the picker catalogue as `{{latest_updated_at, count}, entries}`:
@@ -133,7 +136,7 @@ defmodule Lightning.Adaptors do
   """
   @spec catalogue_with_stamp(atom()) ::
           {{DateTime.t() | nil, non_neg_integer()}, [Store.catalogue_entry()]}
-  def catalogue_with_stamp(sup \\ @sup) do
+  def catalogue_with_stamp(sup \\ Config.default_instance()) do
     {:ok, catalogue} = Store.catalogue(sup)
     catalogue
   end
@@ -145,7 +148,7 @@ defmodule Lightning.Adaptors do
   for the catalogue to load; see `fetch_adaptor/2` for that.
   """
   @spec get_adaptor(atom(), String.t()) :: Package.t() | nil
-  def get_adaptor(sup \\ @sup, name) when is_binary(name),
+  def get_adaptor(sup \\ Config.default_instance(), name) when is_binary(name),
     do: lookup(sup, name)
 
   @doc """
@@ -163,7 +166,8 @@ defmodule Lightning.Adaptors do
   @spec fetch_adaptor(atom(), String.t()) ::
           {:ok, Package.t()}
           | {:error, :not_found | :timeout | :unavailable | :not_ready}
-  def fetch_adaptor(sup \\ @sup, name) when is_binary(name) do
+  def fetch_adaptor(sup \\ Config.default_instance(), name)
+      when is_binary(name) do
     case lookup(sup, name) do
       %Package{} = package ->
         {:ok, package}
@@ -214,7 +218,7 @@ defmodule Lightning.Adaptors do
   """
   @spec ensure_loaded(atom()) ::
           :ok | {:error, :timeout | :unavailable | :not_ready}
-  def ensure_loaded(sup \\ @sup) do
+  def ensure_loaded(sup \\ Config.default_instance()) do
     if ready?(sup), do: :ok, else: load(sup)
   end
 
@@ -260,7 +264,7 @@ defmodule Lightning.Adaptors do
   @spec to_wire(atom(), String.t() | nil) ::
           {:ok, String.t()}
           | {:error, :not_found | :timeout | :unavailable | :not_ready}
-  def to_wire(sup \\ @sup, spec)
+  def to_wire(sup \\ Config.default_instance(), spec)
 
   def to_wire(_sup, nil), do: {:ok, ""}
 
@@ -289,9 +293,10 @@ defmodule Lightning.Adaptors do
   """
   @spec refresh(atom(), keyword()) ::
           :ok | {:ok, Scheduler.refresh_counts()} | {:error, term()}
-  def refresh(opts) when is_list(opts), do: refresh(@sup, opts)
+  def refresh(opts) when is_list(opts),
+    do: refresh(Config.default_instance(), opts)
 
-  def refresh(sup \\ @sup, opts \\ []) do
+  def refresh(sup \\ Config.default_instance(), opts \\ []) do
     scheduler = AdaptorsSupervisor.global_scheduler_name(sup)
 
     if opts[:await] do
@@ -311,7 +316,8 @@ defmodule Lightning.Adaptors do
   """
   @spec refresh_package(atom(), String.t()) ::
           :ok | {:error, :not_found | term()}
-  def refresh_package(sup \\ @sup, name) when is_binary(name) do
+  def refresh_package(sup \\ Config.default_instance(), name)
+      when is_binary(name) do
     Scheduler.refresh_package(
       AdaptorsSupervisor.global_scheduler_name(sup),
       name
@@ -328,7 +334,7 @@ defmodule Lightning.Adaptors do
   @spec refresh_icons(atom()) ::
           {:ok, %{updated: non_neg_integer(), unchanged: non_neg_integer()}}
           | {:error, term()}
-  def refresh_icons(sup \\ @sup) do
+  def refresh_icons(sup \\ Config.default_instance()) do
     Scheduler.refresh_icons(AdaptorsSupervisor.global_scheduler_name(sup))
   catch
     :exit, {:timeout, _} -> {:error, :timeout}
@@ -342,7 +348,8 @@ defmodule Lightning.Adaptors do
   """
   @spec icon_meta(atom(), String.t()) ::
           {:ok, Store.icon_meta()} | {:error, :not_found}
-  def icon_meta(sup \\ @sup, name), do: Store.icon_meta(sup, name)
+  def icon_meta(sup \\ Config.default_instance(), name),
+    do: Store.icon_meta(sup, name)
 
   @doc """
   Subscribes the calling process to catalogue update broadcasts.
@@ -351,7 +358,7 @@ defmodule Lightning.Adaptors do
   messages.
   """
   @spec subscribe_to_updates(atom()) :: :ok | {:error, term()}
-  def subscribe_to_updates(sup \\ @sup) do
+  def subscribe_to_updates(sup \\ Config.default_instance()) do
     Phoenix.PubSub.subscribe(
       Lightning.PubSub,
       AdaptorsSupervisor.client_topic(sup)

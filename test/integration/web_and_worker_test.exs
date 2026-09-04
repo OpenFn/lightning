@@ -2,6 +2,7 @@ defmodule Lightning.WebAndWorkerTest do
   use LightningWeb.ConnCase, async: false
 
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Mox
 
@@ -42,6 +43,7 @@ defmodule Lightning.WebAndWorkerTest do
 
   describe "webhook triggered runs" do
     setup [
+      :isolated_adaptors,
       :register_and_log_in_superuser,
       :stub_rate_limiter_ok,
       :seed_default_adaptor
@@ -411,6 +413,7 @@ defmodule Lightning.WebAndWorkerTest do
 
   describe "webhook with delayed response (after_completion)" do
     setup [
+      :isolated_adaptors,
       :register_and_log_in_superuser,
       :stub_rate_limiter_ok,
       :seed_default_adaptor

@@ -2,11 +2,14 @@ defmodule Mix.Tasks.Lightning.Adaptors.ImportTest do
   use Lightning.DataCase
 
   import ExUnit.CaptureIO
+  import Lightning.AdaptorTestHelpers
 
   alias Lightning.Adaptors.Catalogue
   alias Mix.Tasks.Lightning.Adaptors.Import
 
   @moduletag :tmp_dir
+
+  setup :isolated_adaptors
 
   defp write_snapshot(tmp_dir, records) do
     path = Path.join(tmp_dir, "snapshot.json")

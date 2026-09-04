@@ -9,7 +9,31 @@ defmodule Lightning.AdaptorTestHelpers do
 
   import Lightning.Factories
 
+  alias Lightning.Adaptors.Config
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
+
+  @doc """
+  Starts an isolated `Lightning.Adaptors.Supervisor` instance under a
+  fresh name, backed by `Lightning.Adaptors.StrategyMock`, and stubs
+  `Lightning.Adaptors.Config.default_instance/0` to it, for the calling
+  test process and any process it starts (`Task`, `start_supervised!`,
+  ...) via `$callers`.
+
+  Use as `setup :isolated_adaptors`. Returns `%{sup: sup}`.
+  """
+  @spec isolated_adaptors(map()) :: %{sup: atom()}
+  def isolated_adaptors(context) do
+    sup = :"isolated_adaptors_#{System.unique_integer([:positive])}"
+
+    ExUnit.Callbacks.start_supervised!(
+      {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
+    )
+
+    Mimic.set_mimic_from_context(context)
+    Mimic.stub(Config, :default_instance, fn -> sup end)
+
+    %{sup: sup}
+  end
 
   @doc """
   Seeds a throwaway adaptor row so the catalogue counts as loaded and
@@ -46,14 +70,37 @@ defmodule Lightning.AdaptorTestHelpers do
   end
 
   @doc """
+  Raises unless the calling test has opted into an isolated instance via
+  `setup :isolated_adaptors`. Without it, a seeded row's cache fill lands in
+  the shared `Lightning.Adaptors` cache and outlives the test's DB rollback.
+  """
+  @spec assert_isolated!() :: :ok
+  def assert_isolated! do
+    if Config.default_instance() == Lightning.Adaptors do
+      raise """
+      This seeds the adaptor catalogue against the global Lightning.Adaptors \
+      instance. Its cache fill outlives this test's DB rollback and leaks \
+      into later tests.
+
+      Add `import Lightning.AdaptorTestHelpers` and `setup :isolated_adaptors` \
+      to this test module.
+      """
+    end
+
+    :ok
+  end
+
+  @doc """
   Seeds the catalogue row an adaptor spec needs to pass
   `Lightning.Workflows.Job` validation, unless it is already there.
   """
   @spec ensure_adaptor(String.t()) :: :ok
   def ensure_adaptor(spec) when is_binary(spec) do
+    assert_isolated!()
+
     case Lightning.Adaptors.parse_spec(spec) do
       {name, _version} when is_binary(name) ->
-        source = AdaptorsSupervisor.source(Lightning.Adaptors)
+        source = AdaptorsSupervisor.source(Config.default_instance())
 
         if is_nil(Lightning.Adaptors.Catalogue.get_adaptor(name, source)),
           do: insert(:adaptor, name: name)
@@ -72,6 +119,8 @@ defmodule Lightning.AdaptorTestHelpers do
   @spec seed_credential_schema(String.t()) ::
           Lightning.Adaptors.Catalogue.Adaptor.t()
   def seed_credential_schema(short_name) when is_binary(short_name) do
+    assert_isolated!()
+
     # Raw JSON binary, not a decoded map: `Credentials.Schema.new/2` decodes
     # it with ordered objects.
     schema_body =
@@ -83,8 +132,8 @@ defmodule Lightning.AdaptorTestHelpers do
 
     # Cachex fills run in its Courier process, which cannot see the sandbox
     # connection, so populate the cache directly.
-    cache = AdaptorsSupervisor.cache_name(Lightning.Adaptors)
-    source = AdaptorsSupervisor.source(Lightning.Adaptors)
+    cache = AdaptorsSupervisor.cache_name(Config.default_instance())
+    source = AdaptorsSupervisor.source(Config.default_instance())
     Cachex.put(cache, {:schema, short_name, source}, {:ok, schema_body})
 
     row
@@ -95,6 +144,8 @@ defmodule Lightning.AdaptorTestHelpers do
   """
   @spec seed_all_credential_schemas() :: :ok
   def seed_all_credential_schemas do
+    assert_isolated!()
+
     metas =
       Path.wildcard("test/fixtures/schemas/*.json")
       |> Enum.reject(fn path -> File.stat!(path).size == 0 end)
@@ -115,8 +166,8 @@ defmodule Lightning.AdaptorTestHelpers do
         }
       end)
 
-    cache = AdaptorsSupervisor.cache_name(Lightning.Adaptors)
-    source = AdaptorsSupervisor.source(Lightning.Adaptors)
+    cache = AdaptorsSupervisor.cache_name(Config.default_instance())
+    source = AdaptorsSupervisor.source(Config.default_instance())
     Cachex.put(cache, {:packages, source}, {:ok, metas})
 
     :ok
@@ -129,6 +180,8 @@ defmodule Lightning.AdaptorTestHelpers do
           Lightning.Adaptors.Catalogue.Adaptor.t()
   def seed_adaptor_package(name, latest_version)
       when is_binary(name) and is_binary(latest_version) do
+    assert_isolated!()
+
     {:ok, row} =
       Lightning.Adaptors.Catalogue.upsert_adaptor(%{
         name: name,

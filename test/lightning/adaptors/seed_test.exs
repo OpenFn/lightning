@@ -1,16 +1,24 @@
 defmodule Lightning.Adaptors.SeedTest do
   use Lightning.DataCase, async: true
 
+  import Lightning.AdaptorTestHelpers
+
   alias Lightning.Adaptors.Seed
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   @moduletag :tmp_dir
 
+  setup :isolated_adaptors
+
   setup %{tmp_dir: tmp_dir} do
     sup = :"seed_test_#{System.unique_integer([:positive])}"
 
     start_supervised!(
-      {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
+      Supervisor.child_spec(
+        {AdaptorsSupervisor,
+         name: sup, strategy: Lightning.Adaptors.StrategyMock},
+        id: sup
+      )
     )
 
     :ok =

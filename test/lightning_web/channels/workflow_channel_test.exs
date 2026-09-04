@@ -866,10 +866,9 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "request_adaptors and request_credentials" do
-    setup do
-      cache = Lightning.Adaptors.Supervisor.cache_name(Lightning.Adaptors)
-      Cachex.clear(cache)
+    setup :isolated_adaptors
 
+    setup do
       insert(:adaptor, name: "@openfn/language-salesforce", source: :npm)
       insert(:adaptor, name: "@openfn/language-http", source: :npm)
       :ok

@@ -16,6 +16,17 @@ defmodule Lightning.Adaptors.Config do
   @default_first_load_timeout :timer.seconds(60)
 
   @doc """
+  The supervisor instance public `Lightning.Adaptors` functions read
+  through when called with no explicit instance. Defaults to
+  `Lightning.Adaptors`, the one started in `application.ex`.
+
+  Tests stub this to isolate reads to a private instance; see
+  `Lightning.AdaptorTestHelpers.isolated_adaptors/1`.
+  """
+  @spec default_instance() :: atom()
+  def default_instance, do: Lightning.Adaptors
+
+  @doc """
   The active strategy module. Defaults to `Lightning.Adaptors.NPM`.
   """
   @spec strategy() :: module()

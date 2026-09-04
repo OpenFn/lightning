@@ -8,6 +8,7 @@ defmodule LightningWeb.RunChannelTest do
   alias Lightning.Workflows
 
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Lightning.TestUtils
   import Lightning.TokenHelpers
@@ -244,6 +245,7 @@ defmodule LightningWeb.RunChannelTest do
   end
 
   describe "fetching run data" do
+    setup :isolated_adaptors
     setup :set_google_credential
     setup :create_socket_and_run
 
@@ -313,7 +315,7 @@ defmodule LightningWeb.RunChannelTest do
 
     test "fetch:plan replies with an error when a job adaptor cannot be resolved",
          %{project: project} = context do
-      insert(:adaptor, name: "@openfn/language-readiness-fixture")
+      seed_ready_catalogue()
 
       trigger = build(:trigger, type: :webhook, enabled: true)
       job = build(:job, adaptor: "@openfn/language-never-published-zzz@latest")

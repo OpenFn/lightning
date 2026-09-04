@@ -5,6 +5,7 @@ defmodule LightningWeb.ProjectLiveTest do
   import Phoenix.Component
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import LightningWeb.CredentialLiveHelpers
 
@@ -879,6 +880,7 @@ defmodule LightningWeb.ProjectLiveTest do
   describe "projects settings page" do
     setup :register_and_log_in_user
     setup :create_project_for_current_user
+    setup :isolated_adaptors
 
     setup do
       Lightning.AdaptorTestHelpers.seed_credential_schema("http")

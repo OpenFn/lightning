@@ -4,10 +4,13 @@ defmodule Lightning.Workflows.QueryTest do
   alias Lightning.Workflows.Query
   alias Lightning.Workflows.Workflow
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.JobsFixtures
   import Lightning.AccountsFixtures
   import Lightning.ProjectsFixtures
   import Lightning.Factories
+
+  setup :isolated_adaptors
 
   test "jobs_for/1 with user" do
     user = user_fixture()

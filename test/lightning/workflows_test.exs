@@ -3,6 +3,7 @@ defmodule Lightning.WorkflowsTest do
   use Mimic
 
   import ExUnit.CaptureLog
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
 
   alias Lightning.Auditing.Audit
@@ -976,10 +977,12 @@ defmodule Lightning.WorkflowsTest do
   end
 
   describe "save_workflow/3 adaptor validation" do
+    setup :isolated_adaptors
+
     test "allows a job adaptor change to a known adaptor" do
       user = insert(:user)
       project = insert(:project)
-      insert(:adaptor, name: "@openfn/language-common")
+      ensure_adaptor("@openfn/language-common")
 
       changeset =
         Lightning.Workflows.Workflow.changeset(
@@ -999,7 +1002,7 @@ defmodule Lightning.WorkflowsTest do
     test "refuses an adaptor the catalogue does not list" do
       user = insert(:user)
       project = insert(:project)
-      insert(:adaptor, name: "@openfn/language-common")
+      ensure_adaptor("@openfn/language-common")
 
       changeset =
         Lightning.Workflows.Workflow.changeset(
