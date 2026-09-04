@@ -7,8 +7,10 @@ defmodule LightningWeb.WorkflowChannelTest do
   import Lightning.ProjectsHelpers
   import Mox
   import ExUnit.CaptureLog
+  import Eventually
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     Mox.stub(Lightning.MockConfig, :check_flag?, fn
@@ -866,8 +868,6 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "request_adaptors and request_credentials" do
-    setup :isolated_adaptors
-
     setup do
       insert(:adaptor, name: "@openfn/language-salesforce", source: :npm)
       insert(:adaptor, name: "@openfn/language-http", source: :npm)
@@ -1454,10 +1454,13 @@ defmodule LightningWeb.WorkflowChannelTest do
 
     test "handles an adaptor catalogue that is not ready", %{
       socket: socket,
-      workflow: workflow
+      workflow: workflow,
+      sup: sup
     } do
-      # Global mode: the refresh runs in a Task owned by the production
-      # Scheduler.
+      await_scheduler(sup)
+
+      # Global mode: the refresh runs in a Task owned by the isolated
+      # instance's Scheduler.
       Lightning.Adaptors.Catalogue.delete_all_for_source(:npm)
       Mox.set_mox_global(Lightning.Adaptors.StrategyMock)
 
@@ -1491,8 +1494,11 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
 
     test "does not block other channel traffic while the save is pending", %{
-      socket: socket
+      socket: socket,
+      sup: sup
     } do
+      await_scheduler(sup)
+
       # Slow enough that a synchronous handle_in would still be blocked when
       # the second push is asserted.
       Lightning.Adaptors.Catalogue.delete_all_for_source(:npm)
@@ -2724,13 +2730,13 @@ defmodule LightningWeb.WorkflowChannelTest do
 
   describe "PubSub subscription and adaptors broadcasting" do
     test "forwards adaptors_updated envelope from client topic to socket", %{
-      socket: _socket
+      sup: sup
     } do
       payload = %{adaptors: [%{name: "a"}]}
 
       Phoenix.PubSub.broadcast(
         Lightning.PubSub,
-        Lightning.Adaptors.Supervisor.client_topic(Lightning.Adaptors),
+        Lightning.Adaptors.Supervisor.client_topic(sup),
         %{event: "adaptors_updated", payload: payload}
       )
 
@@ -2756,11 +2762,12 @@ defmodule LightningWeb.WorkflowChannelTest do
       }
     end
 
-    test "does not push adaptors_updated for unrelated events on client topic" do
+    test "does not push adaptors_updated for unrelated events on client topic",
+         %{sup: sup} do
       capture_log(fn ->
         Phoenix.PubSub.broadcast(
           Lightning.PubSub,
-          Lightning.Adaptors.Supervisor.client_topic(Lightning.Adaptors),
+          Lightning.Adaptors.Supervisor.client_topic(sup),
           %{event: "something_else", payload: %{}}
         )
 
@@ -4912,5 +4919,12 @@ defmodule LightningWeb.WorkflowChannelTest do
         insert(:user),
         false
       )
+  end
+
+  # The instance's Scheduler only registers once HighlanderPG holds its
+  # advisory lock, which it acquires after `start_supervised!` returns.
+  defp await_scheduler(sup) do
+    {:global, gname} = Lightning.Adaptors.Supervisor.global_scheduler_name(sup)
+    assert_eventually(is_pid(:global.whereis_name(gname)), 2000)
   end
 end
