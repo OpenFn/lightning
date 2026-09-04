@@ -71,6 +71,7 @@ export function WebhookShowPanel({
       ? 'none configured'
       : `${authCount} configured`;
 
+  const pathError = trigger.errors?.['custom_path']?.[0] ?? null;
   const responseConfig = trigger.webhook_response_config;
   const isAfterCompletion = trigger.webhook_reply === 'after_completion';
   const responseType = isAfterCompletion ? ON_COMPLETE : IMMEDIATELY;
@@ -102,6 +103,16 @@ export function WebhookShowPanel({
           copyText={copyText}
           onCopy={url => void copyToClipboard(url)}
         />
+
+        {/* Uniqueness is only knowable on the server, and it answers after the
+            wizard has already closed. The URL above falls back to the generated
+            one while the name is refused, so it is the endpoint that works. */}
+        {pathError ? (
+          <p className="-mt-4 block text-xs text-red-600">
+            The custom path was not saved: {pathError}. The URL above is this
+            trigger's generated one, which does work.
+          </p>
+        ) : null}
 
         {/* Authentication */}
         <div>

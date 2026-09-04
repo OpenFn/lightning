@@ -3,7 +3,6 @@ import { useCallback, useState } from 'react';
 import type { Workflow } from '../../../types/workflow';
 
 import { CronConfigureStep } from './CronConfigureStep';
-import { KafkaConfigureStep } from './KafkaConfigureStep';
 import { TriggerChooseStep } from './TriggerChooseStep';
 import { TriggerPicker } from './TriggerPicker';
 import { useTriggerDraft } from './useTriggerDraft';
@@ -31,7 +30,7 @@ type Step = 'choose' | 'picker' | 'configure';
 
 /**
  * Type-agnostic trigger edit wizard: a single shell that dispatches its Choose
- * and Configure steps by `draft.type`, covering webhook, cron, and kafka.
+ * and Configure steps by `draft.type`, covering webhook and cron.
  *
  * Owns the edit session: a local draft seeded from the current trigger
  * (`useTriggerDraft`), the step state machine, and the Cancel/Back/Finish
@@ -64,6 +63,7 @@ export function TriggerEditWizard({
 
   const {
     draft,
+    pathUnchanged,
     mergeDraft,
     draftAuthMethodIds,
     setDraftAuthMethodIds,
@@ -111,6 +111,7 @@ export function TriggerEditWizard({
         return (
           <WebhookConfigureStep
             draft={draft}
+            pathUnchanged={pathUnchanged}
             mergeDraft={mergeDraft}
             draftAuthMethodIds={draftAuthMethodIds}
             setDraftAuthMethodIds={setDraftAuthMethodIds}
@@ -125,17 +126,6 @@ export function TriggerEditWizard({
       case 'cron':
         return (
           <CronConfigureStep
-            draft={draft}
-            mergeDraft={mergeDraft}
-            validationError={validationError}
-            onClose={onClose}
-            onBack={() => setStep('choose')}
-            onFinish={() => void finish()}
-          />
-        );
-      case 'kafka':
-        return (
-          <KafkaConfigureStep
             draft={draft}
             mergeDraft={mergeDraft}
             validationError={validationError}
@@ -168,16 +158,6 @@ export function TriggerEditWizard({
       return (
         <TriggerChooseStep
           type="cron"
-          onClose={onClose}
-          onBack={onDone}
-          onChangeType={() => setStep('picker')}
-          onNext={() => setStep('configure')}
-        />
-      );
-    case 'kafka':
-      return (
-        <TriggerChooseStep
-          type="kafka"
           onClose={onClose}
           onBack={onDone}
           onChangeType={() => setStep('picker')}

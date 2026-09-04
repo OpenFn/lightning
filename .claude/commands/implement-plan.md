@@ -18,9 +18,7 @@ When `$ARGUMENTS` contains a plan path:
 - **Identify the agent assignment** for each phase (marked as `**Implementation Agent**: ...`)
 - Read the original ticket and all files mentioned in the plan
 - Read files fully (no limit/offset).
-- Think deeply about how the pieces fit together
 - Create a todo list to track your progress across all phases
-- You coordinate implementation; spawn a fresh specialized agent for each phase.
 
 If `$ARGUMENTS` is empty, ask for one.
 
@@ -32,7 +30,7 @@ See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the can
 
 **This is the core of the implementation process**:
 
-1. **For each phase**, spawn a FRESH agent of the type specified in the plan
+1. **For each phase**, spawn a FRESH agent of the type specified in the plan. This is the default for any plan with more than one phase; a single-phase plan may be implemented directly.
 
 2. **Each agent gets a focused task**:
    ```
@@ -52,8 +50,7 @@ See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the can
    ```
 
 3. **Wait for each phase to complete** before spawning the next agent
-   - This ensures each phase gets a fresh context window
-   - Prevents context overflow on complex implementations
+   - A fresh agent isolates each phase: a later phase cannot be misled by an earlier phase's abandoned attempts
    - Each agent focuses solely on their phase
 
 4. **Between phases**: verify the previous phase's work (check the plan, review agent output, coordinate manual verification), then move on with a new fresh agent.
@@ -62,12 +59,9 @@ See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the can
 
 As the main agent running this command, you are the **coordinator**, not the implementer:
 - You read the plan and understand the full scope
-- You spawn specialized agents for each phase
 - You track overall progress across all phases
 - You handle issues and communicate with the user
 - You coordinate manual verification between phases
-
-Delegate phase implementation to fresh specialized agents rather than implementing directly.
 
 ## Implementation Philosophy
 
@@ -105,6 +99,10 @@ As coordinator, you should:
 - Verify the agent completed their automated checks
 - Coordinate any manual verification with the user
 - Ensure quality before moving to the next phase
+- Review the CHANGELOG entry against the final implementation. Lightning uses
+  Keep-a-Changelog; a user-visible change merging to `main` needs an accurate entry with
+  an issue or PR link. Prefer broadening an existing entry over adding a second one.
+  "No change needed" is a fine outcome — the review is what matters.
 
 ## If an Agent Gets Stuck
 
@@ -133,7 +131,7 @@ If the plan has existing checkmarks:
 You (coordinator): Reading plan... I see 3 phases:
   - Phase 1: Database Schema (phoenix-elixir-expert) ✅ Done
   - Phase 2: API Endpoints (phoenix-elixir-expert) ⬜ Next
-  - Phase 3: React Components (react-collaborative-architect) ⬜ Pending
+  - Phase 3: React Components (react-collab-editor) ⬜ Pending
 
 I'll spawn a fresh phoenix-elixir-expert agent for Phase 2...
 
@@ -144,5 +142,5 @@ Manual verification needed: Test the API endpoints with curl.
 
 [Wait for user to verify or proceed]
 
-Now spawning a fresh react-collaborative-architect agent for Phase 3...
+Now spawning a fresh react-collab-editor agent for Phase 3...
 ```

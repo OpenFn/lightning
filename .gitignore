@@ -96,3 +96,4 @@ assets/test-results
 test-results
 assets/coverage
 test/reports/
+.scratch/

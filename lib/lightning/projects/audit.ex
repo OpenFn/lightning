@@ -7,6 +7,9 @@ defmodule Lightning.Projects.Audit do
     item: "project",
     events: [
       "allow_support_access_updated",
+      "collaborator_added",
+      "collaborator_removed",
+      "collaborator_role_changed",
       "dataclip_retention_period_updated",
       "history_retention_period_updated",
       "requires_mfa_updated"
@@ -33,6 +36,56 @@ defmodule Lightning.Projects.Audit do
           Multi.insert(multi, operation(field), audit_changeset)
       end
     end)
+  end
+
+  @doc """
+  Appends an audit event for every collaborator change in `changes`.
+
+  Step keys carry the affected user's id, which is unique within a single
+  membership write.
+  """
+  def derive_membership_events(multi, project_id, changes, actor) do
+    Enum.reduce(changes, multi, fn change, multi ->
+      Multi.insert(
+        multi,
+        audit_key(change),
+        membership_event(project_id, change, actor)
+      )
+    end)
+  end
+
+  defp audit_key({:added, %{user_id: user_id}}),
+    do: {:audit_collaborator_added, user_id}
+
+  defp audit_key({:role_changed, %{user_id: user_id}}),
+    do: {:audit_collaborator_role_changed, user_id}
+
+  defp audit_key({:removed, %{user_id: user_id}}),
+    do: {:audit_collaborator_removed, user_id}
+
+  defp membership_event(project_id, {:added, member}, actor) do
+    event("collaborator_added", project_id, actor, %{
+      before: nil,
+      after: membership_fields(member.user_id, member.role)
+    })
+  end
+
+  defp membership_event(project_id, {:role_changed, member}, actor) do
+    event("collaborator_role_changed", project_id, actor, %{
+      before: membership_fields(member.user_id, member.previous_role),
+      after: membership_fields(member.user_id, member.role)
+    })
+  end
+
+  defp membership_event(project_id, {:removed, member}, actor) do
+    event("collaborator_removed", project_id, actor, %{
+      before: membership_fields(member.user_id, member.role),
+      after: nil
+    })
+  end
+
+  defp membership_fields(user_id, role) do
+    %{"user_id" => user_id, "role" => to_string(role)}
   end
 
   defp operation(field), do: "audit_#{field}"

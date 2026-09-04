@@ -1,6 +1,8 @@
 defmodule Lightning.ProjectsTest do
   use Lightning.DataCase, async: true
 
+  import Ecto.Query
+
   import Lightning.AccountsFixtures
   import Lightning.Factories
   import Lightning.ProjectsFixtures
@@ -184,54 +186,6 @@ defmodule Lightning.ProjectsTest do
 
       assert {:error, %Ecto.Changeset{}} =
                Projects.create_project(%{"name" => "Can't have spaces!"})
-    end
-
-    test "update_project_user/2 with valid data updates the project_user" do
-      project =
-        project_fixture(
-          project_users: [
-            %{
-              user_id: user_fixture().id,
-              role: :viewer,
-              digest: :daily,
-              failure_alert: false
-            }
-          ]
-        )
-
-      update_attrs = %{digest: "weekly"}
-
-      assert {:ok, %ProjectUser{} = project_user} =
-               Projects.update_project_user(
-                 project.project_users |> List.first(),
-                 update_attrs
-               )
-
-      assert project_user.digest == :weekly
-      assert project_user.failure_alert == false
-    end
-
-    test "update_project_user/2 with invalid data returns error changeset" do
-      project =
-        project_fixture(
-          project_users: [
-            %{
-              user_id: user_fixture().id,
-              role: :viewer,
-              digest: :monthly,
-              failure_alert: true
-            }
-          ]
-        )
-
-      project_user = project.project_users |> List.first()
-
-      update_attrs = %{digest: "bad_value"}
-
-      assert {:error, %Ecto.Changeset{}} =
-               Projects.update_project_user(project_user, update_attrs)
-
-      assert project_user == Projects.get_project_user!(project_user.id)
     end
 
     test "set_notification_pref/3 with a changed value updates the field" do
@@ -559,6 +513,122 @@ defmodule Lightning.ProjectsTest do
 
       assert Repo.get(Lightning.Credentials.OauthClient, oauth_client.id),
              "The OAuth client itself should survive — only the join row is project-scoped"
+    end
+
+    test "delete_project/1 deletes the project's stored files and their objects" do
+      project =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      object_path = "exports/#{project.id}/#{Ecto.UUID.generate()}.zip"
+
+      local_path =
+        Lightning.Config.storage(:path)
+        |> Path.expand()
+        |> Path.join(object_path)
+
+      File.mkdir_p!(Path.dirname(local_path))
+      File.write!(local_path, "pretend archive of dataclip bodies")
+      on_exit(fn -> File.rm_rf!(Path.dirname(local_path)) end)
+
+      exported = insert(:project_file, project: project, path: object_path)
+
+      # A failed export leaves a row with no object behind it.
+      orphaned = insert(:project_file, project: project, path: nil)
+
+      assert {:ok, %Project{}} = Projects.delete_project(project)
+
+      refute Repo.get(Project, project.id)
+      refute Repo.get(Lightning.Projects.File, exported.id)
+      refute Repo.get(Lightning.Projects.File, orphaned.id)
+
+      refute File.exists?(local_path),
+             "the export archive must not survive the project it belonged to"
+    end
+
+    test "delete_project/1 deletes the project when the stored object is already gone" do
+      project =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      # Nothing was ever written at this path. There is no archive left to
+      # protect, so an object that isn't there must not hold up the deletion.
+      project_file =
+        insert(:project_file,
+          project: project,
+          path: "exports/#{project.id}/already-gone.zip"
+        )
+
+      assert {:ok, %Project{}} = Projects.delete_project(project)
+
+      refute Repo.get(Project, project.id)
+      refute Repo.get(Lightning.Projects.File, project_file.id)
+    end
+
+    test "delete_project/1 leaves the project intact when a stored object can't be deleted" do
+      project =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      project_user = insert(:project_user, project: project, user: insert(:user))
+
+      # A path the backend refuses to remove (rather than one that's simply
+      # missing) means the archive may still be sitting there, so we must not
+      # tear the project down around it.
+      project_file =
+        insert(:project_file, project: project, path: undeletable_path(project))
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Projects.delete_project(project)
+
+      assert changeset.errors[:project_files]
+
+      assert Repo.get(Project, project.id)
+      assert Repo.get(Lightning.Projects.File, project_file.id)
+      assert Repo.get(Lightning.Projects.ProjectUser, project_user.id)
+    end
+
+    test "delete_project/1 deletes a sandbox's stored files along with the parent" do
+      parent =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      sandbox = insert(:project, parent_id: parent.id)
+
+      sandbox_file = insert(:project_file, project: sandbox, path: nil)
+
+      assert {:ok, %Project{}} = Projects.delete_project(parent)
+
+      refute Repo.get(Project, parent.id)
+      refute Repo.get(Project, sandbox.id)
+      refute Repo.get(Lightning.Projects.File, sandbox_file.id)
+    end
+
+    test "delete_project/1 stops at a sandbox whose stored file can't be deleted" do
+      parent =
+        insert(:project,
+          scheduled_deletion:
+            Lightning.current_time() |> DateTime.truncate(:second)
+        )
+
+      sandbox = insert(:project, parent_id: parent.id)
+
+      insert(:project_file, project: sandbox, path: undeletable_path(sandbox))
+
+      assert {:error, %Ecto.Changeset{}} = Projects.delete_project(parent)
+
+      # parent_id is ON DELETE SET NULL, so tearing the parent down anyway would
+      # quietly promote the leftover sandbox to a root project.
+      assert Repo.get(Project, parent.id)
+      assert Repo.get(Project, sandbox.id).parent_id == parent.id
     end
 
     test "change_project/1 returns a project changeset" do
@@ -1011,6 +1081,36 @@ defmodule Lightning.ProjectsTest do
       assert Timex.diff(project.scheduled_deletion, now, :days) == days
     end
 
+    # Scheduling deletion is the whole of the offboarding gate during the purge
+    # window — it removes no membership row and revokes no token — so the
+    # sessions it has to end only hear about it through this broadcast.
+    test "schedule_project_deletion/1 broadcasts on the project's topic" do
+      %{id: project_id} = project = insert(:project)
+
+      assert :ok = Projects.Events.subscribe(project_id)
+
+      assert {:ok, _project} = Projects.schedule_project_deletion(project)
+
+      assert_receive %Projects.Events.ProjectDeletionScheduled{
+        project_id: ^project_id
+      }
+    end
+
+    test "schedule_project_deletion/1 stays quiet when the update fails" do
+      project = insert(:project)
+
+      assert :ok = Projects.Events.subscribe(project.id)
+
+      # A project that is already gone cannot be stamped.
+      Repo.delete!(project)
+
+      assert_raise Ecto.StaleEntryError, fn ->
+        Projects.schedule_project_deletion(project)
+      end
+
+      refute_received %Projects.Events.ProjectDeletionScheduled{}
+    end
+
     test "cancel_scheduled_deletion/2" do
       project =
         project_fixture(
@@ -1217,6 +1317,45 @@ defmodule Lightning.ProjectsTest do
   end
 
   describe "export_project/2 as yaml:" do
+    test "exports a snapshot taken when a removed trigger type still existed" do
+      # Snapshots keep the trigger type they were taken with. The Kafka trigger
+      # is gone, but a snapshot from before it went still says :kafka, and
+      # exporting that version must not fall through an unmatched clause and
+      # take the whole export down.
+      project = insert(:project, name: "has-history")
+
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, project: project, name: "old-workflow")
+
+      {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
+
+      # Rewrite the stored snapshot the way an older release would have left it.
+      snapshot
+      |> Ecto.Changeset.change(%{
+        triggers: [
+          %{
+            id: trigger.id,
+            type: :kafka,
+            enabled: false,
+            inserted_at: trigger.inserted_at,
+            updated_at: trigger.updated_at
+          }
+        ]
+      })
+      |> Repo.update!()
+
+      assert {:ok, yaml} =
+               Projects.export_project(:yaml, project.id, [snapshot.id])
+
+      # The workflow name comes from the node, so asserting only that would hold
+      # even if the trigger were dropped or written under the wrong key. Pin the
+      # trigger itself: it is emitted, and emitted as what it was.
+      assert yaml =~ "old-workflow"
+      assert yaml =~ "triggers:"
+      assert yaml =~ "kafka"
+    end
+
     test "works on project with no workflows" do
       project = project_fixture(name: "newly-created-project")
 
@@ -1226,6 +1365,60 @@ defmodule Lightning.ProjectsTest do
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
       assert generated_yaml == expected_yaml
+    end
+
+    test "includes a webhook's custom path, and omits it when unset" do
+      project = insert(:project, name: "et-emr")
+      workflow = insert(:workflow, project: project, name: "facility 1")
+
+      insert(:trigger,
+        workflow: workflow,
+        type: :webhook,
+        enabled: true,
+        custom_path: "et-emr-facility-001"
+      )
+
+      assert {:ok, yaml} = Projects.export_project(:yaml, project.id)
+      assert yaml =~ "custom_path: 'et-emr-facility-001'"
+
+      bare_project = insert(:project, name: "bare")
+      bare_workflow = insert(:workflow, project: bare_project, name: "w")
+      insert(:trigger, workflow: bare_workflow, type: :webhook, enabled: true)
+
+      assert {:ok, bare_yaml} = Projects.export_project(:yaml, bare_project.id)
+      refute bare_yaml =~ "custom_path"
+    end
+
+    test "quotes an all-digit path so it survives a round trip" do
+      project = insert(:project, name: "digits")
+      workflow = insert(:workflow, project: project, name: "w")
+
+      insert(:trigger,
+        workflow: workflow,
+        type: :webhook,
+        enabled: true,
+        custom_path: "12345"
+      )
+
+      assert {:ok, yaml} = Projects.export_project(:yaml, project.id)
+
+      # Unquoted it parses back as an integer and the whole deploy fails.
+      assert yaml =~ "custom_path: '12345'"
+    end
+
+    test "omits a legacy path that would fail a deploy elsewhere" do
+      project = insert(:project, name: "legacy")
+      workflow = insert(:workflow, project: project, name: "w")
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      {1, _} =
+        Lightning.Repo.update_all(
+          from(t in Lightning.Workflows.Trigger, where: t.id == ^trigger.id),
+          set: [custom_path: "orders.v1"]
+        )
+
+      assert {:ok, yaml} = Projects.export_project(:yaml, project.id)
+      refute yaml =~ "orders.v1"
     end
 
     test "adds quotes to values with special charaters" do
@@ -1336,49 +1529,6 @@ defmodule Lightning.ProjectsTest do
       """
 
       assert generated_yaml =~ expected_yaml
-    end
-
-    test "kafka triggers are included in the export" do
-      project = insert(:project, name: "project 1")
-
-      trigger =
-        build(:trigger,
-          type: :kafka,
-          kafka_configuration: %{
-            hosts: [["localhost", "9092"]],
-            topics: ["dummy"],
-            initial_offset_reset_policy: "earliest"
-          }
-        )
-
-      job =
-        build(:job,
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
-        )
-
-      build(:workflow, name: "workflow 1", project: project)
-      |> with_trigger(trigger)
-      |> with_job(job)
-      |> with_edge({trigger, job}, condition_type: :always)
-      |> insert()
-
-      expected_yaml_trigger = """
-          triggers:
-            kafka:
-              type: kafka
-              enabled: true
-              kafka_configuration:
-                hosts:
-                  - 'localhost:9092'
-                topics:
-                  - dummy
-                initial_offset_reset_policy: earliest
-                connect_timeout: 30
-      """
-
-      assert {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
-
-      assert generated_yaml =~ expected_yaml_trigger
     end
 
     test "channels are included in the export with their destination credential" do
@@ -1581,6 +1731,23 @@ defmodule Lightning.ProjectsTest do
                Projects.perform(%Oban.Job{
                  args: %{"project_id" => missing_id, "type" => "purge_deleted"}
                })
+    end
+
+    test "reports a failure instead of returning :ok when the purge can't complete" do
+      project =
+        project_fixture(
+          scheduled_deletion:
+            Lightning.current_time() |> Timex.shift(seconds: -10)
+        )
+
+      insert(:project_file, project: project, path: undeletable_path(project))
+
+      assert {:error, %Ecto.Changeset{}} =
+               Projects.perform(%Oban.Job{
+                 args: %{"project_id" => project.id, "type" => "purge_deleted"}
+               })
+
+      assert Repo.get(Project, project.id)
     end
   end
 
@@ -2403,96 +2570,6 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe ".find_users_to_notify_of_trigger_failure/1" do
-    setup do
-      other_project = insert(:project)
-      project = insert(:project)
-
-      superuser_1 = insert(:user, email: "super1@test.com", role: :superuser)
-      superuser_2 = insert(:user, email: "super2@test.com", role: :superuser)
-
-      other_project_superuser =
-        insert(:user, email: "other@test.com", role: :superuser)
-
-      admin_user = insert(:user, email: "admin@test.com", role: :user)
-      owner_user = insert(:user, email: "owner@test.com", role: :user)
-      user = insert(:user, email: "user@test.com", role: :user)
-
-      insert(
-        :project_user,
-        project: other_project,
-        user: other_project_superuser,
-        role: :viewer
-      )
-
-      insert(
-        :project_user,
-        project: project,
-        user: user,
-        role: :viewer
-      )
-
-      insert(
-        :project_user,
-        project: project,
-        user: superuser_1,
-        role: :viewer
-      )
-
-      insert(
-        :project_user,
-        project: project,
-        user: superuser_2,
-        role: :admin
-      )
-
-      insert(
-        :project_user,
-        project: project,
-        user: admin_user,
-        role: :admin
-      )
-
-      insert(
-        :project_user,
-        project: project,
-        user: owner_user,
-        role: :owner
-      )
-
-      %{
-        admin_user: admin_user,
-        other_project_superuser: other_project_superuser,
-        owner_user: owner_user,
-        project: project,
-        superuser_1: superuser_1,
-        superuser_2: superuser_2,
-        user: user
-      }
-    end
-
-    test "returns associated superusers or users with admin/owner role", %{
-      admin_user: admin_user,
-      owner_user: owner_user,
-      project: project,
-      superuser_1: superuser_1,
-      superuser_2: superuser_2
-    } do
-      expected_emails =
-        [admin_user, owner_user, superuser_1, superuser_2]
-        |> Enum.map(& &1.email)
-        |> Enum.sort()
-
-      actual_emails =
-        project.id
-        |> Projects.find_users_to_notify_of_trigger_failure()
-        |> Enum.map(& &1.email)
-        |> Enum.sort()
-
-      assert actual_emails == expected_emails
-    end
-  end
-
   describe "get_projects_overview/2" do
     test "returns an empty list when the user has no projects" do
       user = insert(:user)
@@ -3107,7 +3184,7 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
-  describe "delete_project_user!/1" do
+  describe "delete_project_user!/2" do
     test "deletes the project user and removes their credentials from the project" do
       user1 = insert(:user)
       user2 = insert(:user)
@@ -3143,7 +3220,8 @@ defmodule Lightning.ProjectsTest do
           project_credentials: [%{project_id: other_project.id}]
         )
 
-      deleted_project_user = Projects.delete_project_user!(project_user)
+      deleted_project_user =
+        Projects.delete_project_user!(project_user, insert(:user))
 
       assert deleted_project_user.id == project_user.id
       refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
@@ -3181,11 +3259,18 @@ defmodule Lightning.ProjectsTest do
       user = insert(:user)
 
       project =
-        insert(:project, project_users: [%{user_id: user.id, role: :editor}])
+        insert(:project,
+          project_users: [
+            %{user_id: insert(:user).id, role: :owner},
+            %{user_id: user.id, role: :editor}
+          ]
+        )
 
-      project_user = List.first(project.project_users)
+      project_user =
+        Enum.find(project.project_users, &(&1.user_id == user.id))
 
-      deleted_project_user = Projects.delete_project_user!(project_user)
+      deleted_project_user =
+        Projects.delete_project_user!(project_user, insert(:user))
 
       assert deleted_project_user.id == project_user.id
       refute Repo.get(Lightning.Projects.ProjectUser, project_user.id)
@@ -3209,7 +3294,10 @@ defmodule Lightning.ProjectsTest do
       assert_raise ArgumentError,
                    "Cannot remove the owner of a project. Transfer ownership first.",
                    fn ->
-                     Projects.delete_project_user!(owner_project_user)
+                     Projects.delete_project_user!(
+                       owner_project_user,
+                       insert(:user)
+                     )
                    end
 
       assert Repo.get(Lightning.Projects.ProjectUser, owner_project_user.id)
@@ -4156,6 +4244,74 @@ defmodule Lightning.ProjectsTest do
     end
   end
 
+  describe "data retention notices and who may be sent the project's contents" do
+    test "notifies an enrolled admin of a project that requires MFA" do
+      user = insert(:user, mfa_enabled: true)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, updated_project} = change_retention_periods(project)
+
+      recipient = Swoosh.Email.Recipient.format(user)
+      %{subject: subject} = data_retention_email(updated_project)
+
+      assert_received {:email,
+                       %Swoosh.Email{to: [^recipient], subject: ^subject}}
+    end
+
+    test "withholds the notice from a disabled admin while a live owner is still notified" do
+      disabled_user = insert(:user, disabled: true)
+      live_user = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: disabled_user.id, role: :admin},
+            %{user_id: live_user.id, role: :owner}
+          ]
+        )
+
+      {:ok, _updated_project} = change_retention_periods(project)
+
+      live_recipient = Swoosh.Email.Recipient.format(live_user)
+      assert_received {:email, %Swoosh.Email{to: [^live_recipient]}}
+
+      disabled_recipient = Swoosh.Email.Recipient.format(disabled_user)
+      refute_received {:email, %Swoosh.Email{to: [^disabled_recipient]}}
+    end
+
+    test "withholds the notice from an admin scheduled for deletion" do
+      user = insert(:user, scheduled_deletion: DateTime.utc_now())
+
+      project =
+        insert(:project, project_users: [%{user_id: user.id, role: :admin}])
+
+      {:ok, _updated_project} = change_retention_periods(project)
+
+      recipient = Swoosh.Email.Recipient.format(user)
+      refute_received {:email, %Swoosh.Email{to: [^recipient]}}
+    end
+
+    test "withholds the notice from an admin who has not enrolled in MFA when the project requires it" do
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, _updated_project} = change_retention_periods(project)
+
+      recipient = Swoosh.Email.Recipient.format(user)
+      refute_received {:email, %Swoosh.Email{to: [^recipient]}}
+    end
+  end
+
   describe "subscribe/0" do
     test "delivers project lifecycle events to the calling process" do
       assert :ok = Projects.subscribe()
@@ -4200,6 +4356,13 @@ defmodule Lightning.ProjectsTest do
     }
   end
 
+  defp change_retention_periods(project) do
+    Projects.update_project(project, %{
+      history_retention_period: 14,
+      dataclip_retention_period: 7
+    })
+  end
+
   defp data_retention_email(updated_project) do
     %{
       subject:
@@ -4227,5 +4390,20 @@ defmodule Lightning.ProjectsTest do
 
     from(Dataclip, select: [:wiped_at, :body, :request])
     |> Lightning.Repo.get(reloaded_dataclip.id)
+  end
+
+  # A storage path the local backend refuses to delete: it's a directory, so
+  # File.rm/1 answers {:error, :eperm} rather than the {:error, :enoent} it
+  # gives for a path that simply holds nothing.
+  defp undeletable_path(project) do
+    object_path = "exports/#{project.id}/undeletable.zip"
+
+    local_path =
+      Lightning.Config.storage(:path) |> Path.expand() |> Path.join(object_path)
+
+    File.mkdir_p!(local_path)
+    on_exit(fn -> File.rm_rf!(Path.dirname(local_path)) end)
+
+    object_path
   end
 end

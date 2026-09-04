@@ -2,7 +2,7 @@
  * TemplateBrowserModalWrapper - creation-flow save handling
  *
  * Covers the connectivity gate, import, and save wiring around
- * `handleSelect` in `TemplateBrowserModalWrapper.tsx`. Save-failure feedback
+ * `handleCreate` in `TemplateBrowserModalWrapper.tsx`. Save-failure feedback
  * itself is owned by the shared handler in `useWorkflow.tsx` (mocked out
  * here via `useWorkflowActions`), so this file only asserts this component's
  * own responsibilities: gating, calling import/save with the right options,

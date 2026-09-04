@@ -60,7 +60,6 @@ TRUNCATE user_tokens CASCADE;
 TRUNCATE user_totps CASCADE;
 
 -- Trigger and webhook auth
-TRUNCATE trigger_kafka_message_records CASCADE;
 TRUNCATE trigger_webhook_auth_methods CASCADE;
 TRUNCATE webhook_auth_methods CASCADE;
 

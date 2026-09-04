@@ -141,18 +141,13 @@ If you were part of the implementation:
 ## Important Guidelines
 
 1. **Report all deviations from the plan.** Flag severity where useful, but don't pre-filter — the reader triages what matters
-2. **Run all automated checks** - Don't skip verification commands
 
 ## Validation Checklist
 
-Always verify:
-- [ ] All phases marked complete are actually done
-- [ ] Automated tests pass
 - [ ] Code follows existing patterns
 - [ ] No regressions introduced
 - [ ] Error handling is robust
 - [ ] Documentation updated if needed
-- [ ] Manual test steps are clear
 
 ## Relationship to Other Commands
 

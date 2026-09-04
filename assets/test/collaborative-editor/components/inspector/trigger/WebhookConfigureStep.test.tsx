@@ -49,6 +49,7 @@ function makeReadyWorkflowStore(): WorkflowStoreInstance {
   });
   const workflowMap = ydoc.getMap('workflow');
   workflowMap.set('id', 'workflow-1');
+  workflowMap.set('name', 'ET EMR Facility 003');
   workflowMap.set('lock_version', 1);
   workflowMap.set('deleted_at', null);
   return createConnectedWorkflowStore(ydoc);
@@ -77,7 +78,7 @@ function makeWebhookDraft(
     has_auth_method: false,
     cron_expression: null,
     cron_cursor_job_id: null,
-    kafka_configuration: null,
+    custom_path: null,
     webhook_reply: 'before_start',
     webhook_response_config: null,
     ...overrides,
@@ -99,6 +100,10 @@ interface SetupOptions {
   canWriteWebhookAuthMethod?: boolean;
   /** Project-level auth methods available to attach. Defaults to none. */
   webhookAuthMethods?: WebhookAuthMethod[];
+  /** Project on the session context, for the custom-path URL prefix. */
+  project?: { id: string; name: string } | null;
+  /** Whether the path is the one the trigger opened with. */
+  pathUnchanged?: boolean;
 }
 
 async function setup({
@@ -110,11 +115,14 @@ async function setup({
   initialExpand,
   canWriteWebhookAuthMethod = true,
   webhookAuthMethods = [],
+  project = null,
+  pathUnchanged = false,
 }: SetupOptions = {}) {
   const { wrapper } = await createTriggerTestHarness({
     canEdit: true,
     canWriteWebhookAuthMethod,
     webhookAuthMethods,
+    project,
     workflowStore: makeReadyWorkflowStore(),
     liveViewActions: mockLiveViewActions,
   });
@@ -127,6 +135,7 @@ async function setup({
   render(
     <WebhookConfigureStep
       draft={draft}
+      pathUnchanged={pathUnchanged}
       mergeDraft={mergeDraft}
       draftAuthMethodIds={draftAuthMethodIds}
       setDraftAuthMethodIds={setDraftAuthMethodIds}
@@ -258,6 +267,7 @@ describe('WebhookConfigureStep', () => {
       const { unmount } = render(
         <WebhookConfigureStep
           draft={makeWebhookDraft()}
+          pathUnchanged={false}
           mergeDraft={vi.fn()}
           draftAuthMethodIds={[]}
           setDraftAuthMethodIds={vi.fn()}
@@ -441,5 +451,275 @@ describe('WebhookConfigureStep', () => {
         screen.getByLabelText('Authentication credential 1')
       ).not.toBeDisabled();
     });
+  });
+});
+
+describe('WebhookConfigureStep — custom URL path', () => {
+  const PROJECT = {
+    id: '33333333-3333-4333-8333-333333333333',
+    name: 'ET EMR',
+  };
+  test('suggests the workflow name', async () => {
+    // Offered, not written: an empty field still keeps the generated URL.
+    await setup({ project: PROJECT });
+
+    expect(screen.getByLabelText('Custom URL path')).toHaveAttribute(
+      'placeholder',
+      'et-emr-facility-003'
+    );
+  });
+
+  test('shows the current path', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-001' }),
+      pathUnchanged: true,
+    });
+
+    expect(screen.getByLabelText('Custom URL path')).toHaveValue(
+      'facility-001'
+    );
+  });
+
+  test('leaves the URL to the panel that already shows it', async () => {
+    // The show panel owns the URL and its copy button.
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-001' }),
+      pathUnchanged: true,
+    });
+
+    expect(screen.queryByText(new RegExp(`/i/${PROJECT.id}/`))).toBeNull();
+  });
+
+  test('keeps what is typed and stores what it derives to', async () => {
+    const mergeDraft = vi.fn();
+    await setup({ project: PROJECT, mergeDraft });
+
+    const input = screen.getByLabelText('Custom URL path');
+
+    fireEvent.change(input, { target: { value: 'ET EMR Facility 003' } });
+
+    expect(input).toHaveValue('ET EMR Facility 003');
+
+    expect(mergeDraft).toHaveBeenCalledWith({
+      custom_path: 'et-emr-facility-003',
+    });
+  });
+
+  test('says what the typed value will be named', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'et-emr-facility-003' }),
+      pathUnchanged: true,
+    });
+
+    fireEvent.change(screen.getByLabelText('Custom URL path'), {
+      target: { value: 'ET EMR Facility 003' },
+    });
+
+    expect(screen.getByText(/will be named/i)).toBeInTheDocument();
+    expect(screen.getByText('et-emr-facility-003')).toBeInTheDocument();
+  });
+
+  test('derives the way the project form derives a name', async () => {
+    const mergeDraft = vi.fn();
+    await setup({ project: PROJECT, mergeDraft });
+
+    const input = screen.getByLabelText('Custom URL path');
+
+    fireEvent.change(input, { target: { value: 'orders.v1?x=2' } });
+    expect(mergeDraft).toHaveBeenCalledWith({ custom_path: 'orders-v1-x-2' });
+
+    fireEvent.change(input, { target: { value: '  spaced  ' } });
+    expect(mergeDraft).toHaveBeenCalledWith({ custom_path: 'spaced' });
+
+    // Nothing survives, so the raw value is held for the save to refuse rather
+    // than being read as "cleared".
+    fireEvent.change(input, { target: { value: '...' } });
+    expect(mergeDraft).toHaveBeenCalledWith({ custom_path: '...' });
+  });
+
+  test('clearing the field clears the path', async () => {
+    const mergeDraft = vi.fn();
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-001' }),
+      pathUnchanged: true,
+      mergeDraft,
+    });
+
+    fireEvent.change(screen.getByLabelText('Custom URL path'), {
+      target: { value: '' },
+    });
+
+    expect(mergeDraft).toHaveBeenCalledWith({ custom_path: null });
+  });
+
+  test('flags a path the server would reject', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'orders/intake' }),
+      pathUnchanged: false,
+    });
+
+    const input = screen.getByLabelText('Custom URL path');
+
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(
+      screen.getByText(/lowercase letters, numbers, hyphens and underscores/i)
+    ).toBeInTheDocument();
+  });
+
+  test('flags a legacy path when the trigger is becoming a webhook', async () => {
+    // The step and the hook have to agree, or Finish refuses with nothing
+    // marked wrong.
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'orders.v1' }),
+      pathUnchanged: false,
+    });
+
+    expect(screen.getByLabelText('Custom URL path')).toHaveAttribute(
+      'aria-invalid',
+      'true'
+    );
+  });
+
+  test('does not flag a legacy path the user has not changed', async () => {
+    // Saving is allowed while the path is left alone.
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'orders.v1' }),
+      pathUnchanged: true,
+    });
+
+    expect(screen.getByLabelText('Custom URL path')).not.toHaveAttribute(
+      'aria-invalid'
+    );
+  });
+
+  test('flags it once the user changes it', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'orders.v2' }),
+      pathUnchanged: false,
+    });
+
+    expect(screen.getByLabelText('Custom URL path')).toHaveAttribute(
+      'aria-invalid',
+      'true'
+    );
+  });
+
+  test('holds a name that derives to nothing instead of clearing', async () => {
+    // Every character strips away. Storing null would read as "cleared".
+    const mergeDraft = vi.fn();
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-001' }),
+      pathUnchanged: true,
+      mergeDraft,
+    });
+
+    fireEvent.change(screen.getByLabelText('Custom URL path'), {
+      target: { value: '...' },
+    });
+
+    expect(mergeDraft).toHaveBeenCalledWith({ custom_path: '...' });
+  });
+
+  test('flags a stored name that derives to nothing', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: '...' }),
+      pathUnchanged: false,
+    });
+
+    const input = screen.getByLabelText('Custom URL path');
+
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText(/no letters or numbers/i)).toBeInTheDocument();
+    expect(screen.queryByText(/will be named/i)).toBeNull();
+  });
+
+  test('drops a server error once the path is edited', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({
+        custom_path: 'facility-002',
+        errors: { custom_path: ['is already used by another workflow'] },
+      }),
+      pathUnchanged: false,
+    });
+
+    expect(screen.queryByText(/already used/i)).toBeNull();
+  });
+
+  test('says when a path is too long, not that the characters are wrong', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'a'.repeat(256) }),
+      pathUnchanged: false,
+    });
+
+    expect(screen.getByText(/255 characters or fewer/i)).toBeInTheDocument();
+  });
+
+  test('shows an error the server sent back for the path', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({
+        custom_path: 'facility-001',
+        errors: {
+          custom_path: ['is already used by another workflow in this project'],
+        },
+      }),
+      pathUnchanged: true,
+    });
+
+    expect(
+      screen.getByText(/already used by another workflow/i)
+    ).toBeInTheDocument();
+  });
+
+  test('links the error to the field for screen readers', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'orders/intake' }),
+      pathUnchanged: false,
+    });
+
+    expect(screen.getByLabelText('Custom URL path')).toHaveAttribute(
+      'aria-describedby',
+      'webhook-custom-path-hint webhook-custom-path-error'
+    );
+  });
+
+  test('flags a UUID typed as a path', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({
+        custom_path: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+      }),
+      pathUnchanged: false,
+    });
+
+    const input = screen.getByLabelText('Custom URL path');
+
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText(/cannot be used as a path/i)).toBeInTheDocument();
+  });
+
+  test('accepts a sixteen-character name', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'orders_intake_v1' }),
+      pathUnchanged: false,
+    });
+
+    const input = screen.getByLabelText('Custom URL path');
+
+    expect(input).not.toHaveAttribute('aria-invalid');
   });
 });

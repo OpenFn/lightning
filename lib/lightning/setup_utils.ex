@@ -99,18 +99,21 @@ defmodule Lightning.SetupUtils do
     end)
   end
 
-  defp create_dhis2_credential(%Accounts.User{id: user_id}) do
+  defp create_dhis2_credential(%Accounts.User{id: user_id} = user) do
     {:ok, credential} =
-      Credentials.create_credential(%{
-        body: %{
-          username: "admin",
-          password: "district",
-          hostUrl: "https://play.dhis2.org/dev"
+      Credentials.create_credential(
+        %{
+          body: %{
+            username: "admin",
+            password: "district",
+            hostUrl: "https://play.dhis2.org/dev"
+          },
+          name: "DHIS2 play",
+          user_id: user_id,
+          schema: "dhis2"
         },
-        name: "DHIS2 play",
-        user_id: user_id,
-        schema: "dhis2"
-      })
+        user
+      )
 
     credential
   end
@@ -508,7 +511,7 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Done in 223ms! ✨
           """),
         input_dataclip_id: dataclip.id,
-        output_dataclip: %{data: http_body, references: []} |> Jason.encode!()
+        output_dataclip: %{"data" => http_body, "references" => []}
       },
       %{
         job_id: send_to_openhim.id,
@@ -532,7 +535,7 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
           [CLI] ✔ Done in 223ms! ✨
           """),
-        output_dataclip: %{data: http_body, references: []} |> Jason.encode!()
+        output_dataclip: %{"data" => http_body, "references" => []}
       },
       %{
         job_id: notify_upload_successful.id,
@@ -556,7 +559,7 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686840747-126941-16ewhef.json
           [CLI] ✔ Done in 209ms! ✨
           """),
-        output_dataclip: %{data: http_body, references: []} |> Jason.encode!()
+        output_dataclip: %{"data" => http_body, "references" => []}
       }
     ]
 
@@ -733,20 +736,18 @@ defmodule Lightning.SetupUtils do
             [CMP] ℹ Added export * statement for @openfn/language-dhis2@latest
           """),
         input_dataclip_id: input_dataclip.id,
-        output_dataclip:
-          %{
-            data: %{
-              spreadsheetId: "wv5ftwhte",
-              tableRange: "A3:D3",
-              updates: %{
-                updatedCells: 4
-              }
-            },
-            references: [
-              %{}
-            ]
-          }
-          |> Jason.encode!()
+        output_dataclip: %{
+          "data" => %{
+            "spreadsheetId" => "wv5ftwhte",
+            "tableRange" => "A3:D3",
+            "updates" => %{
+              "updatedCells" => 4
+            }
+          },
+          "references" => [
+            %{}
+          ]
+        }
       },
       %{
         job_id: upload_to_google_sheet.id,
@@ -803,7 +804,6 @@ defmodule Lightning.SetupUtils do
       Lightning.WorkOrder,
       Lightning.Invocation.Step,
       Lightning.Credentials.Credential,
-      Lightning.KafkaTriggers.TriggerKafkaMessageRecord,
       Lightning.Workflows.Job,
       Lightning.Workflows.Trigger,
       Lightning.Workflows.WebhookAuthMethod,
@@ -1004,8 +1004,8 @@ defmodule Lightning.SetupUtils do
           Enum.each(credentials, fn credential ->
             {:ok, _credential} =
               Credentials.create_credential(
-                credential
-                |> Map.put(:user_id, user.id)
+                credential |> Map.put(:user_id, user.id),
+                user
               )
           end)
 

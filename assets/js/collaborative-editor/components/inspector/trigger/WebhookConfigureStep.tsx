@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import {
+  isValidCustomPath,
+  toCustomPath,
+} from '#/collaborative-editor/types/trigger';
 import { cn } from '#/utils/cn';
 
 import { useLiveViewActions } from '../../../contexts/LiveViewActionsContext';
@@ -7,7 +11,10 @@ import {
   usePermissions,
   useSessionContext,
 } from '../../../hooks/useSessionContext';
-import { useWorkflowReadOnly } from '../../../hooks/useWorkflow';
+import {
+  useWorkflowReadOnly,
+  useWorkflowState,
+} from '../../../hooks/useWorkflow';
 import type { WebhookAuthMethod } from '../../../types/sessionContext';
 import type { Workflow } from '../../../types/workflow';
 import { InspectorLayout } from '../InspectorLayout';
@@ -16,6 +23,12 @@ import { ResponseTypeSelect } from './ResponseTypeSelect';
 import { WebhookAuthMethodSelect } from './WebhookAuthMethodSelect';
 import { WizardBreadcrumb } from './WizardBreadcrumb';
 import { WizardFooter } from './WizardFooter';
+
+const inputClass = cn(
+  'block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm',
+  'focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500',
+  'disabled:cursor-not-allowed disabled:opacity-50'
+);
 
 const codeInputClass = cn(
   'block w-full rounded-lg border border-gray-200 bg-white px-3 py-2',
@@ -32,6 +45,12 @@ type ResponseConfig = {
 interface WebhookConfigureStepProps {
   /** The local trigger draft. */
   draft: Workflow.Trigger;
+  /**
+   * Whether the path is the one the trigger opened with, from
+   * `useTriggerDraft`. Taken rather than recomputed: the step and the save have
+   * to agree, or Finish refuses with nothing on screen marked wrong.
+   */
+  pathUnchanged: boolean;
   /** Shallow-merge updates into the draft. */
   mergeDraft: (updates: Partial<Workflow.Trigger>) => void;
   /** The local, uncommitted auth-method id set. */
@@ -64,6 +83,7 @@ function hasResponseConfig(config: ResponseConfig): boolean {
  */
 export function WebhookConfigureStep({
   draft,
+  pathUnchanged,
   mergeDraft,
   draftAuthMethodIds,
   setDraftAuthMethodIds,
@@ -76,6 +96,7 @@ export function WebhookConfigureStep({
 }: WebhookConfigureStepProps) {
   const permissions = usePermissions();
   const { webhookAuthMethods } = useSessionContext();
+  const workflowName = useWorkflowState(state => state.workflow?.name ?? null);
   const { pushEvent } = useLiveViewActions();
   const { isReadOnly } = useWorkflowReadOnly();
   // Default to no-write until permissions load. During the loading window we
@@ -113,6 +134,43 @@ export function WebhookConfigureStep({
   }, [pushEvent]);
 
   const config = draft.webhook_response_config ?? null;
+  const customPath = draft.type === 'webhook' ? (draft.custom_path ?? '') : '';
+
+  // Kept as typed; the draft holds what it derives to.
+  const [typedPath, setTypedPath] = useState(customPath);
+
+  // A suggestion, not a write: empty still means "keep the generated URL".
+  const suggestedPath = toCustomPath(workflowName ?? '') || 'facility-001';
+
+  // Uniqueness is server-only. Shown while the path is still the one it
+  // complained about, since the draft's copy never updates.
+  const serverPathError = pathUnchanged
+    ? (draft.errors?.['custom_path']?.[0] ?? null)
+    : null;
+
+  const customPathError = (() => {
+    // An untouched path is not judged: its only fix is the rename that would
+    // retire the live URL.
+    if (pathUnchanged || customPath === '') return serverPathError;
+
+    // Held as typed rather than cleared, so the save refuses.
+    if (toCustomPath(customPath) === '') {
+      return 'That name has no letters or numbers in it.';
+    }
+
+    if (isValidCustomPath(customPath)) return serverPathError;
+
+    if (customPath.length > 255) {
+      return 'Too long. Keep it to 255 characters or fewer.';
+    }
+
+    if (/^[a-z0-9_-]+$/.test(customPath)) {
+      return 'A UUID cannot be used as a path.';
+    }
+
+    return 'Use lowercase letters, numbers, hyphens and underscores only.';
+  })();
+
   const isAfterCompletion = draft.webhook_reply === 'after_completion';
 
   const projectAuthMethods = useMemo<WebhookAuthMethod[]>(
@@ -140,6 +198,80 @@ export function WebhookConfigureStep({
             if (target === 'choose') onBack();
           }}
         />
+
+        {/* Label, description, control: the order Response Type uses. */}
+        <div className="space-y-1">
+          <label
+            htmlFor="webhook-custom-path"
+            className="block text-sm font-medium text-slate-800"
+          >
+            Custom URL path
+          </label>
+          <p
+            id="webhook-custom-path-hint"
+            className="block text-xs text-slate-500"
+          >
+            Names this endpoint so you know its URL before you deploy. Leave
+            blank to keep the generated one.
+          </p>
+
+          <input
+            id="webhook-custom-path"
+            type="text"
+            placeholder={suggestedPath}
+            spellCheck={false}
+            autoComplete="off"
+            disabled={isReadOnly}
+            value={typedPath}
+            onChange={e => {
+              // Keep what was typed, store what it becomes, the way the
+              // project form treats a project name.
+              const typed = e.target.value;
+              setTypedPath(typed);
+
+              const derived = toCustomPath(typed);
+
+              if (typed !== '' && derived === '') {
+                // Null would read as "cleared" and retire a live URL, so the
+                // raw value goes in for the schema to refuse.
+                mergeDraft({ custom_path: typed });
+                return;
+              }
+
+              mergeDraft({ custom_path: derived === '' ? null : derived });
+            }}
+            aria-invalid={customPathError ? true : undefined}
+            aria-describedby={
+              customPathError
+                ? 'webhook-custom-path-hint webhook-custom-path-error'
+                : 'webhook-custom-path-hint'
+            }
+            className={cn(
+              inputClass,
+              'mt-1 font-mono',
+              customPathError &&
+                'border-red-300 focus:border-red-500 focus:ring-red-500'
+            )}
+          />
+          {customPathError ? (
+            <p
+              id="webhook-custom-path-error"
+              className="block text-xs text-red-600"
+            >
+              {customPathError}
+            </p>
+          ) : typedPath !== '' &&
+            customPath !== '' &&
+            customPath !== typedPath ? (
+            <p className="block text-xs text-slate-500">
+              This will be named{' '}
+              <span className="rounded border border-slate-300 bg-yellow-100 px-1 font-mono">
+                {customPath}
+              </span>
+              .
+            </p>
+          ) : null}
+        </div>
 
         {/* Response Type */}
         <div className="space-y-1">
