@@ -252,6 +252,8 @@ defmodule LightningWeb.Router do
       scope "/projects/:project_id", as: :project do
         live "/settings/delete", ProjectLive.Settings, :delete
 
+        live "/health", ProjectLive.Health, :show
+
         live "/history", RunLive.Index, :index
         live "/history/channels", RunLive.Index, :channel_logs
         live "/history/channels/:id", ChannelRequestLive.Show, :show

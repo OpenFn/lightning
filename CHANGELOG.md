@@ -26,6 +26,9 @@ and this project adheres to
   summarising one workflow's last 30 days: a donut of work order outcomes, a
   breakdown of the failing ones, and a triage table grouping failures by error
   signature, heaviest first.
+- A project health page at `/projects/:project_id/health`, showing the project
+  name and how many work orders finished across all of its workflows in the last
+  30 days. Charts follow.
 
 ### Fixed
 
