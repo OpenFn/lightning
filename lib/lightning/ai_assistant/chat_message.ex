@@ -36,6 +36,9 @@ defmodule Lightning.AiAssistant.ChatMessage do
     stays the canonical answer.
     """
 
+    use Ecto.Schema
+    import Ecto.Changeset
+
     defmodule Step do
       @moduledoc """
       A workflow step a status segment acted on, recorded as data rather
@@ -75,9 +78,6 @@ defmodule Lightning.AiAssistant.ChatMessage do
         |> validate_length(:name, max: @max_field_length)
       end
     end
-
-    use Ecto.Schema
-    import Ecto.Changeset
 
     @max_content_length 10_000
     # A single action touches a handful of steps; this only guards against a
