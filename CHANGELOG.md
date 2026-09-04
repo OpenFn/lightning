@@ -27,7 +27,7 @@ and this project adheres to
   breakdown of the failing ones, and a triage table grouping failures by error
   signature, heaviest first. The page refreshes itself as that workflow's work
   orders settle, at most once every 30 seconds. Reachable from the workflows
-  list via a "View Stats" link on each row.
+  list via a "Health" link in each row's Actions column.
 
 ### Fixed
 
