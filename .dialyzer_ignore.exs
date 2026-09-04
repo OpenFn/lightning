@@ -1,5 +1,6 @@
 [
-  {"lib/lightning/task_worker.ex", :call_with_opaque},
+  # `task_worker.ex` needed a skip here until `flags: [:no_opaque]` in mix.exs
+  # covered it. Restore it if that flag goes.
   {"lib/lightning/auth_providers/well_known.ex", :invalid_contract},
   {"lib/mix/tasks/install_schemas.ex", :invalid_contract},
 
