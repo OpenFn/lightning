@@ -4,11 +4,11 @@ import type { FailureSignature } from '../types';
  * Failed work orders grouped by error signature, heaviest first.
  *
  * Purely informational — there is nothing to act on here, so no row is a link
- * or a control. The signature grammar is CON-31:
+ * or a control. The signature grammar is:
  * `exitReason:errorType [@ stepName [adaptor@version]]`.
  */
 
-// CON-111. One sentence per error type the worker can report, written to hold
+// One sentence per error type the worker can report, written to hold
 // for every root cause behind that type — the codes are general, so the tip
 // has to be too. `error_type` is not a closed enum — it is whatever the
 // throwing layer set — so `default` catches whatever is unlisted.

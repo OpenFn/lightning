@@ -41,7 +41,7 @@ export interface Outcomes {
 }
 
 /**
- * One row of the triage table: the parts of an error signature (CON-31) and
+ * One row of the triage table: the parts of an error signature and
  * the number of work orders that carry it. `step_name` and `adaptor` are null
  * for a work order whose run failed before reaching a step, or never ran at
  * all; `error_type` is null when nothing reported one.
