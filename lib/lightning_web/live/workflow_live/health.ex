@@ -37,17 +37,13 @@ defmodule LightningWeb.WorkflowLive.Health do
   end
 
   @impl true
-  def handle_info(
-        %Events.WorkOrderUpdated{work_order: %{state: state}},
-        socket
-      )
-      when state in @final_states do
-    {:noreply, throttled_refresh(socket)}
+  def handle_info(%Events.WorkOrderUpdated{work_order: work_order}, socket) do
+    {:noreply, maybe_refresh(socket, work_order)}
   end
 
-  # A work order that started or was retried has nothing this page draws — it
-  # counts final states only.
-  def handle_info(%Events.WorkOrderUpdated{}, socket), do: {:noreply, socket}
+  def handle_info(%Events.WorkOrderCreated{work_order: work_order}, socket) do
+    {:noreply, maybe_refresh(socket, work_order)}
+  end
 
   def handle_info(
         :refresh_window_closed,
@@ -61,6 +57,13 @@ defmodule LightningWeb.WorkflowLive.Health do
   end
 
   def handle_info(_event, socket), do: {:noreply, socket}
+
+  # A work order that started or was retried has nothing this page draws — it
+  # counts final states only.
+  defp maybe_refresh(socket, %{state: state}) when state in @final_states,
+    do: throttled_refresh(socket)
+
+  defp maybe_refresh(socket, _work_order), do: socket
 
   defp throttled_refresh(%{assigns: %{refresh: :idle}} = socket) do
     socket |> assign(refresh: :cooling) |> push_refresh()

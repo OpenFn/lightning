@@ -56,6 +56,20 @@ defmodule LightningWeb.WorkflowLive.HealthTest do
                Cachex.get(:workflow_stats, {:outcomes, workflow.id, 30})
     end
 
+    test "tells the page to refresh when a work order is rejected on arrival",
+         ctx do
+      %{view: view, workflow: workflow, project: project} = ctx
+
+      # Over the run limit: no run is ever created, so nothing updates this
+      # work order after the insert.
+      work_order =
+        insert(:workorder, workflow: workflow, state: :rejected, snapshot: nil)
+
+      Events.work_order_created(project.id, work_order)
+
+      assert_push_event(view, "health:changed", %{})
+    end
+
     test "stays quiet for a work order that has not settled yet", ctx do
       %{view: view, workflow: workflow, project: project} = ctx
 

@@ -62,9 +62,13 @@ describe('useWebhookTrigger', () => {
       wrapper,
     });
 
-    expect(result.current.webhookUrl).toBe(
-      `${window.location.origin}/i/${TRIGGER_ID}`
-    );
+    expect(result.current.endpoints).toEqual([
+      {
+        url: `${window.location.origin}/i/${TRIGGER_ID}`,
+        label: 'Default',
+        generated: true,
+      },
+    ]);
     // Until the store reports methods for this trigger, it is loading.
     expect(result.current.loadingAuthMethods).toBe(true);
     expect(result.current.triggerAuthMethods).toEqual([]);
@@ -87,9 +91,12 @@ describe('useWebhookTrigger', () => {
       wrapper,
     });
 
-    expect(result.current.webhookUrl).toBe(
-      `${window.location.origin}/i/${PROJECT.id}/facility-001`
-    );
+    // Naming a webhook adds an address, it never replaces the default, and the
+    // default is listed first because it is the one that cannot change.
+    expect(result.current.endpoints.map(e => e.url)).toEqual([
+      `${window.location.origin}/i/${TRIGGER_ID}`,
+      `${window.location.origin}/i/${PROJECT.id}/facility-001`,
+    ]);
   });
 
   test('leaves a usable path raw', async () => {
@@ -107,12 +114,12 @@ describe('useWebhookTrigger', () => {
       wrapper,
     });
 
-    expect(result.current.webhookUrl).toBe(
+    expect(result.current.endpoints[1]?.url).toBe(
       `${window.location.origin}/i/${PROJECT.id}/facility-001`
     );
   });
 
-  test('shows the generated URL when the stored path is not addressable', async () => {
+  test('lists only the generated URL when the stored path is not addressable', async () => {
     // Stored verbatim, but the lookup only matches one segment, so this URL
     // would 404 and hide the one that works.
     ydoc.getArray('triggers').get(0).set('custom_path', 'v1/orders');
@@ -125,9 +132,9 @@ describe('useWebhookTrigger', () => {
 
     const { result } = renderHook(() => useWebhookTrigger(legacy), { wrapper });
 
-    expect(result.current.webhookUrl).toBe(
-      `${window.location.origin}/i/${TRIGGER_ID}`
-    );
+    expect(result.current.endpoints.map(e => e.url)).toEqual([
+      `${window.location.origin}/i/${TRIGGER_ID}`,
+    ]);
   });
 
   test('falls back to the trigger id when the project is unknown', async () => {
@@ -140,9 +147,9 @@ describe('useWebhookTrigger', () => {
       wrapper,
     });
 
-    expect(result.current.webhookUrl).toBe(
-      `${window.location.origin}/i/${TRIGGER_ID}`
-    );
+    expect(result.current.endpoints.map(e => e.url)).toEqual([
+      `${window.location.origin}/i/${TRIGGER_ID}`,
+    ]);
   });
 
   test('commitAuthMethods issues the update channel request', async () => {

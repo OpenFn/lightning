@@ -39,27 +39,89 @@ defmodule Lightning.AiAssistant.ChatMessage do
     use Ecto.Schema
     import Ecto.Changeset
 
+    defmodule Step do
+      @moduledoc """
+      A workflow step a status segment acted on, recorded as data rather
+      than left implicit in the status sentence.
+
+      This is what lets the client attach per-step detail to the status
+      that produced it without pattern-matching English prose. `key` is
+      the workflow YAML's key for the step and is the stable identifier;
+      `name` is the display name at the time the action ran, kept so a
+      reloaded transcript reads the way it did live even if the step has
+      since been renamed.
+      """
+
+      use Ecto.Schema
+      import Ecto.Changeset
+
+      @max_field_length 500
+
+      @type t() :: %__MODULE__{key: String.t(), name: String.t() | nil}
+
+      @derive {Jason.Encoder, only: [:key, :name]}
+      @primary_key false
+      embedded_schema do
+        field :key, :string
+        field :name, :string
+      end
+
+      @doc "Maximum length of a step's key or name."
+      def max_field_length, do: @max_field_length
+
+      @doc false
+      def changeset(step, attrs) do
+        step
+        |> cast(attrs, [:key, :name])
+        |> validate_required([:key])
+        |> validate_length(:key, max: @max_field_length)
+        |> validate_length(:name, max: @max_field_length)
+      end
+    end
+
     @max_content_length 10_000
+    # A single action touches a handful of steps; this only guards against a
+    # malformed payload bloating the row.
+    @max_steps 100
 
-    @type t() :: %__MODULE__{type: :text | :status, content: String.t()}
+    @type t() :: %__MODULE__{
+            type: :text | :status,
+            content: String.t(),
+            summary: String.t() | nil,
+            steps: [Step.t()]
+          }
 
-    @derive {Jason.Encoder, only: [:type, :content]}
+    @derive {Jason.Encoder, only: [:type, :content, :summary, :steps]}
     @primary_key false
     embedded_schema do
       field :type, Ecto.Enum, values: [:text, :status]
       field :content, :string
+      # Shorter line for clients that render the steps themselves, so the
+      # step names are not printed once in the sentence and again on the
+      # detail. Clients that render prose only keep using `content`.
+      field :summary, :string
+      embeds_many :steps, Step, on_replace: :delete
     end
 
     @doc false
     def changeset(segment, attrs) do
       segment
-      |> cast(attrs, [:type, :content])
+      |> cast(attrs, [:type, :content, :summary])
+      |> cast_embed(:steps)
       |> validate_required([:type, :content])
       |> validate_length(:content, max: @max_content_length)
+      |> validate_length(:summary, max: @max_content_length)
+      |> validate_length(:steps, max: @max_steps)
     end
 
     @doc "Maximum length of a single segment's content (matches `content`'s cap)."
     def max_content_length, do: @max_content_length
+
+    @doc "Maximum number of steps recorded against one status segment."
+    def max_steps, do: @max_steps
+
+    @doc "Maximum length of a step's key or name."
+    def max_step_field_length, do: Step.max_field_length()
   end
 
   # A reply's segment count is naturally bounded by the model's output size;

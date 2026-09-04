@@ -24,10 +24,10 @@ defmodule Lightning.WorkOrders.Events do
   end
 
   def work_order_created(project_id, work_order) do
-    Lightning.broadcast(
-      topic(project_id),
-      %WorkOrderCreated{work_order: work_order, project_id: project_id}
-    )
+    event = %WorkOrderCreated{work_order: work_order, project_id: project_id}
+
+    Lightning.broadcast(topic(project_id), event)
+    Lightning.broadcast(workflow_topic(work_order.workflow_id), event)
   end
 
   def work_order_updated(project_id, work_order) do
