@@ -110,6 +110,10 @@ config :lightning, Lightning.Adaptors,
   strategy: Lightning.Adaptors.StrategyMock,
   refresh_interval: 0
 
+# The reconciler runs against the shared production catalogue table, which
+# tests seed freely; each test that needs it starts its own named instance.
+config :lightning, Lightning.Credentials.SchemaReconciler, enabled: false
+
 # `Config.source_for/1` only maps the two real strategies; the mock has to
 # declare its catalogue source like any other third-party strategy would.
 config :lightning, Lightning.Adaptors.StrategyMock, source: :npm

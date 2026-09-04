@@ -1066,11 +1066,11 @@ defmodule Lightning.Config.Bootstrap do
     end
   end
 
-  # ADAPTORS_LOCAL_REPO wins outright when set. When unset, fall back to
-  # the (ungated) OPENFN_ADAPTORS_REPO parse above, warning only when
-  # Lightning.Adaptors is actually running the Local strategy — an operator
-  # running the npm strategy with OPENFN_ADAPTORS_REPO still set for the
-  # ws-worker shouldn't be warned about a var they legitimately need.
+  # ADAPTORS_LOCAL_REPO wins outright when set. When it's unset, fall back
+  # to the OPENFN_ADAPTORS_REPO value parsed above, but only warn about it
+  # when Lightning.Adaptors is actually running the Local strategy — an
+  # operator running the npm strategy can leave OPENFN_ADAPTORS_REPO set for
+  # the ws-worker without being warned about a var they still need.
   defp resolve_local_strategy_paths(local_adaptors_repos, adaptors_strategy) do
     case env!("ADAPTORS_LOCAL_REPO", :string, nil) |> parse_repo_list() do
       [] ->

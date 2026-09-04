@@ -37,6 +37,8 @@ defmodule Lightning.Adaptors.Supervisor do
     strategy = Keyword.get(opts, :strategy, Config.strategy())
     lock_key = Keyword.get(opts, :lock_key, lock_key(name))
 
+    # Per-instance config for stateless callers that hold only the name.
+    # Children take theirs from the child spec (see lock_key), not from here.
     :persistent_term.put(meta_key(name), %{
       strategy: strategy,
       source: Config.source_for(strategy)

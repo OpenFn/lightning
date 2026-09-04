@@ -6,8 +6,6 @@ defmodule Lightning.Adaptors.NPMTest do
   @package "@openfn/language-http"
   @latest_version "2.1.0"
 
-  # One Bypass server each for the npm registry, jsDelivr, and
-  # raw.githubusercontent.com; each URL is installed onto the strategy_opts block.
   setup do
     registry = Bypass.open()
     jsdelivr = Bypass.open()
@@ -167,6 +165,13 @@ defmodule Lightning.Adaptors.NPMTest do
       registry: registry,
       github: github
     } do
+      Bypass.expect(registry, "GET", "/-/user/openfn/package", fn conn ->
+        json_resp(conn, 200, %{
+          "@openfn/language-http" => "write",
+          "@openfn/language-salesforce" => "write"
+        })
+      end)
+
       Bypass.expect(registry, "GET", "/-/v1/search", fn conn ->
         body = %{
           "objects" => [
@@ -217,7 +222,7 @@ defmodule Lightning.Adaptors.NPMTest do
     end
 
     test "surfaces list_adaptors errors as {:error, _}", %{registry: registry} do
-      Bypass.expect(registry, "GET", "/-/v1/search", fn conn ->
+      Bypass.expect(registry, "GET", "/-/user/openfn/package", fn conn ->
         Plug.Conn.resp(conn, 503, "")
       end)
 

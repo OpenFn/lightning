@@ -190,13 +190,14 @@ defmodule Lightning.MetadataServiceTest do
         insert(:credential)
         |> with_body(%{name: "main", body: %{"username" => "user"}})
 
-      assert MetadataService.fetch("not a valid package!!", credential) == {
-               :error,
-               %Lightning.MetadataService.Error{
-                 type: "no_matching_adaptor",
-                 __exception__: true
+      assert MetadataService.fetch("not a valid package!!", credential, "main") ==
+               {
+                 :error,
+                 %Lightning.MetadataService.Error{
+                   type: "no_matching_adaptor",
+                   __exception__: true
+                 }
                }
-             }
     end
 
     test "refuses a well-formed adaptor that is not in the registry (whitelist)" do

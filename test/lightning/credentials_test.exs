@@ -2834,4 +2834,44 @@ defmodule Lightning.CredentialsTest do
       end
     end
   end
+
+  describe "reconcile_legacy_schema_names/1" do
+    setup :isolated_adaptors
+
+    test "promotes a resolvable short-name row to the full npm name", %{
+      sup: sup
+    } do
+      Lightning.AdaptorTestHelpers.seed_adaptor_package(
+        "@openfn/language-postgresql",
+        "1.0.0"
+      )
+
+      credential = insert(:credential, schema: "postgresql")
+      other = insert(:credential, schema: "postgresql")
+
+      assert Credentials.reconcile_legacy_schema_names(sup) == 2
+
+      assert Repo.get!(Credential, credential.id).schema ==
+               "@openfn/language-postgresql"
+
+      assert Repo.get!(Credential, other.id).schema ==
+               "@openfn/language-postgresql"
+
+      assert Repo.get!(Credential, credential.id).updated_at ==
+               credential.updated_at
+    end
+
+    test "leaves raw, oauth, and an unresolvable custom short name untouched",
+         %{sup: sup} do
+      raw = insert(:credential, schema: "raw")
+      oauth = insert(:credential, schema: "oauth")
+      custom = insert(:credential, schema: "totally-custom")
+
+      assert Credentials.reconcile_legacy_schema_names(sup) == 0
+
+      assert Repo.get!(Credential, raw.id).schema == "raw"
+      assert Repo.get!(Credential, oauth.id).schema == "oauth"
+      assert Repo.get!(Credential, custom.id).schema == "totally-custom"
+    end
+  end
 end

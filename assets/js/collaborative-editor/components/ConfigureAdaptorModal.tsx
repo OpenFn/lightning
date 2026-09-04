@@ -285,6 +285,7 @@ export function ConfigureAdaptorModal({
   // Filter credentials into sections
   const credentialSections = useMemo(() => {
     const adaptorName = extractAdaptorName(currentAdaptor);
+    const packageName = extractPackageName(currentAdaptor);
     if (!adaptorName) {
       return {
         schemaMatched: [],
@@ -300,7 +301,7 @@ export function ConfigureAdaptorModal({
     const schemaMatched: CredentialWithType[] = projectCredentials
       .filter(c => {
         // Exact schema match
-        if (c.schema === adaptorName) return true;
+        if (c.schema === packageName) return true;
 
         // For HTTP adaptor, all OAuth credentials are considered matching
         if (adaptorName === 'http' && c.schema === 'oauth') return true;
@@ -324,7 +325,9 @@ export function ConfigureAdaptorModal({
     const universal: CredentialWithType[] = projectCredentials
       .filter(c => {
         const isUniversal =
-          c.schema === 'http' || c.schema === 'raw' || c.schema === 'oauth';
+          c.schema === '@openfn/language-http' ||
+          c.schema === 'raw' ||
+          c.schema === 'oauth';
         const alreadyInSchemaMatched = schemaMatched.some(
           matched => matched.id === c.id
         );

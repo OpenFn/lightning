@@ -206,6 +206,40 @@ defmodule Lightning.AdaptorsTest do
     end
   end
 
+  describe "resolve_name/2" do
+    test "resolves a short name to the full name when the full name is in the catalogue",
+         %{sup: sup} do
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      assert Adaptors.resolve_name(sup, "http") == "@openfn/language-http"
+    end
+
+    test "leaves a full name that is already in the catalogue unchanged", %{
+      sup: sup
+    } do
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      assert Adaptors.resolve_name(sup, "@openfn/language-http") ==
+               "@openfn/language-http"
+    end
+
+    test "leaves an unknown short name unchanged", %{sup: sup} do
+      assert Adaptors.resolve_name(sup, "unknownish") == "unknownish"
+    end
+
+    test "never resolves the raw and oauth sentinels, even if shadowed in the catalogue",
+         %{sup: sup} do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(adaptor_record(name: "@openfn/language-raw"))
+
+      {:ok, _} =
+        Catalogue.upsert_adaptor(adaptor_record(name: "@openfn/language-oauth"))
+
+      assert Adaptors.resolve_name(sup, "raw") == "raw"
+      assert Adaptors.resolve_name(sup, "oauth") == "oauth"
+    end
+  end
+
   describe "to_wire/1" do
     test "resolves @latest against the catalogue and passes semver through" do
       {:ok, _} =

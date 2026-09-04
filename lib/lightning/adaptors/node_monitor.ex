@@ -2,12 +2,15 @@ defmodule Lightning.Adaptors.NodeMonitor do
   @moduledoc """
   Partition-recovery companion to `Lightning.Adaptors.Invalidator`.
 
-  On `:nodeup`, re-warms the Cachex table from Postgres so a reconnecting
-  peer never serves stale data until the 24-hour TTL expires. Steady-state
+  Cache entries have no TTL, so a node that misses a `:changed` broadcast
+  while partitioned would otherwise serve it forever. On `:nodeup`,
+  re-warms the Cachex table from Postgres to close that gap. Steady-state
   invalidation belongs to `Lightning.Adaptors.Invalidator`.
 
-  `:nodedown` is a deliberate no-op. The worst case on a silent departure is
-  one stale-URL redirect per client, backstopped by 302-on-stale-sha.
+  `:nodedown` is a deliberate no-op: there's nothing to invalidate on this
+  end when the connection drops. The worst case while partitioned is a
+  stale icon URL, which `LightningWeb.AdaptorIconController`'s
+  302-on-stale-sha handles regardless of which node serves the request.
   """
 
   use GenServer
@@ -18,7 +21,7 @@ defmodule Lightning.Adaptors.NodeMonitor do
   Start a NodeMonitor for the given supervisor instance.
 
   Required opts:
-    * `:name` — registered GenServer name (§6.11 async-test rule).
+    * `:name` — registered GenServer name.
     * `:sup` — supervisor instance name, forwarded to `Store.warm_from_repo/1`.
   """
   @spec start_link(keyword()) :: GenServer.on_start()
@@ -40,8 +43,8 @@ defmodule Lightning.Adaptors.NodeMonitor do
     {:noreply, state}
   end
 
-  # Deliberate no-op: nodedown does not trigger a re-warm. The 24h Cachex TTL
-  # backstops any staleness; 302-on-stale-sha handles already-issued URLs.
+  # Deliberate no-op: nodedown does not trigger a re-warm. 302-on-stale-sha
+  # handles already-issued icon URLs; other reads stay stale until nodeup.
   def handle_info({:nodedown, _node, _info}, state) do
     {:noreply, state}
   end

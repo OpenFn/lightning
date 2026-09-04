@@ -80,4 +80,28 @@ defmodule Lightning.Adaptors.PackageNameTest do
              ) == "@openfn/language-common@local"
     end
   end
+
+  describe "short_name/1" do
+    test "strips the @openfn/language- prefix" do
+      assert PackageName.short_name("@openfn/language-http") == "http"
+    end
+
+    test "passes through a name with no prefix unchanged" do
+      assert PackageName.short_name("raw") == "raw"
+    end
+
+    test "passes through an unrelated scoped name unchanged" do
+      assert PackageName.short_name("@other/scope") == "@other/scope"
+    end
+
+    test "passes through nil unchanged" do
+      assert PackageName.short_name(nil) == nil
+    end
+  end
+
+  describe "full_name/1" do
+    test "prepends the @openfn/language- prefix" do
+      assert PackageName.full_name("http") == "@openfn/language-http"
+    end
+  end
 end

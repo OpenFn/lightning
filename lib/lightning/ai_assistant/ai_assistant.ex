@@ -545,7 +545,8 @@ defmodule Lightning.AiAssistant do
   ## Returns
 
   An updated `ChatSession` struct with `:expression` and `:adaptor` fields populated.
-  The adaptor is resolved through `Lightning.Adaptors.to_wire/1`.
+  The adaptor is resolved through `Lightning.Adaptors.to_wire/1`, falling back
+  to the adaptor as given if that fails.
   """
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()

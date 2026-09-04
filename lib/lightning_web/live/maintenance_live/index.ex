@@ -5,9 +5,9 @@ defmodule LightningWeb.MaintenanceLive.Index do
 
   Exposes two actions: "Refresh Adaptor Registry" (`refresh/0`) and
   "Refresh Adaptor Icons" (`refresh_icons/0`). Neither blocks the LiveView:
-  the registry refresh is fire-and-forget on the leader node, while the icon
-  refresh runs under `start_async` (the underlying call can take up to two
-  minutes) and flashes its result when it completes.
+  the registry refresh is fire-and-forget on the cluster-singleton scheduler,
+  while the icon refresh runs under `start_async` (the underlying call can
+  take up to two minutes) and flashes its result when it completes.
   """
   use LightningWeb, :live_view
 

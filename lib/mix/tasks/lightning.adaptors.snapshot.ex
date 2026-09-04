@@ -12,7 +12,13 @@ defmodule Mix.Tasks.Lightning.Adaptors.Snapshot do
   catalogue is already populated. Either file can be read back by
   `mix lightning.adaptors.import`.
 
-  Use --path to specify the location
+  ## Usage
+
+      mix lightning.adaptors.snapshot
+      mix lightning.adaptors.snapshot --path snapshot.json
+
+  Without `--path`, writes to `adaptor_registry_cache.json` in this
+  instance's `priv` directory.
   """
 
   use Mix.Task

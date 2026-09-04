@@ -658,10 +658,9 @@ defmodule Lightning.Adaptors.Scheduler do
       {:error, {:upsert_failed, Exception.message(e)}}
   end
 
-  # Builds the prior-etag map for `Strategy.fetch_icons/1`. A row or shape
-  # with no etag is left out rather than kept as an empty entry — the
-  # strategy already treats an absent entry as "no prior etag, don't send
-  # If-None-Match".
+  # A row or shape with no etag is left out rather than kept as an empty
+  # entry — the strategy already treats an absent entry as "no prior etag,
+  # don't send If-None-Match".
   @spec prior_etags_from_rows([map()]) :: %{
           String.t() => %{optional(:square | :rectangle) => String.t()}
         }

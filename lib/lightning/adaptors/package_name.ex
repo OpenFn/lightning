@@ -8,6 +8,8 @@ defmodule Lightning.Adaptors.PackageName do
 
   @name_format ~r{\A@?[\w.-]+(?:/[\w.-]+)?\z}
 
+  @language_prefix "@openfn/language-"
+
   @doc """
   Returns the spec format: a package name plus optional `@version`, with
   no newlines or shell metacharacters.
@@ -40,9 +42,9 @@ defmodule Lightning.Adaptors.PackageName do
   @doc """
   Renders a spec for the worker.
 
-  `opts[:source]` of `:local` forces `name@local`. `opts[:latest]` is the
-  concrete version for a `latest` spec, and is required for one under
-  any other source. A `name@local` spec is always kept as is.
+  `opts[:source]` of `:local` forces `name@local`. Otherwise, a `latest`
+  spec is resolved to `opts[:latest]`, which must be given in that case.
+  A `name@local` spec is always kept as is.
   """
   @spec to_wire(String.t() | nil, keyword()) :: String.t()
   def to_wire(adaptor, opts \\ []) do
@@ -61,4 +63,20 @@ defmodule Lightning.Adaptors.PackageName do
         end
     end
   end
+
+  @doc """
+  Strips the `@openfn/language-` prefix from a full package name, e.g.
+  `"@openfn/language-http"` -> `"http"`. Any other value, including `nil`
+  (credential schemas are nullable), passes through unchanged.
+  """
+  @spec short_name(String.t() | nil) :: String.t() | nil
+  def short_name(@language_prefix <> short), do: short
+  def short_name(other), do: other
+
+  @doc """
+  Prepends the `@openfn/language-` prefix to a short adaptor name, e.g.
+  `"http"` -> `"@openfn/language-http"`.
+  """
+  @spec full_name(String.t()) :: String.t()
+  def full_name(short) when is_binary(short), do: @language_prefix <> short
 end

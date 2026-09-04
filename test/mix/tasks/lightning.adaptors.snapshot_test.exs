@@ -48,6 +48,10 @@ defmodule Mix.Tasks.Lightning.Adaptors.SnapshotTest do
       tmp_dir: tmp_dir,
       registry: registry
     } do
+      Bypass.expect(registry, "GET", "/-/user/openfn/package", fn conn ->
+        json_resp(conn, 200, %{})
+      end)
+
       Bypass.expect(registry, "GET", "/-/v1/search", fn conn ->
         json_resp(conn, 200, %{"objects" => []})
       end)
@@ -67,6 +71,10 @@ defmodule Mix.Tasks.Lightning.Adaptors.SnapshotTest do
       registry: registry,
       jsdelivr: jsdelivr
     } do
+      Bypass.expect(registry, "GET", "/-/user/openfn/package", fn conn ->
+        json_resp(conn, 200, %{@package => "write"})
+      end)
+
       Bypass.expect(registry, "GET", "/-/v1/search", fn conn ->
         json_resp(conn, 200, %{
           "objects" => [
