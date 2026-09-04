@@ -98,13 +98,31 @@ describe('TriageTable', () => {
     ).toBeVisible();
   });
 
-  // Raw JS error names reach Lightning through some paths, and a step can
-  // finish without reporting a type at all — neither may render a blank tip.
+  // A crashing step reports these, never `RuntimeCrash` — see TIPS. Untipped,
+  // the most common crash there is falls through to "no recognised error type".
+  test('tips the raw JS names that reach Lightning in place of RuntimeCrash', () => {
+    render(
+      <TriageTable
+        signatures={[
+          signature({ exit_reason: 'crash', error_type: 'ReferenceError' }),
+          signature({ exit_reason: 'crash', error_type: 'SyntaxError' }),
+        ]}
+        emptyMessage="No failures"
+      />
+    );
+
+    expect(screen.getByText(/often a typo or a missing import/)).toBeVisible();
+    expect(screen.getByText(/wasn't in the format it expected/)).toBeVisible();
+  });
+
+  // `error_type` is not a closed enum — it is whatever name the throwing layer
+  // set — and a step can finish without reporting one at all. Neither may
+  // render a blank tip.
   test('falls back to the default tip for an unmapped or missing type', () => {
     render(
       <TriageTable
         signatures={[
-          signature({ error_type: 'TypeError' }),
+          signature({ error_type: 'SomeUnmappedError' }),
           signature({ error_type: null, step_name: 'Verify-cedula' }),
         ]}
         emptyMessage="No failures"

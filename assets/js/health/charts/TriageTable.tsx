@@ -10,8 +10,8 @@ import type { FailureSignature } from '../types';
 
 // CON-111. One sentence per error type the worker can report, written to hold
 // for every root cause behind that type — the codes are general, so the tip
-// has to be too. `default` catches raw JS error names like `TypeError`, which
-// reach Lightning through some paths.
+// has to be too. `error_type` is not a closed enum — it is whatever the
+// throwing layer set — so `default` catches whatever is unlisted.
 const TIPS: Record<string, string> = {
   RuntimeError:
     "Job code hit a value it didn't expect, often a missing input field.",
@@ -19,7 +19,15 @@ const TIPS: Record<string, string> = {
   AdaptorError: 'An error occurred while an adaptor operation was underway.',
   CompileError: "Job code couldn't be compiled, so no step ever ran.",
   RuntimeCrash:
-    "Job code referred to something that doesn't exist; the run was abandoned.",
+    "Job code threw an error the runtime couldn't recover from, so the run was abandoned.",
+  // The only two raw JS names that reach Lightning: `assertRuntimeCrash` wraps
+  // exactly these, and the worker reports the wrapper's `subtype` over its
+  // `name`, so `RuntimeCrash` only ever names a run-level failure. Every other
+  // JS error is wrapped as a `RuntimeError` and reports under that name.
+  ReferenceError:
+    "Job code referred to something that doesn't exist, often a typo or a missing import.",
+  SyntaxError:
+    "Job code tried to parse text that wasn't in the format it expected, most often JSON.",
   ValidationError:
     "The workflow or a job isn't in a shape the runtime accepts, so nothing ran.",
   ImportError:
