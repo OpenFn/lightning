@@ -21,67 +21,11 @@ import type {
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
 import { STREAMING_MESSAGE_ID } from '../types/ai-assistant';
+import { validateWorkflowIds } from '../utils/validateWorkflowIds';
 
 import type { AIModeResult } from './useAIMode';
 import { NOT_CONNECTED_ALERT, STILL_CONNECTING_ALERT } from './useWorkflow';
 import type { SaveWorkflowOptions } from './useWorkflow';
-
-/**
- * Helper function to validate workflow IDs before applying
- *
- * Ensures that all IDs in the workflow spec are strings or null,
- * not objects. This prevents YAML parsing issues where the AI
- * might incorrectly generate object IDs.
- */
-function validateIds(spec: Record<string, unknown>): void {
-  if (spec['jobs']) {
-    for (const [jobKey, job] of Object.entries(spec['jobs'] as object)) {
-      const jobItem = job as Record<string, unknown>;
-      if (
-        jobItem['id'] &&
-        typeof jobItem['id'] === 'object' &&
-        jobItem['id'] !== null
-      ) {
-        throw new Error(
-          `Invalid ID format for job "${jobKey}". IDs must be strings or null, not objects. ` +
-            `Please ask the AI to regenerate the workflow with proper ID format.`
-        );
-      }
-    }
-  }
-  if (spec['triggers']) {
-    for (const [triggerKey, trigger] of Object.entries(
-      spec['triggers'] as object
-    )) {
-      const triggerItem = trigger as Record<string, unknown>;
-      if (
-        triggerItem['id'] &&
-        typeof triggerItem['id'] === 'object' &&
-        triggerItem['id'] !== null
-      ) {
-        throw new Error(
-          `Invalid ID format for trigger "${triggerKey}". IDs must be strings or null, not objects. ` +
-            `Please ask the AI to regenerate the workflow with proper ID format.`
-        );
-      }
-    }
-  }
-  if (spec['edges']) {
-    for (const [edgeKey, edge] of Object.entries(spec['edges'] as object)) {
-      const edgeItem = edge as Record<string, unknown>;
-      if (
-        edgeItem['id'] &&
-        typeof edgeItem['id'] === 'object' &&
-        edgeItem['id'] !== null
-      ) {
-        throw new Error(
-          `Invalid ID format for edge "${edgeKey}". IDs must be strings or null, not objects. ` +
-            `Please ask the AI to regenerate the workflow with proper ID format.`
-        );
-      }
-    }
-  }
-}
 
 /**
  * Hook to manage workflow and job code application from AI Assistant
@@ -330,7 +274,7 @@ export function useAIWorkflowApplications({
       let saveSucceeded = true;
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
-        validateIds(workflowSpec);
+        validateWorkflowIds(workflowSpec);
 
         // IDs are already in the YAML from AI (sent with IDs, like legacy editor)
         const workflowState = convertWorkflowSpecToState(workflowSpec);

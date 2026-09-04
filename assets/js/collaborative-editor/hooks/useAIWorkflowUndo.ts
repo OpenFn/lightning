@@ -9,6 +9,7 @@ import {
 } from '../../yaml/util';
 import { notifications } from '../lib/notifications';
 import type { Job } from '../types';
+import { validateWorkflowIds } from '../utils/validateWorkflowIds';
 
 import { useActionLock } from './useActionLock';
 import type { AppliedCanvas } from './useAppliedCanvas';
@@ -27,7 +28,11 @@ interface UseAIWorkflowUndoReturn {
   /** Reply whose changes are currently undone, so its control offers Redo */
   undoneMessageId: string | null;
   /** Undo a reply's changes, or redo them, confirming first if needed */
-  requestUndoChanges: (messageId: string, yaml: string) => void;
+  requestUndoChanges: (
+    messageId: string,
+    yaml: string,
+    options?: { fromModel?: boolean }
+  ) => void;
   isConfirmOpen: boolean;
   confirmUndoChanges: () => void;
   cancelUndoChanges: () => void;
@@ -58,16 +63,20 @@ export function useAIWorkflowUndo({
   const [pending, setPending] = useState<{
     messageId: string;
     yaml: string;
+    fromModel: boolean;
   } | null>(null);
 
   const { run: restore } = useActionLock(
-    async (messageId: string, yaml: string) => {
+    async (messageId: string, yaml: string, fromModel: boolean) => {
       const coordinated = await startApplyingWorkflow(messageId);
 
       try {
-        // No id validation: this YAML is our own serializer's output, not the
-        // model's.
-        const state = convertWorkflowSpecToState(parseWorkflowYAML(yaml));
+        const spec = parseWorkflowYAML(yaml);
+        // Undo restores the baseline this app serialized, which needs no id
+        // validation. Redo restores the reply's own YAML, which the model
+        // wrote, so it gets the same check the apply path runs on it.
+        if (fromModel) validateWorkflowIds(spec as Record<string, unknown>);
+        const state = convertWorkflowSpecToState(spec);
 
         await importWorkflow(
           applyJobCredsToWorkflowState(state, extractJobCredentials(jobs))
@@ -91,18 +100,20 @@ export function useAIWorkflowUndo({
   );
 
   const requestUndoChanges = useCallback(
-    (messageId: string, yaml: string) => {
+    (messageId: string, yaml: string, options?: { fromModel?: boolean }) => {
+      const fromModel = options?.fromModel ?? false;
       if (appliedCanvas.hasChangedSinceApply()) {
-        setPending({ messageId, yaml });
+        setPending({ messageId, yaml, fromModel });
         return;
       }
-      void restore(messageId, yaml);
+      void restore(messageId, yaml, fromModel);
     },
     [appliedCanvas, restore]
   );
 
   const confirmUndoChanges = useCallback(() => {
-    if (pending) void restore(pending.messageId, pending.yaml);
+    if (pending)
+      void restore(pending.messageId, pending.yaml, pending.fromModel);
     setPending(null);
   }, [pending, restore]);
 

@@ -73,7 +73,10 @@ describe('MessageList - undo applied changes', () => {
 
     await userEvent.click(screen.getByTestId('undo-changes-button'));
 
-    expect(onUndoChanges).toHaveBeenCalledWith('reply-1', BASELINE_YAML);
+    // Undo restores YAML this app serialized, so it needs no id validation
+    expect(onUndoChanges).toHaveBeenCalledWith('reply-1', BASELINE_YAML, {
+      fromModel: false,
+    });
   });
 
   it('offers to redo the reply once its changes are undone', async () => {
@@ -90,7 +93,10 @@ describe('MessageList - undo applied changes', () => {
     expect(button).toHaveTextContent('Redo these changes');
 
     await userEvent.click(button);
-    expect(onUndoChanges).toHaveBeenCalledWith('reply-1', APPLIED_YAML);
+    // Redo restores the reply's own YAML, which the model wrote
+    expect(onUndoChanges).toHaveBeenCalledWith('reply-1', APPLIED_YAML, {
+      fromModel: true,
+    });
   });
 
   it.each([

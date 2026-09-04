@@ -111,6 +111,38 @@ describe('useAIWorkflowUndo', () => {
     });
   });
 
+  it('rejects an object id when restoring YAML the model wrote', async () => {
+    const { result, importWorkflow } = setup();
+    // The model occasionally emits an id as a nested mapping. Redo restores
+    // its YAML, so it gets the same check the apply path runs.
+    const modelYaml = BASELINE_YAML.replace(
+      /^(\s*)id: .*$/m,
+      '$1id:\n$1  value: not-a-string'
+    );
+
+    act(() => {
+      result.current.requestUndoChanges(MESSAGE_ID, modelYaml, {
+        fromModel: true,
+      });
+    });
+
+    await waitFor(() => {
+      expect(importWorkflow).not.toHaveBeenCalled();
+    });
+  });
+
+  it('skips that check for the baseline, which this app serialized', async () => {
+    const { result, importWorkflow } = setup();
+
+    act(() => {
+      result.current.requestUndoChanges(MESSAGE_ID, BASELINE_YAML);
+    });
+
+    await waitFor(() => {
+      expect(importWorkflow).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('confirms before overwriting a workflow edited since the apply', async () => {
     const { result, importWorkflow } = setup({ hasChanged: true });
 

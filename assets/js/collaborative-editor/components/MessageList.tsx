@@ -713,7 +713,11 @@ interface MessageListProps {
    */
   failedApplyMessageIds?: Set<string>;
   /** Restores the workflow to before a reply's changes, or back to after them */
-  onUndoChanges?: (messageId: string, yaml: string) => void;
+  onUndoChanges?: (
+    messageId: string,
+    yaml: string,
+    options?: { fromModel?: boolean }
+  ) => void;
   /** Reply whose changes are currently undone, so its control offers Redo */
   undoneMessageId?: string | null;
   /** An apply is running: undo must not race the import */
@@ -1182,11 +1186,15 @@ export function MessageList({
                       <UndoChangesButton
                         undone={undoneMessageId === message.id}
                         onClick={() => {
+                          const redoing = undoneMessageId === message.id;
                           onUndoChanges?.(
                             message.id,
-                            undoneMessageId === message.id
+                            redoing
                               ? message.code!
-                              : beforeYamlByMessageId.get(message.id)!
+                              : beforeYamlByMessageId.get(message.id)!,
+                            // Redo restores the reply's own YAML, which the
+                            // model wrote; undo restores our own serializer's.
+                            { fromModel: redoing }
                           );
                         }}
                       />
