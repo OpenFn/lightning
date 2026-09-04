@@ -64,49 +64,31 @@ export const isInvisibleOnly = (value: string): boolean =>
 
 export const NAME_BLANK_MESSAGE = "Name can't be blank.";
 
-// `Intl.Segmenter` is not declared in the `es2020` lib this project compiles
-// against, hence the local declaration rather than a lib bump.
-interface GraphemeSegmenter {
-  segment(input: string): Iterable<{ segment: string }>;
-}
-
-interface SegmenterConstructor {
-  new (
-    locales?: string | string[],
-    options?: { granularity: 'grapheme' | 'word' | 'sentence' }
-  ): GraphemeSegmenter;
-}
-
-const SegmenterCtor = (
-  Intl as unknown as {
-    Segmenter?: SegmenterConstructor | undefined;
-  }
-).Segmenter;
-
-const segmenter = SegmenterCtor
-  ? new SegmenterCtor(undefined, { granularity: 'grapheme' })
-  : undefined;
+const segmenter =
+  typeof Intl.Segmenter === 'function'
+    ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+    : undefined;
 
 /**
  * Ecto's `validate_length` counts graphemes. A plain `.length` in JS counts
  * UTF-16 code units. `Intl.Segmenter` gives us the count Elixir uses.
  */
 export const graphemeLength = (value: string): number => {
-  // No fallback on purpose. Counting code points instead would be at least the
-  // grapheme count and never less, so it would refuse names the server accepts
-  // -- 60 of "q\u0327" is 60 graphemes and 120 code points. Stricter than the
-  // server is the one direction this module must never be.
+  // Counting code points instead would be at least the grapheme count and never
+  // less, so it would refuse names the server accepts: 60 of "q\u0327" is 60
+  // graphemes and 120 code points. Stricter than the server is the one
+  // direction this module must never be.
   if (!segmenter) {
     throw new Error('Intl.Segmenter is required to count graphemes');
   }
 
-  return Array.from(segmenter.segment(value)).length;
+  return [...segmenter.segment(value)].length;
 };
 
 /**
- * Call this rather than `graphemeLength`, which throws without a Segmenter, and
- * a throw inside a Zod `.refine()` escapes `safeParse` as an exception rather
- * than becoming a validation error. Without one this lets the server answer.
+ * Call this rather than `graphemeLength`, so a browser without `Intl.Segmenter`
+ * lets the server answer instead of throwing inside a Zod `.refine()`, where a
+ * throw escapes `safeParse` as an exception rather than a validation error.
  */
 export const exceedsGraphemeCap = (value: string, max: number): boolean =>
   segmenter !== undefined && graphemeLength(value) > max;
