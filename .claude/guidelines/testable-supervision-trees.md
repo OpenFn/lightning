@@ -157,6 +157,15 @@ The tell to watch for is global storage smuggling a value past a structural
 boundary that was already open two lines away and already carrying its siblings
 across.
 
+`Lightning.Adaptors.Supervisor` shows both sides. `strategy` and `source` go
+into `:persistent_term` keyed per instance (`lib/lightning/adaptors/supervisor.ex:40-43`),
+which is the acceptable shape for the stateless `Store` functions: a caller
+holding only the instance name has nowhere else to read boot-fixed config from.
+It is the tell for `Scheduler`, whose child spec already carries `cache`,
+`tasks` and `source_topic` (`supervisor.ex:57-62`) but not `strategy`, so the
+process re-reads it from the global store on every refresh (`scheduler.ex:259`,
+`:271`, `:313`). New children take config from the child spec, as `lock_key` does.
+
 ### Scoping mocks without going global
 
 `Mox.allow/3` and `Ecto.Adapters.SQL.Sandbox.allow/3` are one concept with one
@@ -168,10 +177,8 @@ Lightning's collaboration suite is the in-repo example, at
 and each per-test mock to a directly-started collaboration process, guarding every
 `Mox.allow` so a test that never stubbed a given mock is unaffected. Its comment
 records the migration: `set_mox_global` previously made every mock visible
-cross-process, and under private Mox they are allowed explicitly. Private Mox via
-`set_mox_from_context` is the house default; the two remaining `set_mox_global`
-call sites are `test/lightning_web/channels/workflow_channel_test.exs:18` and
-`workflow_channel_broadcast_test.exs:24`.
+cross-process, and under private Mox they are allowed explicitly. Private Mox via `set_mox_from_context` is the house default;
+`grep -rn set_mox_global test/` lists the exceptions.
 
 When the pid does not exist yet at setup time, because of leader election or a lazy
 start, `Mox.allow/3` accepts a `(-> pid())` resolved lazily at first dispatch
