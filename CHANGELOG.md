@@ -28,7 +28,7 @@ and this project adheres to
   signature, heaviest first.
 - A project health page at `/projects/:project_id/health`, showing the project
   name and how many work orders finished across all of its workflows in the last
-  30 days. Charts follow.
+  30 days. Reached from a Health button on the project list. Charts follow.
 
 ### Fixed
 

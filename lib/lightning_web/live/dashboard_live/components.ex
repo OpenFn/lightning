@@ -103,7 +103,9 @@ defmodule LightningWeb.DashboardLive.Components do
               >
                 Last Updated
               </.th>
-              <.th></.th>
+              <.th>
+                <span class="sr-only">Actions</span>
+              </.th>
             </.tr>
           </:header>
           <:body>
@@ -142,13 +144,22 @@ defmodule LightningWeb.DashboardLive.Components do
                   <% end %>
                 </.td>
                 <.td class="text-right">
-                  <.link
-                    class="table-action"
-                    navigate={~p"/projects/#{project.id}/history"}
-                    onclick="event.stopPropagation()"
-                  >
-                    History
-                  </.link>
+                  <div class="flex justify-end gap-1">
+                    <.link
+                      class="table-action"
+                      navigate={~p"/projects/#{project.id}/health"}
+                      onclick="event.stopPropagation()"
+                    >
+                      Health
+                    </.link>
+                    <.link
+                      class="table-action"
+                      navigate={~p"/projects/#{project.id}/history"}
+                      onclick="event.stopPropagation()"
+                    >
+                      History
+                    </.link>
+                  </div>
                 </.td>
               </.tr>
             <% end %>

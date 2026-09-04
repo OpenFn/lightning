@@ -535,6 +535,12 @@ defmodule LightningWeb.DashboardLiveTest do
              "tr#projects-table-row-#{project.id} > td:nth-child(5) span[data-iso-timestamp='#{formatted_date}']",
              NaiveDateTime.to_iso8601(max_updated_at)
            )
+
+    assert has_element?(
+             view,
+             "tr#projects-table-row-#{project.id} > td:nth-child(6) a[href='/projects/#{project.id}/health']",
+             "Health"
+           )
   end
 
   defp get_sorted_projects_by_last_updated_at(projects, order \\ :asc) do
