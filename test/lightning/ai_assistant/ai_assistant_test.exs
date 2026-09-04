@@ -3026,6 +3026,12 @@ defmodule Lightning.AiAssistantTest do
                 ["not", "a", "map"],
                 # over the field length cap
                 %{"key" => String.duplicate("a", 501)},
+                # a name that is not a string
+                %{"key" => "numeric-name", "name" => 123},
+                # a name over the cap
+                %{"key" => "long-name", "name" => String.duplicate("a", 501)},
+                # legal: key alone, no name
+                %{"key" => "no-name"},
                 %{"key" => "kept", "name" => "Kept"}
               ]
             }
@@ -3048,7 +3054,86 @@ defmodule Lightning.AiAssistantTest do
       assert [%ChatMessage.Segment{content: "Wrote code", steps: steps}] =
                List.last(updated.messages).response_segments
 
-      assert [%ChatMessage.Segment.Step{key: "kept", name: "Kept"}] = steps
+      assert [
+               %ChatMessage.Segment.Step{key: "no-name", name: nil},
+               %ChatMessage.Segment.Step{key: "kept", name: "Kept"}
+             ] = steps
+    end
+
+    test "removes steps entirely when none of them survive", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session_with_pending_message(user, project, workflow)
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Done",
+          "response_segments" => [
+            %{
+              "type" => "status",
+              "content" => "Edited workflow structure",
+              "steps" => [%{"name" => "no key"}]
+            }
+          ],
+          "attachments" => []
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: [%{event: "complete", data: complete_payload}]
+         }}
+      end)
+
+      assert {:ok, updated} =
+               AiAssistant.query_global_stream(session, "help with workflow")
+
+      # The key is dropped rather than left empty: "this Apollo did not report
+      # steps" and "this action touched none" are different claims.
+      assert [
+               %ChatMessage.Segment{
+                 content: "Edited workflow structure",
+                 steps: []
+               }
+             ] =
+               List.last(updated.messages).response_segments
+    end
+
+    test "passes a segment that is not a map to the changeset to reject", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session_with_pending_message(user, project, workflow)
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Done",
+          "response_segments" => [
+            ["not", "a", "map"],
+            %{"type" => "status", "content" => "Edited workflow structure"}
+          ],
+          "attachments" => []
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: [%{event: "complete", data: complete_payload}]
+         }}
+      end)
+
+      assert {:ok, updated} =
+               AiAssistant.query_global_stream(session, "help with workflow")
+
+      # Sanitising leaves a non-map alone; the changeset is what drops it, and
+      # the segments around it survive.
+      assert [%ChatMessage.Segment{content: "Edited workflow structure"}] =
+               List.last(updated.messages).response_segments
     end
 
     test "drops an unusable summary rather than losing the segment", %{
