@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react';
 import type { RefObject } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -272,9 +273,14 @@ export function useAIWorkflowApplications({
       // saveSucceeded covers the subsequent save for new workflows.
       let applySucceeded = false;
       let saveSucceeded = true;
+      // Which step we reached, so a report says what actually broke rather
+      // than only that applying failed.
+      let stage: 'parse' | 'validate_ids' | 'import' | 'save' = 'parse';
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
+        stage = 'validate_ids';
         validateWorkflowIds(workflowSpec);
+        stage = 'import';
 
         // IDs are already in the YAML from AI (sent with IDs, like legacy editor)
         const workflowState = convertWorkflowSpecToState(workflowSpec);
@@ -297,10 +303,24 @@ export function useAIWorkflowApplications({
         }
 
         if (isNewWorkflow) {
+          stage = 'save';
           saveSucceeded = await saveNewWorkflow();
         }
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
+
+        // Nothing else records this: the alert below is the whole trace, and
+        // it dies with the tab. Reporting it is how we learn whether a failed
+        // apply is rare enough to leave the user re-prompting, or common
+        // enough to be worth a durable retry. Deliberately carries no YAML,
+        // job code or names, only where in the pipeline it broke.
+        Sentry.captureException(error, {
+          tags: {
+            feature: 'ai_assistant_apply',
+            apply_stage: stage,
+            is_new_workflow: String(isNewWorkflow),
+          },
+        });
 
         const errorMessage =
           error instanceof Error ? error.message : 'Invalid workflow YAML';
@@ -331,6 +351,15 @@ export function useAIWorkflowApplications({
             flowEvents.dispatch('fit-view');
           }
         }
+      }
+
+      if (applySucceeded && !saveSucceeded) {
+        // The import landed and the save did not, so no exception was raised
+        // and the branch above never ran.
+        Sentry.captureMessage('AI assistant workflow applied but not saved', {
+          level: 'warning',
+          tags: { feature: 'ai_assistant_apply', apply_stage: 'save' },
+        });
       }
 
       return applySucceeded && saveSucceeded ? 'applied' : 'failed';
