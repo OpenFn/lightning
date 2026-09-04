@@ -385,8 +385,10 @@ defmodule Lightning.Workflows.StatsTest do
       assert name == job_b.name
     end
 
-    # Otherwise a run that failed twice would be counted twice.
-    test "attributes a run with two failed steps to the earliest one only", %{
+    # A workflow that fans out can break in more than one place at once, and
+    # each break is its own thing to fix — so both are reported, and the counts
+    # sum past the one work order they came from.
+    test "reports every failing step of a run, not just the first", %{
       workflow: workflow,
       trigger: trigger
     } do
@@ -406,9 +408,32 @@ defmodule Lightning.Workflows.StatsTest do
         )
       ])
 
-      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
-      assert %{count: 1, error_type: "Earlier", step_name: name} = signature
-      assert name == job_a.name
+      assert %{signatures: signatures} = Stats.failure_signatures(workflow)
+
+      assert [
+               %{count: 1, error_type: "Earlier", step_name: job_a.name},
+               %{count: 1, error_type: "Later", step_name: job_b.name}
+             ] ==
+               signatures
+               |> Enum.map(&Map.take(&1, [:count, :error_type, :step_name]))
+               |> Enum.sort_by(& &1.error_type)
+    end
+
+    # The same signature reaching a work order twice still describes one broken
+    # work order, which is what the column counts.
+    test "counts a work order once per signature it hits", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      job = hd(workflow.jobs)
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: "RuntimeError"),
+        step(job, exit_reason: "fail", error_type: "RuntimeError")
+      ])
+
+      assert %{signatures: [%{count: 1, error_type: "RuntimeError"}]} =
+               Stats.failure_signatures(workflow)
     end
 
     test "ignores steps that succeeded and work orders that succeeded", %{

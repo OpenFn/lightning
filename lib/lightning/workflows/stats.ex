@@ -5,8 +5,10 @@ defmodule Lightning.Workflows.Stats do
   One public function per chart, each returning only what that chart draws, so a
   cheap chart renders without waiting on an expensive one.
 
-  A failed work order is attributed to its latest run's earliest failing step,
-  so the triage rows sum to exactly the failure total the donuts draw.
+  A failed work order is attributed to every failing step of its latest run, so
+  a run that broke in two branches is a row in both. Each row counts work
+  orders, not steps, which means the rows can sum past the failure total the
+  donuts draw.
 
   Deliberately independent of `Lightning.DashboardStats`, which serves the
   workflow list view: it batches across many workflows to avoid an N+1 while
@@ -37,7 +39,7 @@ defmodule Lightning.Workflows.Stats do
   # rather than changing it.
   @failure_states WorkOrder.failure_states() -- [:cancelled]
 
-  # The signature grammar (CON-31) is written in the worker's words, so a
+  # The signature grammar is written in the worker's words, so a
   # run-level failure has to be mapped back out of its state.
   @state_reasons Run.state_reasons()
 
@@ -79,8 +81,10 @@ defmodule Lightning.Workflows.Stats do
   The signature's parts are returned separately rather than as one string: the
   table styles each part differently, and the tip is looked up by `error_type`.
 
-  Every failed work order lands in exactly one group, so these add up to the
-  failure total the outcomes donut draws.
+  A count is the number of work orders that hit that signature, so a work order
+  that failed in two branches is counted once under each. That makes the rows
+  sum past the failure total the outcomes donut draws, which is the trade: a
+  second broken branch is its own thing to fix, not fallout from the first.
   """
   def failure_signatures(
         %Workflow{id: workflow_id},
@@ -131,41 +135,64 @@ defmodule Lightning.Workflows.Stats do
     end
   end
 
-  # One row per failed work order — the latest run, which is the one whose
-  # completion set the work order's state, and the earliest step that failed
-  # within it. Earliest matters when an `:on_job_failure` edge routes to a job
-  # that fails too: the second failure is fallout, not the cause.
+  # One row per failing step of the work order's latest run — the run whose
+  # completion set the work order's state.
+  #
+  # The lateral join is what expresses "every failing step, or one empty row if
+  # the run never reached one": a plain `left_join` would emit an empty row per
+  # step that succeeded, and an inner join would drop the work orders — lost,
+  # crashed, rejected — that have no step to speak for them.
   defp attributed_failures(workflow_id, since) do
-    from(wo in WorkOrder,
-      # left_join, not join: a rejected work order has no run and still counts.
-      left_join: r in Run,
-      on: r.work_order_id == wo.id,
-      left_join: rs in RunStep,
-      on: rs.run_id == r.id,
-      left_join: s in Step,
-      on: s.id == rs.step_id and s.exit_reason != "success",
-      where:
-        wo.workflow_id == ^workflow_id and wo.last_activity > ^since and
-          wo.state in ^@failure_states,
-      distinct: wo.id,
-      # `s.id` breaks the tie so a failing step that never stamped `started_at`
-      # still beats the null row a filtered-out successful step leaves behind —
-      # otherwise the run reads as having reached no step at all.
-      order_by: [
-        asc: wo.id,
-        desc_nulls_last: r.finished_at,
-        desc: r.id,
-        asc_nulls_last: s.started_at,
-        asc_nulls_last: s.id
-      ],
+    failing_steps =
+      from(s in Step,
+        join: rs in RunStep,
+        on: rs.step_id == s.id,
+        where:
+          rs.run_id == parent_as(:latest_run).run_id and
+            s.exit_reason != "success",
+        select: %{
+          exit_reason: s.exit_reason,
+          error_type: s.error_type,
+          snapshot_id: s.snapshot_id,
+          job_id: s.job_id
+        }
+      )
+
+    from(lr in subquery(latest_runs(workflow_id, since)),
+      as: :latest_run,
+      left_lateral_join: s in subquery(failing_steps),
+      on: true,
       select: %{
-        work_order_state: wo.state,
-        run_state: r.state,
-        run_error_type: r.error_type,
+        work_order_id: lr.work_order_id,
+        work_order_state: lr.work_order_state,
+        run_state: lr.run_state,
+        run_error_type: lr.run_error_type,
         exit_reason: s.exit_reason,
         error_type: s.error_type,
         snapshot_id: s.snapshot_id,
         job_id: s.job_id
+      }
+    )
+  end
+
+  # The latest run only, so a work order retried into a second failure is not
+  # described twice — by the attempt that set its state and by the one before.
+  defp latest_runs(workflow_id, since) do
+    from(wo in WorkOrder,
+      # left_join, not join: a rejected work order has no run and still counts.
+      left_join: r in Run,
+      on: r.work_order_id == wo.id,
+      where:
+        wo.workflow_id == ^workflow_id and wo.last_activity > ^since and
+          wo.state in ^@failure_states,
+      distinct: wo.id,
+      order_by: [asc: wo.id, desc_nulls_last: r.finished_at, desc: r.id],
+      select: %{
+        work_order_id: wo.id,
+        work_order_state: wo.state,
+        run_id: r.id,
+        run_state: r.state,
+        run_error_type: r.error_type
       }
     )
   end
@@ -195,7 +222,7 @@ defmodule Lightning.Workflows.Stats do
           run_error_type: a.run_error_type,
           snapshot_id: a.snapshot_id,
           job_id: a.job_id,
-          count: count()
+          count: count(a.work_order_id, :distinct)
         }
       )
       |> Repo.all()
