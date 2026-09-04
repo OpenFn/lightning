@@ -23,6 +23,13 @@ and this project adheres to
   in `project.yaml`, or through the workflows API. Existing `/i/<trigger-id>`
   URLs are unchanged. [#4952](https://github.com/OpenFn/lightning/issues/4952)
 
+### Changed
+
+- Lightning now keeps its own adaptor registry instead of fetching the list from
+  npm at startup, so new adaptors and versions show up without a rebuild or
+  redeploy. See [ADAPTORS.md](ADAPTORS.md).
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
 ### Fixed
 
 - `eligible_for_claim/0` now breaks ties with `id` after `priority` and
@@ -54,37 +61,6 @@ and this project adheres to
   warns which triggers and channels will lose authentication.
 - Deleting a webhook auth method now logs each trigger and channel it was
   detached from, in addition to the deletion itself.
-- Adaptors now come from Lightning's own registry instead of being fetched from
-  npm on demand. A background scheduler keeps package metadata, credential
-  schemas and adaptor icons in Postgres, and the collaborative editor receives
-  them over the workflow channel, so jobs show their real adaptor icons rather
-  than first-letter placeholders. On a fresh deployment the first job save or
-  run waits for the registry's initial load (up to 60 seconds) instead of
-  failing. Superusers can force a refresh from Settings → Maintenance, or by
-  running `mix lightning.adaptors.refresh`, which waits for the refresh to
-  finish. The npm, jsDelivr and GitHub endpoints the registry reads from can be
-  pointed elsewhere with `ADAPTORS_NPM_REGISTRY_URL`,
-  `ADAPTORS_NPM_JSDELIVR_URL`, `ADAPTORS_NPM_GITHUB_URL` and
-  `ADAPTORS_NPM_GITHUB_REF`, and the HTTP receive timeout for those requests
-  with `ADAPTORS_NPM_HTTP_TIMEOUT` (defaults to 30s). The new `ADAPTORS.md`
-  guide covers local adaptors, offline deployments and refreshing the catalogue.
-  [#4801](https://github.com/OpenFn/lightning/pull/4801)
-- `ADAPTORS_STRATEGY` (`npm`, default, or `local`) picks which strategy the
-  adaptors subsystem serves from. `ADAPTORS_LOCAL_REPO` and
-  `ADAPTORS_ICONS_PATH` configure the local strategy's repo paths and the
-  on-disk icon cache location respectively. `LOCAL_ADAPTORS` and
-  `OPENFN_ADAPTORS_REPO` still work as deprecated aliases for
-  `ADAPTORS_STRATEGY=local` and `ADAPTORS_LOCAL_REPO`, logging a boot warning.
-  [#CON-136](https://linear.app/openfn/issue/CON-136)
-- `mix lightning.adaptors.dump` writes the current catalogue out to a JSON file
-  in the shape `mix lightning.adaptors.import` reads, for mirroring an online
-  instance's catalogue into an airgapped one. The file carries each adaptor's
-  icon metadata too, so copying `ADAPTORS_ICONS_PATH` across alongside it lets
-  the offline instance serve icons it already has cached instead of trying
-  GitHub. A release image, which has no Mix, dumps with
-  `Lightning.Release.dump_adaptors/2` through `bin/lightning eval`, the same way
-  it already imports and migrates.
-  [#CON-139](https://linear.app/openfn/issue/CON-139)
 
 ### Changed
 
@@ -147,43 +123,9 @@ and this project adheres to
         '[]'::jsonb)
   WHERE triggers::text LIKE '%kafka_configuration%';
   ```
-- Credential schemas are read from the adaptors registry rather than the on-disk
-  `schemas_path`. [#4801](https://github.com/OpenFn/lightning/pull/4801)
-- The adaptor catalogue the workflow editor's picker reads is cached in memory
-  alongside the ETag that describes it, so an unchanged catalogue is answered
-  without querying Postgres or rebuilding the payload, and a matching
-  `If-None-Match` costs no database work at all. The cache is dropped whenever
-  an adaptor changes, and pre-warmed when a node rejoins the cluster.
-  [#CON-131](https://linear.app/openfn/issue/CON-131)
-- `devtools`, `template`, `fhir-jembi` and `collections` are hidden from the
-  adaptor picker and version list again, matching the old registry's behaviour.
-  An existing job using one of these adaptors still validates and saves normally
-  — the exclusion only applies to the catalogue listing, not job validation —
-  though its version dropdown in the editor is empty until it's moved off the
-  excluded adaptor. [#CON-139](https://linear.app/openfn/issue/CON-139)
-
-### Removed
-
-- The old in-memory `Lightning.AdaptorRegistry` is gone, along with its
-  `use_cache` option, `ADAPTORS_REGISTRY_JSON_PATH`, `SCHEMAS_PATH`, and the
-  `mix lightning.install_schemas` and `mix lightning.install_adaptor_icons`
-  tasks that fed it (`Lightning.AdaptorService`, which still backs credential
-  metadata lookups, stays). Booting from a static snapshot instead of npm is now
-  `mix lightning.adaptors.import --path <file>` (or, in a release,
-  `bin/lightning eval 'Lightning.Release.seed_adaptors("<file>")'`), which
-  upserts a JSON array of adaptor records (the shape
-  `mix lightning.adaptors.snapshot` or `mix lightning.adaptors.dump` write)
-  straight into the adaptors table; `--replace` makes the file the source's
-  entire contents instead of merging into it.
-  [#4801](https://github.com/OpenFn/lightning/pull/4801)
 
 ### Fixed
 
-- Seeding adaptors from a snapshot file (`mix lightning.adaptors.import` or
-  `Lightning.Release.seed_adaptors/2`) now announces what it changed once the
-  seed commits, so every node drops its stale adaptor caches instead of serving
-  pre-seed data until the next refresh. With `--replace`, adaptors the file
-  dropped are announced too. [#CON-131](https://linear.app/openfn/issue/CON-131)
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
