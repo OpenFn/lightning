@@ -901,9 +901,9 @@ defmodule Lightning.Workflows do
   end
 
   # workflows.name is varchar(255) and Postgres counts those in codepoints. The
-  # `_del` suffix is put on after every validation has run, so a workflow whose
-  # name was already at the column width used to raise a bare Postgrex 22001
-  # out of the delete button, in a LiveView handler with nothing to rescue it.
+  # `_del` suffix goes on after every validation has run, so a workflow already
+  # at the column width would raise a bare Postgrex 22001 out of the delete
+  # button, in a LiveView handler with nothing to rescue it.
   @suffix_headroom String.length("_del") + 4
 
   defp trim_to_fit_suffix(name) do

@@ -86,8 +86,8 @@ export const convertWorkflowStateToSpec = (
   includeIds: boolean = true
 ): WorkflowSpec => {
   // Null-prototype: a job named `__proto__` assigned onto a plain object runs
-  // the prototype setter instead of adding a key, so the job vanished from the
-  // spec and hasOwnProperty never saw the collision. Same for `constructor`
+  // the prototype setter instead of adding a key, so the job never reaches the
+  // spec and hasOwnProperty never sees the collision. Same for `constructor`
   // and `toString` in the seenNames check below.
   const jobs = Object.create(null) as { [key: string]: SpecJob };
   workflowState.jobs.forEach(job => {

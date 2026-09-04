@@ -46,9 +46,9 @@ export function CodeViewPanel() {
   // Generate sanitized filename from workflow name
   const fileName = useMemo(() => {
     if (!workflow) return 'workflow.yaml';
-    // Names can be any script now, and stripping everything outside ASCII
-    // leaves a CJK or Arabic name as the empty string and the download as
-    // `.yaml`. Fall back to a usable name when nothing survives.
+    // Stripping everything outside ASCII leaves a CJK or Arabic name as the
+    // empty string and the download as `.yaml`, so fall back to a usable name
+    // when nothing survives.
     const sanitized = workflow.name
       .replace(/[^a-zA-Z0-9-_\s]/g, '')
       .replace(/\s+/g, '-')

@@ -12,8 +12,8 @@ defmodule Lightning.ExportUtils.Scalar do
   would pick.
   """
 
-  # The historic bare shapes. Anchored with \A and \z rather than ^ and $ so a
-  # trailing newline cannot slip through the way it used to.
+  # The historic bare shapes. Anchored with \A and \z rather than ^ and $, which
+  # would match before a trailing newline and let one through.
   @bare_value ~r/\A[a-zA-Z0-9][a-zA-Z0-9_\-@\.> ]*[a-zA-Z0-9]\z/
 
   @bare_key ~r/\A[a-zA-Z0-9][a-zA-Z0-9_\-@\.>]*[a-zA-Z0-9]\z/
