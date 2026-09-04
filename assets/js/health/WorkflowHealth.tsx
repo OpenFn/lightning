@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
 import { OutcomesDonut } from './charts/OutcomesDonut';
 import { TriageTable } from './charts/TriageTable';
+import { Subtitle, windowDays, workOrderTotal } from './Subtitle';
 import type { FailureSignatures, Outcomes } from './types';
 import { healthBase, useHealthQuery } from './useHealthQuery';
 
@@ -136,23 +137,6 @@ const Panel = <T,>({
   return children(data);
 };
 
-const Subtitle = ({ outcomes }: { outcomes: Outcomes | null }) => {
-  if (!outcomes) return null;
-
-  const days = windowDays(outcomes.window);
-  const total = workOrderTotal(outcomes.counts);
-
-  return (
-    <p className="text-sm text-gray-500">
-      Last {days} day{days === 1 ? '' : 's'} · {total.toLocaleString()} work
-      order{total === 1 ? '' : 's'}
-    </p>
-  );
-};
-
-const workOrderTotal = (counts: Outcomes['counts']) =>
-  Object.values(counts).reduce((sum, count) => sum + count, 0);
-
 const emptyMessage = (
   window: Outcomes['window'],
   noun = 'finished work orders'
@@ -161,6 +145,3 @@ const emptyMessage = (
 
   return `No ${noun} in the last ${days} day${days === 1 ? '' : 's'}`;
 };
-
-const windowDays = ({ from, to }: { from: string; to: string }) =>
-  Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
