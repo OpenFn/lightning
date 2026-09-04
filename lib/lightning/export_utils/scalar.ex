@@ -225,6 +225,9 @@ defmodule Lightning.ExportUtils.Scalar do
     ~s('#{String.replace(string, "'", "''")}')
   end
 
+  # Not a fallback for control characters. Every key that is not bare-legal
+  # arrives here, which is every name in a non-Latin script and every name
+  # holding a colon, an apostrophe, an emoji or a non-breaking space.
   defp double_quote(string) do
     escaped =
       string
