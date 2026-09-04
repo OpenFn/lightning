@@ -18,13 +18,28 @@ and this project adheres to
 ### Added
 
 - Webhook triggers can be given a custom URL path, so an endpoint's URL is known
-  before it is deployed. A trigger with a path of `facility-001` in project
-  `abc-123` answers at `/i/abc-123/facility-001`. Set it in the trigger panel,
-  in `project.yaml`, or through the workflows API. Existing `/i/<trigger-id>`
-  URLs are unchanged. [#4952](https://github.com/OpenFn/lightning/issues/4952)
+  before it is deployed. A trigger with a path of `facility-001` answers at
+  `/i/<project-id>/facility-001`, where `<project-id>` is the project's UUID.
+  Set it in the trigger panel, in `project.yaml`, or through the workflows API.
+  Existing `/i/<trigger-id>` URLs are unchanged.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
+
+### Changed
+
+- The webhook trigger panel now lists every URL a trigger answers on. The
+  default URL is always there and the custom one sits next to it, editable in
+  place, with add, edit, delete and copy on the row itself. A path already used
+  by another workflow in the project is reported while you type, not after you
+  save. A path the server would reject shows what is wrong and is left as you
+  typed it.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
 
 ### Fixed
 
+- Changing a webhook trigger's custom path now marks the workflow as unsaved, so
+  the Save button offers to save it. The unsaved-changes check did not look at
+  the field, so the edit could be lost by navigating away.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - `eligible_for_claim/0` now breaks ties with `id` after `priority` and
   `inserted_at`, so two runs inserted in the same microsecond no longer get
   claimed in a nondeterministic order.
@@ -57,13 +72,6 @@ and this project adheres to
 
 ### Changed
 
-- The webhook trigger panel now lists every URL a trigger answers on. The
-  default URL is always there and the custom one sits next to it, editable in
-  place, with add, edit, delete and copy on the row itself. A path already used
-  by another workflow in the project is reported while you type, not after you
-  save. A path the server would reject shows what is wrong and is left as you
-  typed it.
-  [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - Remove the unreachable, non-streaming code in the AI assistant
   [#5046](https://github.com/OpenFn/lightning/issues/5046)
 - The global chat now starts streaming Apollo's response earlier, so users wait
@@ -126,10 +134,6 @@ and this project adheres to
 
 ### Fixed
 
-- Changing a webhook trigger's custom path now marks the workflow as unsaved, so
-  the Save button offers to save it. The unsaved-changes check did not look at
-  the field, so the edit could be lost by navigating away.
-  [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.
