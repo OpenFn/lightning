@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
+    <script defer src="dist/sidebar_items-75EAC46A.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -216,7 +216,7 @@ is NULL, which <code class="inline">embeds_many</code> loads as an empty list)</
       <h1 class="signature" translate="no">role()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L70" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L132" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -244,7 +244,7 @@ is NULL, which <code class="inline">embeds_many</code> loads as an empty list)</
       <h1 class="signature" translate="no">status()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L71" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L133" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -272,7 +272,7 @@ is NULL, which <code class="inline">embeds_many</code> loads as an empty list)</
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L73" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L135" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -334,7 +334,7 @@ is NULL, which <code class="inline">embeds_many</code> loads as an empty list)</
       <h1 class="signature" translate="no">changeset(chat_message, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L134" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L196" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -358,7 +358,7 @@ string of at most <code class="inline">10000</code> characters</li><li>User mess
       <h1 class="signature" translate="no">max_response_segments()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L159" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L221" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -380,7 +380,7 @@ string of at most <code class="inline">10000</code> characters</li><li>User mess
       <h1 class="signature" translate="no">status_changeset(chat_message, status)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L180" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L242" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -391,10 +391,10 @@ string of at most <code class="inline">10000</code> characters</li><li>User mess
 
 <p>Creates a changeset for updating message status.</p><p>This is a focused changeset that only updates the status field,
 useful for updating message state during processing.</p><h2 id="status_changeset/2-parameters" class="section-heading"><a href="#status_changeset/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">chat_message</code> - The existing ChatMessage struct</li><li><code class="inline">status</code> - New status (<code class="inline">:pending</code>, <code class="inline">:success</code>, <code class="inline">:error</code>, or <code class="inline">:cancelled</code>)</li></ul><h2 id="status_changeset/2-examples" class="section-heading"><a href="#status_changeset/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Mark message as successful</span><span class="w">
-</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="8351387384-1">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:success</span><span class="p" data-group-id="8351387384-1">)</span><span class="w">
+</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="5222777280-1">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:success</span><span class="p" data-group-id="5222777280-1">)</span><span class="w">
 
 </span><span class="c1"># Mark message as failed</span><span class="w">
-</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="8351387384-2">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:error</span><span class="p" data-group-id="8351387384-2">)</span></code></pre>
+</span><span class="nc">ChatMessage</span><span class="o">.</span><span class="n">status_changeset</span><span class="p" data-group-id="5222777280-2">(</span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="ss">:error</span><span class="p" data-group-id="5222777280-2">)</span></code></pre>
   </section>
 </section>
 

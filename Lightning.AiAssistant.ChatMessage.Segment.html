@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-0FBA43E1.js"></script>
+    <script defer src="dist/sidebar_items-75EAC46A.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -155,6 +155,26 @@ stays the canonical answer.</p>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#max_step_field_length/0" data-no-tooltip="" translate="no">max_step_field_length()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Maximum length of a step's key or name.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#max_steps/0" data-no-tooltip="" translate="no">max_steps()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Maximum number of steps recorded against one status segment.</p></div>
+
+    </div>
+
 </div>
 
   </section>
@@ -179,7 +199,7 @@ stays the canonical answer.</p>
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L44" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L87" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -192,6 +212,8 @@ stays the canonical answer.</p>
 
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.AiAssistant.ChatMessage.Segment{
   content: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  steps: [<a href="Lightning.AiAssistant.ChatMessage.Segment.Step.html#t:t/0">Lightning.AiAssistant.ChatMessage.Segment.Step.t</a>()],
+  summary: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   type: :text | :status
 }</pre>
 
@@ -223,7 +245,7 @@ stays the canonical answer.</p>
       <h1 class="signature" translate="no">max_content_length()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L62" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L118" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -233,6 +255,50 @@ stays the canonical answer.</p>
   <section class="docstring">
 
 <p>Maximum length of a single segment's content (matches <code class="inline">content</code>'s cap).</p>
+  </section>
+</section>
+<section class="detail" id="max_step_field_length/0">
+
+  <div class="detail-header">
+    <a href="#max_step_field_length/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">max_step_field_length()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L124" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Maximum length of a step's key or name.</p>
+  </section>
+</section>
+<section class="detail" id="max_steps/0">
+
+  <div class="detail-header">
+    <a href="#max_steps/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">max_steps()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/ai_assistant/chat_message.ex#L121" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Maximum number of steps recorded against one status segment.</p>
   </section>
 </section>
 

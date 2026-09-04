@@ -11,6 +11,7 @@ Lightning.Accounts.html
 Lightning.AdaptorRegistry.Npm.html
 Lightning.AdaptorRegistry.html
 Lightning.AdaptorService.html
+Lightning.AiAssistant.ChatMessage.Segment.Step.html
 Lightning.AiAssistant.ChatMessage.Segment.html
 Lightning.AiAssistant.ChatMessage.html
 Lightning.AiAssistant.ChatSession.html
@@ -434,8 +435,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-652538A0.js
-dist/sidebar_items-0FBA43E1.js
+dist/search_data-D8EFB4C3.js
+dist/sidebar_items-75EAC46A.js
 index.html
 provisioning.html
 readme.html
