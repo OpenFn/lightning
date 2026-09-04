@@ -183,6 +183,89 @@ defmodule Lightning.Workflows.StatsTest do
     assert Stats.outcomes(workflow) == first
   end
 
+  describe "outcomes/2 for a project" do
+    setup do
+      %{project: insert(:project)}
+    end
+
+    test "counts work orders across every workflow in the project", %{
+      project: project
+    } do
+      workflow_a = insert(:simple_workflow, project: project)
+      workflow_b = insert(:simple_workflow, project: project)
+
+      insert_run(workflow_a, hd(workflow_a.triggers), :success)
+      insert_run(workflow_b, hd(workflow_b.triggers), :failed)
+
+      assert %{success: 1, failed: 1} = Stats.outcomes(project).counts
+    end
+
+    test "excludes a workflow marked for deletion", %{project: project} do
+      workflow = insert(:simple_workflow, project: project)
+      insert_run(workflow, hd(workflow.triggers), :success)
+
+      workflow
+      |> Ecto.Changeset.change(deleted_at: ~U[2026-01-01 00:00:00Z])
+      |> Repo.update!()
+
+      assert %{success: 0} = Stats.outcomes(project).counts
+    end
+
+    test "ignores work orders belonging to another project", %{
+      project: project
+    } do
+      other_workflow = insert(:simple_workflow)
+      insert_run(other_workflow, hd(other_workflow.triggers), :failed)
+
+      workflow = insert(:simple_workflow, project: project)
+      insert_run(workflow, hd(workflow.triggers), :success)
+
+      assert %{success: 1, failed: 0} = Stats.outcomes(project).counts
+    end
+
+    test "respects the days_back window", %{project: project} do
+      workflow = insert(:simple_workflow, project: project)
+      trigger = hd(workflow.triggers)
+
+      work_order(workflow, trigger, state: :success, last_activity: days_ago(31))
+
+      assert %{success: 0} = Stats.outcomes(project).counts
+    end
+
+    test "zero-fills every final state for a project with no work orders", %{
+      project: project
+    } do
+      insert(:simple_workflow, project: project)
+
+      assert Stats.outcomes(project).counts ==
+               Map.new(WorkOrder.final_states(), &{&1, 0})
+    end
+
+    test "a project with no workflows at all returns all zeros", %{
+      project: project
+    } do
+      assert Stats.outcomes(project).counts ==
+               Map.new(WorkOrder.final_states(), &{&1, 0})
+    end
+
+    # Keyed separately from the workflow clause (`{:outcomes, :project, ...}`
+    # vs `{:outcomes, :workflow, ...}`), so this proves the project path also
+    # gets the cache rather than colliding with or bypassing it.
+    test "serves a repeat call from the cache rather than requerying", %{
+      project: project
+    } do
+      workflow = insert(:simple_workflow, project: project)
+      trigger = hd(workflow.triggers)
+
+      insert_run(workflow, trigger, :success)
+      first = Stats.outcomes(project)
+
+      insert_run(workflow, trigger, :failed)
+
+      assert Stats.outcomes(project) == first
+    end
+  end
+
   describe "failure_signatures/2" do
     defp failed_run(workflow, trigger, attrs, steps \\ []) do
       {wo_attrs, run_attrs} = Keyword.split(attrs, [:last_activity])
