@@ -399,7 +399,7 @@ export const StructureBlock = ({ rows }: { rows: StructuralChange[] }) => (
     defaultExpanded
     testId="structure-block"
   >
-    <div className="bg-slate-100 text-slate-800 py-2 overflow-x-auto text-xs font-mono leading-5">
+    <div className="bg-white text-[#1f2328] py-2 overflow-x-auto text-xs font-mono leading-5 [font-variant-ligatures:none]">
       {rows.map((row, index) => {
         const marker = structureMarker[row.change];
         return (

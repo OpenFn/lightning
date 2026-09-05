@@ -61,6 +61,7 @@ export function useAIWorkflowApplications({
   onValidationError,
   onCanvasApplied,
   onApplyFailure,
+  onApplyApplied,
   workflowActions,
   monacoRef,
   jobs,
@@ -106,6 +107,8 @@ export function useAIWorkflowApplications({
    * Report that a reply's workflow never reached the canvas. Best effort and
    * never surfaced to the user: they are already being told it failed.
    */
+  /** Clears a recorded failure once the same changes land. */
+  onApplyApplied?: (messageId: string) => void;
   onApplyFailure?: (details: {
     messageId: string;
     stage: 'parse' | 'validate_ids' | 'import' | 'save';
@@ -416,6 +419,27 @@ export function useAIWorkflowApplications({
     Set<string>
   >(() => new Set());
 
+  // Messages whose recorded failure has already been read. A retry that works
+  // removes the id, and the flag on the loaded message stays true until the
+  // server confirms, so without this the notice would come straight back.
+  const seededFailuresRef = useRef<Set<string>>(new Set());
+
+
+
+  useEffect(() => {
+    const unseen = (currentSession?.messages ?? []).filter(
+      message => message.apply_failed && !seededFailuresRef.current.has(message.id)
+    );
+    if (unseen.length === 0) return;
+
+    for (const message of unseen) seededFailuresRef.current.add(message.id);
+    setFailedApplyMessageIds(previous => {
+      const next = new Set(previous);
+      for (const message of unseen) next.add(message.id);
+      return next;
+    });
+  }, [currentSession?.messages]);
+
   const launchApply = useCallback(
     (messageId: string, code: string) => {
       if (inFlightApplyRef.current.has(messageId)) return;
@@ -433,6 +457,10 @@ export function useAIWorkflowApplications({
           setFailedApplyMessageIds(previous => {
             const failed = outcome === 'failed';
             if (failed === previous.has(messageId)) return previous;
+            // Only when it was recorded as failed: an ordinary first apply
+            // has nothing to clear and the server should not be told about
+            // every successful import.
+            if (!failed) onApplyApplied?.(messageId);
             const next = new Set(previous);
             if (failed) next.add(messageId);
             else next.delete(messageId);
@@ -443,7 +471,7 @@ export function useAIWorkflowApplications({
         }
       })();
     },
-    [handleApplyWorkflow, appliedMessageIdsRef]
+    [handleApplyWorkflow, appliedMessageIdsRef, onApplyApplied]
   );
 
   /**
@@ -521,81 +549,6 @@ export function useAIWorkflowApplications({
    * workflow YAML (global messages carry the whole workflow in `code`).
    * Shows a diff only when the open step's body actually changed; clears any
    * stale diff otherwise.
-   */
-  const handlePreviewGlobalStep = useCallback(
-    (yaml: string, messageId: string) => {
-      if (!aiMode || aiMode.page !== 'job_code') return; // only when a step is open
-      const jobId = (aiMode.context as JobCodeContext).job_id;
-      if (!jobId) return;
-
-      // Same dedup guards as handlePreviewJobCode
-      if (previewingMessageId === messageId) return;
-      if (previewingMessageId === STREAMING_MESSAGE_ID) {
-        setPreviewingMessageId(messageId);
-        return;
-      }
-
-      const currentJob = jobs.find(j => j.id === jobId);
-      const currentBody = currentJob?.body ?? '';
-
-      let newBody: string | undefined;
-      try {
-        const spec = parseWorkflowYAML(yaml);
-        // ids from the YAML are preserved, so we match the open step by id
-        const state = convertWorkflowSpecToState(spec);
-        newBody = state.jobs.find(j => j.id === jobId)?.body;
-      } catch (error) {
-        console.error(
-          '[AI Assistant] Failed to parse global workflow YAML:',
-          error
-        );
-        notifications.alert({
-          title: 'Could not preview step',
-          description:
-            error instanceof Error
-              ? error.message
-              : 'The AI server returned invalid workflow YAML.',
-        });
-        return;
-      }
-
-      if (newBody === undefined) {
-        // Open step's id wasn't in the YAML, so the server likely didn't preserve it
-        console.warn(
-          '[AI Assistant] Open step not found in global workflow YAML',
-          { jobId }
-        );
-        notifications.warning({
-          title: 'Could not preview this step',
-          description: `Step "${
-            currentJob?.name ?? jobId
-          }" was not found in the AI response (id: ${jobId}). Its ID may not have been preserved by the server.`,
-        });
-        if (previewingMessageId) monacoRef?.current?.clearDiff();
-        return;
-      }
-
-      if (newBody === currentBody) {
-        // open step genuinely unchanged -> ensure no stale diff is shown
-        if (previewingMessageId) monacoRef?.current?.clearDiff();
-        return;
-      }
-
-      const monaco = monacoRef?.current;
-      if (previewingMessageId && monaco) monaco.clearDiff();
-      if (monaco) {
-        monaco.showDiff(currentBody, newBody);
-        setPreviewingMessageId(messageId);
-      }
-    },
-    [aiMode, jobs, previewingMessageId, monacoRef, setPreviewingMessageId]
-  );
-
-  /**
-   * Apply job code to Y.Doc
-   *
-   * Updates the job body in Y.Doc, which syncs to all collaborators.
-   * Clears any active diff preview and shows success notification.
    */
   const handleApplyJobCode = useCallback(
     async (code: string, messageId: string) => {
@@ -809,7 +762,6 @@ export function useAIWorkflowApplications({
     launchApply,
     failedApplyMessageIds,
     handlePreviewJobCode,
-    handlePreviewGlobalStep,
     handleApplyJobCode,
   };
 }

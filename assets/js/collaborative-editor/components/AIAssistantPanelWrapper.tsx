@@ -95,6 +95,21 @@ import { MessageList } from './MessageList';
  * - Persists width in localStorage
  * - Syncs open/closed state with URL query param (?chat=true)
  */
+/**
+ * Add pastes into the open job, so it only makes sense when the answer was
+ * written for that job. Global replies are page-independent and apply their own
+ * changes, and a reply carrying a code field has its own Apply.
+ */
+export const showAddButtons = ({
+  page,
+  isGlobal,
+  hasCodeMessage,
+}: {
+  page: string | undefined;
+  isGlobal: boolean;
+  hasCodeMessage: boolean;
+}): boolean => page === 'job_code' && !isGlobal && !hasCodeMessage;
+
 export function AIAssistantPanelWrapper({
   aiAssistantEnabled = false,
 }: {
@@ -148,6 +163,7 @@ export function AIAssistantPanelWrapper({
     retryMessage: retryMessageViaChannel,
     updateContext: updateContextViaChannel,
     reportApplyFailure,
+    reportApplyApplied,
   } = useAISessionCommands();
   const messages = useAIMessages();
   const isLoading = useAIIsLoading();
@@ -664,7 +680,6 @@ export function AIAssistantPanelWrapper({
     launchApply,
     failedApplyMessageIds,
     handlePreviewJobCode,
-    handlePreviewGlobalStep,
     handleApplyJobCode,
   } = useAIWorkflowApplications({
     sessionId,
@@ -685,6 +700,7 @@ export function AIAssistantPanelWrapper({
     onValidationError,
     onCanvasApplied: appliedCanvas.record,
     onApplyFailure: reportApplyFailure,
+    onApplyApplied: reportApplyApplied,
     workflowActions: {
       importWorkflow,
       startApplyingWorkflow,
@@ -706,19 +722,19 @@ export function AIAssistantPanelWrapper({
     streamingApplyActions,
   });
 
-  // Route auto-preview to the right handler: global messages carry a full
-  // workflow YAML (the open step's diff is extracted from it), job-code
-  // messages carry the job body directly.
+  // A global reply is not a proposal. Its changes are applied as they arrive,
+  // so showing the open step's diff in the editor offered an accept-or-reject
+  // choice that had already been made, with only a close button to make it
+  // with. The panel's diff blocks are the record of what changed, and Undo is
+  // how it gets taken back. Job chat still previews: there the code is a
+  // proposal and Apply is what lands it.
   const handleAutoPreview = useCallback(
     (code: string, messageId: string) => {
       const message = messages.find(m => m.id === messageId);
-      if (message?.from_global) {
-        handlePreviewGlobalStep(code, messageId);
-      } else {
-        handlePreviewJobCode(code, messageId);
-      }
+      if (message?.from_global) return;
+      handlePreviewJobCode(code, messageId);
     },
-    [messages, handlePreviewGlobalStep, handlePreviewJobCode]
+    [messages, handlePreviewJobCode]
   );
 
   // Auto-preview job code when AI responds with code
@@ -876,12 +892,13 @@ export function AIAssistantPanelWrapper({
                     : undefined
                 }
                 previewingMessageId={previewingMessageId}
-                showAddButtons={
-                  aiMode?.page === 'job_code'
-                    ? // For job_code: hide ADD buttons when message has code field
-                      !messages.some(m => m.role === 'assistant' && m.code)
-                    : false
-                }
+                showAddButtons={showAddButtons({
+                  page: aiMode?.page,
+                  isGlobal: isGlobalAssistantActive,
+                  hasCodeMessage: messages.some(
+                    m => m.role === 'assistant' && m.code
+                  ),
+                })}
                 showApplyButton={
                   aiMode?.page === 'workflow_template' ||
                   (aiMode?.page === 'job_code' && messages.some(m => m.code))

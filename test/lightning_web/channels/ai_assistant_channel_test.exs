@@ -220,7 +220,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{}
         )
 
-      %{joined: socket}
+      %{joined: socket, session: session}
     end
 
     test "accepts a report of a failed apply", %{joined: socket} do
@@ -248,6 +248,30 @@ defmodule LightningWeb.AiAssistantChannelTest do
         })
 
       assert_reply ref, :ok
+    end
+
+    test "records the failure on the message, and clears it on a later success",
+         %{joined: socket, session: session} do
+      message = hd(session.messages)
+
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => message.id,
+          "stage" => "import",
+          "is_new_workflow" => false
+        })
+
+      assert_reply ref, :ok
+
+      # The apply happens in the browser, so without this a reload has no way
+      # to know the changes never landed.
+      assert %{"apply_failed" => true} = Repo.reload!(message).meta
+
+      ref = push(socket, "apply_applied", %{"message_id" => message.id})
+      assert_reply ref, :ok
+
+      # A retry that works has to leave nothing behind.
+      refute Map.has_key?(Repo.reload!(message).meta, "apply_failed")
     end
 
     test "accepts a report with fields missing", %{joined: socket} do
