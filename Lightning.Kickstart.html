@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.3">
+    <meta name="project" content="Lightning v2.18.2">
+
+
+    <title>Lightning.Kickstart — Lightning v2.18.2</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
+
+    <script defer src="dist/sidebar_items-72AD5172.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-XBCM4BHM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectImage">
+          <img src="assets/logo.png" alt="Lightning" />
+        </a>
+
+      <div>
+        <a href="https://openfn.github.io/lightning" class="sidebar-projectName" translate="no">
+Lightning
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v2.18.2
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of Lightning</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">Lightning.Kickstart</span> 
+      <small class="app-vsn" translate="no">(Lightning v2.18.2)</small>
+
+    </h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kickstart.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Declarative, idempotent kickstarting of Lightning from a scenario file.</p><p>Given a plain map (typically decoded from a YAML/JSON scenario file), this
+module creates users (with optional API tokens), credentials and projects,
+and provisions each project's workflows through
+<a href="Lightning.Projects.Provisioner.html"><code class="inline">Lightning.Projects.Provisioner</code></a> — the same engine that backs the
+<code class="inline">/api/provision</code> HTTP API.</p><p>It serves local development (<code class="inline">bin/e2e --scenario</code>) and external test
+harnesses: boot Lightning into a known state, read the manifest, drive the
+public APIs.</p><p>It is <strong>not</strong> a way to provision a live instance. There is no release entry
+point, and <a href="#run/1"><code class="inline">run/1</code></a> refuses to run outside <code class="inline">dev</code> and <code class="inline">test</code> — see &quot;Safety&quot;.
+Deploying state to a running instance is what <code class="inline">/api/provision</code> and the CLI
+are for.</p><h2 id="module-idempotency" class="section-heading"><a href="#module-idempotency" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Idempotency</span></h2><p>Re-running the same scenario converges instead of duplicating:</p><ul><li>Users are matched by email, credentials by <code class="inline">{owner, name}</code>, and both are
+reused when they already exist.</li><li>API tokens are signed JWTs and cannot be supplied; when <code class="inline">api_token: true</code>
+the user's oldest existing API token is reused, and one is generated only
+if none exists. Tokens are surfaced through <a href="#manifest/1"><code class="inline">manifest/1</code></a>.</li><li>Projects, workflows, triggers, jobs and edges get <strong>deterministic ids</strong>
+(UUIDv5-style, derived from a project/workflow's name and from a record's
+key in the workflow spec) unless an explicit <code class="inline">id</code> is given, so the
+provisioner upserts them on subsequent runs.</li><li>Project members are added or have their role updated, never removed.</li></ul><p>Renaming a record changes its derived id, and what that costs depends on the
+record:</p><ul><li>Renaming a <strong>job, trigger or edge</strong> deletes the old row and creates a new
+one - <code class="inline">Workflow</code> declares <code class="inline">has_many :jobs, on_replace: :delete</code>. A renamed
+webhook trigger answers at a new <code class="inline">/i/&lt;id&gt;</code> URL.</li><li>Renaming a <strong>workflow or collection</strong> fails, naming the record: the old one
+is still on the project and the provisioner treats the document as the
+complete set. Pin an explicit <code class="inline">id</code> on a workflow you intend to rename and
+its jobs, triggers and edges keep their ids too.</li><li>Renaming a <strong>project</strong> creates a new one and leaves the old one alone.</li></ul><p>The whole run happens in a single transaction — a failing scenario leaves
+the database untouched.</p><h2 id="module-safety" class="section-heading"><a href="#module-safety" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Safety</span></h2><p>Kickstarting creates users (including superusers), and applies a scenario as
+the desired state: records it declares are overwritten from the file, so a
+job body edited in the editor is reverted on the next run. That is fine for
+a database that exists to be thrown away, and wrong for one anybody relies
+on — so it is confined to <code class="inline">dev</code> and <code class="inline">test</code>, and <a href="#run/1"><code class="inline">run/1</code></a> raises anywhere
+else.</p><p>Mix tasks aren't shipped in a release, so <a href="Mix.Tasks.Lightning.Kickstart.html"><code class="inline">mix lightning.kickstart</code></a> cannot
+be reached in production at all; the environment check exists to also stop
+someone calling this module directly from a remote console.</p><h2 id="module-scenario-shape" class="section-heading"><a href="#module-scenario-shape" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Scenario shape</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">users</span><span class="p">:</span><span class="w">
+  </span><span class="o">-</span><span class="w"> </span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">amy</span><span class="na">@openfn</span><span class="o">.</span><span class="n">org</span><span class="w">          </span><span class="c1"># required</span><span class="w">
+    </span><span class="ss">first_name</span><span class="p">:</span><span class="w"> </span><span class="nc">Amy</span><span class="w">
+    </span><span class="ss">superuser</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
+    </span><span class="ss">api_token</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">                </span><span class="c1"># generate/reuse a token, see manifest</span><span class="w">
+    </span><span class="c1"># password defaults to &quot;welcome12345&quot;</span><span class="w">
+
+</span><span class="ss">credentials</span><span class="p">:</span><span class="w">
+  </span><span class="o">-</span><span class="w"> </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="n">dhis2</span><span class="o">-</span><span class="n">prod</span><span class="w">               </span><span class="c1"># required, unique per scenario</span><span class="w">
+    </span><span class="ss">owner</span><span class="p">:</span><span class="w"> </span><span class="n">amy</span><span class="na">@openfn</span><span class="o">.</span><span class="n">org</span><span class="w">          </span><span class="c1"># required, a user declared above</span><span class="w">
+    </span><span class="ss">schema</span><span class="p">:</span><span class="w"> </span><span class="n">dhis2</span><span class="w">
+    </span><span class="ss">body</span><span class="p">:</span><span class="w">
+      </span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="err">$</span><span class="p" data-group-id="9165255539-1">{</span><span class="n">env</span><span class="ss">:DHIS2_PASSWORD</span><span class="p" data-group-id="9165255539-1">}</span><span class="w">  </span><span class="c1"># explicit env interpolation</span><span class="w">
+
+</span><span class="ss">projects</span><span class="p">:</span><span class="w">
+  </span><span class="o">-</span><span class="w"> </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="n">my</span><span class="o">-</span><span class="n">project</span><span class="w">               </span><span class="c1"># required, url-safe</span><span class="w">
+    </span><span class="ss">description</span><span class="p">:</span><span class="w"> </span><span class="nc">An</span><span class="w"> </span><span class="n">example</span><span class="w"> </span><span class="n">project</span><span class="w"> </span><span class="c1"># optional</span><span class="w">
+    </span><span class="ss">members</span><span class="p">:</span><span class="w">                       </span><span class="c1"># required, exactly one owner</span><span class="w">
+      </span><span class="o">-</span><span class="w"> </span><span class="p" data-group-id="9165255539-2">{</span><span class="w"> </span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">amy</span><span class="na">@openfn</span><span class="o">.</span><span class="n">org</span><span class="p">,</span><span class="w"> </span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="n">owner</span><span class="w"> </span><span class="p" data-group-id="9165255539-2">}</span><span class="w">
+    </span><span class="ss">credentials</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9165255539-3">[</span><span class="n">dhis2</span><span class="o">-</span><span class="n">prod</span><span class="p" data-group-id="9165255539-3">]</span><span class="w">      </span><span class="c1"># optional, exposed to this project</span><span class="w">
+    </span><span class="ss">collections</span><span class="p">:</span><span class="w">                   </span><span class="c1"># optional</span><span class="w">
+      </span><span class="o">-</span><span class="w"> </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="n">my</span><span class="o">-</span><span class="n">collection</span><span class="w">
+    </span><span class="ss">workflows</span><span class="p">:</span><span class="w">                     </span><span class="c1"># workflow-spec documents, see below</span><span class="w">
+      </span><span class="o">-</span><span class="w"> </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="n">my</span><span class="o">-</span><span class="n">workflow</span><span class="w">
+        </span><span class="ss">jobs</span><span class="p">:</span><span class="w">
+          </span><span class="ss">transform</span><span class="p">:</span><span class="w">
+            </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="n">transform</span><span class="w">
+            </span><span class="ss">adaptor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@openfn/language-common@latest&quot;</span><span class="w">
+            </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fn(state =&gt; state);&quot;</span><span class="w">
+            </span><span class="ss">credential</span><span class="p">:</span><span class="w"> </span><span class="n">dhis2</span><span class="o">-</span><span class="n">prod</span><span class="w">   </span><span class="c1"># optional, a credential above</span><span class="w">
+        </span><span class="ss">triggers</span><span class="p">:</span><span class="w">
+          </span><span class="ss">webhook</span><span class="p">:</span><span class="w">
+            </span><span class="ss">type</span><span class="p">:</span><span class="w"> </span><span class="n">webhook</span><span class="w">
+            </span><span class="ss">enabled</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
+        </span><span class="ss">edges</span><span class="p">:</span><span class="w">
+          </span><span class="n">webhook</span><span class="o">-&gt;</span><span class="ss">transform</span><span class="p">:</span><span class="w">
+            </span><span class="ss">source_trigger</span><span class="p">:</span><span class="w"> </span><span class="n">webhook</span><span class="w">
+            </span><span class="ss">target_job</span><span class="p">:</span><span class="w"> </span><span class="n">transform</span><span class="w">
+            </span><span class="ss">condition_type</span><span class="p">:</span><span class="w"> </span><span class="n">always</span><span class="w">
+            </span><span class="ss">enabled</span><span class="p">:</span><span class="w"> </span><span class="no">true</span></code></pre><p>Each entry under <code class="inline">workflows</code> is a <strong>workflow spec</strong> — the same
+hand-writable format the collaborative editor imports and exports and that
+workflow templates are written in, validated against the same JSON Schema
+and converted by <a href="Lightning.Workflows.Spec.html"><code class="inline">Lightning.Workflows.Spec</code></a>. There is no kickstart-specific
+workflow dialect: anything you can paste into the editor's YAML import works
+here, and vice versa. The one extra key kickstart resolves is a job's
+<code class="inline">credential</code>, which names a credential declared at the top level (the schema
+already allows it; the editor ignores it).</p><p>Every other key — the scenario itself, and each user, credential, member and
+project — is checked against an explicit allow-list, so a typo (<code class="inline">usres:</code>) or
+an unsupported field (e.g. <code class="inline">channels</code>, not yet handled here) raises instead
+of being silently ignored.</p><p>Keys are strings, as produced by the YAML/JSON parsers.</p><p>Env interpolation is explicit: only <code class="inline">${env:VAR}</code> references are replaced
+(and it is an error for <code class="inline">VAR</code> to be unset). Plain <code class="inline">${...}</code> is left alone,
+so JS template literals in job bodies (<code class="inline">${id}</code>, <code class="inline">${HOME}</code>, <code class="inline">${state.data}</code>)
+can never collide with interpolation.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:result/0" data-no-tooltip="" translate="no">result()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:user_result/0" data-no-tooltip="" translate="no">user_result()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Per-user result: the persisted user and any generated API token.</p></div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#load_file!/1" data-no-tooltip="" translate="no">load_file!(path)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Parse a scenario file into a map. Supports YAML and JSON.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#manifest/1" data-no-tooltip="" translate="no">manifest(map)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Structured, JSON-encodable manifest of a <a href="#run/1"><code class="inline">run/1</code></a> result — everything an
+external harness needs to drive the instance: user emails and API tokens,
+record ids, and webhook paths.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#run/1" data-no-tooltip="" translate="no">run(scenario)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Create or update everything described by <code class="inline">scenario</code>, atomically.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#run_file/2" data-no-tooltip="" translate="no">run_file(path, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Load a scenario file (<code class="inline">.yaml</code>, <code class="inline">.yml</code> or <code class="inline">.json</code>) and <a href="#run/1"><code class="inline">run/1</code></a> it.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#summary/1" data-no-tooltip="" translate="no">summary(map)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Human-readable one-line-per-record summary of a <a href="#run/1"><code class="inline">run/1</code></a> result.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:result/0">
+
+  <div class="detail-header">
+    <a href="#t:result/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">result()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kickstart.ex#L174" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> result() :: %{
+  users: %{required(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) =&gt; <a href="#t:user_result/0">user_result</a>()},
+  credentials: %{required(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) =&gt; <a href="Lightning.Credentials.Credential.html#t:t/0">Lightning.Credentials.Credential.t</a>()},
+  projects: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()]
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:user_result/0">
+
+  <div class="detail-header">
+    <a href="#t:user_result/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">user_result()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kickstart.ex#L172" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> user_result() :: %{
+  user: <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
+  api_token: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil
+}</pre>
+
+      </div>
+
+<p>Per-user result: the persisted user and any generated API token.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="load_file!/1">
+
+  <div class="detail-header">
+    <a href="#load_file!/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">load_file!(path)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kickstart.ex#L249" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> load_file!(<a href="https://hexdocs.pm/elixir/Path.html#t:t/0">Path.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Parse a scenario file into a map. Supports YAML and JSON.</p>
+  </section>
+</section>
+<section class="detail" id="manifest/1">
+
+  <div class="detail-header">
+    <a href="#manifest/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">manifest(map)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kickstart.ex#L272" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> manifest(<a href="#t:result/0">result</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Structured, JSON-encodable manifest of a <a href="#run/1"><code class="inline">run/1</code></a> result — everything an
+external harness needs to drive the instance: user emails and API tokens,
+record ids, and webhook paths.</p>
+  </section>
+</section>
+<section class="detail" id="run/1">
+
+  <div class="detail-header">
+    <a href="#run/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">run(scenario)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kickstart.ex#L190" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> run(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="#t:result/0">result</a>()</pre>
+
+      </div>
+
+<p>Create or update everything described by <code class="inline">scenario</code>, atomically.</p><p>Returns a result map describing the records; pass it to <a href="#manifest/1"><code class="inline">manifest/1</code></a> for a
+JSON-encodable summary or <a href="#summary/1"><code class="inline">summary/1</code></a> for a human-readable one.</p><p>Raises unless kickstarting is enabled (see the module docs), and rolls the
+whole run back on any error.</p>
+  </section>
+</section>
+<section class="detail" id="run_file/2">
+
+    <span id="run_file/1"></span>
+
+  <div class="detail-header">
+    <a href="#run_file/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">run_file(path, opts \\ [])</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kickstart.ex#L233" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> run_file(
+  <a href="https://hexdocs.pm/elixir/Path.html#t:t/0">Path.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()
+) :: <a href="#t:result/0">result</a>()</pre>
+
+      </div>
+
+<p>Load a scenario file (<code class="inline">.yaml</code>, <code class="inline">.yml</code> or <code class="inline">.json</code>) and <a href="#run/1"><code class="inline">run/1</code></a> it.</p><p>Options:</p><ul><li><code class="inline">:manifest</code> - path to write the JSON manifest to.</li></ul>
+  </section>
+</section>
+<section class="detail" id="summary/1">
+
+  <div class="detail-header">
+    <a href="#summary/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">summary(map)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/kickstart.ex#L305" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> summary(<a href="#t:result/0">result</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+
+      </div>
+
+<p>Human-readable one-line-per-record summary of a <a href="#run/1"><code class="inline">run/1</code></a> result.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+
+        <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Go to package docs">
+              Go to package docs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.3) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>
