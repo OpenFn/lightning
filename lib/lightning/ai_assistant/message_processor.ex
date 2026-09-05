@@ -164,9 +164,79 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
     AiAssistant.query_global_stream(session, message.content,
       workflow_yaml: workflow_yaml,
-      page: page
+      page: page,
+      attachments: build_attachments(session)
     )
   end
+
+  # Run context the user ticked on the chat input; an unresolvable source is
+  # omitted rather than sent as an empty attachment.
+  @spec build_attachments(AiAssistant.ChatSession.t()) :: [map()]
+  defp build_attachments(session) do
+    opts = get_in(session.meta, ["message_options"]) || %{}
+    run_id = get_in(session.meta, ["follow_run_id"])
+
+    log_attachments(opts["log"] == true, run_id, session.project_id) ++
+      io_attachments(
+        opts["attach_io_data"] == true,
+        opts["step_id"],
+        session.project_id
+      )
+  end
+
+  defp log_attachments(true, run_id, project_id) when is_binary(run_id) do
+    case Invocation.logs_for_run(run_id, project_id) do
+      [] ->
+        warn_unresolved("logs", run: run_id, project: project_id)
+        []
+
+      lines ->
+        [%{"type" => "log", "content" => lines}]
+    end
+  end
+
+  defp log_attachments(true, run_id, _project_id) do
+    warn_unresolved("logs", run: run_id)
+    []
+  end
+
+  defp log_attachments(_attach, _run_id, _project_id), do: []
+
+  defp io_attachments(true, step_id, project_id) when is_binary(step_id) do
+    case Ecto.UUID.cast(step_id) do
+      {:ok, uuid} ->
+        {input, output} = fetch_and_scrub_io_data(uuid, project_id)
+
+        if is_nil(input) and is_nil(output) do
+          warn_unresolved("I/O data", step: step_id, project: project_id)
+        end
+
+        attachment("input_dataclip", input) ++
+          attachment("output_dataclip", output)
+
+      :error ->
+        warn_unresolved("I/O data", step: step_id)
+        []
+    end
+  end
+
+  defp io_attachments(true, step_id, _project_id) do
+    warn_unresolved("I/O data", step: step_id)
+    []
+  end
+
+  defp io_attachments(_attach, _step_id, _project_id), do: []
+
+  # The assistant answers from context the user believes it has.
+  defp warn_unresolved(what, context) do
+    Logger.warning(
+      "[AI Assistant] #{what} requested but nothing resolved " <>
+        "(#{inspect(context)})"
+    )
+  end
+
+  defp attachment(_type, nil), do: []
+  defp attachment(type, content), do: [%{"type" => type, "content" => content}]
 
   @spec job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()
   defp job_chat?(session, message) do

@@ -4220,6 +4220,124 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert message_options["page"] == "/projects/p1/workflows/w1"
     end
 
+    test "attaches run logs to the first message's Apollo request", %{
+      socket: socket,
+      project: project,
+      workflow: workflow,
+      job: job
+    } do
+      run =
+        insert(:run,
+          work_order: insert(:workorder, workflow: workflow),
+          starting_job: job,
+          dataclip: insert(:dataclip, project: project)
+        )
+
+      step = insert(:step, job: job)
+      insert(:run_step, run: run, step: step)
+      insert(:log_line, run: run, step: step, message: "boom")
+
+      test_pid = self()
+
+      # Oban runs :inline inside the channel process, so the first message is
+      # already sent by the time the join returns.
+      Mox.stub(Lightning.Tesla.Mock, :call, fn env, opts ->
+        send(test_pid, {:apollo_body, Jason.decode!(env.body)})
+
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Global response"
+        }).(env, opts)
+      end)
+
+      assert {:ok, _response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 %{
+                   "project_id" => project.id,
+                   "workflow_id" => workflow.id,
+                   "job_id" => job.id,
+                   "content" => "why did this fail?",
+                   "code" => "workflow:\n  name: test",
+                   "use_global_assistant" => true,
+                   "follow_run_id" => run.id,
+                   "attach_logs" => true
+                 }
+               )
+
+      assert_receive {:apollo_body, body}
+
+      assert [%{"type" => "log", "content" => [line]}] = body["attachments"]
+      assert line["message"] == "boom"
+    end
+
+    test "stores follow_run_id in the new session's meta", %{
+      socket: socket,
+      project: project,
+      workflow: workflow,
+      job: job
+    } do
+      run =
+        insert(:run,
+          work_order: insert(:workorder, workflow: workflow),
+          starting_job: job,
+          dataclip: insert(:dataclip, project: project)
+        )
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 %{
+                   "project_id" => project.id,
+                   "content" => "why did this fail?",
+                   "use_global_assistant" => true,
+                   "follow_run_id" => run.id,
+                   "attach_logs" => true
+                 }
+               )
+
+      session = AiAssistant.get_session!(response.session_id)
+
+      assert session.meta["follow_run_id"] == run.id
+      assert session.meta["message_options"]["log"] == true
+    end
+
+    test "does not store a follow_run_id from another project", %{
+      socket: socket,
+      project: project
+    } do
+      foreign_project = insert(:project)
+      foreign_workflow = insert(:workflow, project: foreign_project)
+
+      foreign_run =
+        insert(:run,
+          work_order: insert(:workorder, workflow: foreign_workflow),
+          starting_job: insert(:job, workflow: foreign_workflow),
+          dataclip: insert(:dataclip, project: foreign_project)
+        )
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 %{
+                   "project_id" => project.id,
+                   "content" => "why did this fail?",
+                   "use_global_assistant" => true,
+                   "follow_run_id" => foreign_run.id,
+                   "attach_logs" => true
+                 }
+               )
+
+      session = AiAssistant.get_session!(response.session_id)
+
+      refute Map.has_key?(session.meta, "follow_run_id")
+    end
+
     test "new_message with use_global_assistant stores options and code",
          %{
            socket: socket,

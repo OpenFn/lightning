@@ -2350,6 +2350,179 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  describe "logs_for_run/2" do
+    setup do
+      project = insert(:project)
+      dataclip = insert(:dataclip, project: project)
+
+      %{workflow: workflow, trigger: trigger, job: job, snapshot: snapshot} =
+        build_workflow(project: project, name: "logs-for-run")
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: workorder,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          starting_trigger: trigger
+        )
+
+      {:ok, step} =
+        Runs.start_step(run, %{
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "step_id" => Ecto.UUID.generate()
+        })
+
+      %{project: project, run: run, step: step, job: job}
+    end
+
+    test "returns nothing rather than raising without a project", %{run: run} do
+      # A session created for an unsaved job carries no project_id, and the
+      # comparison raises rather than returning empty. The step sibling has
+      # guarded this since it was written.
+      assert Invocation.logs_for_run(run.id, nil) == []
+    end
+
+    test "returns nothing when the run id is not a uuid", %{project: project} do
+      assert Invocation.logs_for_run("not-a-uuid", project.id) == []
+    end
+
+    test "counts what each line costs on the wire, not just its text", %{
+      project: project,
+      run: run,
+      step: step
+    } do
+      # Short messages are the case the bound exists for, and the ids and level
+      # ride along with every one of them.
+      for n <- 1..2100 do
+        insert(:log_line,
+          run: run,
+          step: step,
+          message: "x",
+          timestamp: DateTime.add(~U[2026-08-25 10:00:00Z], n, :second)
+        )
+      end
+
+      assert length(Invocation.logs_for_run(run.id, project.id)) < 2100
+    end
+
+    test "stops reading once the lines cannot fit any consumer's limit", %{
+      project: project,
+      run: run,
+      step: step
+    } do
+      # A job that logs per record over a large batch produces hundreds of
+      # thousands of rows. Reading them all to build a payload that is then
+      # refused costs the caller the whole run in memory.
+      for n <- 1..6 do
+        insert(:log_line,
+          run: run,
+          step: step,
+          message: String.duplicate("x", 100_000),
+          timestamp: DateTime.add(~U[2026-08-25 10:00:00Z], n, :second)
+        )
+      end
+
+      lines = Invocation.logs_for_run(run.id, project.id)
+
+      assert length(lines) < 6
+      assert Enum.map_join(lines, & &1.message) |> byte_size() > 250_000
+    end
+
+    test "returns lines oldest first with the step's job attributed", %{
+      project: project,
+      run: run,
+      step: step,
+      job: job
+    } do
+      insert(:log_line,
+        run: run,
+        step: step,
+        message: "second",
+        level: :error,
+        timestamp: ~U[2026-08-25 10:00:01Z]
+      )
+
+      insert(:log_line,
+        run: run,
+        step: step,
+        message: "first",
+        level: :info,
+        timestamp: ~U[2026-08-25 10:00:00Z]
+      )
+
+      assert [
+               %{
+                 message: "first",
+                 level: :info,
+                 job_id: first_job_id,
+                 step_id: first_step_id
+               },
+               %{message: "second", level: :error}
+             ] = Invocation.logs_for_run(run.id, project.id)
+
+      assert first_job_id == job.id
+      assert first_step_id == step.id
+    end
+
+    test "returns nil ids for a run-level line with no step", %{
+      project: project,
+      run: run
+    } do
+      insert(:log_line,
+        run: run,
+        step: nil,
+        message: "starting worker",
+        timestamp: ~U[2026-08-25 10:00:00Z]
+      )
+
+      assert [%{message: "starting worker", job_id: nil, step_id: nil}] =
+               Invocation.logs_for_run(run.id, project.id)
+    end
+
+    test "returns an empty list when the run has no lines", %{
+      project: project,
+      run: run
+    } do
+      assert Invocation.logs_for_run(run.id, project.id) == []
+    end
+
+    test "excludes lines from other runs", %{
+      project: project,
+      run: run,
+      step: step
+    } do
+      other_run =
+        insert(:run,
+          work_order: insert(:workorder),
+          dataclip: insert(:dataclip),
+          starting_trigger: build(:trigger)
+        )
+
+      insert(:log_line, run: run, step: step, message: "mine")
+      insert(:log_line, run: other_run, message: "theirs")
+
+      assert [%{message: "mine"}] = Invocation.logs_for_run(run.id, project.id)
+    end
+
+    test "returns nothing for a run outside the project", %{
+      run: run,
+      step: step
+    } do
+      insert(:log_line, run: run, step: step, message: "mine")
+
+      assert Invocation.logs_for_run(run.id, insert(:project).id) == []
+    end
+  end
+
   defp assert_dataclips_list(expected, returned) do
     assert expected
            |> Enum.map(&format_listed/1)

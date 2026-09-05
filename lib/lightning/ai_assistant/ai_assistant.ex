@@ -907,6 +907,7 @@ defmodule Lightning.AiAssistant do
   def query_global_stream(session, content, opts \\ []) do
     workflow_yaml = Keyword.get(opts, :workflow_yaml)
     page = Keyword.get(opts, :page)
+    attachments = Keyword.get(opts, :attachments, [])
     history = build_history(session)
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
@@ -918,7 +919,8 @@ defmodule Lightning.AiAssistant do
            page: page,
            history: history,
            meta: meta,
-           metrics_opt_in: metrics_opt_in
+           metrics_opt_in: metrics_opt_in,
+           attachments: attachments
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
@@ -1122,6 +1124,14 @@ defmodule Lightning.AiAssistant do
   # Bridge event: error
   defp handle_sse_event(session_id, %{event: "error", data: data}, acc) do
     case Jason.decode(data) do
+      # On /stream the HTTP status is already 200 by the time this arrives, so
+      # the type in the payload is the only thing that identifies it.
+      {:ok, %{"type" => "ATTACHMENT_TOO_LARGE", "details" => details}} ->
+        broadcast_streaming_error(
+          session_id,
+          attachment_too_large_message(details)
+        )
+
       {:ok, %{"message" => message}} ->
         broadcast_streaming_error(session_id, message)
 
@@ -1198,6 +1208,35 @@ defmodule Lightning.AiAssistant do
 
   # Catch-all for anything unexpected
   defp handle_sse_event(_session_id, _event, acc), do: acc
+
+  # Built from `details`, not Apollo's prose, so the wording stays ours.
+  defp attachment_too_large_message(
+         %{"total_characters" => total, "limit_characters" => limit} = details
+       ) do
+    control =
+      case details do
+        %{"largest_attachment" => %{"type" => "log"}} ->
+          "“Send logs”"
+
+        %{"largest_attachment" => %{"type" => dataclip}}
+        when dataclip in ["input_dataclip", "output_dataclip"] ->
+          "“Send scrubbed I/O”"
+
+        _ ->
+          nil
+      end
+
+    advice =
+      if control,
+        do: "Untick #{control} and send again, or pick a run with less data.",
+        else: "Untick one of the attachment boxes, or pick a run with less data."
+
+    "The attached run context is too large to analyse " <>
+      "(#{total} characters against a #{limit} limit). " <> advice
+  end
+
+  defp attachment_too_large_message(_details),
+    do: "The attached run context is too large to analyse."
 
   defp handle_stream_event(session_id, %{
          "type" => "content_block_delta",
