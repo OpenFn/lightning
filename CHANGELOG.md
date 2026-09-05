@@ -72,6 +72,15 @@ and this project adheres to
   so projects with a large backlog of eligible dataclips no longer time out the
   retention job.
 
+### Security
+
+- Bumped `mint` to 1.10.0, clearing
+  [EEF-CVE-2026-82728](https://osv.dev/vulnerability/EEF-CVE-2026-82728) and
+  [EEF-CVE-2026-82729](https://osv.dev/vulnerability/EEF-CVE-2026-82729), both
+  denial of service in Mint's HTTP/1 parser. Mint is our HTTP client, so they
+  are reachable from a response rather than from a request into Lightning, and
+  the exposure is the outbound calls Lightning makes.
+
 ## [2.18.2] - 2026-09-02
 
 ## [2.18.2-pre] - 2026-08-28
