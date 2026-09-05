@@ -1209,11 +1209,12 @@ defmodule Lightning.AiAssistant do
          %{"total_characters" => total, "limit_characters" => limit} = details
        ) do
     control =
-      case get_in(details, ["largest_attachment", "type"]) do
-        "log" ->
+      case details do
+        %{"largest_attachment" => %{"type" => "log"}} ->
           "“Send logs”"
 
-        dataclip when dataclip in ["input_dataclip", "output_dataclip"] ->
+        %{"largest_attachment" => %{"type" => dataclip}}
+        when dataclip in ["input_dataclip", "output_dataclip"] ->
           "“Send scrubbed I/O”"
 
         _ ->

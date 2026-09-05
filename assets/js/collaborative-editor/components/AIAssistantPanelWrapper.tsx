@@ -474,8 +474,9 @@ export function AIAssistantPanelWrapper({
             : `workflows/${workflowName}`;
 
           // Only follow_run_id, not the whole context: a job_id here would
-          // route the message to job chat.
-          if (context?.follow_run_id) {
+          // route the message to job chat. The fallback for a send that
+          // carried no checkbox.
+          if (!options.follow_run_id && context?.follow_run_id) {
             options.follow_run_id = context.follow_run_id;
           }
         }

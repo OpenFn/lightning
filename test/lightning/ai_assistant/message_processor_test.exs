@@ -958,6 +958,27 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
     end
 
+    test "skips the I/O attachment when step_id is not a uuid", %{
+      user: user,
+      project: project
+    } do
+      # A step_id that cannot be cast used to raise Ecto.Query.CastError from
+      # inside the Oban job, failing the whole message rather than dropping
+      # the one attachment the user asked for.
+      message =
+        global_message(user, project, %{
+          "attach_io_data" => true,
+          "step_id" => "not-a-uuid"
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
     test "omits each attachment whose source is missing", %{
       user: user,
       project: project

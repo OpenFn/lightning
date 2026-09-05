@@ -2408,6 +2408,29 @@ defmodule Lightning.InvocationTest do
       %{project: project, run: run, step: step, job: job}
     end
 
+    test "stops reading once the lines cannot fit any consumer's limit", %{
+      project: project,
+      run: run,
+      step: step
+    } do
+      # A job that logs per record over a large batch produces hundreds of
+      # thousands of rows. Reading them all to build a payload that is then
+      # refused costs the caller the whole run in memory.
+      for n <- 1..6 do
+        insert(:log_line,
+          run: run,
+          step: step,
+          message: String.duplicate("x", 100_000),
+          timestamp: DateTime.add(~U[2026-08-25 10:00:00Z], n, :second)
+        )
+      end
+
+      lines = Invocation.logs_for_run(run.id, project.id)
+
+      assert length(lines) < 6
+      assert Enum.map_join(lines, & &1.message) |> byte_size() > 250_000
+    end
+
     test "returns lines oldest first with the step's job attributed", %{
       project: project,
       run: run,

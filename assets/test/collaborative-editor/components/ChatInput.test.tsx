@@ -300,6 +300,7 @@ describe('ChatInput', () => {
 
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {
         attach_logs: true,
+        follow_run_id: 'run-123',
       });
     });
 
@@ -354,6 +355,7 @@ describe('ChatInput', () => {
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {
         attach_code: true,
         attach_logs: true,
+        follow_run_id: 'run-123',
         attach_io_data: true,
         step_id: 'step-123',
       });
@@ -414,6 +416,7 @@ describe('ChatInput', () => {
 
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {
         attach_logs: true,
+        follow_run_id: 'run-123',
       });
     });
 
@@ -450,6 +453,7 @@ describe('ChatInput', () => {
       // Should only have attach_logs, not attach_code
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {
         attach_logs: true,
+        follow_run_id: 'run-123',
       });
     });
 

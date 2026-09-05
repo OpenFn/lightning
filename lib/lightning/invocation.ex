@@ -23,6 +23,10 @@ defmodule Lightning.Invocation do
   alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
 
+  # Comfortably above Apollo's own 250,000-character attachment limit, so a
+  # payload that would have been accepted is never shortened here.
+  @logs_byte_budget 300_000
+
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
 
@@ -912,21 +916,43 @@ defmodule Lightning.Invocation do
   """
   @spec logs_for_run(Ecto.UUID.t(), Ecto.UUID.t()) :: [map()]
   def logs_for_run(run_id, project_id) do
-    from(l in LogLine,
-      join: r in assoc(l, :run),
-      join: wo in assoc(r, :work_order),
-      join: w in assoc(wo, :workflow),
-      left_join: s in assoc(l, :step),
-      where: l.run_id == ^run_id and w.project_id == ^project_id,
-      order_by: [asc: l.timestamp],
-      select: %{
-        step_id: l.step_id,
-        job_id: s.job_id,
-        level: l.level,
-        message: l.message
-      }
-    )
-    |> Repo.all()
+    query =
+      from(l in LogLine,
+        join: r in assoc(l, :run),
+        join: wo in assoc(r, :work_order),
+        join: w in assoc(wo, :workflow),
+        left_join: s in assoc(l, :step),
+        where: l.run_id == ^run_id and w.project_id == ^project_id,
+        order_by: [asc: l.timestamp],
+        select: %{
+          step_id: l.step_id,
+          job_id: s.job_id,
+          level: l.level,
+          message: l.message
+        }
+      )
+
+    {:ok, lines} =
+      Repo.transaction(fn ->
+        query
+        |> Repo.stream()
+        |> Enum.reduce_while({[], 0}, &take_until_over_budget/2)
+        |> then(fn {lines, _size} -> Enum.reverse(lines) end)
+      end)
+
+    lines
+  end
+
+  # A job that logs per record produces hundreds of thousands of rows.
+  defp take_until_over_budget(line, {lines, size}) do
+    size = size + byte_size(line.message || "")
+    lines = [line | lines]
+
+    if size > @logs_byte_budget do
+      {:halt, {lines, size}}
+    else
+      {:cont, {lines, size}}
+    end
   end
 
   def assemble_logs_for_step(nil), do: nil
