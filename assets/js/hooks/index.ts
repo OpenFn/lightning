@@ -577,28 +577,25 @@ export const Tooltip = {
       return;
     }
 
-    const content = this.el.ariaLabel;
     const placement = this.el.dataset.placement
       ? this.el.dataset.placement
       : 'top';
-    const allowHTML = this.el.dataset.allowHtml
-      ? this.el.dataset.allowHtml
-      : 'false';
     const hideOnClick = this.el.dataset.hideOnClick !== 'false';
 
     const interactive = this.el.dataset.interactive || false;
 
+    // Only for elements that hand the hook a string and opt in. Anything with a
+    // template goes in as a node, where this does not apply.
+    const allowHTML = this.el.dataset.allowHtml === 'true';
+
     this._tippyInstance = tippy(this.el, {
       placement: placement,
       animation: false,
-      allowHTML: allowHTML === 'true',
+      allowHTML,
       interactive,
       hideOnClick: hideOnClick,
     });
-    this._tippyInstance.setContent(content);
-
-    // Store the original content for restoration
-    this._originalContent = content;
+    this._tippyInstance.setContent(this._content());
 
     // Listen for custom events to show "Copied!" message
     this.el.addEventListener('show-copied', () => {
@@ -608,25 +605,37 @@ export const Tooltip = {
 
         setTimeout(() => {
           if (this._tippyInstance) {
-            this._tippyInstance.setContent(this._originalContent);
+            this._tippyInstance.setContent(this._content());
             this._tippyInstance.hide();
           }
         }, 1500);
       }
     });
   },
+  // A fragment is emptied once tippy appends it, so every set needs its own
+  // clone rather than one stored copy.
+  _content() {
+    const template = this.el.querySelector<HTMLTemplateElement>(
+      'template[data-tooltip-content]'
+    );
+
+    // Callers that only set aria-label, such as the icon tooltip, have no
+    // template. Their content is text and never markup.
+    return template ? template.content.cloneNode(true) : this.el.ariaLabel;
+  },
   updated() {
-    const content = this.el.ariaLabel;
-    if (content && this._tippyInstance) {
-      this._tippyInstance.setContent(content);
-      this._originalContent = content;
+    if (this._tippyInstance) {
+      this._tippyInstance.setContent(this._content());
     }
   },
   destroyed() {
     if (this._tippyInstance) this._tippyInstance.destroy();
   },
 } as PhoenixHook<
-  { _tippyInstance: TippyInstance | null; _originalContent: string },
+  {
+    _tippyInstance: TippyInstance | null;
+    _content: () => Node | string;
+  },
   { placement: Placement }
 >;
 

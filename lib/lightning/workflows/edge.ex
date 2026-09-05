@@ -11,6 +11,7 @@ defmodule Lightning.Workflows.Edge do
   use Lightning.Schema
   import Lightning.Validators
 
+  alias Lightning.Validators
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
@@ -112,6 +113,8 @@ defmodule Lightning.Workflows.Edge do
     )
     |> validate_source_condition()
     |> validate_js_condition()
+    |> validate_condition_label()
+    |> validate_condition_expression()
     |> validate_different_nodes()
     |> unique_constraint(:id, name: "workflow_edges_pkey")
   end
@@ -142,20 +145,45 @@ defmodule Lightning.Workflows.Edge do
 
   defp validate_js_condition(changeset) do
     if :js_expression == get_field(changeset, :condition_type) do
-      changeset
-      |> validate_required([:condition_expression])
-      |> validate_condition_expression()
+      validate_required(changeset, [:condition_expression])
     else
       changeset
     end
   end
 
-  defp validate_condition_expression(%{valid?: false} = changeset), do: changeset
-
+  # cast/3 accepts an expression on every condition type, and it is written
+  # into the workflow_snapshots.edges jsonb whatever the type is, so this runs
+  # unconditionally.
+  #
+  # There is deliberately no `valid?: false` short circuit: the changeset is
+  # invalid for unrelated missing fields on plenty of real save paths, and
+  # skipping these checks there is how the hole stayed open.
   defp validate_condition_expression(changeset) do
     changeset
-    |> validate_length(:condition_label, max: 255)
+    |> Validators.validate_no_null_bytes(
+      :condition_expression,
+      "condition expression can't contain a null byte"
+    )
     |> validate_length(:condition_expression, max: 255)
+    |> Validators.validate_name_fits_column(
+      :condition_expression,
+      "condition expression is too long, please use a shorter one"
+    )
+  end
+
+  # A label is set on every condition type, not just :js_expression, and it is
+  # written into the workflow_snapshots.edges jsonb either way.
+  defp validate_condition_label(changeset) do
+    changeset
+    |> Validators.validate_name(
+      :condition_label,
+      "condition label can't contain control characters"
+    )
+    |> validate_length(:condition_label, max: 255)
+    |> Validators.validate_name_fits_column(
+      :condition_label,
+      "condition label is too long, please use a shorter one"
+    )
   end
 
   defp validate_different_nodes(changeset) do

@@ -6,6 +6,81 @@ defmodule Lightning.WorkflowTemplatesTest do
   alias Lightning.WorkflowTemplates
   alias Lightning.Workflows.WorkflowTemplate
 
+  describe "changeset/2 jsonb and column guards" do
+    defp template_changeset(attrs) do
+      workflow = insert(:workflow)
+
+      WorkflowTemplate.changeset(
+        %WorkflowTemplate{},
+        Map.merge(
+          %{
+            name: "a template",
+            code: "workflow code",
+            tags: ["tag"],
+            workflow_id: workflow.id
+          },
+          attrs
+        )
+      )
+    end
+
+    test "a NUL in positions is a changeset error, not a 22P05" do
+      # positions is a jsonb map, and Postgres refuses a NUL anywhere inside
+      # jsonb, keys included (#4893).
+      for positions <- [
+            %{"node\u{0000}id" => %{"x" => 1}},
+            %{"node" => %{"label" => "a\u{0000}b"}}
+          ] do
+        changeset = template_changeset(%{positions: positions})
+
+        assert errors_on(changeset)[:positions] == [
+                 "Positions can't contain a null byte"
+               ],
+               "expected #{inspect(positions)} to be rejected"
+      end
+    end
+
+    test "a NUL in code, description or tags is a changeset error, not a 22021" do
+      for {attrs, field, message} <- [
+            {%{code: "fn(state)\u{0000}"}, :code,
+             "Code can't contain a null byte"},
+            {%{description: "notes\u{0000}"}, :description,
+             "Description can't contain a null byte"},
+            {%{tags: ["ok", "bad\u{0000}"]}, :tags,
+             "Tags can't contain a null byte"}
+          ] do
+        changeset = template_changeset(attrs)
+
+        assert errors_on(changeset)[field] == [message],
+               "expected #{field} to reject a null byte"
+      end
+    end
+
+    test "a long tag saves, because the column has no width to overflow" do
+      # `tags` is an unbounded character varying[], unlike the name columns.
+      changeset = template_changeset(%{tags: ["ok", String.duplicate("a", 300)]})
+
+      assert errors_on(changeset)[:tags] == nil
+    end
+
+    test "ordinary values are untouched" do
+      changeset =
+        template_changeset(%{
+          positions: %{"node" => %{"x" => 1, "y" => 2}},
+          code: "fn(state => state)\nreturn state;",
+          description: "notes\twith\ttabs",
+          tags: ["étape", "患者確認", "🎉"]
+        })
+
+      for field <- [:positions, :code, :description, :tags] do
+        refute errors_on(changeset)[field],
+               "expected #{field} to be accepted"
+      end
+
+      assert {:ok, _} = Repo.insert(changeset)
+    end
+  end
+
   describe "create_template/1" do
     test "creates a new template when none exists for the workflow" do
       workflow = insert(:workflow)

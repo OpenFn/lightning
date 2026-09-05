@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { isNameTooWideForColumn } from '#/utils/nameValidation';
+
 import { uuidSchema } from './common';
 
 export const EdgeConditionType = z.enum([
@@ -23,10 +25,22 @@ export const EdgeSchema = z.object({
 
   // Condition configuration
   condition_type: EdgeConditionType.default('on_job_success'),
-  condition_expression: z.string().optional().nullable(),
+  // The server validates this on every condition type, so this side does too.
+  condition_expression: z
+    .string()
+    .refine(
+      val => !isNameTooWideForColumn(val),
+      'should be at most 255 character(s)'
+    )
+    .optional()
+    .nullable(),
+  // Codepoints, like the expression above.
   condition_label: z
     .string()
-    .max(255, 'should be at most 255 character(s)')
+    .refine(
+      val => !isNameTooWideForColumn(val),
+      'should be at most 255 character(s)'
+    )
     .nullable()
     .optional(),
 
@@ -45,7 +59,10 @@ export const ExprEdgeSchema = EdgeSchema.extend({
     .string()
     .trim()
     .min(1, "can't be blank")
-    .max(255, 'should be at most 255 character(s)')
+    .refine(
+      val => !isNameTooWideForColumn(val),
+      'should be at most 255 character(s)'
+    )
     .nullable(),
 });
 export type EdgeFormValues = z.infer<typeof EdgeSchema>;

@@ -5,7 +5,11 @@ defmodule Lightning.Workflows.Workflow do
   A Workflow contains the fields for defining a workflow.
 
   * `name`
-    A plain text identifier
+    A plain text identifier. Any codepoint except a control character, see
+    `Lightning.Validators.validate_name/3`, and at most 255 of them, which is
+    the width of the column. The cap is higher than a job's 100 because
+    workflow names predate any rule on the field, and nothing longer than the
+    column width can already be stored.
   """
   use Lightning.Schema
 
@@ -86,10 +90,31 @@ defmodule Lightning.Workflows.Workflow do
 
   def validate(changeset) do
     changeset
+    # First, so the length and presence checks below see the normalised value.
+    # Here rather than in changeset/2 because the provisioning API builds its
+    # own changeset and calls validate/1 directly.
+    |> Validators.validate_name(
+      :name,
+      "workflow name can't contain control characters"
+    )
+    # positions is written straight into the workflow_snapshots.positions jsonb,
+    # keys and all, and Postgres refuses a NUL anywhere inside jsonb (#4893).
+    |> Validators.validate_no_null_bytes_deep(
+      :positions,
+      "positions can't contain a null byte"
+    )
     |> Validators.validate_uuid(:project_id)
     |> assoc_constraint(:project)
     |> validate_number(:concurrency, greater_than_or_equal_to: 1)
     |> validate_required([:name])
+    |> validate_length(:name,
+      max: 255,
+      message: "workflow name should be at most %{count} character(s)"
+    )
+    |> Validators.validate_name_fits_column(
+      :name,
+      "workflow name is too long, please use a shorter one"
+    )
     |> unique_constraint([:name, :project_id],
       message:
         "A workflow with this name already exists (possibly pending deletion) in this project."

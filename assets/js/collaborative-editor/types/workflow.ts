@@ -10,22 +10,46 @@
 import type * as Y from 'yjs';
 import { z } from 'zod';
 
+import {
+  CONTROL_CHARS_MESSAGE,
+  NAME_BLANK_MESSAGE,
+  NAME_TOO_WIDE_MESSAGE,
+  hasControlChars,
+  isInvisibleOnly,
+  isNameTooWideForColumn,
+  normalizeName,
+} from '#/utils/nameValidation';
+
 import { EdgeSchema } from './edge';
 import { JobSchema, type Job as JobType } from './job';
 import type { Session } from './session';
 import { TriggerSchema, type Trigger as TriggerType } from './trigger';
 
 /**
- * Zod schema for workflow validation
+ * The workflow name rule, in one place, used by every schema that validates a
+ * name the user typed. Normalise first, then check, which is the order the
+ * server uses. Mirrors `Lightning.Workflows.Workflow.validate/1`.
  *
- * Mirrors backend validation from lib/lightning/workflows/workflow.ex:81-103
+ * Deliberately not used by `BaseWorkflowSchema`, which parses what the server
+ * sends rather than what the user typed. See the note there.
  */
+export const workflowNameSchema = z
+  .string()
+  .transform(normalizeName)
+  .pipe(
+    z
+      .string()
+      .min(1, "can't be blank")
+      .refine(val => !isInvisibleOnly(val), NAME_BLANK_MESSAGE)
+      // Codepoints only. A grapheme count is never above a codepoint count, so
+      // a grapheme cap at the same 255 could not reject anything this does not.
+      .refine(val => !isNameTooWideForColumn(val), NAME_TOO_WIDE_MESSAGE)
+      .refine(val => !hasControlChars(val), CONTROL_CHARS_MESSAGE)
+  );
+
 export const WorkflowSchema = z.object({
   id: z.string().uuid(),
-  name: z
-    .string()
-    .min(1, "can't be blank")
-    .max(255, 'should be at most 255 character(s)'),
+  name: workflowNameSchema,
   lock_version: z.number().int(),
   deleted_at: z.string().nullable(),
 
@@ -47,7 +71,14 @@ export const BaseWorkflowSchema = z.object({
   triggers: z.array(TriggerSchema),
   edges: z.array(EdgeSchema),
   positions: z.record(z.string(), z.object({}).loose()).nullable(),
-  name: z.string().min(1).max(255),
+  // This schema parses the workflow arriving FROM the server, and one failed
+  // safeParse throws the whole session context away, so a name the server
+  // stored happily must never be refused here. Codepoints, and no control
+  // character check: the server is the authority on what may be written.
+  name: z
+    .string()
+    .min(1)
+    .refine(val => !isNameTooWideForColumn(val)),
   concurrency: z.number().nullable().optional(),
   enable_job_logs: z.boolean().default(false),
 });
@@ -63,10 +94,7 @@ export type BaseWorkflow = z.infer<typeof BaseWorkflowSchema>;
 export function createWorkflowSchema(projectConcurrency: number | null) {
   return z.object({
     id: z.string().uuid(),
-    name: z
-      .string()
-      .min(1, "can't be blank")
-      .max(255, 'should be at most 255 character(s)'),
+    name: workflowNameSchema,
     lock_version: z.number().int(),
     deleted_at: z.string().nullable(),
 

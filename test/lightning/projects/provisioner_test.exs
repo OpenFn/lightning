@@ -198,7 +198,120 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
   end
 
+  describe "import_document/4 workflow name validation" do
+    setup do
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      :ok
+    end
+
+    defp import_with_workflow_name(name) do
+      user = insert(:user)
+      %{body: %{"workflows" => [workflow]} = body} = valid_document()
+
+      body = Map.put(body, "workflows", [Map.put(workflow, "name", name)])
+
+      Provisioner.import_document(
+        %Lightning.Projects.Project{},
+        user,
+        body
+      )
+    end
+
+    test "a control character in a workflow name is a changeset error, not a 500" do
+      # This path builds its own changeset and calls Workflow.validate/1
+      # directly, so it used to skip the name rule entirely. A NUL reached
+      # Postgres and came back as a 22021 that action_fallback does not handle,
+      # which is a 500 on POST /api/provision (#4893).
+      for name <- [
+            "before\u{0000}after",
+            "tab\u{0009}here",
+            "delete\u{007F}",
+            "c1\u{0080}next",
+            "sep\u{2028}here",
+            "non\u{FFFF}char"
+          ] do
+        assert {:error, changeset} = import_with_workflow_name(name),
+               "expected #{inspect(name)} to be rejected"
+
+        assert [workflow_changeset] =
+                 Ecto.Changeset.get_change(changeset, :workflows)
+
+        assert errors_on(workflow_changeset)[:name] == [
+                 "workflow name can't contain control characters"
+               ]
+      end
+    end
+
+    test "a workflow name is normalised to NFC on import" do
+      assert {:ok, project} = import_with_workflow_name("Ve\u{0301}rifier")
+
+      assert [%{name: name}] = project.workflows
+      assert name == "V\u{00E9}rifier"
+    end
+
+    test "a workflow name past the column width is a changeset error" do
+      assert {:error, changeset} =
+               import_with_workflow_name(String.duplicate("a", 300))
+
+      assert [workflow_changeset] =
+               Ecto.Changeset.get_change(changeset, :workflows)
+
+      assert errors_on(workflow_changeset)[:name] == [
+               "workflow name should be at most 255 character(s)"
+             ]
+    end
+  end
+
   describe "import_document/2 with a new project" do
+    test "finds a credential named in a different normal form" do
+      user = insert(:user)
+
+      # The stored name went through validate_name so it is NFC. A spec written
+      # by a client that composes differently asks for the same name in NFD.
+      # The two render identically, so a byte comparison fails with an error
+      # naming a credential the user can see.
+      nfc = "Vérifier"
+      nfd = "Ve" <> <<0x0301::utf8>> <> "rifier"
+      refute nfc == nfd
+
+      credential = insert(:credential, name: nfc, user: user)
+      assert credential.name == nfc
+
+      %{body: %{"workflows" => [workflow]} = body, project_id: _} =
+        valid_document()
+
+      project_credential_id = Ecto.UUID.generate()
+
+      body_with_credentials =
+        body
+        |> Map.put("project_credentials", [
+          %{
+            "id" => project_credential_id,
+            "name" => nfd,
+            "owner" => user.email
+          }
+        ])
+        |> Map.put("workflows", [workflow])
+
+      Mox.stub(Lightning.Extensions.MockUsageLimiter, :limit_action, fn _a, _c ->
+        :ok
+      end)
+
+      assert {:ok, %{project_credentials: [project_credential]}} =
+               Provisioner.import_document(
+                 %Lightning.Projects.Project{},
+                 user,
+                 body_with_credentials
+               )
+
+      assert project_credential.credential_id == credential.id
+    end
+
     test "with valid data" do
       Mox.verify_on_exit!()
       %{id: user_id} = user = insert(:user)

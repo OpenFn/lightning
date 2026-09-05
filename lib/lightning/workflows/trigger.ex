@@ -178,6 +178,20 @@ defmodule Lightning.Workflows.Trigger do
     changeset
     |> validate_required([:type])
     |> assoc_constraint(:workflow)
+    # Only the NUL: a comment is free text and legitimately holds newlines.
+    # kafka_configuration is an embed and guards its own hosts and topics.
+    |> validate_no_null_bytes(
+      :comment,
+      "comment can't contain a null byte"
+    )
+    |> validate_name_fits_column(
+      :comment,
+      "comment is too long, please use a shorter one"
+    )
+    |> validate_name_fits_column(
+      :cron_expression,
+      "cron expression is too long, please use a shorter one"
+    )
     |> validate_by_type()
     |> validate_custom_path()
     # After the trim, so a padded path is judged on what would be stored.

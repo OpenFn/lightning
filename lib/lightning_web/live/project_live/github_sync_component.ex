@@ -209,8 +209,19 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       %{"error_description" => message} ->
         "GitHub Error: #{message}"
 
-      %Tesla.Env{body: body} ->
+      # Only a decoded body is worth unwrapping. Tesla.Middleware.JSON leaves
+      # the body a binary for an HTML or plain-text response, and recursing
+      # into that lands on the clause below, putting a page of GitHub's HTML in
+      # a flash.
+      %Tesla.Env{body: %{} = body} ->
         error_message(body)
+
+      # Usually ours: the export pre-flight fails with a plain string naming
+      # both colliding entities, which the generic message below would lose.
+      # Not exclusively, though: refresh_oauth_token/1 passes GitHub's body
+      # straight through.
+      message when is_binary(message) ->
+        message
 
       _error ->
         "Oops! An error occurred while connecting to GitHub. Please try again later"
@@ -241,6 +252,16 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         assign(socket, changeset: changeset)
+
+      # The export pre-flight in initiate_sync/2 fails with a plain string
+      # naming both colliding entities. Without this it reaches the catch-all
+      # below and the user is told they lack GitHub access, which is false.
+      {:error, message} when is_binary(message) ->
+        socket
+        |> put_flash(:error, message)
+        |> push_navigate(
+          to: ~p"/projects/#{socket.assigns.project}/settings#vcs"
+        )
 
       {:error, _} ->
         socket
