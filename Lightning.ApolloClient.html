@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-72AD5172.js"></script>
+    <script defer src="dist/sidebar_items-BD76E7D5.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -282,7 +282,7 @@ provide more targeted and relevant assistance.</p>
       <h1 class="signature" translate="no">global_chat_stream(content, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L155" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/apollo_client.ex#L157" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -302,7 +302,8 @@ an internal router that uses the <code class="inline">page</code> field to deter
 Streaming events (text chunks, changes, status) are emitted as SSE,
 followed by a final <code class="inline">complete</code> event with the full response payload.</p><h2 id="global_chat_stream/2-parameters" class="section-heading"><a href="#global_chat_stream/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">content</code> - User's question or request</li><li><code class="inline">opts</code> - Keyword list of options:<ul><li><code class="inline">:workflow_yaml</code> - Full workflow YAML including job bodies (optional)</li><li><code class="inline">:page</code> - Current page URL for routing (optional)</li><li><code class="inline">:history</code> - Previous conversation messages (default: [])</li><li><code class="inline">:meta</code> - Optional metadata map (e.g. session IDs, Langfuse keys).
 Omitted from the wire payload when not supplied.</li><li><code class="inline">:metrics_opt_in</code> - Optional boolean enabling Langfuse metrics tracking
-on the Apollo side. Omitted from the wire payload when not supplied.</li></ul></li></ul>
+on the Apollo side. Omitted from the wire payload when not supplied.</li><li><code class="inline">:attachments</code> - Run context the user chose to send, as a list of
+<code class="inline">%{&quot;type&quot; =&gt; type, &quot;content&quot; =&gt; content}</code> maps (default: <code class="inline">[]</code>)</li></ul></li></ul>
   </section>
 </section>
 <section class="detail" id="job_chat_stream/2">
