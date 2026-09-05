@@ -522,81 +522,6 @@ export function useAIWorkflowApplications({
    * Shows a diff only when the open step's body actually changed; clears any
    * stale diff otherwise.
    */
-  const handlePreviewGlobalStep = useCallback(
-    (yaml: string, messageId: string) => {
-      if (!aiMode || aiMode.page !== 'job_code') return; // only when a step is open
-      const jobId = (aiMode.context as JobCodeContext).job_id;
-      if (!jobId) return;
-
-      // Same dedup guards as handlePreviewJobCode
-      if (previewingMessageId === messageId) return;
-      if (previewingMessageId === STREAMING_MESSAGE_ID) {
-        setPreviewingMessageId(messageId);
-        return;
-      }
-
-      const currentJob = jobs.find(j => j.id === jobId);
-      const currentBody = currentJob?.body ?? '';
-
-      let newBody: string | undefined;
-      try {
-        const spec = parseWorkflowYAML(yaml);
-        // ids from the YAML are preserved, so we match the open step by id
-        const state = convertWorkflowSpecToState(spec);
-        newBody = state.jobs.find(j => j.id === jobId)?.body;
-      } catch (error) {
-        console.error(
-          '[AI Assistant] Failed to parse global workflow YAML:',
-          error
-        );
-        notifications.alert({
-          title: 'Could not preview step',
-          description:
-            error instanceof Error
-              ? error.message
-              : 'The AI server returned invalid workflow YAML.',
-        });
-        return;
-      }
-
-      if (newBody === undefined) {
-        // Open step's id wasn't in the YAML, so the server likely didn't preserve it
-        console.warn(
-          '[AI Assistant] Open step not found in global workflow YAML',
-          { jobId }
-        );
-        notifications.warning({
-          title: 'Could not preview this step',
-          description: `Step "${
-            currentJob?.name ?? jobId
-          }" was not found in the AI response (id: ${jobId}). Its ID may not have been preserved by the server.`,
-        });
-        if (previewingMessageId) monacoRef?.current?.clearDiff();
-        return;
-      }
-
-      if (newBody === currentBody) {
-        // open step genuinely unchanged -> ensure no stale diff is shown
-        if (previewingMessageId) monacoRef?.current?.clearDiff();
-        return;
-      }
-
-      const monaco = monacoRef?.current;
-      if (previewingMessageId && monaco) monaco.clearDiff();
-      if (monaco) {
-        monaco.showDiff(currentBody, newBody);
-        setPreviewingMessageId(messageId);
-      }
-    },
-    [aiMode, jobs, previewingMessageId, monacoRef, setPreviewingMessageId]
-  );
-
-  /**
-   * Apply job code to Y.Doc
-   *
-   * Updates the job body in Y.Doc, which syncs to all collaborators.
-   * Clears any active diff preview and shows success notification.
-   */
   const handleApplyJobCode = useCallback(
     async (code: string, messageId: string) => {
       if (!aiMode || aiMode.page !== 'job_code') {
@@ -809,7 +734,6 @@ export function useAIWorkflowApplications({
     launchApply,
     failedApplyMessageIds,
     handlePreviewJobCode,
-    handlePreviewGlobalStep,
     handleApplyJobCode,
   };
 }

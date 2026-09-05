@@ -679,7 +679,6 @@ export function AIAssistantPanelWrapper({
     launchApply,
     failedApplyMessageIds,
     handlePreviewJobCode,
-    handlePreviewGlobalStep,
     handleApplyJobCode,
   } = useAIWorkflowApplications({
     sessionId,
@@ -721,19 +720,19 @@ export function AIAssistantPanelWrapper({
     streamingApplyActions,
   });
 
-  // Route auto-preview to the right handler: global messages carry a full
-  // workflow YAML (the open step's diff is extracted from it), job-code
-  // messages carry the job body directly.
+  // A global reply is not a proposal. Its changes are applied as they arrive,
+  // so showing the open step's diff in the editor offered an accept-or-reject
+  // choice that had already been made, with only a close button to make it
+  // with. The panel's diff blocks are the record of what changed, and Undo is
+  // how it gets taken back. Job chat still previews: there the code is a
+  // proposal and Apply is what lands it.
   const handleAutoPreview = useCallback(
     (code: string, messageId: string) => {
       const message = messages.find(m => m.id === messageId);
-      if (message?.from_global) {
-        handlePreviewGlobalStep(code, messageId);
-      } else {
-        handlePreviewJobCode(code, messageId);
-      }
+      if (message?.from_global) return;
+      handlePreviewJobCode(code, messageId);
     },
-    [messages, handlePreviewGlobalStep, handlePreviewJobCode]
+    [messages, handlePreviewJobCode]
   );
 
   // Auto-preview job code when AI responds with code

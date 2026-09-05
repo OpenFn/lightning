@@ -72,6 +72,11 @@ and this project adheres to
   the reply itself, beside the diffs that did not land, and offers to try
   again. It used to fall back to a raw YAML panel.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- Editing an open step with the global assistant no longer puts a diff in the
+  code editor. The change is already applied, so the diff read as a proposal
+  to accept or reject when the only control was a close button, and reloading
+  revealed the change had been written all along.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
 
 - Changing a webhook trigger's custom path now marks the workflow as unsaved, so
   the Save button offers to save it. The unsaved-changes check did not look at

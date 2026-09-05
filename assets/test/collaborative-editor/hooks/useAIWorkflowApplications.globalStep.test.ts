@@ -3,8 +3,11 @@
  *
  * Tests behavior specific to global AI assistant messages (full workflow
  * YAML, `from_global: true`, no job_id):
- * - handlePreviewGlobalStep: per-step diff extracted from the workflow YAML
  * - handleApplyWorkflow: relaxed mode guard for global messages only
+ *
+ * The editor is no longer given a per-step diff for a global reply: those
+ * changes are applied as they arrive, so the diff offered a choice that had
+ * already been made.
  */
 
 import { renderHook, waitFor } from '@testing-library/react';
@@ -162,91 +165,6 @@ describe('useAIWorkflowApplications - global messages', () => {
       return { name: 'Test Workflow', jobs: {}, triggers: {}, edges: {} };
     });
     mockYamlJobBody('new body');
-  });
-
-  describe('handlePreviewGlobalStep', () => {
-    it('shows a diff when the open step body changed in the YAML', () => {
-      const { result } = renderApplications();
-
-      result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
-
-      expect(mockShowDiff).toHaveBeenCalledWith('old body', 'new body');
-      expect(mockSetPreviewingMessageId).toHaveBeenCalledWith('msg-1');
-    });
-
-    it('shows no diff and clears a stale one when the open step is unchanged', () => {
-      mockYamlJobBody('old body'); // same as current job body
-
-      const { result } = renderApplications({
-        previewingMessageId: 'previous-msg',
-      });
-
-      result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
-
-      expect(mockClearDiff).toHaveBeenCalled();
-      expect(mockShowDiff).not.toHaveBeenCalled();
-      expect(mockSetPreviewingMessageId).not.toHaveBeenCalled();
-    });
-
-    it('warns when the open step is missing from the YAML (id not preserved)', () => {
-      vi.mocked(convertWorkflowSpecToState).mockReturnValue({
-        id: 'wf-1',
-        name: 'Test Workflow',
-        jobs: [],
-        triggers: [],
-        edges: [],
-        positions: null,
-      });
-
-      const { result } = renderApplications();
-
-      result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
-
-      expect(mockShowDiff).not.toHaveBeenCalled();
-      expect(mockSetPreviewingMessageId).not.toHaveBeenCalled();
-      expect(notifications.warning).toHaveBeenCalled();
-    });
-
-    it('alerts for invalid YAML', () => {
-      const { result } = renderApplications();
-
-      result.current.handlePreviewGlobalStep('invalid yaml', 'msg-1');
-
-      expect(mockShowDiff).not.toHaveBeenCalled();
-      expect(mockClearDiff).not.toHaveBeenCalled();
-      expect(mockSetPreviewingMessageId).not.toHaveBeenCalled();
-      expect(notifications.alert).toHaveBeenCalled();
-    });
-
-    it('does nothing when no job is open (workflow_template mode)', () => {
-      const { result } = renderApplications({
-        aiMode: createMockAIMode('workflow_template'),
-        page: 'workflow_template',
-      });
-
-      result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
-
-      expect(parseWorkflowYAML).not.toHaveBeenCalled();
-      expect(mockShowDiff).not.toHaveBeenCalled();
-    });
-
-    it('deduplicates previews like handlePreviewJobCode', () => {
-      // Already previewing this message -> no-op
-      const { result } = renderApplications({
-        previewingMessageId: 'msg-1',
-      });
-      result.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
-      expect(mockShowDiff).not.toHaveBeenCalled();
-      expect(mockSetPreviewingMessageId).not.toHaveBeenCalled();
-
-      // Streaming preview already shown -> only swap the message id
-      const { result: streaming } = renderApplications({
-        previewingMessageId: '__streaming__',
-      });
-      streaming.current.handlePreviewGlobalStep('name: Test Workflow', 'msg-1');
-      expect(mockShowDiff).not.toHaveBeenCalled();
-      expect(mockSetPreviewingMessageId).toHaveBeenCalledWith('msg-1');
-    });
   });
 
   describe('handleApplyWorkflow with global messages', () => {
