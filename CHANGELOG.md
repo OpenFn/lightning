@@ -61,6 +61,11 @@ and this project adheres to
 
 ### Fixed
 
+- The global assistant no longer offers to paste a reply's code block into
+  whichever job you have open. It applies its own changes and shows them as
+  diffs, so those blocks are data it quoted back or work it has already done.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+
 - Changing a webhook trigger's custom path now marks the workflow as unsaved, so
   the Save button offers to save it. The unsaved-changes check did not look at
   the field, so the edit could be lost by navigating away.

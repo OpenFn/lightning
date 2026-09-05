@@ -95,6 +95,21 @@ import { MessageList } from './MessageList';
  * - Persists width in localStorage
  * - Syncs open/closed state with URL query param (?chat=true)
  */
+/**
+ * Add pastes into the open job, so it only makes sense when the answer was
+ * written for that job. Global replies are page-independent and apply their own
+ * changes, and a reply carrying a code field has its own Apply.
+ */
+export const showAddButtons = ({
+  page,
+  isGlobal,
+  hasCodeMessage,
+}: {
+  page: string | undefined;
+  isGlobal: boolean;
+  hasCodeMessage: boolean;
+}): boolean => page === 'job_code' && !isGlobal && !hasCodeMessage;
+
 export function AIAssistantPanelWrapper({
   aiAssistantEnabled = false,
 }: {
@@ -876,12 +891,13 @@ export function AIAssistantPanelWrapper({
                     : undefined
                 }
                 previewingMessageId={previewingMessageId}
-                showAddButtons={
-                  aiMode?.page === 'job_code'
-                    ? // For job_code: hide ADD buttons when message has code field
-                      !messages.some(m => m.role === 'assistant' && m.code)
-                    : false
-                }
+                showAddButtons={showAddButtons({
+                  page: aiMode?.page,
+                  isGlobal: isGlobalAssistantActive,
+                  hasCodeMessage: messages.some(
+                    m => m.role === 'assistant' && m.code
+                  ),
+                })}
                 showApplyButton={
                   aiMode?.page === 'workflow_template' ||
                   (aiMode?.page === 'job_code' && messages.some(m => m.code))
