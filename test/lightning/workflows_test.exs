@@ -3,6 +3,7 @@ defmodule Lightning.WorkflowsTest do
   use Mimic
 
   import ExUnit.CaptureLog
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
 
   alias Lightning.Auditing.Audit
@@ -972,6 +973,64 @@ defmodule Lightning.WorkflowsTest do
       assert Workflows.unique_workflow_name("Other Workflow", project.id,
                exclude_workflow_id: workflow.id
              ) == "Other Workflow 1"
+    end
+  end
+
+  describe "save_workflow/3 adaptor validation" do
+    setup :isolated_adaptors
+
+    test "allows a job adaptor change to a known adaptor" do
+      user = insert(:user)
+      project = insert(:project)
+      ensure_adaptor("@openfn/language-common")
+
+      changeset =
+        Lightning.Workflows.Workflow.changeset(
+          %Lightning.Workflows.Workflow{},
+          %{
+            name: "ungated",
+            project_id: project.id,
+            jobs: [
+              %{name: "job", body: "fn()", adaptor: "@openfn/language-common"}
+            ]
+          }
+        )
+
+      assert {:ok, _workflow} = Workflows.save_workflow(changeset, user)
+    end
+
+    test "refuses an adaptor the catalogue does not list" do
+      user = insert(:user)
+      project = insert(:project)
+      ensure_adaptor("@openfn/language-common")
+
+      changeset =
+        Lightning.Workflows.Workflow.changeset(
+          %Lightning.Workflows.Workflow{},
+          %{
+            name: "gated",
+            project_id: project.id,
+            jobs: [
+              %{name: "job", body: "fn()", adaptor: "@openfn/language-evil"}
+            ]
+          }
+        )
+
+      assert {:error, %Ecto.Changeset{} = cs} =
+               Workflows.save_workflow(changeset, user)
+
+      assert %{jobs: [%{adaptor: ["is not a recognised adaptor"]}]} =
+               errors_on(cs)
+    end
+
+    test "a save without adaptor changes does not consult the catalogue" do
+      user = insert(:user)
+      workflow = insert(:workflow)
+
+      changeset =
+        Lightning.Workflows.Workflow.changeset(workflow, %{name: "renamed"})
+
+      assert {:ok, _workflow} = Workflows.save_workflow(changeset, user)
     end
   end
 

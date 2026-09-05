@@ -7,6 +7,7 @@ defmodule Lightning.CredentialsTest do
   alias Lightning.Credentials.Credential
   alias Lightning.Repo
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Ecto.Query
   import Mox
@@ -334,6 +335,14 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "create_credential/1" do
+    setup :isolated_adaptors
+
+    setup do
+      # create_credential/1 needs a schema on file for body casting to work.
+      Lightning.AdaptorTestHelpers.seed_credential_schema("postgresql")
+      :ok
+    end
+
     test "fails if another cred exists with the same name for the same user" do
       user = insert(:user)
 
@@ -491,6 +500,13 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "update_credential/2" do
+    setup :isolated_adaptors
+
+    setup do
+      Lightning.AdaptorTestHelpers.seed_credential_schema("postgresql")
+      :ok
+    end
+
     test "updates an OAuth credential with new scopes" do
       user = insert(:user)
       oauth_client = insert(:oauth_client)

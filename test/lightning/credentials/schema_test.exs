@@ -2,6 +2,8 @@ defmodule Lightning.Credentials.SchemaTest do
   use Lightning.DataCase, async: true
 
   import ExUnit.CaptureLog
+  import Lightning.AdaptorTestHelpers
+  import Lightning.Factories
   import Mox
 
   alias Lightning.Credentials
@@ -9,11 +11,23 @@ defmodule Lightning.Credentials.SchemaTest do
   alias Lightning.Credentials.SchemaDocument
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     Mox.stub(Lightning.MockConfig, :sentry, fn -> Lightning.MockSentry end)
     Mox.stub(Lightning.MockSentry, :capture_message, fn _msg, _opts -> :ok end)
     :ok
+  end
+
+  defp seed_adaptor_schema(name) do
+    # Persist the raw JSON binary (not a decoded map) so
+    # `Jason.decode!(_, objects: :ordered_objects)` downstream can
+    # preserve the schema's property order.
+    schema_body =
+      Path.join(["test", "fixtures", "schemas", "#{name}.json"])
+      |> File.read!()
+
+    insert(:adaptor, name: name, source: :npm, schema_data: schema_body)
   end
 
   setup do
@@ -301,7 +315,39 @@ defmodule Lightning.Credentials.SchemaTest do
     end
   end
 
+  describe "Credentials.get_schema/1" do
+    test "preserves JSON property order from the persisted schema body" do
+      ordered_body = ~s({
+        "properties": {
+          "zeta": {"type": "string"},
+          "alpha": {"type": "string"},
+          "mu": {"type": "string"}
+        },
+        "type": "object"
+      })
+
+      insert(:adaptor,
+        name: "ordered-fixture",
+        source: :npm,
+        schema_data: ordered_body
+      )
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
+        {:error, :unreachable}
+      end)
+
+      schema = Credentials.get_schema("ordered-fixture")
+
+      assert schema.fields == [:zeta, :alpha, :mu]
+    end
+  end
+
   describe "validate/2" do
+    setup do
+      Enum.each(~w(godata postgresql http dhis2), &seed_adaptor_schema/1)
+      :ok
+    end
+
     test "successfully validates field with json schema email format" do
       schema = Credentials.get_schema("godata")
 

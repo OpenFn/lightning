@@ -1,6 +1,7 @@
 defmodule LightningWeb.WorkflowChannelTest do
   use LightningWeb.ChannelCase
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.CollaborationHelpers
   import Lightning.Factories
   import Lightning.ProjectsHelpers
@@ -8,6 +9,7 @@ defmodule LightningWeb.WorkflowChannelTest do
   import ExUnit.CaptureLog
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     Mox.stub(Lightning.MockConfig, :check_flag?, fn
@@ -19,6 +21,8 @@ defmodule LightningWeb.WorkflowChannelTest do
     Mox.set_mox_global(LightningMock)
     # Stub the broadcast calls that save_workflow makes
     Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
+    seed_ready_catalogue()
 
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
@@ -863,14 +867,28 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "request_adaptors and request_credentials" do
+    setup do
+      insert(:adaptor, name: "@openfn/language-salesforce", source: :npm)
+      insert(:adaptor, name: "@openfn/language-http", source: :npm)
+      :ok
+    end
+
     test "handles multiple concurrent requests independently", %{
       socket: socket
     } do
       ref_adaptors = push(socket, "request_adaptors", %{})
       ref_credentials = push(socket, "request_credentials", %{})
 
-      assert_reply ref_adaptors, :ok, %{adaptors: _}
+      assert_reply ref_adaptors, :ok, %{adaptors: adaptors}
       assert_reply ref_credentials, :ok, %{credentials: credentials}
+
+      assert is_list(adaptors)
+      assert adaptors != []
+      assert Enum.all?(adaptors, &Map.has_key?(&1, :icon_urls))
+
+      assert Enum.all?(adaptors, fn a ->
+               Enum.sort(Map.keys(a.icon_urls)) == [:rectangle, :square]
+             end)
 
       assert Map.has_key?(credentials, :project_credentials)
       assert Map.has_key?(credentials, :keychain_credentials)
@@ -878,74 +896,78 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert is_list(credentials.keychain_credentials)
     end
 
-    test "returns project-specific adaptors", %{socket: socket, project: project} do
-      # Create jobs with specific adaptors in this project
-      workflow = insert(:workflow, project: project)
+    test "request_adaptors enriches records with icon_urls when meta present",
+         %{socket: socket} do
+      name = "@openfn/language-common"
+      square_sha = :crypto.strong_rand_bytes(32)
+      rectangle_sha = :crypto.strong_rand_bytes(32)
 
-      insert(:job,
-        workflow: workflow,
-        adaptor: "@openfn/language-salesforce@latest"
+      insert(:adaptor,
+        name: name,
+        icon_square_ext: "png",
+        icon_square_sha256: square_sha,
+        icon_rectangle_ext: "svg",
+        icon_rectangle_sha256: rectangle_sha
       )
 
-      insert(:job, workflow: workflow, adaptor: "@openfn/language-http@2.0.0")
+      ref = push(socket, "request_adaptors", %{})
+      assert_reply ref, :ok, %{adaptors: adaptors}
 
-      ref = push(socket, "request_project_adaptors", %{})
+      record = Enum.find(adaptors, &(&1.name == name))
+      assert record, "expected legacy registry to include #{name}"
 
-      assert_reply ref, :ok, %{
-        project_adaptors: project_adaptors,
-        all_adaptors: all_adaptors
-      }
+      {:ok, meta} = Lightning.Adaptors.icon_meta(name)
 
-      assert is_list(project_adaptors)
-      assert is_list(all_adaptors)
+      assert record.icon_urls.square ==
+               LightningWeb.AdaptorIconURL.build(name, meta, :square)
 
-      # Verify project_adaptors contains only adaptors used in the project
-      project_adaptor_names = Enum.map(project_adaptors, & &1.name)
-      assert "@openfn/language-salesforce" in project_adaptor_names
-      assert "@openfn/language-http" in project_adaptor_names
+      assert record.icon_urls.rectangle ==
+               LightningWeb.AdaptorIconURL.build(name, meta, :rectangle)
 
-      # Verify all_adaptors contains the full registry
-      assert length(all_adaptors) > 0
+      assert is_binary(record.icon_urls.square)
+      assert is_binary(record.icon_urls.rectangle)
     end
 
-    test "returns empty project_adaptors for project with no jobs", %{
-      socket: socket
-    } do
-      ref = push(socket, "request_project_adaptors", %{})
+    test "request_adaptors emits nil icon_urls when row has no icon meta",
+         %{socket: socket} do
+      name = "@openfn/language-dhis2"
 
-      assert_reply ref, :ok, %{
-        project_adaptors: project_adaptors,
-        all_adaptors: all_adaptors
-      }
-
-      assert project_adaptors == []
-      assert is_list(all_adaptors)
-      assert length(all_adaptors) > 0
-    end
-
-    test "handles duplicate adaptors in project", %{
-      socket: socket,
-      project: project
-    } do
-      workflow = insert(:workflow, project: project)
-
-      # Create multiple jobs with the same adaptor
-      insert(:job,
-        workflow: workflow,
-        adaptor: "@openfn/language-common@latest"
+      insert(:adaptor,
+        name: name,
+        source: :npm,
+        icon_square_ext: nil,
+        icon_square_sha256: nil,
+        icon_rectangle_ext: nil,
+        icon_rectangle_sha256: nil
       )
 
-      insert(:job, workflow: workflow, adaptor: "@openfn/language-common@1.0.0")
+      ref = push(socket, "request_adaptors", %{})
+      assert_reply ref, :ok, %{adaptors: adaptors}
 
-      ref = push(socket, "request_project_adaptors", %{})
+      record = Enum.find(adaptors, &(&1.name == name))
+      assert record, "expected packages/0 to include #{name}"
+      assert record.icon_urls == %{square: nil, rectangle: nil}
+    end
 
-      assert_reply ref, :ok, %{project_adaptors: project_adaptors}
+    test "request_adaptors handles half-populated icon meta", %{socket: socket} do
+      name = "@openfn/language-commcare"
+      square_sha = :crypto.strong_rand_bytes(32)
 
-      # Should only appear once in project_adaptors
-      common_adaptors =
-        Enum.filter(project_adaptors, &(&1.name == "@openfn/language-common"))
+      insert(:adaptor,
+        name: name,
+        icon_square_ext: "png",
+        icon_square_sha256: square_sha,
+        icon_rectangle_ext: nil,
+        icon_rectangle_sha256: nil
+      )
 
-      assert length(common_adaptors) <= 1
+      ref = push(socket, "request_adaptors", %{})
+      assert_reply ref, :ok, %{adaptors: adaptors}
+
+      record = Enum.find(adaptors, &(&1.name == name))
+      assert record, "expected legacy registry to include #{name}"
+      assert is_binary(record.icon_urls.square)
+      assert record.icon_urls.rectangle == nil
     end
 
     test "returns correctly structured project credentials", %{
@@ -1316,6 +1338,25 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert saved.lock_version == lock_version
     end
 
+    test "replies an error and keeps the channel alive when the session process is dead",
+         %{socket: socket} do
+      # A dead session makes the call exit rather than raise; the reply must
+      # still arrive.
+      session_pid = socket.assigns.session_pid
+      ref_mon = Process.monitor(session_pid)
+      Process.exit(session_pid, :kill)
+      assert_receive {:DOWN, ^ref_mon, :process, ^session_pid, :killed}
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{base: ["An internal error occurred"]},
+        type: "internal_error"
+      }
+
+      assert Process.alive?(socket.channel_pid)
+    end
+
     test "returns validation errors", %{socket: socket} do
       # Set invalid data in Y.Doc (blank name)
       session_pid = socket.assigns.session_pid
@@ -1408,6 +1449,77 @@ defmodule LightningWeb.WorkflowChannelTest do
       # since the transaction rolls back entirely on the snapshot failure.
       refute Lightning.Workflows.get_workflow!(workflow.id).name ==
                "Snapshot Collision"
+    end
+
+    test "handles an adaptor catalogue that is not ready", %{
+      socket: socket,
+      workflow: workflow,
+      sup: _sup
+    } do
+      # Global mode: the refresh runs in a Task owned by the isolated
+      # instance's Scheduler.
+      Lightning.Adaptors.Catalogue.delete_all_for_source(:npm)
+      Mox.set_mox_global(Lightning.Adaptors.StrategyMock)
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:error, :unreachable}
+      end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      session_pid = socket.assigns.session_pid
+      doc = Lightning.Collaboration.Session.get_doc(session_pid)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "name", "Blocked By Catalogue")
+      end)
+
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        errors: %{
+          base: ["The adaptor catalogue is still loading. Try again shortly."]
+        },
+        type: "adaptor_catalogue_unavailable"
+      }
+
+      refute Lightning.Workflows.get_workflow!(workflow.id).name ==
+               "Blocked By Catalogue"
+    end
+
+    test "does not block other channel traffic while the save is pending", %{
+      socket: socket
+    } do
+      # Slow enough that a synchronous handle_in would still be blocked when
+      # the second push is asserted.
+      Lightning.Adaptors.Catalogue.delete_all_for_source(:npm)
+      Mox.set_mox_global(Lightning.Adaptors.StrategyMock)
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        Process.sleep(300)
+        {:error, :unreachable}
+      end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      save_ref = push(socket, "save_workflow", %{})
+
+      name_ref =
+        push(socket, "validate_workflow_name", %{
+          "workflow" => %{"name" => "Another Name"}
+        })
+
+      assert_reply name_ref, :ok, _payload, 100
+
+      assert_reply save_ref,
+                   :error,
+                   %{type: "adaptor_catalogue_unavailable"},
+                   2000
     end
 
     test "handles deleted workflow", %{socket: socket, workflow: workflow} do
@@ -2688,6 +2800,88 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert [cred | _] = credentials.project_credentials
       assert cred.owner == nil
       assert cred.oauth_client_name == nil
+    end
+  end
+
+  describe "PubSub subscription and adaptors broadcasting" do
+    test "forwards adaptors_updated envelope from client topic to socket", %{
+      sup: sup
+    } do
+      payload = %{adaptors: [%{name: "a"}]}
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        Lightning.Adaptors.Supervisor.client_topic(sup),
+        %{event: "adaptors_updated", payload: payload}
+      )
+
+      assert_push "adaptors_updated", %{adaptors: [%{name: "a"}]}
+    end
+
+    test "credentials_updated forwarder still pushes after adaptors clause added",
+         %{workflow: workflow} do
+      rendered_credentials = %{
+        project_credentials: [],
+        keychain_credentials: []
+      }
+
+      Phoenix.PubSub.broadcast(
+        Lightning.PubSub,
+        "workflow:collaborate:#{workflow.id}",
+        %{event: "credentials_updated", payload: rendered_credentials}
+      )
+
+      assert_push "credentials_updated", %{
+        project_credentials: [],
+        keychain_credentials: []
+      }
+    end
+
+    test "does not push adaptors_updated for unrelated events on client topic",
+         %{sup: sup} do
+      capture_log(fn ->
+        Phoenix.PubSub.broadcast(
+          Lightning.PubSub,
+          Lightning.Adaptors.Supervisor.client_topic(sup),
+          %{event: "something_else", payload: %{}}
+        )
+
+        refute_push "adaptors_updated", _, 50
+      end)
+    end
+  end
+
+  describe "unrecognised channel messages" do
+    test "handle_in replies with an error instead of crashing the channel",
+         %{socket: socket} do
+      log =
+        capture_log(fn ->
+          ref = push(socket, "request_project_adaptors", %{})
+
+          assert_reply ref, :error, %{
+            reason: "unknown event: request_project_adaptors"
+          }
+        end)
+
+      assert log =~ "unhandled handle_in event: request_project_adaptors"
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "handle_info logs and stays alive for an unrecognised internal broadcast",
+         %{socket: socket, workflow: workflow} do
+      log =
+        capture_log(fn ->
+          Phoenix.PubSub.broadcast(
+            Lightning.PubSub,
+            "workflow:collaborate:#{workflow.id}",
+            %{event: "some_future_event", payload: %{}}
+          )
+
+          refute_push "some_future_event", _, 50
+        end)
+
+      assert log =~ "unhandled handle_info event: some_future_event"
+      assert Process.alive?(socket.channel_pid)
     end
   end
 

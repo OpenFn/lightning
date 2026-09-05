@@ -62,8 +62,6 @@ COPY lib lib
 COPY assets assets
 
 RUN mix lightning.install_runtime
-RUN mix lightning.install_adaptor_icons
-RUN mix lightning.install_schemas
 RUN npm install --prefix assets
 
 # compile assets
@@ -121,12 +119,10 @@ ENV ADAPTORS_PATH=/app/priv/openfn
 # Only copy the final release and the adaptor directory from the build stage
 COPY --from=builder --chown=lightning:root /app/_build/${MIX_ENV}/rel/lightning ./
 COPY --from=builder --chown=lightning:root /app/priv/openfn ./priv/openfn
-COPY --from=builder --chown=lightning:root /app/priv/schemas ./priv/schemas
 COPY --from=builder --chown=lightning:root /app/priv/github ./priv/github
 
 USER lightning
 
-ENV SCHEMAS_PATH="/app/priv/schemas"
 ENV COMMIT=${COMMIT}
 ENV BRANCH=${BRANCH}
 ENV IMAGE_TAG=${IMAGE_TAG}

@@ -17,7 +17,7 @@ defmodule Lightning.Workflows.Job do
   """
   use Lightning.Schema
 
-  alias Lightning.AdaptorRegistry
+  alias Lightning.Adaptors
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.Scoping
@@ -129,9 +129,11 @@ defmodule Lightning.Workflows.Job do
 
   defp validate_adaptor(changeset) do
     changeset =
-      validate_format(changeset, :adaptor, AdaptorRegistry.adaptor_format(),
-        message: "adaptor has invalid format"
-      )
+      validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
+        if Adaptors.valid_format?(adaptor),
+          do: [],
+          else: [adaptor: "adaptor has invalid format"]
+      end)
 
     if changeset.valid? do
       validate_known_adaptor(changeset)
@@ -140,23 +142,27 @@ defmodule Lightning.Workflows.Job do
     end
   end
 
-  # Rejects an adaptor the registry doesn't know about, so an unknown package
-  # cannot be persisted on a job.
+  # Rejects an adaptor the catalogue doesn't know about, so an unknown
+  # package cannot be persisted on a job. `fetch_adaptor` returns
+  # `:not_found` once the catalogue has loaded and genuinely lacks the
+  # package, but any other error means the catalogue itself isn't ready
+  # yet, so that case gets its own, retry-able message.
   defp validate_known_adaptor(changeset) do
     validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
-      if adaptor_known?(adaptor) do
+      with {name, _version} when is_binary(name) <- Adaptors.parse_spec(adaptor),
+           {:ok, _package} <- Adaptors.fetch_adaptor(name) do
         []
       else
-        [adaptor: "is not a recognised adaptor"]
+        {:error, :not_found} ->
+          [adaptor: "is not a recognised adaptor"]
+
+        {:error, _} ->
+          [adaptor: "adaptor catalogue is not ready yet, try again shortly"]
+
+        _ ->
+          [adaptor: "is not a recognised adaptor"]
       end
     end)
-  end
-
-  defp adaptor_known?(adaptor) do
-    case AdaptorRegistry.resolve_package_name(adaptor) do
-      {name, _version} when is_binary(name) -> AdaptorRegistry.exists?(name)
-      _ -> false
-    end
   end
 
   defp validate_keychain_credential_project_membership(changeset) do

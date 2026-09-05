@@ -10,8 +10,8 @@ defmodule Lightning.AdaptorService do
   The service requires at least `:adaptors_path`, which is used to both query
   which adaptors are installed and when to install new adaptors.
 
-  Another optional setting is: `:repo`, which must point at a module that will be
-  used to do the querying and installing.
+  Another optional setting is `:repo`, which must point at a module that
+  does the actual querying and installing.
 
   ## Installing Adaptors
 
@@ -21,6 +21,10 @@ defmodule Lightning.AdaptorService do
   The adaptor is marked as `:installing`, to allow for conditional behaviour
   elsewhere such as delaying or rejecting processing until the adaptor becomes
   available.
+
+  Every install is gated on the adaptor catalogue (`Lightning.Adaptors`):
+  `install/2` refuses to run `npm install` for a package name the catalogue
+  doesn't recognise.
 
   ## Looking up adaptors
 
@@ -54,12 +58,15 @@ defmodule Lightning.AdaptorService do
   """
   use Agent
 
-  alias Lightning.AdaptorRegistry
+  alias Lightning.Adaptors
 
   require Logger
 
-  defmodule Adaptor do
-    @moduledoc false
+  defmodule InstalledAdaptor do
+    @moduledoc """
+    An adaptor installed on disk, as returned by `Lightning.AdaptorService.find_adaptor/2`
+    and `Lightning.AdaptorService.install/2`.
+    """
     @type install_status :: :present | :installing
 
     @type t :: %__MODULE__{
@@ -88,7 +95,7 @@ defmodule Lightning.AdaptorService do
     This function is called when the service starts up in order to query
     which adaptors are already installed.
     """
-    @callback list_local(path :: String.t()) :: list(Adaptor.t())
+    @callback list_local(path :: String.t()) :: list(InstalledAdaptor.t())
     def list_local(path, _depth \\ 4) when is_binary(path) do
       System.cmd("npm", ~w[list --global --json --long --prefix #{path}],
         env: []
@@ -103,7 +110,7 @@ defmodule Lightning.AdaptorService do
             local_name |> String.starts_with?("@openfn")
           end)
           |> Enum.map(fn {local_name, details} ->
-            %Adaptor{
+            %InstalledAdaptor{
               name: details["name"],
               version: details["version"],
               path: details["path"],
@@ -193,10 +200,9 @@ defmodule Lightning.AdaptorService do
 
     @type t :: %__MODULE__{
             name: GenServer.server(),
-            adaptors: [Adaptor.t()],
+            adaptors: [InstalledAdaptor.t()],
             adaptors_path: binary(),
-            repo: module(),
-            adaptor_registry: GenServer.server()
+            repo: module()
           }
 
     @enforce_keys [:adaptors_path]
@@ -204,8 +210,7 @@ defmodule Lightning.AdaptorService do
                 [
                   :name,
                   adaptors: [],
-                  repo: Repo,
-                  adaptor_registry: Lightning.AdaptorRegistry
+                  repo: Repo
                 ]
 
     def find_adaptor(%{adaptors: adaptors}, fun) when is_function(fun) do
@@ -235,12 +240,13 @@ defmodule Lightning.AdaptorService do
     Agent.get(agent, fn state -> state.adaptors end)
   end
 
-  @spec find_adaptor(Agent.agent(), package :: String.t()) :: Adaptor.t() | nil
+  @spec find_adaptor(Agent.agent(), package :: String.t()) ::
+          InstalledAdaptor.t() | nil
   def find_adaptor(agent, package) when is_binary(package) do
     find_adaptor(agent, resolve_package_name(package))
   end
 
-  @spec find_adaptor(Agent.agent(), package_spec()) :: Adaptor.t() | nil
+  @spec find_adaptor(Agent.agent(), package_spec()) :: InstalledAdaptor.t() | nil
   def find_adaptor(agent, {package_name, version}) do
     requirement = version_to_requirement(version)
 
@@ -284,7 +290,7 @@ defmodule Lightning.AdaptorService do
   end
 
   @spec install(Agent.agent(), binary()) ::
-          {:ok, Adaptor.t()}
+          {:ok, InstalledAdaptor.t()}
           | {:error, :adaptor_not_permitted}
           | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
   def install(agent, package) when is_binary(package) do
@@ -292,13 +298,11 @@ defmodule Lightning.AdaptorService do
   end
 
   @spec install(Agent.agent(), package_spec()) ::
-          {:ok, Adaptor.t()}
+          {:ok, InstalledAdaptor.t()}
           | {:error, :adaptor_not_permitted}
           | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
   def install(agent, {package_name, _version} = package_spec) do
-    registry = Agent.get(agent, fn state -> state.adaptor_registry end)
-
-    if AdaptorRegistry.exists?(registry, package_name) do
+    if known?(package_name) do
       agent
       |> find_adaptor(package_spec)
       |> case do
@@ -314,11 +318,15 @@ defmodule Lightning.AdaptorService do
     end
   end
 
+  defp known?(nil), do: false
+
+  defp known?(name), do: match?({:ok, _}, Adaptors.fetch_adaptor(name))
+
   @spec install!(Agent.agent(), package_spec()) ::
-          {:ok, Adaptor.t()}
+          {:ok, InstalledAdaptor.t()}
           | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
   defp install!(agent, {package_name, version} = package_spec) do
-    new_adaptor = %Adaptor{
+    new_adaptor = %InstalledAdaptor{
       name: package_name,
       version: version,
       status: :installing
@@ -350,15 +358,8 @@ defmodule Lightning.AdaptorService do
     end
   end
 
-  def resolve_package_name(package_name) when is_binary(package_name) do
-    AdaptorRegistry.adaptor_format()
-    |> Regex.run(package_name)
-    |> case do
-      [_, name, version] -> {name, version}
-      [_, name] -> {name, nil}
-      _ -> {nil, nil}
-    end
-  end
+  def resolve_package_name(package_name) when is_binary(package_name),
+    do: Adaptors.parse_spec(package_name)
 
   @doc """
   Turns a package name and version into a string for NPM.

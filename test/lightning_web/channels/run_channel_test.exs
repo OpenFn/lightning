@@ -8,6 +8,7 @@ defmodule LightningWeb.RunChannelTest do
   alias Lightning.Workflows
 
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Lightning.TestUtils
   import Lightning.TokenHelpers
@@ -244,6 +245,7 @@ defmodule LightningWeb.RunChannelTest do
   end
 
   describe "fetching run data" do
+    setup :isolated_adaptors
     setup :set_google_credential
     setup :create_socket_and_run
 
@@ -309,6 +311,33 @@ defmodule LightningWeb.RunChannelTest do
                  "project_id" => workflow.project_id
                }
              }
+    end
+
+    test "fetch:plan replies with an error when a job adaptor cannot be resolved",
+         %{project: project} = context do
+      seed_ready_catalogue()
+
+      trigger = build(:trigger, type: :webhook, enabled: true)
+      job = build(:job, adaptor: "@openfn/language-never-published-zzz@latest")
+
+      workflow =
+        %{triggers: [trigger]} =
+        build(:workflow, project: project)
+        |> with_trigger(trigger)
+        |> with_job(job)
+        |> with_edge({trigger, job}, %{condition_type: :always})
+        |> insert()
+
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
+      %{socket: socket} =
+        context
+        |> Map.merge(%{workflow: workflow, trigger: trigger, snapshot: snapshot})
+        |> merge_setups([:create_run, :create_socket, :join_run_channel])
+
+      ref = push(socket, "fetch:plan", %{})
+
+      assert_reply ref, :error, %{reason: "adaptor_not_found"}
     end
 
     @tag project_retention_policy: :erase_all
@@ -2781,6 +2810,7 @@ defmodule LightningWeb.RunChannelTest do
 
     job =
       build(:job,
+        adaptor: "@openfn/language-common@1.6.2",
         body: ~s[fn(state => { return {...state, extra: "data"} })],
         project_credential: %{credential: credential, project: project}
       )

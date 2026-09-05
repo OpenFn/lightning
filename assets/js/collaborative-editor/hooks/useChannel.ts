@@ -46,6 +46,7 @@ export interface ChannelError {
    * - validation_error: Ecto changeset validation failed
    * - optimistic_lock_error: Concurrent modification conflict (stale lock_version)
    * - limit_error: Usage limit exceeded (AI assistant, runs, etc.)
+   * - adaptor_catalogue_unavailable: Adaptor catalogue hasn't loaded yet, retry shortly
    *
    * Optional for the same reason as `errors`.
    */
@@ -57,6 +58,7 @@ export interface ChannelError {
     | 'validation_error'
     | 'optimistic_lock_error'
     | 'limit_error'
+    | 'adaptor_catalogue_unavailable'
     | undefined;
 
   /**
@@ -69,11 +71,16 @@ export interface ChannelError {
 export async function channelRequest<T = unknown>(
   channel: Channel,
   message: string,
-  payload: object
+  payload: object,
+  timeout?: number
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    channel
-      .push(message, payload)
+    const push =
+      timeout === undefined
+        ? channel.push(message, payload)
+        : channel.push(message, payload, timeout);
+
+    push
       .receive('ok', (response: T) => {
         resolve(response);
       })

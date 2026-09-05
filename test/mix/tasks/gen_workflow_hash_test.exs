@@ -6,6 +6,13 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHashTest do
   alias Lightning.WorkflowVersions
   alias Mix.Tasks.Lightning.GenWorkflowHash
 
+  # The task changes the global Logger level; restore it or capture_log goes
+  # quiet for the rest of the suite.
+  setup do
+    level = Logger.level()
+    on_exit(fn -> Logger.configure(level: level) end)
+  end
+
   defp run(args) do
     capture_io(fn -> GenWorkflowHash.run(args) end) |> String.trim()
   end

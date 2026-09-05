@@ -4,6 +4,7 @@ defmodule Lightning.Workflows.JobTest do
   alias Lightning.Workflows.Job
   alias Lightning.Repo
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
 
   defp random_job_name(length) do
@@ -16,6 +17,8 @@ defmodule Lightning.Workflows.JobTest do
   end
 
   describe "changeset/2" do
+    setup :isolated_adaptors
+
     test "a malformed id is a changeset error, not an Ecto.ChangeError on save" do
       # An unsubstituted import placeholder reaching :id (a :binary_id field)
       # passes cast/3 and would only raise when dumped on insert. validate_uuid
@@ -231,6 +234,9 @@ defmodule Lightning.Workflows.JobTest do
     end
 
     test "accepts well-formed, registry-listed adaptor strings" do
+      ensure_adaptor("@openfn/language-common")
+      ensure_adaptor("@openfn/language-http")
+
       [
         "@openfn/language-common@latest",
         "@openfn/language-http@1.2.3",
@@ -239,16 +245,57 @@ defmodule Lightning.Workflows.JobTest do
         "@openfn/language-common"
       ]
       |> Enum.each(fn adaptor ->
-        errors = Job.changeset(%Job{}, %{adaptor: adaptor}) |> errors_on()
+        errors =
+          Job.changeset(%Job{}, %{
+            name: "job",
+            body: "fn(state => state)",
+            adaptor: adaptor
+          })
+          |> errors_on()
+
         refute errors[:adaptor], "expected #{inspect(adaptor)} to be accepted"
       end)
     end
 
+    test "accepts an adaptor the catalogue listing excludes" do
+      ensure_adaptor("@openfn/language-collections")
+
+      errors =
+        Job.changeset(%Job{}, %{
+          name: "job",
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-collections@1.0.0"
+        })
+        |> errors_on()
+
+      refute errors[:adaptor]
+    end
+
+    test "a never-loaded catalogue refuses the adaptor as not ready, then rejects it once loaded" do
+      # With no expectations the production Scheduler's load fails, as it
+      # would with npm unreachable.
+      params = %{
+        name: "job",
+        body: "fn(state => state)",
+        adaptor: "@openfn/language-totally-unseeded-xyz@1.0.0"
+      }
+
+      assert Job.changeset(%Job{}, params) |> errors_on() |> Map.get(:adaptor) ==
+               ["adaptor catalogue is not ready yet, try again shortly"]
+
+      ensure_adaptor("@openfn/language-http")
+
+      assert Job.changeset(%Job{}, params) |> errors_on() |> Map.get(:adaptor) ==
+               ["is not a recognised adaptor"]
+    end
+
     test "rejects a well-formed adaptor that is not in the registry" do
+      ensure_adaptor("@openfn/language-http")
+
       # The registry membership check only runs on an otherwise-valid changeset,
       # so name and body are supplied here.
       [
-        "@openfn/language-foo@1.0.0",
+        "@openfn/language-never-seeded@1.0.0",
         "@evilcorp/language-http@1.0.0",
         "common@1.0.0"
       ]

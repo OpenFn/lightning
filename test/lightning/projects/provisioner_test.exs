@@ -8,10 +8,13 @@ defmodule Lightning.Projects.ProvisionerTest do
   alias Lightning.Workflows.Snapshot
 
   import Ecto.Query
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import LightningWeb.CoreComponents, only: [translate_error: 1]
 
   describe "parse_document/2 with a new project" do
+    setup :isolated_adaptors
+
     test "with invalid data" do
       Mox.verify_on_exit!()
 
@@ -169,6 +172,8 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
 
     test "rejects a job with an adaptor that is not in the registry" do
+      ensure_adaptor("@openfn/language-common")
+
       %{body: body} = valid_document()
 
       body =
@@ -195,6 +200,36 @@ defmodule Lightning.Projects.ProvisionerTest do
                  %{jobs: [%{adaptor: ["is not a recognised adaptor"]} | _]}
                ]
              } = flatten_errors(changeset)
+    end
+  end
+
+  describe "import_document/2 adaptor validation" do
+    setup :isolated_adaptors
+
+    test "allows the import when the adaptor is known" do
+      user = insert(:user)
+      ensure_adaptor("@openfn/language-foo")
+      %{body: body} = valid_document()
+
+      body =
+        Map.update!(body, "workflows", fn workflows ->
+          Enum.map(workflows, fn workflow ->
+            Map.update!(workflow, "jobs", fn [first_job | rest] ->
+              [
+                Map.put(first_job, "adaptor", "@openfn/language-foo@1.0.0")
+                | rest
+              ]
+            end)
+          end)
+        end)
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      assert {:ok, _project} = Provisioner.import_document(nil, user, body)
     end
   end
 

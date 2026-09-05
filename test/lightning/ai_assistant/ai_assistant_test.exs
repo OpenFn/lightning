@@ -1,16 +1,20 @@
 defmodule Lightning.AiAssistantTest do
   use Lightning.DataCase, async: true
+  import Lightning.AdaptorTestHelpers
   import Mox
 
   alias Lightning.AiAssistant
   alias Lightning.AiAssistant.ChatMessage
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])
     workflow = insert(:simple_workflow, project: project)
+    ensure_adaptor("@openfn/language-common")
+    ensure_adaptor("@openfn/language-http")
     [user: user, project: project, workflow: workflow]
   end
 
@@ -440,8 +444,8 @@ defmodule Lightning.AiAssistantTest do
       assert session.user_id == user.id
       assert session.expression == job_1.body
 
-      assert session.adaptor ==
-               Lightning.AdaptorRegistry.resolve_adaptor(job_1.adaptor)
+      assert {:ok, session.adaptor} ==
+               Lightning.Adaptors.to_wire(job_1.adaptor)
 
       assert length(session.messages) == 1
       message = hd(session.messages)
@@ -968,8 +972,8 @@ defmodule Lightning.AiAssistantTest do
 
       assert updated_session.expression == expression
 
-      assert updated_session.adaptor ==
-               Lightning.AdaptorRegistry.resolve_adaptor(adaptor)
+      assert {:ok, updated_session.adaptor} ==
+               Lightning.Adaptors.to_wire(adaptor)
     end
   end
 
@@ -1092,8 +1096,8 @@ defmodule Lightning.AiAssistantTest do
 
       assert enriched.expression == job.body
 
-      assert enriched.adaptor ==
-               Lightning.AdaptorRegistry.resolve_adaptor(job.adaptor)
+      assert {:ok, enriched.adaptor} ==
+               Lightning.Adaptors.to_wire(job.adaptor)
     end
 
     test "adds run logs when follow_run_id is in meta", %{
@@ -1258,10 +1262,8 @@ defmodule Lightning.AiAssistantTest do
       # Verify the job body and adaptor are set correctly
       assert enriched.expression == "console.log('test');"
 
-      assert enriched.adaptor ==
-               Lightning.AdaptorRegistry.resolve_adaptor(
-                 "@openfn/language-http@latest"
-               )
+      assert {:ok, enriched.adaptor} ==
+               Lightning.Adaptors.to_wire("@openfn/language-http@latest")
     end
 
     test "fetches logs when follow_run_id is added mid-session", %{

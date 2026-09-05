@@ -4,6 +4,7 @@ defmodule Lightning.Config.BootstrapTest do
   alias Lightning.Config.Bootstrap
 
   import Mox
+  import ExUnit.CaptureLog
   setup :verify_on_exit!
 
   @opts_key {Config, :opts}
@@ -537,9 +538,9 @@ defmodule Lightning.Config.BootstrapTest do
   end
 
   describe "adaptor registry" do
-    test "raises an exception when LOCAL_ADAPTORS is set to true but OPENFN_ADAPTORS_REPO is not set" do
+    test "raises when LOCAL_ADAPTORS is set to true but no repo path is set" do
       assert_raise RuntimeError,
-                   ~r/LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set/,
+                   ~r/ADAPTORS_STRATEGY is set to local, but neither ADAPTORS_LOCAL_REPO nor/,
                    fn ->
                      Dotenvy.source([%{"LOCAL_ADAPTORS" => "true"}])
 
@@ -547,28 +548,34 @@ defmodule Lightning.Config.BootstrapTest do
                    end
     end
 
-    test "local_adaptors_repos defaults to [] when OPENFN_ADAPTORS_REPO is set but LOCAL_ADAPTORS is not set" do
-      Dotenvy.source([%{"OPENFN_ADAPTORS_REPO" => "/path"}])
-      Bootstrap.configure()
+    test "LOCAL_ADAPTORS=true with ADAPTORS_LOCAL_REPO boots the local strategy and only warns" do
+      log =
+        capture_log(fn ->
+          Dotenvy.source([
+            %{"LOCAL_ADAPTORS" => "true", "ADAPTORS_LOCAL_REPO" => "/path"}
+          ])
 
-      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+          Bootstrap.configure()
+        end)
 
-      assert adaptor_registry[:local_adaptors_repos] == []
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.Local
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/path"]
+      assert log =~ "LOCAL_ADAPTORS is deprecated"
     end
 
-    test "local_adaptors_repos is a one-element list when both OPENFN_ADAPTORS_REPO and LOCAL_ADAPTORS are set with a single path" do
+    test "OPENFN_ADAPTORS_REPO with LOCAL_ADAPTORS=true becomes the local strategy's single repo path" do
       Dotenvy.source([
         %{"OPENFN_ADAPTORS_REPO" => "/path", "LOCAL_ADAPTORS" => "true"}
       ])
 
       Bootstrap.configure()
 
-      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
-
-      assert adaptor_registry[:local_adaptors_repos] == ["/path"]
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/path"]
     end
 
-    test "local_adaptors_repos parses comma-separated OPENFN_ADAPTORS_REPO into an ordered list" do
+    test "comma-separated OPENFN_ADAPTORS_REPO parses into an ordered list" do
       Dotenvy.source([
         %{
           "OPENFN_ADAPTORS_REPO" => "/private/repo,/canonical/adaptors",
@@ -578,15 +585,13 @@ defmodule Lightning.Config.BootstrapTest do
 
       Bootstrap.configure()
 
-      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
-
-      assert adaptor_registry[:local_adaptors_repos] == [
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == [
                "/private/repo",
                "/canonical/adaptors"
              ]
     end
 
-    test "local_adaptors_repos drops empty segments and trims whitespace" do
+    test "OPENFN_ADAPTORS_REPO drops empty segments and trims whitespace" do
       Dotenvy.source([
         %{
           "OPENFN_ADAPTORS_REPO" => "  /a  ,  ,/b ",
@@ -596,9 +601,260 @@ defmodule Lightning.Config.BootstrapTest do
 
       Bootstrap.configure()
 
-      adaptor_registry = get_env(:lightning, Lightning.AdaptorRegistry)
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == [
+               "/a",
+               "/b"
+             ]
+    end
+  end
 
-      assert adaptor_registry[:local_adaptors_repos] == ["/a", "/b"]
+  describe "adaptors NPM upstream URLs" do
+    test "no keys are forced when nothing is set, so sub-modules' own @default_* wins" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      refute Keyword.has_key?(npm, :registry_url)
+      refute Keyword.has_key?(npm, :jsdelivr_url)
+      refute Keyword.has_key?(npm, :github_url)
+      refute Keyword.has_key?(npm, :github_ref)
+      refute Keyword.has_key?(npm, :http_timeout)
+    end
+
+    test "are overridden by the ADAPTORS_NPM_* env vars" do
+      Dotenvy.source([
+        %{
+          "ADAPTORS_NPM_REGISTRY_URL" => "http://localhost:4874/npm",
+          "ADAPTORS_NPM_JSDELIVR_URL" => "http://localhost:4874/jsdelivr",
+          "ADAPTORS_NPM_GITHUB_URL" => "http://localhost:4874/github",
+          "ADAPTORS_NPM_GITHUB_REF" => "some-feature-branch"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      assert npm[:registry_url] == "http://localhost:4874/npm"
+      assert npm[:jsdelivr_url] == "http://localhost:4874/jsdelivr"
+      assert npm[:github_url] == "http://localhost:4874/github"
+      assert npm[:github_ref] == "some-feature-branch"
+    end
+
+    test "ADAPTORS_NPM_HTTP_TIMEOUT sets http_timeout when present" do
+      Dotenvy.source([%{"ADAPTORS_NPM_HTTP_TIMEOUT" => "5000"}])
+
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      assert npm[:http_timeout] == 5000
+    end
+
+    test "ADAPTORS_NPM_HTTP_TIMEOUT does not force a 0ms timeout when set but empty" do
+      Dotenvy.source([%{"ADAPTORS_NPM_HTTP_TIMEOUT" => ""}])
+
+      Bootstrap.configure()
+
+      npm = get_env(:lightning, Lightning.Adaptors.NPM)
+
+      refute Keyword.has_key?(npm, :http_timeout)
+    end
+  end
+
+  describe "adaptors strategy" do
+    test "defaults to the npm strategy when nothing is set" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.NPM
+    end
+
+    test "ADAPTORS_STRATEGY=npm explicitly selects the npm strategy" do
+      Dotenvy.source([%{"ADAPTORS_STRATEGY" => "npm"}])
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.NPM
+    end
+
+    test "ADAPTORS_STRATEGY=local selects the local strategy" do
+      Dotenvy.source([
+        %{"ADAPTORS_STRATEGY" => "local", "ADAPTORS_LOCAL_REPO" => "/path"}
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.Local
+    end
+
+    test "ADAPTORS_STRATEGY is trimmed of surrounding whitespace" do
+      Dotenvy.source([
+        %{"ADAPTORS_STRATEGY" => "  local  ", "ADAPTORS_LOCAL_REPO" => "/path"}
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.Local
+    end
+
+    test "ADAPTORS_STRATEGY=local with no repo path configured raises" do
+      assert_raise RuntimeError,
+                   ~r/ADAPTORS_STRATEGY is set to local, but neither ADAPTORS_LOCAL_REPO nor/,
+                   fn ->
+                     Dotenvy.source([%{"ADAPTORS_STRATEGY" => "local"}])
+
+                     Bootstrap.configure()
+                   end
+    end
+
+    test "does not write :strategy into the real application env in :test, so config/test.exs's mock survives" do
+      Process.put({Config, :opts}, {:test, ""})
+
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      refute Keyword.has_key?(
+               get_env(:lightning, Lightning.Adaptors),
+               :strategy
+             )
+    end
+
+    test "raises when ADAPTORS_STRATEGY is not npm or local" do
+      assert_raise RuntimeError, ~r/ADAPTORS_STRATEGY/, fn ->
+        Dotenvy.source([%{"ADAPTORS_STRATEGY" => "bogus"}])
+        Bootstrap.configure()
+      end
+    end
+
+    test "LOCAL_ADAPTORS=true with ADAPTORS_STRATEGY unset back-compats to the local strategy and warns" do
+      log =
+        capture_log(fn ->
+          Dotenvy.source([
+            %{"LOCAL_ADAPTORS" => "true", "OPENFN_ADAPTORS_REPO" => "/path"}
+          ])
+
+          Bootstrap.configure()
+        end)
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.Local
+
+      assert log =~ "ADAPTORS_STRATEGY=local"
+    end
+
+    test "ADAPTORS_STRATEGY explicitly set wins over the LOCAL_ADAPTORS back-compat" do
+      log =
+        capture_log(fn ->
+          Dotenvy.source([
+            %{
+              "LOCAL_ADAPTORS" => "true",
+              "OPENFN_ADAPTORS_REPO" => "/path",
+              "ADAPTORS_STRATEGY" => "npm"
+            }
+          ])
+
+          Bootstrap.configure()
+        end)
+
+      assert get_env(:lightning, Lightning.Adaptors)[:strategy] ==
+               Lightning.Adaptors.NPM
+
+      refute log =~ "ADAPTORS_STRATEGY=local"
+    end
+  end
+
+  describe "adaptors icons path" do
+    test "is unset when ADAPTORS_ICONS_PATH is not set" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      # A present-but-nil :icon_path would defeat
+      # Lightning.Adaptors.Config's own default, so the key must be absent
+      # entirely, not just nil.
+      refute Keyword.has_key?(
+               get_env(:lightning, Lightning.Adaptors),
+               :icon_path
+             )
+    end
+
+    test "ADAPTORS_ICONS_PATH sets and expands the icon path" do
+      Dotenvy.source([%{"ADAPTORS_ICONS_PATH" => "./tmp/icons"}])
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:icon_path] ==
+               Path.expand("./tmp/icons")
+    end
+  end
+
+  describe "adaptors local strategy repo paths" do
+    test "defaults to an empty list when nothing is set" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == []
+    end
+
+    test "ADAPTORS_LOCAL_REPO parses a comma-separated list" do
+      Dotenvy.source([%{"ADAPTORS_LOCAL_REPO" => "/a,/b"}])
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == [
+               "/a",
+               "/b"
+             ]
+    end
+
+    test "OPENFN_ADAPTORS_REPO back-compats to the local strategy paths and warns when ADAPTORS_STRATEGY=local" do
+      log =
+        capture_log(fn ->
+          Dotenvy.source([
+            %{
+              "OPENFN_ADAPTORS_REPO" => "/path",
+              "ADAPTORS_STRATEGY" => "local"
+            }
+          ])
+
+          Bootstrap.configure()
+        end)
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/path"]
+      assert log =~ "ADAPTORS_LOCAL_REPO"
+    end
+
+    test "a blank ADAPTORS_LOCAL_REPO falls back to OPENFN_ADAPTORS_REPO instead of discarding it" do
+      log =
+        capture_log(fn ->
+          Dotenvy.source([
+            %{
+              "OPENFN_ADAPTORS_REPO" => "/path",
+              "ADAPTORS_LOCAL_REPO" => " , ",
+              "ADAPTORS_STRATEGY" => "local"
+            }
+          ])
+
+          Bootstrap.configure()
+        end)
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/path"]
+      assert log =~ "ADAPTORS_LOCAL_REPO"
+    end
+
+    test "ADAPTORS_LOCAL_REPO takes precedence over OPENFN_ADAPTORS_REPO" do
+      Dotenvy.source([
+        %{
+          "OPENFN_ADAPTORS_REPO" => "/old",
+          "ADAPTORS_LOCAL_REPO" => "/new"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors.Local)[:paths] == ["/new"]
     end
   end
 

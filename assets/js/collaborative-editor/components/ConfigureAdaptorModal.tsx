@@ -251,9 +251,7 @@ export function ConfigureAdaptorModal({
       const adaptor = allAdaptors.find(a => a.name === packageName);
 
       if (adaptor) {
-        const sortedVersions = sortVersionsDescending(
-          adaptor.versions.map(v => v.version)
-        );
+        const sortedVersions = sortVersionsDescending(adaptor.versions);
 
         if (sortedVersions.length > 0 && sortedVersions[0]) {
           onVersionChange(sortedVersions[0]);
@@ -420,9 +418,7 @@ export function ConfigureAdaptorModal({
       return [];
     }
 
-    const sortedVersions = sortVersionsDescending(
-      adaptor.versions.map(v => v.version)
-    );
+    const sortedVersions = sortVersionsDescending(adaptor.versions);
 
     return ['latest', ...sortedVersions];
   }, [currentAdaptor, allAdaptors]);

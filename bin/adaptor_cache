@@ -1,0 +1,29 @@
+#!/usr/bin/env elixir
+
+# =============================================================================
+# Lightning Adaptor Cache
+# =============================================================================
+#
+# A self-contained record-and-replay reverse proxy in front of the three
+# upstreams the Lightning.Adaptors.* subsystem reads from: registry.npmjs.org,
+# cdn.jsdelivr.net and raw.githubusercontent.com. See
+# tooling/adaptor_cache/README.md.
+#
+# A forward proxy would not work: Lightning talks to these upstreams through
+# Req/Finch, and neither honours HTTP_PROXY/HTTPS_PROXY. Each upstream does
+# have a configurable base URL, which is what this reverse proxy plugs into.
+# =============================================================================
+
+Mix.install([
+  {:bandit, "~> 1.5"},
+  {:plug, "~> 1.16"},
+  {:req, "~> 0.5"}
+])
+
+script_path = Path.expand(__ENV__.file)
+lib_dir = Path.join(Path.dirname(script_path), "../tooling/adaptor_cache/lib")
+
+~w(cache.ex router.ex publish.ex scenario.ex cli.ex)
+|> Enum.each(&Code.require_file(Path.join(lib_dir, &1)))
+
+AdaptorCache.Cli.main(System.argv(), script: script_path)

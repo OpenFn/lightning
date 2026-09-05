@@ -317,11 +317,18 @@ vi.mock('../../../../js/collaborative-editor/hooks/useAdaptors', () => ({
     loading: false,
     error: null,
   }),
-  useProjectAdaptors: () => ({
-    projectAdaptors: [],
+  useAdaptorsInUse: () => ({
+    adaptorsInUse: [],
     allAdaptors: [],
   }),
   useAdaptors: () => [],
+  useAdaptorsLoading: () => false,
+  useAdaptorsError: () => null,
+  useAdaptorCommands: () => ({
+    requestAdaptors: vi.fn(),
+    setAdaptors: vi.fn(),
+    clearError: vi.fn(),
+  }),
 }));
 
 // Mock credentials hooks

@@ -59,6 +59,13 @@ and this project adheres to
   typed it.
   [#4952](https://github.com/OpenFn/lightning/issues/4952)
 
+### Changed
+
+- Lightning now keeps its own adaptor registry instead of fetching the list from
+  npm at startup, so new adaptors and versions show up without a rebuild or
+  redeploy. See [ADAPTORS.md](ADAPTORS.md).
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
 ### Fixed
 
 - Changing a webhook trigger's custom path now marks the workflow as unsaved, so

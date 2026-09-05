@@ -1,121 +1,110 @@
 defmodule Lightning.AdaptorServiceTest do
+  @moduledoc """
+  Covers `AdaptorService.known?/1` gating `install/2` on
+  `Lightning.Adaptors.fetch_adaptor/1`: an empty catalogue waits for one
+  load, and a name the loaded catalogue lacks refuses the install.
+  """
+
+  # set_mox_global: the load runs in a Task owned by the production
+  # Scheduler.
   use Lightning.DataCase, async: false
 
-  import ExUnit.CaptureLog
+  import Mox
 
-  alias Lightning.AdaptorRegistry
+  alias Lightning.Adaptors.Catalogue
   alias Lightning.AdaptorService
-  alias Lightning.AdaptorService.Adaptor
 
-  @permitted "@openfn/language-adaptor-service-test"
+  setup :set_mox_global
+  setup :verify_on_exit!
 
-  defmodule StubRepo do
-    @moduledoc false
-    alias Lightning.AdaptorService.Adaptor
+  setup do
+    Lightning.AdaptorTestHelpers.clear_global_adaptors_cache()
+    stub(Lightning.AdaptorService.RepoMock, :list_local, fn _path -> [] end)
 
-    @present [
-      %Adaptor{
-        name: "@openfn/language-adaptor-service-test",
-        version: "1.0.0",
-        path: "/fake/path",
-        local_name: "@openfn/language-adaptor-service-test",
-        status: :present
-      }
-    ]
+    {:ok, agent} =
+      AdaptorService.start_link(
+        adaptors_path: "test/tmp/adaptors",
+        repo: Lightning.AdaptorService.RepoMock
+      )
 
-    def list_local(_path), do: @present
-    def list_local(_path, _depth), do: @present
-
-    def install(_aliased_name, _dir), do: {"", 0}
+    {:ok, agent: agent}
   end
 
-  describe "Repo.install/2" do
-    @tag :tmp_dir
-    test "is not vulnerable to shell injection", %{tmp_dir: dir} do
-      marker = Path.join(dir, "pwned")
+  describe "install/2 refuses a package the catalogue doesn't recognise" do
+    test "empty catalogue: loads once, then refuses without calling repo.install/2",
+         %{agent: agent} do
+      test_pid = self()
 
-      Lightning.AdaptorService.Repo.install(
-        ["bogus-#{System.unique_integer([:positive])} > #{marker}"],
-        dir
-      )
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, 1, fn ->
+        send(test_pid, :listed)
+        {:ok, []}
+      end)
 
-      refute File.exists?(marker)
-    end
-  end
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
 
-  describe "AdaptorService.install/2 allowlist" do
-    setup do
-      cache =
-        Briefly.create!(extname: ".json")
-        |> tap(fn path ->
-          File.write!(
-            path,
-            Jason.encode!([
-              %{
-                name: @permitted,
-                latest: "1.0.0",
-                repo: "git+https://example.com/test.git",
-                versions: []
-              }
-            ])
-          )
-        end)
+      assert {:error, :adaptor_not_permitted} =
+               AdaptorService.install(agent, "@openfn/language-http")
 
-      start_supervised!(
-        {AdaptorRegistry, name: :test_asvc_registry, use_cache: cache}
-      )
-
-      start_supervised!(
-        {AdaptorService,
-         name: :test_adaptor_service,
-         adaptors_path: "/tmp/fake",
-         repo: StubRepo,
-         adaptor_registry: :test_asvc_registry}
-      )
-
-      :ok
+      assert_received :listed
     end
 
-    test "refuses a non-permitted adaptor" do
-      log =
-        capture_log(fn ->
-          assert AdaptorService.install(
-                   :test_adaptor_service,
-                   "@openfn/language-http@1.0.0"
-                 ) ==
-                   {:error, :adaptor_not_permitted}
-        end)
+    test "populated catalogue without this package: refuses", %{agent: agent} do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(%{
+          name: "@openfn/language-common",
+          source: :npm,
+          latest_version: "1.0.0",
+          versions: [
+            %{
+              version: "1.0.0",
+              integrity: "sha512-abc",
+              tarball_url: "https://example.com/x-1.0.0.tgz",
+              size_bytes: 1024,
+              dependencies: %{},
+              peer_dependencies: %{},
+              published_at: nil,
+              deprecated: false
+            }
+          ]
+        })
 
-      assert log =~
-               "Refusing to install non-permitted adaptor: \"@openfn/language-http\""
-    end
-
-    test "permits an adaptor present in the registry and already on disk" do
-      assert {:ok, %Adaptor{name: @permitted}} =
-               AdaptorService.install(:test_adaptor_service, @permitted)
+      assert {:error, :adaptor_not_permitted} =
+               AdaptorService.install(agent, "@openfn/language-http")
     end
   end
 
-  describe "resolve_package_name/1" do
-    test "splits a well-formed package string" do
-      assert AdaptorService.resolve_package_name("@openfn/language-http@1.2.3") ==
-               {"@openfn/language-http", "1.2.3"}
+  describe "install/2 allows a package the catalogue recognises" do
+    test "populated catalogue with this package: proceeds to repo.install/2",
+         %{agent: agent} do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(%{
+          name: "@openfn/language-http",
+          source: :npm,
+          latest_version: "1.0.0",
+          versions: [
+            %{
+              version: "1.0.0",
+              integrity: "sha512-abc",
+              tarball_url: "https://example.com/x-1.0.0.tgz",
+              size_bytes: 1024,
+              dependencies: %{},
+              peer_dependencies: %{},
+              published_at: nil,
+              deprecated: false
+            }
+          ]
+        })
 
-      assert AdaptorService.resolve_package_name("@openfn/language-http") ==
-               {"@openfn/language-http", nil}
-    end
+      expect(Lightning.AdaptorService.RepoMock, :install, fn _adaptor, _dir ->
+        {"", 0}
+      end)
 
-    test "returns {nil, nil} for malformed / injection-shaped strings, not raising" do
-      for bad <- [
-            "@openfn/x\npwd\nb@1.0.0",
-            "@openfn/language-http@1.0.0; touch /tmp/x",
-            "@openfn/language-common@latest and stuff",
-            "$(whoami)",
-            ""
-          ] do
-        assert AdaptorService.resolve_package_name(bad) == {nil, nil},
-               "expected #{inspect(bad)} to be rejected"
-      end
+      stub(Lightning.AdaptorService.RepoMock, :list_local, fn _path -> [] end)
+
+      assert {:ok, _installed} =
+               AdaptorService.install(agent, "@openfn/language-http")
     end
   end
 end

@@ -513,16 +513,18 @@ defmodule Lightning.AiAssistant do
   ## Returns
 
   An updated `ChatSession` struct with `:expression` and `:adaptor` fields populated.
-  The adaptor is resolved through `Lightning.AdaptorRegistry`.
+  The adaptor is resolved through `Lightning.Adaptors.to_wire/1`.
   """
   @spec put_expression_and_adaptor(ChatSession.t(), String.t(), String.t()) ::
           ChatSession.t()
   def put_expression_and_adaptor(session, expression, adaptor) do
-    %{
-      session
-      | expression: expression,
-        adaptor: Lightning.AdaptorRegistry.resolve_adaptor(adaptor)
-    }
+    wire =
+      case Lightning.Adaptors.to_wire(adaptor) do
+        {:ok, wire} -> wire
+        {:error, _} -> adaptor
+      end
+
+    %{session | expression: expression, adaptor: wire}
   end
 
   @doc """

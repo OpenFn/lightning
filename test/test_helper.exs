@@ -5,15 +5,21 @@ Mox.defmock(Lightning.AuthProviders.OauthHTTPClient.Mock, for: Tesla.Adapter)
 Mox.defmock(Lightning.MockSentry, for: Lightning.SentryBehaviour)
 Mox.defmock(Lightning.Tesla.Mock, for: Tesla.Adapter)
 
+Mox.defmock(Lightning.Adaptors.StrategyMock, for: Lightning.Adaptors.Strategy)
+
+Mox.defmock(Lightning.AdaptorService.RepoMock,
+  for: Lightning.AdaptorService.Repo
+)
+
 :ok = Application.ensure_started(:ex_machina)
 
 Mimic.copy(:hackney)
 Mimic.copy(File)
 Mimic.copy(IO)
+Mimic.copy(Lightning.Adaptors.Config)
 Mimic.copy(Lightning.FailureEmail)
 Mimic.copy(Lightning.Projects.Provisioner)
 Mimic.copy(Lightning.MetadataService)
-Mimic.copy(Mix.Tasks.Lightning.InstallSchemas)
 
 # Other ExUnit configuration can be found in `config/runtime.exs`,
 # for example to change the `assert_receive` timeout, configure it using the
@@ -68,6 +74,29 @@ Application.put_env(:lightning, Lightning.Extensions,
   collection_hook: Lightning.Extensions.MockCollectionHook,
   project_hook: Lightning.Extensions.MockProjectHook,
   external_metrics: Lightning.Extensions.ExternalMetrics
+)
+
+# Pin the `Lightning.Adaptors.IconCache` on-disk path to a per-OS-PID
+# directory and wipe it at startup. Without the wipe, leftover files
+# from a prior run can mask a Mox expectation by short-circuiting
+# `IconCache.cached?/4`, since `System.unique_integer/1` resets per-VM
+# and recycles. Keying by OS PID also keeps concurrent `mix test` runs
+# (parallel CI shards, separate tmux panes) from colliding.
+icon_dir =
+  Path.join([
+    System.tmp_dir!(),
+    "lightning_test_icons",
+    System.pid()
+  ])
+
+File.rm_rf!(icon_dir)
+File.mkdir_p!(icon_dir)
+
+Application.put_env(
+  :lightning,
+  Lightning.Adaptors,
+  Application.get_env(:lightning, Lightning.Adaptors, [])
+  |> Keyword.put(:icon_path, icon_dir)
 )
 
 ExUnit.start()
