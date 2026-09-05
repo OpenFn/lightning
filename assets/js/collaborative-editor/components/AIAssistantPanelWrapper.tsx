@@ -32,6 +32,8 @@ import {
   useAIStreamingChanges,
   useAIStreamingContent,
   useAIStreamingSegments,
+  useAIStreamingSnapshots,
+  useAISnapshotsByMessageId,
   useAIStreamingStatus,
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
@@ -42,6 +44,8 @@ import { useAIPanelDiffManager } from '../hooks/useAIPanelDiffManager';
 import { useAIPanelURLSync } from '../hooks/useAIPanelURLSync';
 import { useAISession } from '../hooks/useAISession';
 import { useAIWorkflowApplications } from '../hooks/useAIWorkflowApplications';
+import { useAIWorkflowUndo } from '../hooks/useAIWorkflowUndo';
+import { useAppliedCanvas } from '../hooks/useAppliedCanvas';
 import { useAutoPreview } from '../hooks/useAutoPreview';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import {
@@ -76,6 +80,7 @@ import {
 } from '../utils/workflowSerialization';
 
 import { AIAssistantPanel } from './AIAssistantPanel';
+import { AlertDialog } from './AlertDialog';
 import { MessageList } from './MessageList';
 
 /**
@@ -142,12 +147,16 @@ export function AIAssistantPanelWrapper({
     loadSessions,
     retryMessage: retryMessageViaChannel,
     updateContext: updateContextViaChannel,
+    reportApplyFailure,
   } = useAISessionCommands();
   const messages = useAIMessages();
   const isLoading = useAIIsLoading();
   const streamingContent = useAIStreamingContent();
   const streamingStatus = useAIStreamingStatus();
   const streamingSegments = useAIStreamingSegments();
+  const streamingSnapshots = useAIStreamingSnapshots();
+
+  const snapshotsByMessageId = useAISnapshotsByMessageId();
   const streamingChanges = useAIStreamingChanges();
   const sessionId = useAISessionId();
   const sessionType = useAISessionType();
@@ -168,6 +177,40 @@ export function AIAssistantPanelWrapper({
 
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
+  /**
+   * Open a step from a diff block in the IDE, selecting the node and opening
+   * the editor in one navigation.
+   *
+   * Resolves by id first, then by name. Parsing YAML without `id:` fields
+   * invents ids, and the apply path parses the same YAML separately, so for
+   * a step the reply just added the diff's id and the canvas's id disagree.
+   * Navigating to an id nothing owns opens an empty editor.
+   */
+  /** Whether a diff block's step actually exists on the canvas */
+  const canOpenStep = useCallback(
+    ({ jobId, name }: { jobId?: string; name: string }) =>
+      jobs.some(job => job.id === jobId || job.name === name),
+    [jobs]
+  );
+
+  const handleOpenStep = useCallback(
+    ({ jobId, name }: { jobId?: string; name: string }) => {
+      const match =
+        (jobId && jobs.find(job => job.id === jobId)) ??
+        jobs.find(job => job.name === name);
+      if (!match) return;
+      // Clears the sibling selections too: leaving a stale trigger or edge
+      // behind still resolves to the job, but leaves a URL that is wrong to
+      // share and wrong to go back to.
+      updateSearchParams({
+        panel: 'editor',
+        job: match.id,
+        trigger: null,
+        edge: null,
+      });
+    },
+    [jobs, updateSearchParams]
+  );
   const edges = useWorkflowState(state => state.edges);
   const positions = useWorkflowState(state => state.positions);
 
@@ -591,10 +634,29 @@ export function AIAssistantPanelWrapper({
     [aiStore]
   );
 
+  const appliedCanvas = useAppliedCanvas();
+
+  const {
+    undoneMessageId,
+    requestUndoChanges,
+    isConfirmOpen,
+    confirmUndoChanges,
+    cancelUndoChanges,
+  } = useAIWorkflowUndo({
+    jobs,
+    appliedCanvas,
+    workflowActions: {
+      importWorkflow,
+      startApplyingWorkflow,
+      doneApplyingWorkflow,
+    },
+  });
+
   // Hook to handle workflow/job code application logic
   const {
     handleApplyWorkflow,
     launchApply,
+    failedApplyMessageIds,
     handlePreviewJobCode,
     handlePreviewGlobalStep,
     handleApplyJobCode,
@@ -615,6 +677,8 @@ export function AIAssistantPanelWrapper({
     isSessionConnected,
     isSessionConnecting,
     onValidationError,
+    onCanvasApplied: appliedCanvas.record,
+    onApplyFailure: reportApplyFailure,
     workflowActions: {
       importWorkflow,
       startApplyingWorkflow,
@@ -797,8 +861,6 @@ export function AIAssistantPanelWrapper({
                 onPreviewJobCode={
                   aiMode?.page === 'job_code' ? handlePreviewJobCode : undefined
                 }
-                onPreviewGlobalStep={handlePreviewGlobalStep}
-                canPreviewGlobalStep={aiMode?.page === 'job_code'}
                 applyingMessageId={
                   // If anyone is applying (including other users), pass the message ID
                   // to show "APPLYING..." state. Prioritize stored message ID from store,
@@ -823,12 +885,33 @@ export function AIAssistantPanelWrapper({
                 streamingContent={streamingContent}
                 streamingStatus={streamingStatus}
                 streamingSegments={streamingSegments}
+                streamingSnapshots={streamingSnapshots}
+                snapshotsByMessageId={snapshotsByMessageId}
+                onOpenStep={handleOpenStep}
+                canOpenStep={canOpenStep}
+                currentUserId={user?.id}
+                failedApplyMessageIds={failedApplyMessageIds}
+                onUndoChanges={requestUndoChanges}
+                undoneMessageId={undoneMessageId}
+                isApplyInFlight={!!applyingMessageId || isApplyingWorkflow}
                 isGlobalAssistantActive={isGlobalAssistantActive}
               />
             </AIAssistantPanel>
           </div>
         </>
       )}
+
+      <AlertDialog
+        isOpen={isConfirmOpen}
+        onClose={cancelUndoChanges}
+        onConfirm={confirmUndoChanges}
+        title="Overwrite changes to the workflow?"
+        // Neutral about whose changes they are: a collaborator's edits are
+        // taken by the same whole-document replace.
+        description="The workflow has been edited since the assistant applied these changes. Continuing replaces the whole workflow, discarding those edits."
+        confirmLabel="Continue"
+        variant="danger"
+      />
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { IMMEDIATELY, ON_COMPLETE } from './ResponseTypeSelect';
 import { TriggerTypeBadge } from './TriggerTypeBadge';
 import { useCanEditWorkflow } from './useCanEditWorkflow';
 import { useWebhookTrigger } from './useWebhookTrigger';
-import { WebhookUrlField } from './WebhookUrlField';
+import { WebhookUrlList } from './WebhookUrlList';
 
 /** Backend default webhook response status (success and error) when unset. */
 const DEFAULT_STATUS_CODE = 201;
@@ -54,8 +54,9 @@ export function WebhookShowPanel({
 }: WebhookShowPanelProps) {
   const { canEdit, tooltipMessage } = useCanEditWorkflow();
   const {
-    webhookUrl,
+    endpoints,
     copyText,
+    copiedUrl,
     copyToClipboard,
     triggerAuthMethods,
     loadingAuthMethods,
@@ -71,6 +72,7 @@ export function WebhookShowPanel({
       ? 'none configured'
       : `${authCount} configured`;
 
+  const pathError = trigger.errors?.['custom_path']?.[0] ?? null;
   const responseConfig = trigger.webhook_response_config;
   const isAfterCompletion = trigger.webhook_reply === 'after_completion';
   const responseType = isAfterCompletion ? ON_COMPLETE : IMMEDIATELY;
@@ -96,12 +98,23 @@ export function WebhookShowPanel({
           <TriggerTypeBadge />
         </div>
 
-        {/* Webhook URL */}
-        <WebhookUrlField
-          url={webhookUrl}
+        {/* Webhook URLs */}
+        <WebhookUrlList
+          endpoints={endpoints}
           copyText={copyText}
+          copiedUrl={copiedUrl}
           onCopy={url => void copyToClipboard(url)}
         />
+
+        {/* Uniqueness is only knowable on the server, and it answers after the
+            wizard has already closed. The refused path is listed above, greyed
+            and not copyable, so it is clear which one failed. */}
+        {pathError ? (
+          <p className="-mt-4 block text-xs text-red-600">
+            The custom path was not saved: {pathError}. The default URL is
+            unaffected.
+          </p>
+        ) : null}
 
         {/* Authentication */}
         <div>

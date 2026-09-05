@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { TriggerSchema } from '#/collaborative-editor/types/trigger';
+import { TriggerDraftSchema } from '#/collaborative-editor/types/trigger';
 
 import { useWorkflowActions } from '../../../hooks/useWorkflow';
 import type { Workflow } from '../../../types/workflow';
@@ -24,6 +24,12 @@ export interface UseTriggerDraftOptions {
  * Return shape of the {@link useTriggerDraft} hook.
  */
 export interface UseTriggerDraftResult {
+  /**
+   * Whether the path is the one the trigger opened with. False when it is
+   * being changed, and false when the trigger is becoming a webhook, since a
+   * path that meant nothing on a cron row is about to become a live URL.
+   */
+  pathUnchanged: boolean;
   /** The local, uncommitted trigger draft. */
   draft: Workflow.Trigger;
   /** Shallow-merges `updates` into the draft. Never touches the Y.Doc. */
@@ -92,7 +98,7 @@ export function useTriggerDraft(
   options: UseTriggerDraftOptions
 ): UseTriggerDraftResult {
   const { initialAuthMethodIds, commitAuthMethods } = options;
-  const { updateTrigger } = useWorkflowActions();
+  const { updateTrigger, clearErrorField } = useWorkflowActions();
 
   const [draft, setDraft] = useState<Workflow.Trigger>(() => trigger);
   const [draftAuthMethodIds, setDraftAuthMethodIdsState] = useState<string[]>(
@@ -151,18 +157,46 @@ export function useTriggerDraft(
     return triggerChanged || authIdsChanged;
   }, [draft, authIdsChanged]);
 
+  // Judge only what the user changed, so a pre-migration path does not block
+  // edits to anything else.
+  const baselineCustomPath = baselineRef.current.custom_path ?? null;
+
+  // Becoming a webhook makes a path that meant nothing on a cron or kafka
+  // trigger into a live URL, and the server validates it then. Leaving it out
+  // here would close the wizard on a save the server refuses.
+  const becomingWebhook =
+    draft.type === 'webhook' && baselineRef.current.type !== 'webhook';
+
+  const pathUnchanged =
+    !becomingWebhook && (draft.custom_path ?? null) === baselineCustomPath;
+
+  const draftIssues = useMemo(() => {
+    const result = TriggerDraftSchema.safeParse(draft);
+    if (result.success) return [];
+
+    return result.error.issues.filter(
+      issue => !(pathUnchanged && issue.path[0] === 'custom_path')
+    );
+  }, [draft, pathUnchanged]);
+
+  // The path reports against its own field, so the footer points at it rather
+  // than repeating it. Silence would leave Finish doing nothing when the field
+  // is scrolled behind an open disclosure.
   const validationError = useMemo(() => {
-    const result = TriggerSchema.safeParse(draft);
-    if (result.success) return null;
-    return result.error.issues[0]?.message ?? 'Invalid trigger configuration';
-  }, [draft]);
+    const elsewhere = draftIssues.find(
+      issue => issue.path[0] !== 'custom_path'
+    );
+
+    if (elsewhere) return elsewhere.message;
+    if (draftIssues.length > 0) return 'Fix the highlighted field to finish.';
+
+    return null;
+  }, [draftIssues]);
 
   const commit = useCallback(async (): Promise<{ ok: boolean }> => {
-    const result = TriggerSchema.safeParse(draft);
-
     // Invalid draft: do not persist. `validationError` (derived above) already
     // reflects the failure for the caller to surface.
-    if (!result.success) {
+    if (draftIssues.length > 0) {
       return { ok: false };
     }
 
@@ -187,17 +221,27 @@ export function useTriggerDraft(
       updateTrigger(trigger.id, updates);
     }
 
+    // A server error was raised for the value that was there at the time. Once
+    // the path changes it is about something that is no longer on screen, so it
+    // goes. The next save decides the new one.
+    if ('custom_path' in updates) {
+      clearErrorField(`triggers.${trigger.id}`, 'custom_path');
+    }
+
     return { ok: true };
   }, [
     draft,
+    draftIssues,
     trigger.id,
     updateTrigger,
+    clearErrorField,
     authIdsChanged,
     draftAuthMethodIds,
     commitAuthMethods,
   ]);
 
   return {
+    pathUnchanged,
     draft,
     mergeDraft,
     draftAuthMethodIds,

@@ -56,6 +56,26 @@ export const STREAMING_MESSAGE_ID = '__streaming__' as const;
 export interface ResponseSegment {
   type: 'text' | 'status';
   content: string;
+  /**
+   * Shorter line to show when this segment's steps are rendered as detail
+   * below it, so the step names are not printed twice. Falls back to
+   * `content` when absent.
+   */
+  summary?: string;
+  /**
+   * Workflow steps this action touched, as data rather than names buried
+   * in `content`. Present only on status segments, and only from an Apollo
+   * that reports them — absent means "not reported", not "touched none".
+   */
+  steps?: SegmentStep[];
+}
+
+/** A workflow step a status segment acted on */
+export interface SegmentStep {
+  /** The workflow YAML key for the step: the stable identifier */
+  key: string;
+  /** Display name at the time the action ran */
+  name?: string;
 }
 
 /**
@@ -166,6 +186,16 @@ export type ConnectionState =
  * reset it. `saveFailed` records that the post-import auto-save of a new
  * workflow is still owed.
  */
+/**
+ * A workflow YAML snapshot captured mid-stream, pinned to the position it
+ * occupied in the segment timeline. See `streamingSnapshots`.
+ */
+export interface WorkflowSnapshot {
+  yaml: string;
+  /** Number of timeline segments that had drained when this snapshot landed */
+  segmentIndex: number;
+}
+
 export interface StreamingApplyState {
   yaml: string;
   saveFailed: boolean;
@@ -195,7 +225,41 @@ export interface AIAssistantState {
    * order is preserved. Reset alongside the other streaming fields.
    */
   streamingSegments: ResponseSegment[];
+  /**
+   * Workflow YAML snapshots streamed during a reply, in wire order.
+   *
+   * Apollo sends a `changes` event at every point it actually mutates the
+   * workflow, immediately followed by the settled status that describes
+   * that mutation. `segmentIndex` records how many segments the timeline
+   * held when the snapshot drained, which is exactly the index of the
+   * status segment that follows it — so snapshot N is the "after" state
+   * for status N, and snapshot N-1 is its "before".
+   *
+   * Fed through the same char drain as status segments so a snapshot can
+   * never overtake the text that preceded it on the wire. Reset alongside
+   * the other streaming fields.
+   */
+  streamingSnapshots: WorkflowSnapshot[];
+  /**
+   * Snapshots handed over from `streamingSnapshots` when a reply finalizes,
+   * keyed by the assistant message id the server assigned it.
+   *
+   * The id is only known at `new_message`, so the live stream cannot record
+   * them under it directly. Keeping them here means a message renders the
+   * same per-status diffs the moment it settles as it did while streaming,
+   * instead of collapsing to a single whole-message diff. Session-scoped:
+   * a reload has no snapshots and falls back to the whole-message diff
+   * until they are persisted server-side.
+   */
+  snapshotsByMessageId: Record<string, WorkflowSnapshot[]>;
   streamingApply: StreamingApplyState | null;
+  /**
+   * The canvas as it stood after the assistant's last import, serialized by
+   * `serializeCanvasForComparison`. Undo compares against it to tell whether
+   * the workflow has been edited since, and skip the confirmation when it has
+   * not. Session-scoped: a reload has none, and undo then always confirms.
+   */
+  appliedCanvasYaml: string | null;
 
   sessionList: SessionSummary[];
   sessionListLoading: boolean;
@@ -254,11 +318,13 @@ export interface AIAssistantStore {
   _appendStreamingChunk: (content: string) => void;
   _appendStreamingSegment: (segment: ResponseSegment) => void;
   setStreamingStatus: (text: string | null) => void;
+  _appendStreamingSnapshot: (yaml: string) => void;
   _setStreamingChanges: (changes: Record<string, unknown>) => void;
   _clearStreaming: () => void;
   _setStreamingApply: (yaml: string) => void;
   _setStreamingApplySaveFailed: (saveFailed: boolean) => void;
   _clearStreamingApply: () => void;
+  _setAppliedCanvasYaml: (yaml: string | null) => void;
   _connectChannel: (channelProvider: unknown) => () => void;
 }
 

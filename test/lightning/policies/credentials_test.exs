@@ -39,9 +39,31 @@ defmodule Lightning.Policies.CredentialsTest do
         created_by: owner
       )
 
+    # Scheduling deletion removes no membership rows, so owner/admin/support
+    # still hold real project_users rows (or support access) on this project.
+    scheduled_project =
+      insert(:project,
+        allow_support_access: tags[:allow_support_access],
+        project_users: [
+          %{user_id: viewer.id, role: :viewer},
+          %{user_id: editor.id, role: :editor},
+          %{user_id: admin.id, role: :admin},
+          %{user_id: owner.id, role: :owner}
+        ],
+        scheduled_deletion: DateTime.utc_now() |> DateTime.add(7, :day)
+      )
+
+    scheduled_keychain_credential =
+      insert(:keychain_credential,
+        project: scheduled_project,
+        created_by: owner
+      )
+
     %{
       project: project,
       keychain_credential: keychain_credential,
+      scheduled_project: scheduled_project,
+      scheduled_keychain_credential: scheduled_keychain_credential,
       viewer: viewer,
       admin: admin,
       owner: owner,
@@ -56,13 +78,11 @@ defmodule Lightning.Policies.CredentialsTest do
       project: project,
       owner: owner
     } do
-      project_user = get_project_user(project, owner)
-
       assert Credentials
              |> Bodyguard.permit?(
                :create_keychain_credential,
                owner,
-               %{project_user: project_user, project: project}
+               project
              )
     end
 
@@ -70,13 +90,11 @@ defmodule Lightning.Policies.CredentialsTest do
       project: project,
       admin: admin
     } do
-      project_user = get_project_user(project, admin)
-
       assert Credentials
              |> Bodyguard.permit?(
                :create_keychain_credential,
                admin,
-               %{project_user: project_user, project: project}
+               project
              )
     end
 
@@ -195,6 +213,23 @@ defmodule Lightning.Policies.CredentialsTest do
              )
     end
 
+    test "refuses a support user on a project that has not allowed support access",
+         %{
+           keychain_credential: keychain_credential,
+           support_user: support_user
+         } do
+      for action <- [
+            :edit_keychain_credential,
+            :delete_keychain_credential,
+            :view_keychain_credential
+          ] do
+        refute Credentials
+               |> Bodyguard.permit?(action, support_user, keychain_credential),
+               "#{action} was granted without allow_support_access"
+      end
+    end
+
+    @tag allow_support_access: true
     test "support users can edit keychain credentials", %{
       keychain_credential: keychain_credential,
       support_user: support_user
@@ -205,6 +240,30 @@ defmodule Lightning.Policies.CredentialsTest do
                support_user,
                keychain_credential
              )
+    end
+
+    # An explicit membership row decides, exactly as it does in
+    # Lightning.Policies.ProjectUsers. Support access stands in for someone with
+    # no row; it must not upgrade a row that was deliberately set low, or
+    # "this person is read-only here" could not be expressed at all.
+    @tag allow_support_access: true
+    test "refuses a support user pinned to a viewer role, even with support access",
+         %{
+           project: project,
+           keychain_credential: keychain_credential,
+           support_user: support_user
+         } do
+      insert(:project_user, project: project, user: support_user, role: :viewer)
+
+      for action <- [
+            :edit_keychain_credential,
+            :delete_keychain_credential,
+            :view_keychain_credential
+          ] do
+        refute Credentials
+               |> Bodyguard.permit?(action, support_user, keychain_credential),
+               "#{action} was granted to a support user holding a :viewer row"
+      end
     end
   end
 
@@ -269,6 +328,7 @@ defmodule Lightning.Policies.CredentialsTest do
              )
     end
 
+    @tag allow_support_access: true
     test "support users can delete keychain credentials", %{
       keychain_credential: keychain_credential,
       support_user: support_user
@@ -343,6 +403,7 @@ defmodule Lightning.Policies.CredentialsTest do
              )
     end
 
+    @tag allow_support_access: true
     test "support users can view keychain credentials", %{
       keychain_credential: keychain_credential,
       support_user: support_user
@@ -353,6 +414,169 @@ defmodule Lightning.Policies.CredentialsTest do
                support_user,
                keychain_credential
              )
+    end
+  end
+
+  defp keychain_action_cases(
+         allowed_project,
+         refused_project,
+         allowed_kc,
+         refused_kc
+       ) do
+    [
+      {:create_keychain_credential, allowed_project, refused_project},
+      {:edit_keychain_credential, allowed_kc, refused_kc},
+      {:delete_keychain_credential, allowed_kc, refused_kc},
+      {:view_keychain_credential, allowed_kc, refused_kc}
+    ]
+  end
+
+  describe "a project scheduled for deletion" do
+    test "refuses every keychain-credential action for :owner and :admin", %{
+      project: project,
+      scheduled_project: scheduled_project,
+      keychain_credential: keychain_credential,
+      scheduled_keychain_credential: scheduled_keychain_credential,
+      owner: owner,
+      admin: admin
+    } do
+      cases =
+        keychain_action_cases(
+          project,
+          scheduled_project,
+          keychain_credential,
+          scheduled_keychain_credential
+        )
+
+      for actor <- [owner, admin], {action, live, scheduled} <- cases do
+        # Control: the same actor CAN act on a live project, so every
+        # refusal below is about the project's lifecycle, not the role.
+        assert Credentials |> Bodyguard.permit?(action, actor, live),
+               "#{action} was refused on a live project"
+
+        refute Credentials |> Bodyguard.permit?(action, actor, scheduled),
+               "#{action} was granted on a project scheduled for deletion"
+      end
+    end
+
+    @tag allow_support_access: true
+    test "refuses every keychain-credential action for a support user", %{
+      project: project,
+      scheduled_project: scheduled_project,
+      keychain_credential: keychain_credential,
+      scheduled_keychain_credential: scheduled_keychain_credential,
+      support_user: support_user
+    } do
+      cases =
+        keychain_action_cases(
+          project,
+          scheduled_project,
+          keychain_credential,
+          scheduled_keychain_credential
+        )
+
+      for {action, live, scheduled} <- cases do
+        assert Credentials |> Bodyguard.permit?(action, support_user, live),
+               "#{action} was refused on a live project"
+
+        refute Credentials
+               |> Bodyguard.permit?(action, support_user, scheduled),
+               "#{action} was granted on a project scheduled for deletion"
+      end
+    end
+  end
+
+  describe "a project that requires MFA" do
+    setup tags do
+      enrolled = tags[:enrolled] == true
+
+      owner = insert(:user, mfa_enabled: enrolled)
+      admin = insert(:user, mfa_enabled: enrolled)
+      support_user = insert(:user, support_user: true, mfa_enabled: enrolled)
+
+      members = [
+        %{user_id: owner.id, role: :owner},
+        %{user_id: admin.id, role: :admin}
+      ]
+
+      unrestricted_project =
+        insert(:project, allow_support_access: true, project_users: members)
+
+      mfa_project =
+        insert(:project,
+          requires_mfa: true,
+          allow_support_access: true,
+          project_users: members
+        )
+
+      %{
+        unrestricted_project: unrestricted_project,
+        unrestricted_keychain_credential:
+          insert(:keychain_credential,
+            project: unrestricted_project,
+            created_by: owner
+          ),
+        mfa_project: mfa_project,
+        mfa_keychain_credential:
+          insert(:keychain_credential, project: mfa_project, created_by: owner),
+        mfa_owner: owner,
+        mfa_admin: admin,
+        mfa_support_user: support_user
+      }
+    end
+
+    test "refuses every keychain-credential action for an unenrolled owner, admin or support user",
+         %{
+           unrestricted_project: unrestricted_project,
+           mfa_project: mfa_project,
+           unrestricted_keychain_credential: unrestricted_kc,
+           mfa_keychain_credential: mfa_kc,
+           mfa_owner: owner,
+           mfa_admin: admin,
+           mfa_support_user: support_user
+         } do
+      cases =
+        keychain_action_cases(
+          unrestricted_project,
+          mfa_project,
+          unrestricted_kc,
+          mfa_kc
+        )
+
+      actors = [
+        {"an owner", owner},
+        {"an admin", admin},
+        {"a support user", support_user}
+      ]
+
+      for {label, actor} <- actors,
+          {action, unrestricted, mfa_required} <- cases do
+        # Control: the same unenrolled actor CAN act on a project that does
+        # not require MFA, so every refusal below is about the requirement and
+        # not about the role. A support user is bound as much as a member is:
+        # the requirement is about the human, not the membership row.
+        assert Credentials |> Bodyguard.permit?(action, actor, unrestricted),
+               "#{action} was refused to #{label} on a project that does not require MFA"
+
+        refute Credentials |> Bodyguard.permit?(action, actor, mfa_required),
+               "#{action} was granted to #{label} who has not enrolled in MFA"
+      end
+    end
+
+    @tag enrolled: true
+    test "allows every keychain-credential action once the owner or admin has enrolled",
+         %{
+           mfa_project: mfa_project,
+           mfa_keychain_credential: mfa_kc,
+           mfa_owner: owner,
+           mfa_admin: admin
+         } do
+      cases = keychain_action_cases(mfa_project, mfa_project, mfa_kc, mfa_kc)
+
+      for actor <- [owner, admin], {action, subject, _} <- cases do
+        assert Credentials |> Bodyguard.permit?(action, actor, subject),
+               "#{action} was refused to an actor who has enrolled in MFA"
+      end
     end
   end
 end

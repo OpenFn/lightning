@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.18.0",
+      version: "2.18.2",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -14,6 +14,12 @@ defmodule Lightning.MixProject do
       aliases: aliases(),
       deps: deps(),
       dialyzer: [
+        # OTP 28 reworked how Dialyzer checks opaque types (OTP-19364).
+        # Elixir inlines `MapSet.new/0`, so every `Ecto.Multi` call downstream
+        # gets flagged, 62 of them here and none real. Ecto declined to change
+        # its internals (elixir-ecto/ecto#4708). Elixir 1.20 removes the
+        # opacity, so this flag goes then.
+        flags: [:no_opaque],
         plt_add_apps: [:mix],
         plt_local_path: "priv/plts/",
         plt_core_path: "priv/plts/core.plt"
@@ -65,19 +71,22 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  # Advisories acknowledged for `mix hex.audit`. cowlib is the only one left, and
-  # it has no patched release (latest is 2.19.0). Note that both EEF records carry
-  # no `fixed` event, while the GitHub twin of CVE-2026-43969
-  # (GHSA-g2wm-735q-3f56) records `last_affected: 2.16.1` -- so 2.19.0 may
-  # already be unaffected and the EEF record simply lacks a fix event. IDs are
-  # matched against an advisory's primary ID or any alias, so the CVE form also
-  # silences the GHSA/EEF variants.
+  # cowlib advisories we have checked and accepted. Each names a function on
+  # cowlib's header-building path, and nothing in our tree calls any of them. The
+  # parse side of two of them is reachable through cowboy_req, so recheck by
+  # function rather than by module. No patched cowlib release exists yet. Hex
+  # matches an advisory's primary ID or any alias, so the CVE form also silences
+  # the GHSA and EEF variants. Detail in #5102.
   defp hex_audit do
     [
       ignore_advisories: [
         # cowlib
+        # cow_http_struct_hd:escape_string/2
         "CVE-2026-43966",
-        "CVE-2026-43969"
+        # cow_cookie:cookie/1
+        "CVE-2026-43969",
+        # cow_link:link/1
+        "CVE-2026-43971"
       ]
     ]
   end
@@ -90,7 +99,6 @@ defmodule Lightning.MixProject do
       # {:rexbug, ">= 1.0.0", only: :test},
       {:bcrypt_elixir, "~> 3.3"},
       {:bodyguard, "~> 2.2"},
-      {:broadway_kafka, "~> 0.4.2"},
       {:bypass, "~> 2.1", only: :test},
       {:briefly, "~> 0.5.0"},
       {:cachex, "~> 4.0"},
@@ -131,7 +139,7 @@ defmodule Lightning.MixProject do
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.12.0", only: :test},
       {:mint, "~> 1.0"},
-      {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
+      {:mix_test_watch, "~> 1.3", only: [:test, :dev], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
@@ -172,6 +180,7 @@ defmodule Lightning.MixProject do
        github: "lau/tzdata",
        ref: "766f38de21e9cd3dc4b185ac6244466e4ee65308",
        override: true},
+      {:yaml_elixir, "~> 2.12"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
       {:hammer_backend_mnesia, "~> 0.6"},

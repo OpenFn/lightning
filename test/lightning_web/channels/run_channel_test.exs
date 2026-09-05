@@ -10,6 +10,7 @@ defmodule LightningWeb.RunChannelTest do
   import Ecto.Query
   import Lightning.Factories
   import Lightning.TestUtils
+  import Lightning.TokenHelpers
   import Lightning.Utils.Maps, only: [stringify_keys: 1]
 
   setup do
@@ -57,28 +58,6 @@ defmodule LightningWeb.RunChannelTest do
                  %{"token" => "invalid"}
                )
 
-      # A valid token, but nbf hasn't been reached yet
-      {:ok, bearer, _} =
-        Workers.WorkerToken.generate_and_sign(
-          %{
-            "nbf" =>
-              DateTime.utc_now()
-              |> DateTime.add(5, :second)
-              |> DateTime.to_unix()
-          },
-          Lightning.Config.run_token_signer()
-        )
-
-      Lightning.Stub.freeze_time(DateTime.utc_now())
-
-      assert {:error, %{reason: "unauthorized"}} =
-               socket
-               |> subscribe_and_join(
-                 LightningWeb.RunChannel,
-                 "run:123",
-                 %{"token" => bearer}
-               )
-
       # A valid token, but the id doesn't match the channel name
       id = Ecto.UUID.generate()
       other_id = Ecto.UUID.generate()
@@ -93,6 +72,157 @@ defmodule LightningWeb.RunChannelTest do
                |> subscribe_and_join(
                  LightningWeb.RunChannel,
                  "run:#{other_id}",
+                 %{"token" => bearer}
+               )
+    end
+
+    # The channel only ever says "unauthorized", which cannot tell "refused for
+    # nbf" apart from "refused because the claim set is not a run token's", so
+    # this test and the next each name the verifier's own reason as well.
+    test "rejects a WorkerToken claim set signed with the run signer", %{
+      socket: socket
+    } do
+      {:ok, bearer, _} =
+        Workers.WorkerToken.generate_and_sign(
+          %{
+            "nbf" =>
+              DateTime.utc_now()
+              |> DateTime.add(5, :second)
+              |> DateTime.to_unix()
+          },
+          Lightning.Config.run_token_signer()
+        )
+
+      # Positive control on the same signer and the same context: a genuine run
+      # token is accepted here, so the refusal below is about the claim set and
+      # not about the signer or the context being wrong.
+      "123"
+      |> valid_run_claims()
+      |> raw_run_token()
+      |> Workers.verify_run_token(%{id: "123"})
+      |> assert_accepted(
+        "positive control: the run signer refused a genuine run token, so the WorkerToken " <>
+          "refusal below says nothing about its claim set."
+      )
+
+      bearer
+      |> Workers.verify_run_token(%{id: "123"})
+      |> assert_refused_naming(
+        ~w(id exp sub),
+        "verify_run_token/2 accepted a WorkerToken claim set carrying a valid run-signer " <>
+          "signature, so anything minted off that key authorises as a run token."
+      )
+
+      assert {:error, %{reason: "unauthorized"}} =
+               socket
+               |> subscribe_and_join(
+                 LightningWeb.RunChannel,
+                 "run:123",
+                 %{"token" => bearer}
+               )
+    end
+
+    test "rejects a complete run token whose nbf has not been reached", %{
+      socket: socket
+    } do
+      id = Ecto.UUID.generate()
+      now = DateTime.utc_now()
+
+      # Mint and verification must agree on "now" for "five seconds ahead" to
+      # mean anything.
+      Lightning.Stub.freeze_time(now)
+
+      claims = valid_run_claims(id)
+
+      # Positive control off the same claim set, nbf left alone, so the refusal
+      # below is about nbf and not about a fixture that never verified.
+      claims
+      |> raw_run_token()
+      |> Workers.verify_run_token(%{id: id})
+      |> assert_accepted(
+        "positive control: the claim set this test moves nbf on does not verify " <>
+          "unmodified, so refusing it with nbf ahead proves nothing."
+      )
+
+      not_yet =
+        claims |> Map.put("nbf", DateTime.to_unix(now) + 5) |> raw_run_token()
+
+      # Pinned to the exact atom so a refusal here cannot be the presence gate
+      # swallowing an nbf failure as a missing claim.
+      assert Workers.verify_run_token(not_yet, %{id: id}) ==
+               {:error, :nbf_not_reached},
+             "a run token complete in every other respect must be refused for its nbf, " <>
+               "and say so — a worker that presents one early would otherwise look like " <>
+               "a malformed-token bug."
+
+      assert {:error, %{reason: "unauthorized"}} =
+               socket
+               |> subscribe_and_join(
+                 LightningWeb.RunChannel,
+                 "run:#{id}",
+                 %{"token" => not_yet}
+               )
+    end
+
+    # The join payload is decoded JSON, so `"token"` can be a number, null, an
+    # object or an array. Each must be refused rather than crash the channel,
+    # which would cost an error log and a Sentry event per attempt.
+    test "rejects a token param that is not a string at all", %{socket: socket} do
+      id = Ecto.UUID.generate()
+
+      # Positive control on the same socket and topic: a genuine run token gets
+      # past verification and is refused for the run not existing, so the
+      # refusals below are about the token param, not an unusable socket.
+      assert {:error, %{reason: "not_found"}} =
+               socket
+               |> subscribe_and_join(
+                 LightningWeb.RunChannel,
+                 "run:#{id}",
+                 %{
+                   "token" =>
+                     Workers.generate_run_token(%{id: id}, %{
+                       run_timeout_ms: 1000
+                     })
+                 }
+               )
+
+      # Compared with ==, not matched: assert/2 is a function, so a match would
+      # raise MatchError before the message naming the offending param is read.
+      for token <- [nil, 123, %{"alg" => "none"}, ["a", "b"], true] do
+        assert subscribe_and_join(
+                 socket,
+                 LightningWeb.RunChannel,
+                 "run:#{id}",
+                 %{"token" => token}
+               ) == {:error, %{reason: "unauthorized"}},
+               "joining with a #{inspect(token)} token param must be refused, " <>
+                 "not crash the channel process."
+      end
+    end
+
+    test "a worker joins regardless of the email verification flag",
+         %{socket: socket} do
+      # A worker arrives on /worker via WorkerSocket, which resolves a run token
+      # rather than a person and carries no confirmation check at all — so this
+      # holds by construction. Pinned anyway because turning the flag on must
+      # never break every run on the instance.
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      run = run_in(insert(:project))
+
+      bearer =
+        Workers.generate_run_token(run, %Lightning.Runs.RunOptions{
+          run_timeout_ms: 2
+        })
+
+      assert {:ok, _reply, _socket} =
+               subscribe_and_join(
+                 socket,
+                 LightningWeb.RunChannel,
+                 "run:#{run.id}",
                  %{"token" => bearer}
                )
     end
@@ -347,6 +477,29 @@ defmodule LightningWeb.RunChannelTest do
 
       ref = push(socket, "fetch:dataclip", %{})
       assert_reply ref, :ok, {:binary, "null"}
+    end
+
+    test "fetch:dataclip passes stored request headers through unscrubbed", %{
+      socket: socket,
+      dataclip: dataclip
+    } do
+      dataclip
+      |> Ecto.Changeset.change(
+        request: %{
+          "headers" => %{
+            "content-type" => "application/json",
+            "x-api-key" => "a-pre-fix-stored-secret"
+          }
+        }
+      )
+      |> Repo.update!()
+
+      ref = push(socket, "fetch:dataclip", %{})
+
+      assert_reply ref, :ok, {:binary, payload}
+
+      assert payload =~ "a-pre-fix-stored-secret"
+      assert payload =~ "application/json"
     end
 
     @tag project_retention_policy: :erase_all
@@ -976,7 +1129,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => step.id,
           "output_dataclip_id" => Ecto.UUID.generate(),
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "normal",
           "timestamp" => to_string(timestamp)
         })
@@ -1001,7 +1154,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => step.id,
           "output_dataclip_id" => Ecto.UUID.generate(),
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "normal"
         })
 
@@ -1021,7 +1174,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => step.id,
           "output_dataclip_id" => Ecto.UUID.generate(),
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "fail"
         })
 
@@ -1043,7 +1196,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => step_id,
           "output_dataclip_id" => dataclip_id,
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "normal"
         })
 
@@ -1078,7 +1231,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => step_id,
           "output_dataclip_id" => dataclip_id,
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "normal"
         })
 
@@ -1105,7 +1258,7 @@ defmodule LightningWeb.RunChannelTest do
       ref =
         push(socket, "step:complete", %{
           "step_id" => step_id,
-          "output_dataclip" => ~s({"foo": "bar"}),
+          "output_dataclip" => %{"foo" => "bar"},
           "reason" => "normal"
         })
 
@@ -1124,7 +1277,7 @@ defmodule LightningWeb.RunChannelTest do
         push(socket, "step:complete", %{
           "step_id" => foreign_step.id,
           "output_dataclip_id" => output_dataclip_id,
-          "output_dataclip" => ~s({"leaked": "data"}),
+          "output_dataclip" => %{"leaked" => "data"},
           "reason" => "fail"
         })
 
@@ -1495,6 +1648,141 @@ defmodule LightningWeb.RunChannelTest do
 
       assert_receive %Lightning.Runs.Events.LogAppended{log_line: log_line_2}
       assert log_line_2.message == "Log 2"
+    end
+  end
+
+  describe "logging on a trigger with webhook auth methods" do
+    setup do
+      project = insert(:project)
+      dataclip = insert(:dataclip, body: %{"foo" => "bar"}, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      auth_methods = [
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :api,
+          api_key: "sup3r-s3cret-api-key"
+        ),
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic,
+          username: "caller",
+          password: "sup3r-s3cret-password"
+        )
+      ]
+
+      trigger
+      |> Repo.preload(:webhook_auth_methods)
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:webhook_auth_methods, auth_methods)
+      |> Repo.update!()
+
+      {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          options:
+            Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
+              project_id: project.id
+            })
+            |> Map.new()
+        )
+
+      %{run: run, workflow: workflow}
+    end
+
+    setup [:create_socket, :join_run_channel]
+
+    # The channel scrubber used to be seeded only by `fetch:credential`, so a job
+    # that read an inbound auth header out of `state.request.headers` and logged
+    # it wrote the secret into `log_lines` verbatim -- readable by any project
+    # member, including a `:viewer` who is not allowed to see auth methods.
+    test "run:log scrubs the trigger's api key out of the message", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "run:log", %{
+          "message" => ["the inbound key was sup3r-s3cret-api-key"],
+          "timestamp" => "1699444653874083"
+        })
+
+      assert_reply ref, :ok, %{log_line_id: _}
+
+      assert Repo.one(Lightning.Invocation.LogLine).message ==
+               "the inbound key was ***"
+    end
+
+    test "run:log scrubs the trigger's basic password and its base64 form", %{
+      socket: socket
+    } do
+      credentials = Base.encode64("caller:sup3r-s3cret-password")
+
+      ref =
+        push(socket, "run:log", %{
+          "message" => ["Basic #{credentials} / sup3r-s3cret-password"],
+          "timestamp" => "1699444653874083"
+        })
+
+      assert_reply ref, :ok, %{log_line_id: _}
+
+      message = Repo.one(Lightning.Invocation.LogLine).message
+
+      refute message =~ credentials
+      refute message =~ "sup3r-s3cret-password"
+      assert message == "Basic *** / ***"
+    end
+
+    test "run:batch_logs scrubs every line in the batch", %{socket: socket} do
+      ref =
+        push(socket, "run:batch_logs", %{
+          "logs" => [
+            %{
+              "message" => ["first sup3r-s3cret-api-key"],
+              "timestamp" => "1699444653874083"
+            },
+            %{
+              "message" => ["second sup3r-s3cret-api-key"],
+              "timestamp" => "1699444653874084"
+            }
+          ]
+        })
+
+      assert_reply ref, :ok, _
+
+      messages =
+        Lightning.Invocation.LogLine
+        |> order_by(asc: :timestamp)
+        |> Repo.all()
+        |> Enum.map(& &1.message)
+
+      assert messages == ["first ***", "second ***"]
+    end
+
+    test "a message with no secret in it is stored verbatim", %{socket: socket} do
+      ref =
+        push(socket, "run:log", %{
+          "message" => ["nothing sensitive here"],
+          "timestamp" => "1699444653874083"
+        })
+
+      assert_reply ref, :ok, %{log_line_id: _}
+
+      assert Repo.one(Lightning.Invocation.LogLine).message ==
+               "nothing sensitive here"
     end
   end
 
@@ -1909,15 +2197,14 @@ defmodule LightningWeb.RunChannelTest do
           options: run_options |> Map.from_struct()
         )
 
-      {:ok, bearer, claims} =
-        Lightning.Workers.WorkerToken.generate_and_sign(
-          %{},
-          Lightning.Config.worker_token_signer()
-        )
+      claims = ws_worker_claims()
 
       socket =
         LightningWeb.WorkerSocket
-        |> socket("socket_id", %{token: bearer, claims: claims})
+        |> socket("socket_id", %{
+          token: raw_worker_token(claims),
+          claims: claims
+        })
 
       {:ok, _, socket} =
         socket
@@ -2446,7 +2733,7 @@ defmodule LightningWeb.RunChannelTest do
       %{
         "step_id" => step.id,
         "output_dataclip_id" => Ecto.UUID.generate(),
-        "output_dataclip" => ~s({"foo": "bar"}),
+        "output_dataclip" => %{"foo" => "bar"},
         "reason" => "normal"
       }
       |> maybe_put("webhook_response", Keyword.get(opts, :webhook_response))
@@ -2564,14 +2851,12 @@ defmodule LightningWeb.RunChannelTest do
   end
 
   defp create_socket(context) do
-    {:ok, bearer, claims} =
-      Workers.WorkerToken.generate_and_sign(
-        %{},
-        Lightning.Config.worker_token_signer()
-      )
+    # `socket/3` bypasses `WorkerSocket.connect/2`, so these claims are assigned
+    # rather than verified — but they are still the shape ws-worker sends.
+    claims = ws_worker_claims()
 
     assigns = %{
-      token: bearer,
+      token: raw_worker_token(claims),
       claims: claims,
       api_version: context[:api_version]
     }
@@ -2664,6 +2949,39 @@ defmodule LightningWeb.RunChannelTest do
     insert(:step, runs: [run], job: job, exit_reason: "success")
   end
 
+  # Browser clients reach the channel through `UserSocket`, so their standing
+  # comes from the session token rather than a worker run token.
+  defp connect_browser_socket(user) do
+    session_token = Lightning.Accounts.generate_user_session_token(user)
+    token = Phoenix.Token.encrypt(@endpoint, "user socket", session_token)
+    {:ok, socket} = connect(LightningWeb.UserSocket, %{"token" => token})
+    socket
+  end
+
+  # A run a worker can be handed, with the work order chain it needs.
+  defp run_in(project) do
+    %{triggers: [trigger]} =
+      workflow = insert(:simple_workflow, project: project)
+
+    {:ok, snapshot} = Workflows.Snapshot.create(workflow)
+    dataclip = insert(:dataclip, project: project)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot
+      )
+
+    insert(:run,
+      work_order: work_order,
+      starting_trigger: trigger,
+      dataclip: dataclip,
+      snapshot: snapshot
+    )
+  end
+
   # Browser client tests
   describe "joining the run:* channel as browser client" do
     setup do
@@ -2741,6 +3059,46 @@ defmodule LightningWeb.RunChannelTest do
 
       assert {:error, %{reason: "not_found"}} =
                subscribe_and_join(socket, "run:#{fake_id}", %{})
+    end
+
+    # The `/mfa_required` page a blocked member lands on still renders their
+    # session token, so that session can open the socket by hand. The check has
+    # to hold on the join, not only on the LiveView mount.
+    test "rejects a member of an MFA-required project who has not enrolled" do
+      user = insert(:user, mfa_enabled: false)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      run = run_in(project)
+
+      assert {:error, %{reason: "unauthorized"}} =
+               user
+               |> connect_browser_socket()
+               |> subscribe_and_join("run:#{run.id}", %{}),
+             "an unenrolled member joined a run channel on a project that " <>
+               "requires MFA — this streams log lines and step dataclips"
+    end
+
+    # Control: without it, a policy that refuses everybody would pass.
+    test "admits a member of an MFA-required project who has enrolled" do
+      user = insert(:user, mfa_enabled: true)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      run = run_in(project)
+
+      assert {:ok, _reply, _socket} =
+               user
+               |> connect_browser_socket()
+               |> subscribe_and_join("run:#{run.id}", %{})
     end
   end
 
@@ -2956,7 +3314,7 @@ defmodule LightningWeb.RunChannelTest do
         Lightning.Runs.complete_step(
           %{
             "step_id" => step.id,
-            "output_dataclip" => Jason.encode!(%{"foo" => "bar"}),
+            "output_dataclip" => %{"foo" => "bar"},
             "output_dataclip_id" => Ecto.UUID.generate(),
             "reason" => "success",
             "finished_at" => DateTime.utc_now(),
@@ -2984,5 +3342,187 @@ defmodule LightningWeb.RunChannelTest do
       assert pushed_log.id == log_line.id
       assert pushed_log.message == "test message"
     end
+  end
+
+  describe "project access revocation for browser clients" do
+    setup do
+      owner = insert(:user)
+      member = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: owner.id, role: :owner},
+            %{user_id: member.id, role: :editor}
+          ]
+        )
+
+      run = run_in(project)
+
+      {:ok, _reply, socket} =
+        member
+        |> connect_browser_socket()
+        |> subscribe_and_join("run:#{run.id}", %{})
+
+      %{
+        actor: insert(:user),
+        member: member,
+        project: project,
+        run: run,
+        socket: socket
+      }
+    end
+
+    test "stops the channel when the joined user is removed from the project",
+         %{actor: actor, member: member, project: project, socket: socket} do
+      channel_pid = socket.channel_pid
+      monitor_ref = Process.monitor(channel_pid)
+
+      remove_member(project, member, actor)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, ^channel_pid, :normal}
+    end
+
+    test "stops streaming run data once the joined user is removed", %{
+      actor: actor,
+      member: member,
+      project: project,
+      run: run,
+      socket: socket
+    } do
+      # Positive control: the stream is live before the removal.
+      append_log(run, "before removal")
+      assert_push "logs", %{logs: [%{message: "before removal"}]}
+
+      monitor_ref = Process.monitor(socket.channel_pid)
+      remove_member(project, member, actor)
+      assert_receive {:DOWN, ^monitor_ref, :process, _pid, :normal}
+
+      append_log(run, "after removal")
+
+      refute_push "logs", %{logs: [%{message: "after removal"}]}
+    end
+
+    test "leaves the channel joined when a different member is removed", %{
+      actor: actor,
+      project: project,
+      run: run,
+      socket: socket
+    } do
+      other_member = insert(:user)
+
+      insert(:project_user,
+        project: project,
+        user: other_member,
+        role: :editor
+      )
+
+      remove_member(project, other_member, actor)
+
+      # The broadcast is delivered before this push, so once the channel has
+      # replied it has necessarily already handled the membership event.
+      ref = push(socket, "fetch:logs", %{})
+      assert_reply ref, :ok, %{logs: _}
+      assert Process.alive?(socket.channel_pid)
+
+      append_log(run, "still a member")
+      assert_push "logs", %{logs: [%{message: "still a member"}]}
+    end
+
+    test "leaves the channel joined when the user is removed from another project",
+         %{actor: actor, member: member, socket: socket} do
+      other_project =
+        insert(:project,
+          project_users: [
+            %{user_id: insert(:user).id, role: :owner},
+            %{user_id: member.id, role: :editor}
+          ]
+        )
+
+      remove_member(other_project, member, actor)
+
+      ref = push(socket, "fetch:logs", %{})
+      assert_reply ref, :ok, %{logs: _}
+      assert Process.alive?(socket.channel_pid)
+    end
+
+    test "stops a support user's channel when the project withdraws support access",
+         %{project: project, run: run} do
+      Mox.stub(
+        Lightning.Extensions.MockProjectHook,
+        :handle_project_validation,
+        & &1
+      )
+
+      {:ok, project} =
+        Lightning.Projects.update_project(project, %{allow_support_access: true})
+
+      support_user = insert(:user, support_user: true)
+
+      {:ok, _reply, socket} =
+        support_user
+        |> connect_browser_socket()
+        |> subscribe_and_join("run:#{run.id}", %{})
+
+      monitor_ref = Process.monitor(socket.channel_pid)
+
+      {:ok, _project} =
+        Lightning.Projects.update_project(project, %{
+          allow_support_access: false
+        })
+
+      assert_receive {:DOWN, ^monitor_ref, :process, _pid, :normal}
+    end
+
+    # Project-wide, with no user on the event: `Scope` refuses a wound-down
+    # project to everybody, so every browser socket streaming its runs goes.
+    test "stops the channel when the project is scheduled for deletion", %{
+      project: project,
+      run: run,
+      socket: socket
+    } do
+      # Positive control: the stream is live before the wind-down.
+      append_log(run, "before scheduling")
+      assert_push "logs", %{logs: [%{message: "before scheduling"}]}
+
+      monitor_ref = Process.monitor(socket.channel_pid)
+
+      {:ok, _project} = Lightning.Projects.schedule_project_deletion(project)
+
+      assert_receive {:DOWN, ^monitor_ref, :process, _pid, :normal}
+
+      append_log(run, "after scheduling")
+
+      refute_push "logs", %{logs: [%{message: "after scheduling"}]}
+    end
+
+    test "leaves the channel joined when another project is scheduled for deletion",
+         %{socket: socket} do
+      other_project =
+        insert(:project, project_users: [%{user: insert(:user), role: :owner}])
+
+      {:ok, _project} =
+        Lightning.Projects.schedule_project_deletion(other_project)
+
+      ref = push(socket, "fetch:logs", %{})
+      assert_reply ref, :ok, %{logs: _}
+      assert Process.alive?(socket.channel_pid)
+    end
+  end
+
+  defp remove_member(project, user, actor) do
+    project
+    |> Lightning.Projects.get_project_user(user)
+    |> Lightning.Projects.delete_project_user!(actor)
+  end
+
+  defp append_log(run, message) do
+    {:ok, _log_line} =
+      Lightning.Runs.append_run_log(run, %{
+        message: message,
+        level: :info,
+        source: "TEST",
+        timestamp: DateTime.utc_now()
+      })
   end
 end

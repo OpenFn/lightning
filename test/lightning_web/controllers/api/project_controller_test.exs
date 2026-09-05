@@ -23,6 +23,49 @@ defmodule LightningWeb.API.ProjectControllerTest do
     end
   end
 
+  # Proves the plug is wired into the /api scope, rather than only that the
+  # plug function itself refuses — see user_auth_test.exs for the unit tests.
+  describe "with an account past its confirmation deadline" do
+    test "gets a 401, and the same token works again once confirmed", %{
+      conn: conn
+    } do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      user = insert(:user)
+      insert(:project, project_users: [%{user: user}])
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      user =
+        user
+        |> Ecto.Changeset.change(
+          confirmed_at: nil,
+          inserted_at:
+            DateTime.utc_now()
+            |> DateTime.add(-50, :hour)
+            |> DateTime.truncate(:second)
+        )
+        |> Lightning.Repo.update!()
+
+      refused = conn |> assign_bearer(token) |> get(~p"/api/projects")
+
+      assert json_response(refused, 401) == %{"error" => "Unauthorized"}
+
+      user
+      |> Ecto.Changeset.change(
+        confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
+      |> Lightning.Repo.update!()
+
+      allowed = conn |> assign_bearer(token) |> get(~p"/api/projects")
+
+      assert [%{"type" => "projects"}] = json_response(allowed, 200)["data"]
+    end
+  end
+
   describe "index" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 

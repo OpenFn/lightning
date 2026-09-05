@@ -55,6 +55,7 @@ import type {
   Message,
   MessageOptions,
   MessageStatus,
+  ResponseSegment,
   SessionType,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
@@ -138,11 +139,21 @@ export class AIChannelRegistry {
   private streamingBuffer = '';
   private streamingDrainPos = 0;
   private streamingDrainTimer: ReturnType<typeof setInterval> | null = null;
-  // Status markers pinned to buffer positions. A status arriving over the
-  // wire is emitted into the store's streamingSegments timeline only once
+  // Timeline markers pinned to buffer positions. A status or workflow
+  // snapshot arriving over the wire enters the store's timeline only once
   // every character buffered before it has drained, preserving wire order
   // (same guarantee drainThenRun provides for new_message).
-  private pendingStatusMarkers: Array<{ pos: number; text: string }> = [];
+  //
+  // Snapshots ride the same queue as statuses because Apollo emits them as
+  // a pair — the changed YAML, then the settled status describing it. If
+  // snapshots bypassed the drain they would land while earlier prose was
+  // still typing out, and attach to the wrong status line.
+  private pendingTimelineMarkers: Array<
+    { pos: number } & (
+      | { kind: 'status'; segment: ResponseSegment }
+      | { kind: 'snapshot'; yaml: string }
+    )
+  > = [];
   // Delay in ms between each letter. 15ms ≈ 65 chars/sec.
   private static readonly LETTER_INTERVAL_MS = 15;
   // Callback to run after the buffer finishes draining (e.g., finalize message)
@@ -174,10 +185,25 @@ export class AIChannelRegistry {
    * enters the store's streamingSegments timeline only after the text that
    * preceded it on the wire has drained.
    */
-  private bufferStreamingStatusSegment(text: string): void {
-    this.pendingStatusMarkers.push({
+  private bufferStreamingStatusSegment(segment: ResponseSegment): void {
+    this.pendingTimelineMarkers.push({
+      kind: 'status',
       pos: this.streamingBuffer.length,
-      text,
+      segment,
+    });
+    this.startDraining();
+  }
+
+  /**
+   * Enqueue a workflow YAML snapshot at the current end of the streaming
+   * buffer, so it lands in the timeline immediately before the status
+   * segment Apollo sends next to describe it.
+   */
+  private bufferStreamingSnapshot(yaml: string): void {
+    this.pendingTimelineMarkers.push({
+      kind: 'snapshot',
+      pos: this.streamingBuffer.length,
+      yaml,
     });
     this.startDraining();
   }
@@ -187,14 +213,15 @@ export class AIChannelRegistry {
    * char drain (i.e. all text before them has already been appended).
    */
   private flushDueStatusMarkers(): void {
-    let next = this.pendingStatusMarkers.at(0);
+    let next = this.pendingTimelineMarkers.at(0);
     while (next && next.pos <= this.streamingDrainPos) {
-      this.pendingStatusMarkers.shift();
-      this.store._appendStreamingSegment({
-        type: 'status',
-        content: next.text,
-      });
-      next = this.pendingStatusMarkers.at(0);
+      this.pendingTimelineMarkers.shift();
+      if (next.kind === 'status') {
+        this.store._appendStreamingSegment(next.segment);
+      } else {
+        this.store._appendStreamingSnapshot(next.yaml);
+      }
+      next = this.pendingTimelineMarkers.at(0);
     }
   }
 
@@ -228,7 +255,7 @@ export class AIChannelRegistry {
     }
     this.streamingBuffer = '';
     this.streamingDrainPos = 0;
-    this.pendingStatusMarkers = [];
+    this.pendingTimelineMarkers = [];
   }
 
   /**
@@ -492,6 +519,39 @@ export class AIChannelRegistry {
    * @param topic - Channel topic
    * @param messageId - Message ID to retry
    */
+  /**
+   * Report that a reply's workflow failed to reach the canvas.
+   *
+   * Sent to the server rather than to the browser's Sentry SDK, which is
+   * disabled. Without this the only trace is an alert and a console line,
+   * both of which die with the tab, so we cannot tell how often this
+   * happens. Carries no workflow content, only which step broke.
+   *
+   * Best effort: a report that does not arrive must never surface to the
+   * user on top of the failure they are already being told about.
+   */
+  reportApplyFailure(
+    topic: string,
+    details: {
+      messageId: string;
+      stage: 'parse' | 'validate_ids' | 'import' | 'save';
+      isNewWorkflow: boolean;
+    }
+  ): void {
+    const entry = this.channels.get(topic);
+    if (!entry) return;
+
+    entry.channel
+      .push('apply_failed', {
+        message_id: details.messageId,
+        stage: details.stage,
+        is_new_workflow: details.isNewWorkflow,
+      })
+      .receive('error', (response: unknown) => {
+        logger.warn('Could not report a failed apply', response);
+      });
+  }
+
   retryMessage(topic: string, messageId: string): void {
     const entry = this.channels.get(topic);
 
@@ -729,24 +789,57 @@ export class AIChannelRegistry {
     // so they land after the text that preceded them on the wire.
     const streamingSegmentHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as {
-        segment?: { type?: string; content?: string };
+        segment?: {
+          type?: string;
+          content?: string;
+          summary?: string;
+          steps?: Array<{ key?: string; name?: string }>;
+        };
       };
       // Only status segments exist on the wire today; anything else is a
       // contract change and is ignored until the client learns about it.
-      if (typedPayload.segment?.type !== 'status') return;
-      if (typeof typedPayload.segment.content !== 'string') return;
+      const incoming = typedPayload.segment;
+      if (incoming?.type !== 'status') return;
+      if (typeof incoming.content !== 'string') return;
 
       if (this.store.getSnapshot().streamingStatus) {
         this.store.setStreamingStatus(null);
       }
-      this.bufferStreamingStatusSegment(typedPayload.segment.content);
+
+      // `summary` and `steps` are optional: an older Apollo sends neither,
+      // and the timeline renders from `content` alone in that case.
+      const segment: ResponseSegment = {
+        type: 'status',
+        content: incoming.content,
+      };
+      if (typeof incoming.summary === 'string' && incoming.summary) {
+        segment.summary = incoming.summary;
+      }
+      const steps = Array.isArray(incoming.steps)
+        ? incoming.steps.filter(
+            (step): step is { key: string; name?: string } =>
+              !!step && typeof step.key === 'string' && step.key !== ''
+          )
+        : [];
+      if (steps.length > 0) segment.steps = steps;
+
+      this.bufferStreamingStatusSegment(segment);
     };
 
     const streamingChangesHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as {
         changes: Record<string, unknown>;
       };
+      // Two consumers with deliberately different timing. The canvas wants
+      // the newest workflow as early as possible, so the scalar is set at
+      // network arrival and auto-apply runs off it. The chat timeline wants
+      // wire order against the prose, so the same YAML is also pinned into
+      // the drain queue and only becomes a snapshot when its turn comes.
       this.store._setStreamingChanges(typedPayload.changes);
+      const yaml = typedPayload.changes['yaml'];
+      if (typeof yaml === 'string' && yaml.trim()) {
+        this.bufferStreamingSnapshot(yaml);
+      }
     };
 
     const streamingErrorHandler: ChannelCallback = (_payload: unknown) => {

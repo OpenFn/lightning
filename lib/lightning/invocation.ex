@@ -92,7 +92,7 @@ defmodule Lightning.Invocation do
   def get_dataclip_with_body!(id) do
     # Query body as pretty-printed JSON text directly from PostgreSQL, avoiding expensive
     # deserialization to Elixir map (saves ~38x memory amplification!)
-    # For http_request/kafka types, wraps body in {"data": ..., "request": ...} structure
+    # For http_request types, wraps body in {"data": ..., "request": ...} structure
     dataclip =
       from(d in Lightning.Invocation.Dataclip, where: d.id == ^id)
       |> Query.select_as_input_text()

@@ -1169,10 +1169,15 @@ defmodule Lightning.AiAssistant do
       {:ok, %{"type" => "status", "content" => content} = segment}
       when is_binary(content) ->
         # Take only the contract fields so stray keys from Apollo never
-        # reach the client.
+        # reach the client. `steps` and `summary` are optional: `steps`
+        # names what the action touched as data, which is how the client
+        # attaches per-step detail without parsing `content`.
         broadcast_streaming_segment(
           session_id,
-          Map.take(segment, ["type", "content"])
+          segment
+          |> Map.take(["type", "content", "summary", "steps"])
+          |> normalize_segment_steps()
+          |> normalize_segment_summary()
         )
 
       _ ->
@@ -1389,8 +1394,19 @@ defmodule Lightning.AiAssistant do
   # save: absent or all-invalid segments mean a flat legacy message. The
   # segment contract itself lives in `ChatMessage.Segment`.
   defp normalize_response_segments(segments) when is_list(segments) do
+    # Sanitise before validating, not after. A malformed `steps` entry would
+    # otherwise fail the whole segment and lose its prose, and a non-map entry
+    # would reach cast_embed and raise rather than simply being dropped.
     {valid, dropped} =
-      Enum.split_with(segments, fn segment ->
+      segments
+      |> Enum.map(fn segment ->
+        if is_map(segment) do
+          segment |> normalize_segment_steps() |> normalize_segment_summary()
+        else
+          segment
+        end
+      end)
+      |> Enum.split_with(fn segment ->
         is_map(segment) and
           ChatMessage.Segment.changeset(%ChatMessage.Segment{}, segment).valid?
       end)
@@ -1407,12 +1423,65 @@ defmodule Lightning.AiAssistant do
     end
 
     case kept do
-      [] -> nil
-      kept -> Enum.map(kept, &Map.take(&1, ["type", "content"]))
+      [] ->
+        nil
+
+      kept ->
+        Enum.map(kept, &Map.take(&1, ["type", "content", "summary", "steps"]))
     end
   end
 
   defp normalize_response_segments(_segments), do: nil
+
+  # Keeps only the step fields we persist, and drops the key entirely when
+  # Apollo sent nothing usable — an empty list would otherwise read as "this
+  # action touched no steps", which is not the same as "this Apollo version
+  # does not report steps".
+  # `summary` is optional decoration, so it must never be the reason a segment
+  # is thrown away: anything the embed would reject is dropped here instead.
+  defp normalize_segment_summary(%{"summary" => summary} = segment)
+       when is_binary(summary) do
+    if String.length(summary) <= ChatMessage.Segment.max_content_length() do
+      segment
+    else
+      Map.delete(segment, "summary")
+    end
+  end
+
+  defp normalize_segment_summary(segment), do: Map.delete(segment, "summary")
+
+  defp normalize_segment_steps(%{"steps" => steps} = segment)
+       when is_list(steps) do
+    max_steps = ChatMessage.Segment.max_steps()
+
+    steps
+    |> Enum.filter(&is_map/1)
+    |> Enum.map(&Map.take(&1, ["key", "name"]))
+    |> Enum.filter(&valid_segment_step?/1)
+    |> Enum.take(max_steps)
+    |> case do
+      [] -> Map.delete(segment, "steps")
+      kept -> Map.put(segment, "steps", kept)
+    end
+  end
+
+  defp normalize_segment_steps(segment), do: Map.delete(segment, "steps")
+
+  # Anything the embed would reject has to be dropped here rather than left to
+  # fail the cast: an invalid step invalidates its whole segment, which loses
+  # a status line the user already saw live.
+  defp valid_segment_step?(%{"key" => key} = step) when is_binary(key) do
+    max = ChatMessage.Segment.max_step_field_length()
+
+    key != "" and String.length(key) <= max and
+      case Map.get(step, "name") do
+        nil -> true
+        name when is_binary(name) -> String.length(name) <= max
+        _other -> false
+      end
+  end
+
+  defp valid_segment_step?(_step), do: false
 
   # Global chat always returns a full workflow YAML (job bodies embedded).
   # The frontend handles per-step diffing and full-workflow apply.

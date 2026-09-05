@@ -17,6 +17,12 @@ defmodule LightningWeb.AiAssistantChannel do
   alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Projects
+  alias Lightning.Projects.Events.ProjectDeletionScheduled
+  alias Lightning.Projects.Events.ProjectUserAdded
+  alias Lightning.Projects.Events.ProjectUserRemoved
+  alias Lightning.Projects.Events.ProjectUserRoleChanged
+  alias Lightning.Projects.Events.SupportAccessUpdated
+  alias Lightning.Projects.Events.WorkflowDeleted
   alias Lightning.Runs
   alias Lightning.Workflows
   alias LightningWeb.Channels.AiAssistantJSON
@@ -41,6 +47,7 @@ defmodule LightningWeb.AiAssistantChannel do
       session = finalize_session_load(session, session_id, params)
 
       Lightning.subscribe("ai_session:#{session.id}")
+      subscribe_to_project_events(session)
 
       # Broadcast new session creation to workflow channel so other users see it
       if session_id == "new" do
@@ -57,6 +64,7 @@ defmodule LightningWeb.AiAssistantChannel do
          session_id: session.id,
          session_type: session_type,
          session: session,
+         workflow_id: get_workflow_id_for_session(session),
          current_user: user
        )}
     else
@@ -77,101 +85,147 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
+  # Deliberately `:read`, unlike `update_context`: asking the assistant about a
+  # session you may read is part of reading it, so viewers keep chat. The cost is
+  # that they add to shared session history and spend the project's AI quota;
+  # what they cannot do is write the answer back onto the job or workflow.
+  # Requiring edit rights here would be a product change, not a policy fix.
+  #
+  # The row comes from the guard, not from `socket.assigns`. `save_message/3`
+  # writes `meta` back from the struct it is handed, so the join-time snapshot
+  # would drop a `runtime_context` another participant persisted since.
   @impl true
   def handle_in("new_message", %{"content" => content} = params, socket) do
-    session = socket.assigns.session
-    user = socket.assigns.current_user
-    project_id = get_project_id_from_session(session)
+    with_authorized_frame(socket, :read, fn session ->
+      user = socket.assigns.current_user
+      project_id = get_project_id_from_session(session)
 
-    if String.trim(content) != "" do
-      limit_result = Limiter.validate_quota(project_id)
+      if String.trim(content) != "" do
+        limit_result = Limiter.validate_quota(project_id)
 
-      handle_new_message_with_quota(
-        session,
-        user,
-        content,
-        limit_result,
-        params,
-        socket
-      )
-    else
-      reply_validation_error("Message cannot be empty", socket)
-    end
+        handle_new_message_with_quota(
+          session,
+          user,
+          content,
+          limit_result,
+          params,
+          socket
+        )
+      else
+        reply_validation_error("Message cannot be empty", socket)
+      end
+    end)
   end
 
+  # `:read` for the same reason as `new_message`: a retry is the same request
+  # again, so it is gated the same way.
   @impl true
   def handle_in("retry_message", %{"message_id" => message_id}, socket) do
-    message = Lightning.Repo.get(Lightning.AiAssistant.ChatMessage, message_id)
-    project_id = get_project_id_from_session(socket.assigns.session)
+    with_authorized_frame(socket, :read, fn _authorized_session ->
+      message = Lightning.Repo.get(Lightning.AiAssistant.ChatMessage, message_id)
+      project_id = get_project_id_from_session(socket.assigns.session)
 
-    if message && message.chat_session_id == socket.assigns.session_id do
-      case Limiter.validate_quota(project_id) do
-        :ok ->
-          retry_message_with_quota(message, socket)
+      if message && message.chat_session_id == socket.assigns.session_id do
+        case Limiter.validate_quota(project_id) do
+          :ok ->
+            retry_message_with_quota(message, socket)
 
-        {:error, _, %Lightning.Extensions.Message{text: text}} ->
-          reply_limit_error(text, socket)
+          {:error, _, %Lightning.Extensions.Message{text: text}} ->
+            reply_limit_error(text, socket)
+        end
+      else
+        reply_unauthorized_error("message not found or unauthorized", socket)
       end
-    else
-      reply_unauthorized_error("message not found or unauthorized", socket)
-    end
+    end)
   end
 
   @impl true
   def handle_in("update_context", params, socket) do
-    session = socket.assigns.session
+    with_authorized_frame(socket, :edit, fn session ->
+      cond do
+        params["job_adaptor"] != nil or params["job_body"] != nil or
+            params["job_name"] != nil ->
+          update_job_code_context(session, params, socket)
 
-    cond do
-      params["job_adaptor"] != nil or params["job_body"] != nil or
-          params["job_name"] != nil ->
-        update_job_code_context(session, params, socket)
+        params["workflow_id"] != nil ->
+          update_workflow_template_context(session, params, socket)
 
-      params["workflow_id"] != nil ->
-        update_workflow_template_context(session, params, socket)
+        true ->
+          {:reply,
+           {:error,
+            %{reason: "Context updates not supported for this session type"}},
+           socket}
+      end
+    end)
+  end
 
-      true ->
-        {:reply,
-         {:error,
-          %{reason: "Context updates not supported for this session type"}},
-         socket}
-    end
+  @doc false
+  # A workflow the assistant produced failed to reach the canvas. Nothing else
+  # records that: the client shows an alert and logs to a console, both of
+  # which die with the tab, and the browser Sentry SDK is disabled. Without a
+  # report we cannot say whether a failed apply is rare enough to leave the
+  # user re-prompting or common enough to be worth a durable retry.
+  #
+  # Carries no workflow content, only which step broke.
+  @impl true
+  def handle_in("apply_failed", params, socket) do
+    with_authorized_frame(socket, :read, fn session ->
+      Lightning.Sentry.capture_message(
+        "AI assistant workflow apply failed",
+        level: :warning,
+        tags: %{
+          feature: "ai_assistant_apply",
+          apply_stage: apply_stage(params["stage"]),
+          is_new_workflow: to_string(params["is_new_workflow"] == true)
+        },
+        extra: %{
+          session_id: session.id,
+          message_id: params["message_id"]
+        }
+      )
+
+      {:reply, :ok, socket}
+    end)
   end
 
   @impl true
   def handle_in("list_sessions", params, socket) do
-    session = socket.assigns.session
-    session_type = socket.assigns.session_type
+    with_authorized_frame(socket, :read, fn _authorized_session ->
+      session = socket.assigns.session
+      session_type = socket.assigns.session_type
 
-    offset = Map.get(params, "offset", 0)
-    limit = Map.get(params, "limit", 20)
+      offset = Map.get(params, "offset", 0)
+      limit = Map.get(params, "limit", 20)
 
-    opts = [offset: offset, limit: limit]
+      opts = [offset: offset, limit: limit]
 
-    opts =
-      if session_type == "workflow_template" do
-        workflow = get_workflow_for_session(session)
-        Keyword.put(opts, :workflow, workflow)
+      opts =
+        if session_type == "workflow_template" do
+          workflow = get_workflow_for_session(session)
+          Keyword.put(opts, :workflow, workflow)
+        else
+          opts
+        end
+
+      with {:ok, resource} <-
+             get_resource_for_session_type(session_type, session),
+           %{sessions: sessions, pagination: pagination} <-
+             AiAssistant.list_sessions(resource, :desc, opts) do
+        {:reply,
+         {:ok,
+          %{
+            sessions: AiAssistantJSON.format_sessions(sessions),
+            pagination: %{
+              total_count: pagination.total_count,
+              has_next_page: pagination.has_next_page,
+              has_prev_page: pagination.has_prev_page
+            }
+          }}, socket}
       else
-        opts
+        {:error, reason} ->
+          {:reply, {:error, %{reason: reason}}, socket}
       end
-
-    with {:ok, resource} <- get_resource_for_session_type(session_type, session),
-         %{sessions: sessions, pagination: pagination} <-
-           AiAssistant.list_sessions(resource, :desc, opts) do
-      {:reply,
-       {:ok,
-        %{
-          sessions: AiAssistantJSON.format_sessions(sessions),
-          pagination: %{
-            total_count: pagination.total_count,
-            has_next_page: pagination.has_next_page,
-            has_prev_page: pagination.has_prev_page
-          }
-        }}, socket}
-    else
-      {:error, reason} ->
-        {:reply, {:error, %{reason: reason}}, socket}
-    end
+    end)
   end
 
   defp update_job_code_context(session, params, socket) do
@@ -179,14 +233,10 @@ defmodule LightningWeb.AiAssistantChannel do
     job_adaptor = params["job_adaptor"]
     job_name = params["job_name"]
 
-    # Fetch fresh session from DB to get current meta (including message_options)
-    # This prevents race conditions where update_context overwrites message_options
-    # set by a concurrent new_message call
-    fresh_session =
-      Lightning.Repo.get!(Lightning.AiAssistant.ChatSession, session.id)
-
+    # `session` is the row `with_authorized_frame/3` read a moment ago, so its
+    # meta is current: no second fetch on what is a per-keystroke path.
     updated_meta =
-      (fresh_session.meta || %{})
+      (session.meta || %{})
       |> Map.put("runtime_context", %{
         "job_body" => job_body,
         "job_adaptor" => job_adaptor,
@@ -194,14 +244,14 @@ defmodule LightningWeb.AiAssistantChannel do
         "updated_at" => DateTime.utc_now() |> DateTime.to_iso8601()
       })
 
-    case fresh_session
+    case session
          |> Ecto.Changeset.change(%{meta: updated_meta})
          |> Lightning.Repo.update() do
       {:ok, updated_session} ->
         updated_session =
           updated_session
           |> AiAssistant.put_expression_and_adaptor(
-            job_body || session.expression || "",
+            job_body || socket.assigns.session.expression || "",
             job_adaptor || "@openfn/language-common@latest"
           )
 
@@ -226,7 +276,7 @@ defmodule LightningWeb.AiAssistantChannel do
       is_nil(workflow_id) ->
         {:reply, {:ok, %{success: true}}, socket}
 
-      check_workflow_access_by_id(workflow_id, user, :access_write) != :ok ->
+      check_workflow_access_by_id(workflow_id, user, :edit_workflow) != :ok ->
         {:reply, {:error, %{reason: "unauthorized"}}, socket}
 
       true ->
@@ -234,6 +284,9 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
+  # `session` is the row `with_authorized_frame/3` just read, so `meta` still
+  # holds anything an intervening `new_message` persisted (message_options);
+  # writing from the join-time snapshot would drop it.
   defp persist_workflow_template_context(session, workflow_id, socket) do
     updated_meta =
       (session.meta || %{})
@@ -383,9 +436,87 @@ defmodule LightningWeb.AiAssistantChannel do
     {:noreply, socket}
   end
 
+  # Inbound frames are re-authorised in `with_authorized_frame/3`, but the
+  # broadcasts pushed above (assistant replies, streaming chunks, errors) leave
+  # without passing through it. A socket that keeps receiving them after its
+  # user's access was revoked is the same leak in the other direction, so the
+  # channel drops itself as soon as this user's standing on the project changes
+  # in a way that no longer authorises the session.
+  @impl true
+  def handle_info(
+        %event{user_id: user_id},
+        %{assigns: %{current_user: %{id: user_id}}} = socket
+      )
+      when event in [
+             ProjectUserAdded,
+             ProjectUserRemoved,
+             ProjectUserRoleChanged
+           ] do
+    stop_unless_authorized(socket)
+  end
+
+  # The project is wound down, so no standing on it authorises anything any more
+  # and no later change can undo that. Every session on the project is in scope,
+  # so there is no user to match on.
+  @impl true
+  def handle_info(%ProjectDeletionScheduled{}, socket) do
+    stop_unless_authorized(socket)
+  end
+
+  # The workflow this session hangs off is gone. Inbound frames are not refused
+  # for it — a soft-deleted workflow still authorises, because access is the
+  # project's to grant — so the session has to be dropped explicitly.
+  @impl true
+  def handle_info(
+        %WorkflowDeleted{workflow_id: workflow_id},
+        %{assigns: %{workflow_id: workflow_id}} = socket
+      )
+      when not is_nil(workflow_id) do
+    {:stop, :normal, socket}
+  end
+
+  # Support access is a support user's only standing on a project, so revoking it
+  # can end their session. Members are unaffected: their row outranks it.
+  @impl true
+  def handle_info(
+        %SupportAccessUpdated{},
+        %{assigns: %{current_user: %{support_user: true}}} = socket
+      ) do
+    stop_unless_authorized(socket)
+  end
+
+  @impl true
+  def handle_info(%event{}, socket)
+      when event in [
+             ProjectUserAdded,
+             ProjectUserRemoved,
+             ProjectUserRoleChanged,
+             SupportAccessUpdated,
+             WorkflowDeleted
+           ] do
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_info(_msg, socket) do
     {:noreply, socket}
+  end
+
+  defp stop_unless_authorized(socket) do
+    case authorize_frame(socket, :read) do
+      {:ok, _session} -> {:noreply, socket}
+      {:error, :unauthorized} -> {:stop, :normal, socket}
+    end
+  end
+
+  # Membership events are the only signal that an open socket's authorisation
+  # went stale; a session with no resolvable project (a brand-new unsaved
+  # workflow) has no membership to watch yet.
+  defp subscribe_to_project_events(session) do
+    case get_project_id_from_session(session) do
+      nil -> :ok
+      project_id -> Lightning.Projects.Events.subscribe(project_id)
+    end
   end
 
   defp parse_topic(topic) do
@@ -655,18 +786,36 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
+  # The permission defaults to the one each session type has always been joined
+  # with. Callers that need a stricter check pass it explicitly.
   defp authorize_session_access(%{session_type: "job_code"} = session, user) do
-    authorize_job_code_session(session, user)
+    authorize_session_access(session, user, :access_read)
   end
 
   defp authorize_session_access(
          %{session_type: "workflow_template"} = session,
          user
        ) do
-    authorize_workflow_template_session(session, user)
+    authorize_session_access(session, user, :access_write)
   end
 
-  defp authorize_job_code_session(session, user) do
+  defp authorize_session_access(
+         %{session_type: "job_code"} = session,
+         user,
+         permission
+       ) do
+    authorize_job_code_session(session, user, permission)
+  end
+
+  defp authorize_session_access(
+         %{session_type: "workflow_template"} = session,
+         user,
+         permission
+       ) do
+    authorize_workflow_template_session(session, user, permission)
+  end
+
+  defp authorize_job_code_session(session, user, permission) do
     unsaved_job = session.meta["unsaved_job"]
 
     cond do
@@ -674,12 +823,17 @@ defmodule LightningWeb.AiAssistantChannel do
         check_workflow_access_by_id(
           unsaved_job["workflow_id"],
           user,
-          :access_read
+          permission
         )
 
       session.job_id ->
-        authorize_saved_job_session(session, user)
+        authorize_saved_job_session(session, user, permission)
 
+      # No project to authorise against, so `permission` is not consulted and
+      # `:edit` degrades to "you own it". Reachable only for a session with no
+      # job, no project and no unsaved workflow, which no current creation path
+      # produces. Worth keeping that way now that a write check comes through
+      # here.
       session.user_id == user.id ->
         :ok
 
@@ -688,16 +842,21 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp authorize_workflow_template_session(session, user) do
+  defp authorize_workflow_template_session(session, user, permission) do
     unsaved_workflow = session.meta["unsaved_workflow"]
 
     cond do
       unsaved_workflow && unsaved_workflow["id"] ->
-        check_project_access(session.project_id, user, :access_write)
+        check_project_access(session.project_id, user, permission)
 
       session.project_id ->
-        check_project_access(session.project_id, user, :access_write)
+        check_project_access(session.project_id, user, permission)
 
+      # No project to authorise against, so `permission` is not consulted and
+      # `:edit` degrades to "you own it". Reachable only for a session with no
+      # job, no project and no unsaved workflow, which no current creation path
+      # produces. Worth keeping that way now that a write check comes through
+      # here.
       session.user_id == user.id ->
         :ok
 
@@ -706,11 +865,13 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  defp authorize_saved_job_session(session, user) do
+  defp authorize_saved_job_session(session, user, permission) do
     case Jobs.get_job(session.job_id) do
       {:ok, job} ->
-        check_workflow_access_by_id(job.workflow_id, user, :access_read)
+        check_workflow_access_by_id(job.workflow_id, user, permission)
 
+      # Same as the ownership branches above: the job is gone, so there is
+      # nothing left to authorise against and `permission` is not consulted.
       {:error, :not_found} ->
         if session.user_id == user.id, do: :ok, else: {:error, :unauthorized}
     end
@@ -729,8 +890,20 @@ defmodule LightningWeb.AiAssistantChannel do
   defp check_project_access(project_id, user, permission) do
     case Projects.get_project(project_id) do
       nil -> {:error, :unauthorized}
-      project -> Permissions.can(:workflows, permission, user, project)
+      project -> authorize_project(project, user, permission)
     end
+  end
+
+  # `Policies.Workflows.authorize/3` collapses `:access_write` into the same
+  # bare membership check as `:access_read`, so an `:access_write` call here
+  # would let a viewer straight through. Anything that genuinely needs edit
+  # rights goes through the role-aware ProjectUsers policy instead.
+  defp authorize_project(project, user, :edit_workflow) do
+    Permissions.can(:project_users, :edit_workflow, user, project)
+  end
+
+  defp authorize_project(project, user, permission) do
+    Permissions.can(:workflows, permission, user, project)
   end
 
   # A not-yet-saved workflow (no row) is allowed; an existing one must be writable.
@@ -1240,6 +1413,60 @@ defmodule LightningWeb.AiAssistantChannel do
       {:error, changeset} ->
         errors = format_changeset_errors(changeset)
         {:reply, {:error, %{type: "validation_error", errors: errors}}, socket}
+    end
+  end
+
+  # Re-authorisation for every privileged frame.
+  #
+  # The check made at join is a snapshot: a socket stays open across role
+  # changes, project-membership removals and session edits. Each privileged
+  # handler therefore re-reads the session row and re-runs the authorisation
+  # against current state rather than trusting `socket.assigns`.
+  #
+  # `:read` reproduces exactly what join enforced. `:edit` demands real edit
+  # rights via the role-aware policy — see `authorize_project/3`.
+  # The row the decision was made against is handed to the closure: a handler
+  # that writes must write from that row rather than from the join-time snapshot
+  # in `socket.assigns`, which may have been superseded in between.
+  # The stage names a step in the client's apply pipeline. It arrives from the
+  # browser, so it is matched against what we know rather than passed through
+  # into a Sentry tag.
+  defp apply_stage(stage)
+       when stage in ["parse", "validate_ids", "import", "save"],
+       do: stage
+
+  defp apply_stage(_stage), do: "unknown"
+
+  defp with_authorized_frame(socket, mode, fun) do
+    case authorize_frame(socket, mode) do
+      {:ok, session} ->
+        fun.(session)
+
+      {:error, :unauthorized} ->
+        reply_unauthorized_error("unauthorized", socket)
+    end
+  end
+
+  defp authorize_frame(socket, mode) do
+    user = socket.assigns.current_user
+
+    # A bare row, not AiAssistant.get_session/1: the authorisation decision only
+    # needs project_id, job_id, user_id and meta, and this runs on every frame.
+    case Lightning.Repo.get(
+           Lightning.AiAssistant.ChatSession,
+           socket.assigns.session_id
+         ) do
+      nil ->
+        {:error, :unauthorized}
+
+      session ->
+        permission_result =
+          case mode do
+            :read -> authorize_session_access(session, user)
+            :edit -> authorize_session_access(session, user, :edit_workflow)
+          end
+
+        with :ok <- permission_result, do: {:ok, session}
     end
   end
 

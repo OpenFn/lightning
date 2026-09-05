@@ -194,23 +194,6 @@ defmodule Lightning.InvocationTest do
       parsed = Jason.decode!(result.body_json)
       assert parsed == %{"baz" => "qux"}
 
-      # Test with kafka type - should wrap body in {"data": ..., "request": ...}
-      kafka_dataclip =
-        insert(:dataclip,
-          body: %{"kafka" => "data"},
-          request: %{"topic" => "test"},
-          type: :kafka,
-          project: project
-        )
-
-      result = Invocation.get_dataclip_with_body!(kafka_dataclip.id)
-
-      assert result.type == :kafka
-      assert is_binary(result.body_json)
-      parsed = Jason.decode!(result.body_json)
-      assert parsed["data"] == %{"kafka" => "data"}
-      assert parsed["request"] == %{"topic" => "test"}
-
       # Test that it raises when dataclip doesn't exist
       assert_raise Ecto.NoResultsError, fn ->
         Invocation.get_dataclip_with_body!(Ecto.UUID.generate())
@@ -456,24 +439,17 @@ defmodule Lightning.InvocationTest do
     test "doesn't return a dataclip if the wrong text is entered" do
       %{jobs: [job1 | _rest]} = insert(:complex_workflow)
 
-      [%{id: dataclip_id} | _ignored] =
-        Enum.map(1..10, fn _i ->
-          insert(:dataclip) |> tap(&insert(:step, input_dataclip: &1, job: job1))
-        end)
-
-      # replace the actual 3rd character with some random number
-      prefix = String.slice(dataclip_id, 0, 2) <> "4"
+      dataclip = insert(:dataclip, id: "11111111-1111-1111-1111-111111111111")
+      insert(:step, input_dataclip: dataclip, job: job1)
 
       dataclips =
         Invocation.list_dataclips_for_job(
           job1,
-          %{id_prefix: prefix},
+          %{id_prefix: "222"},
           limit: 10
         )
 
-      # ensure that the dataclip isn't found:
-      # i.e., refute that writing "ab4" matches a dataclip with UUID prefix "ab7"
-      refute Enum.any?(dataclips, &(&1.id == dataclip_id))
+      refute Enum.any?(dataclips, &(&1.id == dataclip.id))
     end
 
     test "filters out wiped dataclips" do
