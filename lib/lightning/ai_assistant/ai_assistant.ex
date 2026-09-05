@@ -1264,11 +1264,9 @@ defmodule Lightning.AiAssistant do
 
   defp handle_error_response(error_response, session) do
     case error_response do
-      {:ok, %Tesla.Env{status: status, body: body}}
+      {:ok, %Tesla.Env{status: status}}
       when status not in @success_status_range ->
-        error_message =
-          error_message_from_body(body) ||
-            "AI server returned an error (HTTP #{status})."
+        error_message = "AI server returned an error (HTTP #{status})."
 
         Logger.error(
           "AI query failed for session #{session.id}: #{error_message}"
@@ -1292,13 +1290,6 @@ defmodule Lightning.AiAssistant do
         {:error, "Oops! Something went wrong. Please try again."}
     end
   end
-
-  # Streaming requests carry a lazy Stream (a fun or %Stream{} struct) as the
-  # body, so error responses can't be indexed like decoded JSON maps.
-  defp error_message_from_body(body) when is_map(body) and not is_struct(body),
-    do: body["message"]
-
-  defp error_message_from_body(_body), do: nil
 
   defp build_job_message(body) do
     message = body["history"] |> Enum.reverse() |> hd()
