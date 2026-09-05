@@ -65,6 +65,9 @@ and this project adheres to
   whichever job you have open. It applies its own changes and shows them as
   diffs, so those blocks are data it quoted back or work it has already done.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- AI assistant code blocks share the surface the workflow diffs use, so a reply
+  and the diff below it no longer read as two different products.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
 
 - Changing a webhook trigger's custom path now marks the workflow as unsaved, so
   the Save button offers to save it. The unsaved-changes check did not look at

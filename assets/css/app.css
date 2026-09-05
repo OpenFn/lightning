@@ -1050,12 +1050,10 @@
       @apply mt-4;
     }
 
-    pre {
-      @apply text-slate-200 bg-slate-700 rounded-md p-2 my-2 overflow-x-auto;
-
-      code {
-        @apply text-sm leading-3;
-      }
+    /* Code blocks are styled on the element in MessageList, matching the
+       workflow diff blocks, so the two read as one surface. */
+    pre code {
+      @apply text-xs;
     }
   }
 

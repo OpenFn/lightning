@@ -3,6 +3,11 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
+import {
+  TOKEN_CLASS,
+  tokenizeJs,
+  tokenizeJson,
+} from '../utils/highlightJs';
 import { cn } from '#/utils/cn';
 
 import type {
@@ -29,7 +34,7 @@ import {
 } from './WorkflowDiffBlocks';
 
 const PROSE_CLASSES =
-  'text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:rounded-md prose-pre:bg-slate-100 prose-pre:border-2 prose-pre:border-slate-200 prose-pre:text-slate-800 prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:text-xs prose-pre:font-mono prose-pre:mb-4';
+  'text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:font-medium prose-h1:text-lg prose-h1:text-gray-900 prose-h1:mb-3 prose-h2:text-base prose-h2:text-gray-900 prose-h2:mb-2 prose-h2:mt-5 prose-h3:text-sm prose-h3:text-gray-900 prose-h3:mb-2 prose-h3:font-semibold prose-p:mb-3 prose-p:last:mb-0 prose-p:text-gray-700 prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-3 prose-ul:space-y-1 prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-3 prose-ol:space-y-1 prose-li:text-gray-700 prose-strong:font-medium prose-strong:text-gray-900 prose-em:italic prose-a:text-primary-600 prose-a:hover:text-primary-700 prose-a:underline prose-a:font-normal prose-code:px-1.5 prose-code:py-0.5 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:rounded prose-code:text-xs prose-code:font-mono prose-code:font-normal prose-code:before:content-none prose-code:after:content-none prose-pre:mb-4';
 
 /**
  * Three-dot bouncing "typing" indicator, shared by the pre-text loading
@@ -58,12 +63,41 @@ const StatusSegmentRow = ({ content }: { content: string }) => (
  * Custom code block component for react-markdown
  * Renders code with COPY/ADD action buttons
  */
+/** Source with the diff blocks' palette, or plain when the language is unread. */
+const highlight = (source: string, language?: string | undefined) => {
+  const tokenizer =
+    language === 'javascript' || language === 'js'
+      ? tokenizeJs
+      : language === 'json'
+        ? tokenizeJson
+        : null;
+
+  // A fence usually opens and closes on its own line, so the content arrives
+  // with a blank row at each end that renders as an empty box.
+  const trimmed = source.replace(/^\n+/, '').replace(/\s+$/, '');
+
+  if (!tokenizer) return trimmed;
+
+  return tokenizer(trimmed).map((tokens, line) => (
+    <div key={line}>
+      {tokens.map((token, n) => (
+        <span key={n} className={TOKEN_CLASS[token.kind]}>
+          {token.text}
+        </span>
+      ))}
+    </div>
+  ));
+};
+
 const CodeBlock = ({
   children,
+  language,
   showAddButtons,
   isWriteDisabled = false,
 }: {
   children: string;
+  /** Fence language, when the reply gave one. Only JavaScript is highlighted. */
+  language?: string | undefined;
   showAddButtons?: boolean;
   /** Whether Add button is disabled due to readonly mode */
   isWriteDisabled?: boolean;
@@ -105,8 +139,13 @@ const CodeBlock = ({
   );
 
   return (
-    <pre className="relative group">
-      <code>{children}</code>
+    <pre className="relative group px-3 py-2 my-2 bg-white text-[#1f2328] border border-[#d1d9e0] rounded-md text-xs font-mono leading-5 [font-variant-ligatures:none] whitespace-pre-wrap break-words">
+      {/* The message body styles inline code as a grey chip, and that variant
+          beats a plain utility here. Block, too: an inline box holding block
+          rows paints its background either side of them. */}
+      <code className="block !bg-transparent !p-0 !rounded-none text-inherit">
+        {highlight(children, language)}
+      </code>
       <div className="code-actions absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           type="button"
@@ -168,6 +207,7 @@ const MarkdownContent = ({
             if (isCodeBlock || (children && String(children).includes('\n'))) {
               return (
                 <CodeBlock
+                  language={codeClassName?.replace('language-', '')}
                   showAddButtons={showAddButtons ?? false}
                   isWriteDisabled={isWriteDisabled}
                 >

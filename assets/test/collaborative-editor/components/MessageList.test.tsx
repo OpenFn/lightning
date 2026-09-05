@@ -404,6 +404,51 @@ describe('MessageList', () => {
       expect(screen.getByText('Add')).toBeInTheDocument();
     });
 
+    it('highlights a javascript block with the same palette as the diffs', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '```javascript\nconst x = "hi";\n```',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      // Primer's keyword and string colours, the ones the diff blocks use, so
+      // a reply and the diff below it read as one surface.
+      expect(container.querySelector('.text-\\[\\#cf222e\\]')).not.toBeNull();
+      expect(container.querySelector('.text-\\[\\#0a3069\\]')).not.toBeNull();
+    });
+
+    it('highlights a json block, which is what the assistant actually sends', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '```json\n{ "apiKey": "string" }\n```',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      // Keys take Primer's blue, values its string colour.
+      expect(container.querySelector('.text-\\[\\#0550ae\\]')).not.toBeNull();
+      expect(container.querySelector('.text-\\[\\#0a3069\\]')).not.toBeNull();
+    });
+
+    it('leaves a block it cannot read as plain text', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '```yaml\napiKey: "string"\n```',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      expect(screen.getByText(/apiKey/)).toBeInTheDocument();
+      expect(container.querySelector('.text-\\[\\#cf222e\\]')).toBeNull();
+    });
+
     it('should not show Add button when showAddButtons is false', () => {
       const messages = [
         createMockAIMessage({
