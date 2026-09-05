@@ -1395,7 +1395,7 @@ describe('MessageList', () => {
       ).toBeLessThan(screen.getAllByTestId('diff-block').length);
     });
 
-    it('gives a global reply its Apply button back when the apply failed', () => {
+    it('says so on the reply when the apply failed, and offers a retry', () => {
       const messages = [
         createMockAIMessage({
           id: 'msg-user',
@@ -1412,23 +1412,41 @@ describe('MessageList', () => {
         }),
       ];
 
-      // Global replies auto-apply and normally show no panel, but a failed
-      // import is never retried, so without this the reply is a dead end.
+      const onApplyWorkflow = vi.fn();
+
       const { rerender } = render(
-        <MessageList messages={messages} showApplyButton />
+        <MessageList
+          messages={messages}
+          showApplyButton
+          onApplyWorkflow={onApplyWorkflow}
+        />
       );
-      expect(
-        screen.queryByTestId('apply-workflow-button')
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId('ai-apply-failed')).not.toBeInTheDocument();
 
       rerender(
         <MessageList
           messages={messages}
           showApplyButton
+          onApplyWorkflow={onApplyWorkflow}
           failedApplyMessageIds={new Set(['msg-global'])}
         />
       );
-      expect(screen.getByTestId('apply-workflow-button')).toBeInTheDocument();
+
+      // The diff blocks read as a record of what changed, so a reply whose
+      // apply was rejected has to say so where they are.
+      expect(screen.getByTestId('ai-apply-failed')).toBeInTheDocument();
+      // And the recovery is the same import, not the raw YAML panel the
+      // global assistant deliberately does without.
+      expect(
+        screen.queryByTestId('apply-workflow-button')
+      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId('generated-code')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+      expect(onApplyWorkflow).toHaveBeenCalledWith(
+        messages[1]!.code,
+        'msg-global'
+      );
     });
 
     it('renders no diff blocks for a global reply that errored', () => {

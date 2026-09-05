@@ -68,6 +68,10 @@ and this project adheres to
 - AI assistant code blocks share the surface the workflow diffs use, so a reply
   and the diff below it no longer read as two different products.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- A global assistant reply whose changes could not be applied now says so on
+  the reply itself, beside the diffs that did not land, and offers to try
+  again. It used to fall back to a raw YAML panel.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
 
 - Changing a webhook trigger's custom path now marks the workflow as unsaved, so
   the Save button offers to save it. The unsaved-changes check did not look at

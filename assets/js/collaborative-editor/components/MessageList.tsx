@@ -1170,8 +1170,7 @@ export function MessageList({
                       button is the only way out. */}
                     {!isStreaming(message) &&
                       message.code &&
-                      (!isGlobalReply(message) ||
-                        failedApplyMessageIds?.has(message.id)) && (
+                      !isGlobalReply(message) && (
                         <div className="rounded-lg overflow-hidden border border-gray-200 bg-white">
                           <div
                             className={cn(
@@ -1262,6 +1261,42 @@ export function MessageList({
                         }}
                       />
                     )}
+
+                    {/* The diff blocks read as a record of what changed, so a
+                        reply whose apply was rejected has to say so where they
+                        are. The retry is the same import, not a YAML dump: the
+                        blocks are the global assistant's whole representation
+                        of the change and the panel was removed for that. */}
+                    {isGlobalReply(message) &&
+                      failedApplyMessageIds?.has(message.id) && (
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200"
+                          data-testid="ai-apply-failed"
+                        >
+                          <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0" />
+                          <span className="text-sm text-red-700 flex-1">
+                            These changes were not applied to the canvas.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onApplyWorkflow?.(message.code!, message.id);
+                            }}
+                            disabled={isWriteDisabled || !!applyingMessageId}
+                            className={cn(
+                              'inline-flex items-center gap-1.5 px-3 py-1.5',
+                              'text-xs font-medium rounded-md',
+                              'bg-red-100 text-red-700 hover:bg-red-200',
+                              'transition-colors duration-150',
+                              'disabled:opacity-50 disabled:cursor-not-allowed',
+                              'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
+                            )}
+                          >
+                            <span className="hero-arrow-path h-3.5 w-3.5" />
+                            Try again
+                          </button>
+                        </div>
+                      )}
 
                     {!isStreaming(message) &&
                       message.status === 'error' &&
