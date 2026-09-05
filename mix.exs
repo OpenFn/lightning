@@ -180,6 +180,7 @@ defmodule Lightning.MixProject do
        github: "lau/tzdata",
        ref: "766f38de21e9cd3dc4b185ac6244466e4ee65308",
        override: true},
+      {:yaml_elixir, "~> 2.12"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
       {:hammer_backend_mnesia, "~> 0.6"},

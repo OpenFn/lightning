@@ -41,6 +41,13 @@ and this project adheres to
   Set it in the trigger panel, in `project.yaml`, or through the workflows API.
   Existing `/i/<trigger-id>` URLs are unchanged.
   [#4952](https://github.com/OpenFn/lightning/issues/4952)
+- Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
+  scenario file (users, API tokens, credentials, projects, workflows) via
+  `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and
+  external test harnesses. Workflows in a scenario are written in the existing
+  workflow-spec format — the same YAML the collaborative editor imports and
+  exports, validated against the same JSON Schema.
+  [#4974](https://github.com/OpenFn/lightning/issues/4974)
 
 ### Changed
 
