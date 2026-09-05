@@ -1223,12 +1223,16 @@ defmodule Lightning.AiAssistant do
           "“Send scrubbed I/O”"
 
         _ ->
-          "an attachment"
+          nil
       end
 
+    advice =
+      if control,
+        do: "Untick #{control} and send again, or pick a run with less data.",
+        else: "Untick one of the attachment boxes, or pick a run with less data."
+
     "The attached run context is too large to analyse " <>
-      "(#{total} characters against a #{limit} limit). " <>
-      "Untick #{control} and send again, or pick a run with less data."
+      "(#{total} characters against a #{limit} limit). " <> advice
   end
 
   defp attachment_too_large_message(_details),

@@ -2384,6 +2384,36 @@ defmodule Lightning.InvocationTest do
       %{project: project, run: run, step: step, job: job}
     end
 
+    test "returns nothing rather than raising without a project", %{run: run} do
+      # A session created for an unsaved job carries no project_id, and the
+      # comparison raises rather than returning empty. The step sibling has
+      # guarded this since it was written.
+      assert Invocation.logs_for_run(run.id, nil) == []
+    end
+
+    test "returns nothing when the run id is not a uuid", %{project: project} do
+      assert Invocation.logs_for_run("not-a-uuid", project.id) == []
+    end
+
+    test "counts what each line costs on the wire, not just its text", %{
+      project: project,
+      run: run,
+      step: step
+    } do
+      # Short messages are the case the bound exists for, and the ids and level
+      # ride along with every one of them.
+      for n <- 1..2100 do
+        insert(:log_line,
+          run: run,
+          step: step,
+          message: "x",
+          timestamp: DateTime.add(~U[2026-08-25 10:00:00Z], n, :second)
+        )
+      end
+
+      assert length(Invocation.logs_for_run(run.id, project.id)) < 2100
+    end
+
     test "stops reading once the lines cannot fit any consumer's limit", %{
       project: project,
       run: run,

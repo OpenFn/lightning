@@ -371,6 +371,7 @@ export function AIAssistantPanelWrapper({
         attach_logs?: boolean;
         attach_io_data?: boolean;
         step_id?: string;
+        follow_run_id?: string;
         use_global_assistant?: boolean;
       }
     ) => {
@@ -418,6 +419,11 @@ export function AIAssistantPanelWrapper({
           ...(messageOptions?.attach_logs && { attach_logs: true }),
           ...(messageOptions?.attach_io_data && { attach_io_data: true }),
           ...(messageOptions?.step_id && { step_id: messageOptions.step_id }),
+          // The first message needs the run the checkbox was gated on too,
+          // otherwise session creation falls back to the URL param.
+          ...(messageOptions?.follow_run_id && {
+            follow_run_id: messageOptions.follow_run_id,
+          }),
           ...(messageOptions?.use_global_assistant && {
             use_global_assistant: true,
           }),

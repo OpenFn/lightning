@@ -26,6 +26,7 @@ defmodule Lightning.Invocation do
   # Comfortably above Apollo's own 250,000-character attachment limit, so a
   # payload that would have been accepted is never shortened here.
   @logs_byte_budget 300_000
+  @logs_line_overhead 150
 
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
@@ -915,7 +916,16 @@ defmodule Lightning.Invocation do
   retries. Run-level lines have no step, so both ids are nil for them.
   """
   @spec logs_for_run(Ecto.UUID.t(), Ecto.UUID.t()) :: [map()]
+  def logs_for_run(_run_id, nil), do: []
+
   def logs_for_run(run_id, project_id) do
+    case Ecto.UUID.cast(run_id) do
+      {:ok, uuid} -> logs_for_run_id(uuid, project_id)
+      :error -> []
+    end
+  end
+
+  defp logs_for_run_id(run_id, project_id) do
     query =
       from(l in LogLine,
         join: r in assoc(l, :run),
@@ -945,7 +955,9 @@ defmodule Lightning.Invocation do
 
   # A job that logs per record produces hundreds of thousands of rows.
   defp take_until_over_budget(line, {lines, size}) do
-    size = size + byte_size(line.message || "")
+    # The ids and level ride along with every line, so a run of short messages
+    # costs far more on the wire than its text suggests.
+    size = size + byte_size(line.message || "") + @logs_line_overhead
     lines = [line | lines]
 
     if size > @logs_byte_budget do
