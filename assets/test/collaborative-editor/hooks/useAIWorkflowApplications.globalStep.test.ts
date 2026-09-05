@@ -167,6 +167,25 @@ describe('useAIWorkflowApplications - global messages', () => {
     mockYamlJobBody('new body');
   });
 
+  describe('a failure the server recorded', () => {
+    it('is read back on load, so a reload still knows it never landed', () => {
+      const message = createGlobalMessage();
+      const { result } = renderApplications({
+        currentSession: { messages: [{ ...message, apply_failed: true }] },
+      });
+
+      expect(result.current.failedApplyMessageIds.has(message.id)).toBe(true);
+    });
+
+    it('is not read back for a reply that applied cleanly', () => {
+      const { result } = renderApplications({
+        currentSession: { messages: [createGlobalMessage()] },
+      });
+
+      expect(result.current.failedApplyMessageIds.size).toBe(0);
+    });
+  });
+
   describe('handleApplyWorkflow with global messages', () => {
     it('applies a global message while a job is open (job_code mode)', async () => {
       const globalMessage = createGlobalMessage();

@@ -764,6 +764,40 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
+  Records whether a reply's changes reached the canvas.
+
+  The apply happens in the browser, so nothing else knows it failed. Without
+  this the reply reads as a success on the next page load: its diff blocks
+  stand as a record of changes that never landed, and it offers to undo them.
+
+  Clearing on a later success is half the point, so a retry that works leaves
+  nothing behind.
+  """
+  @spec set_apply_failed(Ecto.UUID.t(), boolean()) ::
+          {:ok, ChatMessage.t()} | {:error, :not_found | Changeset.t()}
+  def set_apply_failed(message_id, failed?) do
+    case Repo.get(ChatMessage, message_id) do
+      nil ->
+        {:error, :not_found}
+
+      message ->
+        meta = message.meta || %{}
+
+        meta =
+          if failed?,
+            do: Map.put(meta, "apply_failed", true),
+            else: Map.delete(meta, "apply_failed")
+
+        # change/2 rather than the full changeset: this only touches an
+        # internal flag, and the message's own validations need associations
+        # this path has no reason to load.
+        message
+        |> Changeset.change(meta: meta)
+        |> Repo.update()
+    end
+  end
+
+  @doc """
   Queries the AI service for job-specific code assistance with streaming.
 
   Sends a user query to the Apollo AI service along with job context

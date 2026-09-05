@@ -61,6 +61,7 @@ export function useAIWorkflowApplications({
   onValidationError,
   onCanvasApplied,
   onApplyFailure,
+  onApplyApplied,
   workflowActions,
   monacoRef,
   jobs,
@@ -106,6 +107,8 @@ export function useAIWorkflowApplications({
    * Report that a reply's workflow never reached the canvas. Best effort and
    * never surfaced to the user: they are already being told it failed.
    */
+  /** Clears a recorded failure once the same changes land. */
+  onApplyApplied?: (messageId: string) => void;
   onApplyFailure?: (details: {
     messageId: string;
     stage: 'parse' | 'validate_ids' | 'import' | 'save';
@@ -416,6 +419,27 @@ export function useAIWorkflowApplications({
     Set<string>
   >(() => new Set());
 
+  // Messages whose recorded failure has already been read. A retry that works
+  // removes the id, and the flag on the loaded message stays true until the
+  // server confirms, so without this the notice would come straight back.
+  const seededFailuresRef = useRef<Set<string>>(new Set());
+
+
+
+  useEffect(() => {
+    const unseen = (currentSession?.messages ?? []).filter(
+      message => message.apply_failed && !seededFailuresRef.current.has(message.id)
+    );
+    if (unseen.length === 0) return;
+
+    for (const message of unseen) seededFailuresRef.current.add(message.id);
+    setFailedApplyMessageIds(previous => {
+      const next = new Set(previous);
+      for (const message of unseen) next.add(message.id);
+      return next;
+    });
+  }, [currentSession?.messages]);
+
   const launchApply = useCallback(
     (messageId: string, code: string) => {
       if (inFlightApplyRef.current.has(messageId)) return;
@@ -433,6 +457,10 @@ export function useAIWorkflowApplications({
           setFailedApplyMessageIds(previous => {
             const failed = outcome === 'failed';
             if (failed === previous.has(messageId)) return previous;
+            // Only when it was recorded as failed: an ordinary first apply
+            // has nothing to clear and the server should not be told about
+            // every successful import.
+            if (!failed) onApplyApplied?.(messageId);
             const next = new Set(previous);
             if (failed) next.add(messageId);
             else next.delete(messageId);
@@ -443,7 +471,7 @@ export function useAIWorkflowApplications({
         }
       })();
     },
-    [handleApplyWorkflow, appliedMessageIdsRef]
+    [handleApplyWorkflow, appliedMessageIdsRef, onApplyApplied]
   );
 
   /**

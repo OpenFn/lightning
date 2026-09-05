@@ -174,6 +174,11 @@ export const useAISessionCommands = () => {
     registry.reportApplyFailure(topic, details);
   };
 
+  const reportApplyApplied = (messageId: string) => {
+    if (!registry || !topic) return;
+    registry.reportApplyApplied(topic, messageId);
+  };
+
   const loadSessions = (offset = 0, limit = 20) => {
     if (!registry || !topic) {
       console.warn('Cannot load sessions: registry or topic not available');
@@ -202,6 +207,7 @@ export const useAISessionCommands = () => {
     sendMessage,
     retryMessage,
     reportApplyFailure,
+    reportApplyApplied,
     loadSessions,
     updateContext,
     isConnected,

@@ -96,6 +96,8 @@ export interface Message {
    * messages carry a full workflow YAML in `code` and never a `job_id`.
    */
   from_global?: boolean;
+  /** Recorded server-side when this reply's changes never reached the canvas. */
+  apply_failed?: boolean;
   /**
    * Interleaved text/status timeline for global assistant replies.
    * `null`/absent for legacy and non-global messages (render flat `content`).

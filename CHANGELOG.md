@@ -72,6 +72,10 @@ and this project adheres to
   the reply itself, beside the diffs that did not land, and offers to try
   again. It used to fall back to a raw YAML panel.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- A failed apply is now remembered, so reloading no longer turns it back into
+  a success. The reply kept its diff blocks and offered to undo changes that
+  had never landed. A retry that works clears the record.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
 - Editing an open step with the global assistant no longer puts a diff in the
   code editor. The change is already applied, so the diff read as a proposal
   to accept or reject when the only control was a close button, and reloading
