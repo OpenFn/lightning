@@ -54,7 +54,6 @@ import {
   useSession,
 } from '../hooks/useSession';
 import {
-  useExperimentalFeaturesEnabled,
   useIsNewWorkflow,
   useLimits,
   useProject,
@@ -179,8 +178,9 @@ export function AIAssistantPanelWrapper({
   const connectionState = useAIConnectionState();
   const isSessionConnected = useSession(selectIsConnected);
   const isSessionConnecting = useSession(selectIsConnecting);
-  const experimentalFeaturesEnabled = useExperimentalFeaturesEnabled();
-  const [isGlobalAssistantActive, setIsGlobalAssistantActive] = useState(false);
+  // The global assistant is the only one the UI reaches. Every message is
+  // routed to it from here, so nothing downstream has to decide again.
+  const isGlobalAssistantActive = true;
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
   const user = useUser();
@@ -383,73 +383,38 @@ export function AIAssistantPanelWrapper({
     (
       content: string,
       messageOptions?: {
-        attach_code?: boolean;
         attach_logs?: boolean;
         attach_io_data?: boolean;
-        step_id?: string;
         follow_run_id?: string;
-        use_global_assistant?: boolean;
       }
     ) => {
       const currentState = aiStore.getSnapshot();
-
-      // For job_code with attach_code, get CURRENT code from Y.Doc
-      let updatedAiMode = aiMode;
-      if (messageOptions?.attach_code && aiMode?.mode === 'job_code') {
-        const context = aiMode.context as JobCodeContext;
-        const jobId = context.job_id;
-
-        if (jobId) {
-          // Get fresh code from jobs array (backed by Y.Doc)
-          const currentJob = jobs.find(j => j.id === jobId);
-          if (currentJob) {
-            // Update aiMode with new context (don't mutate)
-            const projectId =
-              'project_id' in context
-                ? (context.project_id as string)
-                : project!.id;
-            updatedAiMode = {
-              ...aiMode,
-              context: {
-                ...context,
-                project_id: projectId,
-                job_body: currentJob.body,
-              },
-            };
-          }
-          // If job not found, fall back to existing context.job_body
-          // (job could be unsaved or deleted)
-        }
-      }
+      const attached = { ...messageOptions, use_global_assistant: true };
 
       // If no session exists, we need to include content in context for first message
-      if (!currentState.sessionId && updatedAiMode) {
-        const { mode, context, page } = updatedAiMode;
+      if (!currentState.sessionId && aiMode) {
+        const { mode, context, page } = aiMode;
 
         // Prepare context with content and message options for channel join
         let finalContext = {
           ...context,
           content,
-          // Include attach_code/attach_logs so backend knows to include them in first message
-          ...(messageOptions?.attach_code && { attach_code: true }),
-          ...(messageOptions?.attach_logs && { attach_logs: true }),
-          ...(messageOptions?.attach_io_data && { attach_io_data: true }),
-          ...(messageOptions?.step_id && { step_id: messageOptions.step_id }),
+          // Include the attachment flags so the backend knows to resolve them
+          // for the first message too
+          ...(attached.attach_logs && { attach_logs: true }),
+          ...(attached.attach_io_data && { attach_io_data: true }),
           // The first message needs the run the checkbox was gated on too,
           // otherwise session creation falls back to the URL param.
-          ...(messageOptions?.follow_run_id && {
-            follow_run_id: messageOptions.follow_run_id,
+          ...(attached.follow_run_id && {
+            follow_run_id: attached.follow_run_id,
           }),
-          ...(messageOptions?.use_global_assistant && {
+          ...(attached.use_global_assistant && {
             use_global_assistant: true,
           }),
         };
 
         // Add workflow YAML if in workflow mode or global assistant
-        if (
-          page === 'workflow_template' ||
-          messageOptions?.use_global_assistant
-        ) {
+        if (page === 'workflow_template' || attached.use_global_assistant) {
           const workflowData = prepareWorkflowForSerialization(
             workflow,
             jobs,
@@ -465,7 +430,7 @@ export function AIAssistantPanelWrapper({
           }
 
           // Derive page for global assistant routing
-          if (messageOptions?.use_global_assistant) {
+          if (attached.use_global_assistant) {
             const jobName = (context as JobCodeContext)?.job_name;
             const workflowName = workflow?.name || 'workflow';
             finalContext = {
@@ -497,22 +462,20 @@ export function AIAssistantPanelWrapper({
       // For existing sessions, prepare options and send
       let options:
         | {
-            attach_code?: boolean;
             attach_logs?: boolean;
             attach_io_data?: boolean;
-            step_id?: string;
             code?: string;
             use_global_assistant?: boolean;
             page?: string;
             follow_run_id?: string;
           }
         | undefined = {
-        ...messageOptions, // Include attach_code, attach_logs, attach_io_data, step_id
+        ...attached, // attach_logs, attach_io_data, follow_run_id
       };
 
       if (
         aiMode?.page === 'workflow_template' ||
-        messageOptions?.use_global_assistant
+        attached.use_global_assistant
       ) {
         const workflowData = prepareWorkflowForSerialization(
           workflow,
@@ -530,7 +493,7 @@ export function AIAssistantPanelWrapper({
         }
 
         // Derive page for global assistant routing
-        if (messageOptions?.use_global_assistant) {
+        if (attached.use_global_assistant) {
           const context = aiMode?.context as JobCodeContext;
           const jobName = context?.job_name;
           const workflowName = workflow?.name || 'workflow';
@@ -565,7 +528,6 @@ export function AIAssistantPanelWrapper({
       aiStore,
       aiMode,
       updateSearchParams,
-      project,
     ]
   );
 
@@ -577,10 +539,6 @@ export function AIAssistantPanelWrapper({
     },
     [aiStore, retryMessageViaChannel]
   );
-
-  const handleGlobalAssistantChange = useCallback((active: boolean) => {
-    setIsGlobalAssistantActive(active);
-  }, []);
 
   const [applyingMessageId, setApplyingMessageId] = useState<string | null>(
     null
@@ -772,16 +730,12 @@ export function AIAssistantPanelWrapper({
       ?.id;
     if (triggeringUserId && user?.id && triggeringUserId !== user.id) return;
 
-    // Workflow YAML applies to the shared Y.Doc, so global streams are
-    // page-independent: global chat streams it from the job code view too,
-    // and the diagram must be up to date whenever the user navigates there.
-    // Non-global workflow chat keeps its workflow_template-only gate (a
-    // stream can outlive a mid-stream switch to a job page).
+    // Workflow YAML applies to the shared Y.Doc, so a stream is
+    // page-independent: it can arrive while a step is open, and the diagram
+    // has to be right when the user navigates back to it.
     if ('yaml' in streamingChanges) {
       const yaml = streamingChanges['yaml'] as string;
-      const yamlCanApply =
-        isGlobalAssistantActive || aiMode?.page === 'workflow_template';
-      if (yaml && yamlCanApply) {
+      if (yaml) {
         appliedStreamingChangesRef.current = streamingChanges;
         // handleApplyWorkflow records the streaming apply in the store
         // (after a successful import) so the final new_message can skip it
@@ -849,9 +803,6 @@ export function AIAssistantPanelWrapper({
               focusTrigger={focusTrigger}
               connectionState={sessionId ? connectionState : 'connected'}
               aiLimit={limits.ai_assistant ?? null}
-              showGlobalAssistantOption={experimentalFeaturesEnabled}
-              isGlobalAssistantActive={isGlobalAssistantActive}
-              onGlobalAssistantChange={handleGlobalAssistantChange}
             >
               <MessageList
                 messages={messages}

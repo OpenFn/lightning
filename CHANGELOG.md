@@ -17,10 +17,35 @@ and this project adheres to
 
 ### Changed
 
+- The AI assistant is the global assistant for everyone. It was behind the
+  experimental features setting and an opt-in tickbox on the chat input, and
+  both are gone: every message goes to it, and the badge naming which assistant
+  answered goes with them. Existing workflow conversations still open and read
+  as they always did, and replying in one moves it to the global assistant from
+  that message on.
+  [#5042](https://github.com/OpenFn/lightning/issues/5042)
+
+- The AI assistant's attachment tickboxes are now about the run you are looking
+  at, and they appear wherever you are. "Send run logs" and "Send run data" sit
+  above the message box on the canvas and in the run history as well as in the
+  step editor, and appear once a run is loaded rather than sitting greyed out.
+  "Send run data" now covers every step in the run rather than the one that
+  happened to be highlighted, and still sends the shape of the data with the
+  values removed. The "Press Enter to send" hint below the box is gone, since
+  the notice and the send button now share that row.
+  [#5037](https://github.com/OpenFn/lightning/issues/5037)
+
 - Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising
   the first character of a string, which breaks names in many languages.
   Lightning does not normalise anything today, but #4577 adds it on every name,
   so the runtime moves first.
+
+### Removed
+
+- The AI assistant's "Send code" tickbox. The assistant reads your workflow to
+  answer anything about it, so the box did nothing except in one case, where it
+  looked like a choice and was not one.
+  [#5037](https://github.com/OpenFn/lightning/issues/5037)
 
 ### Added
 
