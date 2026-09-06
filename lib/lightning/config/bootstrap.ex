@@ -131,6 +131,13 @@ defmodule Lightning.Config.Bootstrap do
           end
         end)
 
+    # Read here rather than from System.get_env: envs come through Dotenvy, so
+    # a value set in a .env file never reaches the system environment. Recorded
+    # for the boot warning in Lightning.Application, where Logger is up.
+    config :lightning,
+           :apollo_timeout_env_still_set,
+           env!("APOLLO_TIMEOUT", :string, nil) != nil
+
     # How long to wait to reach Apollo at all.
     apollo_connect_timeout =
       env!(

@@ -1250,7 +1250,7 @@ defmodule Lightning.AiAssistant do
       other ->
         Logger.warning(
           "[AI Assistant] Unreadable error event for session #{session_id}: " <>
-            inspect(other)
+            inspect(other, printable_limit: 128)
         )
     end
 
@@ -1415,13 +1415,31 @@ defmodule Lightning.AiAssistant do
         Logger.error("AI query timed out for session #{session.id}")
         {:error, "Request timed out. Please try again."}
 
+      # Finch wraps every Mint error in one of its own, so a bare atom only
+      # arrives from our adapter's own deadline. These are the same failures
+      # arriving by the other route, and they have to read the same.
+      {:error, %s{reason: :timeout}}
+      when s in [Finch.TransportError, Mint.TransportError] ->
+        Logger.error("AI query timed out for session #{session.id}")
+        {:error, "Request timed out. Please try again."}
+
       {:error, :econnrefused} ->
         Logger.error("Connection refused to AI server for session #{session.id}")
         {:error, "Unable to reach the AI server. Please try again later."}
 
+      {:error, %s{reason: reason}}
+      when s in [Finch.TransportError, Mint.TransportError] and
+             reason in [:econnrefused, :closed, :nxdomain] ->
+        Logger.error(
+          "Cannot reach AI server for session #{session.id}: #{inspect(reason)}"
+        )
+
+        {:error, "Unable to reach the AI server. Please try again later."}
+
       unexpected_error ->
         Logger.error(
-          "Unexpected error for session #{session.id}: #{inspect(unexpected_error)}"
+          "Unexpected error for session #{session.id}: " <>
+            inspect(unexpected_error, printable_limit: 128)
         )
 
         {:error, "Oops! Something went wrong. Please try again."}
