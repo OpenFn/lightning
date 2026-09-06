@@ -173,6 +173,7 @@ defmodule Lightning.Application do
       |> Enum.reject(&is_nil/1)
 
     warn_if_apollo_timeout_still_set()
+    warn_if_connect_timeout_is_unreachable()
     warn_if_ai_jobs_outlive_the_drain_window()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
@@ -228,6 +229,26 @@ defmodule Lightning.Application do
   end
 
   defp poolable_url?(_endpoint), do: false
+
+  # Reaching Apollo happens inside the adapter's wait for the first byte, which
+  # the idle timeout bounds, so a connect timeout above it can never expire.
+  # Silently, and on the setting an operator most expects to control a slow or
+  # unreachable host.
+  @doc false
+  def warn_if_connect_timeout_is_unreachable do
+    connect = Lightning.Config.apollo(:connect_timeout)
+    idle = Lightning.Config.apollo(:idle_timeout)
+
+    if is_integer(connect) and is_integer(idle) and connect > idle do
+      Logger.warning("""
+      [AI Assistant] APOLLO_CONNECT_TIMEOUT_MS is #{connect}ms but \
+      APOLLO_IDLE_TIMEOUT_MS is #{idle}ms, and the wait to reach Apollo sits \
+      inside the idle budget. Connecting will give up after #{idle}ms whatever \
+      the connect setting says. Raise APOLLO_IDLE_TIMEOUT_MS to at least \
+      #{connect}ms, or lower APOLLO_CONNECT_TIMEOUT_MS.
+      """)
+    end
+  end
 
   # Left unread it would silently lift a ceiling an operator lowered on purpose.
   @doc false

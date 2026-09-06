@@ -169,6 +169,52 @@ defmodule Lightning.ApplicationTest do
       refute logs =~ "[AI Assistant] APOLLO_TIMEOUT is no longer read"
     end
 
+    test "says so when the connect timeout is above the idle timeout" do
+      put_temporary_env(:lightning, :apollo,
+        endpoint: "http://apollo.test:3000",
+        connect_timeout: 60_000,
+        idle_timeout: 30_000,
+        request_timeout: 300_000
+      )
+
+      logs =
+        ExUnit.CaptureLog.capture_log(fn ->
+          Lightning.Application.warn_if_connect_timeout_is_unreachable()
+        end)
+
+      assert logs =~
+               "[AI Assistant] APOLLO_CONNECT_TIMEOUT_MS is 60000ms but APOLLO_IDLE_TIMEOUT_MS is 30000ms"
+    end
+
+    test "stays quiet when the connect timeout fits inside the idle one" do
+      put_temporary_env(:lightning, :apollo,
+        endpoint: "http://apollo.test:3000",
+        connect_timeout: 5_000,
+        idle_timeout: 30_000,
+        request_timeout: 300_000
+      )
+
+      logs =
+        ExUnit.CaptureLog.capture_log(fn ->
+          Lightning.Application.warn_if_connect_timeout_is_unreachable()
+        end)
+
+      refute logs =~ "APOLLO_CONNECT_TIMEOUT_MS"
+    end
+
+    # No env fiddling on purpose: this reads the shipped defaults, so raising
+    # one of them past the drain window fails here rather than warning on every
+    # production boot. The margin is 345s against 360s.
+    test "stays quiet on the defaults we ship" do
+      logs =
+        ExUnit.CaptureLog.capture_log(fn ->
+          Lightning.Application.warn_if_ai_jobs_outlive_the_drain_window()
+          Lightning.Application.warn_if_connect_timeout_is_unreachable()
+        end)
+
+      assert logs == ""
+    end
+
     test "says so when an AI job can outlive Oban's drain window" do
       put_temporary_env(:lightning, :apollo,
         endpoint: "http://apollo.test:3000",

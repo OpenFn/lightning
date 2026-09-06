@@ -255,7 +255,9 @@ Three optional variables control how long Lightning waits on Apollo. Each one
 has a default, so set them only if those defaults do not suit your deployment.
 
 - `APOLLO_CONNECT_TIMEOUT_MS` - how long to wait to reach Apollo at all.
-  Defaults to 5000.
+  Defaults to 5000. Reaching Apollo happens inside the idle budget, so a value
+  above `APOLLO_IDLE_TIMEOUT_MS` never takes effect; Lightning warns at boot if
+  you set one.
 - `APOLLO_IDLE_TIMEOUT_MS` - the longest acceptable silence, both before the
   first byte of an answer and between the chunks that follow. Defaults to 30000.
 - `APOLLO_REQUEST_TIMEOUT_MS` - the longest one whole request may take, however
@@ -266,8 +268,9 @@ The idle default assumes Apollo v3.1.1 or later, which sends a keepalive every
 is thinking, and 30 seconds will cut it off, so raise `APOLLO_IDLE_TIMEOUT_MS`
 or upgrade Apollo.
 
-`APOLLO_TIMEOUT` used to cover all three of these. It is no longer read, and
-Lightning logs a warning at boot if it is still set.
+`APOLLO_TIMEOUT` is the old name for `APOLLO_IDLE_TIMEOUT_MS`. It only ever
+covered the silence, never the other two. It is no longer read, and Lightning
+logs a warning at boot if it is still set.
 
 ### Kafka Triggers
 

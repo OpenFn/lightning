@@ -68,7 +68,7 @@ defmodule Lightning.Tesla.Adapter.Finch do
 
       # Upstream unwraps %Mint.TransportError{} here. Finch wraps every Mint
       # transport error in one of its own before returning, so that clause
-      # cannot fire and is left out for the same reason as the one below.
+      # cannot fire and is left out.
       {:error, reason} ->
         {:error, reason}
     end

@@ -1209,6 +1209,10 @@ defmodule Lightning.AiAssistant do
 
   # A silence long enough to give up on reaches us two ways, from our own
   # adapter and from Finch, and both have to read the same to the user.
+  # APOLLO_REQUEST_TIMEOUT_MS lands here too: Finch reports the whole-request
+  # cap as the same :timeout, so a healthy answer cut off for running long
+  # reads as a stall. Nothing at this layer separates them, and neither does
+  # the log. How long the message took is the only thing that does.
   defp transport_failure_message(:timeout) do
     "The assistant stopped responding partway through. Please try again."
   end
@@ -1415,9 +1419,11 @@ defmodule Lightning.AiAssistant do
         Logger.error("AI query timed out for session #{session.id}")
         {:error, "Request timed out. Please try again."}
 
-      # Finch wraps every Mint error in one of its own, so a bare atom only
-      # arrives from our adapter's own deadline. These are the same failures
-      # arriving by the other route, and they have to read the same.
+      # One failure arriving two ways: a bare atom from our adapter's own
+      # deadline, and a struct from Finch. Finch wraps Mint's error before
+      # returning it, so Mint's struct should not reach here; it is named
+      # anyway because the cost is a word in a guard, and the cost of missing
+      # it is the generic error below.
       {:error, %s{reason: :timeout}}
       when s in [Finch.TransportError, Mint.TransportError] ->
         Logger.error("AI query timed out for session #{session.id}")

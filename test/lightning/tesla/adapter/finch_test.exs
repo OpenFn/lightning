@@ -145,12 +145,24 @@ defmodule Lightning.Tesla.Adapter.FinchTest do
     assert %Finch.TransportError{reason: :closed} = Adapter.take_stream_error()
   end
 
-  test "reading the reason clears it, so the next request starts clean" do
+  test "reading the reason clears it" do
     port = stalling_server("partial", 10_000)
 
     drain(port, receive_timeout: @quiet_timeout)
 
     assert_went_quiet(Adapter.take_stream_error())
+    assert Adapter.take_stream_error() == nil
+  end
+
+  # Reading cannot be what guarantees this on its own: a stream that ends
+  # cleanly never reads, so only the delete on the way into call/2 stops the
+  # next request inheriting the last one's reason.
+  test "a failed reason nobody read does not reach the next request" do
+    drain(stalling_server("partial", 10_000), receive_timeout: @quiet_timeout)
+
+    chunks = drain(complete_server(["one", "two"]), receive_timeout: 2_000)
+
+    assert Enum.join(chunks) == "onetwo"
     assert Adapter.take_stream_error() == nil
   end
 
