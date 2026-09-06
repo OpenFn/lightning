@@ -70,6 +70,71 @@ defmodule LightningWeb.ProjectLive.DeletionTeardownTest do
       end
     end
 
+    test "an archived sandbox lands on the parent's copy of the open workflow",
+         %{
+           conn: conn,
+           owner: owner
+         } do
+      parent = insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      # Promote matches workflows by name, so the same name is what identifies
+      # the parent's copy of the workflow being edited in the sandbox.
+      parent_workflow = insert(:workflow, project: parent, name: "Cat Facts")
+      sandbox_workflow = insert(:workflow, project: sandbox, name: "Cat Facts")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/w/#{sandbox_workflow}",
+          on_error: :raise
+        )
+
+      {:ok, _project} = Projects.schedule_project_deletion(sandbox)
+
+      flash =
+        assert_redirect(
+          view,
+          ~p"/projects/#{parent.id}/w/#{parent_workflow.id}",
+          @teardown_timeout
+        )
+
+      assert flash["info"] == "Sandbox archived."
+    end
+
+    test "an archived sandbox falls back to the parent's workflow list", %{
+      conn: conn,
+      owner: owner
+    } do
+      parent = insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      # The parent holds no workflow of this name, so there is nothing specific
+      # to land on.
+      sandbox_workflow =
+        insert(:workflow, project: sandbox, name: "Only in the sandbox")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/w/#{sandbox_workflow}",
+          on_error: :raise
+        )
+
+      {:ok, _project} = Projects.schedule_project_deletion(sandbox)
+
+      flash =
+        assert_redirect(view, ~p"/projects/#{parent.id}/w", @teardown_timeout)
+
+      assert flash["info"] == "Sandbox archived."
+    end
+
     test "leaves a view on another project mounted", %{
       conn: conn,
       owner: owner,

@@ -463,7 +463,7 @@ describe('Header - lifecycle actions', () => {
     }
   });
 
-  test('archiving the sandbox pushes archive_sandbox and navigates to the parent', async () => {
+  test('archiving the sandbox pushes archive_sandbox and leaves navigation to the server', async () => {
     const user = userEvent.setup();
     promote.mockResolvedValue({
       parent_project_id: 'parent-1',
@@ -490,13 +490,10 @@ describe('Header - lifecycle actions', () => {
       await waitFor(() => {
         expect(archiveSandbox).toHaveBeenCalledTimes(1);
       });
-      // Navigation carries the promoted marker (the toast can't survive the
-      // reload) and targets the parent's freshly merged workflow.
-      await waitFor(() => {
-        expect(nav.hrefSetter).toHaveBeenCalledWith(
-          '/projects/parent-1/w/wf-parent?promoted=1'
-        );
-      });
+      // Archiving schedules the sandbox for deletion, and the LiveView teardown
+      // hook redirects every socket on it to the parent's copy of this
+      // workflow. Navigating from here as well only raced that redirect.
+      expect(nav.hrefSetter).not.toHaveBeenCalled();
       expect(notifySuccess).not.toHaveBeenCalled();
     } finally {
       nav.restore();

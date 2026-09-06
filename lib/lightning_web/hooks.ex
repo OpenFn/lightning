@@ -291,11 +291,25 @@ defmodule LightningWeb.Hooks do
   # it for good — so there is nothing to re-mount into. Leave the project
   # rather than bouncing through a mount that would only redirect again with a
   # less useful message.
-  defp handle_project_user_event(%ProjectDeletionScheduled{}, socket) do
-    {:halt,
-     socket
-     |> put_flash(:info, "Project deleted.")
-     |> redirect(to: ~p"/projects")}
+  # A sandbox is wound down by archiving it, which is the last step of a
+  # promote. Its parent is where the promoted work now lives and is somewhere
+  # the user still has standing, so send them there rather than all the way out
+  # to the projects list. If they had a workflow open, land on the parent's copy
+  # of it: promote matches workflows by name, so the same name identifies it.
+  defp handle_project_user_event(%ProjectDeletionScheduled{} = event, socket) do
+    case archived_sandbox_destination(event, socket) do
+      nil ->
+        {:halt,
+         socket
+         |> put_flash(:info, "Project deleted.")
+         |> redirect(to: ~p"/projects")}
+
+      path ->
+        {:halt,
+         socket
+         |> put_flash(:info, "Sandbox archived.")
+         |> redirect(to: path)}
+    end
   end
 
   # The workflow this socket is holding open is gone. Nobody resolves it again,
@@ -355,6 +369,41 @@ defmodule LightningWeb.Hooks do
   end
 
   defp handle_project_user_event(_message, socket), do: {:cont, socket}
+
+  # Archiving a sandbox is the last step of a promote, and its parent is where
+  # the promoted work now lives, so send the user there rather than all the way
+  # out to the projects list. If they had a workflow open, land on the parent's
+  # copy of it: promote matches workflows by name, so the same name identifies
+  # it.
+  #
+  # Returns nil, meaning "fall back to the projects list", when this is not a
+  # sandbox, when the event is about an ancestor rather than this project, or
+  # when the parent is being wound down too — a cascade leaves nothing above to
+  # land on.
+  defp archived_sandbox_destination(
+         %ProjectDeletionScheduled{project_id: deleted_id},
+         %{assigns: %{project: %{id: project_id, parent_id: parent_id}}} = socket
+       )
+       when deleted_id == project_id and not is_nil(parent_id) do
+    case Lightning.Projects.get_project(parent_id) do
+      %{scheduled_deletion: nil} -> parent_destination(socket, parent_id)
+      _ -> nil
+    end
+  end
+
+  defp archived_sandbox_destination(_event, _socket), do: nil
+
+  defp parent_destination(socket, parent_id) do
+    with %{current_workflow_id: workflow_id} when is_binary(workflow_id) <-
+           socket.assigns,
+         %{name: name} <- Lightning.Workflows.get_workflow(workflow_id),
+         %{id: parent_workflow_id} <-
+           Lightning.Workflows.get_workflow_by_name(parent_id, name) do
+      ~p"/projects/#{parent_id}/w/#{parent_workflow_id}"
+    else
+      _ -> ~p"/projects/#{parent_id}/w"
+    end
+  end
 
   # `:current_uri` is assigned by `LightningWeb.InitAssigns`, but only from
   # `handle_params` — fall back to the project's workflow index, which re-runs

@@ -1,5 +1,5 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { useCallback, useContext, useRef, useState } from 'react';
+import { useCallback, useContext, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
@@ -240,12 +240,6 @@ export function Header({
   const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
   const [showEditInSandboxPicker, setShowEditInSandboxPicker] = useState(false);
   const [showPromoteDialog, setShowPromoteDialog] = useState(false);
-  // Retains the parent project + workflow ids from a successful merge so the
-  // optional archive step can navigate into the parent afterwards.
-  const promoteResultRef = useRef<{
-    parent_project_id: string;
-    workflow_id: string | null;
-  } | null>(null);
   const activeRun = useActiveRun();
   const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
   const followedRunId = params.run ?? null;
@@ -405,7 +399,7 @@ export function Header({
     }
 
     try {
-      promoteResultRef.current = await promote();
+      await promote();
       return true;
     } catch (error) {
       const description = isChannelRequestError(error)
@@ -435,13 +429,12 @@ export function Header({
   // surfaced inline and resolve false so the dialog stays on its success step.
   const handleArchiveSandbox = useCallback(async (): Promise<boolean> => {
     try {
-      const { parent_project_id } = await archiveSandbox();
-      const workflowId = promoteResultRef.current?.workflow_id;
-      const base = workflowId
-        ? `/projects/${parent_project_id}/w/${workflowId}`
-        : `/projects/${parent_project_id}/w`;
+      await archiveSandbox();
 
-      window.location.href = `${base}?promoted=1`;
+      // Navigation is the server's: archiving schedules the sandbox for
+      // deletion, and the LiveView's teardown hook redirects every socket on it
+      // to the parent, landing on the parent's copy of this workflow. Racing it
+      // from here only produced a second navigation to the same place.
       return true;
     } catch (error) {
       const description = isChannelRequestError(error)
@@ -578,26 +571,6 @@ export function Header({
               </span>
             </Tooltip>
           )}
-          {projectId && workflowId && (
-            <Tooltip
-              content={
-                <span>
-                  Looking for the old version of the workflow builder? You can
-                  switch back for a few more days by clicking this icon. (But it
-                  will soon be retired!)
-                </span>
-              }
-              side="bottom"
-            >
-              <button
-                type="button"
-                onClick={() => void handleSwitchToLegacyEditor()}
-                className="w-6 h-6 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
-              >
-                <span className="hero-question-mark-circle"></span>
-              </button>
-            </Tooltip>
-          )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
@@ -708,22 +681,17 @@ export function Header({
                   </button>
                 </Tooltip>
               )}
-              {projectId &&
-                workflowId &&
-                firstTriggerId &&
-                !isReadOnly && (
-                  <NewRunButton
-                    onClick={() => {
-                      void (isRetryable
-                        ? handleRetryClick()
-                        : handleRunClick());
-                    }}
-                    onRunWithCustomInputClick={handleRunWithCustomInputClick}
-                    disabled={!canRun || isRunPanelOpen || isIDEOpen}
-                    isRunning={isSubmitting || runIsProcessing}
-                    text={isRetryable ? 'Run (Retry)' : 'Run'}
-                  />
-                )}
+              {projectId && workflowId && firstTriggerId && !isReadOnly && (
+                <NewRunButton
+                  onClick={() => {
+                    void (isRetryable ? handleRetryClick() : handleRunClick());
+                  }}
+                  onRunWithCustomInputClick={handleRunWithCustomInputClick}
+                  disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                  isRunning={isSubmitting || runIsProcessing}
+                  text={isRetryable ? 'Run (Retry)' : 'Run'}
+                />
+              )}
               {(!isReadOnly || readOnlyReason === 'unsaved_new') && (
                 <SaveButton
                   canSave={canSave && !hasSettingsErrors}
