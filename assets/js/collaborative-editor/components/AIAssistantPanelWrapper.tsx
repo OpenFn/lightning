@@ -178,8 +178,7 @@ export function AIAssistantPanelWrapper({
   const connectionState = useAIConnectionState();
   const isSessionConnected = useSession(selectIsConnected);
   const isSessionConnecting = useSession(selectIsConnecting);
-  // The global assistant is the only one the UI reaches. Every message is
-  // routed to it from here, so nothing downstream has to decide again.
+  // Routed from here so nothing downstream decides it again.
   const isGlobalAssistantActive = true;
   const workflowTemplateContext = useAIWorkflowTemplateContext();
   const project = useProject();
@@ -399,8 +398,6 @@ export function AIAssistantPanelWrapper({
         let finalContext = {
           ...context,
           content,
-          // Include the attachment flags so the backend knows to resolve them
-          // for the first message too
           ...(attached.attach_logs && { attach_logs: true }),
           ...(attached.attach_io_data && { attach_io_data: true }),
           // The first message needs the run the checkbox was gated on too,
@@ -730,9 +727,8 @@ export function AIAssistantPanelWrapper({
       ?.id;
     if (triggeringUserId && user?.id && triggeringUserId !== user.id) return;
 
-    // Workflow YAML applies to the shared Y.Doc, so a stream is
-    // page-independent: it can arrive while a step is open, and the diagram
-    // has to be right when the user navigates back to it.
+    // A stream can arrive while a step is open, and the diagram has to be
+    // right when the user navigates back to it.
     if ('yaml' in streamingChanges) {
       const yaml = streamingChanges['yaml'] as string;
       if (yaml) {

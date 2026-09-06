@@ -16,16 +16,13 @@ defmodule Lightning.Scrubber do
   """
   use Agent
 
-  # Wide enough that an ordinary record keeps its shape, narrow enough that a
-  # map keyed by identifier does not carry every identifier out.
+  # Wide enough for an ordinary record, narrow enough for one keyed by id.
   @map_key_limit 50
 
-  # And a ceiling on the whole structure, since nesting multiplies the limit
-  # above by itself at every level.
+  # A ceiling on the whole structure, which nesting would otherwise multiply.
   @key_budget 500
 
-  # The budget counts keys, not their length, and a field name can be as long
-  # as the body. This bounds what a single one carries.
+  # The budget counts keys, not their length.
   @max_key_length 200
 
   defmodule State do
@@ -219,10 +216,8 @@ defmodule Lightning.Scrubber do
     end
   end
 
-  # Keys are not values and survive as they are, so a map keyed by record
-  # identifier carries those identifiers out with it. The budget is spent
-  # across the whole structure rather than per map, because fifty keys at each
-  # of four levels is still millions of them.
+  # Keys survive as they are, so the budget is spent across the whole
+  # structure rather than per map.
   defp scrub_value(map, array_limit, budget) when is_map(map) do
     {kept, dropped} =
       map

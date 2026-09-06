@@ -202,20 +202,15 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   defp log_attachments(_attach, _run_id, _project_id), do: []
 
-  # The whole run, to match the logs beside it. A user reading a run asks about
-  # the run, and the step they happen to have highlighted is rarely the one the
-  # answer turns on.
   defp io_attachments(true, run_id, project_id) when is_binary(run_id) do
     case Invocation.scrubbed_io_for_run(run_id, project_id) do
-      # No steps at all: either the run is not this project's, or it has yet
-      # to start one. Worth a look, unlike the case below.
+      # No steps: the run is not this project's, or has yet to start one.
       [] ->
         warn_unresolved("I/O data", run: run_id, project: project_id)
         []
 
       steps ->
-        # A run with steps can still have nothing to attach, when none of them
-        # kept a dataclip. Ordinary, and worth telling apart from the above.
+        # Steps that kept no dataclip. Ordinary, unlike the case above.
         case Enum.flat_map(steps, &step_io_attachments/1) do
           [] ->
             warn_no_data(run_id, project_id, length(steps))
@@ -234,10 +229,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   defp io_attachments(_attach, _run_id, _project_id), do: []
 
-  # The step name rides inside the content rather than beside it, because
-  # Apollo prints an attachment as its type and its content and nothing else.
-  # Without it a run of five steps arrives as ten blocks that cannot be told
-  # apart.
+  # The name goes inside the content because Apollo renders an attachment as
+  # its type and its content, and nothing else.
   defp step_io_attachments(step) do
     attachment("input_dataclip", step.step_name, step.input) ++
       attachment("output_dataclip", step.step_name, step.output)

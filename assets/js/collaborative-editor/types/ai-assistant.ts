@@ -138,9 +138,8 @@ export type WorkflowTemplateContext =
       errors?: string;
       content?: string;
 
-      // The run the user attached, and what they attached from it. These ride
-      // on the channel join because that is the only way a session's first
-      // message reaches the server.
+      // Carried on the channel join, which is how a session's first message
+      // reaches the server.
       follow_run_id?: string;
       attach_logs?: boolean;
       attach_io_data?: boolean;

@@ -135,8 +135,6 @@ describe('AIAssistantPanel', () => {
     });
 
     it('should not name which assistant answered', () => {
-      // There is one, so the badge that told Job from Workflow from Global has
-      // nothing left to say.
       renderWithStore(
         <AIAssistantPanel isOpen={true} onClose={mockOnClose} page="job_code" />
       );

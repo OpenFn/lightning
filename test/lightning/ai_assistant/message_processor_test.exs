@@ -999,8 +999,7 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
 
       insert(:run_step, run: run, step: other_step)
 
-      # The step the user happens to have highlighted. The answer rarely turns
-      # on it, so it must not be what decides the attachment.
+      # Highlighted, and not what decides the attachment.
       message =
         global_message(user, project, %{
           "attach_io_data" => true,
@@ -1053,8 +1052,7 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
         global_reply().(env, opts)
       end)
 
-      # The user was promised I/O data, so the silence has to be logged. The
-      # run itself resolves, which is why the warning cannot hang off that.
+      # The run resolves, so the warning cannot hang off that.
       logs =
         ExUnit.CaptureLog.capture_log(fn ->
           assert :ok =

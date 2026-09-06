@@ -1063,11 +1063,7 @@ export class AIChannelRegistry {
       params['code'] = context.code;
     }
 
-    // Run context the user ticked, for both context shapes. These used to be
-    // forwarded only when a step was open, so asking from the canvas lost the
-    // logs and data on the first turn: the join is the only way that message
-    // reaches the server, and later turns go through `new_message`, which
-    // always carried them. That is the same shape of bug as `code` above.
+    // For both context shapes, for the same reason as `code` above.
     if ('follow_run_id' in context && context.follow_run_id) {
       params['follow_run_id'] = context.follow_run_id;
     }

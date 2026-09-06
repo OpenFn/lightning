@@ -33,10 +33,7 @@ interface MessageOptions {
   follow_run_id?: string;
 }
 
-/**
- * What the assistant can be given beyond the workflow, which it always reads.
- * Both are scoped to the run on screen, so both appear and disappear with it.
- */
+/** What can be attached beyond the workflow, which the assistant always reads. */
 const ATTACHMENTS = [
   {
     key: 'logs',
@@ -202,10 +199,8 @@ export function ChatInput({
     if (!input.trim() || isLoading || isDisabled) return;
 
     const options: MessageOptions = {};
-    // Both boxes describe the run in front of the user, so both hang off the
-    // same id. Sending it is what stops what we promise to attach and what the
-    // backend looks up from drifting: useAIMode reads the run from the URL, and
-    // LiveView push_patch strips that param.
+    // The run rides along so what we promise to attach and what the backend
+    // looks up cannot drift: LiveView push_patch strips the URL param.
     if (selectedRunId) {
       options.attach_logs = attachLogs;
       options.attach_io_data = attachIoData;

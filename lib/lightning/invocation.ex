@@ -30,14 +30,10 @@ defmodule Lightning.Invocation do
   @logs_byte_budget 300_000
   @logs_line_overhead 150
 
-  # Scrubbing collapses a dataclip to its shape, so a whole run's worth costs
-  # far less than the rows it came from. The budget is on what comes out, give
-  # or take the step that crosses it, which is read whole before its size is
-  # known.
+  # On the scrubbed output, and the step that crosses it is read whole.
   @io_byte_budget 100_000
 
-  # A body still has to be read before it can be collapsed. Anything past this
-  # is described rather than read: no shape needs a megabyte to state.
+  # Past this a body is described rather than read.
   @io_dataclip_byte_cap 1_000_000
 
   @io_erased "[erased by this project's retention policy]"
@@ -1023,9 +1019,7 @@ defmodule Lightning.Invocation do
       join: w in assoc(wo, :workflow),
       left_join: j in assoc(s, :job),
       where: rs.run_id == ^run_id and w.project_id == ^project_id,
-      # Execution order, so the run reads the way it ran. A step that never
-      # started has no start time, so the row's own age breaks the tie; the id
-      # is last only to make the order total.
+      # A step that never started has no start time, so age breaks the tie.
       order_by: [asc_nulls_last: s.started_at, asc: s.inserted_at, asc: s.id],
       select: %{
         step_name: j.name,
@@ -1036,9 +1030,7 @@ defmodule Lightning.Invocation do
     |> Repo.all()
   end
 
-  # Past the budget the run still reads as a sequence, it just says where it
-  # stopped. Dropping the rest silently would leave a reader summarising three
-  # steps of six as though that were the whole run.
+  # Past the budget a step still appears, saying why it was not read.
   defp take_io_within_budget(step, size) when size > @io_byte_budget do
     entry = %{
       step_name: step.step_name,
@@ -1061,11 +1053,9 @@ defmodule Lightning.Invocation do
 
   defp scrubbed_body(nil), do: nil
 
-  # One body at a time, so a long run never holds more than one in memory, and
-  # the size test runs in Postgres so an oversized one is not sent to the BEAM
-  # at all. It measures the JSON rather than the row: pg_column_size reports
-  # the compressed datum, which on the repetitive data these workflows carry is
-  # smaller than the real body by a factor of tens.
+  # One body at a time, and sized in Postgres so an oversized one never reaches
+  # the BEAM. octet_length measures the JSON; pg_column_size would measure the
+  # compressed datum, which on this data is smaller by a factor of tens.
   defp scrubbed_body(dataclip_id) do
     query =
       from(d in Dataclip,
@@ -1106,8 +1096,7 @@ defmodule Lightning.Invocation do
   defp over_budget(_dataclip_id), do: @io_over_budget
 
   defp io_entry_size(entry) do
-    # Scrubbing leaves only strings, numbers, booleans, nil, lists and maps
-    # with string keys, so this cannot fail on anything it is given.
+    # Scrubbed output is always encodable.
     entry |> Jason.encode!() |> byte_size()
   end
 
