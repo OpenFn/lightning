@@ -19,6 +19,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowReleases
   alias Lightning.WorkflowVersions
 
   defdelegate subscribe(project_id), to: Events
@@ -181,7 +182,7 @@ defmodule Lightning.Workflows do
     transaction_result =
       try do
         changeset
-        |> build_save_multi(actor)
+        |> build_save_multi(actor, opts)
         |> Repo.transaction()
 
         # NOTE: Ecto.StaleEntryError is deliberately NOT caught — optimistic
@@ -235,7 +236,7 @@ defmodule Lightning.Workflows do
   # Builds the Ecto.Multi pipeline for save_workflow. Does NOT call
   # Repo.transaction — that stays in the try/rescue block of the caller so
   # rescue wraps only the transaction, not this builder.
-  defp build_save_multi(changeset, actor) do
+  defp build_save_multi(changeset, actor, opts) do
     Multi.new()
     |> Multi.put(:actor, actor)
     |> Multi.run(:validate, fn _repo, _changes ->
@@ -259,7 +260,57 @@ defmodule Lightning.Workflows do
       hash = WorkflowVersions.generate_hash(workflow)
       WorkflowVersions.record_version(workflow, hash)
     end)
+    |> maybe_record_go_live_release(opts)
   end
+
+  # Records a go-live release in the same transaction as the snapshot, when the
+  # caller (go_live/2 or the collaborative go-live path) asks for it. The release
+  # points at the snapshot this save just captured; if the publish was a true
+  # no-op (nothing changed, so no snapshot was captured) it falls back to the
+  # workflow's current snapshot so the release still resolves to real content.
+  #
+  # A workflow predating the snapshot system has neither, and a release cannot
+  # exist without one. Going live still has to work for those, so we skip the
+  # release rather than fail the save. The same workflows are logged by the
+  # backfill migration.
+  defp maybe_record_go_live_release(multi, opts) do
+    if Keyword.get(opts, :record_release) == :go_live do
+      Multi.run(multi, :workflow_release, fn repo, changes ->
+        %{workflow: workflow, actor: actor} = changes
+
+        case changes[:snapshot] || current_snapshot(repo, workflow) do
+          nil ->
+            Logger.warning(
+              "No snapshot for workflow #{workflow.id} at go-live; skipping release."
+            )
+
+            {:ok, nil}
+
+          snapshot ->
+            WorkflowReleases.insert_release(repo, %{
+              workflow_id: workflow.id,
+              kind: :go_live,
+              snapshot_id: snapshot.id,
+              published_by_id: actor_id(actor),
+              source_project_id: nil
+            })
+        end
+      end)
+    else
+      multi
+    end
+  end
+
+  defp current_snapshot(repo, workflow) do
+    from(s in Snapshot,
+      join: w in assoc(s, :workflow),
+      where: s.workflow_id == ^workflow.id and s.lock_version == w.lock_version
+    )
+    |> repo.one()
+  end
+
+  defp actor_id(%Lightning.Accounts.User{id: id}), do: id
+  defp actor_id(_actor), do: nil
 
   defp validate_not_deleted(%{data: %{deleted_at: nil}}), do: {:ok, true}
   defp validate_not_deleted(_changeset), do: {:error, :workflow_deleted}
@@ -1067,7 +1118,7 @@ defmodule Lightning.Workflows do
     |> Repo.preload(:triggers)
     |> update_triggers_enabled_state(true)
     |> Ecto.Changeset.put_change(:state, :live)
-    |> save_workflow(actor)
+    |> save_workflow(actor, record_release: :go_live)
   end
 
   @doc """

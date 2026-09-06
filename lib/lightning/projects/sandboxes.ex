@@ -214,9 +214,12 @@ defmodule Lightning.Projects.Sandboxes do
            # otherwise the subscriber would reload pre-commit state on its own
            # connection.
            {:ok, updated_target} <-
-             Provisioner.import_document(target, actor, merge_doc,
-               allow_stale: true,
-               reconcile_collaboration: false
+             Provisioner.import_document(
+               target,
+               actor,
+               merge_doc,
+               [allow_stale: true, reconcile_collaboration: false] ++
+                 release_import_opts(source, opts, merge_doc)
              ),
            {:ok, _} <- sync_collections(source, target) do
         {:ok, {updated_target, merge_doc}}
@@ -233,6 +236,45 @@ defmodule Lightning.Projects.Sandboxes do
       {:error, reason} ->
         {:error, classify_merge_error(reason)}
     end
+  end
+
+  # Builds the `:release` import option for a promote. A promote asks for it via
+  # `opts.record_release` and always scopes to `selected_workflow_ids`; any other
+  # merge (e.g. the full sandbox-management merge) records nothing. The promoted
+  # workflows land on the target under the target's ids, so we map the selected
+  # source workflows to their merged-document ids by name (workflow names are
+  # unique within a project) and hand the provisioner exactly those ids.
+  defp release_import_opts(source, opts, merge_doc) do
+    with :promote <- Map.get(opts, :record_release),
+         [_ | _] = selected_ids <- Map.get(opts, :selected_workflow_ids) do
+      [
+        release: %{
+          kind: :promote,
+          source_project_id: source.id,
+          workflow_ids: promoted_target_ids(selected_ids, merge_doc)
+        }
+      ]
+    else
+      _ -> []
+    end
+  end
+
+  defp promoted_target_ids(selected_source_ids, merge_doc) do
+    selected_names =
+      from(w in Workflow,
+        where: w.id in ^selected_source_ids,
+        select: w.name
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    merge_doc
+    |> Map.get("workflows", [])
+    |> Enum.filter(fn wf ->
+      wf["delete"] != true and MapSet.member?(selected_names, wf["name"])
+    end)
+    |> Enum.map(& &1["id"])
+    |> MapSet.new()
   end
 
   # Attaches the chosen sandbox-only credentials to the target so the merge

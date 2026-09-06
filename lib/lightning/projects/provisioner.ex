@@ -38,6 +38,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowReleases
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkflowVersions
 
@@ -84,6 +85,7 @@ defmodule Lightning.Projects.Provisioner do
   def import_document(project, user_or_repo_connection, data, opts) do
     allow_stale = Keyword.get(opts, :allow_stale, false)
     reconcile_collaboration = Keyword.get(opts, :reconcile_collaboration, true)
+    release = Keyword.get(opts, :release)
 
     result =
       Repo.transact(fn ->
@@ -114,7 +116,8 @@ defmodule Lightning.Projects.Provisioner do
                create_snapshots(
                  project_changeset,
                  updated_project.workflows,
-                 user_or_repo_connection
+                 user_or_repo_connection,
+                 release
                ) do
           Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
@@ -315,7 +318,8 @@ defmodule Lightning.Projects.Provisioner do
   defp create_snapshots(
          project_changeset,
          inserted_workflows,
-         user_or_repo_connection
+         user_or_repo_connection,
+         release
        ) do
     project_changeset
     |> get_assoc(:workflows)
@@ -343,6 +347,12 @@ defmodule Lightning.Projects.Provisioner do
           )
         end
       )
+      |> maybe_record_promote_release(
+        workflow,
+        snapshot_operation,
+        user_or_repo_connection,
+        release
+      )
     end)
     |> Repo.transaction()
     |> case do
@@ -350,6 +360,41 @@ defmodule Lightning.Projects.Provisioner do
       {:error, _failed_key, changeset, _changes} -> {:error, changeset}
     end
   end
+
+  # Records a promote release in the same transaction as the snapshot, but only
+  # for the workflows a promote actually targeted (`release.workflow_ids`) — the
+  # provisioner is a generic pipeline, so ordinary imports/deploys/merges pass no
+  # release and record nothing, and sibling parent workflows carried along by a
+  # promote are excluded here.
+  defp maybe_record_promote_release(multi, _workflow, _snapshot_op, _actor, nil),
+    do: multi
+
+  defp maybe_record_promote_release(
+         multi,
+         workflow,
+         snapshot_operation,
+         actor,
+         %{workflow_ids: workflow_ids} = release
+       ) do
+    if MapSet.member?(workflow_ids, workflow.id) do
+      Multi.run(multi, "workflow_release_#{workflow.id}", fn repo, changes ->
+        %{^snapshot_operation => snapshot} = changes
+
+        WorkflowReleases.insert_release(repo, %{
+          workflow_id: workflow.id,
+          kind: release.kind,
+          snapshot_id: snapshot.id,
+          published_by_id: promote_actor_id(actor),
+          source_project_id: release.source_project_id
+        })
+      end)
+    else
+      multi
+    end
+  end
+
+  defp promote_actor_id(%User{id: id}), do: id
+  defp promote_actor_id(_actor), do: nil
 
   @spec parse_document(
           Project.t(),

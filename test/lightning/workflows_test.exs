@@ -9,6 +9,8 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Workflows
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.WorkflowRelease
+  alias Lightning.Workflows.WorkflowReleases
   alias Lightning.Workflows.Triggers.Events
   alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
 
@@ -46,6 +48,65 @@ defmodule Lightning.WorkflowsTest do
 
       refute Repo.preload(draft, :triggers, force: true).triggers
              |> Enum.any?(& &1.enabled)
+    end
+
+    test "go_live records a v1 go-live release authored by the actor, pointing at the captured snapshot",
+         %{user: user} do
+      {:ok, live} = Workflows.go_live(insert(:simple_workflow), user)
+
+      snapshot = Snapshot.get_current_for(live)
+
+      assert [
+               %WorkflowRelease{
+                 version_number: 1,
+                 kind: :go_live,
+                 published_by_id: published_by_id,
+                 source_project_id: nil,
+                 snapshot_id: snapshot_id
+               }
+             ] = WorkflowReleases.list_for_workflow(live.id)
+
+      assert published_by_id == user.id
+      assert snapshot_id == snapshot.id
+    end
+
+    test "a second go_live records v2", %{user: user} do
+      {:ok, live} = Workflows.go_live(insert(:simple_workflow), user)
+      {:ok, draft} = Workflows.switch_to_draft(live, user)
+      {:ok, _relive} = Workflows.go_live(draft, user)
+
+      assert [
+               %WorkflowRelease{version_number: 2, kind: :go_live},
+               %WorkflowRelease{version_number: 1, kind: :go_live}
+             ] = WorkflowReleases.list_for_workflow(live.id)
+    end
+
+    test "switch_to_draft records no release", %{user: user} do
+      {:ok, live} = Workflows.go_live(insert(:simple_workflow), user)
+      {:ok, _draft} = Workflows.switch_to_draft(live, user)
+
+      # Only the go-live release exists; drafting is not a published version.
+      assert [%WorkflowRelease{kind: :go_live}] =
+               WorkflowReleases.list_for_workflow(live.id)
+    end
+
+    test "go_live on a workflow with no snapshot skips the release instead of failing",
+         %{user: user} do
+      # Already live with its trigger enabled, so go_live changes nothing and no
+      # snapshot is captured. Predates the snapshot system, so there is no
+      # current snapshot to fall back to either.
+      workflow = insert(:simple_workflow, state: :live)
+
+      refute Snapshot.get_current_for(workflow)
+
+      log =
+        capture_log(fn ->
+          assert {:ok, live} = Workflows.go_live(workflow, user)
+          assert live.state == :live
+        end)
+
+      assert log =~ "skipping release"
+      assert WorkflowReleases.list_for_workflow(workflow.id) == []
     end
   end
 

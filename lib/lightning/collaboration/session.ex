@@ -449,8 +449,10 @@ defmodule Lightning.Collaboration.Session do
            |> apply_state_transition(mode),
          {:ok, changeset} <- maybe_disable_triggers_on_limit(changeset),
          {:ok, saved_workflow} <-
-           Lightning.Workflows.save_workflow(changeset, user,
-             skip_reconcile: true
+           Lightning.Workflows.save_workflow(
+             changeset,
+             user,
+             [skip_reconcile: true] ++ release_save_opts(mode)
            ),
          :ok <- merge_saved_workflow_into_ydoc(state, saved_workflow),
          {:ok, _job_cleanup_count} <-
@@ -521,6 +523,11 @@ defmodule Lightning.Collaboration.Session do
         {:reply, {:error, changeset}, state}
     end
   end
+
+  # Going live records a go-live release alongside the snapshot; a plain save or
+  # a switch-to-draft records none.
+  defp release_save_opts({:set_state, :live}), do: [record_release: :go_live]
+  defp release_save_opts(_mode), do: []
 
   defp apply_state_transition(changeset, :save), do: changeset
 

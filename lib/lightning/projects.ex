@@ -2194,7 +2194,8 @@ defmodule Lightning.Projects do
 
         with {:ok, _updated_parent} <-
                Sandboxes.merge(sandbox, parent, actor, %{
-                 selected_workflow_ids: [sandbox_workflow.id]
+                 selected_workflow_ids: [sandbox_workflow.id],
+                 record_release: :promote
                }) do
           parent_workflow_id =
             case Lightning.Workflows.get_workflow_by_name(

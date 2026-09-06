@@ -798,6 +798,21 @@ defmodule Lightning.SessionTest do
       assert {:ok, draft} = Session.set_workflow_state(session, user, :draft)
       assert draft.state == :draft
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+
+      # Going live records a single go-live release authored by the actor;
+      # switching back to draft records none.
+      assert [
+               %Lightning.Workflows.WorkflowRelease{
+                 version_number: 1,
+                 kind: :go_live,
+                 published_by_id: published_by_id
+               }
+             ] =
+               Lightning.Workflows.WorkflowReleases.list_for_workflow(
+                 workflow.id
+               )
+
+      assert published_by_id == user.id
     end
 
     test "set_workflow_state returns an internal error with no shared doc", %{

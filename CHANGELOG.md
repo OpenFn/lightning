@@ -30,6 +30,12 @@ and this project adheres to
   and live (read-only) workflows no longer show run or edit actions that cannot
   be used there.
   [#5005](https://github.com/OpenFn/lightning/pull/5005)
+- Record a version each time a workflow goes live or is promoted. Every publish
+  now writes a release row carrying a sequential version number, the snapshot it
+  published, who published it and, for a promote, the sandbox it came from.
+  Workflows that are already live are backfilled with a v1. Nothing reads these
+  yet, so the editor's version list is unchanged for now.
+  [#PR](https://github.com/OpenFn/lightning/pull/PR)
 - The job code AI assistant now shows the progress statuses (e.g. "Writing
   code...") that Apollo streams _after_ the text answer while it generates code,
   displayed below the answer in the same style as the initial "Thinking..."

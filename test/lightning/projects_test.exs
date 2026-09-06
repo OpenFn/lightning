@@ -3916,6 +3916,48 @@ defmodule Lightning.ProjectsTest do
       assert reloaded_beta.lock_version == parent_beta.lock_version
     end
 
+    test "records a promote release on the parent workflow only", %{
+      owner: owner,
+      sandbox: sandbox,
+      sandbox_alpha: sandbox_alpha,
+      parent_alpha: parent_alpha,
+      parent_beta: parent_beta
+    } do
+      edit_single_job_body!(sandbox_alpha.id, "console.log('promoted');")
+
+      assert {:ok, %{workflow_id: workflow_id}} =
+               Projects.promote_workflow(sandbox_alpha, owner)
+
+      assert workflow_id == parent_alpha.id
+
+      # The next version after the parent's own go-live (v1) is v2, authored by
+      # the promoter, tagged to the sandbox it came from.
+      assert [
+               %Lightning.Workflows.WorkflowRelease{
+                 version_number: 2,
+                 kind: :promote,
+                 published_by_id: published_by_id,
+                 source_project_id: source_project_id
+               },
+               %Lightning.Workflows.WorkflowRelease{
+                 version_number: 1,
+                 kind: :go_live
+               }
+             ] =
+               Lightning.Workflows.WorkflowReleases.list_for_workflow(
+                 workflow_id
+               )
+
+      assert published_by_id == owner.id
+      assert source_project_id == sandbox.id
+
+      # The untouched sibling keeps only its own go-live release.
+      assert [%Lightning.Workflows.WorkflowRelease{kind: :go_live}] =
+               Lightning.Workflows.WorkflowReleases.list_for_workflow(
+                 parent_beta.id
+               )
+    end
+
     test "returns {:error, :not_a_sandbox} for a workflow in a root project" do
       actor = insert(:user)
       root = insert(:project, project_users: [%{user: actor, role: :owner}])
