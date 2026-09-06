@@ -470,7 +470,13 @@ const WorkflowReplyTimeline = ({
 };
 
 /** Restores the workflow to before a reply's changes, or back to after them */
-const UndoChangesButton = ({
+/**
+ * Takes back everything a reply did, not the block it happens to sit near.
+ *
+ * Lives in the reply's footer beside Copy: it belongs to the whole reply, and
+ * against the diff blocks it read as the last one's control.
+ */
+const RevertReplyButton = ({
   undone,
   onClick,
 }: {
@@ -481,15 +487,15 @@ const UndoChangesButton = ({
     type="button"
     data-testid="undo-changes-button"
     onClick={onClick}
-    className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-1 text-xs font-medium text-gray-700 inset-ring inset-ring-gray-300 hover:inset-ring-gray-400"
+    className="flex items-center gap-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
   >
     <span
       className={cn(
-        'h-3.5 w-3.5',
+        'h-3 w-3',
         undone ? 'hero-arrow-uturn-right' : 'hero-arrow-uturn-left'
       )}
     />
-    {undone ? 'Redo these changes' : 'Undo these changes'}
+    <span>{undone ? 'Restore this reply' : 'Revert this reply'}</span>
   </button>
 );
 
@@ -1244,24 +1250,6 @@ export function MessageList({
                         </div>
                       )}
 
-                    {canUndoChanges(message) && (
-                      <UndoChangesButton
-                        undone={undoneMessageId === message.id}
-                        onClick={() => {
-                          const redoing = undoneMessageId === message.id;
-                          onUndoChanges?.(
-                            message.id,
-                            redoing
-                              ? message.code!
-                              : beforeYamlByMessageId.get(message.id)!,
-                            // Redo restores the reply's own YAML, which the
-                            // model wrote; undo restores our own serializer's.
-                            { fromModel: redoing }
-                          );
-                        }}
-                      />
-                    )}
-
                     {/* The diff blocks read as a record of what changed, so a
                         reply whose apply was rejected has to say so where they
                         are. The retry is the same import, not a YAML dump: the
@@ -1382,6 +1370,27 @@ export function MessageList({
                           {copiedMessageId === message.id ? 'Copied' : 'Copy'}
                         </span>
                       </button>
+                      {canUndoChanges(message) && (
+                        <>
+                          <span>•</span>
+                          <RevertReplyButton
+                            undone={undoneMessageId === message.id}
+                            onClick={() => {
+                              const redoing = undoneMessageId === message.id;
+                              onUndoChanges?.(
+                                message.id,
+                                redoing
+                                  ? message.code!
+                                  : beforeYamlByMessageId.get(message.id)!,
+                                // Redo restores the reply's own YAML, which
+                                // the model wrote; undo restores our own
+                                // serializer's.
+                                { fromModel: redoing }
+                              );
+                            }}
+                          />
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

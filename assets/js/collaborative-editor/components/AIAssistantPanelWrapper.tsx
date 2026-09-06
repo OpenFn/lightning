@@ -928,11 +928,13 @@ export function AIAssistantPanelWrapper({
         isOpen={isConfirmOpen}
         onClose={cancelUndoChanges}
         onConfirm={confirmUndoChanges}
-        title="Overwrite changes to the workflow?"
-        // Neutral about whose changes they are: a collaborator's edits are
-        // taken by the same whole-document replace.
-        description="The workflow has been edited since the assistant applied these changes. Continuing replaces the whole workflow, discarding those edits."
-        confirmLabel="Continue"
+        title="Undo replaces the whole workflow"
+        // States what undo does rather than claiming edits exist. The check
+        // behind this dialog also fires when it simply cannot tell, after a
+        // reload has lost the record of how the canvas was left, so copy that
+        // asserts the workflow has changed is wrong about half the time.
+        description="It goes back to how it was before this reply, so anything changed since will be lost."
+        confirmLabel="Undo anyway"
         variant="danger"
       />
     </div>
