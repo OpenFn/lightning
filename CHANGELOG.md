@@ -35,12 +35,12 @@ and this project adheres to
   published, who published it and, for a promote, the sandbox it came from.
   Workflows that are already live are backfilled with a v1. Nothing reads these
   yet, so the editor's version list is unchanged for now.
-  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+  [#5122](https://github.com/OpenFn/lightning/pull/5122)
 - The job code AI assistant now shows the progress statuses (e.g. "Writing
   code...") that Apollo streams _after_ the text answer while it generates code,
   displayed below the answer in the same style as the initial "Thinking..."
   indicator. Statuses are surfaced in whatever order Apollo sends them.
-  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+  [#5122](https://github.com/OpenFn/lightning/pull/5122)
 
 ### Changed
 
