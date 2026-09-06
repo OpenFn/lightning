@@ -448,6 +448,26 @@ defmodule Lightning.ProjectsTest do
       refute Repo.get(Lightning.Channels.ChannelRequest, request.id)
     end
 
+    test "delete_project/1 deletes a project holding a released workflow" do
+      # Releases hold their snapshot with an on_delete: :restrict foreign key,
+      # while both releases and snapshots cascade from the workflow. Deleting the
+      # workflow fires both cascades in one statement, so this pins that the
+      # restrict does not abort the delete.
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+      workflow = insert(:simple_workflow, project: project)
+
+      {:ok, live} = Lightning.Workflows.go_live(workflow, user)
+
+      assert [%{version_number: 1}] =
+               Lightning.Workflows.WorkflowReleases.list_for_workflow(live.id)
+
+      assert {:ok, %Project{}} = Projects.delete_project(project)
+
+      assert Lightning.Workflows.WorkflowReleases.list_for_workflow(live.id) ==
+               []
+    end
+
     test "delete_project/1 deletes project with associated oauth clients" do
       project =
         insert(:project,

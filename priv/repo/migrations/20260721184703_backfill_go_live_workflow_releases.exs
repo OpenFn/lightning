@@ -25,6 +25,12 @@ defmodule Lightning.Repo.Migrations.BackfillGoLiveWorkflowReleases do
   # Guarded by NOT EXISTS so a re-run is a no-op rather than a duplicate-key
   # crash. A live workflow with no matching snapshot is intentionally left out
   # here and surfaced by log_live_workflows_without_snapshot/1.
+  #
+  # Nothing enforces one snapshot per (workflow_id, lock_version): the index on
+  # that pair is not unique, and the provisioner imports with allow_stale, so two
+  # concurrent imports can land on the same lock_version. DISTINCT ON keeps the
+  # newest of any such pair, because a second row would try to insert a second
+  # (workflow_id, 1) and take the migration down with it.
   def insert_sql do
     """
     INSERT INTO workflow_releases (
@@ -37,7 +43,7 @@ defmodule Lightning.Repo.Migrations.BackfillGoLiveWorkflowReleases do
       source_project_id,
       inserted_at
     )
-    SELECT
+    SELECT DISTINCT ON (w.id)
       gen_random_uuid(),
       1,
       'go_live',
@@ -55,19 +61,26 @@ defmodule Lightning.Repo.Migrations.BackfillGoLiveWorkflowReleases do
       AND NOT EXISTS (
         SELECT 1 FROM workflow_releases r WHERE r.workflow_id = w.id
       )
+    ORDER BY w.id, s.inserted_at DESC, s.id DESC
     """
   end
 
   @doc false
-  # Only removes the backfilled rows: v1 go-live releases with no actor and no
-  # source project. Releases created by real go-lives/promotes are left alone.
+  # Only removes the backfilled rows. A null actor is not enough to identify
+  # them: published_by_id is nilify_all, so a real go-live's release looks the
+  # same once its author's account is purged. The backfill copies the snapshot's
+  # inserted_at onto the release, which a real go-live never does (it stamps its
+  # own insert time), so that correlation is what separates the two.
   def delete_sql do
     """
-    DELETE FROM workflow_releases
-    WHERE version_number = 1
-      AND kind = 'go_live'
-      AND published_by_id IS NULL
-      AND source_project_id IS NULL
+    DELETE FROM workflow_releases r
+    USING workflow_snapshots s
+    WHERE r.snapshot_id = s.id
+      AND r.inserted_at = s.inserted_at
+      AND r.version_number = 1
+      AND r.kind = 'go_live'
+      AND r.published_by_id IS NULL
+      AND r.source_project_id IS NULL
     """
   end
 

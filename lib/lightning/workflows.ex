@@ -265,25 +265,25 @@ defmodule Lightning.Workflows do
 
   # Records a go-live release in the same transaction as the snapshot, when the
   # caller (go_live/2 or the collaborative go-live path) asks for it. The release
-  # points at the snapshot this save just captured; if the publish was a true
-  # no-op (nothing changed, so no snapshot was captured) it falls back to the
-  # workflow's current snapshot so the release still resolves to real content.
+  # points at the snapshot this save just captured.
   #
-  # A workflow predating the snapshot system has neither, and a release cannot
-  # exist without one. Going live still has to work for those, so we skip the
-  # release rather than fail the save. The same workflows are logged by the
-  # backfill migration.
+  # No snapshot means the save changed nothing, so nothing was published and
+  # there is no new version to record. Going live on a workflow that is already
+  # live is the case that reaches here, and a workflow predating the snapshot
+  # system reaches it too. Promote answers the same question the same way: a
+  # merge with no changes records nothing.
+  #
+  # Tying the release to a captured snapshot also keeps version allocation
+  # behind the workflow's optimistic lock. A save that captures a snapshot has
+  # updated the workflow row, so two concurrent publishes cannot read the same
+  # max(version_number).
   defp maybe_record_go_live_release(multi, opts) do
     if Keyword.get(opts, :record_release) == :go_live do
       Multi.run(multi, :workflow_release, fn repo, changes ->
         %{workflow: workflow, actor: actor} = changes
 
-        case changes[:snapshot] || current_snapshot(repo, workflow) do
+        case changes[:snapshot] do
           nil ->
-            Logger.warning(
-              "No snapshot for workflow #{workflow.id} at go-live; skipping release."
-            )
-
             {:ok, nil}
 
           snapshot ->
@@ -299,14 +299,6 @@ defmodule Lightning.Workflows do
     else
       multi
     end
-  end
-
-  defp current_snapshot(repo, workflow) do
-    from(s in Snapshot,
-      join: w in assoc(s, :workflow),
-      where: s.workflow_id == ^workflow.id and s.lock_version == w.lock_version
-    )
-    |> repo.one()
   end
 
   defp actor_id(%Lightning.Accounts.User{id: id}), do: id

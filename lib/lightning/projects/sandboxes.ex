@@ -167,7 +167,8 @@ defmodule Lightning.Projects.Sandboxes do
   * `target` - The project receiving the merge
   * `actor` - The user performing the merge
   * `opts` - Merge options (`:selected_workflow_ids`,
-    `:deleted_target_workflow_ids`, `:selected_credential_ids`)
+    `:deleted_target_workflow_ids`, `:selected_credential_ids`,
+    `:record_release`)
 
   ## Credential attachment
 

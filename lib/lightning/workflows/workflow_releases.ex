@@ -5,10 +5,16 @@ defmodule Lightning.Workflows.WorkflowReleases do
   A release is recorded at each go-live and each promote, always inside the same
   transaction as the snapshot it points at, so a release can never reference
   content that failed to persist. `version_number` is allocated as
-  `max(existing) + 1` per workflow within that transaction; the publish
-  transaction bumps the workflow's optimistic `lock_version`, which serializes
-  concurrent publishes so they cannot allocate the same number (the
-  `(workflow_id, version_number)` unique index is the final backstop).
+  `max(existing) + 1` per workflow within that transaction.
+
+  That allocation is safe only because callers record a release exclusively when
+  the save captured a snapshot. Capturing one means the workflow row was
+  updated, so the optimistic `lock_version` bump serialises concurrent publishes
+  and they cannot read the same maximum. A caller that recorded a release
+  without a captured snapshot would be allocating without that lock, because
+  Ecto issues no `UPDATE` at all for an empty changeset and the optimistic lock
+  never runs. The `(workflow_id, version_number)` unique index is the backstop
+  if that ever happens.
   """
   import Ecto.Query
 

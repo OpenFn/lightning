@@ -70,15 +70,34 @@ defmodule Lightning.WorkflowsTest do
       assert snapshot_id == snapshot.id
     end
 
-    test "a second go_live records v2", %{user: user} do
+    test "a second go_live records v2 against the snapshot it published", %{
+      user: user
+    } do
       {:ok, live} = Workflows.go_live(insert(:simple_workflow), user)
+      v1_snapshot = Snapshot.get_current_for(live)
+
       {:ok, draft} = Workflows.switch_to_draft(live, user)
-      {:ok, _relive} = Workflows.go_live(draft, user)
+      {:ok, relive} = Workflows.go_live(draft, user)
+      v2_snapshot = Snapshot.get_current_for(relive)
 
       assert [
-               %WorkflowRelease{version_number: 2, kind: :go_live},
-               %WorkflowRelease{version_number: 1, kind: :go_live}
+               %WorkflowRelease{
+                 version_number: 2,
+                 kind: :go_live,
+                 snapshot_id: v2_snapshot_id
+               },
+               %WorkflowRelease{
+                 version_number: 1,
+                 kind: :go_live,
+                 snapshot_id: v1_snapshot_id
+               }
              ] = WorkflowReleases.list_for_workflow(live.id)
+
+      # Each release points at the snapshot current when it was published, not
+      # at whichever snapshot happens to be current now.
+      assert v1_snapshot_id == v1_snapshot.id
+      assert v2_snapshot_id == v2_snapshot.id
+      refute v1_snapshot_id == v2_snapshot_id
     end
 
     test "switch_to_draft records no release", %{user: user} do
@@ -90,22 +109,33 @@ defmodule Lightning.WorkflowsTest do
                WorkflowReleases.list_for_workflow(live.id)
     end
 
-    test "go_live on a workflow with no snapshot skips the release instead of failing",
-         %{user: user} do
+    test "go_live on an already live workflow records nothing", %{user: user} do
+      # Publishing a workflow that is already live changes nothing, so no
+      # snapshot is captured and there is no new version to record. Without this
+      # you get a v2 pointing at the same content as v1.
+      {:ok, live} = Workflows.go_live(insert(:simple_workflow), user)
+
+      assert [%WorkflowRelease{version_number: 1}] =
+               WorkflowReleases.list_for_workflow(live.id)
+
+      assert {:ok, still_live} = Workflows.go_live(live, user)
+      assert still_live.state == :live
+
+      assert [%WorkflowRelease{version_number: 1}] =
+               WorkflowReleases.list_for_workflow(live.id)
+    end
+
+    test "go_live on a workflow with no snapshot still succeeds", %{user: user} do
       # Already live with its trigger enabled, so go_live changes nothing and no
-      # snapshot is captured. Predates the snapshot system, so there is no
-      # current snapshot to fall back to either.
+      # snapshot is captured. Predates the snapshot system, so it has no current
+      # snapshot either. Recording a release needs a snapshot, so this must not
+      # fail the save.
       workflow = insert(:simple_workflow, state: :live)
 
       refute Snapshot.get_current_for(workflow)
 
-      log =
-        capture_log(fn ->
-          assert {:ok, live} = Workflows.go_live(workflow, user)
-          assert live.state == :live
-        end)
-
-      assert log =~ "skipping release"
+      assert {:ok, live} = Workflows.go_live(workflow, user)
+      assert live.state == :live
       assert WorkflowReleases.list_for_workflow(workflow.id) == []
     end
   end
