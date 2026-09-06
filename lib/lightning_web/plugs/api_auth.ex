@@ -31,11 +31,10 @@ defmodule LightningWeb.Plugs.ApiAuth do
   end
 
   defp put_subject(conn) do
-    conn.assigns.claims
-    |> Lightning.Tokens.get_subject()
-    |> then(fn subject ->
-      conn |> assign(:subject, subject)
-    end)
+    case Lightning.Tokens.get_subject(conn.assigns.claims) do
+      nil -> deny_access(conn)
+      subject -> assign(conn, :subject, subject)
+    end
   end
 
   defp deny_access(conn) do

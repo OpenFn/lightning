@@ -7,6 +7,11 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
 
   require Logger
 
+  # Columns this section can sort by (see Projects.dynamic_order_by/1); client
+  # sort params are resolved against this set via TableHelpers.sort_field/3,
+  # never interned.
+  @sortable_keys ~w(name last_updated_at)a
+
   @impl true
   def update(assigns, socket) do
     {:ok,
@@ -33,8 +38,8 @@ defmodule LightningWeb.DashboardLive.UserProjectsSection do
 
   defp assign_projects(%{assigns: assigns} = socket) do
     sort_param = {
-      String.to_existing_atom(assigns.sort_key),
-      String.to_existing_atom(assigns.sort_direction)
+      TableHelpers.sort_field(assigns.sort_key, @sortable_keys, :name),
+      TableHelpers.sort_direction(assigns.sort_direction)
     }
 
     projects =

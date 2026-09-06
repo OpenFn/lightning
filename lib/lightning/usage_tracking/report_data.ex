@@ -15,7 +15,7 @@ defmodule Lightning.UsageTracking.ReportData do
       instance: instrument_instance(configuration, cleartext_enabled, date),
       projects: instrument_projects(cleartext_enabled, date),
       report_date: date,
-      version: "2"
+      version: "3"
     }
   end
 
@@ -26,6 +26,7 @@ defmodule Lightning.UsageTracking.ReportData do
     |> instrument_identity(cleartext_enabled)
     |> Map.merge(%{
       no_of_active_users: UserService.no_of_active_users(date),
+      no_of_monthly_active_users: UserService.no_of_monthly_active_users(date),
       no_of_users: UserService.no_of_users(date),
       operating_system: operating_system_name(),
       version: UsageTracking.lightning_version()

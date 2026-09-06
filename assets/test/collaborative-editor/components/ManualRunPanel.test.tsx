@@ -206,6 +206,7 @@ describe('ManualRunPanel', () => {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,
@@ -978,9 +979,9 @@ describe('ManualRunPanel', () => {
       // Click Run button
       await user.click(screen.getByText('Run From Here'));
 
-      // Verify saveWorkflow was called with { silent: true }
+      // Verify saveWorkflow was called with { notify: 'none' }
       await waitFor(() => {
-        expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
+        expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'none' });
         expect(saveWorkflow).toHaveBeenCalledOnce();
       });
     });

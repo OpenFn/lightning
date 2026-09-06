@@ -1,14 +1,55 @@
-// Tests for BreadcrumbText: the truncating workflow-name label gains a tooltip
-// so long names stay readable on hover, while non-string children render as-is.
+/**
+ * Breadcrumbs Component Tests
+ *
+ * Covers the two breadcrumb primitives:
+ * - BreadcrumbLink: an anchor for real navigation (href) or a button for
+ *   actions (onClick only). The workflow title uses the button mode to return
+ *   to the root workflow editor view.
+ * - BreadcrumbText: the truncating workflow-name label. A string child gains a
+ *   tooltip so long names stay readable on hover; non-string children render
+ *   as-is.
+ */
 
 import { render, screen } from '@testing-library/react';
-import { describe, expect, test } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, test, vi } from 'vitest';
 
-import { BreadcrumbText } from '../../../js/collaborative-editor/components/Breadcrumbs';
+import {
+  BreadcrumbLink,
+  BreadcrumbText,
+} from '../../../js/collaborative-editor/components/Breadcrumbs';
+
+describe('BreadcrumbLink', () => {
+  test('renders a button (not a link) and fires onClick when no href is given', async () => {
+    const handleClick = vi.fn();
+    render(<BreadcrumbLink onClick={handleClick}>My Workflow</BreadcrumbLink>);
+
+    const button = screen.getByRole('button', { name: 'My Workflow' });
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+
+    await userEvent.click(button);
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  test('renders an anchor with the given href for navigation', () => {
+    render(<BreadcrumbLink href="/projects/123/w">Workflows</BreadcrumbLink>);
+
+    const link = screen.getByRole('link', { name: 'Workflows' });
+    expect(link).toHaveAttribute('href', '/projects/123/w');
+  });
+});
 
 describe('BreadcrumbText', () => {
   const LONG_NAME =
     'A very long workflow name that will be truncated by max-w-[16rem]';
+
+  test('renders non-interactive text', () => {
+    render(<BreadcrumbText>My Workflow</BreadcrumbText>);
+
+    expect(screen.getByText('My Workflow')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
 
   test('wraps a string name in a tooltip trigger so the full name is reachable', () => {
     render(<BreadcrumbText>{LONG_NAME}</BreadcrumbText>);

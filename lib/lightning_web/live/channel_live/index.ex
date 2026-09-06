@@ -157,18 +157,23 @@ defmodule LightningWeb.ChannelLive.Index do
   defp apply_action(socket, :edit, %{"id" => id}) do
     if socket.assigns.can_edit_channel do
       channel =
-        Channels.get_channel!(id,
+        Channels.get_channel_for_project(socket.assigns.project.id, id,
           include: [
             :client_auth_methods,
             :destination_auth_method
           ]
         )
 
-      socket
-      |> assign(
-        page_title: "Edit Channel",
-        selected_channel: channel
-      )
+      if channel do
+        assign(socket,
+          page_title: "Edit Channel",
+          selected_channel: channel
+        )
+      else
+        socket
+        |> put_flash(:error, "Channel not found")
+        |> push_navigate(to: ~p"/projects/#{socket.assigns.project.id}/channels")
+      end
     else
       socket
       |> put_flash(:error, "You are not authorized to edit channels.")
@@ -243,7 +248,7 @@ defmodule LightningWeb.ChannelLive.Index do
   defp fetch_project_channel(socket, channel_id) do
     case Channels.get_channel_for_project(socket.assigns.project.id, channel_id) do
       %{} = channel -> {:ok, channel}
-      nil -> socket |> put_flash(:error, "Channel not found.") |> noreply()
+      nil -> socket |> put_flash(:error, "Channel not found") |> noreply()
     end
   end
 

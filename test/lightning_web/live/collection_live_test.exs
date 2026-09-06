@@ -8,11 +8,11 @@ defmodule LightningWeb.CollectionLiveTest do
     setup :register_and_log_in_user
 
     test "Regular user cannot access the collections page", %{conn: conn} do
-      {:ok, _view, html} =
+      {:ok, conn} =
         live(conn, ~p"/settings/collections")
         |> follow_redirect(conn, ~p"/projects")
 
-      assert html =~ "No Access"
+      assert conn.resp_body =~ "No Access"
     end
   end
 

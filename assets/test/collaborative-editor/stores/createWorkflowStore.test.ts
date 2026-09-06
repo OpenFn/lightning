@@ -170,7 +170,7 @@ describe('WorkflowStore - Save Workflow', () => {
     expect(response).toMatchObject({
       saved_at: expect.any(String),
     });
-    expect(response?.lock_version).toBeUndefined();
+    expect(response.lock_version).toBeUndefined();
 
     // Y.Doc should remain unchanged
     expect(workflowMap.get('lock_version')).toBe(originalLockVersion);

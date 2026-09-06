@@ -176,6 +176,16 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
               <div>
                 <.text_field form={f} field={:redirect_host} label="Redirect Host" />
               </div>
+              <div>
+                <.input
+                  type="checkbox"
+                  field={f[:allow_unverified_email]}
+                  label="Trust unverified emails from this provider"
+                />
+                <span class="text-xs text-secondary-500">
+                  Only enable for a provider you trust that doesn't assert <code>email_verified</code>. Off by default.
+                </span>
+              </div>
             </div>
             <div class="hidden sm:block mt-4" aria-hidden="true">
               <div class="border-t border-secondary-200"></div>

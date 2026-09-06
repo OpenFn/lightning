@@ -145,7 +145,6 @@ defmodule Lightning.MergeProjectsHelpers do
     * `:comment` - Trigger comment (optional)
     * `:custom_path` - Custom webhook path (optional)
     * `:cron_expression` - Cron expression for cron triggers (optional)
-    * `:kafka_configuration` - Kafka configuration map for kafka triggers (optional)
 
   ## Examples
 
@@ -163,13 +162,11 @@ defmodule Lightning.MergeProjectsHelpers do
       "type",
       "comment",
       "custom_path",
-      "cron_expression",
-      "kafka_configuration"
+      "cron_expression"
     ])
     |> Map.put("id", id)
     |> Enum.reject(fn {k, v} ->
-      k in ["comment", "custom_path", "cron_expression", "kafka_configuration"] and
-        is_nil(v)
+      k in ["comment", "custom_path", "cron_expression"] and is_nil(v)
     end)
     |> Map.new()
   end

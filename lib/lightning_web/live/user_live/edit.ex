@@ -5,27 +5,15 @@ defmodule LightningWeb.UserLive.Edit do
   """
   use LightningWeb, :live_view
 
+  on_mount {LightningWeb.Hooks, :ensure_admin}
+
   alias Lightning.Accounts
   alias Lightning.Accounts.User
-  alias Lightning.Policies.Permissions
-  alias Lightning.Policies.Users
 
   @impl true
   def mount(_params, _session, socket) do
-    can_access_admin_space =
-      Users
-      |> Permissions.can?(:access_admin_space, socket.assigns.current_user, {})
-
-    if can_access_admin_space do
-      {:ok,
-       socket
-       |> assign(active_menu_item: :users),
-       layout: {LightningWeb.Layouts, :settings}}
-    else
-      {:ok,
-       put_flash(socket, :nav, :no_access)
-       |> push_navigate(to: "/projects")}
-    end
+    {:ok, assign(socket, active_menu_item: :users),
+     layout: {LightningWeb.Layouts, :settings}}
   end
 
   @impl true

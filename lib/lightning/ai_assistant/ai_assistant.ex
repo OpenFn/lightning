@@ -15,7 +15,6 @@ defmodule Lightning.AiAssistant do
 
   alias Ecto.Changeset
   alias Ecto.Multi
-  alias Lightning.Accounts
   alias Lightning.Accounts.User
   alias Lightning.AiAssistant.ChatMessage
   alias Lightning.AiAssistant.ChatSession
@@ -36,12 +35,6 @@ defmodule Lightning.AiAssistant do
   @type opts :: keyword()
 
   @doc """
-  Returns the maximum allowed length for chat session titles.
-  """
-  @spec title_max_length() :: non_neg_integer()
-  def title_max_length, do: @title_max_length
-
-  @doc """
   Checks if the AI assistant feature is enabled via application configuration.
 
   Verifies that both the Apollo endpoint URL and API key are properly configured,
@@ -56,79 +49,6 @@ defmodule Lightning.AiAssistant do
     endpoint = Lightning.Config.apollo(:endpoint)
     api_key = Lightning.Config.apollo(:ai_assistant_api_key)
     is_binary(endpoint) && is_binary(api_key)
-  end
-
-  @doc """
-  Checks if the Apollo AI service endpoint is reachable and responding.
-
-  Performs a connectivity test to ensure the external AI service is available
-  before attempting to make actual queries.
-
-  ## Returns
-
-  `true` if the Apollo endpoint responds successfully, `false` otherwise.
-  """
-  @spec endpoint_available?() :: boolean()
-  def endpoint_available? do
-    ApolloClient.test() == :ok
-  end
-
-  @doc """
-  Checks if a user has acknowledged the AI assistant disclaimer recently.
-
-  Verifies that the user has read and accepted the AI assistant terms and conditions
-  within the last 24 hours. This ensures users are aware of AI limitations and usage terms.
-
-  ## Parameters
-
-  - `user` - The `%User{}` struct to check
-
-  ## Returns
-
-  `true` if disclaimer was read within 24 hours, `false` otherwise.
-  """
-  @spec user_has_read_disclaimer?(User.t()) :: boolean()
-  def user_has_read_disclaimer?(user) do
-    read_at =
-      user
-      |> Accounts.get_preference("ai_assistant.disclaimer_read_at")
-      |> case do
-        timestamp when is_binary(timestamp) -> String.to_integer(timestamp)
-        other -> other
-      end
-
-    case read_at && DateTime.from_unix(read_at) do
-      {:ok, datetime} ->
-        DateTime.diff(DateTime.utc_now(), datetime, :hour) < 24
-
-      _error ->
-        false
-    end
-  end
-
-  @doc """
-  Records that a user has read and accepted the AI assistant disclaimer.
-
-  Updates the user's preferences with a timestamp indicating when they
-  acknowledged the AI assistant terms and conditions.
-
-  ## Parameters
-
-  - `user` - The `%User{}` who read the disclaimer
-
-  ## Returns
-
-  `{:ok, user}` - Successfully recorded disclaimer acceptance.
-  """
-  @spec mark_disclaimer_read(User.t()) :: {:ok, User.t()}
-  def mark_disclaimer_read(user) do
-    timestamp = DateTime.utc_now() |> DateTime.to_unix()
-
-    Accounts.update_user_preference(
-      user,
-      "ai_assistant.disclaimer_read_at",
-      timestamp
-    )
   end
 
   @doc """
@@ -161,6 +81,7 @@ defmodule Lightning.AiAssistant do
 
     session_attrs = %{
       job_id: job.id,
+      project_id: project_id_for_job(job),
       user_id: user.id,
       title: create_title(content),
       session_type: "job_code",
@@ -180,6 +101,15 @@ defmodule Lightning.AiAssistant do
     end)
     |> Repo.transaction()
     |> handle_transaction_result()
+  end
+
+  defp project_id_for_job(%Job{workflow_id: nil}), do: nil
+
+  defp project_id_for_job(%Job{workflow_id: workflow_id}) do
+    Workflow
+    |> where([w], w.id == ^workflow_id)
+    |> select([w], w.project_id)
+    |> Repo.one()
   end
 
   @doc """
@@ -569,29 +499,6 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
-  Checks if additional sessions are available beyond the current count.
-
-  This is a convenience function to determine if there are more sessions
-  to load without fetching the actual data. Useful for "Load More" UI patterns.
-
-  ## Parameters
-
-  - `resource` - A `%Project{}` or `%Job{}` struct
-  - `current_count` - Number of sessions already loaded
-
-  ## Returns
-
-  `true` if more sessions exist, `false` otherwise.
-  """
-  @spec has_more_sessions?(Project.t() | Job.t(), integer()) :: boolean()
-  def has_more_sessions?(resource, current_count) do
-    %{pagination: pagination} =
-      list_sessions(resource, :desc, offset: current_count, limit: 1)
-
-    pagination.has_next_page
-  end
-
-  @doc """
   Adds job-specific context to a chat session for enhanced AI assistance.
 
   Enriches a session with the job's expression code and adaptor information,
@@ -701,30 +608,6 @@ defmodule Lightning.AiAssistant do
   defp maybe_add_run_logs(session, _job_id), do: session
 
   @doc """
-  Associates a workflow with a chat session.
-
-  Links a generated workflow to the session that created it, enabling tracking
-  and future modifications through the same conversation context.
-
-  ## Parameters
-
-  - `session` - The `%ChatSession{}` that generated the workflow
-  - `workflow` - The `%Workflow{}` struct to associate
-
-  ## Returns
-
-  - `{:ok, session}` - Successfully linked workflow to session
-  - `{:error, changeset}` - Association failed with validation errors
-  """
-  @spec associate_workflow(ChatSession.t(), Workflow.t()) ::
-          {:ok, ChatSession.t()} | {:error, Ecto.Changeset.t()}
-  def associate_workflow(session, workflow) do
-    session
-    |> ChatSession.changeset(%{workflow_id: workflow.id})
-    |> Repo.update()
-  end
-
-  @doc """
   Saves a message to an existing chat session.
 
   Adds a new message to the session's message history and updates the session.
@@ -780,13 +663,25 @@ defmodule Lightning.AiAssistant do
   end
 
   defp prepare_message_attrs(message_attrs, session, code) do
-    message_attrs
-    |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
-    |> Map.put("chat_session_id", session.id)
-    |> Map.put("code", code)
-    |> maybe_put_job_id_from_session(session)
-    |> maybe_put_unsaved_job_meta(session)
+    attrs =
+      message_attrs
+      |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
+      |> Map.put("chat_session_id", session.id)
+      |> Map.put("code", code)
+
+    # Global messages carry a full workflow YAML, never a job —
+    # even when the session was started from a job step.
+    if global_message?(attrs) do
+      attrs
+    else
+      attrs
+      |> maybe_put_job_id_from_session(session)
+      |> maybe_put_unsaved_job_meta(session)
+    end
   end
+
+  defp global_message?(%{"meta" => %{"from_global" => true}}), do: true
+  defp global_message?(_), do: false
 
   defp maybe_put_unsaved_job_meta(attrs, session) do
     is_assistant = to_string(Map.get(attrs, "role")) == "assistant"
@@ -869,31 +764,50 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
-  Finds all pending user messages in a chat session.
+  Records whether a reply's changes reached the canvas.
 
-  Retrieves messages that have been sent by users but are still waiting
-  for processing or AI responses. Useful for identifying stuck or failed requests.
+  The apply happens in the browser, so nothing else knows it failed. Without
+  this the reply reads as a success on the next page load: its diff blocks
+  stand as a record of changes that never landed, and it offers to undo them.
 
-  ## Parameters
-
-  - `session` - The `%ChatSession{}` to search
-
-  ## Returns
-
-  List of `%ChatMessage{}` structs with `:role` of `:user` and `:status` of `:pending`.
+  Clearing on a later success is half the point, so a retry that works leaves
+  nothing behind.
   """
-  @spec find_pending_user_messages(ChatSession.t()) :: [ChatMessage.t()]
-  def find_pending_user_messages(session) do
-    messages = session.messages || []
-    Enum.filter(messages, &(&1.role == :user && &1.status == :pending))
+  @spec set_apply_failed(Ecto.UUID.t(), Ecto.UUID.t(), boolean()) ::
+          {:ok, ChatMessage.t()} | {:error, :not_found | Changeset.t()}
+  def set_apply_failed(session_id, message_id, failed?) do
+    # Cast before the lookup: the id comes from the browser, and the streaming
+    # apply reports failures against a pseudo-id that is not a uuid at all.
+    # Scoped to the session for the same reason retry_message is: a read-level
+    # frame must not reach a message in someone else's project.
+    with {:ok, uuid} <- Ecto.UUID.cast(message_id),
+         %ChatMessage{chat_session_id: ^session_id} = message <-
+           Repo.get(ChatMessage, uuid) do
+      meta = message.meta || %{}
+
+      meta =
+        if failed?,
+          do: Map.put(meta, "apply_failed", true),
+          else: Map.delete(meta, "apply_failed")
+
+      # change/2 rather than the full changeset: this only touches an
+      # internal flag, and the message's own validations need associations
+      # this path has no reason to load.
+      message
+      |> Changeset.change(meta: meta)
+      |> Repo.update()
+    else
+      _ -> {:error, :not_found}
+    end
   end
 
   @doc """
-  Queries the AI assistant for job-specific code assistance.
+  Queries the AI service for job-specific code assistance with streaming.
 
-  Sends a user query to the Apollo AI service along with job context (expression and adaptor)
-  and conversation history. The AI provides targeted assistance for coding tasks, debugging,
-  and adaptor-specific guidance.
+  Sends a user query to the Apollo AI service along with job context
+  (expression and adaptor) and conversation history, using SSE streaming.
+  Text chunks and status updates are broadcast via PubSub as they arrive.
+  The complete message is saved to the database when the stream finishes.
 
   ## Parameters
 
@@ -904,39 +818,6 @@ defmodule Lightning.AiAssistant do
 
   - `{:ok, session}` - AI responded successfully, session updated with response
   - `{:error, reason}` - Query failed, reason is either a string error message or changeset
-  """
-  @spec query(ChatSession.t(), String.t(), opts()) ::
-          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
-  def query(session, content, opts \\ []) do
-    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
-
-    initial_context = %{
-      expression: session.expression,
-      adaptor: session.adaptor,
-      log: session.logs
-    }
-
-    context = build_context(initial_context, opts)
-
-    history = build_history(session)
-    {meta, metrics_opt_in} = apollo_meta(session)
-
-    ApolloClient.job_chat(
-      content,
-      context: context,
-      history: history,
-      meta: meta,
-      metrics_opt_in: metrics_opt_in
-    )
-    |> handle_ai_response(session, &build_job_message/1)
-  end
-
-  @doc """
-  Queries the AI service for job assistance with streaming.
-
-  Same as `query/3` but uses SSE streaming. Text chunks and status updates
-  are broadcast via PubSub as they arrive. The complete message is saved
-  to the database when the stream finishes.
   """
   @spec query_stream(ChatSession.t(), String.t(), opts()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
@@ -1008,10 +889,11 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
-  Queries the AI service for workflow template generation.
+  Queries the AI service for workflow template generation with streaming.
 
-  Sends a request to generate or modify workflow templates based on user requirements.
-  Can include validation errors from previous attempts to help the AI provide corrections.
+  Sends a request to generate or modify workflow templates based on user
+  requirements, using SSE streaming. Can include validation errors from
+  previous attempts to help the AI provide corrections.
 
   ## Parameters
 
@@ -1025,32 +907,6 @@ defmodule Lightning.AiAssistant do
 
   - `{:ok, session}` - Workflow template generated successfully
   - `{:error, reason}` - Generation failed, reason is either a string error message or changeset
-  """
-  @spec query_workflow(ChatSession.t(), String.t(), opts()) ::
-          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
-  def query_workflow(session, content, opts \\ []) do
-    code = Keyword.get(opts, :code)
-    errors = Keyword.get(opts, :errors)
-
-    Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
-
-    {meta, metrics_opt_in} = apollo_meta(session)
-
-    ApolloClient.workflow_chat(
-      content,
-      code: code,
-      errors: errors,
-      history: build_history(session),
-      meta: meta,
-      metrics_opt_in: metrics_opt_in
-    )
-    |> handle_ai_response(session, &build_workflow_message/1)
-  end
-
-  @doc """
-  Queries the AI service for workflow template generation with streaming.
-
-  Same as `query_workflow/3` but uses SSE streaming.
   """
   @spec query_workflow_stream(ChatSession.t(), String.t(), opts()) ::
           {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
@@ -1089,6 +945,7 @@ defmodule Lightning.AiAssistant do
   def query_global_stream(session, content, opts \\ []) do
     workflow_yaml = Keyword.get(opts, :workflow_yaml)
     page = Keyword.get(opts, :page)
+    attachments = Keyword.get(opts, :attachments, [])
     history = build_history(session)
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
@@ -1100,15 +957,12 @@ defmodule Lightning.AiAssistant do
            page: page,
            history: history,
            meta: meta,
-           metrics_opt_in: metrics_opt_in
+           metrics_opt_in: metrics_opt_in,
+           attachments: attachments
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
-        process_stream(
-          session,
-          body,
-          &build_global_message(&1, session)
-        )
+        process_stream(session, body, &build_global_message/1)
 
       error ->
         handle_error_response(error, session)
@@ -1308,6 +1162,14 @@ defmodule Lightning.AiAssistant do
   # Bridge event: error
   defp handle_sse_event(session_id, %{event: "error", data: data}, acc) do
     case Jason.decode(data) do
+      # On /stream the HTTP status is already 200 by the time this arrives, so
+      # the type in the payload is the only thing that identifies it.
+      {:ok, %{"type" => "ATTACHMENT_TOO_LARGE", "details" => details}} ->
+        broadcast_streaming_error(
+          session_id,
+          attachment_too_large_message(details)
+        )
+
       {:ok, %{"message" => message}} ->
         broadcast_streaming_error(session_id, message)
 
@@ -1335,6 +1197,36 @@ defmodule Lightning.AiAssistant do
     acc
   end
 
+  # Bridge event: status — a persistent, completed-action status, the same
+  # shape as a persisted `response_segments` entry, so the client renders
+  # live and reloaded status segments identically. Transient "thinking"
+  # updates arrive separately as Anthropic thinking events (see
+  # handle_stream_event/2).
+  defp handle_sse_event(session_id, %{event: "status", data: data}, acc) do
+    case Jason.decode(data) do
+      {:ok, %{"type" => "status", "content" => content} = segment}
+      when is_binary(content) ->
+        # Take only the contract fields so stray keys from Apollo never
+        # reach the client. `steps` and `summary` are optional: `steps`
+        # names what the action touched as data, which is how the client
+        # attaches per-step detail without parsing `content`.
+        broadcast_streaming_segment(
+          session_id,
+          segment
+          |> Map.take(["type", "content", "summary", "steps"])
+          |> normalize_segment_steps()
+          |> normalize_segment_summary()
+        )
+
+      _ ->
+        Logger.warning(
+          "Dropping malformed status event for session #{session_id}"
+        )
+    end
+
+    acc
+  end
+
   # Bridge event: log — skip Python stdout
   defp handle_sse_event(_session_id, %{event: "log"}, acc), do: acc
 
@@ -1354,6 +1246,35 @@ defmodule Lightning.AiAssistant do
 
   # Catch-all for anything unexpected
   defp handle_sse_event(_session_id, _event, acc), do: acc
+
+  # Built from `details`, not Apollo's prose, so the wording stays ours.
+  defp attachment_too_large_message(
+         %{"total_characters" => total, "limit_characters" => limit} = details
+       ) do
+    control =
+      case details do
+        %{"largest_attachment" => %{"type" => "log"}} ->
+          "“Send logs”"
+
+        %{"largest_attachment" => %{"type" => dataclip}}
+        when dataclip in ["input_dataclip", "output_dataclip"] ->
+          "“Send scrubbed I/O”"
+
+        _ ->
+          nil
+      end
+
+    advice =
+      if control,
+        do: "Untick #{control} and send again, or pick a run with less data.",
+        else: "Untick one of the attachment boxes, or pick a run with less data."
+
+    "The attached run context is too large to analyse " <>
+      "(#{total} characters against a #{limit} limit). " <> advice
+  end
+
+  defp attachment_too_large_message(_details),
+    do: "The attached run context is too large to analyse."
 
   defp handle_stream_event(session_id, %{
          "type" => "content_block_delta",
@@ -1403,6 +1324,14 @@ defmodule Lightning.AiAssistant do
     )
   end
 
+  defp broadcast_streaming_segment(session_id, segment) do
+    Lightning.broadcast(
+      "ai_session:#{session_id}",
+      {:ai_assistant, :streaming_segment,
+       %{segment: segment, session_id: session_id}}
+    )
+  end
+
   defp broadcast_streaming_error(session_id, error) do
     Lightning.broadcast(
       "ai_session:#{session_id}",
@@ -1410,23 +1339,13 @@ defmodule Lightning.AiAssistant do
     )
   end
 
-  defp handle_ai_response(response, session, message_builder) do
-    case response do
-      {:ok, %Tesla.Env{status: status, body: body}}
-      when status in @success_status_range ->
-        {message_attrs, opts} = message_builder.(body)
-        save_message(session, message_attrs, opts)
-
-      error ->
-        handle_error_response(error, session)
-    end
-  end
-
   defp handle_error_response(error_response, session) do
     case error_response do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status not in @success_status_range ->
-        error_message = body["message"]
+        error_message =
+          error_message_from_body(body) ||
+            "AI server returned an error (HTTP #{status})."
 
         Logger.error(
           "AI query failed for session #{session.id}: #{error_message}"
@@ -1450,6 +1369,13 @@ defmodule Lightning.AiAssistant do
         {:error, "Oops! Something went wrong. Please try again."}
     end
   end
+
+  # Streaming requests carry a lazy Stream (a fun or %Stream{} struct) as the
+  # body, so error responses can't be indexed like decoded JSON maps.
+  defp error_message_from_body(body) when is_map(body) and not is_struct(body),
+    do: body["message"]
+
+  defp error_message_from_body(_body), do: nil
 
   defp build_job_message(body) do
     message = body["history"] |> Enum.reverse() |> hd()
@@ -1479,93 +1405,136 @@ defmodule Lightning.AiAssistant do
     {message_attrs, opts}
   end
 
-  defp build_global_message(body, session) do
-    {code, job, job_key} =
-      extract_global_code_and_job(body["attachments"], session)
+  defp build_global_message(body) do
+    code = extract_global_workflow_yaml(body["attachments"])
 
-    message_attrs = %{
-      role: :assistant,
-      content: body["response"]
-    }
-
-    # Set job on message for "Generated Job Code" rendering.
-    # For saved jobs, set the job association directly.
-    # For unsaved jobs, set from_unsaved_job in meta so
-    # format_message can use it as a fallback job_id.
     message_attrs =
-      cond do
-        job ->
-          Map.put(message_attrs, :job, job)
+      %{
+        role: :assistant,
+        content: body["response"],
+        meta: %{"from_global" => true}
+      }
+      |> put_response_segments(
+        normalize_response_segments(body["response_segments"])
+      )
 
-        job_key ->
-          Map.put(message_attrs, :meta, %{"from_global_job_code" => job_key})
-
-        true ->
-          message_attrs
-      end
-
-    opts = [
-      usage: body["usage"] || %{},
-      meta: body["meta"],
-      code: code
-    ]
-
+    opts = [usage: body["usage"] || %{}, meta: body["meta"], code: code]
     {message_attrs, opts}
   end
 
-  # Extracts the appropriate code artifact and optional job from global chat
-  # attachments. On a job step, prefers job_code (renders as code diff).
-  # On the workflow overview, prefers workflow_yaml (renders as YAML card).
-  defp extract_global_code_and_job(attachments, session)
-       when is_list(attachments) do
-    page = get_in(session.meta || %{}, ["message_options", "page"])
-    on_job_step = page && length(String.split(page, "/")) >= 3
+  # Flat replies omit the key entirely: casting nil into embeds_many is an
+  # error, and an absent key leaves the column NULL for legacy parity.
+  defp put_response_segments(attrs, nil), do: attrs
 
-    job_code_attachment =
-      Enum.find(attachments, &match?(%{"type" => "job_code"}, &1))
+  defp put_response_segments(attrs, segments),
+    do: Map.put(attrs, :response_segments, segments)
 
-    if on_job_step && job_code_attachment do
-      job_key = job_code_attachment["job_key"]
+  # `response_segments` is the display timeline of the streamed reply (text and status
+  # segments in stream order); `response` stays the flat answer that history
+  # is rebuilt from. Apollo is an external boundary, so invalid or oversized
+  # segments are dropped (and counted in the logs) rather than failing the
+  # save: absent or all-invalid segments mean a flat legacy message. The
+  # segment contract itself lives in `ChatMessage.Segment`.
+  defp normalize_response_segments(segments) when is_list(segments) do
+    # Sanitise before validating, not after. A malformed `steps` entry would
+    # otherwise fail the whole segment and lose its prose, and a non-map entry
+    # would reach cast_embed and raise rather than simply being dropped.
+    {valid, dropped} =
+      segments
+      |> Enum.map(fn segment ->
+        if is_map(segment) do
+          segment |> normalize_segment_steps() |> normalize_segment_summary()
+        else
+          segment
+        end
+      end)
+      |> Enum.split_with(fn segment ->
+        is_map(segment) and
+          ChatMessage.Segment.changeset(%ChatMessage.Segment{}, segment).valid?
+      end)
 
-      job =
-        resolve_job_from_key(session.workflow_id, job_key)
+    max_segments = ChatMessage.max_response_segments()
+    {kept, truncated} = Enum.split(valid, max_segments)
 
-      {job_code_attachment["content"], job, job_key}
-    else
-      workflow_yaml =
-        Enum.find_value(attachments, fn
-          %{"type" => "workflow_yaml", "content" => content} -> content
-          _ -> nil
-        end)
+    if dropped != [] or truncated != [] do
+      Logger.warning(
+        "Discarding response segments from Apollo payload: " <>
+          "#{length(dropped)} invalid, #{length(truncated)} over the " <>
+          "#{max_segments}-segment cap"
+      )
+    end
 
-      {workflow_yaml, nil, nil}
+    case kept do
+      [] ->
+        nil
+
+      kept ->
+        Enum.map(kept, &Map.take(&1, ["type", "content", "summary", "steps"]))
     end
   end
 
-  defp extract_global_code_and_job(_, _), do: {nil, nil, nil}
+  defp normalize_response_segments(_segments), do: nil
 
-  defp resolve_job_from_key(nil, _), do: nil
-  defp resolve_job_from_key(_, nil), do: nil
+  # Keeps only the step fields we persist, and drops the key entirely when
+  # Apollo sent nothing usable — an empty list would otherwise read as "this
+  # action touched no steps", which is not the same as "this Apollo version
+  # does not report steps".
+  # `summary` is optional decoration, so it must never be the reason a segment
+  # is thrown away: anything the embed would reject is dropped here instead.
+  defp normalize_segment_summary(%{"summary" => summary} = segment)
+       when is_binary(summary) do
+    if String.length(summary) <= ChatMessage.Segment.max_content_length() do
+      segment
+    else
+      Map.delete(segment, "summary")
+    end
+  end
 
-  defp resolve_job_from_key(workflow_id, job_key) do
-    import Ecto.Query
+  defp normalize_segment_summary(segment), do: Map.delete(segment, "summary")
 
-    Lightning.Workflows.Job
-    |> where([j], j.workflow_id == ^workflow_id)
-    |> Repo.all()
-    |> Enum.find(fn job ->
-      normalize_job_name(job.name) == normalize_job_name(job_key)
+  defp normalize_segment_steps(%{"steps" => steps} = segment)
+       when is_list(steps) do
+    max_steps = ChatMessage.Segment.max_steps()
+
+    steps
+    |> Enum.filter(&is_map/1)
+    |> Enum.map(&Map.take(&1, ["key", "name"]))
+    |> Enum.filter(&valid_segment_step?/1)
+    |> Enum.take(max_steps)
+    |> case do
+      [] -> Map.delete(segment, "steps")
+      kept -> Map.put(segment, "steps", kept)
+    end
+  end
+
+  defp normalize_segment_steps(segment), do: Map.delete(segment, "steps")
+
+  # Anything the embed would reject has to be dropped here rather than left to
+  # fail the cast: an invalid step invalidates its whole segment, which loses
+  # a status line the user already saw live.
+  defp valid_segment_step?(%{"key" => key} = step) when is_binary(key) do
+    max = ChatMessage.Segment.max_step_field_length()
+
+    key != "" and String.length(key) <= max and
+      case Map.get(step, "name") do
+        nil -> true
+        name when is_binary(name) -> String.length(name) <= max
+        _other -> false
+      end
+  end
+
+  defp valid_segment_step?(_step), do: false
+
+  # Global chat always returns a full workflow YAML (job bodies embedded).
+  # The frontend handles per-step diffing and full-workflow apply.
+  defp extract_global_workflow_yaml(attachments) when is_list(attachments) do
+    Enum.find_value(attachments, fn
+      %{"type" => "workflow_yaml", "content" => content} -> content
+      _ -> nil
     end)
   end
 
-  defp normalize_job_name(name) when is_binary(name) do
-    name
-    |> String.downcase()
-    |> String.replace(~r/[^a-z0-9]+/, "-")
-    |> String.trim("-")
-  end
-
-  defp normalize_job_name(_), do: ""
+  defp extract_global_workflow_yaml(_), do: nil
 
   defp build_history(session) do
     messages = session.messages || []

@@ -283,7 +283,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
   end
 
   defp maybe_fetch_branches(
-         %{assigns: %{changeset: changeset, branches: branches}} = socket
+         %{assigns: %{changeset: changeset, branches: branches, user: user}} =
+           socket
        ) do
     installation = Ecto.Changeset.get_field(changeset, :github_installation_id)
     repo = Ecto.Changeset.get_field(changeset, :repo)
@@ -297,7 +298,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
           socket,
           :branches,
           fn ->
-            branches = fetch_branches(installation, repo)
+            branches = fetch_branches(user, installation, repo)
             {:ok, %{branches: %{repo => branches}}}
           end,
           reset: true
@@ -354,8 +355,8 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
     end
   end
 
-  defp fetch_branches(installation_id, repo_name) do
-    case VersionControl.fetch_repo_branches(installation_id, repo_name) do
+  defp fetch_branches(user, installation_id, repo_name) do
+    case VersionControl.fetch_repo_branches(user, installation_id, repo_name) do
       {:ok, body} ->
         body
         |> Enum.map(fn branch -> Map.take(branch, ["name"]) end)

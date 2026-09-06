@@ -11,10 +11,46 @@ defmodule LightningWeb.Hooks do
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.Policies.Users
+  alias Lightning.Projects.Events
+  alias Lightning.Projects.Events.ProjectDeletionScheduled
+  alias Lightning.Projects.Events.ProjectUserAdded
+  alias Lightning.Projects.Events.ProjectUserRemoved
+  alias Lightning.Projects.Events.ProjectUserRoleChanged
+  alias Lightning.Projects.Events.SupportAccessUpdated
+  alias Lightning.Projects.Events.WorkflowDeleted
   alias Lightning.Projects.ProjectLimiter
+  alias Lightning.Projects.Scope
   alias Lightning.Services.UsageLimiter
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias LightningWeb.LiveHelpers
+
+  # Gates the admin space. Halts the mount and redirects when the user can't
+  # access it, so admin-only LiveViews can't be mounted (and their per-event
+  # handlers can't be invoked) by a non-admin socket.
+  def on_mount(
+        :ensure_admin,
+        _params,
+        _session,
+        %{assigns: %{current_user: nil}} = socket
+      ) do
+    {:halt, redirect(socket, to: ~p"/users/log_in")}
+  end
+
+  def on_mount(:ensure_admin, _params, _session, socket) do
+    can_access_admin_space =
+      Users
+      |> Permissions.can?(:access_admin_space, socket.assigns.current_user, {})
+
+    if can_access_admin_space do
+      {:cont, socket}
+    else
+      {:halt,
+       socket
+       |> put_flash(:nav, :no_access)
+       |> redirect(to: ~p"/projects")}
+    end
+  end
 
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access
@@ -42,43 +78,116 @@ defmodule LightningWeb.Hooks do
         %{assigns: %{current_user: current_user}} = socket
       ) do
     project = Lightning.Projects.get_project(project_id)
+
+    # Subscribe *before* the membership reads below. A revocation committed in
+    # the gap between reading the role and subscribing would be missed, and
+    # this socket would keep its mount-time permissions for as long as it lives
+    # — the exact failure this hook exists to prevent.
+    socket = watch_project_membership(socket, project)
+
     projects = Lightning.Projects.get_projects_for_user(current_user)
 
     project_user =
       project && Lightning.Projects.get_project_user(project, current_user)
 
-    can_access_project =
-      Permissions.can?(ProjectUsers, :access_project, current_user, project)
+    # One Scope, two questions. `:access_project` now refuses an MFA-blocked
+    # member outright, so it can no longer tell "not a member" apart from
+    # "member who hasn't enrolled" — and only the second may be told the
+    # project exists. `blocked_by_mfa?/1` draws that line.
+    case Scope.fetch(current_user, project) do
+      {:ok, scope} ->
+        cond do
+          ProjectUsers.blocked_by_mfa?(scope) ->
+            {:halt, redirect(socket, to: ~p"/mfa_required")}
 
-    cond do
-      can_access_project and project.requires_mfa and !current_user.mfa_enabled ->
-        {:halt, redirect(socket, to: ~p"/mfa_required")}
+          ProjectUsers.permitted?(:access_project, scope) ->
+            access_root =
+              Lightning.Projects.access_root_for_user(project, current_user)
 
-      can_access_project ->
-        access_root =
-          Lightning.Projects.access_root_for_user(project, current_user)
+            project_label =
+              Lightning.Projects.display_name_within_access_root(
+                project,
+                access_root
+              )
 
-        project_label =
-          Lightning.Projects.display_name_within_access_root(
-            project,
-            access_root
-          )
+            {:cont,
+             socket
+             |> assign(:side_menu_theme, "primary-theme")
+             |> assign(:project_user, project_user)
+             |> assign(:project, project)
+             |> assign(:access_root, access_root)
+             |> assign(:project_label, project_label)
+             |> assign(:projects, projects)}
 
-        {:cont,
-         socket
-         |> assign(:side_menu_theme, "primary-theme")
-         |> assign(:project_user, project_user)
-         |> assign(:project, project)
-         |> assign(:access_root, access_root)
-         |> assign(:project_label, project_label)
-         |> assign(:projects, projects)}
+          true ->
+            {:halt,
+             redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
+        end
 
-      true ->
+      # No such project, or one scheduled for deletion. Both were already the
+      # not-found redirect before Scope answered them here.
+      {:error, _reason} ->
         {:halt, redirect(socket, to: "/projects") |> put_flash(:nav, :not_found)}
     end
   end
 
   def on_mount(:project_scope, _, _session, socket) do
+    {:cont, socket}
+  end
+
+  def on_mount(
+        :ensure_workflow_belongs_to_project,
+        %{"id" => workflow_id},
+        _session,
+        %{assigns: %{project: project}} = socket
+      ) do
+    workflow_exists? =
+      Lightning.Workflows.workflow_exists_in_project?(project.id, workflow_id)
+
+    if workflow_exists? do
+      # Read by `handle_project_user_event/2`, which sees the project's
+      # `WorkflowDeleted` events but has no other way to know which workflow
+      # this socket is holding open.
+      {:cont, assign(socket, :current_workflow_id, workflow_id)}
+    else
+      {:halt,
+       socket
+       |> put_flash(:error, "Workflow not found")
+       |> redirect(to: ~p"/projects/#{project}/w")}
+    end
+  end
+
+  def on_mount(
+        :ensure_workflow_belongs_to_project,
+        _params,
+        _session,
+        socket
+      ) do
+    {:cont, socket}
+  end
+
+  def on_mount(
+        :ensure_run_belongs_to_project,
+        %{"id" => run_id},
+        _session,
+        %{assigns: %{project: project}} = socket
+      ) do
+    if Lightning.Runs.get_for_project(run_id, project.id) do
+      {:cont, socket}
+    else
+      {:halt,
+       socket
+       |> put_flash(:error, "Run not found")
+       |> redirect(to: ~p"/projects/#{project}/history")}
+    end
+  end
+
+  def on_mount(
+        :ensure_run_belongs_to_project,
+        _params,
+        _session,
+        socket
+      ) do
     {:cont, socket}
   end
 
@@ -139,27 +248,121 @@ defmodule LightningWeb.Hooks do
     end
   end
 
-  def on_mount(:check_legacy_preference, params, _session, socket) do
-    case socket.assigns do
-      %{current_user: user, live_action: live_action}
-      when live_action in [:edit, :new] ->
-        prefer_legacy_editor =
-          Lightning.Accounts.get_preference(user, "prefer_legacy_editor")
+  @project_user_events [
+    ProjectUserAdded,
+    ProjectUserRemoved,
+    ProjectUserRoleChanged,
+    SupportAccessUpdated
+  ]
 
-        if prefer_legacy_editor do
-          path =
-            LightningWeb.WorkflowLive.Helpers.legacy_editor_url(
-              params,
-              live_action
-            )
+  # A mount-time authorisation decision is not durable: the ProjectUser row can
+  # be written while the socket lives. Subscribe to the project's events and
+  # re-mount on any change to our own membership, so `:project_scope` and every
+  # mount-time permission assign are recomputed. A removed user is redirected
+  # out by the re-mount itself.
+  #
+  # Every direction re-mounts, including additions: a support user added with a
+  # narrower role than their support access would otherwise keep their wider
+  # mount-time assigns, and "did this widen or narrow my access?" cannot be
+  # answered from the event alone.
+  #
+  # Called before the caller has decided whether access is granted, so that no
+  # revocation can slip through between the decision and the subscription. If
+  # the mount goes on to halt, the subscription dies with the process.
+  defp watch_project_membership(socket, nil), do: socket
 
-          {:halt, push_navigate(socket, to: path)}
-        else
-          {:cont, socket}
-        end
+  defp watch_project_membership(socket, project) do
+    if connected?(socket) do
+      Events.subscribe(project.id)
 
-      _ ->
-        {:cont, socket}
+      attach_hook(
+        socket,
+        :project_user_events,
+        :handle_info,
+        &handle_project_user_event/2
+      )
+    else
+      socket
     end
   end
+
+  # The project is wound down. Every socket on it is in scope, whatever standing
+  # it holds, and no later change can bring the project back — `Scope` refuses
+  # it for good — so there is nothing to re-mount into. Leave the project
+  # rather than bouncing through a mount that would only redirect again with a
+  # less useful message.
+  defp handle_project_user_event(%ProjectDeletionScheduled{}, socket) do
+    {:halt,
+     socket
+     |> put_flash(:info, "Project deleted.")
+     |> redirect(to: ~p"/projects")}
+  end
+
+  # The workflow this socket is holding open is gone. Nobody resolves it again,
+  # so leave it for the project's workflow list.
+  #
+  # `:ensure_workflow_belongs_to_project` sets `current_workflow_id`; a socket
+  # that never took that hook has no such assign and falls to the clause below.
+  defp handle_project_user_event(
+         %WorkflowDeleted{workflow_id: workflow_id},
+         %{assigns: %{current_workflow_id: workflow_id, project: project}} =
+           socket
+       ) do
+    {:halt,
+     socket
+     |> put_flash(:info, "Workflow deleted.")
+     |> push_navigate(to: ~p"/projects/#{project}/w")}
+  end
+
+  # Some other workflow in the project, or this view is not holding one open at
+  # all — nothing to do, but halt so the event never reaches a LiveView with no
+  # matching `handle_info/2`.
+  defp handle_project_user_event(%WorkflowDeleted{}, socket) do
+    {:halt, socket}
+  end
+
+  # Support access is project-wide, so there is no user to match on: the sockets
+  # it speaks for are the ones holding the project by support access alone. A
+  # membership row wins over support access while it exists, so those sessions
+  # are untouched. Turning support access *on* cannot match a live socket, since
+  # a support user without a row could not have mounted while it was off, which
+  # is why this needs no direction check.
+  defp handle_project_user_event(
+         %SupportAccessUpdated{},
+         %{
+           assigns: %{
+             current_user: %{support_user: true},
+             project_user: nil
+           }
+         } = socket
+       ) do
+    {:halt, push_navigate(socket, to: remount_path(socket))}
+  end
+
+  defp handle_project_user_event(
+         %event{user_id: user_id},
+         %{assigns: %{current_user: %{id: user_id}}} = socket
+       )
+       when event in @project_user_events do
+    {:halt, push_navigate(socket, to: remount_path(socket))}
+  end
+
+  # Somebody else's standing on the project — nothing to do, but halt so the
+  # event never reaches a LiveView that has no matching `handle_info/2` clause.
+  defp handle_project_user_event(%event{}, socket)
+       when event in @project_user_events do
+    {:halt, socket}
+  end
+
+  defp handle_project_user_event(_message, socket), do: {:cont, socket}
+
+  # `:current_uri` is assigned by `LightningWeb.InitAssigns`, but only from
+  # `handle_params` — fall back to the project's workflow index, which re-runs
+  # the same `:project_scope` gate. The URI carries the query string, so the
+  # re-mount keeps filters and panel params.
+  defp remount_path(%{assigns: %{current_uri: uri}}) when is_binary(uri),
+    do: uri
+
+  defp remount_path(%{assigns: %{project: project}}),
+    do: ~p"/projects/#{project}/w"
 end

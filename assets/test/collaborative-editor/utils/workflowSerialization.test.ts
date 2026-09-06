@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   prepareWorkflowForSerialization,
+  serializeCanvasForComparison,
   serializeWorkflowToYAML,
 } from '../../../js/collaborative-editor/utils/workflowSerialization';
 
@@ -130,6 +131,56 @@ describe('workflowSerialization', () => {
       expect(result?.name).toBe('Test Workflow');
       expect(result?.jobs).toHaveLength(1);
       expect(result?.jobs[0].id).toBe('job-1');
+    });
+  });
+
+  describe('serializeCanvasForComparison', () => {
+    const canvas = (
+      overrides: {
+        body?: string;
+        positions?: Record<string, { x: number; y: number }>;
+      } = {}
+    ) => ({
+      workflow: { id: 'wf-1', name: 'Test Workflow' },
+      jobs: [
+        {
+          id: 'job-1',
+          name: 'Get Data',
+          adaptor: '@openfn/language-http@latest',
+          body: overrides.body ?? 'fn(state => state);',
+        },
+      ],
+      triggers: [{ id: 'trigger-1', type: 'webhook', enabled: true }],
+      edges: [
+        {
+          id: 'edge-1',
+          condition_type: 'always',
+          enabled: true,
+          target_job_id: 'job-1',
+          source_trigger_id: 'trigger-1',
+        },
+      ],
+    });
+
+    it('is deterministic and carries no positions', () => {
+      // Both properties are what make a string comparison a safe change
+      // detector: dragging a node must not read as an edit.
+      expect(serializeCanvasForComparison(canvas())).toBe(
+        serializeCanvasForComparison(canvas())
+      );
+      expect(serializeCanvasForComparison(canvas())).not.toContain('pos:');
+    });
+
+    it('reflects an edited step body', () => {
+      expect(serializeCanvasForComparison(canvas())).not.toBe(
+        serializeCanvasForComparison(canvas({ body: 'fn(state => null);' }))
+      );
+    });
+
+    it('returns undefined for a canvas with no steps to compare', () => {
+      expect(
+        serializeCanvasForComparison({ ...canvas(), jobs: [] })
+      ).toBeUndefined();
     });
   });
 });

@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "2.16.7",
+      version: "2.18.2",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [
@@ -14,6 +14,12 @@ defmodule Lightning.MixProject do
       aliases: aliases(),
       deps: deps(),
       dialyzer: [
+        # OTP 28 reworked how Dialyzer checks opaque types (OTP-19364).
+        # Elixir inlines `MapSet.new/0`, so every `Ecto.Multi` call downstream
+        # gets flagged, 62 of them here and none real. Ecto declined to change
+        # its internals (elixir-ecto/ecto#4708). Elixir 1.20 removes the
+        # opacity, so this flag goes then.
+        flags: [:no_opaque],
         plt_add_apps: [:mix],
         plt_local_path: "priv/plts/",
         plt_core_path: "priv/plts/core.plt"
@@ -29,6 +35,7 @@ defmodule Lightning.MixProject do
         verify: :test
       ],
       compilers: Mix.compilers(),
+      hex: hex_audit(),
 
       # Docs
       name: "Lightning",
@@ -64,6 +71,26 @@ defmodule Lightning.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
+  # cowlib advisories we have checked and accepted. Each names a function on
+  # cowlib's header-building path, and nothing in our tree calls any of them. The
+  # parse side of two of them is reachable through cowboy_req, so recheck by
+  # function rather than by module. No patched cowlib release exists yet. Hex
+  # matches an advisory's primary ID or any alias, so the CVE form also silences
+  # the GHSA and EEF variants. Detail in #5102.
+  defp hex_audit do
+    [
+      ignore_advisories: [
+        # cowlib
+        # cow_http_struct_hd:escape_string/2
+        "CVE-2026-43966",
+        # cow_cookie:cookie/1
+        "CVE-2026-43969",
+        # cow_link:link/1
+        "CVE-2026-43971"
+      ]
+    ]
+  end
+
   # Specifies your project dependencies.
   #
   # Type `mix help deps` for examples and options.
@@ -72,10 +99,10 @@ defmodule Lightning.MixProject do
       # {:rexbug, ">= 1.0.0", only: :test},
       {:bcrypt_elixir, "~> 3.3"},
       {:bodyguard, "~> 2.2"},
-      {:broadway_kafka, "~> 0.4.2"},
       {:bypass, "~> 2.1", only: :test},
       {:briefly, "~> 0.5.0"},
       {:cachex, "~> 4.0"},
+      {:castore, "~> 1.0"},
       {:cloak_ecto, "~> 1.3.0"},
       {:credo, "~> 1.7.3", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
@@ -91,13 +118,18 @@ defmodule Lightning.MixProject do
       {:ex_json_schema, "~> 0.11.2"},
       {:ex_machina, "~> 2.8.0", only: :test},
       {:excoveralls, "~> 0.18.5", only: [:test, :dev]},
+      {:finch, "~> 0.23"},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.26"},
-      {:git_hooks, "~> 0.8.0", only: [:dev], runtime: false},
-      {:google_api_storage, "~> 0.46.0"},
-      {:hackney, "~> 1.18"},
+      {:git_hooks, "~> 0.9.0", only: [:dev], runtime: false},
+      # Overridden because phoenix_swoosh 1.2.1 (latest) still declares
+      # hackney ~> 1.10. It never actually calls hackney, so the constraint is
+      # dead weight, but it has to be overridden to resolve.
+      # 4.6.0 is the ceiling: 4.6.1+ require h2 ~> 0.11.0 while hackney's own
+      # webtransport dep requires h2 ~> 0.10.4, so newer releases cannot resolve.
+      {:hackney, "~> 4.6.0", override: true},
       {:heroicons, "~> 0.5.3"},
-      {:httpoison, "~> 2.0"},
+      {:httpoison, "~> 3.0.0", override: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.6.0"},
       {:jsonpatch, "~> 2.2"},
@@ -106,7 +138,8 @@ defmodule Lightning.MixProject do
       {:libcluster_postgres, "~> 0.2.0"},
       {:live_debugger, "~> 0.3.0", only: :dev},
       {:mimic, "~> 1.12.0", only: :test},
-      {:mix_test_watch, "~> 1.2.0", only: [:test, :dev], runtime: false},
+      {:mint, "~> 1.0"},
+      {:mix_test_watch, "~> 1.3", only: [:test, :dev], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3.8", only: :test},
       {:mox, "~> 1.2.0", only: :test},
@@ -120,7 +153,6 @@ defmodule Lightning.MixProject do
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.5", only: :dev},
       {:phoenix_live_view, "~> 1.0.17"},
-      {:phoenix_storybook, "~> 0.9.2", only: :dev},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
@@ -128,17 +160,27 @@ defmodule Lightning.MixProject do
       {:rambo, "~> 0.3.4"},
       {:retry, "~> 0.18"},
       {:scrivener, "~> 2.7"},
-      {:sentry, "~> 10.9.0"},
+      {:sentry, "~> 13.2.0"},
       {:sobelow, "~> 0.14.1", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
-      {:swoosh, "~> 1.17"},
+      {:swoosh, "~> 1.26"},
       {:gen_smtp, "~> 1.1"},
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tesla, "~> 1.18.2"},
-      {:tidewave, "~> 0.5.4", only: :dev},
+      {:tidewave, "~> 0.8.0", only: :dev},
       {:timex, "~> 3.7"},
+      # Pinned to the merge of `hackney ~> 1.17 or ~> 4.0` (lau/tzdata#170),
+      # which lets tzdata keep its autoupdater on hackney 4. Not on Hex yet --
+      # 1.1.4 predates the fix and no release is scheduled. Move back to a Hex
+      # release once one carries #170, since git deps are invisible to
+      # `mix deps.audit`.
+      {:tzdata,
+       github: "lau/tzdata",
+       ref: "766f38de21e9cd3dc4b185ac6244466e4ee65308",
+       override: true},
+      {:yaml_elixir, "~> 2.12"},
       {:replug, "~> 0.1.0"},
       {:phoenix_swoosh, "~> 1.2.1"},
       {:hammer_backend_mnesia, "~> 0.6"},
@@ -152,7 +194,7 @@ defmodule Lightning.MixProject do
       {:eqrcode, "~> 0.2"},
       # Github API Secret Encoding
       {:enacl, github: "aeternity/enacl", branch: "master"},
-      {:earmark, "~> 1.4"},
+      {:mdex, "~> 0.13"},
       {:eventually, "~> 1.1", only: [:test]},
       {:benchee, "~> 1.5.0", only: :dev},
       {:statistics, "~> 0.6", only: :dev},
@@ -167,7 +209,7 @@ defmodule Lightning.MixProject do
     if path = System.get_env("PHILTER_PATH") do
       {:philter, path: path}
     else
-      {:philter, "~> 0.3.0"}
+      {:philter, "~> 0.4.0"}
     end
   end
 

@@ -25,16 +25,33 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    credential = Credentials.get_credential!(id)
+    credential = socket.assigns.credential
 
+    if id == credential.id do
+      delete_or_schedule(credential, socket)
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You can't perform this action")
+       |> push_navigate(to: socket.assigns.return_to)}
+    end
+  end
+
+  defp delete_or_schedule(credential, socket) do
     cond do
       not socket.assigns.delete_now? ->
-        case Credentials.schedule_credential_deletion(credential) do
+        case Credentials.schedule_credential_deletion(
+               credential,
+               socket.assigns.current_user
+             ) do
           {:ok, %Credential{}} ->
             {:noreply,
              socket
              |> put_flash(:info, "Credential scheduled for deletion")
              |> push_navigate(to: socket.assigns.return_to)}
+
+          {:error, :unauthorized} ->
+            {:noreply, unauthorized(socket)}
 
           {:error, %Ecto.Changeset{} = _changeset} ->
             {:noreply, socket}
@@ -50,13 +67,40 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
          |> push_patch(to: socket.assigns.return_to)}
 
       true ->
-        Credentials.delete_credential(credential)
+        delete_now(credential, socket)
+    end
+  end
 
+  # The result used to be discarded and success reported either way. Now that
+  # the context can refuse, saying it worked when it did not is the worst of
+  # the available answers, so nothing but a committed delete gets the success
+  # flash.
+  defp delete_now(credential, socket) do
+    case Credentials.delete_credential(
+           credential,
+           socket.assigns.current_user
+         ) do
+      {:ok, _} ->
         {:noreply,
          socket
          |> put_flash(:info, "Credential deleted successfully")
          |> push_navigate(to: socket.assigns.return_to)}
+
+      {:error, :unauthorized} ->
+        {:noreply, unauthorized(socket)}
+
+      _error ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Could not delete this credential.")
+         |> push_navigate(to: socket.assigns.return_to)}
     end
+  end
+
+  defp unauthorized(socket) do
+    socket
+    |> put_flash(:error, "You are not authorized to delete this credential.")
+    |> push_navigate(to: socket.assigns.return_to)
   end
 
   @impl true
