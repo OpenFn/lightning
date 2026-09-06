@@ -175,16 +175,19 @@ describe('YAMLFileDropzone', () => {
       const onUpload = vi.fn();
       render(<YAMLFileDropzone onUpload={onUpload} />);
 
-      expect(screen.getByText(/Upload a file/i)).toBeInTheDocument();
-      expect(screen.getByText(/or drag and drop/i)).toBeInTheDocument();
-      expect(screen.getByText(/YML or YAML, up to 8MB/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Upload or drop a YAML file/i)
+      ).toBeInTheDocument();
+      expect(screen.getByText('YML')).toBeInTheDocument();
+      expect(screen.getByText('YAML')).toBeInTheDocument();
+      expect(screen.getByText(/, up to 8MB/i)).toBeInTheDocument();
     });
 
     test('displays upload icon', () => {
       const onUpload = vi.fn();
       const { container } = render(<YAMLFileDropzone onUpload={onUpload} />);
 
-      const icon = container.querySelector('span.hero-cloud-arrow-up');
+      const icon = container.querySelector('span.hero-arrow-up-tray');
       expect(icon).toBeInTheDocument();
     });
 

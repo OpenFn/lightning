@@ -65,7 +65,9 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       Lightning.MockConfig
       |> expect(:check_flag?, fn :allow_signup -> true end)
       |> expect(:check_flag?, fn :init_project_for_new_user -> true end)
-      |> expect(:check_flag?, fn :require_email_verification -> true end)
+      # The follow-up request checks the lockout twice: once to refuse it, once
+      # in put_user_token/2.
+      |> expect(:check_flag?, 2, fn :require_email_verification -> true end)
 
       conn =
         conn

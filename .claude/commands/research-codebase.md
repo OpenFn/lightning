@@ -45,9 +45,8 @@ Then wait for the user's research query.
    - Consider which directories, files, or architectural patterns are relevant
 
 3. **Spawn parallel sub-agent tasks for comprehensive research:**
-   - Create multiple Task agents to research different aspects concurrently.
+   - Create Task agents to research different aspects concurrently.
    - See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the canonical agent roster. For research, the relevant agents are typically **codebase-locator**, **codebase-analyzer**, **codebase-pattern-finder**, **context-locator**, **context-analyzer**, and (only when the user explicitly asks for external research) **web-search-researcher**.
-   - All agents are documentarians, not critics: they describe what exists without suggesting improvements.
    - For web-research agents, instruct them to return LINKS with their findings and INCLUDE those links in your final report.
    - Start with locator agents to find what exists; then run analyzer agents on the most promising findings. Run multiple agents in parallel when they're searching for different things.
 
@@ -64,12 +63,23 @@ Then wait for the user's research query.
    - Answer the user's specific questions with concrete evidence
 
 5. **Generate research document:**
-   - Use the metadata gathered in step 4
+   - Gather the metadata the frontmatter below requires:
+     - Commit hash: `git rev-parse HEAD`
+     - Branch: `git branch --show-current`
+     - Repository name: `gh repo view --json name -q .name`
+     - Researcher name: from step 4
+   - Write to `.context/shared/research/YYYY-MM-DD-XXXX-description.md` where:
+     - YYYY-MM-DD is today's date
+     - XXXX is the GitHub issue number (omit if no issue)
+     - description is a brief kebab-case description of the research topic
+   - Examples:
+     - With issue: `2025-10-06-3635-save-workflow.md`
+     - Without issue: `2025-10-06-authentication-flow.md`
    - Structure the document with YAML frontmatter followed by content:
      ```markdown
      ---
      date: [Current date and time with timezone in ISO format]
-     researcher: [Researcher name from step 4 status]
+     researcher: [Researcher name]
      git_commit: [Current commit hash]
      branch: [Current branch name]
      repository: [Repository name]
@@ -82,10 +92,10 @@ Then wait for the user's research query.
 
      # Research: [User's Question/Topic]
 
-     **Date**: [Current date and time with timezone from step 4]
-     **Researcher**: [Researcher name from step 4 status]
-     **Git Commit**: [Current commit hash from step 4]
-     **Branch**: [Current branch name from step 4]
+     **Date**: [Current date and time with timezone]
+     **Researcher**: [Researcher name]
+     **Git Commit**: [Current commit hash]
+     **Branch**: [Current branch name]
      **Repository**: [Repository name]
 
      ## Research Question
@@ -145,19 +155,14 @@ Then wait for the user's research query.
 
 ## Important notes:
 - For Lightning-specific commands referenced in research reports (e.g., `mix verify`, `mix test`), see [CLAUDE.md §Common Commands](../../CLAUDE.md#common-commands).
-- Always use parallel Task agents to maximize efficiency and minimize context usage
+- Use parallel agents for genuinely independent research areas
 - Always run fresh codebase research - never rely solely on existing research documents
 - The .context/ directory provides historical context to supplement live findings
 - Focus on finding concrete file paths and line numbers for developer reference
 - Each sub-agent prompt should be specific and focused on read-only documentation operations
 - Link to GitHub when possible for permanent references
-- Explore all of .context/ directory, including shared/, stuart/, frank/, and root-level files (see `.claude/agents/context-locator.md` for the `.context/` layout)
-- **File reading**: Read mentioned files fully (no limit/offset) before spawning sub-tasks
-- **Ordering**: Follow the numbered steps:
-  - Read mentioned files first before spawning sub-tasks (step 1)
-  - Wait for all sub-agents to complete before synthesizing (step 4)
-  - Gather metadata before writing the document (step 5 before step 6)
-  - Don't write the research document with placeholder values
+- Explore all of .context/, including root-level files (see `.claude/agents/context-locator.md` for the `.context/` layout)
+- Don't write the research document with placeholder values
 - **Frontmatter consistency**:
   - Always include frontmatter at the beginning of research documents
   - Keep frontmatter fields consistent across all research documents

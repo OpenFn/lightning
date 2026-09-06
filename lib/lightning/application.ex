@@ -55,6 +55,12 @@ defmodule Lightning.Application do
          warmer(module: Lightning.AuthProviders.CacheWarmer)
        ]}
 
+    # Signing keys (JWKS) for OIDC login, cached off the per-login verify path.
+    auth_provider_jwks_cache_childspec =
+      Supervisor.child_spec({Cachex, name: :auth_provider_jwks},
+        id: :auth_provider_jwks_cache
+      )
+
     :telemetry.attach_many(
       "oban-errors",
       [
@@ -141,6 +147,7 @@ defmodule Lightning.Application do
         {Phoenix.PubSub, name: Lightning.PubSub},
         {Finch, name: Lightning.Finch},
         auth_providers_cache_childspec,
+        auth_provider_jwks_cache_childspec,
         {Lightning.Collaboration.Supervisor, []},
         # Start the Endpoint (http/https)
         LightningWeb.Endpoint,
@@ -151,8 +158,7 @@ defmodule Lightning.Application do
         {Lightning.TaskWorker, name: :cli_task_worker},
         {Lightning.Runtime.RuntimeManager,
          worker_secret: Lightning.Config.worker_secret(),
-         endpoint: LightningWeb.Endpoint},
-        {Lightning.KafkaTriggers.Supervisor, type: :supervisor}
+         endpoint: LightningWeb.Endpoint}
         # Start a worker by calling: Lightning.Worker.start_link(arg)
         # {Lightning.Worker, arg}
       ]

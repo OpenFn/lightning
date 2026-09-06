@@ -7,7 +7,7 @@ defmodule Lightning.WorkOrdersTest do
   alias Lightning.Extensions.MockUsageLimiter
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.Message
-  alias Lightning.KafkaTriggers.TriggerKafkaMessageRecord
+  alias Lightning.Invocation.Dataclip
   alias Lightning.WorkOrders
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.RetryManyWorkOrdersJob
@@ -28,22 +28,11 @@ defmodule Lightning.WorkOrdersTest do
 
       {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
 
-      record_changeset =
-        TriggerKafkaMessageRecord.changeset(
-          %TriggerKafkaMessageRecord{},
-          %{topic_partition_offset: "foo-bar-baz", trigger_id: trigger.id}
-        )
-
-      multi =
-        Multi.new()
-        |> Multi.insert(:record, record_changeset)
-
       %{
         workflow: workflow,
         trigger: trigger |> Repo.reload!(),
         job: job |> Repo.reload!(),
-        snapshot: snapshot,
-        multi: multi
+        snapshot: snapshot
       }
     end
 
@@ -119,7 +108,7 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     @tag trigger_type: :webhook
-    test "with a sync webhook trigger (custom)", context do
+    test "with a webhook trigger (custom, which is not synchronous)", context do
       %{workflow: existing_workflow} = context
 
       job = build(:job)
@@ -141,7 +130,7 @@ defmodule Lightning.WorkOrdersTest do
         WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
 
       [run] = workorder.runs
-      assert run.queue == "fast_lane"
+      assert run.queue == "default"
     end
 
     test "with a webhook trigger (without runs)", context do
@@ -210,9 +199,7 @@ defmodule Lightning.WorkOrdersTest do
       }
     end
 
-    @tag trigger_type: :kafka
     test "with a provided multi instance - also executes the multi", %{
-      multi: multi,
       trigger: trigger,
       workflow: workflow
     } do
@@ -226,6 +213,20 @@ defmodule Lightning.WorkOrdersTest do
       Lightning.WorkOrders.subscribe(project_id)
       dataclip = insert(:dataclip, project: project)
 
+      record_id = Ecto.UUID.generate()
+
+      multi =
+        Multi.new()
+        |> Multi.insert(
+          :record,
+          Dataclip.new(%{
+            id: record_id,
+            body: %{"from" => "the multi"},
+            type: :global,
+            project_id: project_id
+          })
+        )
+
       assert {:ok, _workorder} =
                WorkOrders.create_for(
                  trigger,
@@ -234,8 +235,7 @@ defmodule Lightning.WorkOrdersTest do
                  workflow: workflow
                )
 
-      assert TriggerKafkaMessageRecord
-             |> Repo.get_by(trigger_id: trigger.id) != nil
+      assert Repo.get(Dataclip, record_id) != nil
     end
 
     test "with a manual workorder", context do
@@ -2725,6 +2725,87 @@ defmodule Lightning.WorkOrdersTest do
       # Should include the specific workorder plus up to 20 others
       assert Enum.any?(results, &(&1.id == workorder1.id))
       assert Enum.all?(results, &(&1.workflow_id == workflow.id))
+    end
+
+    test "does not surface another workflow's work order for a foreign run_id",
+         %{workflow: workflow, trigger: trigger, snapshot: snapshot} do
+      # An own work order, so this workflow's history is non-empty.
+      own_dataclip = insert(:dataclip)
+
+      own_workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: own_dataclip,
+          snapshot: snapshot
+        )
+
+      insert(:run,
+        work_order: own_workorder,
+        dataclip: own_dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot
+      )
+
+      # A run belonging to a DIFFERENT workflow (and project).
+      other_workflow = insert(:simple_workflow)
+      other_trigger = hd(other_workflow.triggers)
+      {:ok, other_snapshot} = Lightning.Workflows.Snapshot.create(other_workflow)
+      other_dataclip = insert(:dataclip)
+
+      foreign_workorder =
+        insert(:workorder,
+          workflow: other_workflow,
+          trigger: other_trigger,
+          dataclip: other_dataclip,
+          snapshot: other_snapshot
+        )
+
+      foreign_run =
+        insert(:run,
+          work_order: foreign_workorder,
+          dataclip: other_dataclip,
+          starting_trigger: other_trigger,
+          snapshot: other_snapshot
+        )
+
+      results = WorkOrders.get_workorders_with_runs(workflow.id, foreign_run.id)
+      wo_ids = Enum.map(results, & &1.id)
+
+      # The foreign run's work order is never returned; the caller falls back to
+      # its own workflow's history.
+      refute foreign_workorder.id in wo_ids
+      assert own_workorder.id in wo_ids
+      assert Enum.all?(results, &(&1.workflow_id == workflow.id))
+    end
+
+    test "falls back to the workflow's history for a malformed run_id", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot: snapshot
+    } do
+      dataclip = insert(:dataclip)
+
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot,
+          runs: [
+            %{
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              snapshot: snapshot,
+              state: :available
+            }
+          ]
+        )
+
+      # A non-UUID run_id must not crash; it's treated as no pin.
+      results = WorkOrders.get_workorders_with_runs(workflow.id, "not-a-uuid")
+
+      assert Enum.map(results, & &1.id) == [workorder.id]
     end
 
     test "respects the limit of 20 workorders", %{

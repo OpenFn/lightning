@@ -69,6 +69,47 @@ defmodule Lightning.RunsTest do
     end
   end
 
+  describe "get_for_project/2" do
+    setup do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      %{run: run, project: workflow.project}
+    end
+
+    test "returns the run when it belongs to the given project", %{
+      run: run,
+      project: project
+    } do
+      assert %Run{id: id} = Runs.get_for_project(run.id, project.id)
+      assert id == run.id
+    end
+
+    test "returns nil when the run belongs to a different project", %{run: run} do
+      other_project = insert(:project)
+
+      refute Runs.get_for_project(run.id, other_project.id)
+    end
+
+    test "returns nil when the run does not exist", %{project: project} do
+      refute Runs.get_for_project(Ecto.UUID.generate(), project.id)
+    end
+  end
+
   describe "claim/3" do
     setup do
       %{worker_name: "my.worker.name", queues: ["manual", "*"]}
@@ -267,10 +308,10 @@ defmodule Lightning.RunsTest do
 
   describe "start_step/1" do
     test "creates a new step for a run" do
-      dataclip = insert(:dataclip)
-
       %{triggers: [trigger], jobs: [job]} =
         workflow = insert(:simple_workflow) |> with_snapshot()
+
+      dataclip = insert(:dataclip, project: workflow.project)
 
       %{runs: [run]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
@@ -319,10 +360,10 @@ defmodule Lightning.RunsTest do
     end
 
     test "should not allow referencing job that is not on the snapshot" do
-      dataclip = insert(:dataclip)
-
       %{triggers: [trigger], jobs: [old_job]} =
         workflow = insert(:simple_workflow) |> with_snapshot()
+
+      dataclip = insert(:dataclip, project: workflow.project)
 
       %{runs: [run_1]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
@@ -371,6 +412,35 @@ defmodule Lightning.RunsTest do
         Runs.complete_step(%{
           step_id: step.id,
           reason: "success",
+          output_dataclip: %{"foo" => "bar"},
+          output_dataclip_id: Ecto.UUID.generate(),
+          run_id: run.id,
+          project_id: workflow.project_id
+        })
+
+      step =
+        step
+        |> Repo.preload(output_dataclip: Invocation.Query.dataclip_with_body())
+
+      assert step.exit_reason == "success"
+      assert Jason.decode!(step.output_dataclip.body) == %{"foo" => "bar"}
+    end
+
+    test "accepts a JSON-encoded string output_dataclip, for backward compatibility with older workers" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step =
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+
+      {:ok, step} =
+        Runs.complete_step(%{
+          step_id: step.id,
+          reason: "success",
           output_dataclip: ~s({"foo": "bar"}),
           output_dataclip_id: Ecto.UUID.generate(),
           run_id: run.id,
@@ -383,6 +453,64 @@ defmodule Lightning.RunsTest do
 
       assert step.exit_reason == "success"
       assert Jason.decode!(step.output_dataclip.body) == %{"foo" => "bar"}
+    end
+
+    test "wraps a JSON-encoded scalar output_dataclip in %{\"value\" => x}" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step =
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+
+      {:ok, step} =
+        Runs.complete_step(%{
+          step_id: step.id,
+          reason: "success",
+          output_dataclip: ~s(42),
+          output_dataclip_id: Ecto.UUID.generate(),
+          run_id: run.id,
+          project_id: workflow.project_id
+        })
+
+      step =
+        step
+        |> Repo.preload(output_dataclip: Invocation.Query.dataclip_with_body())
+
+      assert step.exit_reason == "success"
+      assert Jason.decode!(step.output_dataclip.body) == %{"value" => 42}
+    end
+
+    test "wraps a plain string output_dataclip that isn't valid JSON in %{\"value\" => x}" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{runs: [run]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      step =
+        insert(:step, runs: [run], job: job, input_dataclip: dataclip)
+
+      {:ok, step} =
+        Runs.complete_step(%{
+          step_id: step.id,
+          reason: "success",
+          output_dataclip: "abc-123",
+          output_dataclip_id: Ecto.UUID.generate(),
+          run_id: run.id,
+          project_id: workflow.project_id
+        })
+
+      step =
+        step
+        |> Repo.preload(output_dataclip: Invocation.Query.dataclip_with_body())
+
+      assert step.exit_reason == "success"
+      assert Jason.decode!(step.output_dataclip.body) == %{"value" => "abc-123"}
     end
 
     # Regression for #4800: dataclip inserts no longer build the search_vector
@@ -405,7 +533,7 @@ defmodule Lightning.RunsTest do
                Runs.complete_step(%{
                  step_id: step.id,
                  reason: "success",
-                 output_dataclip: ~s({"deferred": "indexword"}),
+                 output_dataclip: %{"deferred" => "indexword"},
                  output_dataclip_id: output_dataclip_id,
                  run_id: run.id,
                  project_id: workflow.project_id
@@ -450,7 +578,7 @@ defmodule Lightning.RunsTest do
           %{
             step_id: step.id,
             reason: "success",
-            output_dataclip: ~s({"foo": "bar"}),
+            output_dataclip: %{"foo" => "bar"},
             output_dataclip_id: Ecto.UUID.generate(),
             run_id: run.id,
             project_id: workflow.project_id
@@ -497,7 +625,7 @@ defmodule Lightning.RunsTest do
                Runs.complete_step(%{
                  step_id: Ecto.UUID.generate(),
                  reason: "success",
-                 output_dataclip: ~s({"foo": "bar"}),
+                 output_dataclip: %{"foo" => "bar"},
                  output_dataclip_id: Ecto.UUID.generate(),
                  run_id: run.id,
                  project_id: workflow.project_id
@@ -513,14 +641,6 @@ defmodule Lightning.RunsTest do
         case context.dataclip_type do
           :http_request ->
             insert(:http_request_dataclip)
-
-          :kafka ->
-            insert(
-              :dataclip,
-              body: %{"foo" => "bar"},
-              request: %{"ts" => 1_720_607_114_132, "topic" => "baz_topic"},
-              type: :kafka
-            )
 
           :step_result ->
             insert(:dataclip,
@@ -545,21 +665,6 @@ defmodule Lightning.RunsTest do
     test "returns headers and body for http_request", %{run: run} do
       assert Runs.get_input(run) ==
                ~s({"data": {"foo": "bar"}, "request": {"headers": {"content-type": "application/json"}}})
-    end
-
-    @tag dataclip_type: :kafka
-    test "returns headers and body for kafka datclip", %{run: run} do
-      input =
-        run
-        |> Runs.get_input()
-        |> Jason.decode!()
-
-      expected = %{
-        "data" => %{"foo" => "bar"},
-        "request" => %{"ts" => 1_720_607_114_132, "topic" => "baz_topic"}
-      }
-
-      assert input == expected
     end
   end
 

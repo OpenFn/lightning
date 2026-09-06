@@ -17,6 +17,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Channels.Channel
   alias Lightning.Channels.ChannelAuthMethod
   alias Lightning.Collections.Collection
+  alias Lightning.Credentials.Scoping
   alias Lightning.Extensions.UsageLimiting.Action
   alias Lightning.Extensions.UsageLimiting.Context
   alias Lightning.Projects.Project
@@ -34,7 +35,6 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
@@ -82,12 +82,16 @@ defmodule Lightning.Projects.Provisioner do
              build_import_changeset(project, user_or_repo_connection, data),
            edges_to_cleanup <-
              edges_referencing_deleted_jobs(project_changeset),
+           # Before the insert, or a workflow being dropped in this same
+           # document still holds the name the incoming one wants.
+           :ok <- release_paths_of_soft_deleted_workflows(project_changeset),
            {:ok, %{workflows: workflows} = project} <-
              Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
+           :ok <- check_credential_scoping(project, project_changeset),
            :ok <- cleanup_orphaned_edges(edges_to_cleanup),
            :ok <-
              disable_triggers_for_soft_deleted_workflows(project_changeset),
-           :ok <- notify_kafka_for_soft_deleted_workflows(project_changeset),
+           :ok <- release_paths_of_hidden_workflows(project),
            :ok <- handle_collection_deletion(project_changeset),
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
@@ -107,9 +111,13 @@ defmodule Lightning.Projects.Provisioner do
              ) do
         Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
-        project_changeset
-        |> get_assoc(:workflows)
-        |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
+        # A provisioning document can soft-delete a workflow, which is the same
+        # disappearance as a delete driven from the UI and has to reach the same
+        # sessions. On the project's topic, not this one — see
+        # `Lightning.Projects.Events`.
+        workflows
+        |> Enum.filter(& &1.deleted_at)
+        |> Enum.each(&Lightning.Projects.Events.workflow_deleted/1)
 
         Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
           Lightning.Projects.Project.sandbox?(updated_project)
@@ -118,6 +126,148 @@ defmodule Lightning.Projects.Provisioner do
         {:ok, updated_project}
       end
     end)
+  end
+
+  # Read-your-writes: every one of the project's just-written jobs (including
+  # those on soft-deleted workflows, so a document that soft-deletes a workflow
+  # while planting a cross-project ref on its job can't slip a carrier past the
+  # scan) plus its channel destination credentials. Runs inside the import
+  # transaction so a cross-project reference rolls the whole import back, before
+  # the non-transactional CollectionHook fires. Covers the keychain hole that
+  # Job.validate no-ops on for new jobs (workflow_id unset until insert).
+  defp check_credential_scoping(project, project_changeset) do
+    job_refs =
+      project.id
+      |> Scoping.job_refs_for_project()
+      |> Enum.map(&%{&1 | key: {:job, &1.key}})
+
+    channel_refs =
+      from(cam in ChannelAuthMethod,
+        join: c in Channel,
+        on: c.id == cam.channel_id,
+        where:
+          c.project_id == ^project.id and not is_nil(cam.project_credential_id),
+        select: %{
+          key: {:channel, cam.channel_id},
+          label: c.name,
+          project_credential_id: cam.project_credential_id
+        }
+      )
+      |> Repo.all()
+
+    refs = job_refs ++ channel_refs
+
+    case Scoping.out_of_project_references(project.id, refs) do
+      [] ->
+        :ok
+
+      violations ->
+        {:error, apply_violations(project_changeset, violations, refs)}
+    end
+  end
+
+  # A violation on a row carried in the document surfaces as a field error on
+  # its nested changeset — one association level deeper than the save_workflow
+  # path: project -> workflows -> jobs, and project -> channels ->
+  # destination_auth_method. A violation on a persisted row the document never
+  # touched has no changeset to carry it, so it becomes a base error naming
+  # the row — the import still fails, diagnosably.
+  defp apply_violations(changeset, violations, refs) do
+    {job_violations, channel_violations} =
+      Enum.split_with(violations, &match?({:job, _id}, &1.key))
+
+    {changeset, unattached_jobs} =
+      apply_job_violations(changeset, job_violations)
+
+    {changeset, unattached_channels} =
+      apply_channel_violations(changeset, channel_violations)
+
+    Scoping.invalidate(
+      changeset,
+      unattached_jobs ++ unattached_channels,
+      ref_descriptions(refs)
+    )
+  end
+
+  defp ref_descriptions(refs) do
+    Map.new(refs, fn
+      %{key: {:job, _id} = key, label: name} -> {key, ~s(job "#{name}")}
+      %{key: {:channel, _id} = key, label: name} -> {key, ~s(channel "#{name}")}
+    end)
+  end
+
+  defp apply_job_violations(changeset, violations) do
+    case get_change(changeset, :workflows) do
+      nil ->
+        {changeset, violations}
+
+      workflow_changesets ->
+        {workflows, unattached} =
+          Enum.map_reduce(
+            workflow_changesets,
+            violations,
+            &attach_job_violations/2
+          )
+
+        {put_change(changeset, :workflows, workflows), unattached}
+    end
+  end
+
+  defp attach_job_violations(workflow_cs, violations) do
+    case get_change(workflow_cs, :jobs) do
+      nil ->
+        {workflow_cs, violations}
+
+      job_changesets ->
+        {jobs, unattached} =
+          Scoping.attach_violations(
+            job_changesets,
+            violations,
+            &{:job, get_field(&1, :id)}
+          )
+
+        {put_change(workflow_cs, :jobs, jobs), unattached}
+    end
+  end
+
+  defp apply_channel_violations(changeset, violations) do
+    case get_change(changeset, :channels) do
+      nil ->
+        {changeset, violations}
+
+      channel_changesets ->
+        {channels, unattached} =
+          Enum.map_reduce(channel_changesets, violations, fn channel_cs,
+                                                             remaining ->
+            key = {:channel, get_field(channel_cs, :id)}
+            {matched, rest} = Enum.split_with(remaining, &(&1.key == key))
+
+            channel_cs =
+              Enum.reduce(matched, channel_cs, fn _violation, cs ->
+                add_channel_credential_error(cs)
+              end)
+
+            {channel_cs, rest}
+          end)
+
+        {put_change(changeset, :channels, channels), unattached}
+    end
+  end
+
+  defp add_channel_credential_error(channel_cs) do
+    message = Scoping.violation_message(:project_credential_id)
+
+    case get_change(channel_cs, :destination_auth_method) do
+      nil ->
+        add_error(channel_cs, :project_credential_id, message)
+
+      auth_method_cs ->
+        put_change(
+          channel_cs,
+          :destination_auth_method,
+          add_error(auth_method_cs, :project_credential_id, message)
+        )
+    end
   end
 
   defp build_import_changeset(project, user_or_repo_connection, data) do
@@ -314,17 +464,12 @@ defmodule Lightning.Projects.Provisioner do
 
   def parse_document(%Project{} = project, data, user_or_repo_connection)
       when is_map(data) do
-    changeset =
-      project
-      |> project_changeset(data)
-      |> maybe_add_project_credentials(user_or_repo_connection)
-
-    valid_pc_ids = valid_project_credential_ids(changeset)
-
-    changeset
+    project
+    |> project_changeset(data)
+    |> maybe_add_project_credentials(user_or_repo_connection)
     |> cast_assoc(:collections, with: &collection_changeset/2)
-    |> cast_assoc(:channels, with: &channel_changeset(&1, &2, valid_pc_ids))
-    |> cast_assoc(:workflows, with: &workflow_changeset(&1, &2, valid_pc_ids))
+    |> cast_assoc(:channels, with: &channel_changeset/2)
+    |> cast_assoc(:workflows, with: &workflow_changeset/2)
     |> then(fn changeset ->
       case WorkflowUsageLimiter.limit_workflows_activation(
              project,
@@ -346,13 +491,6 @@ defmodule Lightning.Projects.Provisioner do
           add_error(changeset, :id, message)
       end
     end)
-  end
-
-  defp valid_project_credential_ids(changeset) do
-    changeset
-    |> get_assoc(:project_credentials)
-    |> Enum.map(&get_field(&1, :id))
-    |> Enum.reject(&is_nil/1)
   end
 
   defp limit_collection_creation(changeset) do
@@ -491,7 +629,7 @@ defmodule Lightning.Projects.Provisioner do
   def preload_dependencies(project, snapshots) when is_list(snapshots) do
     project = preload_dependencies(project)
 
-    %{project | workflows: Snapshot.get_all_by_ids(snapshots)}
+    %{project | workflows: Snapshot.get_all_by_ids(snapshots, project.id)}
   end
 
   defp project_changeset(project, attrs) do
@@ -511,8 +649,8 @@ defmodule Lightning.Projects.Provisioner do
     |> Collection.validate()
   end
 
-  defp channel_changeset(channel, attrs, valid_project_credentials) do
-    attrs = maybe_add_destination_auth_param(attrs, channel)
+  defp channel_changeset(channel, attrs) do
+    attrs = resolve_destination_auth_param(attrs, channel)
 
     channel
     |> cast(attrs, [
@@ -524,33 +662,9 @@ defmodule Lightning.Projects.Provisioner do
     ])
     |> validate_required([:id, :name, :destination_url])
     |> block_channel_deletion()
-    |> cast_assoc(:destination_auth_method,
-      with: fn struct, attrs ->
-        struct
-        |> ChannelAuthMethod.changeset(attrs)
-        |> validate_project_credential_in_project(
-          :project_credential_id,
-          valid_project_credentials
-        )
-      end
-    )
+    |> cast_assoc(:destination_auth_method, with: &ChannelAuthMethod.changeset/2)
     |> validate_extraneous_params()
     |> Channel.validate()
-  end
-
-  defp validate_project_credential_in_project(
-         changeset,
-         field,
-         valid_project_credentials
-       ) do
-    changeset
-    |> validate_change(field, fn _ky, value ->
-      if value in valid_project_credentials do
-        []
-      else
-        [{field, "credential doesnt exist or isn't available in this project"}]
-      end
-    end)
   end
 
   # Channel deletion is intentionally rejected by the provisioner because
@@ -570,10 +684,10 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  defp maybe_add_destination_auth_param(attrs, %Channel{} = channel) do
+  defp resolve_destination_auth_param(attrs, %Channel{} = channel) do
     case Map.fetch(attrs, "destination_credential_id") do
       :error ->
-        attrs
+        Map.delete(attrs, "destination_auth_method")
 
       {:ok, project_credential_id} ->
         attrs
@@ -611,14 +725,14 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  defp workflow_changeset(workflow, attrs, valid_project_credentials) do
+  defp workflow_changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:id, :name, :state, :delete, :deleted_at])
     |> optimistic_lock(:lock_version)
     |> validate_required([:id])
     |> maybe_soft_delete_workflow()
     |> validate_extraneous_params(ignore: ["version_history"])
-    |> cast_assoc(:jobs, with: &job_changeset(&1, &2, valid_project_credentials))
+    |> cast_assoc(:jobs, with: &job_changeset/2)
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
     |> cast_assoc(:edges, with: &edge_changeset/2)
     |> maybe_infer_workflow_state(attrs)
@@ -647,7 +761,7 @@ defmodule Lightning.Projects.Provisioner do
     end)
   end
 
-  defp job_changeset(job, attrs, valid_project_credentials) do
+  defp job_changeset(job, attrs) do
     job
     |> Job.changeset(attrs)
     |> cast(attrs, [:delete])
@@ -655,20 +769,11 @@ defmodule Lightning.Projects.Provisioner do
     |> unique_constraint(:id, name: :jobs_pkey)
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
-    |> validate_project_credential_in_project(
-      :project_credential_id,
-      valid_project_credentials
-    )
   end
 
   defp trigger_changeset(trigger, attrs) do
     trigger
     |> Trigger.cast_changeset(attrs)
-    |> cast_embed(
-      :kafka_configuration,
-      required: false,
-      with: &kafka_config_changeset/2
-    )
     |> cast_embed(
       :webhook_response_config,
       required: false,
@@ -676,20 +781,25 @@ defmodule Lightning.Projects.Provisioner do
     )
     |> Trigger.validate()
     |> cast(attrs, [:delete])
+    |> reject_server_owned_trigger_params(attrs)
     |> validate_required([:id])
     |> unique_constraint(:id, name: :triggers_pkey)
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
   end
 
-  defp kafka_config_changeset(kafka_config, attrs) do
-    kafka_config
-    |> KafkaConfiguration.changeset(attrs)
-    |> validate_change(:username, fn :username, _change ->
-      [username: "credentials can only be changed through the dashboard"]
-    end)
-    |> validate_change(:password, fn :password, _change ->
-      [password: "credentials can only be changed through the dashboard"]
+  # `validate_extraneous_params/2` builds its allow-list from `changeset.types`,
+  # so adding these as schema fields silently started accepting them.
+  defp reject_server_owned_trigger_params(changeset, attrs) do
+    Enum.reduce([:project_id, :legacy_bare_path], changeset, fn field, acc ->
+      key = to_string(field)
+
+      if is_map(attrs) and
+           (Map.has_key?(attrs, key) or Map.has_key?(attrs, field)) do
+        add_error(acc, :base, "extraneous parameters: %{params}", params: key)
+      else
+        acc
+      end
     end)
   end
 
@@ -819,28 +929,58 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  defp notify_kafka_for_soft_deleted_workflows(project_changeset) do
+  # A hidden row must not keep a name reserved. Released whatever the trigger's
+  # enabled state, and before the insert so one document can drop a workflow and
+  # claim its path in the same breath.
+  defp release_paths_of_soft_deleted_workflows(project_changeset) do
+    case soft_deleted_workflow_ids(project_changeset) do
+      [] ->
+        :ok
+
+      ids ->
+        from(t in Trigger, where: t.workflow_id in ^ids)
+        |> Repo.update_all(set: [custom_path: nil, legacy_bare_path: false])
+
+        :ok
+    end
+  end
+
+  # Project-wide and after the write: a checked-in yaml can still name the path
+  # of a workflow deleted since, and the cast would put it back on a row nobody
+  # can see. Disabled rows only, since webhook ingest ignores `deleted_at` and a
+  # hidden workflow with an enabled trigger is still serving.
+  defp release_paths_of_hidden_workflows(%Project{id: project_id}) do
+    from(t in Trigger,
+      join: w in Workflow,
+      on: w.id == t.workflow_id,
+      where:
+        w.project_id == ^project_id and not is_nil(w.deleted_at) and
+          not t.enabled and not is_nil(t.custom_path)
+    )
+    |> Repo.update_all(set: [custom_path: nil, legacy_bare_path: false])
+
+    :ok
+  end
+
+  defp soft_deleted_workflow_ids(project_changeset) do
     project_changeset
     |> get_assoc(:workflows)
-    |> Enum.filter(
-      &(&1.action == :update and not is_nil(get_change(&1, :deleted_at)))
-    )
+    |> Enum.filter(fn cs ->
+      cs.action == :update and not is_nil(get_change(cs, :deleted_at))
+    end)
     |> Enum.map(&get_field(&1, :id))
-    |> Workflows.notify_kafka_triggers_for_workflows()
   end
 
   defp disable_triggers_for_soft_deleted_workflows(project_changeset) do
-    deleted_workflow_ids =
-      project_changeset
-      |> get_assoc(:workflows)
-      |> Enum.filter(fn cs ->
-        cs.action == :update and not is_nil(get_change(cs, :deleted_at))
-      end)
-      |> Enum.map(&get_field(&1, :id))
+    deleted_workflow_ids = soft_deleted_workflow_ids(project_changeset)
 
     if deleted_workflow_ids == [] do
       :ok
     else
+      # Released whatever the trigger's state, or a hidden row keeps the name.
+      from(t in Trigger, where: t.workflow_id in ^deleted_workflow_ids)
+      |> Repo.update_all(set: [custom_path: nil, legacy_bare_path: false])
+
       from(t in Trigger,
         where: t.workflow_id in ^deleted_workflow_ids and t.enabled
       )

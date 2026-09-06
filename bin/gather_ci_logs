@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+#
+# gather_ci_logs — fetch the "Run Elixir tests" step output from the last N
+# test_elixir CircleCI jobs and save de-ANSI'd logs into .scratch/ci-logs/.
+#
+# OpenFn/lightning is an OSS project on CircleCI, so the v1.1 API is readable
+# without a token. Every test_elixir job runs ./bin/ci_tests, which reruns
+# failed tests after the first pass — so a job can show "success" yet still have
+# flaked on the first run. We flag those: a log containing
+# "Renamed failed test report" means the retry path fired = first-run flake.
+#
+# Usage: bin/gather_ci_logs [N]              # N test_elixir jobs, default 20
+#        BRANCH=main bin/gather_ci_logs 20  # main only (default) — see BRANCH below
+#        BRANCH= bin/gather_ci_logs 20      # empty = all branches
+#
+# BRANCH defaults to "main". The 2026-06 pass sampled all branches and mistook
+# in-development bugs for flakes; main-only keeps the sample honest.
+#
+# Output: .scratch/ci-logs/
+#   build-<num>-<branch>.log   full de-ANSI'd "Run Elixir tests" step output
+#   index.tsv                  build, branch, date, outcome, flaky, log
+#
+set -uo pipefail
+
+N="${1:-20}"
+BRANCH="${BRANCH-main}"
+PROJECT="gh/OpenFn/lightning"
+API="https://circleci.com/api/v1.1/project/$PROJECT"
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(git -C "$HERE" rev-parse --show-toplevel)"
+OUT="$PROJECT_ROOT/.scratch/ci-logs"
+mkdir -p "$OUT"
+INDEX="$OUT/index.tsv"
+printf 'build\tbranch\tdate\toutcome\tflaky\tlog\n' > "$INDEX"
+
+strip_ansi() { sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g; s/\r//g'; }
+
+echo "gather-ci-logs: collecting $N test_elixir jobs (branch=${BRANCH:-<all>}) -> $OUT"
+
+collected=0
+offset=0
+while [ "$collected" -lt "$N" ]; do
+  batch=$(curl -s --max-time 30 "$API?limit=100&offset=$offset&filter=completed" -H "Accept: application/json")
+  nums=$(echo "$batch" | jq -r --arg br "$BRANCH" \
+    '.[] | select(.workflows.job_name=="test_elixir") | select($br=="" or .branch==$br) | .build_num')
+  if [ -z "$nums" ]; then
+    echo "no more test_elixir builds at offset $offset"
+    break
+  fi
+  for num in $nums; do
+    [ "$collected" -ge "$N" ] && break
+    detail=$(curl -s --max-time 30 "$API/$num" -H "Accept: application/json")
+    branch=$(echo "$detail" | jq -r '.branch // "unknown"')
+    date=$(echo "$detail" | jq -r '.committer_date // "?"')
+    outcome=$(echo "$detail" | jq -r '.outcome // "?"')
+    url=$(echo "$detail" | jq -r '.steps[]?.actions[]? | select(.name=="Run Elixir tests") | .output_url' | head -1)
+    if [ -z "$url" ] || [ "$url" = "null" ]; then
+      echo "  build $num: no test step output, skip"
+      continue
+    fi
+    safe_branch="${branch//\//_}"
+    log="$OUT/build-${num}-${safe_branch}.log"
+    curl -s --max-time 90 "$url" | jq -r '.[].message' 2>/dev/null | strip_ansi > "$log"
+    if grep -q "Renamed failed test report" "$log"; then flaky="FLAKY"; else flaky="clean"; fi
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "$num" "$branch" "$date" "$outcome" "$flaky" "$(basename "$log")" >> "$INDEX"
+    echo "  build $num ($branch) $outcome -> $flaky"
+    collected=$((collected + 1))
+  done
+  offset=$((offset + 100))
+done
+
+echo "=== collected $collected logs. index: $INDEX ==="
+column -t -s "$(printf '\t')" "$INDEX"

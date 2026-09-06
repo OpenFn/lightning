@@ -48,12 +48,16 @@ describe('ChatInput', () => {
       expect(screen.getByText(/for new line/)).toBeInTheDocument();
     });
 
-    it('should show warning about sensitive data by default', () => {
+    it('should show the AI disclaimer footer by default', () => {
       render(<ChatInput />);
 
       expect(
-        screen.getByText(/Do not include PII or sensitive data/)
+        screen.getByText(/Please use AI responsibly\. Never share PII\./)
       ).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /learn more/i })).toHaveAttribute(
+        'href',
+        'https://www.openfn.org/ai'
+      );
     });
 
     it('should show job controls when showJobControls is true', () => {
@@ -61,7 +65,9 @@ describe('ChatInput', () => {
 
       expect(screen.getByText(/Send code/)).toBeInTheDocument();
       expect(screen.getByText(/Send logs/)).toBeInTheDocument();
-      expect(screen.queryByText(/Do not include PII/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Please use AI responsibly/)
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -294,6 +300,7 @@ describe('ChatInput', () => {
 
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {
         attach_logs: true,
+        follow_run_id: 'run-123',
       });
     });
 
@@ -348,6 +355,7 @@ describe('ChatInput', () => {
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {
         attach_code: true,
         attach_logs: true,
+        follow_run_id: 'run-123',
         attach_io_data: true,
         step_id: 'step-123',
       });
@@ -408,6 +416,7 @@ describe('ChatInput', () => {
 
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {
         attach_logs: true,
+        follow_run_id: 'run-123',
       });
     });
 
@@ -444,6 +453,7 @@ describe('ChatInput', () => {
       // Should only have attach_logs, not attach_code
       expect(mockSendMessage).toHaveBeenCalledWith('Test', {
         attach_logs: true,
+        follow_run_id: 'run-123',
       });
     });
 

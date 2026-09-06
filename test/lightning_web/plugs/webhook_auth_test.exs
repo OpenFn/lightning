@@ -4,8 +4,9 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
   import Plug.Test
   import Lightning.Factories
 
-  alias LightningWeb.Plugs.WebhookAuth
   alias Lightning.Repo
+  alias Lightning.WebhookAuthMethods
+  alias LightningWeb.Plugs.WebhookAuth
 
   @moduletag capture_log: true
 
@@ -105,6 +106,53 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
     assert conn.assigns[:trigger] == expected_trigger
   end
 
+  describe "a trigger reached by its custom path" do
+    setup %{auth_method: auth_method} do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook,
+          custom_path: "et-emr-facility-001"
+        )
+
+      associate_auth_method(trigger, auth_method)
+
+      %{
+        project: project,
+        trigger: trigger,
+        url: "/i/#{project.id}/et-emr-facility-001"
+      }
+    end
+
+    test "is protected by the same auth method as its default URL", %{url: url} do
+      conn = conn(:post, url) |> WebhookAuth.call([])
+
+      assert conn.halted
+      assert conn.status == 401
+      assert Jason.decode!(conn.resp_body) == %{"error" => "Unauthorized"}
+    end
+
+    test "lets a correctly authenticated request through", %{
+      url: url,
+      trigger: trigger,
+      auth_method: auth_method
+    } do
+      credentials =
+        Base.encode64("#{auth_method.username}:#{auth_method.password}")
+
+      conn =
+        conn(:post, url)
+        |> put_req_header("authorization", "Basic #{credentials}")
+        |> WebhookAuth.call([])
+
+      refute conn.halted
+      assert conn.assigns[:trigger].id == trigger.id
+    end
+  end
+
   test "responds with 401 for an unauthenticated request to a protected trigger",
        %{trigger: trigger, auth_method: auth_method} do
     associate_auth_method(trigger, auth_method)
@@ -149,11 +197,107 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
     assert conn.assigns[:trigger] == expected_trigger
   end
 
+  describe "auth methods scheduled for deletion" do
+    setup %{trigger: trigger} do
+      live = insert(:webhook_auth_method, auth_type: :api, api_key: "live-key")
+
+      revoked_api =
+        insert(:webhook_auth_method, auth_type: :api, api_key: "revoked-key")
+
+      revoked_basic =
+        insert(:webhook_auth_method,
+          auth_type: :basic,
+          username: "partner",
+          password: "revoked-password"
+        )
+
+      associate_auth_methods(trigger, [live, revoked_api, revoked_basic])
+
+      user = insert(:user)
+
+      {:ok, _} =
+        WebhookAuthMethods.schedule_for_deletion(revoked_api, actor: user)
+
+      {:ok, _} =
+        WebhookAuthMethods.schedule_for_deletion(revoked_basic, actor: user)
+
+      :ok
+    end
+
+    test "rejects a revoked API key", %{trigger: trigger} do
+      conn =
+        conn(:post, "/i/#{trigger.id}")
+        |> put_req_header("x-api-key", "revoked-key")
+        |> WebhookAuth.call([])
+
+      assert conn.halted
+      assert conn.status == 404
+      refute conn.assigns[:trigger]
+    end
+
+    test "rejects revoked basic credentials", %{trigger: trigger} do
+      encoded = Base.encode64("partner:revoked-password")
+
+      conn =
+        conn(:post, "/i/#{trigger.id}")
+        |> put_req_header("authorization", "Basic #{encoded}")
+        |> WebhookAuth.call([])
+
+      assert conn.halted
+      assert conn.status == 404
+      refute conn.assigns[:trigger]
+    end
+
+    test "the remaining live API key still authenticates", %{trigger: trigger} do
+      conn =
+        conn(:post, "/i/#{trigger.id}")
+        |> put_req_header("x-api-key", "live-key")
+        |> WebhookAuth.call([])
+
+      refute conn.halted
+      assert conn.assigns[:trigger].id == trigger.id
+    end
+  end
+
+  # The trigger-side counterpart of the channel test in
+  # channel_proxy_plug_test.exs: cutting the last join row revokes the
+  # credential and leaves an open webhook. The delete modal warns about this
+  # before the operator confirms, so it is the intended trade rather than a
+  # bug, but it should be visible in the suite.
+  test "revoking a trigger's only auth method leaves the webhook open", %{
+    trigger: trigger
+  } do
+    only = insert(:webhook_auth_method, auth_type: :api, api_key: "only-key")
+    associate_auth_method(trigger, only)
+
+    {:ok, _} =
+      WebhookAuthMethods.schedule_for_deletion(only, actor: insert(:user))
+
+    conn = conn(:post, "/i/#{trigger.id}") |> WebhookAuth.call([])
+
+    refute conn.halted
+    assert conn.assigns[:trigger].id == trigger.id
+
+    # The revoked key isn't rejected so much as ignored: with no methods left
+    # the trigger authenticates nobody, so the same request succeeds too.
+    conn =
+      conn(:post, "/i/#{trigger.id}")
+      |> put_req_header("x-api-key", "only-key")
+      |> WebhookAuth.call([])
+
+    refute conn.halted
+    assert conn.assigns[:trigger].id == trigger.id
+  end
+
   defp associate_auth_method(trigger, auth_method) do
+    associate_auth_methods(trigger, [auth_method])
+  end
+
+  defp associate_auth_methods(trigger, auth_methods) do
     trigger
     |> Repo.preload(:webhook_auth_methods)
     |> Ecto.Changeset.change()
-    |> Ecto.Changeset.put_assoc(:webhook_auth_methods, [auth_method])
+    |> Ecto.Changeset.put_assoc(:webhook_auth_methods, auth_methods)
     |> Repo.update!()
   end
 end

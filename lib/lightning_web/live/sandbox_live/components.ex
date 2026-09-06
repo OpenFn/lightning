@@ -27,6 +27,10 @@ defmodule LightningWeb.SandboxLive.Components do
     @color_palette
   end
 
+  def random_color do
+    Enum.random(color_palette_hex_colors())
+  end
+
   attr :current_project, Project, required: true
   attr :enable_create_button, :boolean, required: true
   attr :disabled_button_tooltip, :string, default: nil

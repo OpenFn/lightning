@@ -59,6 +59,7 @@ defmodule Lightning.Channels.HandlerTest do
           headers: [
             {"authorization", "Bearer secret-token"},
             {"x-api-key", "my-api-key"},
+            {"cookie", "_lightning_key=victim-session-token"},
             {"content-type", "application/json"}
           ]
         )
@@ -68,6 +69,7 @@ defmodule Lightning.Channels.HandlerTest do
       assert [
                {"authorization", "[REDACTED]"},
                {"x-api-key", "[REDACTED]"},
+               {"cookie", "[REDACTED]"},
                {"content-type", "application/json"}
              ] = new_state.request_headers
     end
@@ -86,7 +88,8 @@ defmodule Lightning.Channels.HandlerTest do
         status: 200,
         headers: [
           {"content-type", "application/json"},
-          {"authorization", "Bearer upstream-token"}
+          {"authorization", "Bearer upstream-token"},
+          {"set-cookie", "sid=attacker-controlled"}
         ],
         content_type: "application/json",
         time_to_first_byte_us: 15_000
@@ -100,7 +103,8 @@ defmodule Lightning.Channels.HandlerTest do
 
       assert [
                {"content-type", "application/json"},
-               {"authorization", "[REDACTED]"}
+               {"authorization", "[REDACTED]"},
+               {"set-cookie", "[REDACTED]"}
              ] = new_state.response_headers
     end
   end

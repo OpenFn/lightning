@@ -13,11 +13,11 @@ defmodule LightningWeb.AuditLiveTest do
     setup :register_and_log_in_user
 
     test "cannot access the audit trail", %{conn: conn} do
-      {:ok, _index_live, html} =
+      {:ok, conn} =
         live(conn, ~p"/settings/audit", on_error: :raise)
         |> follow_redirect(conn, "/projects")
 
-      assert html =~ "Sorry, you don&#39;t have access to that."
+      assert conn.resp_body =~ "Sorry, you don&#39;t have access to that."
     end
   end
 

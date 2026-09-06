@@ -21,6 +21,9 @@ export default {
       max: 'max-content',
     },
     extend: {
+      boxShadow: {
+        card: '0 4px 16px 0 rgba(0, 0, 0, 0.06)',
+      },
       animation: {
         'spin-pause': 'spin-pause 2s infinite ease',
         'fill-up': 'fill-up 2s infinite ease-in',

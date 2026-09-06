@@ -386,19 +386,33 @@ defmodule Lightning.WebhookAuthMethodsTest do
     end
   end
 
-  describe "find_by_id!/1" do
-    test "retrieves the auth method by id" do
-      auth_method = insert(:webhook_auth_method)
+  describe "find_for_project/3" do
+    test "retrieves the auth method when it belongs to the project" do
+      project = insert(:project)
+      auth_method = insert(:webhook_auth_method, project: project)
 
-      assert WebhookAuthMethods.find_by_id!(auth_method.id) ==
-               auth_method
-               |> unload_relation(:project)
+      assert WebhookAuthMethods.find_for_project(project, auth_method.id).id ==
+               auth_method.id
     end
 
-    test "raises an error if there is no matching auth method" do
-      assert_raise Ecto.NoResultsError, fn ->
-        WebhookAuthMethods.find_by_id!(Ecto.UUID.generate())
-      end
+    test "returns nil for an auth method in another project" do
+      auth_method = insert(:webhook_auth_method, project: insert(:project))
+
+      assert WebhookAuthMethods.find_for_project(
+               insert(:project),
+               auth_method.id
+             ) == nil
+    end
+
+    test "returns nil for a missing or malformed id" do
+      project = insert(:project)
+
+      assert WebhookAuthMethods.find_for_project(
+               project,
+               Ecto.UUID.generate()
+             ) == nil
+
+      assert WebhookAuthMethods.find_for_project(project, "not-a-uuid") == nil
     end
   end
 
@@ -487,6 +501,113 @@ defmodule Lightning.WebhookAuthMethodsTest do
     assert final_audit_entries_count == initial_audit_entries_count
   end
 
+  test "schedule_for_deletion/2 detaches the auth method from its triggers" do
+    user = insert(:user)
+    trigger = insert(:trigger)
+
+    revoked = insert(:webhook_auth_method, auth_type: :api, api_key: "revoked")
+    live = insert(:webhook_auth_method, auth_type: :api, api_key: "live")
+
+    trigger
+    |> Repo.preload(:webhook_auth_methods)
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_assoc(:webhook_auth_methods, [revoked, live])
+    |> Repo.update!()
+
+    {:ok, _} = WebhookAuthMethods.schedule_for_deletion(revoked, actor: user)
+
+    remaining =
+      trigger
+      |> Repo.preload(:webhook_auth_methods, force: true)
+      |> Map.fetch!(:webhook_auth_methods)
+      |> Enum.map(& &1.id)
+
+    assert remaining == [live.id]
+
+    audit = find_audit("webhook_auth_method", "removed_from_trigger", revoked.id)
+
+    assert audit.actor_id == user.id
+    assert audit.changes.before == %{"trigger_id" => trigger.id}
+    assert audit.changes.after == %{"trigger_id" => nil}
+  end
+
+  test "schedule_for_deletion/2 audits links made after the struct was loaded" do
+    user = insert(:user)
+    trigger = insert(:trigger)
+    wam = insert(:webhook_auth_method, auth_type: :api, api_key: "revoked")
+
+    # The delete modal preloads the method and holds it while the operator
+    # confirms. A link made in that window must still be audited.
+    stale = Repo.preload(wam, [:triggers, :channels])
+
+    trigger
+    |> Repo.preload(:webhook_auth_methods)
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_assoc(:webhook_auth_methods, [wam])
+    |> Repo.update!()
+
+    {:ok, _} = WebhookAuthMethods.schedule_for_deletion(stale, actor: user)
+
+    assert trigger
+           |> Repo.preload(:webhook_auth_methods, force: true)
+           |> Map.fetch!(:webhook_auth_methods) == []
+
+    audit = find_audit("webhook_auth_method", "removed_from_trigger", wam.id)
+    assert audit.changes.before == %{"trigger_id" => trigger.id}
+  end
+
+  test "schedule_for_deletion/2 detaches the auth method from its channels" do
+    user = insert(:user)
+    project = insert(:project)
+
+    revoked =
+      insert(:webhook_auth_method,
+        project: project,
+        auth_type: :api,
+        api_key: "revoked"
+      )
+
+    live =
+      insert(:webhook_auth_method,
+        project: project,
+        auth_type: :api,
+        api_key: "live"
+      )
+
+    channel =
+      insert(:channel,
+        project: project,
+        channel_auth_methods: [
+          build(:channel_auth_method,
+            role: :client,
+            webhook_auth_method: revoked
+          ),
+          build(:channel_auth_method, role: :client, webhook_auth_method: live)
+        ]
+      )
+
+    {:ok, _} = WebhookAuthMethods.schedule_for_deletion(revoked, actor: user)
+
+    remaining =
+      channel
+      |> Repo.preload(:client_webhook_auth_methods, force: true)
+      |> Map.fetch!(:client_webhook_auth_methods)
+      |> Enum.map(& &1.id)
+
+    assert remaining == [live.id]
+
+    audit = find_audit("channel", "auth_method_removed", channel.id)
+
+    assert audit.actor_id == user.id
+
+    assert audit.changes.before == %{
+             "role" => "client",
+             "webhook_auth_method_id" => revoked.id
+           }
+
+    assert audit.changes.after == nil
+  end
+
   test "schedule_for_deletion/2 returns error with invalid changeset" do
     user = insert(:user)
 
@@ -502,6 +623,18 @@ defmodule Lightning.WebhookAuthMethodsTest do
     assert {:error, %Ecto.Changeset{} = changeset} = result
 
     assert changeset.valid? == false
+  end
+
+  defp find_audit(item_type, event, item_id) do
+    audits =
+      Lightning.Auditing.list_all()
+      |> Enum.filter(fn audit ->
+        audit.item_type == item_type and audit.event == event and
+          audit.item_id == item_id
+      end)
+
+    assert [audit] = audits
+    audit
   end
 
   defp decode_encrypted_binary(data) do

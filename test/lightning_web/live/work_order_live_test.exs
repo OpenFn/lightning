@@ -724,7 +724,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
       job = insert(:job, workflow: workflow)
 
-      dataclip = insert(:dataclip)
+      dataclip = insert(:dataclip, project: project)
 
       {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
 
@@ -835,7 +835,7 @@ defmodule LightningWeb.WorkOrderLiveTest do
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
       job = insert(:job, workflow: workflow)
 
-      dataclip = insert(:dataclip)
+      dataclip = insert(:dataclip, project: project)
 
       {:ok, snapshot} = Lightning.Workflows.Snapshot.create(workflow)
 
@@ -1034,7 +1034,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
       dataclip =
         insert(:dataclip,
           type: :http_request,
-          body: %{"username" => "eliaswalyba"}
+          body: %{"username" => "eliaswalyba"},
+          project: project
         )
 
       %{runs: [run_one]} =
@@ -1070,7 +1071,11 @@ defmodule LightningWeb.WorkOrderLiveTest do
       {:ok, snapshot_two} = Workflows.Snapshot.create(workflow_two)
 
       dataclip =
-        insert(:dataclip, type: :http_request, body: %{"username" => "qassim"})
+        insert(:dataclip,
+          type: :http_request,
+          body: %{"username" => "qassim"},
+          project: project
+        )
 
       work_order_two =
         insert(:workorder,

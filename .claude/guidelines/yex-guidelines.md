@@ -1,14 +1,20 @@
 # Yex (Y.js/Elixir) Usage Guidelines for Lightning
 
-This document provides comprehensive guidelines for working with Yex, the Elixir wrapper for the Y.js CRDT library, in the Lightning collaborative editing system.
+This document covers working with Yex, the Elixir wrapper for the Y.js CRDT library, in the
+Lightning collaborative editing system.
+
+**Version:** this targets **y_ex 0.8.0** (`mix.lock`), which builds against **yrs 0.23.1**
+(`deps/y_ex/native/yex/Cargo.lock`; `Cargo.toml` states `0.23.0`, but that is a requirement
+rather than a pin). y_ex is pre-1.0 and its API moves — check `deps/y_ex/lib/` before trusting
+anything here.
 
 ## Table of Contents
 - [Transaction Deadlock Rules](#transaction-deadlock-rules)
 - [The Correct Pattern](#the-correct-pattern)
 - [Core Concepts](#core-concepts)
+- [API Reference](#api-reference)
 - [Prelim Types](#prelim-types)
 - [Reading data: handle vs snapshot discipline](#reading-data-handle-vs-snapshot-discipline)
-- [API Reference](#api-reference)
 - [Common Gotchas](#common-gotchas)
 - [Testing Patterns](#testing-patterns)
 
@@ -24,18 +30,50 @@ Calling `Yex.Doc.get_map/2`, `Yex.Doc.get_array/2`, or `Yex.Doc.get_text/2` **in
 
 ### Why this happens
 
-From `/deps/y_ex/lib/doc.ex:6-8`:
+From `deps/y_ex/lib/doc.ex:6-8`:
 
 > It is not recommended to perform operations on a single document from multiple processes simultaneously.
 > If blocked by a transaction, the Beam scheduler threads may potentially deadlock.
 > This limitation is due to the underlying yrs and beam specifications and may be resolved in the future.
 
-The underlying issue:
-1. Yex documents are owned by a worker process (usually a GenServer)
-2. All operations dispatch to this worker process via `GenServer.call`
-3. Transactions hold native (Rust) locks in the underlying yrs library
-4. If you call `get_map/get_array` inside a transaction, it tries to dispatch to the worker process that's already blocked holding the transaction
-5. This creates a deadlock at the BEAM scheduler level, **hanging the entire VM**
+**What you can check in this repo** (y_ex 0.8.0, yrs 0.23.1):
+
+1. `Yex.Doc.transaction/3` opens a yrs `TransactionMut` and stashes it in the *calling
+   process's* dictionary, keyed by the doc reference (`deps/y_ex/lib/doc.ex:159-181`;
+   `cur_txn/1` at `:236-238` is a `Process.get/2`). The NIF that opens it is
+   `native/yex/src/doc.rs:257-275`.
+2. Functions on a shared type look that transaction up and hand it down. `Yex.Map.set/3` calls
+   `Yex.Nif.map_set(map, cur_txn(map), key, content)` (`lib/shared_type/map.ex:44-47`), and
+   `map_set` declares `current_transaction: Option<ResourceArc<TransactionResource>>`
+   (`native/yex/src/map.rs:46-58`). `NifDoc::mutably` reuses it when it is there and opens a
+   new one only when it is not (`doc.rs:143-165`).
+3. `Yex.Doc.get_map/2`, `get_array/2` and `get_text/2` have no such parameter.
+   `get_map/2` is `Yex.Nif.doc_get_or_insert_map(doc, name)` (`doc.ex:133-135`), and that NIF's
+   entire body is `doc.get_or_insert_map(name)` (`doc.rs:247-250`) — nothing to pass the open
+   transaction into, and no route through `mutably`. It goes straight to the yrs document and
+   acquires whatever it needs on its own.
+4. Everywhere else that y_ex opens a transaction for you, it uses yrs's fallible entry points,
+   `try_transact_mut` and `try_transact` (`doc.rs:222`, `:264`, `:271`) — those return an error
+   instead of waiting. `get_or_insert_map` is the one path that does not go through them.
+
+**What has been observed:** calling `Yex.Doc.get_map/2` inside an open transaction, against the
+pinned NIF, hangs immediately. It does not respond to `SIGTERM`, and it takes the whole VM down
+rather than the calling process.
+
+**What is inference, not a read fact:** what yrs does while it waits. `yrs` is a crates.io
+dependency and its source is not vendored here, so nothing below the
+`doc.get_or_insert_map(name)` call at `doc.rs:249` can be checked from this repository. The
+behaviour is consistent with a blocking wait for exclusive access that the open transaction
+already holds, but treat that as an explanation of the symptom rather than something read off a
+file. (The `RwLock` you can see at `doc.rs:268` and `:273` is *not* it — that one guards y_ex's
+own handle to the transaction resource, and it is not what blocks.)
+
+**None of that changes what you have to do.** The wait happens inside a NIF, on a BEAM scheduler
+thread, so the scheduler cannot preempt it or kill it — which is why this shows up as a dead VM
+and not a crashed process. And it happens **whether or not a `GenServer.call` is involved**:
+`Yex.Doc.new/1` defaults `worker_pid` to `self()` (`doc.ex:101`), so a document owned by the
+calling process runs directly with no dispatch at all (`doc.ex:44-56`) — and it still hangs.
+Being inside the worker process is not an exemption.
 
 ---
 
@@ -51,6 +89,7 @@ def serialize_to_ydoc(doc, workflow) do
   edges_array = Yex.Doc.get_array(doc, "edges")
   triggers_array = Yex.Doc.get_array(doc, "triggers")
   positions = Yex.Doc.get_map(doc, "positions")
+  errors = Yex.Doc.get_map(doc, "errors")
 
   # Step 2: Start transaction and use the pre-retrieved objects
   Yex.Doc.transaction(doc, "initialize_workflow_document", fn ->
@@ -67,7 +106,7 @@ def serialize_to_ydoc(doc, workflow) do
 end
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:54-70`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:57-93`
 
 ### ❌ DON'T DO THIS
 
@@ -88,46 +127,24 @@ end
 
 ## Core Concepts
 
-### Critical: You Cannot Create Map/Array/Text Directly
+### You cannot create Map/Array/Text directly
 
 Yex.Map, Yex.Array, and Yex.Text **cannot be created directly**. They can only be obtained through `Yex.Doc.get_map/2`, `Yex.Doc.get_array/2`, and `Yex.Doc.get_text/2`.
 
 ```elixir
 # ❌ WRONG - These functions DO NOT EXIST
-map = Yex.Map.new()          # NO! This function doesn't exist
-array = Yex.Array.new()      # NO! This function doesn't exist
-text = Yex.Text.new()        # NO! This function doesn't exist
+map = Yex.Map.new()          # Does not exist in y_ex 0.8.0
+array = Yex.Array.new()      # Does not exist in y_ex 0.8.0
+text = Yex.Text.new()        # Does not exist in y_ex 0.8.0
 
 # ✅ CORRECT - Only way to create these types
 doc = Yex.Doc.new()
-map = Yex.Doc.get_map(doc, "my_map")       # This is the ONLY way
-array = Yex.Doc.get_array(doc, "my_array") # This is the ONLY way
-text = Yex.Doc.get_text(doc, "my_text")    # This is the ONLY way
+map = Yex.Doc.get_map(doc, "my_map")       # The only constructor
+array = Yex.Doc.get_array(doc, "my_array") # The only constructor
+text = Yex.Doc.get_text(doc, "my_text")    # The only constructor
 ```
 
-**To insert nested structures (a map inside an array, etc), use Prelim types:**
-
-```elixir
-# ❌ WRONG - You cannot insert a Yex.Map/Array/Text that doesn't exist
-jobs_array = Yex.Doc.get_array(doc, "jobs")
-job_map = Yex.Map.new()  # ERROR! This function doesn't exist
-Yex.Array.push(jobs_array, job_map)
-
-# ✅ CORRECT - Use Prelim types for nested structures
-jobs_array = Yex.Doc.get_array(doc, "jobs")
-job_map = Yex.MapPrelim.from(%{
-  "id" => "abc123",
-  "name" => "My Job",
-  "body" => Yex.TextPrelim.from("console.log('hello');")
-})
-Yex.Array.push(jobs_array, job_map)
-
-# After insertion, prelim becomes real Yex type
-{:ok, real_job_map} = Yex.Array.fetch(jobs_array, 0)
-# real_job_map is now a %Yex.Map{} struct
-{:ok, body_text} = Yex.Map.fetch(real_job_map, "body")
-# body_text is now a %Yex.Text{} struct
-```
+To build nested structures, see [§Prelim Types](#prelim-types).
 
 **Why this matters:**
 - Yex types are bound to a document and worker process
@@ -135,7 +152,7 @@ Yex.Array.push(jobs_array, job_map)
 - Prelim types are "plans" that become real Yex types when inserted
 - This is different from typical Elixir APIs where you can create structs directly
 
-**Reference:** `deps/y_ex/lib/doc.ex:113-135`, `lib/lightning/collaboration/workflow_serializer.ex:114-127`
+**Reference:** `deps/y_ex/lib/doc.ex:113-135`, `lib/lightning/collaboration/workflow_serializer.ex:164-178`
 
 ---
 
@@ -167,7 +184,7 @@ def handle_call({Yex.Doc, :run, fun}, _from, state) do
 end
 ```
 
-**Reference:** `deps/y_ex/lib/server/doc_server_worker.ex:125-130`
+**Reference:** `deps/y_ex/lib/server/doc_server_worker.ex:123-130`
 
 ### Transactions
 
@@ -197,7 +214,7 @@ end)
 
 ### Document Structure in Lightning
 
-Lightning workflows use a consistent Y.Doc structure:
+Lightning workflows use a consistent Y.Doc structure of six root-level collections:
 
 ```elixir
 # Root-level collections
@@ -206,9 +223,10 @@ Lightning workflows use a consistent Y.Doc structure:
 "edges"     (Yex.Array) - Array of edge maps
 "triggers"  (Yex.Array) - Array of trigger maps
 "positions" (Yex.Map)   - Node positions: %{node_id => %{"x" => ..., "y" => ...}}
+"errors"    (Yex.Map)   - Field-level validation errors: %{field_path => error_message}
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:11-28`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:11-21`
 
 ---
 
@@ -252,7 +270,7 @@ Yex.Map.set(map, "numbers", array_prelim)
 # job["body"] is a %Yex.Text{} struct
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:114-127`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:164-178`
 
 ## Reading data: handle vs snapshot discipline
 
@@ -286,6 +304,11 @@ items = Yex.Array.to_list(array)
 - Read-only diffs, comparisons, hashing
 - Anything that ends directly at `|> Repo.insert/1` or `|> broadcast/1`
 
+The serializer's read path splits by object, deliberately: `extract_jobs`/`extract_edges`/
+`extract_triggers` take snapshots, while the workflow metadata stays on handles so
+`Yex.Map.fetch/2` can distinguish an absent key from an explicit nil and let schema defaults
+apply (`workflow_serializer.ex:119-135`).
+
 Primary accessors:
 
 ```elixir
@@ -296,7 +319,10 @@ text = Yex.Text.to_string(body_text)
 
 After `to_json`, ordinary `Map.get/2` with a default handles missing keys — no sentinel needed.
 
-**Wrinkle:** `Yex.Array.to_json` and `Yex.Map.to_json` recurse through nested Y.Maps and Y.Arrays but **leave `%Yex.Text{}` structs in place**. Text leaves still need `Yex.Text.to_string/1` at the consumer — see Gotcha #4.
+**Note:** `Yex.Array.to_json` and `Yex.Map.to_json` recurse all the way down. Nested Y.Maps,
+Y.Arrays *and Y.Texts* all become plain Elixir data — a nested `Y.Text` comes back as a
+binary, not a `%Yex.Text{}`. If you need live text handles, use `to_list/1` (handle
+discipline) instead.
 
 ### Don't cross disciplines mid-layer
 
@@ -339,7 +365,7 @@ concurrency = Map.get(workflow, "concurrency")  # nil if absent
 
 If you see advice to "use the `:not_found` / `:error` sentinel" on a layer that's already `to_json`-ed, the layer is straddling — drop the sentinel or drop the `to_json`, don't do both.
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:172-217`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:109-154` (read path), `:257-270` (`extract_jobs`)
 
 ### Subscribing to document updates
 
@@ -396,7 +422,8 @@ end
 
 ### 3. Converting Atoms to Strings for Yjs Compatibility
 
-**Problem:** Yjs only supports boolean, string, number, and null. Elixir atoms must be converted.
+**Problem:** Yjs values are JSON-shaped — booleans, numbers, strings, null, plus nested
+lists and maps. Elixir atoms have no representation, so they must be converted.
 
 **Solution:** Convert atoms (except booleans) to strings.
 
@@ -414,29 +441,26 @@ defp to_yjs_variant(value) when is_atom(value), do: value |> to_string()
 defp to_yjs_variant(value), do: value
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_reconciler.ex:236-240`
+**Reference:** `lib/lightning/collaboration/workflow_reconciler.ex:252-256`
 
-### 4. Text Fields Need Special Extraction
+### 4. Y.Text handles need explicit extraction
 
-**Problem:** Y.Text fields don't automatically convert to strings.
+**Problem:** under handle discipline (`to_list/1`, `Yex.Map.fetch/2`) a job's `body` comes
+back as a `%Yex.Text{}`, not a string.
 
-**Solution:** Use `Yex.Text.to_string/1` to extract text content.
+**Solution:** `Yex.Text.to_string/1`, with a binary clause so the same function also handles
+`to_json` output.
 
 ```elixir
-# After calling Yex.Array.to_json(jobs_array)
-jobs = Enum.map(jobs_list, fn job ->
-  %{
-    "id" => job["id"],
-    "body" => extract_text(job["body"])  # Don't forget this!
-  }
-end)
-
-defp extract_text(%Yex.Text{} = text), do: Yex.Text.to_string(text)
-defp extract_text(binary) when is_binary(binary), do: binary
-defp extract_text(nil), do: ""
+# Clauses for both disciplines: to_json flattens Y.Text to a binary, to_list preserves
+# the handle.
+defp extract_text_field(%Yex.Text{} = text), do: Yex.Text.to_string(text)
+defp extract_text_field(string) when is_binary(string), do: string
+defp extract_text_field(nil), do: ""
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:212-217`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:340-356` (definition),
+`:257-270` (usage in `extract_jobs`).
 
 ### 5. Using Deprecated Functions
 
@@ -470,7 +494,7 @@ job_map = Yex.MapPrelim.from(%{
 })
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:116-124`
+**Reference:** `lib/lightning/collaboration/workflow_serializer.ex:165-173`
 
 ### 7. Finding Array Items by ID
 
@@ -490,7 +514,7 @@ index = Enum.find_index(jobs_array, fn job ->
 end)
 ```
 
-**Reference:** `lib/lightning/collaboration/workflow_reconciler.ex:222-234`
+**Reference:** `lib/lightning/collaboration/workflow_reconciler.ex:238-250`
 
 ---
 
@@ -513,7 +537,7 @@ test "serialize workflow to Y.Doc" do
 end
 ```
 
-**Reference:** `test/lightning/collaboration/workflow_serializer_test.exs:21-26`
+**Reference:** `test/lightning/collaboration/workflow_serializer_test.exs:15-27`
 
 ### Monitoring Updates in Tests
 
@@ -566,33 +590,26 @@ test "round-trip: serialize then deserialize" do
 end
 ```
 
-**Reference:** `test/lightning/collaboration/workflow_serializer_test.exs:662-776`
+**Reference:** `test/lightning/collaboration/workflow_serializer_test.exs:875`
 
-### Helper Functions for Tests
+### Helper functions for tests
 
-```elixir
-# Preload workflow associations
-defp preload_workflow_associations(workflow) do
-  Repo.preload(workflow, [:jobs, :edges, :triggers])
-end
+These live in the test suite. Copy from the one whose discipline you want, and check what it
+returns before you use it — the same name means different things in different files, and none
+of them carries a typespec, so nothing stops them drifting further apart.
 
-# Find item in Y.Array by ID
-defp find_in_ydoc_array(array, id) do
-  array
-  |> Enum.find(fn item ->
-    case item do
-      %Yex.Map{} = map -> Yex.Map.fetch!(map, "id") == id
-      map when is_map(map) -> Map.get(map, "id") == id
-    end
-  end)
-end
+- `test/lightning/collaboration/workflow_serializer_test.exs:11-13` —
+  `preload_workflow_associations/1`.
+- `test/lightning/collaboration/workflow_reconciler_test.exs:783-805` —
+  `find_in_ydoc_array/2` under **snapshot discipline**: returns `Yex.Map.to_map(map)`, a plain
+  Elixir map, so `result["id"]` works.
+- `test/lightning/collaboration/workflow_reconciler_test.exs:807-813` — `assert_one_update/1`.
+- `test/lightning/collaboration/session_test.exs:706-711` — a second `find_in_ydoc_array/2`,
+  under **handle discipline**: returns the live `%Yex.Map{}`, so you need `Yex.Map.fetch!/2` and
+  `result["id"]` raises.
 
-# Assert single update
-defp assert_one_update(doc) do
-  assert_receive {:update_v1, _, nil, ^doc}
-  refute_receive {:update_v1, _, nil, ^doc}, nil, "Got a second update"
-end
-```
+The two `find_in_ydoc_array/2` are not interchangeable. See
+[Reading data](#reading-data-handle-vs-snapshot-discipline).
 
 ---
 
@@ -618,4 +635,3 @@ If you encounter issues or have questions:
 1. Check this guide first
 2. Review the code references provided
 3. Look at test files for working examples
-4. Get objects before transactions

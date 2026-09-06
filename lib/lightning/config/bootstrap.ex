@@ -138,6 +138,12 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, :apollo, :endpoint])
         ),
+      # APOLLO_TIMEOUT (ms) bounds every request to Apollo. For streaming
+      # (all AI chat) it is the time-to-headers and the max gap between SSE
+      # chunks — and because the AI job's total-runtime ceiling is derived
+      # from the same value, it effectively bounds the whole run too, so
+      # size it above the longest expected AI run. Unset, it falls back to
+      # the per-env compiled config.
       timeout:
         env!(
           "APOLLO_TIMEOUT",
@@ -203,21 +209,26 @@ defmodule Lightning.Config.Bootstrap do
     config :lightning, :adaptor_service,
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
 
-    local_adaptors_repo =
-      env!(
-        "OPENFN_ADAPTORS_REPO",
-        :string,
-        Utils.get_env([
-          :lightning,
-          Lightning.AdaptorRegistry,
-          :local_adaptors_repo
-        ])
-      )
+    # Comma-separated to match the ws-worker parser, so the picker view and
+    # @local resolution agree on the same repo list. See RUNNINGLOCAL.md.
+    local_adaptors_repos =
+      env!("OPENFN_ADAPTORS_REPO", :string, nil)
+      |> case do
+        nil ->
+          []
 
-    use_local_adaptors_repo? =
+        value when is_binary(value) ->
+          value
+          |> String.split(",", trim: true)
+          |> Enum.map(&String.trim/1)
+          |> Enum.reject(&(&1 == ""))
+          |> Enum.map(&Path.expand/1)
+      end
+
+    use_local_adaptors_repos? =
       env!("LOCAL_ADAPTORS", &Utils.ensure_boolean/1, false)
       |> tap(fn v ->
-        if v && !is_binary(local_adaptors_repo) do
+        if v && local_adaptors_repos == [] do
           raise """
           LOCAL_ADAPTORS is set to true, but OPENFN_ADAPTORS_REPO is not set.
           """
@@ -231,8 +242,8 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, Lightning.AdaptorRegistry, :use_cache])
         ),
-      local_adaptors_repo:
-        use_local_adaptors_repo? && Path.expand(local_adaptors_repo)
+      local_adaptors_repos:
+        if(use_local_adaptors_repos?, do: local_adaptors_repos, else: [])
 
     config :lightning,
       schemas_path:
@@ -270,7 +281,6 @@ defmodule Lightning.Config.Bootstrap do
        args: %{"type" => "monthly_project_digest"}},
       #  TODO - move this into an ENV?
       {"17 */2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
-      {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker},
       {"* * * * *", Lightning.LogLines.SearchVectorWorker},
       {"* * * * *", Lightning.Invocation.DataclipSearchVectorWorker}
     ]
@@ -283,7 +293,8 @@ defmodule Lightning.Config.Bootstrap do
            args: %{"type" => "purge_deleted"}},
           {"45 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}},
           {"0 3 * * *", Lightning.WebhookAuthMethods,
-           args: %{"type" => "purge_deleted"}}
+           args: %{"type" => "purge_deleted"}},
+          {"15 3 * * *", Lightning.Workflows, args: %{"type" => "purge_deleted"}}
         ],
         else: []
 
@@ -510,6 +521,28 @@ defmodule Lightning.Config.Bootstrap do
       cors_origin:
         env!("CORS_ORIGIN", :string, "*") |> String.split(",") |> List.wrap()
 
+    # Escape hatch for self-hosted deployments whose OAuth provider lives on an
+    # internal network: allowlist those hosts so the pinned egress adapter lets
+    # them through. Only applied when set, so the secure default (block all
+    # internal ranges) and the dev allowlist stay intact otherwise.
+    if oauth_allowed_hosts = env!("OAUTH_PROVIDER_ALLOWED_HOSTS", :string, nil) do
+      config :lightning, Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter,
+        allowed_hosts: String.split(oauth_allowed_hosts, ",", trim: true)
+    end
+
+    # Egress policy for the channel reverse proxy (consumed only by Philter).
+    # Blocking private/reserved ranges is the secure default; operators fronting
+    # internal upstreams can relax it, or allowlist specific hosts as an escape
+    # hatch that survives even when the block is on.
+    config :philter,
+      block_private_networks:
+        env!("CHANNEL_BLOCK_PRIVATE_NETWORKS", &Utils.ensure_boolean/1, true)
+
+    if channel_allowed_hosts = env!("CHANNEL_ALLOWED_HOSTS", :string, nil) do
+      config :philter,
+        allowed_hosts: Utils.parse_host_list(channel_allowed_hosts)
+    end
+
     if config_env() == :prod do
       unless database_url do
         raise """
@@ -532,9 +565,18 @@ defmodule Lightning.Config.Bootstrap do
       if disable_db_ssl do
         config :lightning, Lightning.Repo, ssl: false
       else
-        ssl_opts = [verify: :verify_none]
+        disable_cert_check =
+          env!("DISABLE_DB_SSL_CERT_VERIFY", &Utils.ensure_boolean/1, false)
 
-        config :lightning, Lightning.Repo, ssl_opts: ssl_opts, ssl: true
+        ssl_opts =
+          if disable_cert_check do
+            [verify: :verify_none]
+          else
+            %{host: db_host} = URI.parse(database_url)
+            :tls_certificate_check.options(db_host)
+          end
+
+        config :lightning, Lightning.Repo, ssl: ssl_opts
       end
 
       # The secret key base is used to sign/encrypt cookies and other secrets.
@@ -632,7 +674,7 @@ defmodule Lightning.Config.Bootstrap do
       tags: %{host: host},
       release: release[:label],
       enable_source_code_context: true,
-      root_source_code_path: File.cwd!()
+      root_source_code_paths: [File.cwd!()]
 
     config :lightning, Lightning.PromEx,
       disabled: not env!("PROMEX_ENABLED", &Utils.ensure_boolean/1, false),
@@ -733,52 +775,6 @@ defmodule Lightning.Config.Bootstrap do
         env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10),
       daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10),
       run_chunk_size: env!("USAGE_TRACKING_RUN_CHUNK_SIZE", :integer, 100)
-
-    config :lightning, :kafka_triggers,
-      alternate_storage_enabled:
-        env!(
-          "KAFKA_ALTERNATE_STORAGE_ENABLED",
-          &Utils.ensure_boolean/1,
-          false
-        )
-        |> tap(fn enabled ->
-          if enabled do
-            touch_result =
-              env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil)
-              |> to_string()
-              |> then(fn path ->
-                if File.exists?(path) do
-                  path
-                  |> Path.join(".lightning_storage_check")
-                  |> File.touch()
-                else
-                  :error
-                end
-              end)
-
-            unless touch_result == :ok do
-              raise """
-              KAFKA_ALTERNATE_STORAGE_ENABLED is set to yes/true.
-
-              KAFKA_ALTERNATE_STORAGE_FILE_PATH must be a writable directory.
-              """
-            end
-          end
-        end),
-      alternate_storage_file_path:
-        env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil),
-      duplicate_tracking_retention_seconds:
-        env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600),
-      enabled: env!("KAFKA_TRIGGERS_ENABLED", &Utils.ensure_boolean/1, false),
-      notification_embargo_seconds:
-        env!("KAFKA_NOTIFICATION_EMBARGO_SECONDS", :integer, 3600),
-      number_of_consumers: env!("KAFKA_NUMBER_OF_CONSUMERS", :integer, 1),
-      number_of_messages_per_second:
-        env!("KAFKA_NUMBER_OF_MESSAGES_PER_SECOND", :float, 1),
-      number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1)
-
-    config :lightning, :ui_metrics_tracking,
-      enabled: env!("UI_METRICS_ENABLED", &Utils.ensure_boolean/1, false)
 
     config :lightning,
            :broadcast_work_available,

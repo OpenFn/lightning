@@ -1,10 +1,13 @@
-import { useWorkflowReadOnly } from '../../hooks/useWorkflow';
-import type { Workflow } from '../../types/workflow';
-import { NewRunButton } from '../NewRunButton';
+import { useState } from 'react';
 
-import { InspectorFooter } from './InspectorFooter';
-import { InspectorLayout } from './InspectorLayout';
-import { TriggerForm } from './TriggerForm';
+import type { Workflow } from '../../types/workflow';
+
+import {
+  CronShowPanel,
+  type EditFocus,
+  TriggerEditWizard,
+  WebhookShowPanel,
+} from './trigger';
 
 interface TriggerInspectorProps {
   trigger: Workflow.Trigger;
@@ -13,56 +16,67 @@ interface TriggerInspectorProps {
 }
 
 /**
- * Renders trigger title based on type, matching old WorkflowEdit behavior
- */
-function getTriggerTitle(trigger: Workflow.Trigger): string {
-  if (!trigger.type) {
-    return 'New Trigger';
-  }
-
-  switch (trigger.type) {
-    case 'webhook':
-      return 'Webhook Trigger';
-    case 'cron':
-      return 'Cron Trigger';
-    case 'kafka':
-      return 'Kafka Trigger';
-    default:
-      return 'Unknown Trigger';
-  }
-}
-
-/**
  * TriggerInspector - Composition layer for trigger configuration.
- * Currently just wraps form with layout (no actions yet).
+ *
+ * Dispatches by trigger type to a read-only "show / resting" panel, and hands
+ * off to the unified {@link TriggerEditWizard} for editing.
  */
 export function TriggerInspector({
   trigger,
   onClose,
-  onOpenRunPanel,
+  onOpenRunPanel: _onOpenRunPanel,
 }: TriggerInspectorProps) {
-  const { isReadOnly } = useWorkflowReadOnly();
+  // View-state machine. The read-only "show" panel is the resting state for a
+  // typed trigger; "edit" hands off to the unified wizard (Choose → Configure
+  // over a local draft).
+  const [view, setView] = useState<'show' | 'edit'>('show');
+  // When the user enters edit via an inline deep link ("Add authentication" /
+  // "Configure default response status"), jump straight to Configure with that
+  // section expanded. `undefined` = the plain Edit button → Choose step. Only
+  // the webhook show panel produces a non-undefined focus.
+  const [editFocus, setEditFocus] = useState<EditFocus | undefined>(undefined);
 
-  // Build footer with run button
-  const footer = (
-    <InspectorFooter
-      rightButtons={
-        <NewRunButton
-          onClick={() => onOpenRunPanel({ triggerId: trigger.id })}
-          tooltipSide="top"
-          disabled={isReadOnly}
+  // The "edit" view is reachable only via a show panel's Edit button, which is
+  // already disabled when the user can't edit the workflow, so no extra
+  // permission gate is needed here.
+  if (view === 'edit') {
+    return (
+      <TriggerEditWizard
+        trigger={trigger}
+        initialFocus={editFocus}
+        onClose={onClose}
+        onDone={() => {
+          setView('show');
+          setEditFocus(undefined);
+        }}
+      />
+    );
+  }
+
+  // Resting state: read-only show panel per type. Per design these panels drop
+  // the Enabled toggle + Run button (running lives on the header, enable/disable
+  // on the canvas).
+  switch (trigger.type) {
+    case 'webhook':
+      return (
+        <WebhookShowPanel
+          trigger={trigger}
+          onClose={onClose}
+          onEdit={focus => {
+            setEditFocus(focus);
+            setView('edit');
+          }}
         />
-      }
-    />
-  );
-
-  return (
-    <InspectorLayout
-      title={getTriggerTitle(trigger)}
-      onClose={onClose}
-      footer={footer}
-    >
-      <TriggerForm trigger={trigger} />
-    </InspectorLayout>
-  );
+      );
+    case 'cron':
+      return (
+        <CronShowPanel
+          trigger={trigger}
+          onClose={onClose}
+          onEdit={() => setView('edit')}
+        />
+      );
+    default:
+      return null;
+  }
 }

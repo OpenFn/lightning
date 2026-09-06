@@ -16,6 +16,7 @@ defmodule Lightning.Channels do
   alias Lightning.Channels.PersistencePolicy
   alias Lightning.Channels.SearchParams
   alias Lightning.Config
+  alias Lightning.Credentials.Scoping
   alias Lightning.Projects.Project
   alias Lightning.Repo
 
@@ -194,6 +195,9 @@ defmodule Lightning.Channels do
     changeset = Channel.changeset(%Channel{}, attrs)
 
     Multi.new()
+    |> Multi.run(:credential_scope_check, fn _repo, _changes ->
+      credential_scope_check(changeset)
+    end)
     |> Multi.insert(:channel, changeset)
     |> Multi.run(:audit, fn _repo, %{channel: channel} ->
       case Audit.event("created", channel.id, actor, changeset) do
@@ -208,6 +212,7 @@ defmodule Lightning.Channels do
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
       {:error, :channel, changeset, _} -> {:error, changeset}
+      {:error, :credential_scope_check, changeset, _} -> {:error, changeset}
     end
   end
 
@@ -220,6 +225,9 @@ defmodule Lightning.Channels do
     changeset = Channel.changeset(channel, attrs)
 
     Multi.new()
+    |> Multi.run(:credential_scope_check, fn _repo, _changes ->
+      credential_scope_check(changeset)
+    end)
     |> Multi.update(:channel, changeset, stale_error_field: :lock_version)
     |> Multi.run(:audit, fn _repo, %{channel: updated} ->
       case Audit.event("updated", updated.id, actor, changeset) do
@@ -234,7 +242,92 @@ defmodule Lightning.Channels do
     |> case do
       {:ok, %{channel: channel}} -> {:ok, channel}
       {:error, :channel, changeset, _} -> {:error, changeset}
+      {:error, :credential_scope_check, changeset, _} -> {:error, changeset}
     end
+  end
+
+  defp credential_scope_check(changeset) do
+    project_id = Ecto.Changeset.get_field(changeset, :project_id)
+    dest = Ecto.Changeset.get_change(changeset, :destination_auth_method)
+    clients = Ecto.Changeset.get_change(changeset, :client_auth_methods) || []
+
+    with true <- not is_nil(project_id),
+         refs = destination_refs(dest) ++ client_refs(clients),
+         [_ | _] = violations <-
+           Scoping.out_of_project_references(project_id, refs) do
+      {:error, apply_violations(changeset, dest, clients, violations)}
+    else
+      _ -> {:ok, :ok}
+    end
+  end
+
+  defp destination_refs(%Ecto.Changeset{} = dest) do
+    case Ecto.Changeset.get_field(dest, :project_credential_id) do
+      pc_id when is_binary(pc_id) ->
+        [%{key: :destination, project_credential_id: pc_id}]
+
+      _ ->
+        []
+    end
+  end
+
+  defp destination_refs(_dest), do: []
+
+  # Rows being removed can't introduce a bad reference, and skipping them keeps
+  # a row that is already out of scope deletable rather than wedging the form.
+  defp client_refs(clients) do
+    Enum.flat_map(clients, fn
+      %Ecto.Changeset{action: :delete} ->
+        []
+
+      %Ecto.Changeset{} = client ->
+        case Ecto.Changeset.get_field(client, :webhook_auth_method_id) do
+          wam_id when is_binary(wam_id) ->
+            [%{key: {:client, wam_id}, webhook_auth_method_id: wam_id}]
+
+          _ ->
+            []
+        end
+    end)
+  end
+
+  defp apply_violations(changeset, dest, clients, violations) do
+    {clients, unattached} =
+      Scoping.attach_violations(clients, violations, fn client ->
+        {:client, Ecto.Changeset.get_field(client, :webhook_auth_method_id)}
+      end)
+
+    changeset
+    |> put_client_violations(clients)
+    |> put_destination_violation(dest, unattached)
+    |> Map.put(:valid?, false)
+  end
+
+  defp put_client_violations(changeset, []), do: changeset
+
+  defp put_client_violations(changeset, clients) do
+    Ecto.Changeset.put_change(changeset, :client_auth_methods, clients)
+  end
+
+  defp put_destination_violation(changeset, dest, unattached) do
+    if Enum.any?(unattached, &(&1.key == :destination)) do
+      apply_destination_violation(changeset, dest)
+    else
+      changeset
+    end
+  end
+
+  defp apply_destination_violation(changeset, dest) do
+    dest =
+      Ecto.Changeset.add_error(
+        dest,
+        :project_credential_id,
+        Scoping.violation_message(:project_credential_id)
+      )
+
+    changeset
+    |> Ecto.Changeset.put_change(:destination_auth_method, dest)
+    |> Map.put(:valid?, false)
   end
 
   @doc """

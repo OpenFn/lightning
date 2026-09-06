@@ -254,6 +254,39 @@ defmodule LightningWeb.DataclipControllerTest do
       end)
     end
 
+    # `Policies.Dataclips.authorize/3` asks
+    # `Projects.member_of?(%Project{id: project_id}, user)` about a project it
+    # built from an id, so `scheduled_deletion` is never read. Scheduling
+    # deletion removes no membership rows, so the viewer below is still a
+    # member and still gets the body.
+    test "returns 403 for a :viewer on a project scheduled for deletion", %{
+      conn: conn
+    } do
+      viewer = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: viewer.id, role: :viewer}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.add(7, :day)
+        )
+
+      dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :global,
+          body: %{"secret_looking_thing" => "hunter2"}
+        )
+
+      conn =
+        conn |> log_in_user(viewer) |> get(~p"/dataclip/body/#{dataclip.id}")
+
+      assert conn.status == 403,
+             "expected the dataclip body to be refused on a shut-down project"
+
+      refute conn.resp_body =~ "hunter2",
+             "the dataclip body was served for a project scheduled for deletion"
+    end
+
     test "returns 200 with \"null\" body when the dataclip body is nil", %{
       conn: conn,
       user: user
@@ -368,6 +401,30 @@ defmodule LightningWeb.DataclipControllerTest do
       assert html_response(conn, 401) =~ "Authorization Error"
     end
 
+    test "returns an empty result for a job in another project", %{
+      conn: conn,
+      project: project
+    } do
+      # Authorized on our own project, but the job id belongs to a different
+      # project: the search returns empty, never that project's dataclips, and
+      # indistinguishable from our own job with no dataclips.
+      foreign_job =
+        insert(:job, workflow: insert(:workflow, project: insert(:project)))
+
+      conn = get(conn, ~p"/projects/#{project}/jobs/#{foreign_job}/dataclips")
+
+      assert %{"data" => []} = json_response(conn, 200)
+    end
+
+    test "returns 400 for a malformed job_id (not a 500)", %{
+      conn: conn,
+      project: project
+    } do
+      conn = get(conn, ~p"/projects/#{project}/jobs/not-a-uuid/dataclips")
+
+      assert json_response(conn, 400)
+    end
+
     # NOTE: This test currently fails with an unhandled `ArgumentError` because
     # `String.to_integer/1` in `DataclipController.search/2` is unguarded
     # (lib/lightning_web/controllers/dataclip_controller.ex:136). Once the
@@ -472,6 +529,54 @@ defmodule LightningWeb.DataclipControllerTest do
 
       # Returns 401 because Projects.get_project! raises for unauthorized access
       assert html_response(conn, 401) =~ "Authorization Error"
+    end
+
+    test "returns a null payload for a run in another project", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      # Authorized on our own project, but the run belongs to a different one:
+      # the dataclip body must not leak; the response is a null payload,
+      # indistinguishable from an own run with no dataclip.
+      other_project = insert(:project)
+      other_workflow = insert(:workflow, project: other_project)
+      other_trigger = insert(:trigger, workflow: other_workflow)
+      other_dataclip = insert(:dataclip, project: other_project)
+
+      other_run =
+        insert(:run,
+          work_order:
+            insert(:workorder,
+              workflow: other_workflow,
+              trigger: other_trigger,
+              dataclip: other_dataclip
+            ),
+          dataclip: other_dataclip,
+          starting_trigger: other_trigger
+        )
+
+      conn =
+        get(
+          conn,
+          ~p"/projects/#{project}/runs/#{other_run}/dataclip?job_id=#{job.id}"
+        )
+
+      assert %{"dataclip" => nil, "run_step" => nil} = json_response(conn, 200)
+    end
+
+    test "returns 400 for a malformed run_id (not a 500)", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      conn =
+        get(
+          conn,
+          ~p"/projects/#{project}/runs/not-a-uuid/dataclip?job_id=#{job.id}"
+        )
+
+      assert json_response(conn, 400)
     end
   end
 

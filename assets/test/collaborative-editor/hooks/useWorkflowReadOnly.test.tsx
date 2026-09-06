@@ -699,7 +699,7 @@ describe('useWorkflowReadOnly - Unsaved New Workflow', () => {
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(true);
       expect(result.current.tooltipMessage).toBe(
-        'Click "Create" to edit this workflow'
+        'This workflow has not been saved yet and cannot be edited'
       );
     });
   });

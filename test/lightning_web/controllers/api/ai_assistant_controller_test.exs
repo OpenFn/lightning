@@ -19,7 +19,6 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
         :timeout -> 5_000
-        :streaming_timeout -> 120_000
       end
     end)
 
@@ -62,6 +61,35 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
         get(
           conn,
           ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=123"
+        )
+
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+  end
+
+  describe "list_sessions with an email-confirmation lockout" do
+    setup [:register_and_log_in_user]
+
+    test "returns 401 to a locked-out account", %{conn: conn, user: user} do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      user
+      |> Ecto.Changeset.change(
+        confirmed_at: nil,
+        inserted_at:
+          DateTime.utc_now()
+          |> Timex.shift(hours: -50)
+          |> DateTime.truncate(:second)
+      )
+      |> Lightning.Repo.update!()
+
+      conn =
+        get(
+          conn,
+          ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{Ecto.UUID.generate()}"
         )
 
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
@@ -330,6 +358,63 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
         )
 
       assert json_response(conn, 403) == %{"error" => "Forbidden"}
+    end
+
+    test "returns 403 for a non-owner on a matching session with no workflow_id",
+         %{conn: _conn} do
+      # Matching session with no workflow to authorise against.
+      owner = insert(:user)
+      unsaved_job_id = Ecto.UUID.generate()
+
+      _session =
+        insert(:chat_session,
+          user: owner,
+          session_type: "job_code",
+          job_id: nil,
+          title: "No-workflow unsaved session",
+          meta: %{"unsaved_job" => %{"id" => unsaved_job_id, "name" => "X"}}
+        )
+
+      requester = insert(:user)
+
+      conn =
+        build_conn()
+        |> put_req_header("accept", "application/json")
+        |> log_in_user(requester)
+
+      conn =
+        get(
+          conn,
+          ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{unsaved_job_id}"
+        )
+
+      assert json_response(conn, 403) == %{"error" => "Forbidden"}
+    end
+
+    test "owner can list a matching session with no workflow_id", %{
+      conn: conn,
+      user: user
+    } do
+      unsaved_job_id = Ecto.UUID.generate()
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "job_code",
+          job_id: nil,
+          title: "No-workflow unsaved session",
+          meta: %{"unsaved_job" => %{"id" => unsaved_job_id, "name" => "X"}}
+        )
+
+      conn =
+        get(
+          conn,
+          ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{unsaved_job_id}"
+        )
+
+      response = json_response(conn, 200)
+      assert %{"sessions" => sessions} = response
+      assert Enum.any?(sessions, &(&1["id"] == session.id))
     end
   end
 

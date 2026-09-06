@@ -9,7 +9,13 @@
 // Disabled because we reference navigator.clipboard.writeText in expect() calls
 // which TypeScript sees as an unbound method. This is safe in tests where we're
 // checking if the mocked method was called, not actually calling it.
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -196,11 +202,29 @@ describe('MessageList', () => {
   });
 
   describe('Message Status', () => {
-    it('should show error state for failed messages', () => {
+    it('should show error content in styled box for assistant error with content', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
-          content: 'Failed message',
+          content: 'YAML parse failed: unexpected token',
+          status: 'error',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      // Non-empty content renders inline in a red validation error box
+      expect(screen.getByTestId('ai-validation-error')).toBeInTheDocument();
+      expect(
+        screen.getByText('YAML parse failed: unexpected token')
+      ).toBeInTheDocument();
+    });
+
+    it('should show "Failed to send message" banner for assistant error with no content', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '',
           status: 'error',
         }),
       ];
@@ -378,6 +402,51 @@ describe('MessageList', () => {
       render(<MessageList messages={messages} showAddButtons />);
 
       expect(screen.getByText('Add')).toBeInTheDocument();
+    });
+
+    it('highlights a javascript block with the same palette as the diffs', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '```javascript\nconst x = "hi";\n```',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      // Primer's keyword and string colours, the ones the diff blocks use, so
+      // a reply and the diff below it read as one surface.
+      expect(container.querySelector('.text-\\[\\#cf222e\\]')).not.toBeNull();
+      expect(container.querySelector('.text-\\[\\#0a3069\\]')).not.toBeNull();
+    });
+
+    it('highlights a json block, which is what the assistant actually sends', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '```json\n{ "apiKey": "string" }\n```',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      // Keys take Primer's blue, values its string colour.
+      expect(container.querySelector('.text-\\[\\#0550ae\\]')).not.toBeNull();
+      expect(container.querySelector('.text-\\[\\#0a3069\\]')).not.toBeNull();
+    });
+
+    it('leaves a block it cannot read as plain text', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: '```yaml\napiKey: "string"\n```',
+        }),
+      ];
+
+      const { container } = render(<MessageList messages={messages} />);
+
+      expect(screen.getByText(/apiKey/)).toBeInTheDocument();
+      expect(container.querySelector('.text-\\[\\#cf222e\\]')).toBeNull();
     });
 
     it('should not show Add button when showAddButtons is false', () => {
@@ -790,7 +859,7 @@ describe('MessageList', () => {
       );
 
       expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
+        behavior: 'instant',
         block: 'end',
       });
 
@@ -808,7 +877,7 @@ describe('MessageList', () => {
 
       // Should scroll again with new message
       expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
+        behavior: 'instant',
         block: 'end',
       });
     });
@@ -820,6 +889,965 @@ describe('MessageList', () => {
 
       // Use semantic query via data-testid
       expect(screen.getByTestId('message-list')).toBeInTheDocument();
+    });
+  });
+
+  describe('Global Messages (from_global)', () => {
+    it('renders no YAML panel and no action buttons for global messages', () => {
+      const onApplyWorkflow = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Done.',
+          code: 'name: Test\njobs: {}',
+          from_global: true,
+        }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          onApplyWorkflow={onApplyWorkflow}
+          showApplyButton
+          showAddButtons
+        />
+      );
+
+      // Global changes auto-apply, so the whole Generated Workflow block
+      // disappears — no panel, no Apply/Copy/Preview/Add row. The diff
+      // blocks are the entire representation of the change.
+      expect(screen.queryByText('Generated Workflow')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('expand-code-button')
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText('Apply')).not.toBeInTheDocument();
+      expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add')).not.toBeInTheDocument();
+      // The only Copy left is the message-footer copy, not a code action
+      expect(
+        screen.queryByTestId('apply-workflow-button')
+      ).not.toBeInTheDocument();
+    });
+
+    it('keeps job-code messages unchanged: Preview routes to onPreviewJobCode', async () => {
+      const onPreviewJobCode = vi.fn();
+      const onApplyWorkflow = vi.fn();
+      const onApplyJobCode = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-job',
+          role: 'assistant',
+          code: 'fn(state => state)',
+          job_id: 'job-1',
+        }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          onPreviewJobCode={onPreviewJobCode}
+          onApplyWorkflow={onApplyWorkflow}
+          onApplyJobCode={onApplyJobCode}
+          showApplyButton
+        />
+      );
+
+      expect(screen.getByText('Generated Job Code')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByText('Preview'));
+      expect(onPreviewJobCode).toHaveBeenCalledWith(
+        'fn(state => state)',
+        'msg-job'
+      );
+
+      await userEvent.click(screen.getByText('Apply'));
+      expect(onApplyJobCode).toHaveBeenCalledWith(
+        'fn(state => state)',
+        'msg-job'
+      );
+      expect(onApplyWorkflow).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Workflow Diff Blocks (global messages)', () => {
+    const workflowYaml = (body: string) =>
+      [
+        'id: wf-1',
+        'name: Test Workflow',
+        'jobs:',
+        '  transform-data:',
+        '    id: job-1',
+        '    name: Transform data',
+        "    adaptor: '@openfn/language-common@latest'",
+        '    body: |',
+        `      ${body}`,
+        'triggers:',
+        '  webhook:',
+        '    id: trigger-1',
+        '    type: webhook',
+        '    enabled: true',
+        'edges:',
+        '  webhook->transform-data:',
+        '    id: edge-1',
+        '    source_trigger: webhook',
+        '    target_job: transform-data',
+        '    condition_type: always',
+        '    enabled: true',
+      ].join('\n') + '\n';
+
+    /** Two-step workflow: webhook -> Transform data -> Send to Gmail */
+    const twoStepYaml = (transformBody: string, gmailBody: string) =>
+      [
+        'id: wf-1',
+        'name: Test Workflow',
+        'jobs:',
+        '  transform-data:',
+        '    id: job-1',
+        '    name: Transform data',
+        "    adaptor: '@openfn/language-common@latest'",
+        '    body: |',
+        `      ${transformBody}`,
+        '  send-to-gmail:',
+        '    id: job-2',
+        '    name: Send to Gmail',
+        "    adaptor: '@openfn/language-gmail@latest'",
+        '    body: |',
+        `      ${gmailBody}`,
+        'triggers:',
+        '  webhook:',
+        '    id: trigger-1',
+        '    type: webhook',
+        '    enabled: true',
+        'edges:',
+        '  webhook->transform-data:',
+        '    id: edge-1',
+        '    source_trigger: webhook',
+        '    target_job: transform-data',
+        '    condition_type: always',
+        '    enabled: true',
+        '  transform-data->send-to-gmail:',
+        '    id: edge-2',
+        '    source_job: transform-data',
+        '    target_job: send-to-gmail',
+        '    condition_type: on_job_success',
+        '    enabled: true',
+      ].join('\n') + '\n';
+
+    describe('while the reply is still streaming', () => {
+      const userMessage = (code: string) =>
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Change the transform',
+          code,
+        });
+
+      it('renders the diff as soon as the snapshot lands, before the reply settles', () => {
+        const before = workflowYaml('fn(state => state);');
+        const after = workflowYaml('fn(state => state.data);');
+
+        render(
+          <MessageList
+            messages={[userMessage(before)]}
+            isGlobalAssistantActive
+            streamingSegments={[
+              { type: 'status', content: 'Edited workflow structure' },
+            ]}
+            streamingSnapshots={[{ yaml: after, segmentIndex: 0 }]}
+          />
+        );
+
+        // The blocks used to wait for the persisted message, which is what
+        // made every diff appear at once when the stream ended.
+        expect(screen.getByTestId('streaming-message')).toBeInTheDocument();
+        expect(screen.getByTestId('diff-block-header')).toHaveTextContent(
+          'Updated Transform data'
+        );
+      });
+
+      it('renders each action under the status that announced it', () => {
+        const before = twoStepYaml('fn(s => s);', 'fn(s => s);');
+        const first = twoStepYaml('fn(s => s.data);', 'fn(s => s);');
+        const second = twoStepYaml('fn(s => s.data);', 'fn(s => s.mail);');
+
+        render(
+          <MessageList
+            messages={[userMessage(before)]}
+            isGlobalAssistantActive
+            streamingSegments={[
+              { type: 'status', content: 'Wrote code for "Transform data"' },
+              { type: 'status', content: 'Wrote code for "Send to Gmail"' },
+            ]}
+            streamingSnapshots={[
+              { yaml: first, segmentIndex: 0 },
+              { yaml: second, segmentIndex: 1 },
+            ]}
+          />
+        );
+
+        const groups = screen.getAllByTestId('status-step-diffs');
+        expect(groups).toHaveLength(2);
+        expect(
+          within(groups[0]!).getByTestId('diff-block-header')
+        ).toHaveTextContent('Updated Transform data');
+        expect(
+          within(groups[1]!).getByTestId('diff-block-header')
+        ).toHaveTextContent('Updated Send to Gmail');
+      });
+
+      it('attributes by snapshot, not by name, when the status never names the step', () => {
+        const before = workflowYaml('fn(state => state);');
+        const after = workflowYaml('fn(state => state.data);');
+
+        render(
+          <MessageList
+            messages={[userMessage(before)]}
+            isGlobalAssistantActive
+            streamingSegments={[{ type: 'status', content: 'Made an edit' }]}
+            streamingSnapshots={[{ yaml: after, segmentIndex: 0 }]}
+          />
+        );
+
+        // The old prose-matching path needed the step name in the status
+        // text; the snapshot pairing does not.
+        const group = screen.getByTestId('status-step-diffs');
+        expect(
+          within(group).getByTestId('diff-block-header')
+        ).toHaveTextContent('Updated Transform data');
+      });
+
+      it('holds a snapshot below the timeline until its status arrives', () => {
+        const before = workflowYaml('fn(state => state);');
+        const after = workflowYaml('fn(state => state.data);');
+
+        render(
+          <MessageList
+            messages={[userMessage(before)]}
+            isGlobalAssistantActive
+            streamingSegments={[{ type: 'status', content: 'Planning' }]}
+            streamingSnapshots={[{ yaml: after, segmentIndex: 1 }]}
+          />
+        );
+
+        // Pinned past the last drained segment — render it at the end
+        // rather than dropping it.
+        expect(
+          screen.queryByTestId('status-step-diffs')
+        ).not.toBeInTheDocument();
+        expect(screen.getByTestId('workflow-diff-blocks')).toBeInTheDocument();
+      });
+
+      it('keeps the same blocks when the reply settles with its snapshots', () => {
+        const before = workflowYaml('fn(state => state);');
+        const after = workflowYaml('fn(state => state.data);');
+        const segments = [
+          { type: 'status' as const, content: 'Edited workflow structure' },
+        ];
+
+        const { rerender } = render(
+          <MessageList
+            messages={[userMessage(before)]}
+            isGlobalAssistantActive
+            streamingSegments={segments}
+            streamingSnapshots={[{ yaml: after, segmentIndex: 0 }]}
+          />
+        );
+
+        const streamed = screen.getByTestId('status-step-diffs').innerHTML;
+
+        // The stream ends: the placeholder goes away and the persisted
+        // message arrives carrying the same snapshots.
+        rerender(
+          <MessageList
+            messages={[
+              userMessage(before),
+              createMockAIMessage({
+                id: 'msg-global',
+                role: 'assistant',
+                content: 'Done.',
+                code: after,
+                from_global: true,
+                response_segments: segments,
+              }),
+            ]}
+            isGlobalAssistantActive
+            snapshotsByMessageId={{
+              'msg-global': [{ yaml: after, segmentIndex: 0 }],
+            }}
+          />
+        );
+
+        expect(screen.getByTestId('assistant-message')).toBeInTheDocument();
+        expect(screen.getByTestId('status-step-diffs').innerHTML).toBe(
+          streamed
+        );
+      });
+    });
+
+    it('renders a diff block with header and red/green rows for a changed step', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Change the transform',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Done, I updated the step.',
+          code: workflowYaml('fn(state => state.data);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(screen.getByTestId('workflow-diff-blocks')).toBeInTheDocument();
+      expect(screen.getByTestId('diff-block')).toBeInTheDocument();
+      expect(screen.getByTestId('diff-block-header')).toHaveTextContent(
+        'Updated Transform data'
+      );
+      expect(screen.getByTestId('diff-block-summary')).toHaveTextContent(
+        '+1 -1'
+      );
+
+      // Every block starts expanded, with red/green rows
+      const removed = screen.getByTestId('diff-line-removed');
+      const added = screen.getByTestId('diff-line-added');
+      expect(removed).toHaveTextContent('fn(state => state);');
+      expect(removed).toHaveClass('bg-[#ffebe9]');
+      expect(added).toHaveTextContent('fn(state => state.data);');
+      expect(added).toHaveClass('bg-[#e6ffec]');
+    });
+
+    it('renders a Structure block for edge/trigger changes', () => {
+      const before = workflowYaml('fn(state => state);');
+      const after = before.replace(
+        'type: webhook\n    enabled: true',
+        'type: webhook\n    enabled: false'
+      );
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Disable the trigger',
+          code: before,
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Disabled it.',
+          code: after,
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(screen.getByTestId('structure-block')).toBeInTheDocument();
+      const row = screen.getByTestId('structure-row');
+      expect(row).toHaveTextContent('webhook trigger');
+      expect(row.getAttribute('data-change')).toBe('modify');
+      // No step bodies changed -> no per-step diff blocks
+      expect(screen.queryByTestId('diff-block')).not.toBeInTheDocument();
+    });
+
+    it('renders all-adds diff when the preceding user message has no code', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Build me a workflow',
+          // no code: client had no workflow to serialize
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Here you go.',
+          code: workflowYaml('fn(state => state);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      // Step block plus a Structure block (trigger + edge adds)
+      const headers = screen.getAllByTestId('diff-block-header');
+      expect(headers[0]).toHaveTextContent('Added step Transform data');
+      expect(headers[1]).toHaveTextContent('Structure');
+      const structureRows = screen.getAllByTestId('structure-row');
+      expect(structureRows).toHaveLength(2);
+      structureRows.forEach(row => {
+        expect(row.getAttribute('data-change')).toBe('add');
+      });
+      // Every block starts expanded, add blocks included
+      expect(screen.getByTestId('diff-line-added')).toBeInTheDocument();
+    });
+
+    it('renders nothing when the workflow is unchanged', () => {
+      const yaml = workflowYaml('fn(state => state);');
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Just answer a question',
+          code: yaml,
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'No changes needed.',
+          code: yaml,
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(
+        screen.queryByTestId('workflow-diff-blocks')
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders no diff blocks for non-global assistant messages with code', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Fix my job code',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-job',
+          role: 'assistant',
+          content: 'Here is the code.',
+          code: 'fn(state => state.data);',
+          job_id: 'job-1',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(
+        screen.queryByTestId('workflow-diff-blocks')
+      ).not.toBeInTheDocument();
+    });
+
+    it('opens a changed step in the IDE from its diff block', async () => {
+      const onOpenStep = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Change the transform',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Done.',
+          code: workflowYaml('fn(state => state.data);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} onOpenStep={onOpenStep} />);
+
+      await userEvent.click(screen.getByTestId('diff-block-open-step'));
+
+      // Carries both: the id can be one the parser invented, so the caller
+      // resolves by id first and falls back to the name.
+      expect(onOpenStep).toHaveBeenCalledWith({
+        jobId: 'job-1',
+        name: 'Transform data',
+      });
+    });
+
+    it('offers no link for a removed step, which has nowhere to go', () => {
+      const before = twoStepYaml('fn(s => s);', 'fn(s => s);');
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Drop the second step',
+          code: before,
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Removed it.',
+          code: workflowYaml('fn(s => s);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} onOpenStep={vi.fn()} />);
+
+      const headers = screen
+        .getAllByTestId('diff-block-header')
+        .map(h => h.textContent);
+      expect(headers.some(h => h?.startsWith('Removed step'))).toBe(true);
+      // One block is a removal, so there are fewer links than blocks
+      expect(
+        screen.queryAllByTestId('diff-block-open-step').length
+      ).toBeLessThan(screen.getAllByTestId('diff-block').length);
+    });
+
+    it('says so on the reply when the apply failed, and offers a retry', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Build it',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Done.',
+          code: workflowYaml('fn(state => state.data);'),
+          from_global: true,
+        }),
+      ];
+
+      const onApplyWorkflow = vi.fn();
+
+      const { rerender } = render(
+        <MessageList
+          messages={messages}
+          showApplyButton
+          onApplyWorkflow={onApplyWorkflow}
+        />
+      );
+      expect(screen.queryByTestId('ai-apply-failed')).not.toBeInTheDocument();
+
+      rerender(
+        <MessageList
+          messages={messages}
+          showApplyButton
+          onApplyWorkflow={onApplyWorkflow}
+          failedApplyMessageIds={new Set(['msg-global'])}
+        />
+      );
+
+      // The diff blocks read as a record of what changed, so a reply whose
+      // apply was rejected has to say so where they are.
+      expect(screen.getByTestId('ai-apply-failed')).toBeInTheDocument();
+      // And the recovery is the same import, not the raw YAML panel the
+      // global assistant deliberately does without.
+      expect(
+        screen.queryByTestId('apply-workflow-button')
+      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId('generated-code')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+      expect(onApplyWorkflow).toHaveBeenCalledWith(
+        messages[1]!.code,
+        'msg-global'
+      );
+    });
+
+    it('renders no diff blocks for a global reply that errored', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Change it',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Something went wrong.',
+          code: workflowYaml('fn(state => state.data);'),
+          from_global: true,
+          status: 'error',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      // Only a successful reply was applied. Blocks here would present
+      // changes that never reached the canvas as a record of what happened.
+      expect(
+        screen.queryByTestId('workflow-diff-blocks')
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows no link when navigation is not wired up', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Change it',
+          code: workflowYaml('fn(state => state);'),
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Done.',
+          code: workflowYaml('fn(state => state.data);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(
+        screen.queryByTestId('diff-block-open-step')
+      ).not.toBeInTheDocument();
+    });
+
+    it('collapses an expanded add block on toggle click', async () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-user',
+          role: 'user',
+          content: 'Build me a workflow',
+        }),
+        createMockAIMessage({
+          id: 'msg-global',
+          role: 'assistant',
+          content: 'Here you go.',
+          code: workflowYaml('fn(state => state);'),
+          from_global: true,
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      // Blocks start expanded, so the toggle collapses rather than expands
+      expect(screen.getByTestId('diff-line-added')).toHaveTextContent(
+        'fn(state => state);'
+      );
+
+      const toggles = screen.getAllByTestId('diff-block-toggle');
+      // First toggle belongs to the Add step block
+      await userEvent.click(toggles[0]!);
+      expect(screen.queryByTestId('diff-line-added')).not.toBeInTheDocument();
+    });
+
+    describe('interleaved with response segments', () => {
+      it('renders both mentioned step diffs right after the write status row, not at the end', () => {
+        const messages = [
+          createMockAIMessage({
+            id: 'msg-user',
+            role: 'user',
+            content: 'Update both steps',
+            code: twoStepYaml('fn(state => state);', 'sendEmail();'),
+          }),
+          createMockAIMessage({
+            id: 'msg-global',
+            role: 'assistant',
+            content: 'All done.',
+            code: twoStepYaml('fn(state => state.data);', 'sendEmail(body);'),
+            from_global: true,
+            response_segments: [
+              { type: 'text', content: 'Let me update those steps.' },
+              {
+                type: 'status',
+                content: 'Wrote code for "Transform data", "Send to Gmail"',
+                summary: 'Wrote code for 2 steps',
+                steps: [
+                  { key: 'transform-data', name: 'Transform data' },
+                  { key: 'send-to-gmail', name: 'Send to Gmail' },
+                ],
+              },
+              { type: 'text', content: 'All done.' },
+            ],
+          }),
+        ];
+
+        render(<MessageList messages={messages} />);
+
+        // Both diffs live in the inline container after the status row
+        const inline = screen.getByTestId('status-step-diffs');
+        const headers = within(inline).getAllByTestId('diff-block-header');
+        expect(headers).toHaveLength(2);
+        expect(headers[0]).toHaveTextContent('Updated Transform data');
+        expect(headers[1]).toHaveTextContent('Updated Send to Gmail');
+
+        // ...immediately after the status row that announced the writes
+        const statusRow = screen.getByTestId('settled-status');
+        expect(statusRow.nextElementSibling).toBe(inline);
+
+        // Nothing left over for the end of the message
+        expect(
+          screen.queryByTestId('workflow-diff-blocks')
+        ).not.toBeInTheDocument();
+      });
+
+      it('does not attach diffs to read-only statuses like "Read code for X"', () => {
+        const messages = [
+          createMockAIMessage({
+            id: 'msg-user',
+            role: 'user',
+            content: 'Update the transform',
+            code: twoStepYaml('fn(state => state);', 'sendEmail();'),
+          }),
+          createMockAIMessage({
+            id: 'msg-global',
+            role: 'assistant',
+            content: 'Done.',
+            code: twoStepYaml('fn(state => state.data);', 'sendEmail();'),
+            from_global: true,
+            response_segments: [
+              { type: 'status', content: 'Read code for "Transform data"' },
+              { type: 'text', content: 'Done.' },
+            ],
+          }),
+        ];
+
+        render(<MessageList messages={messages} />);
+
+        // The read status attracts nothing; the diff falls to the end
+        expect(
+          screen.queryByTestId('status-step-diffs')
+        ).not.toBeInTheDocument();
+        const tail = screen.getByTestId('workflow-diff-blocks');
+        expect(within(tail).getByTestId('diff-block-header')).toHaveTextContent(
+          'Updated Transform data'
+        );
+      });
+
+      it('renders diffs no status mentioned at the end of the message', () => {
+        const messages = [
+          createMockAIMessage({
+            id: 'msg-user',
+            role: 'user',
+            content: 'Update both steps',
+            code: twoStepYaml('fn(state => state);', 'sendEmail();'),
+          }),
+          createMockAIMessage({
+            id: 'msg-global',
+            role: 'assistant',
+            content: 'Done.',
+            code: twoStepYaml('fn(state => state.data);', 'sendEmail(body);'),
+            from_global: true,
+            response_segments: [
+              {
+                type: 'status',
+                content: 'Wrote code for "Transform data"',
+                steps: [{ key: 'transform-data', name: 'Transform data' }],
+              },
+              { type: 'text', content: 'Done.' },
+            ],
+          }),
+        ];
+
+        render(<MessageList messages={messages} />);
+
+        // Mentioned step renders inline...
+        const inline = screen.getByTestId('status-step-diffs');
+        expect(
+          within(inline).getByTestId('diff-block-header')
+        ).toHaveTextContent('Updated Transform data');
+
+        // ...the unmentioned one falls to the end
+        const tail = screen.getByTestId('workflow-diff-blocks');
+        expect(within(tail).getByTestId('diff-block-header')).toHaveTextContent(
+          'Updated Send to Gmail'
+        );
+      });
+    });
+
+    it('keeps the Generated Workflow panel for non-global assistant messages', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'msg-template',
+          role: 'assistant',
+          content: 'Here is a workflow.',
+          code: workflowYaml('fn(state => state);'),
+          // no from_global: workflow-template chat message
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(screen.getByText('Generated Workflow')).toBeInTheDocument();
+      expect(screen.getByTestId('expand-code-button')).toBeInTheDocument();
+      // No diff blocks either — this is not a global reply
+      expect(
+        screen.queryByTestId('workflow-diff-blocks')
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Response Segments Timeline', () => {
+    it('renders text blocks and settled status rows in segment order', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'assistant',
+          content: 'Final answer',
+          response_segments: [
+            { type: 'text', content: 'Adding a step first.' },
+            { type: 'status', content: 'Adding step send-to-gmail...' },
+            { type: 'text', content: 'Final answer' },
+            { type: 'status', content: 'Validating workflow...' },
+          ],
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      const assistantMessage = screen.getByTestId('assistant-message');
+
+      // Statuses render settled: italic gray rows, no bouncing dots
+      const statusRows = screen.getAllByTestId('settled-status');
+      expect(statusRows).toHaveLength(2);
+      expect(statusRows[0]).toHaveTextContent('Adding step send-to-gmail...');
+      expect(statusRows[1]).toHaveTextContent('Validating workflow...');
+      statusRows.forEach(row => {
+        expect(row.querySelector('.animate-bounce')).not.toBeInTheDocument();
+        expect(row.querySelector('.italic')).toBeInTheDocument();
+      });
+
+      // Both text segments render (not the joined flat content once)
+      expect(screen.getByText('Adding a step first.')).toBeInTheDocument();
+      expect(screen.getByText('Final answer')).toBeInTheDocument();
+
+      // DOM order matches segment order: text, status, text, status
+      const textContent = assistantMessage.textContent ?? '';
+      expect(textContent.indexOf('Adding a step first.')).toBeLessThan(
+        textContent.indexOf('Adding step send-to-gmail...')
+      );
+      expect(textContent.indexOf('Adding step send-to-gmail...')).toBeLessThan(
+        textContent.indexOf('Final answer')
+      );
+      expect(textContent.indexOf('Final answer')).toBeLessThan(
+        textContent.indexOf('Validating workflow...')
+      );
+    });
+
+    it('renders flat content when response_segments is absent or empty', () => {
+      const messages = [
+        createMockAIMessage({
+          id: '1',
+          role: 'assistant',
+          content: 'Legacy flat message',
+        }),
+        createMockAIMessage({
+          id: '2',
+          role: 'assistant',
+          content: 'Empty segments message',
+          response_segments: [],
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(screen.getByText('Legacy flat message')).toBeInTheDocument();
+      expect(screen.getByText('Empty segments message')).toBeInTheDocument();
+      expect(screen.queryByTestId('settled-status')).not.toBeInTheDocument();
+    });
+
+    it('settles timeline statuses with ticks and shows the thinking scalar with dots (global active)', () => {
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      const { rerender } = render(
+        <MessageList
+          messages={messages}
+          isLoading
+          isGlobalAssistantActive
+          streamingContent="Answer"
+          streamingStatus="Writing the next step..."
+          streamingSegments={[
+            { type: 'status', content: 'Edited workflow structure' },
+            { type: 'text', content: 'Answer' },
+            { type: 'status', content: 'Added step send-to-gmail' },
+          ]}
+        />
+      );
+
+      // Timeline statuses are completed actions: settled + tick, even the
+      // trailing one, even mid-stream.
+      const settled = screen.getAllByTestId('settled-status');
+      expect(settled).toHaveLength(2);
+      for (const row of settled) {
+        expect(row.querySelector('.animate-bounce')).not.toBeInTheDocument();
+        expect(row.querySelector('.hero-check-micro')).toBeInTheDocument();
+      }
+
+      // The transient thinking status renders below with dots.
+      const thinking = screen.getByTestId('streaming-status');
+      expect(thinking).toHaveTextContent('Writing the next step...');
+      expect(thinking.querySelectorAll('.animate-bounce')).toHaveLength(3);
+
+      // No thinking scalar → no dots row at all.
+      rerender(
+        <MessageList
+          messages={messages}
+          isLoading
+          isGlobalAssistantActive
+          streamingContent="Answer"
+          streamingStatus={null}
+          streamingSegments={[
+            { type: 'status', content: 'Edited workflow structure' },
+            { type: 'text', content: 'Answer' },
+          ]}
+        />
+      );
+      expect(screen.queryByTestId('streaming-status')).not.toBeInTheDocument();
+      expect(screen.getByTestId('settled-status')).toHaveTextContent(
+        'Edited workflow structure'
+      );
+    });
+
+    it('shows a leading status segment before any text has streamed', () => {
+      // Apollo can complete an action (and emit its status) before the
+      // first text chunk arrives; the streaming placeholder must render
+      // from segments alone.
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          isLoading
+          isGlobalAssistantActive
+          streamingContent={null}
+          streamingStatus={null}
+          streamingSegments={[
+            { type: 'status', content: 'Edited workflow structure' },
+          ]}
+        />
+      );
+
+      expect(screen.getByTestId('streaming-message')).toBeInTheDocument();
+      expect(screen.getByTestId('settled-status')).toHaveTextContent(
+        'Edited workflow structure'
+      );
+    });
+
+    it('keeps flat streaming rendering when the global assistant is not active', () => {
+      const messages = [
+        createMockAIMessage({ role: 'user', content: 'Question' }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          isLoading
+          streamingContent="Flat answer"
+          streamingStatus="Generating code..."
+          streamingSegments={[
+            { type: 'text', content: 'Flat answer' },
+            { type: 'status', content: 'Generating code...' },
+          ]}
+        />
+      );
+
+      // Flat content + single scalar status row, no woven timeline
+      expect(screen.getByText('Flat answer')).toBeInTheDocument();
+      expect(screen.queryByTestId('settled-status')).not.toBeInTheDocument();
+      const status = screen.getByTestId('streaming-status');
+      expect(status).toHaveTextContent('Generating code...');
+      expect(status.querySelectorAll('.animate-bounce')).toHaveLength(3);
     });
   });
 

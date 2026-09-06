@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+#
+# repeat_mix_test — run `mix test` N times in the Lightning project, capturing
+# each run's combined stdout+stderr to a dated log. Surfaces first-run flakes by
+# repetition. Unlike bin/ci_tests it does NOT retry failed tests in-run — the
+# whole point is to see the raw first-run result every time.
+#
+# Usage:
+#   bin/repeat_mix_test [N] [test paths...]   # N defaults to 1 (safety)
+#   CI_TIMING=1 bin/repeat_mix_test 11         # full suite, CI scheduler/timing
+#   bin/repeat_mix_test 30 test/foo_test.exs   # loop just these files
+#
+# CI_TIMING=1 exports the same knobs CircleCI uses (.circleci/config.yml):
+#   ERL_FLAGS="+S 4:4"  (cap schedulers — CI runs less parallel than a dev box)
+#   ASSERT_RECEIVE_TIMEOUT="1000"
+# Use it to try to reproduce CI-only flakes locally.
+#
+# Output: .scratch/runs/<session-stamp>/
+#   run-NN-<stamp>.log   full combined output of each run
+#   summary.tsv          run, exit, seed, tests, failures, duration_s, log
+#
+set -uo pipefail
+
+N="${1:-1}"
+shift || true
+TARGETS=("$@")
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(git -C "$HERE" rev-parse --show-toplevel)"
+RUNS_ROOT="$PROJECT_ROOT/.scratch/runs"
+
+stamp() { date +%Y%m%dT%H%M%S; }
+
+SESSION="$(stamp)"
+SESSION_DIR="$RUNS_ROOT/$SESSION"
+mkdir -p "$SESSION_DIR"
+SUMMARY="$SESSION_DIR/summary.tsv"
+printf 'run\texit\tseed\ttests\tfailures\tduration_s\tlog\n' > "$SUMMARY"
+
+# Namespaces the test DB (config/test.exs:40 suffixes TEST_DATABASE_NAME with it),
+# so long repeat loops can't collide with another worktree or session using
+# lightning_test. The `test` alias (mix.exs:226) creates it on first run.
+export MIX_TEST_PARTITION="${MIX_TEST_PARTITION:-flaky}"
+
+if [ "${CI_TIMING:-0}" = "1" ]; then
+  export ERL_FLAGS="+S 4:4"
+  export ASSERT_RECEIVE_TIMEOUT="1000"
+fi
+
+cd "$PROJECT_ROOT" || { echo "cannot cd to $PROJECT_ROOT" >&2; exit 1; }
+
+echo "repeat_mix_test: N=$N  session=$SESSION  ci_timing=${CI_TIMING:-0}  db=lightning_test${MIX_TEST_PARTITION}  targets=${TARGETS[*]:-<full suite>}"
+echo "logs -> $SESSION_DIR"
+
+for i in $(seq 1 "$N"); do
+  RUN=$(printf '%02d' "$i")
+  RSTAMP="$(stamp)"
+  LOG="$SESSION_DIR/run-${RUN}-${RSTAMP}.log"
+  START=$(date +%s)
+  echo "=== run $i/$N @ $RSTAMP (ci_timing=${CI_TIMING:-0}) ===" | tee "$LOG"
+  MIX_ENV=test mix test "${TARGETS[@]}" >>"$LOG" 2>&1
+  EC=$?
+  END=$(date +%s)
+  DUR=$((END - START))
+  SEED=$(grep -oE 'seed: [0-9]+' "$LOG" | head -1 | grep -oE '[0-9]+')
+  LINE=$(grep -oE '[0-9]+ tests?, [0-9]+ failures?' "$LOG" | tail -1)
+  TESTS=$(echo "$LINE" | grep -oE '^[0-9]+')
+  FAILS=$(echo "$LINE" | grep -oE '[0-9]+ failures?' | grep -oE '[0-9]+')
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$i" "$EC" "${SEED:-?}" "${TESTS:-?}" "${FAILS:-0}" "$DUR" "$(basename "$LOG")" >> "$SUMMARY"
+  echo "  -> exit=$EC seed=${SEED:-?} ${LINE:-(no summary line)} ${DUR}s"
+done
+
+echo "=== done. summary: $SUMMARY ==="
+cat "$SUMMARY"

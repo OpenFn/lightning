@@ -23,10 +23,11 @@ vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   notifications: {
     alert: vi.fn(),
     success: vi.fn(),
+    dismiss: vi.fn(),
   },
 }));
 
-describe('useAIWorkflowApplications - Job Code', () => {
+describe('useAIWorkflowApplications - job code', () => {
   // Mock functions
   const mockImportWorkflow = vi.fn();
   const mockStartApplyingWorkflow = vi.fn(() => Promise.resolve(true));
@@ -39,6 +40,14 @@ describe('useAIWorkflowApplications - Job Code', () => {
   const mockClearDiff = vi.fn();
   const mockShowDiff = vi.fn();
 
+  const mockSaveWorkflow = vi.fn(() => Promise.resolve());
+
+  const mockStreamingApplyActions = {
+    set: vi.fn(),
+    setSaveFailed: vi.fn(),
+    clear: vi.fn(),
+  };
+
   const mockWorkflowActions = {
     importWorkflow: mockImportWorkflow,
     startApplyingWorkflow: mockStartApplyingWorkflow,
@@ -46,6 +55,7 @@ describe('useAIWorkflowApplications - Job Code', () => {
     startApplyingJobCode: mockStartApplyingJobCode,
     doneApplyingJobCode: mockDoneApplyingJobCode,
     updateJob: mockUpdateJob,
+    saveWorkflow: mockSaveWorkflow,
   };
 
   const createMockMonacoRef = () => ({
@@ -97,7 +107,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -125,7 +140,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -153,7 +173,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: 'msg-1', // Already previewing
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -182,7 +207,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: 'msg-1', // Existing preview
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -208,7 +238,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -238,7 +273,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -268,7 +308,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -301,7 +346,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -328,7 +378,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: 'msg-1',
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -356,7 +411,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -384,7 +444,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 
@@ -416,7 +481,12 @@ describe('useAIWorkflowApplications - Job Code', () => {
           setPreviewingMessageId: mockSetPreviewingMessageId,
           previewingMessageId: null,
           setApplyingMessageId: mockSetApplyingMessageId,
+          isNewWorkflow: false,
+          isSessionConnected: true,
+          isSessionConnecting: false,
           appliedMessageIdsRef: { current: new Set() },
+          streamingApply: null,
+          streamingApplyActions: mockStreamingApplyActions,
         })
       );
 

@@ -364,6 +364,223 @@ describe('createAIAssistantStore', () => {
     });
   });
 
+  describe('Streaming Segments', () => {
+    it('stacks status segments and opens a new text segment after a status', () => {
+      store._appendStreamingChunk('First ');
+      store._appendStreamingChunk('answer');
+      store._appendStreamingSegment({
+        type: 'status',
+        content: 'Edited workflow structure',
+      });
+      store._appendStreamingSegment({
+        type: 'status',
+        content: 'Added step send-to-gmail',
+      });
+      store._appendStreamingChunk('Done');
+
+      // Every status segment is a completed action from Apollo's dedicated
+      // status event — they all persist, in wire order, no collapsing.
+      expect(store.getSnapshot().streamingSegments).toEqual([
+        { type: 'text', content: 'First answer' },
+        { type: 'status', content: 'Edited workflow structure' },
+        { type: 'status', content: 'Added step send-to-gmail' },
+        { type: 'text', content: 'Done' },
+      ]);
+    });
+
+    it('keeps a leading status segment when text starts', () => {
+      store._appendStreamingSegment({
+        type: 'status',
+        content: 'Edited workflow structure',
+      });
+      store._appendStreamingChunk('Answer');
+
+      expect(store.getSnapshot().streamingSegments).toEqual([
+        { type: 'status', content: 'Edited workflow structure' },
+        { type: 'text', content: 'Answer' },
+      ]);
+    });
+
+    it('survives scalar-status clearing (setStreamingStatus and streaming changes)', () => {
+      store._appendStreamingChunk('Answer');
+      store._appendStreamingSegment({ type: 'status', content: 'Working...' });
+
+      store.setStreamingStatus(null);
+      store._setStreamingChanges({ code: 'fn(s => s)' });
+
+      expect(store.getSnapshot().streamingSegments).toEqual([
+        { type: 'text', content: 'Answer' },
+        { type: 'status', content: 'Working...' },
+      ]);
+    });
+
+    it('resets when the final assistant message lands', () => {
+      store._appendStreamingChunk('Answer');
+      store._appendStreamingSegment({ type: 'status', content: 'Working...' });
+
+      store._addMessage(
+        createMockAIMessage({ role: 'assistant', status: 'success' })
+      );
+
+      expect(store.getSnapshot().streamingSegments).toEqual([]);
+    });
+
+    it('resets on message error', () => {
+      const message = createMockAIMessage({
+        role: 'assistant',
+        status: 'processing',
+      });
+      store._addMessage(message);
+      store._appendStreamingChunk('Answer');
+      store._appendStreamingSegment({ type: 'status', content: 'Working...' });
+
+      store._updateMessageStatus(message.id, 'error');
+
+      expect(store.getSnapshot().streamingSegments).toEqual([]);
+    });
+
+    it('resets on clearSession and disconnect', () => {
+      store._appendStreamingChunk('Answer');
+      store.clearSession();
+      expect(store.getSnapshot().streamingSegments).toEqual([]);
+
+      store._appendStreamingChunk('Answer again');
+      store.disconnect();
+      expect(store.getSnapshot().streamingSegments).toEqual([]);
+    });
+  });
+
+  describe('Streaming Snapshots', () => {
+    it('pins each snapshot to the segment index its status will occupy', () => {
+      store._appendStreamingSegment({ type: 'status', content: 'Planned' });
+      store._appendStreamingSnapshot('yaml-a');
+      store._appendStreamingSegment({ type: 'status', content: 'Edited' });
+      store._appendStreamingSnapshot('yaml-b');
+      store._appendStreamingSegment({ type: 'status', content: 'Wrote code' });
+
+      // Apollo sends the snapshot immediately before the status describing
+      // it, so the pinned index is the index of that status.
+      expect(store.getSnapshot().streamingSnapshots).toEqual([
+        { yaml: 'yaml-a', segmentIndex: 1 },
+        { yaml: 'yaml-b', segmentIndex: 2 },
+      ]);
+    });
+
+    it('collapses a repeated snapshot so no empty diff hangs off a status', () => {
+      store._appendStreamingSnapshot('yaml-a');
+      store._appendStreamingSegment({ type: 'status', content: 'Edited' });
+      store._appendStreamingSnapshot('yaml-a');
+
+      expect(store.getSnapshot().streamingSnapshots).toEqual([
+        { yaml: 'yaml-a', segmentIndex: 0 },
+      ]);
+    });
+
+    it('hands the snapshots to the assistant message id when the reply settles', () => {
+      store._appendStreamingSnapshot('yaml-a');
+      store._appendStreamingSegment({ type: 'status', content: 'Edited' });
+
+      store._addMessage(
+        createMockAIMessage({
+          id: 'assistant-1',
+          role: 'assistant',
+          status: 'success',
+          response_segments: [{ type: 'status', content: 'Edited' }],
+        })
+      );
+
+      const state = store.getSnapshot();
+      // The server only names the message at new_message, so the live
+      // stream cannot record under that id itself.
+      expect(state.snapshotsByMessageId['assistant-1']).toEqual([
+        { yaml: 'yaml-a', segmentIndex: 0 },
+      ]);
+      expect(state.streamingSnapshots).toEqual([]);
+    });
+
+    it('drops the snapshots when the server timeline is a different length', () => {
+      store._appendStreamingSnapshot('yaml-a');
+      store._appendStreamingSegment({ type: 'status', content: 'Edited' });
+      store._appendStreamingSegment({ type: 'status', content: 'Wrote code' });
+
+      // The server dropped or truncated a segment, so the pinned indices no
+      // longer name the same statuses; showing them would put blocks under
+      // the wrong rows.
+      store._addMessage(
+        createMockAIMessage({
+          id: 'assistant-3',
+          role: 'assistant',
+          status: 'success',
+          response_segments: [{ type: 'status', content: 'Edited' }],
+        })
+      );
+
+      expect(store.getSnapshot().snapshotsByMessageId).toEqual({});
+    });
+
+    it('records nothing for a message that streamed no snapshots', () => {
+      store._addMessage(
+        createMockAIMessage({
+          id: 'assistant-2',
+          role: 'assistant',
+          status: 'success',
+        })
+      );
+
+      expect(store.getSnapshot().snapshotsByMessageId).toEqual({});
+    });
+
+    it('drops the snapshots when a stream errors out', () => {
+      store._appendStreamingSnapshot('yaml-a');
+
+      store._clearStreaming();
+
+      expect(store.getSnapshot().streamingSnapshots).toEqual([]);
+    });
+  });
+
+  describe('Streaming Apply', () => {
+    it('records, flags, and clears the streaming apply lifecycle', () => {
+      store._setStreamingApply('name: Test');
+      expect(store.getSnapshot().streamingApply).toEqual({
+        yaml: 'name: Test',
+        saveFailed: false,
+      });
+
+      store._setStreamingApplySaveFailed(true);
+      expect(store.getSnapshot().streamingApply?.saveFailed).toBe(true);
+
+      store._setStreamingApplySaveFailed(false);
+      expect(store.getSnapshot().streamingApply?.saveFailed).toBe(false);
+
+      store._clearStreamingApply();
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+
+    it('ignores saveFailed updates when no streaming apply is pending', () => {
+      store._setStreamingApplySaveFailed(true);
+
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+
+    it('is cleared on session change but survives stream-end and disconnect', () => {
+      // The final new_message may arrive after the stream ends or after a
+      // reconnect — the record must survive both so the duplicate import
+      // can still be skipped.
+      store._setStreamingApply('name: Test');
+      store._clearStreaming();
+      store.disconnect();
+      expect(store.getSnapshot().streamingApply).not.toBeNull();
+
+      store.loadSession('session-2');
+      expect(store.getSnapshot().streamingApply).toBeNull();
+
+      store._setStreamingApply('name: Test 2');
+      store.clearSession();
+      expect(store.getSnapshot().streamingApply).toBeNull();
+    });
+  });
+
   describe('State Subscriptions', () => {
     it('should notify subscribers on state changes', () => {
       const subscriber = vi.fn();

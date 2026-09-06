@@ -30,6 +30,18 @@ function defaultSelector(state: SessionState): SessionState {
   return state;
 }
 
+// Stable selector reference — passing a fresh arrow function on every render
+// defeats useSession's memoized-selector cache (see useSyncExternalStore call
+// below).
+export const selectIsConnected = (state: SessionState): boolean =>
+  state.isConnected;
+
+// True only during the initial channel-join window, distinct from a genuine
+// disconnect. Lets "not connected yet" gates avoid rejecting an action that
+// would succeed moments later once the join completes.
+export const selectIsConnecting = (state: SessionState): boolean =>
+  state.lastStatus === 'connecting';
+
 export function useSession(): SessionState;
 export function useSession<T>(
   selector: (state: SessionState) => T,

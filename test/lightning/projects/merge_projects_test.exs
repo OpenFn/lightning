@@ -2176,76 +2176,25 @@ defmodule Lightning.Projects.MergeProjectsTest do
     end
 
     test "preserves webhook trigger custom_path" do
+      # `custom_path` is namespaced per project, so the source's name comes
+      # across rather than being dropped or left as the target's.
       {source, _source_elements} =
         generate_workflow([:webhook], %{
-          triggers: %{
-            :webhook => %{custom_path: "/custom/webhook/path"}
-          }
+          webhook: %{custom_path: "source-webhook-path"}
         })
 
       {target, _target_elements} =
         generate_workflow([:webhook], %{
-          triggers: %{
-            :webhook => %{custom_path: "/different/path"}
-          }
+          webhook: %{custom_path: "different-path"}
         })
 
-      result = MergeProjects.merge_workflow(source, target)
-
-      result_trigger = hd(result["triggers"])
-      source_trigger = hd(source.triggers)
-      assert result_trigger["custom_path"] == source_trigger.custom_path
-    end
-
-    test "preserves kafka trigger configuration" do
-      # Test that kafka trigger configuration is preserved from source
-      source_kafka_config = %{
-        "hosts" => ["localhost:9092"],
-        "topic" => "source_topic",
-        "partition" => 0
-      }
-
-      source_trigger =
-        build(:trigger,
-          type: :kafka,
-          kafka_configuration: source_kafka_config
-        )
-
-      source =
-        build(:workflow)
-        |> with_trigger(source_trigger)
-        |> insert()
-
-      target_kafka_config = %{
-        "hosts" => ["different:9092"],
-        "topic" => "target_topic",
-        "partition" => 1
-      }
-
-      target_trigger =
-        build(:trigger,
-          type: :kafka,
-          kafka_configuration: target_kafka_config
-        )
-
-      target =
-        build(:workflow)
-        |> with_trigger(target_trigger)
-        |> insert()
+      assert hd(source.triggers).custom_path == "source-webhook-path"
+      assert hd(target.triggers).custom_path == "different-path"
 
       result = MergeProjects.merge_workflow(source, target)
 
       result_trigger = hd(result["triggers"])
-      # Kafka configuration should contain the source values (as a struct)
-      kafka_config = result_trigger["kafka_configuration"]
-
-      # The kafka_configuration appears to be a mix of struct fields and map values
-      # Check that the source values are preserved in the map part
-      assert Map.get(kafka_config, "hosts") == source_kafka_config["hosts"]
-      assert Map.get(kafka_config, "topic") == source_kafka_config["topic"]
-
-      assert Map.get(kafka_config, "partition") ==
-               source_kafka_config["partition"]
+      assert result_trigger["custom_path"] == "source-webhook-path"
     end
 
     test "preserves attributes with multiple triggers feeding same job" do

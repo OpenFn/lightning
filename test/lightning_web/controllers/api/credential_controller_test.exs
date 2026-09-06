@@ -239,6 +239,84 @@ defmodule LightningWeb.API.CredentialControllerTest do
       end)
     end
 
+    test "does not disclose sibling projects the caller is not a member of", %{
+      conn: conn,
+      user: user
+    } do
+      project_a =
+        insert(:project,
+          name: "project-a",
+          project_users: [%{user_id: user.id, role: :viewer}]
+        )
+
+      # A different tenant's project the caller has no membership in.
+      other_project = insert(:project, name: "other-tenant-secret")
+
+      owner = insert(:user)
+
+      _shared_credential =
+        insert(:credential,
+          user: owner,
+          name: "Shared Credential",
+          schema: "raw",
+          project_credentials: [
+            %{project_id: project_a.id},
+            %{project_id: other_project.id}
+          ]
+        )
+
+      conn = get(conn, ~p"/api/projects/#{project_a.id}/credentials")
+
+      assert %{"credentials" => [credential]} = json_response(conn, 200)
+
+      rendered_project_ids = Enum.map(credential["projects"], & &1["id"])
+      assert project_a.id in rendered_project_ids
+      refute other_project.id in rendered_project_ids
+
+      refute Enum.any?(
+               credential["projects"],
+               &(&1["name"] == "other-tenant-secret")
+             )
+
+      # The sibling project's UUID must not leak via project_credentials either.
+      pc_project_ids =
+        Enum.map(credential["project_credentials"], & &1["project_id"])
+
+      assert project_a.id in pc_project_ids
+      refute other_project.id in pc_project_ids
+    end
+
+    test "shows the caller's own association when the project is a sandbox", %{
+      conn: conn,
+      user: user
+    } do
+      root = insert(:project)
+
+      sandbox =
+        insert(:project,
+          parent: root,
+          project_users: [%{user_id: user.id, role: :viewer}]
+        )
+
+      owner = insert(:user)
+
+      _credential =
+        insert(:credential,
+          user: owner,
+          name: "Sandbox Credential",
+          schema: "raw",
+          project_credentials: [%{project_id: sandbox.id}]
+        )
+
+      conn = get(conn, ~p"/api/projects/#{sandbox.id}/credentials")
+
+      assert %{"credentials" => [credential]} = json_response(conn, 200)
+      assert Enum.map(credential["projects"], & &1["id"]) == [sandbox.id]
+
+      assert Enum.map(credential["project_credentials"], & &1["project_id"]) ==
+               [sandbox.id]
+    end
+
     test "returns 403 when user lacks access to project", %{
       conn: conn,
       user: _user
@@ -329,6 +407,45 @@ defmodule LightningWeb.API.CredentialControllerTest do
 
   describe "create" do
     setup [:assign_bearer_for_api]
+
+    test "refuses a repo connection token instead of crashing", %{conn: conn} do
+      # `require_authenticated_api_resource` lets these through the pipeline,
+      # and a credential belongs to a person, so there is no sensible owner to
+      # give it. It used to fall over on the user association and come back a
+      # 422; it must not become a 500 now that the actor is threaded through.
+      repo_connection =
+        insert(:project_repo_connection, project: insert(:project))
+
+      conn =
+        Plug.Conn.put_req_header(
+          conn,
+          "authorization",
+          "Bearer #{repo_connection.access_token}"
+        )
+
+      assert conn
+             |> post(~p"/api/credentials", %{
+               "name" => "Planted",
+               "schema" => "raw",
+               "credential_bodies" => [
+                 %{"name" => "main", "body" => %{"a" => "b"}}
+               ]
+             })
+             |> json_response(403)
+
+      refute Lightning.Repo.get_by(Lightning.Credentials.Credential,
+               name: "Planted"
+             )
+
+      # Listing crashed the same way, for the same reason, on both routes.
+      assert conn |> get(~p"/api/credentials") |> json_response(403)
+
+      project = insert(:project)
+
+      assert conn
+             |> get(~p"/api/projects/#{project.id}/credentials")
+             |> json_response(403)
+    end
 
     test "creates a basic credential without project associations", %{
       conn: conn,

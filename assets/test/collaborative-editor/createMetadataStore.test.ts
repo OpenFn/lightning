@@ -201,7 +201,9 @@ describe('createMetadataStore', () => {
         const jobState = state.jobs.get('job-789');
 
         expect(jobState?.metadata).toBeNull();
-        expect(jobState?.error).toContain('Channel request failed');
+        // The server's own message, not a placeholder: ChannelRequestError
+        // formats the error payload at construction.
+        expect(jobState?.error).toContain('Connection failed');
         expect(jobState?.isLoading).toBe(false);
       }
     );

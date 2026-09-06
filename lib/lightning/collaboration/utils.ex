@@ -68,6 +68,27 @@ defmodule Lightning.Collaboration.Utils do
     end
   end
 
+  @doc """
+  Classifies a Yjs protocol message by type without decoding its payload into
+  a printable string.
+
+  Returns the message-type atom (`:sync_step1`, `:sync_step2`, `:sync_update`,
+  `:awareness`, or another protocol tag), `:unknown` for an unrecognised shape,
+  or `{:error, reason}` when decoding fails. Cheaper than `decipher_message/1`
+  when only the classification is needed — e.g. `LightningWeb.WorkflowChannel`
+  deciding whether an inbound frame modifies the document.
+  """
+  @spec message_type(binary()) :: atom() | {:error, any()}
+  def message_type(payload) do
+    case Yex.Sync.message_decode(payload) do
+      {:ok, {:sync, {type, _}}} -> type
+      {:ok, {:awareness, _}} -> :awareness
+      {:ok, {type, _}} when is_atom(type) -> type
+      {:ok, _other} -> :unknown
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   defp safe_binary_to_string(binary) do
     binary
     |> :binary.bin_to_list()
