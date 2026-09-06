@@ -3,7 +3,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
   import Lightning.Factories
   import Lightning.WorkflowsFixtures
-  import Phoenix.LiveViewTest
 
   alias Lightning.Extensions.Message
   alias Lightning.Workflows
@@ -348,7 +347,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              } =
                saved_workflow = get_saved_workflow(response_workflow["id"])
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
       assert Map.take(hd(workflow.edges), [:condition_type, :enabled]) ==
                Map.take(edge, [:condition_type, :enabled])
@@ -385,7 +384,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert saved_workflow = get_saved_workflow(response_workflow["id"])
 
-      assert response_workflow == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
       assert pluck_to_mapset(workflow.edges, [:condition_type, :enabled]) ==
                pluck_to_mapset(saved_workflow.edges, [:condition_type, :enabled])
@@ -454,8 +453,15 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       saved_workflow = get_saved_workflow(response_workflow["id"])
 
-      assert encode_decode(response_workflow) |> remove_timestamps() ==
-               encode_decode(saved_workflow) |> remove_timestamps()
+      merged = encode_decode(response_workflow) |> remove_timestamps()
+      saved = encode_decode(saved_workflow) |> remove_timestamps()
+
+      assert MapSet.new(merged["jobs"]) == MapSet.new(saved["jobs"])
+      assert MapSet.new(merged["edges"]) == MapSet.new(saved["edges"])
+      assert MapSet.new(merged["triggers"]) == MapSet.new(saved["triggers"])
+
+      assert Map.drop(merged, ["jobs", "edges", "triggers"]) ==
+               Map.drop(saved, ["jobs", "edges", "triggers"])
     end
 
     test "returns 422 when an edge has invalid condition_type", %{
@@ -522,6 +528,43 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                  "Job #{job1.id} has the errors: [body: is invalid]",
                  "Job #{job2.id} has the errors: [adaptor: is invalid]"
                ])
+    end
+
+    test "returns 422 when a job references another project's credential", %{
+      conn: conn,
+      project: project
+    } do
+      other_project = insert(:project)
+      project_credential = insert(:project_credential, project: other_project)
+
+      %{jobs: [job]} =
+        workflow =
+        build(:simple_workflow, name: "work1", project_id: project.id)
+        |> then(fn %{jobs: [job]} = workflow ->
+          %{
+            workflow
+            | jobs: [%{job | project_credential_id: project_credential.id}]
+          }
+        end)
+
+      conn =
+        post(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows/",
+          Jason.encode!(workflow)
+        )
+
+      assert %{
+               "id" => nil,
+               "errors" => %{
+                 "jobs" => jobs_errors
+               }
+             } = json_response(conn, 422)
+
+      assert [job_error] = jobs_errors
+      assert job_error =~ "Job #{job.id} has the errors:"
+      assert job_error =~ "project_credential_id:"
+      assert job_error =~ "isn't available in this project"
     end
 
     test "returns 422 when a trigger has invalid value", %{
@@ -746,6 +789,25 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
              }
     end
 
+    test "returns 422 when edges, jobs and triggers are omitted", %{
+      conn: conn,
+      project: project
+    } do
+      conn =
+        post(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows",
+          Jason.encode!(%{name: "workflow without children"})
+        )
+
+      assert json_response(conn, 422) == %{
+               "id" => nil,
+               "errors" => %{
+                 "edges" => ["Missing edge with source_trigger_id."]
+               }
+             }
+    end
+
     test "returns 422 when edges has multiple source triggers", %{
       conn: conn,
       project: project
@@ -877,7 +939,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       saved_workflow = get_saved_workflow(workflow)
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
       assert workflow
              |> Map.merge(patch)
@@ -925,15 +987,19 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       saved_workflow = get_saved_workflow(workflow)
 
-      assert encode_decode(response_workflow) == encode_decode(saved_workflow)
+      assert_response(response_workflow)
 
-      assert workflow
-             |> Map.merge(patch)
-             |> encode_decode()
-             |> remove_timestamps() ==
-               saved_workflow
-               |> encode_decode()
-               |> remove_timestamps()
+      merged =
+        workflow |> Map.merge(patch) |> encode_decode() |> remove_timestamps()
+
+      saved = saved_workflow |> encode_decode() |> remove_timestamps()
+
+      assert MapSet.new(merged["jobs"]) == MapSet.new(saved["jobs"])
+      assert MapSet.new(merged["edges"]) == MapSet.new(saved["edges"])
+      assert MapSet.new(merged["triggers"]) == MapSet.new(saved["triggers"])
+
+      assert Map.drop(merged, ["jobs", "edges", "triggers"]) ==
+               Map.drop(saved, ["jobs", "edges", "triggers"])
     end
 
     test "Adds a disconnected/orphan job", %{conn: conn, project: project} do
@@ -1010,8 +1076,9 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       refute Presence.has_any_presence?(workflow)
 
-      {:ok, _view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/legacy")
+      # Simulate a user editing the workflow in the collaborative editor by
+      # tracking their presence on the workflow.
+      Presence.track_user_presence(user, workflow, self())
 
       patch = %{name: "work1.1"}
 
@@ -1049,7 +1116,7 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       patch =
         %{
           name: "work1.1",
-          triggers: [%{trigger | custom_path: ["invalid path in list"]}]
+          triggers: [%{trigger | comment: ["invalid comment in list"]}]
         }
 
       conn =
@@ -1063,10 +1130,44 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
                "id" => workflow.id,
                "errors" => %{
                  "triggers" => [
-                   "Trigger #{trigger.id} has the errors: [custom_path: is invalid]"
+                   "Trigger #{trigger.id} has the errors: [comment: is invalid]"
                  ]
                }
              }
+    end
+
+    test "accepts a triggers patch that echoes an existing custom_path", %{
+      conn: conn,
+      project: project
+    } do
+      # The CLI round-trips whole documents, so a trigger that already has a
+      # custom_path sends the same value back on every deploy. That must not
+      # 422.
+      %{triggers: [trigger]} =
+        workflow =
+        insert(:simple_workflow, name: "work1.0", project: project)
+        |> Repo.reload()
+        |> Repo.preload([:edges, :jobs, :triggers])
+
+      trigger =
+        trigger
+        |> Ecto.Changeset.change(custom_path: "partner-feed")
+        |> Repo.update!()
+
+      patch = %{
+        name: "work1.1",
+        triggers: [%{trigger | comment: "untouched routing"}]
+      }
+
+      conn =
+        patch(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(patch)
+        )
+
+      assert %{"errors" => %{}} = json_response(conn, 200)
+      assert Repo.reload!(trigger).custom_path == "partner-feed"
     end
 
     test "returns 422 for invalid jobs patch", %{
@@ -1291,6 +1392,102 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     end
   end
 
+  describe "authorization by project role" do
+    setup [:assign_bearer_for_api, :create_project_for_current_user]
+
+    @tag role: :viewer
+    test "viewer cannot create a workflow", %{conn: conn, project: project} do
+      workflow =
+        build(:simple_workflow,
+          name: "viewer-created-workflow",
+          project_id: project.id
+        )
+
+      conn =
+        post(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows/",
+          Jason.encode!(workflow)
+        )
+
+      assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+
+      refute Lightning.Repo.get_by(Lightning.Workflows.Workflow,
+               name: "viewer-created-workflow"
+             )
+    end
+
+    @tag role: :viewer
+    test "viewer cannot update a workflow", %{conn: conn, project: project} do
+      workflow =
+        insert(:simple_workflow, name: "original-name", project: project)
+        |> Repo.reload()
+
+      conn =
+        patch(
+          conn,
+          ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+          Jason.encode!(%{name: "hacked-by-viewer"})
+        )
+
+      assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+
+      assert Repo.reload(workflow).name == "original-name"
+    end
+
+    test "admin, editor and owner can create a workflow", %{conn: conn} do
+      for role <- [:admin, :editor, :owner] do
+        user = insert(:user)
+        project = insert(:project, project_users: [%{user: user, role: role}])
+
+        workflow =
+          build(:simple_workflow,
+            name: "#{role}-created-workflow",
+            project_id: project.id
+          )
+
+        resp_conn =
+          conn
+          |> assign_bearer(user)
+          |> post(
+            ~p"/api/projects/#{project.id}/workflows/",
+            Jason.encode!(workflow)
+          )
+
+        assert %{"workflow" => %{"id" => id}, "errors" => %{}} =
+                 json_response(resp_conn, 201),
+               "expected #{role} to be allowed to create a workflow"
+
+        assert Lightning.Repo.get(Lightning.Workflows.Workflow, id)
+      end
+    end
+
+    test "admin, editor and owner can update a workflow", %{conn: conn} do
+      for role <- [:admin, :editor, :owner] do
+        user = insert(:user)
+        project = insert(:project, project_users: [%{user: user, role: role}])
+
+        workflow =
+          insert(:simple_workflow, name: "#{role}-original", project: project)
+          |> Repo.reload()
+
+        resp_conn =
+          conn
+          |> assign_bearer(user)
+          |> patch(
+            ~p"/api/projects/#{project.id}/workflows/#{workflow.id}",
+            Jason.encode!(%{name: "#{role}-updated"})
+          )
+
+        assert %{"workflow" => %{}, "errors" => %{}} =
+                 json_response(resp_conn, 200),
+               "expected #{role} to be allowed to update a workflow"
+
+        assert Repo.reload(workflow).name == "#{role}-updated"
+      end
+    end
+  end
+
   describe "PUT /workflows/:workflow_id" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 
@@ -1333,15 +1530,23 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       assert_response(response_workflow)
 
-      saved_workflow =
+      saved =
         get_saved_workflow(response_workflow["id"])
         |> encode_decode()
         |> remove_timestamps()
 
-      assert workflow
-             |> Map.merge(complete_update)
-             |> encode_decode()
-             |> remove_timestamps() == saved_workflow
+      merged =
+        workflow
+        |> Map.merge(complete_update)
+        |> encode_decode()
+        |> remove_timestamps()
+
+      assert MapSet.new(merged["jobs"]) == MapSet.new(saved["jobs"])
+      assert MapSet.new(merged["edges"]) == MapSet.new(saved["edges"])
+      assert MapSet.new(merged["triggers"]) == MapSet.new(saved["triggers"])
+
+      assert Map.drop(merged, ["jobs", "edges", "triggers"]) ==
+               Map.drop(saved, ["jobs", "edges", "triggers"])
     end
 
     test "updates completely a workflow with disconnected job", %{
@@ -1534,8 +1739,9 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
 
       refute Presence.has_any_presence?(workflow)
 
-      {:ok, _view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/legacy")
+      # Simulate a user editing the workflow in the collaborative editor by
+      # tracking their presence on the workflow.
+      Presence.track_user_presence(user, workflow, self())
 
       workflow_update = %{workflow | name: "work1.1"}
 

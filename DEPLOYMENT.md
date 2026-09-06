@@ -186,9 +186,10 @@ For SMTP, the following environment variables are required:
 | **Variable**                                      | Description                                                                                                                                                                                                                                                     |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ADAPTORS_PATH`                                   | Where you store your locally installed adaptors                                                                                                                                                                                                                 |
-| `ALLOW_SIGNUP`                                    | Set to `true` to enable user access to the registration page. Set to `false` to disable new user registrations and block access to the registration page.<br>Default is `true`.                                                                                 |
+| `ALLOW_SIGNUP`                                    | Set to `true` to enable user access to the registration page. Set to `false` to disable new user registrations and block access to the registration page.<br>Default is `false`.                                                                                |
 | `CORS_ORIGIN`                                     | A list of acceptable hosts for browser/cors requests (',' separated)                                                                                                                                                                                            |
 | `DISABLE_DB_SSL`                                  | In production, the use of an SSL connection to Postgres is required by default.<br>Setting this to `"true"` allows unencrypted connections to the database. This is strongly discouraged in a real production environment.                                      |
+| `DISABLE_DB_SSL_CERT_VERIFY`                      | When a SSL connection is used to connect to Postgres, the server's certificate will be verified by default.<br> Setting this to `"true"` disables certificate verification. This is strongly discouraged in a real production environment.                      |
 | `EMAIL_ADMIN`                                     | This is used as the sender email address for system emails. It is also displayed in the menu as the support email.                                                                                                                                              |
 | `EMAIL_SENDER_NAME`                               | This is displayed in the email client as the sender name for emails sent by the application.                                                                                                                                                                    |
 | `ERLANG_NODE_DISCOVERY_VIA_POSTGRES_CHANNEL_NAME` | The name of the Postgresql channel that is used when Erlang node discovery via Postgres is enabled. Defaults to `lightning-cluster` if not set.                                                                                                                 |
@@ -224,7 +225,6 @@ For SMTP, the following environment variables are required:
 | `ADAPTORS_REGISTRY_JSON_PATH`                     | Path to adaptor registry file. When provided, the app will attempt to read from it then later fallback to the internet                                                                                                                                          |
 | `SECRET_KEY_BASE`                                 | A secret key used as a base to generate secrets for encrypting and signing data.                                                                                                                                                                                |
 | `SENTRY_DSN`                                      | If using Sentry for error monitoring, your DSN                                                                                                                                                                                                                  |
-| `UI_METRICS_ENABLED`                              | Enable serverside tracking of certain metrics related to the UI. This s temporary functionality. Defaults to `false`.                                                                                                                                           |
 | `URL_HOST`                                        | The host used for writing URLs (e.g., `demo.openfn.org`)                                                                                                                                                                                                        |
 | `URL_PORT`                                        | The port, usually `443` for production                                                                                                                                                                                                                          |
 | `URL_SCHEME`                                      | The scheme for writing URLs (e.g., `https`)                                                                                                                                                                                                                     |
@@ -251,147 +251,77 @@ The following environment variables are required:
   an Anthropic key.
 - `APOLLO_ENDPOINT` - the endpoint for the OpenFn Apollo AI service.
 
-### Kafka Triggers
+### OAuth credential connections (Google, Salesforce, etc.)
 
-🧪 **Experimental**
+OAuth clients that **jobs** use to connect to external systems (Google Sheets,
+Salesforce, and similar) are no longer configured via environment variables.
+They are registered in the UI under **Credentials → OAuth clients** and scoped
+to the projects that use them; the client id, secret, and redirect/callback URL
+are entered in that form.
 
-Lightning workflows can be configured with a trigger that will consume messages
-from a Kafka Cluster. By default this is disabled and you will not see the
-option to create a Kafka trigger in the UI, nor will the Kafka consumer groups
-be running.
+> The older `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` and
+> `SALESFORCE_CLIENT_ID` / `SALESFORCE_CLIENT_SECRET` environment variables are
+> no longer read by Lightning and can be removed from your deployment.
 
-To enable this feature set the `KAFKA_TRIGGERS_ENABLED` environment variable to
-`yes` and restart Lightning. Please note that, if you enable this feature and
-then create some Kafka triggers and then disable the feature, you will not be
-able to edit any triggers created before the feature was disabled.
+### OAuth Provider Egress
 
-#### Performance Tuning
+When a user configures an OAuth client, they supply the provider's endpoint URLs
+(authorization, token, userinfo, revocation, introspection). Lightning makes
+server-side requests to those URLs during credential setup and automatic token
+refresh, which makes them a Server-Side Request Forgery (SSRF) sink: a
+low-privilege user could point an endpoint at an internal service or a cloud
+metadata address (`169.254.169.254`) and use the server as a proxy.
 
-The number of Kafka consumers in the consumer group can be modified by setting
-the `KAFKA_NUMBER_OF_CONSUMERS` environment variable. The default value is
-currently 1. The optimal setting is one consumer per topic partition. NOTE: This
-setting will move to KafkaConfiguration as it will be trigger-specific.
+To prevent this, all outbound OAuth requests are routed through an egress guard
+that resolves the endpoint hostname, rejects any address in an internal or
+reserved range, and pins the connection to the validated IP (so DNS cannot swap
+in an internal address after the check). This is **on by default** and requires
+no configuration; internal endpoints are blocked and the request fails with a
+generic network error.
 
-The number of messages that the Kafka consumer will forward is rate-limited by
-the `KAFKA_NUMBER_OF_MESSAGES_PER_SECOND` environment variable. This can be set
-to a value of less than 1 (minimum 0.1) and will converted (and rounded-down) to
-an integer value of messages over a 10-second interval (e.g. 0.15 becomes 1
-message every 10 seconds). The default value is 1.
+| **Variable**                   | **Description**                                                                                                                                         | **Default** |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------: |
+| `OAUTH_PROVIDER_ALLOWED_HOSTS` | Comma-separated list of hostnames that bypass the internal-range block. Only set this if your OAuth provider legitimately lives on an internal network. |   _(empty)_ |
 
-Processing concurrency within the Kafka Broadway pipeline is controlled by the
-`KAFKA_NUMBER_OF_PROCESSORS` environment variable. Modifying this, modifies the
-number of processors that are downstream of the Kafka consumer, so an increase
-in this value should increase throughput (when factoring in the rate limit set
-by `KAFKA_NUMBER_OF_MESSAGES_PER_SECOND`). The default value is 1.
+Only add a host here if you are self-hosting an OAuth provider (or a proxy to
+one) on an address the guard would otherwise block, and you trust it. Matching
+is by **hostname string**, case-insensitive — e.g.
+`OAUTH_PROVIDER_ALLOWED_HOSTS=idp.internal.example,localhost`. An allow-listed
+host is still resolved, but its resolved IP is not checked against the block
+list, so keep the list as small as possible.
 
-#### Deduplication
+### Channel Egress
 
-Each Kafka trigger maintains record of the topic, partition and offset for each
-message received. This to protect against the ingestion of duplicate messages
-from the cluster. These records are periodically cleaned out. The duration for
-which they are retained is controlled by
-`KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS`. The default value is 3600.
+Lightning can proxy requests through to a channel's configured upstream via the
+`/channels/:id/...` reverse proxy (powered by the `philter` dependency). Because
+the upstream URL is operator-supplied, that proxy is a Server-Side Request
+Forgery (SSRF) sink: a request could be pointed at an internal service or a
+cloud metadata address (`169.254.169.254`) and use the server as a proxy.
 
-#### Disabling Kafka Triggers
+To prevent this, the channel proxy runs an egress guard that resolves the
+upstream hostname and rejects any address in a private, loopback, link-local, or
+otherwise reserved range. This is **on by default** and requires no
+configuration; with neither variable set, blocking is on and nothing is
+allow-listed.
 
-After a Kafka consumer group connects to a Kafka cluster, the cluster will track
-the last committed offset for a given consumer group ,to ensure that the
-consumer group receives the correct messages.
+| **Variable**                     | **Description**                                                                                                                                          | **Default** |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------: |
+| `CHANNEL_BLOCK_PRIVATE_NETWORKS` | Whether to reject channel upstreams that resolve to private/loopback/link-local/reserved IP ranges (`true`/`false`/`yes`/`no`). Set false to allow them. |      `true` |
+| `CHANNEL_ALLOWED_HOSTS`          | Comma-separated list of hostnames that bypass the block entirely — the escape hatch.                                                                     |   _(empty)_ |
 
-This data is retained for a finite period. If an enabled Kafka trigger is
-disabled for longer than the offset retention period the consumer group offset
-data will be cleared.
+The allow-list is checked **first**. A host in `CHANNEL_ALLOWED_HOSTS` is
+allowed even if it resolves to a private IP, and even while
+`CHANNEL_BLOCK_PRIVATE_NETWORKS=true`. So the common safe setup is to leave
+blocking on (the default) and allow-list just the specific internal host you
+need. With `CHANNEL_BLOCK_PRIVATE_NETWORKS=false` the allow-list is moot —
+everything is allowed.
 
-If the Kafka trigger is re-enabled after the offset data has been cleared, this
-will result in the consumer group reverting to what has been configured as the
-'Initial offset reset policy' for the trigger. This may result in the
-duplication of messages or even data loss.
-
-It is recommended that you check the value of the `offsets.retention.minutes`
-for the Kafka cluster to determine what the cluster's retention period is, and
-consider this when disabling a Kafka trigger for an extended period.
-
-#### Failure notifications
-
-Under certain failure conditions, a Kafka trigger will send an email to certain
-users that are associated with a project. After each email an embargo is applied
-to ensure that Lightning does not flood the recipients with email. The length of
-the embargo is controlled by the `KAFKA_NOTIFICATION_EMBARGO_SECONDS` ENV
-variable.
-
-#### Persisting Failed Messages
-
-**PLEASE NOTE: If alternate file storage is not enabled, messages that fail to
-be persisted will not be retained by Lightning and this can result in data loss,
-if the Kafka cluster can not make these messages available again.**
-
-If a Kafka message fails to be persisted as a WorkOrder, Run and Dataclip, the
-option exists to write the failed message to a location on the local file
-system. If this option is enabled by setting `KAFKA_ALTERNATE_STORAGE_ENABLED`,
-then the `KAFKA_ALTERNATE_STORAGE_PATH` ENV variable must be set to the path
-that exists and is writable by Lightning. The location should also be suitably
-protected to prevent data exposure as Lightning **will not encrypt** the message
-contents when writing it.
-
-If the option is enabled and a message fails to be persisted, Lightning will
-create a subdirectory named with the id if the affected trigger's workflow in
-the location specified by `KAFKA_ALTERNATE_STORAGE_PATH` (assuming such a
-subdirectory does not already exist). Lightning will serialise the message
-headers and data as received by the Kafka pipeline and write this to a file
-within the subdirectory. The file will be named based on the pattern
-`<trigger_id>_<message_topic>_<message_partition>_<message_offset>.json`.
-
-To recover the persisted messages, it is suggested that the affected triggers be
-disabled before commencing. Once this is done, the following code needs to be
-run from an IEx console on each node that is running Lightning:
-
-```elixir
-Lightning.KafkaTriggers.MessageRecovery.recover_messages(
-  Lightning.Config.kafka_alternate_storage_file_path()
-)
-```
-
-Further details regarding the behaviour of `MessageRecovery.recover_messages/1`
-can be found in the module documentation of `MessageRecovery`. Recovered
-messages will have the `.json` extension modified to `.json.recovered` but they
-will be left in place. Future recovery runs will not process files that have
-been marked as recovered.
-
-Once all files have either been recovered or discarded, the triggers can be
-enabled once more.
-
-### Google Oauth2
-
-Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
-application' type.
-
-Set the callback url to: `https://<ENDPOINT DOMAIN>/authenticate/callback`.
-Replacing `ENDPOINT DOMAIN` with the host name of your instance.
-
-Once the client has been created, get/download the OAuth client JSON and set the
-following environment variables:
-
-| **Variable**           | Description                                   |
-| ---------------------- | --------------------------------------------- |
-| `GOOGLE_CLIENT_ID`     | Which is `client_id` from the client details. |
-| `GOOGLE_CLIENT_SECRET` | `client_secret` from the client details.      |
-
-### Salesforce Oauth2
-
-Using your Salesforce developer account, create a new Oauth 2.0 connected
-application.
-
-Set the callback url to: `https://<ENDPOINT DOMAIN>/authenticate/callback`.
-Replacing `ENDPOINT DOMAIN` with the host name of your instance.
-
-Grant permissions as desired.
-
-Once the client has been created set the following environment variables:
-
-| **Variable**               | Description                                                           |
-| -------------------------- | --------------------------------------------------------------------- |
-| `SALESFORCE_CLIENT_ID`     | Which is `Consumer Key` from the "Manage Consumer Details" screen.    |
-| `SALESFORCE_CLIENT_SECRET` | Which is `Consumer Secret` from the "Manage Consumer Details" screen. |
+Matching is by **exact hostname only**, case-insensitive, with a single trailing
+dot ignored. There is **no CIDR range and no wildcard support**; a literal IP
+entry matches only if the channel URL uses that exact IP string. Entries are
+bare hostnames — an entry containing a URL scheme (`://`), a path (`/`),
+internal whitespace, or `@` is rejected at boot with a clear error naming the
+bad entry. For example: `CHANNEL_ALLOWED_HOSTS=api.internal.example,localhost`.
 
 ### Webhook Retry Configuration
 

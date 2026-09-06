@@ -70,10 +70,11 @@ export const ReactComponent = {
         pushEventTo: this.pushEventTo.bind(this, this.el),
         el: this.el,
         containerEl: this._containerEl,
-        navigate: path => {
+        navigate: (path, options) => {
+          const replace = options?.replace ?? false;
           this.liveSocket.execJS(
             this.el,
-            '[["patch",{"replace":false,"href":"' + path + '"}]]'
+            JSON.stringify([['patch', { replace, href: path }]])
           );
         },
       },

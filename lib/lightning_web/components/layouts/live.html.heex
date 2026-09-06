@@ -65,9 +65,17 @@
                   <.icon name="hero-user-group-mini" class="h-5 w-5 shrink-0" />
                   <span class="menu-item-text truncate">Community</span>
                 </Menu.menu_item>
-                <Menu.menu_item href={"mailto:" <> Lightning.Config.instance_admin_email()}>
+                <Menu.menu_item
+                  href={"mailto:" <> Lightning.Config.instance_admin_email()}
+                  target="_self"
+                >
                   <.icon name="hero-lifebuoy-mini" class="h-5 w-5 shrink-0" />
-                  <span class="menu-item-text truncate">Support</span>
+                  <span
+                    class="menu-item-text truncate"
+                    title={Lightning.Config.instance_admin_email()}
+                  >
+                    Support
+                  </span>
                 </Menu.menu_item>
               <% end %>
             <% end %>
@@ -79,24 +87,12 @@
     <div class="flex-auto">
       <Common.flash flash={@flash} kind={:info} />
       <Common.flash flash={@flash} kind={:error} />
-      <.live_nav_block
-        :if={
-          !assigns[:account_confirmation_required?] or
-            @socket.view == LightningWeb.ProfileLive.Edit
-        }
-        flash={@flash}
-      >
+      <.live_nav_block flash={@flash}>
         {@inner_content}
       </.live_nav_block>
       <.live_component
         module={LightningWeb.LiveComponentPortal}
         id="component-portal"
-      />
-      <.live_component
-        :if={assigns[:account_confirmation_required?]}
-        module={LightningWeb.AccountConfirmationModal}
-        id="account-confirmation-modal"
-        current_user={@current_user}
       />
       <.live_component
         :if={assigns[:gdpr_banner]}

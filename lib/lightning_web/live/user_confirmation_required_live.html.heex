@@ -1,0 +1,132 @@
+<Common.flash flash={@flash} kind={:info} />
+<Common.flash flash={@flash} kind={:error} />
+
+<section class="bg-gray-50 h-full overflow-y-auto">
+  <div class="flex flex-col items-center px-6 py-8 mx-auto">
+    <img
+      class="w-16 h-16 mb-6"
+      src={Routes.static_path(@socket, "/images/logo.svg")}
+      alt="OpenFn logo"
+    />
+    <h1 class="text-2xl font-semibold text-gray-900 mb-6">
+      Confirm your email address
+    </h1>
+
+    <div class="w-full sm:max-w-md space-y-4">
+      <div class="bg-white rounded-lg shadow p-6 space-y-4 text-sm text-gray-600">
+        <p>
+          Your account is blocked pending email confirmation. We sent a
+          confirmation link to
+          <span class="font-medium text-gray-900">{@current_user.email}</span>
+          when you signed up — open it to keep using OpenFn.
+        </p>
+        <p>
+          If that link has expired, request a new one. If the address above is
+          wrong, correct it below and we will send the link there instead.
+        </p>
+
+        <Common.alert :if={@email_sent} type="info" id="confirmation-email-sent">
+          <:message>
+            We have sent a new confirmation link to {@current_user.email}.
+          </:message>
+        </Common.alert>
+
+        <Common.alert
+          :if={@resend_throttled}
+          type="warning"
+          id="confirmation-email-throttled"
+        >
+          <:message>
+            {ConfirmationLockout.resend_throttled_message()}
+          </:message>
+        </Common.alert>
+
+        <Common.alert
+          :if={@email_change_requested}
+          type="info"
+          id="email-change-requested"
+        >
+          <:message>
+            We have sent confirmation instructions to {@email_change_requested}.
+          </:message>
+        </Common.alert>
+
+        <Common.alert
+          :if={@send_failed}
+          type="danger"
+          id="confirmation-email-failed"
+        >
+          <:message>
+            We could not send that email just now. Try again in a moment; if it
+            keeps failing, contact your instance administrator.
+          </:message>
+        </Common.alert>
+
+        <.button
+          id="resend-confirmation-email-button"
+          type="button"
+          theme="primary"
+          phx-click="resend-confirmation-email"
+        >
+          Resend confirmation email
+        </.button>
+      </div>
+
+      <.form
+        :let={f}
+        for={@email_changeset}
+        as={:user}
+        phx-change="validate_email"
+        phx-submit="change_email"
+        id="email-form"
+        class="bg-white rounded-lg shadow p-6 space-y-4"
+      >
+        <div class="text-base font-medium text-gray-900">
+          Change email address
+        </div>
+
+        <Common.alert
+          :if={@correction_throttled}
+          type="warning"
+          id="email-change-throttled"
+        >
+          <:message>
+            You've asked us to change this address a few times recently. Check
+            the inbox of the address you last entered; you can try another in a
+            few minutes.
+          </:message>
+        </Common.alert>
+
+        <.input
+          type="email"
+          field={f[:email]}
+          label="New email address"
+          required="true"
+          phx-debounce="blur"
+        />
+        <.input
+          type="password"
+          field={f[:current_password]}
+          label="Enter password to confirm"
+          required="true"
+          phx-debounce="blur"
+          autocomplete="current-password"
+        />
+        <.button
+          type="submit"
+          theme="primary"
+          disabled={!@email_changeset.valid?}
+          phx-disable-with="Sending confirmation email..."
+        >
+          Update email
+        </.button>
+      </.form>
+
+      <p class="text-sm text-gray-500 text-center">
+        <.link href={~p"/users/log_out"} class="link font-medium">
+          Log out
+        </.link>
+      </p>
+    </div>
+  </div>
+</section>

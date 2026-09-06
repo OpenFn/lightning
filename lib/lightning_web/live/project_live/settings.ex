@@ -175,12 +175,12 @@ defmodule LightningWeb.ProjectLive.Settings do
           :credentials,
           :create_keychain_credential,
           current_user,
-          %{project: project, project_user: project_user}
+          project
         ),
       can_create_collection:
         Permissions.can?(
-          :project_users,
-          :create_collection,
+          :collections,
+          :manage_collection,
           current_user,
           project
         )
@@ -338,13 +338,28 @@ defmodule LightningWeb.ProjectLive.Settings do
      )}
   end
 
+  # Fields the generic settings/concurrency save may set; gated by
+  # `can_edit_project`. Privileged fields (requires_mfa, scheduled_deletion,
+  # retention, allow_support_access, parent_id) are deliberately excluded so a
+  # crafted payload cannot set them past their own dedicated gates.
+  @project_settings_fields ~w(raw_name name description concurrency color env)
+
+  # Retention fields, gated by `can_edit_data_retention`.
+  @retention_fields ~w(retention_policy history_retention_period
+                       dataclip_retention_period)
+
   def handle_event("save", %{"project" => project_params}, socket) do
-    if socket.assigns.can_edit_project do
-      save_project(socket, Helpers.derive_name_param(project_params))
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+    case authorize(socket, :edit_project) do
+      :ok ->
+        params =
+          project_params
+          |> Helpers.derive_name_param()
+          |> Map.take(@project_settings_fields)
+
+        save_project(socket, params)
+
+      {:error, :unauthorized} ->
+        deny_action(socket, "save")
     end
   end
 
@@ -353,51 +368,50 @@ defmodule LightningWeb.ProjectLive.Settings do
         %{"project" => project_params},
         socket
       ) do
-    if socket.assigns.can_edit_data_retention do
-      save_project(socket, project_params)
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+    case authorize(socket, :edit_data_retention) do
+      :ok ->
+        save_project(socket, Map.take(project_params, @retention_fields))
+
+      {:error, :unauthorized} ->
+        deny_action(socket, "save_retention_settings")
     end
   end
 
   def handle_event("toggle_support_access", _params, socket) do
-    if socket.assigns.can_edit_project do
-      project = socket.assigns.project
+    case authorize(socket, :edit_project) do
+      :ok ->
+        project = socket.assigns.project
 
-      {:ok, project} =
-        Projects.update_project(
-          project,
-          %{
-            allow_support_access: !project.allow_support_access
-          },
-          socket.assigns.current_user
-        )
+        {:ok, project} =
+          Projects.update_project(
+            project,
+            %{
+              allow_support_access: !project.allow_support_access
+            },
+            socket.assigns.current_user
+          )
 
-      flash_msg =
-        if project.allow_support_access do
-          "Granted access to support users successfully"
-        else
-          "Revoked access to support users successfully"
-        end
+        flash_msg =
+          if project.allow_support_access do
+            "Granted access to support users successfully"
+          else
+            "Revoked access to support users successfully"
+          end
 
-      {:noreply,
-       socket
-       |> assign(:project, project)
-       |> put_flash(:info, flash_msg)}
-    else
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "You are not authorized to perform this action."
-       )}
+        {:noreply,
+         socket
+         |> assign(:project, project)
+         |> put_flash(:info, flash_msg)}
+
+      {:error, :unauthorized} ->
+        deny_action(socket, "toggle_support_access")
     end
   end
 
   def handle_event("toggle-mfa", _params, socket) do
-    if socket.assigns.can_edit_project && socket.assigns.can_require_mfa do
+    # `can_require_mfa` comes from the `:limit_mfa` hook - a usage limit rather
+    # than a role-derived boolean
+    if :ok == authorize(socket, :edit_project) and socket.assigns.can_require_mfa do
       %{project: project, current_user: current_user} = socket.assigns
 
       {:ok, project} =
@@ -412,12 +426,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        |> assign(:project, project)
        |> put_flash(:info, "Project MFA requirement updated successfully")}
     else
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "You are not authorized to perform this action."
-       )}
+      deny_action(socket, "toggle-mfa")
     end
   end
 
@@ -547,15 +556,24 @@ defmodule LightningWeb.ProjectLive.Settings do
              "delete_webhook_auth_method"
            ] do
     if socket.assigns.can_write_webhook_auth_method do
-      auth_method =
-        WebhookAuthMethods.find_by_id!(auth_method_id, include: [:triggers])
+      case WebhookAuthMethods.find_for_project(
+             socket.assigns.project,
+             auth_method_id,
+             include: [:triggers]
+           ) do
+        nil ->
+          socket
+          |> put_flash(:error, "Webhook auth method not found")
+          |> noreply()
 
-      socket
-      |> assign(
-        active_modal: String.to_existing_atom(target_modal),
-        active_modal_assigns: %{webhook_auth_method: auth_method}
-      )
-      |> noreply()
+        auth_method ->
+          socket
+          |> assign(
+            active_modal: String.to_existing_atom(target_modal),
+            active_modal_assigns: %{webhook_auth_method: auth_method}
+          )
+          |> noreply()
+      end
     else
       socket
       |> put_flash(:error, "You are not authorized to perform this action")
@@ -566,66 +584,63 @@ defmodule LightningWeb.ProjectLive.Settings do
   def handle_event(
         "show_modal",
         %{
-          "target" => "linked_triggers_for_webhook_auth_method",
+          "target" => "linked_usage_for_webhook_auth_method",
           "id" => auth_method_id
         },
         socket
       ) do
-    auth_method =
-      WebhookAuthMethods.find_by_id!(auth_method_id,
-        include: [triggers: [:workflow]]
-      )
-
-    socket
-    |> assign(
-      active_modal: :linked_triggers_for_webhook_auth_method,
-      active_modal_assigns: %{webhook_auth_method: auth_method}
-    )
-    |> noreply()
-  end
-
-  def handle_event(
-        "set_failure_alert",
-        %{
-          "project_user_id" => project_user_id,
-          "failure_alert" => failure_alert
-        },
-        socket
-      ) do
-    project_user = Projects.get_project_user!(project_user_id)
-
-    changeset =
-      {%{failure_alert: project_user.failure_alert}, %{failure_alert: :boolean}}
-      |> Ecto.Changeset.cast(%{failure_alert: failure_alert}, [:failure_alert])
-
-    case Ecto.Changeset.get_change(changeset, :failure_alert) do
+    case WebhookAuthMethods.find_for_project(
+           socket.assigns.project,
+           auth_method_id,
+           include: [triggers: [:workflow]]
+         ) do
       nil ->
-        {:noreply, socket}
+        socket
+        |> put_flash(:error, "Webhook auth method not found")
+        |> noreply()
 
-      setting ->
-        Projects.update_project_user(project_user, %{failure_alert: setting})
-        |> dispatch_flash(socket)
+      auth_method ->
+        socket
+        |> assign(
+          active_modal: :linked_usage_for_webhook_auth_method,
+          active_modal_assigns: %{webhook_auth_method: auth_method}
+        )
+        |> noreply()
     end
   end
 
+  # Notification prefs (failure alerts, digest) are edited through one path: the
+  # param key matches the field name, and each maps to a self-only policy action.
+  @notification_prefs %{
+    "set_failure_alert" => {:failure_alert, :edit_failure_alerts},
+    "set_digest" => {:digest, :edit_digest_alerts}
+  }
+
   def handle_event(
-        "set_digest",
-        %{"project_user_id" => project_user_id, "digest" => digest},
+        event,
+        %{"project_user_id" => project_user_id} = params,
         socket
-      ) do
-    project_user = Projects.get_project_user!(project_user_id)
+      )
+      when is_map_key(@notification_prefs, event) do
+    {field, action} = Map.fetch!(@notification_prefs, event)
 
-    changeset =
-      {%{digest: project_user.digest |> to_string()}, %{digest: :string}}
-      |> Ecto.Changeset.cast(%{digest: digest}, [:digest])
+    project_user =
+      Projects.get_project_user_for_project(
+        project_user_id,
+        socket.assigns.project
+      )
 
-    case Ecto.Changeset.get_change(changeset, :digest) do
-      nil ->
-        {:noreply, socket}
-
-      digest ->
-        Projects.update_project_user(project_user, %{digest: digest})
-        |> dispatch_flash(socket)
+    if editable_alert_target?(action, project_user, socket) do
+      case Projects.set_notification_pref(
+             project_user,
+             field,
+             params[to_string(field)]
+           ) do
+        :unchanged -> {:noreply, socket}
+        result -> dispatch_flash(result, socket)
+      end
+    else
+      deny_action(socket, event, project_user_id)
     end
   end
 
@@ -634,16 +649,24 @@ defmodule LightningWeb.ProjectLive.Settings do
         %{"project_user_id" => project_user_id},
         %{assigns: assigns} = socket
       ) do
-    project_user = Projects.get_project_user!(project_user_id, include: :user)
+    project_user =
+      Projects.get_project_user_for_project(
+        project_user_id,
+        assigns.project,
+        include: :user
+      )
 
-    if user_removable?(
-         project_user,
-         assigns.current_user,
-         assigns.can_remove_project_user,
-         assigns.project,
-         assigns.sandbox?
-       ) do
-      Projects.delete_project_user!(project_user)
+    # Re-resolve the actor's own permission rather than trusting the
+    # mount-time `:can_remove_project_user` assign - see `authorize/2`.
+    if project_user &&
+         user_removable?(
+           project_user,
+           assigns.current_user,
+           :ok == authorize(socket, :remove_project_user),
+           assigns.project,
+           assigns.sandbox?
+         ) do
+      Projects.delete_project_user!(project_user, assigns.current_user)
 
       {:noreply,
        socket
@@ -652,9 +675,7 @@ defmodule LightningWeb.ProjectLive.Settings do
          to: ~p"/projects/#{assigns.project}/settings#collaboration"
        )}
     else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action")}
+      deny_action(socket, "remove_project_user", project_user_id)
     end
   end
 
@@ -718,6 +739,29 @@ defmodule LightningWeb.ProjectLive.Settings do
          socket
          |> put_flash(:error, "Error when updating the project user")}
     end
+  end
+
+  defp authorize(
+         %{assigns: %{current_user: current_user, project: project}},
+         action
+       ) do
+    Permissions.can(:project_users, action, current_user, project)
+  end
+
+  defp deny_action(socket, event, project_user_id \\ nil) do
+    %{project: project, current_user: current_user} = socket.assigns
+
+    reason =
+      if project_user_id,
+        do:
+          "project_user_id=#{inspect(project_user_id)} not in project, or " <>
+            "not permitted for user=#{current_user.id}",
+        else: "not permitted for user=#{current_user.id}"
+
+    Logger.warning("Rejected #{event} in project=#{project.id}: #{reason}")
+
+    {:noreply,
+     put_flash(socket, :error, "You are not authorized to perform this action.")}
   end
 
   defp checked?(changeset, input_id) do
@@ -850,6 +894,19 @@ defmodule LightningWeb.ProjectLive.Settings do
     can_remove_project_user and project_user.role != :owner and
       project_user.user_id != current_user.id and
       not (sandbox? and parent_admin?(project, project_user))
+  end
+
+  # Notification prefs are self-only (:edit_failure_alerts / :edit_digest_alerts),
+  # so scoping the target to the project is not enough; the actor must own it.
+  defp editable_alert_target?(_action, nil, _socket), do: false
+
+  defp editable_alert_target?(action, project_user, socket) do
+    Permissions.can?(
+      :project_users,
+      action,
+      socket.assigns.current_user,
+      project_user
+    )
   end
 
   defp parent_admin?(project, %{user: %User{} = user}),

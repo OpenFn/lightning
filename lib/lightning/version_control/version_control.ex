@@ -180,9 +180,10 @@ defmodule Lightning.VersionControl do
         join: s in assoc(w, :snapshots),
         on: s.lock_version == w.lock_version,
         where: w.project_id == ^project_id and is_nil(w.deleted_at),
+        order_by: s.id,
         select: s.id
 
-    Repo.all(current_query) |> Enum.reverse()
+    Repo.all(current_query)
   end
 
   defp maybe_add_snapshots(inputs, snapshot_ids) do
@@ -246,8 +247,20 @@ defmodule Lightning.VersionControl do
 
   defp maybe_fetch_remaining_repos(_client, initial_result), do: initial_result
 
-  def fetch_repo_branches(installation_id, repo_name) do
-    with {:ok, client} <- GithubClient.build_installation_client(installation_id) do
+  @doc """
+  Fetches a repository's branches for `user`.
+
+  The GitHub App private key can mint an installation token for **any**
+  installation of the shared App, so this verifies (using the user's own GitHub
+  OAuth grant, via `/user/installations`) that `installation_id` is one the user
+  can access before using the app credential. Without this check a user could
+  read branch names from a private repository in another tenant's installation
+  (a confused-deputy). GitHub's installation token then scopes repository access
+  to that installation.
+  """
+  def fetch_repo_branches(user, installation_id, repo_name) do
+    with :ok <- authorize_installation_access(user, installation_id),
+         {:ok, client} <- GithubClient.build_installation_client(installation_id) do
       case GithubClient.get_repo_branches(client, repo_name) do
         {:ok, %{body: body}} ->
           {:ok, body}
@@ -255,6 +268,25 @@ defmodule Lightning.VersionControl do
         {:error, %{body: body}} ->
           {:error, body}
       end
+    end
+  end
+
+  defp authorize_installation_access(user, installation_id) do
+    case fetch_user_installations(user) do
+      {:ok, %{"installations" => installations}} when is_list(installations) ->
+        if Enum.any?(installations, fn installation ->
+             to_string(installation["id"]) == to_string(installation_id)
+           end) do
+          :ok
+        else
+          {:error, :unauthorized_installation}
+        end
+
+      {:ok, _body} ->
+        {:error, :unauthorized_installation}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 

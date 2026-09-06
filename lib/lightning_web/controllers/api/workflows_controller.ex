@@ -9,7 +9,7 @@ defmodule LightningWeb.API.WorkflowsController do
 
   A workflow consists of:
   - Jobs: JavaScript execution units with adaptors
-  - Triggers: Initiation methods (Webhook, Cron, Kafka)
+  - Triggers: Initiation methods (Webhook, Cron)
   - Edges: Connections between triggers/jobs with conditions
 
   ## Validation Rules
@@ -413,6 +413,14 @@ defmodule LightningWeb.API.WorkflowsController do
        ),
        do: validate_workflow(edges, jobs, triggers, ids_map)
 
+  defp validate_workflow(%{} = params, ids_map) do
+    edges = Map.get(params, "edges", [])
+    jobs = Map.get(params, "jobs", [])
+    triggers = Map.get(params, "triggers", [])
+
+    validate_workflow(edges, jobs, triggers, ids_map)
+  end
+
   defp validate_workflow(edges, jobs, triggers, ids_map) do
     # {:ok, _ids} <- validate_ids(edges),
     with {:ok, triggers_ids} <- validate_ids(triggers),
@@ -532,11 +540,11 @@ defmodule LightningWeb.API.WorkflowsController do
   end
 
   defp authorize_write(conn, project_id) do
-    authorize_for_project(conn, project_id, :access_write)
+    authorize_for_project(conn, project_id, :edit_workflow)
   end
 
   defp authorize_read(conn, project_id) do
-    authorize_for_project(conn, project_id, :access_read)
+    authorize_for_project(conn, project_id, :access_project)
   end
 
   defp authorize_read_workflow(conn, %Workflow{project_id: project_id}) do
@@ -547,7 +555,7 @@ defmodule LightningWeb.API.WorkflowsController do
     project = Repo.get(Project, project_id)
 
     Permissions.can(
-      Lightning.Policies.Workflows,
+      Lightning.Policies.ProjectUsers,
       access,
       conn.assigns.current_resource,
       project

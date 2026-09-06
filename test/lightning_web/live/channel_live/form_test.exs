@@ -493,6 +493,53 @@ defmodule LightningWeb.ChannelLive.FormTest do
       assert length(destination_cams) == 1
       assert hd(destination_cams).project_credential_id == pc.id
     end
+
+    @tag role: :editor
+    test "redirects when editing a channel that belongs to another project", %{
+      conn: conn,
+      project: project
+    } do
+      other_project = insert(:project)
+
+      other_channel =
+        insert(:channel,
+          project: other_project,
+          name: "other-tenant-channel",
+          destination_url: "https://other.example.com"
+        )
+
+      assert {:error, {:live_redirect, %{to: redirect_to, flash: flash}}} =
+               live(
+                 conn,
+                 ~p"/projects/#{project.id}/channels/#{other_channel.id}/edit"
+               )
+
+      assert redirect_to == ~p"/projects/#{project.id}/channels"
+      assert flash["error"] == "Channel not found"
+    end
+
+    @tag role: :editor
+    test "a client-side patch to another project's channel edit is rejected", %{
+      conn: conn,
+      project: project
+    } do
+      foreign_channel =
+        insert(:channel, project: insert(:project), name: "other-tenant")
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/channels")
+
+      # Simulate a tampered browser pushing a live_patch straight to the
+      # foreign channel's edit action. Unlike the run/workflow views, the
+      # channel index re-scopes on every handle_params (apply_action/:edit
+      # loads via get_channel_for_project), so the patch is rejected.
+      assert {:error, {:live_redirect, %{to: to}}} =
+               render_patch(
+                 view,
+                 ~p"/projects/#{project.id}/channels/#{foreign_channel.id}/edit"
+               )
+
+      assert to == ~p"/projects/#{project.id}/channels"
+    end
   end
 
   describe "destination credential round-trips" do
@@ -717,6 +764,179 @@ defmodule LightningWeb.ChannelLive.FormTest do
         )
 
       assert dest_cams == []
+    end
+  end
+
+  describe "cross-project destination credential is rejected" do
+    @tag role: :editor
+    test "creating a channel with another project's credential is rejected",
+         %{conn: conn, project: project} do
+      # The dropdown only lists this project's credentials; a tampered browser
+      # can still POST an arbitrary project_credential UUID. It must be rejected
+      # at save so a foreign tenant's secret can't be attached and exfiltrated.
+      other_project = insert(:project)
+      victim_credential = insert(:project_credential, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      # The malicious credential id is passed via render_submit's override map
+      # rather than through form/2 (the dropdown only offers in-project
+      # options, so form/2 would reject it) — this simulates a tampered
+      # browser POSTing a raw UUID.
+      view
+      |> form("#channel-form-new",
+        channel: %{
+          name: "exfil",
+          destination_url: "https://attacker.example.com"
+        }
+      )
+      |> render_submit(%{
+        channel: %{destination_credential_id: victim_credential.id}
+      })
+
+      # Stays on the form — no redirect to the index.
+      assert has_element?(view, "#channel-form-new")
+
+      # Nothing was persisted.
+      assert Channels.list_channels_for_project(project.id) == []
+    end
+
+    @tag role: :editor
+    test "swapping in another project's credential on edit is rejected",
+         %{conn: conn, project: project, user: user} do
+      credential = insert(:credential, project: project, user: user)
+
+      own_pc =
+        insert(:project_credential, project: project, credential: credential)
+
+      other_project = insert(:project)
+      victim_credential = insert(:project_credential, project: other_project)
+
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :destination,
+        webhook_auth_method: nil,
+        project_credential: own_pc
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
+        )
+
+      # Foreign credential id supplied via the override map to bypass the
+      # dropdown's in-project options (see the create test above).
+      view
+      |> form("#channel-form-#{channel.id}", channel: %{name: channel.name})
+      |> render_submit(%{
+        channel: %{destination_credential_id: victim_credential.id}
+      })
+
+      # Stays on the form — no redirect to the index.
+      assert has_element?(view, "#channel-form-#{channel.id}")
+
+      # The existing destination credential is untouched; the foreign one
+      # was never attached.
+      loaded =
+        Channels.get_channel!(channel.id, include: [:channel_auth_methods])
+
+      dest_cams =
+        Enum.filter(loaded.channel_auth_methods, &(&1.role == :destination))
+
+      assert length(dest_cams) == 1
+      assert hd(dest_cams).project_credential_id == own_pc.id
+    end
+  end
+
+  describe "cross-project client auth method is rejected" do
+    @tag role: :editor
+    test "creating a channel with another project's webhook auth method is rejected",
+         %{conn: conn, project: project} do
+      # The client-auth checkbox list only renders this project's webhook auth
+      # methods, but a tampered browser can POST an arbitrary
+      # webhook_auth_method UUID. It must be rejected at save so a foreign
+      # tenant's auth object can't gate this project's channel.
+      other_project = insert(:project)
+      victim_auth_method = insert(:webhook_auth_method, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      # The foreign id is passed via render_submit's override map rather than
+      # through form/2 (the form only renders in-project checkboxes, so form/2
+      # would reject the unknown field) — this simulates a tampered browser.
+      view
+      |> form("#channel-form-new",
+        channel: %{
+          name: "borrowed-auth",
+          destination_url: "https://example.com/destination"
+        }
+      )
+      |> render_submit(%{
+        channel: %{client_auth_methods: %{victim_auth_method.id => "true"}}
+      })
+
+      assert Repo.preload(victim_auth_method, :channel_auth_methods).channel_auth_methods ==
+               []
+
+      for channel <- Channels.list_channels_for_project(project.id) do
+        assert Repo.preload(channel, :client_auth_methods).client_auth_methods ==
+                 []
+      end
+    end
+
+    @tag role: :editor
+    test "adding another project's webhook auth method on edit is rejected",
+         %{conn: conn, project: project} do
+      own_auth_method = insert(:webhook_auth_method, project: project)
+      other_project = insert(:project)
+      victim_auth_method = insert(:webhook_auth_method, project: other_project)
+
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :client,
+        webhook_auth_method: own_auth_method
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
+        )
+
+      # Foreign auth-method id supplied via the override map to bypass the
+      # in-project checkbox list (see the create test above).
+      view
+      |> form("#channel-form-#{channel.id}", channel: %{name: channel.name})
+      |> render_submit(%{
+        channel: %{
+          client_auth_methods: %{
+            own_auth_method.id => "true",
+            victim_auth_method.id => "true"
+          }
+        }
+      })
+
+      # The existing in-project client auth method is untouched; the foreign
+      # one was never attached (see the create test on why this doesn't assert
+      # which layer stopped it).
+      loaded =
+        Channels.get_channel!(channel.id, include: [:channel_auth_methods])
+
+      client_cams =
+        Enum.filter(loaded.channel_auth_methods, &(&1.role == :client))
+
+      assert length(client_cams) == 1
+      assert hd(client_cams).webhook_auth_method_id == own_auth_method.id
+
+      assert Repo.preload(victim_auth_method, :channel_auth_methods).channel_auth_methods ==
+               []
     end
   end
 end

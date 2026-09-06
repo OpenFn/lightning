@@ -1,37 +1,26 @@
 defmodule LightningWeb.CollectionLive.Index do
   use LightningWeb, :live_view
 
+  on_mount {LightningWeb.Hooks, :ensure_admin}
+
   import LightningWeb.CollectionLive.Components
 
   alias Lightning.Collections
   alias Lightning.Collections.Collection
-  alias Lightning.Policies.Permissions
-  alias Lightning.Policies.Users
 
   require Logger
 
   @impl true
   def mount(_params, _session, socket) do
-    can_access_admin_space =
-      Users
-      |> Permissions.can?(:access_admin_space, socket.assigns.current_user, {})
-
-    if can_access_admin_space do
-      {:ok,
-       socket
-       |> assign(
-         page_title: "Collections",
-         active_menu_item: :collections,
-         collections: Collections.list_collections(),
-         sort_by: "name",
-         sort_direction: :asc
-       ), layout: {LightningWeb.Layouts, :settings}}
-    else
-      {:ok,
-       socket
-       |> put_flash(:nav, :no_access)
-       |> push_navigate(to: "/projects")}
-    end
+    {:ok,
+     socket
+     |> assign(
+       page_title: "Collections",
+       active_menu_item: :collections,
+       collections: Collections.list_collections(),
+       sort_by: "name",
+       sort_direction: :asc
+     ), layout: {LightningWeb.Layouts, :settings}}
   end
 
   @impl true

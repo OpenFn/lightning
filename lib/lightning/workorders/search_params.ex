@@ -6,25 +6,33 @@ defmodule Lightning.WorkOrders.SearchParams do
 
   use Lightning.Schema
 
-  @derive {Jason.Encoder,
-           only: [
-             :status,
-             :search_fields,
-             :search_term,
-             :workflow_id,
-             :workorder_id,
-             :date_after,
-             :date_before,
-             :wo_date_after,
-             :wo_date_before,
-             :sort_by,
-             :sort_direction
-           ]}
+  @fields [
+    :status,
+    :search_fields,
+    :search_term,
+    :workflow_id,
+    :workorder_id,
+    :date_after,
+    :date_before,
+    :wo_date_after,
+    :wo_date_before,
+    :sort_by,
+    :sort_direction
+  ]
 
-  @statuses Lightning.WorkOrder.states()
-            |> Enum.map(&Atom.to_string/1)
-  @statuses_set MapSet.new(@statuses)
-  @search_fields ~w(id body log dataclip_name)
+  @derive {Jason.Encoder, only: @fields}
+  # Also implement the built-in JSON.Encoder: the history-export path serialises
+  # this struct (audit metadata and the Oban job args) through it, and without
+  # this every export raised instead of running.
+  @derive {JSON.Encoder, only: @fields}
+
+  @status_values Lightning.WorkOrder.states()
+  @search_field_values [:id, :body, :log, :dataclip_name]
+
+  # String forms for the URI/flag params new/1 receives from the UI.
+  @statuses Enum.map(@status_values, &Atom.to_string/1)
+  @search_fields Enum.map(@search_field_values, &Atom.to_string/1)
+  @statuses_set MapSet.new(@status_values)
 
   defmacro status_list do
     quote do
@@ -33,10 +41,11 @@ defmodule Lightning.WorkOrders.SearchParams do
   end
 
   @type t :: %__MODULE__{
-          status: [String.t()],
-          search_fields: [String.t()],
+          status: [atom()],
+          search_fields: [atom()],
           search_term: String.t(),
           workflow_id: Ecto.UUID.t(),
+          workorder_id: Ecto.UUID.t(),
           date_after: DateTime.t(),
           date_before: DateTime.t(),
           wo_date_after: DateTime.t(),
@@ -47,8 +56,13 @@ defmodule Lightning.WorkOrders.SearchParams do
 
   @primary_key false
   embedded_schema do
-    field(:status, {:array, :string})
-    field(:search_fields, {:array, :string}, default: @search_fields)
+    field(:status, {:array, Ecto.Enum}, values: @status_values, default: [])
+
+    field(:search_fields, {:array, Ecto.Enum},
+      values: @search_field_values,
+      default: @search_field_values
+    )
+
     field(:search_term, :string)
     field(:workflow_id, :binary_id)
     field(:workorder_id, :binary_id)
@@ -60,38 +74,24 @@ defmodule Lightning.WorkOrders.SearchParams do
     field(:sort_direction, :string)
   end
 
+  # Raises on invalid input. A malformed filter is only reachable by hand-editing
+  # the query string, and failing loud (500) is safer here than silently
+  # dropping the bad filter, which would widen the results/export. from_map/1
+  # handles the untrusted serialized args for the worker, and fails closed.
   def new(params) do
-    params = from_uri(params)
+    params
+    |> from_uri()
+    |> changeset()
+    |> apply_action!(:validate)
+  end
 
+  defp changeset(params) do
     %__MODULE__{}
-    |> cast(params, [
-      :status,
-      :search_fields,
-      :search_term,
-      :workflow_id,
-      :workorder_id,
-      :date_after,
-      :date_before,
-      :wo_date_after,
-      :wo_date_before,
-      :sort_by,
-      :sort_direction
-    ])
-    |> validate_subset(:status, @statuses)
-    |> validate_subset(:search_fields, @search_fields)
+    |> cast(params, @fields)
     |> validate_inclusion(:sort_by, ["inserted_at", "last_activity"],
       allow_nil: true
     )
     |> validate_inclusion(:sort_direction, ["asc", "desc"], allow_nil: true)
-    |> apply_action!(:validate)
-    |> Map.update!(:status, fn statuses ->
-      Enum.map(statuses, fn status -> String.to_existing_atom(status) end)
-    end)
-    |> Map.update!(:search_fields, fn search_fields ->
-      Enum.map(search_fields, fn search_field ->
-        String.to_existing_atom(search_field)
-      end)
-    end)
   end
 
   def all_statuses_set?(%{status: status_list}) do
@@ -149,27 +149,15 @@ defmodule Lightning.WorkOrders.SearchParams do
     |> Map.merge(search_params, fn _key, v1, _v2 -> v1 end)
   end
 
-  def from_map(map) do
-    updated_map =
-      map
-      |> Enum.into(%{}, fn {key, value} ->
-        {String.to_existing_atom(key), value}
-      end)
-      |> Map.update!(:date_after, &parse_datetime/1)
-      |> Map.update!(:date_before, &parse_datetime/1)
-      |> Map.update!(:wo_date_after, &parse_datetime/1)
-      |> Map.update!(:wo_date_before, &parse_datetime/1)
-
-    struct(__MODULE__, updated_map)
+  # Oban args (JSON): rebuilds the struct new/1 validated before enqueue. Runs
+  # in the export worker, so it returns {:error, _} rather than raising on a
+  # stale or malformed arg, letting the worker fail the export cleanly instead
+  # of crashing or exporting the wrong rows.
+  def from_map(map) when is_map(map) do
+    map
+    |> changeset()
+    |> apply_action(:validate)
   end
 
-  defp parse_datetime(nil), do: nil
-
-  defp parse_datetime(datetime_string) do
-    DateTime.from_iso8601(datetime_string)
-    |> case do
-      {:ok, datetime, _} -> datetime
-      _ -> nil
-    end
-  end
+  def from_map(_), do: {:error, :invalid_search_params}
 end

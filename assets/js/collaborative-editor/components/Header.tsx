@@ -4,12 +4,9 @@ import { useCallback, useContext, useState } from 'react';
 import { useURLState } from '#/react/lib/use-url-state';
 
 import { Tooltip } from '../../components/Tooltip';
-import { buildClassicalEditorUrl } from '../../utils/editorUrlConversion';
 import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
-import { channelRequest } from '../hooks/useChannel';
 import { useActiveRun } from '../hooks/useHistory';
-import { useSession } from '../hooks/useSession';
 import {
   useIsNewWorkflow,
   useLimits,
@@ -17,12 +14,7 @@ import {
   useProjectRepoConnection,
   useSessionWorkflow,
 } from '../hooks/useSessionContext';
-import {
-  useImportPanelState,
-  useIsCreateWorkflowPanelCollapsed,
-  useTemplatePanel,
-  useUICommands,
-} from '../hooks/useUI';
+import { useUICommands } from '../hooks/useUI';
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 import {
   useCanRun,
@@ -222,16 +214,10 @@ export function Header({
   const { saveWorkflow, goLive, switchToDraft } = useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
-  const jobs = useWorkflowState(state => state.jobs);
   const { canRun } = useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
   const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
-  const isNewWorkflow = useIsNewWorkflow();
-  const isCreateWorkflowPanelCollapsed = useIsCreateWorkflowPanelCollapsed();
-  const importPanelState = useImportPanelState();
-  const { selectedTemplate } = useTemplatePanel();
-  const { provider } = useSession();
   const limits = useLimits();
   const { isReadOnly } = useWorkflowReadOnly();
   const { hasChanges } = useUnsavedChanges();
@@ -242,6 +228,7 @@ export function Header({
   const lifecycleState = sessionWorkflow?.state;
   const permissions = usePermissions();
   const canProvisionSandbox = permissions?.can_provision_sandbox ?? false;
+  const isNewWorkflow = useIsNewWorkflow();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
   const [showEditInSandboxPicker, setShowEditInSandboxPicker] = useState(false);
@@ -262,8 +249,6 @@ export function Header({
 
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
-  const isWorkflowEmpty = jobs.length === 0 && triggers.length === 0;
-  const currentMethod = params['method'] as 'template' | 'import' | 'ai' | null;
 
   // Check if viewing a pinned version via URL parameter
   // When ?v= is present, user is viewing a specific version (even if latest)
@@ -276,14 +261,14 @@ export function Header({
       ? 'Switch to the latest version of this workflow to use the AI Assistant.'
       : undefined;
 
-  const showChangeIndicator = hasChanges && canSave && !isNewWorkflow;
+  const showChangeIndicator = hasChanges && canSave;
 
   const handleRunClick = useCallback(async () => {
     if (!firstTriggerId || !projectId || !workflowId) return;
 
     setIsSubmitting(true);
     try {
-      await saveWorkflow({ silent: true });
+      await saveWorkflow({ notify: 'none' });
       const response = await dataclipApi.submitManualRun({
         workflowId,
         projectId,
@@ -318,7 +303,7 @@ export function Header({
 
     setIsSubmitting(true);
     try {
-      await saveWorkflow({ silent: true });
+      await saveWorkflow({ notify: 'none' });
 
       const firstStep = activeRun.steps[0];
       const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;
@@ -375,25 +360,6 @@ export function Header({
     }
   }, [firstTriggerId, openRunPanel, selectNode, updateSearchParams]);
 
-  const handleSwitchToLegacyEditor = useCallback(async () => {
-    if (!provider?.channel || !projectId || !workflowId) return;
-
-    try {
-      await channelRequest(provider.channel, 'switch_to_legacy_editor', {});
-
-      // Build legacy editor URL and navigate
-      const legacyUrl = buildClassicalEditorUrl({
-        projectId,
-        workflowId,
-        searchParams: new URLSearchParams(window.location.search),
-        isNewWorkflow,
-      });
-      window.location.href = legacyUrl;
-    } catch (error) {
-      console.error('Failed to switch to legacy editor:', error);
-    }
-  }, [provider, projectId, workflowId, isNewWorkflow]);
-
   useKeyboardShortcut(
     'Control+Enter, Meta+Enter',
     () => {
@@ -409,7 +375,6 @@ export function Header({
         canRun &&
         !isRunPanelOpen &&
         !isIDEOpen &&
-        !isNewWorkflow &&
         !isSubmitting &&
         !runIsProcessing &&
         !!projectId &&
@@ -429,7 +394,6 @@ export function Header({
         canRun &&
         !isRunPanelOpen &&
         !isIDEOpen &&
-        !isNewWorkflow &&
         !!projectId &&
         !!workflowId &&
         !!firstTriggerId,
@@ -464,61 +428,28 @@ export function Header({
             <Breadcrumbs>{children}</Breadcrumbs>
           </div>
           <ReadOnlyWarning className="ml-3" />
-          {projectId && workflowId && (
-            <Tooltip
-              content={
-                <span>
-                  Looking for the old version of the workflow builder? You can
-                  switch back for a few more days by clicking this icon. (But it
-                  will soon be retired!)
-                </span>
-              }
-              side="bottom"
-            >
-              <button
-                type="button"
-                onClick={() => void handleSwitchToLegacyEditor()}
-                className="w-6 h-6 place-self-center text-slate-500 hover:text-slate-400 cursor-pointer"
-              >
-                <span className="hero-question-mark-circle"></span>
-              </button>
-            </Tooltip>
-          )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
           <div className="flex flex-row gap-2 items-center">
             <div className="flex flex-row gap-2 items-center">
               <div>
-                <Tooltip
-                  content={
-                    isNewWorkflow && isWorkflowEmpty
-                      ? 'Add a workflow to configure settings'
-                      : null
-                  }
-                  side="bottom"
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentPanel = params.panel;
+                    updateSearchParams({
+                      panel: currentPanel === 'settings' ? null : 'settings',
+                    });
+                  }}
+                  className={`w-6 h-6 place-self-center ${
+                    hasSettingsErrors
+                      ? 'text-danger-500 hover:text-danger-400 cursor-pointer'
+                      : 'text-slate-500 hover:text-slate-400 cursor-pointer'
+                  }`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isNewWorkflow && isWorkflowEmpty) return;
-                      const currentPanel = params.panel;
-                      updateSearchParams({
-                        panel: currentPanel === 'settings' ? null : 'settings',
-                      });
-                    }}
-                    disabled={isNewWorkflow && isWorkflowEmpty}
-                    className={`w-6 h-6 place-self-center ${
-                      hasSettingsErrors
-                        ? 'text-danger-500 hover:text-danger-400 cursor-pointer'
-                        : isNewWorkflow && isWorkflowEmpty
-                          ? 'cursor-not-allowed opacity-50'
-                          : 'text-slate-500 hover:text-slate-400 cursor-pointer'
-                    }`}
-                  >
-                    <span className="hero-adjustments-vertical"></span>
-                  </button>
-                </Tooltip>
+                  <span className="hero-adjustments-vertical"></span>
+                </button>
               </div>
               <div
                 className="hidden"
@@ -624,7 +555,6 @@ export function Header({
               {projectId &&
                 workflowId &&
                 firstTriggerId &&
-                !isNewWorkflow &&
                 !isReadOnly && (
                   <NewRunButton
                     onClick={() => {
@@ -639,47 +569,12 @@ export function Header({
                   />
                 )}
               <SaveButton
-                canSave={
-                  canSave &&
-                  !hasSettingsErrors &&
-                  // For new workflows, check based on creation method
-                  !(
-                    isNewWorkflow &&
-                    !isCreateWorkflowPanelCollapsed &&
-                    // Template method: need a selected template OR workflow on canvas
-                    ((currentMethod === 'template' &&
-                      !selectedTemplate &&
-                      isWorkflowEmpty) ||
-                      // Import method: need valid YAML
-                      (currentMethod === 'import' &&
-                        importPanelState !== 'valid'))
-                  ) &&
-                  // When panel is collapsed, just check workflow isn't empty
-                  !(
-                    isNewWorkflow &&
-                    isCreateWorkflowPanelCollapsed &&
-                    isWorkflowEmpty
-                  )
-                }
-                tooltipMessage={
-                  isNewWorkflow &&
-                  !isCreateWorkflowPanelCollapsed &&
-                  currentMethod === 'import' &&
-                  importPanelState === 'invalid'
-                    ? 'Fix validation errors to continue'
-                    : isNewWorkflow &&
-                        !isCreateWorkflowPanelCollapsed &&
-                        currentMethod === 'template' &&
-                        !selectedTemplate
-                      ? 'Select a template to continue'
-                      : isNewWorkflow && isWorkflowEmpty
-                        ? 'Cannot save an empty workflow'
-                        : tooltipMessage
-                }
+                canSave={canSave && !hasSettingsErrors}
+                tooltipMessage={tooltipMessage}
                 onClick={() => void saveWorkflow()}
                 repoConnection={repoConnection}
                 onSyncClick={openGitHubSyncModal}
-                label={isNewWorkflow ? 'Create' : 'Save'}
+                label="Save"
                 canSync={githubSyncLimit.allowed}
                 syncTooltipMessage={githubSyncLimit.message}
                 hasChanges={showChangeIndicator}

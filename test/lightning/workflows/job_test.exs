@@ -229,5 +229,55 @@ defmodule Lightning.Workflows.JobTest do
       errors = Job.changeset(%Job{}, %{adaptor: nil}) |> errors_on()
       assert errors[:adaptor] == ["job adaptor can't be blank"]
     end
+
+    test "accepts well-formed, registry-listed adaptor strings" do
+      [
+        "@openfn/language-common@latest",
+        "@openfn/language-http@1.2.3",
+        "@openfn/language-http@1.2.3-pre",
+        "@openfn/language-http",
+        "@openfn/language-common"
+      ]
+      |> Enum.each(fn adaptor ->
+        errors = Job.changeset(%Job{}, %{adaptor: adaptor}) |> errors_on()
+        refute errors[:adaptor], "expected #{inspect(adaptor)} to be accepted"
+      end)
+    end
+
+    test "rejects a well-formed adaptor that is not in the registry" do
+      # The registry membership check only runs on an otherwise-valid changeset,
+      # so name and body are supplied here.
+      [
+        "@openfn/language-foo@1.0.0",
+        "@evilcorp/language-http@1.0.0",
+        "common@1.0.0"
+      ]
+      |> Enum.each(fn adaptor ->
+        errors =
+          Job.changeset(%Job{}, %{
+            name: "job",
+            body: "fn(state => state)",
+            adaptor: adaptor
+          })
+          |> errors_on()
+
+        assert errors[:adaptor] == ["is not a recognised adaptor"],
+               "expected #{inspect(adaptor)} to be rejected as unknown"
+      end)
+    end
+
+    test "rejects malformed / injection-shaped adaptor strings" do
+      [
+        "@openfn/x\npwd\nb@1.0.0",
+        "@openfn/language-http@7.3.2; touch /tmp/x",
+        "@openfn/language-common@latest and stuff"
+      ]
+      |> Enum.each(fn adaptor ->
+        errors = Job.changeset(%Job{}, %{adaptor: adaptor}) |> errors_on()
+
+        assert errors[:adaptor] == ["adaptor has invalid format"],
+               "expected #{inspect(adaptor)} to be rejected"
+      end)
+    end
   end
 end

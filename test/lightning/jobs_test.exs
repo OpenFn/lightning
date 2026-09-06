@@ -64,8 +64,45 @@ defmodule Lightning.JobsTest do
       assert_raise Ecto.NoResultsError, fn ->
         Jobs.get_job!(Ecto.UUID.generate())
       end
+    end
 
-      assert Jobs.get_job_with_credential(Ecto.UUID.generate()) == nil
+    test "get_job_with_credential/2 returns the credential-preloaded job scoped to its workflow" do
+      project = insert(:project)
+      credential = insert(:credential)
+
+      project_credential =
+        insert(:project_credential, project: project, credential: credential)
+
+      workflow = insert(:workflow, project: project)
+      other_workflow = insert(:workflow)
+
+      job =
+        insert(:job, workflow: workflow, project_credential: project_credential)
+
+      # Matching on `credential: %{id: ...}` also asserts the credential is
+      # preloaded (a %NotLoaded{} would not match), guarding the function's
+      # namesake behaviour against a dropped preload.
+      assert %Job{id: id, credential: %{id: credential_id}} =
+               Jobs.get_job_with_credential(job.id, workflow.id)
+
+      assert id == job.id
+      assert credential_id == credential.id
+
+      refute Jobs.get_job_with_credential(job.id, other_workflow.id)
+      refute Jobs.get_job_with_credential(Ecto.UUID.generate(), workflow.id)
+    end
+
+    test "job_in_project?/2 is true only for a job in the given project" do
+      project = insert(:project)
+      job = insert(:job, workflow: insert(:workflow, project: project))
+
+      other_job =
+        insert(:job, workflow: insert(:workflow, project: insert(:project)))
+
+      assert Jobs.job_in_project?(job.id, project)
+      refute Jobs.job_in_project?(other_job.id, project)
+      refute Jobs.job_in_project?(Ecto.UUID.generate(), project)
+      refute Jobs.job_in_project?("not-a-uuid", project)
     end
 
     test "change_job/1 returns a job changeset" do

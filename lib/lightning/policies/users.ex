@@ -31,7 +31,10 @@ defmodule Lightning.Policies.Users do
 
   def authorize(:delete_api_token, %User{} = authenticated_user, token)
       when is_binary(token) do
-    authenticated_user.id == Accounts.get_user_by_api_token(token).id
+    case Accounts.get_user_by_api_token(token) do
+      %User{id: owner_id} -> authenticated_user.id == owner_id
+      nil -> false
+    end
   end
 
   def authorize(action, %User{} = authenticated_user, %module{} = credential)

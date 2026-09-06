@@ -61,6 +61,7 @@ import type {
   JobCodeContext,
   Message,
   MessageStatus,
+  ResponseSegment,
   Session,
   SessionListResponse,
   SessionSummary,
@@ -71,11 +72,20 @@ import type {
 import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
 
+import { clearWorkflowDiffCaches } from '../utils/workflowDiff';
+
 const logger = _logger.ns('AIAssistantStore').seal();
 
 /**
  * Creates an AI Assistant store instance
  */
+/**
+ * How many replies keep their streamed snapshots. Each holds a full workflow
+ * YAML per mutation, so this is the difference between a bounded cost and
+ * tens of megabytes across a long session.
+ */
+const MAX_RETAINED_SNAPSHOT_MESSAGES = 10;
+
 export const createAIAssistantStore = (): AIAssistantStore => {
   let state: AIAssistantState = produce(
     {
@@ -89,12 +99,16 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       streamingContent: null,
       streamingStatus: null,
       streamingChanges: null,
+      streamingSegments: [],
+      streamingSnapshots: [],
+      snapshotsByMessageId: {},
+      streamingApply: null,
+      appliedCanvasYaml: null,
       sessionList: [],
       sessionListLoading: false,
       sessionListPagination: null,
       jobCodeContext: null,
       workflowTemplateContext: null,
-      hasReadDisclaimer: false,
     } as AIAssistantState,
     draft => draft
   );
@@ -162,6 +176,8 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingContent = null;
       draft.streamingStatus = null;
       draft.streamingChanges = null;
+      draft.streamingSegments = [];
+      draft.streamingSnapshots = [];
     });
 
     notify('disconnect');
@@ -197,21 +213,11 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   };
 
   /**
-   * Mark AI disclaimer as read
-   */
-  const markDisclaimerRead = () => {
-    state = produce(state, draft => {
-      draft.hasReadDisclaimer = true;
-    });
-
-    notify('markDisclaimerRead');
-  };
-
-  /**
    * Clear session and start fresh
    * Forces creation of a new session by clearing sessionId and messages
    */
   const clearSession = () => {
+    clearWorkflowDiffCaches();
     state = produce(state, draft => {
       draft.sessionId = null;
       draft.messages = [];
@@ -220,6 +226,11 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingContent = null;
       draft.streamingStatus = null;
       draft.streamingChanges = null;
+      draft.streamingSegments = [];
+      draft.streamingSnapshots = [];
+      draft.snapshotsByMessageId = {};
+      draft.streamingApply = null;
+      draft.appliedCanvasYaml = null;
     });
 
     notify('clearSession');
@@ -230,11 +241,22 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Switches to the specified session
    */
   const loadSession = (sessionId: string) => {
+    clearWorkflowDiffCaches();
     state = produce(state, draft => {
       draft.connectionState = 'connecting';
       draft.sessionId = sessionId;
       draft.messages = [];
+      draft.streamingContent = null;
+      draft.streamingStatus = null;
+      // Left behind, the auto-apply effect can re-run against the previous
+      // session's workflow and import it onto this canvas.
+      draft.streamingChanges = null;
+      draft.streamingSegments = [];
+      draft.streamingSnapshots = [];
+      draft.snapshotsByMessageId = {};
       draft.isLoading = true;
+      draft.streamingApply = null;
+      draft.appliedCanvasYaml = null;
     });
 
     notify('loadSession');
@@ -427,6 +449,37 @@ export const createAIAssistantStore = (): AIAssistantStore => {
           draft.streamingContent = null;
           draft.streamingStatus = null;
           draft.streamingChanges = null;
+          const streamedSegmentCount = draft.streamingSegments.length;
+          draft.streamingSegments = [];
+          // Hand the streamed snapshots to the id the server just assigned,
+          // so the settled message renders the same per-status diffs it did
+          // a moment ago instead of collapsing to one whole-message diff.
+          //
+          // Their indices count the timeline this client built. The server
+          // drops invalid segments and truncates long ones, so if its
+          // timeline is a different length the indices no longer line up and
+          // the blocks would jump to the wrong status at exactly the moment
+          // this is meant to be seamless. Fall back to the whole-message
+          // diff rather than show them against the wrong statuses.
+          const serverSegments = message.response_segments?.length ?? 0;
+          if (
+            draft.streamingSnapshots.length > 0 &&
+            serverSegments === streamedSegmentCount
+          ) {
+            // Evict only when actually storing something. Doing it up front
+            // meant a plain-text reply, which retains nothing, still dropped
+            // the oldest reply's snapshots and quietly sent it back to the
+            // whole-message diff. Each entry holds a full workflow YAML per
+            // mutation, so the cap is what keeps a long session bounded.
+            const retained = Object.keys(draft.snapshotsByMessageId);
+            if (retained.length >= MAX_RETAINED_SNAPSHOT_MESSAGES) {
+              retained
+                .slice(0, retained.length - MAX_RETAINED_SNAPSHOT_MESSAGES + 1)
+                .forEach(id => delete draft.snapshotsByMessageId[id]);
+            }
+            draft.snapshotsByMessageId[message.id] = draft.streamingSnapshots;
+          }
+          draft.streamingSnapshots = [];
         } else if (message.status === 'processing') {
           draft.isLoading = true;
         }
@@ -456,6 +509,8 @@ export const createAIAssistantStore = (): AIAssistantStore => {
         if (status === 'error') {
           draft.streamingContent = null;
           draft.streamingStatus = null;
+          draft.streamingSegments = [];
+          draft.streamingSnapshots = [];
         }
         if (status === 'processing') {
           draft.isLoading = true;
@@ -577,8 +632,50 @@ export const createAIAssistantStore = (): AIAssistantStore => {
   const _appendStreamingChunk = (content: string) => {
     state = produce(state, draft => {
       draft.streamingContent = (draft.streamingContent || '') + content;
+
+      // streamingContent stays the flat source of truth; the timeline is a
+      // parallel view of the same text, split by status segments.
+      const lastSegment = draft.streamingSegments.at(-1);
+      if (lastSegment && lastSegment.type === 'text') {
+        lastSegment.content += content;
+      } else {
+        draft.streamingSegments.push({ type: 'text', content });
+      }
     });
     notify('_appendStreamingChunk');
+  };
+
+  /**
+   * Append a status segment to the streaming timeline. Only the channel
+   * registry's char drain may call this — that is what keeps wire order.
+   * @internal
+   */
+  const _appendStreamingSegment = (segment: ResponseSegment) => {
+    state = produce(state, draft => {
+      draft.streamingSegments.push(segment);
+    });
+    notify('_appendStreamingSegment');
+  };
+
+  /**
+   * Record a workflow YAML snapshot at its position in the segment timeline.
+   *
+   * Pinned to the current segment count, which is the index of the status
+   * segment that describes this change once it drains — Apollo sends the
+   * snapshot immediately before its settled status. Consecutive identical
+   * snapshots are collapsed: Apollo re-sends the whole document on every
+   * mutation, and a tool that changed nothing would otherwise hang an
+   * empty diff under a status line.
+   */
+  const _appendStreamingSnapshot = (yaml: string) => {
+    if (state.streamingSnapshots.at(-1)?.yaml === yaml) return;
+    state = produce(state, draft => {
+      draft.streamingSnapshots.push({
+        yaml,
+        segmentIndex: draft.streamingSegments.length,
+      });
+    });
+    notify('_appendStreamingSnapshot');
   };
 
   const setStreamingStatus = (text: string | null) => {
@@ -602,8 +699,72 @@ export const createAIAssistantStore = (): AIAssistantStore => {
       draft.streamingContent = null;
       draft.streamingStatus = null;
       draft.streamingChanges = null;
+      draft.streamingSegments = [];
+      draft.streamingSnapshots = [];
     });
     notify('_clearStreaming');
+  };
+
+  /**
+   * Record that a workflow YAML was successfully imported to the canvas
+   * during streaming, so the auto-apply of the final new_message can skip
+   * the duplicate import when it carries the same YAML.
+   *
+   * Deliberately NOT cleared by _clearStreaming or disconnect: the final
+   * message may arrive after the stream ends (or after a reconnect), and
+   * the skip must still happen then. Cleared when the session changes or
+   * when the next final message with code is processed.
+   * @internal Called by useAIWorkflowApplications after a streaming import
+   */
+  const _setStreamingApply = (yaml: string) => {
+    state = produce(state, draft => {
+      draft.streamingApply = { yaml, saveFailed: false };
+    });
+    notify('_setStreamingApply');
+  };
+
+  /**
+   * Mark whether the post-import auto-save of a streaming apply failed
+   * (a save is still owed). No-op when no streaming apply is pending, so
+   * callers on shared save paths don't need to know whether the current
+   * apply came from streaming.
+   * @internal Called by useAIWorkflowApplications save/retry paths
+   */
+  const _setStreamingApplySaveFailed = (saveFailed: boolean) => {
+    if (!state.streamingApply) return;
+
+    state = produce(state, draft => {
+      if (draft.streamingApply) {
+        draft.streamingApply.saveFailed = saveFailed;
+      }
+    });
+    notify('_setStreamingApplySaveFailed');
+  };
+
+  /**
+   * Clear the pending streaming apply record.
+   * @internal Called by useAIWorkflowApplications on session load and when
+   * the next final message with code is processed
+   */
+  const _clearStreamingApply = () => {
+    if (!state.streamingApply) return;
+
+    state = produce(state, draft => {
+      draft.streamingApply = null;
+    });
+    notify('_clearStreamingApply');
+  };
+
+  /**
+   * Record the canvas as it stands after an assistant import, so undo can
+   * tell whether the workflow has been edited since.
+   * @internal Called by useAppliedCanvas after a successful import
+   */
+  const _setAppliedCanvasYaml = (yaml: string | null) => {
+    state = produce(state, draft => {
+      draft.appliedCanvasYaml = yaml;
+    });
+    notify('_setAppliedCanvasYaml');
   };
 
   /**
@@ -661,7 +822,6 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     disconnect,
     setMessageSending,
     retryMessage,
-    markDisclaimerRead,
     clearSession,
     loadSession,
     loadSessionList,
@@ -680,9 +840,15 @@ export const createAIAssistantStore = (): AIAssistantStore => {
     _initializeContext,
     _setProcessingState,
     _appendStreamingChunk,
+    _appendStreamingSegment,
     setStreamingStatus,
+    _appendStreamingSnapshot,
     _setStreamingChanges,
     _clearStreaming,
+    _setStreamingApply,
+    _setStreamingApplySaveFailed,
+    _setAppliedCanvasYaml,
+    _clearStreamingApply,
     _connectChannel,
   };
 };

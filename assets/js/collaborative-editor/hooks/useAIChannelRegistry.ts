@@ -163,12 +163,20 @@ export const useAISessionCommands = () => {
     registry.retryMessage(topic, messageId);
   };
 
-  const markDisclaimerRead = () => {
-    if (!registry || !topic) {
-      console.warn('Cannot mark disclaimer: registry or topic not available');
-      return;
-    }
-    registry.markDisclaimerRead(topic);
+  const reportApplyFailure = (details: {
+    messageId: string;
+    stage: 'parse' | 'validate_ids' | 'import' | 'save';
+    isNewWorkflow: boolean;
+  }) => {
+    // Best effort: no channel means no report, and never a second problem
+    // on top of the failure the user is already seeing.
+    if (!registry || !topic) return;
+    registry.reportApplyFailure(topic, details);
+  };
+
+  const reportApplyApplied = (messageId: string) => {
+    if (!registry || !topic) return;
+    registry.reportApplyApplied(topic, messageId);
   };
 
   const loadSessions = (offset = 0, limit = 20) => {
@@ -198,7 +206,8 @@ export const useAISessionCommands = () => {
   return {
     sendMessage,
     retryMessage,
-    markDisclaimerRead,
+    reportApplyFailure,
+    reportApplyApplied,
     loadSessions,
     updateContext,
     isConnected,
