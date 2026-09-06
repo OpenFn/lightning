@@ -2642,6 +2642,20 @@ defmodule Lightning.InvocationTest do
       assert input =~ "too large"
     end
 
+    test "says nothing about a dataclip whose body was removed", ctx do
+      step =
+        add_step(ctx, "emptied", input_dataclip: clip(ctx.project, %{"a" => 1}))
+
+      # Not wiped, just no body: what Invocation.delete_dataclip/1 leaves.
+      Lightning.Repo.query!(
+        "UPDATE dataclips SET body = NULL WHERE id = $1",
+        [Ecto.UUID.dump!(step.input_dataclip_id)]
+      )
+
+      assert [%{input: nil}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+    end
+
     test "calls a null body null rather than too large", ctx do
       step =
         add_step(ctx, "null output",
@@ -2690,11 +2704,24 @@ defmodule Lightning.InvocationTest do
         )
       end
 
+      # Past the budget and with nothing to read either way.
+      add_step(ctx, "nothing to read",
+        started_at: ~U[2026-09-01 10:00:59Z],
+        input_dataclip: nil
+      )
+
       entries = Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
 
       # Every step is still named, and the ones past the budget say why they
       # are not there rather than going missing.
-      assert length(entries) == 8
+      assert length(entries) == 9
+
+      assert List.last(entries) == %{
+               step_name: "nothing to read",
+               input: nil,
+               output: nil
+             }
+
       assert Enum.any?(entries, &is_map(&1.input))
 
       assert Enum.any?(
