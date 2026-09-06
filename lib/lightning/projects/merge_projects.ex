@@ -725,7 +725,17 @@ defmodule Lightning.Projects.MergeProjects do
     {new_mapping, merged_from_source ++ deleted_targets}
   end
 
-  defp build_trigger_attrs(trigger, id, target \\ nil) do
+  # A workflow being carried across untouched keeps its custom_path as-is: it is
+  # not being merged onto anything, so there is no target to conflict with and
+  # nothing to validate against. Only the two merge paths screen the path.
+  defp build_trigger_attrs(trigger, id) do
+    trigger
+    |> Map.take(@trigger_fields)
+    |> Map.put(:id, id)
+    |> stringify_keys()
+  end
+
+  defp build_trigger_attrs(trigger, id, target) do
     trigger
     |> Map.take(@trigger_fields)
     |> drop_unusable_custom_path(target)
@@ -971,7 +981,7 @@ defmodule Lightning.Projects.MergeProjects do
 
     triggers =
       Enum.map(source_workflow.triggers, fn trigger ->
-        build_trigger_attrs(trigger, Map.fetch!(node_mappings, trigger.id))
+        build_trigger_attrs(trigger, Map.fetch!(node_mappings, trigger.id), nil)
       end)
 
     edges =
