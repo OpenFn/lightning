@@ -195,9 +195,9 @@ defmodule Lightning.ApolloClient do
         # instead of discarding it. See Lightning.Tesla.Adapter.Finch.
         {
           Lightning.Tesla.Adapter.Finch,
-          # The gap between chunks, not the length of the whole answer. A reply
-          # that keeps arriving never trips this - MessageProcessor's job
-          # timeout is what bounds total duration.
+          # Both the wait for the first byte and each gap after it, not the
+          # length of the whole answer. A reply that keeps arriving never
+          # trips this - MessageProcessor's job timeout bounds total duration.
           name: Lightning.Finch,
           receive_timeout: Lightning.Config.apollo(:idle_timeout),
           request_timeout: Lightning.Config.apollo(:request_timeout)

@@ -58,12 +58,14 @@ and this project adheres to
   [#4882](https://github.com/OpenFn/lightning/issues/4882)
 
 - `APOLLO_TIMEOUT` is replaced by `APOLLO_CONNECT_TIMEOUT_MS`,
-  `APOLLO_IDLE_TIMEOUT_MS` and `APOLLO_REQUEST_TIMEOUT_MS`, which bound
-  reaching Apollo, a silence part-way through an answer, and a whole request.
-  One number had to be sized for the longest of those, so a broken path took as
-  long to notice as a slow answer. Setting the old name now logs a warning at
-  boot saying it is ignored.
-  [#4882](https://github.com/OpenFn/lightning/issues/4882)
+  `APOLLO_IDLE_TIMEOUT_MS` and `APOLLO_REQUEST_TIMEOUT_MS`, which bound reaching
+  Apollo, a silence part-way through an answer, and a whole request. One number
+  had to be sized for the longest of those, so a broken path took as long to
+  notice as a slow answer. Setting the old name now logs a warning at boot
+  saying it is ignored. The idle default of 30s assumes Apollo v3.1.1 or later,
+  which sends a keepalive every 15s. On an older Apollo a working stream can go
+  quiet for longer than that, so raise `APOLLO_IDLE_TIMEOUT_MS` or upgrade
+  Apollo. [#4882](https://github.com/OpenFn/lightning/issues/4882)
 
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the

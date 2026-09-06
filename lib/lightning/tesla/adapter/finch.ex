@@ -4,8 +4,9 @@ defmodule Lightning.Tesla.Adapter.Finch do
   preserved on a streamed response.
 
   Not a faithful copy: it drops upstream's `build/4` clauses for multipart,
-  stream and function request bodies, so anything but a plain body raises here.
-  Apollo sends JSON.
+  stream and function request bodies, and hands the body to `Finch.build/4` as
+  it stands. Anything but a plain body therefore fails further down, in Mint,
+  rather than here. Apollo sends JSON.
 
   Upstream's streaming path returns `nil` from its `Stream.unfold` for a
   mid-stream error, a mid-stream timeout, and a clean end alike, discarding the
@@ -32,6 +33,9 @@ defmodule Lightning.Tesla.Adapter.Finch do
 
   @behaviour Tesla.Adapter
 
+  # receive_timeout covers two waits, not one: the wait for status and headers
+  # in stream/3, and each gap between chunks in body_stream/3. Whichever
+  # elapses first ends the request.
   @defaults [receive_timeout: 15_000]
   @stream_error_key {__MODULE__, :stream_error}
 
@@ -82,6 +86,10 @@ defmodule Lightning.Tesla.Adapter.Finch do
     owner = self()
     ref = make_ref()
 
+    # Upstream's callback carries two `{:error, _}` clauses. `Finch.stream/5`
+    # only ever passes `:status`, `:headers`, `:data` and `:trailers` to it and
+    # reports a failure through its return value, which handle_stream_response/3
+    # below reads. Those clauses cannot fire, so they are left out.
     fun = fn
       {:status, status}, _acc ->
         status
@@ -94,12 +102,6 @@ defmodule Lightning.Tesla.Adapter.Finch do
 
       {:trailers, trailers}, _acc ->
         trailers
-
-      {:error, error}, _acc ->
-        send(owner, {ref, {:error, error}})
-
-      {:error, error, _}, _acc ->
-        send(owner, {ref, {:error, error}})
     end
 
     task =

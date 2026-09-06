@@ -146,10 +146,11 @@ defmodule Lightning.Config.Bootstrap do
         Utils.get_env([:lightning, :apollo, :connect_timeout])
       )
 
-    # Longest acceptable silence part-way through an answer. Apollo sends a
-    # keepalive every 15s from v3.1.1, so half a minute of nothing means the
-    # path is broken rather than that a model is thinking. Raise it if you run
-    # an older Apollo that has no keepalive.
+    # Longest acceptable silence, both before the first byte of an answer and
+    # between the chunks after it. Apollo sends a keepalive every 15s from
+    # v3.1.1, so half a minute of nothing means the path is broken rather than
+    # that a model is thinking. Raise it if you run an older Apollo that has no
+    # keepalive.
     apollo_idle_timeout =
       env!(
         "APOLLO_IDLE_TIMEOUT_MS",

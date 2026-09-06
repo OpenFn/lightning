@@ -1,5 +1,8 @@
 defmodule Lightning.ApplicationTest do
-  use Lightning.DataCase, async: true
+  # Not async: these tests swap :lightning, :apollo and Oban's config, which
+  # every other test reads, and capture_log takes the whole Logger rather than
+  # just what this process emits.
+  use Lightning.DataCase, async: false
 
   alias Lightning.Config
 
@@ -151,7 +154,8 @@ defmodule Lightning.ApplicationTest do
           Lightning.Application.warn_if_apollo_timeout_still_set()
         end)
 
-      assert logs =~ "APOLLO_TIMEOUT is no longer read"
+      assert logs =~
+               "[AI Assistant] APOLLO_TIMEOUT is no longer read and the value you set is being ignored."
     end
 
     test "stays quiet when it is not" do
@@ -162,7 +166,7 @@ defmodule Lightning.ApplicationTest do
           Lightning.Application.warn_if_apollo_timeout_still_set()
         end)
 
-      refute logs =~ "APOLLO_TIMEOUT"
+      refute logs =~ "[AI Assistant] APOLLO_TIMEOUT is no longer read"
     end
 
     test "says so when an AI job can outlive Oban's drain window" do
@@ -178,7 +182,8 @@ defmodule Lightning.ApplicationTest do
           Lightning.Application.warn_if_ai_jobs_outlive_the_drain_window()
         end)
 
-      assert logs =~ "Oban stops draining"
+      assert logs =~
+               "[AI Assistant] An AI job may run for 645000ms but Oban stops draining"
     end
   end
 end

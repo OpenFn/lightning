@@ -19,12 +19,30 @@ defmodule Lightning.Tesla.Adapter.FinchTest do
   # A second is still far below the ten the servers below stay silent for.
   @quiet_timeout 1_000
 
-  defp listener do
+  # Accepts one connection, hands the socket to `fun`, then closes. The server
+  # is unlinked on purpose - see the moduledoc - so the test has to take it
+  # down itself: without on_exit, a server still sleeping out its hold time
+  # keeps an accepted socket open long after the test that started it passed.
+  defp serve(fun) do
     {:ok, listen} =
       :gen_tcp.listen(0, [:binary, packet: :raw, active: false, reuseaddr: true])
 
     {:ok, port} = :inet.port(listen)
-    {listen, port}
+
+    server =
+      spawn(fn ->
+        {:ok, socket} = :gen_tcp.accept(listen)
+        {:ok, _request} = :gen_tcp.recv(socket, 0)
+        fun.(socket)
+        :gen_tcp.close(socket)
+      end)
+
+    on_exit(fn ->
+      Process.exit(server, :kill)
+      :gen_tcp.close(listen)
+    end)
+
+    port
   end
 
   defp headers do
@@ -39,60 +57,33 @@ defmodule Lightning.Tesla.Adapter.FinchTest do
     [Integer.to_string(byte_size(chunk), 16), "\r\n", chunk, "\r\n"]
   end
 
-  # Sends one chunk then holds the connection open in silence. Unlinked on
-  # purpose - see the moduledoc.
+  # Sends one chunk then holds the connection open in silence.
   defp stalling_server(chunk, hold_ms) do
-    {listen, port} = listener()
-
-    spawn(fn ->
-      {:ok, socket} = :gen_tcp.accept(listen)
-      {:ok, _request} = :gen_tcp.recv(socket, 0)
+    serve(fn socket ->
       :gen_tcp.send(socket, [headers(), encode(chunk)])
       Process.sleep(hold_ms)
-      :gen_tcp.close(socket)
-      :gen_tcp.close(listen)
     end)
-
-    port
   end
 
   # Never goes quiet for long, so only a deadline on the whole request can stop
-  # it. Unlinked on purpose - see the moduledoc.
+  # it.
   defp dripping_server(chunk, every_ms) do
-    {listen, port} = listener()
-
-    spawn(fn ->
-      {:ok, socket} = :gen_tcp.accept(listen)
-      {:ok, _request} = :gen_tcp.recv(socket, 0)
+    serve(fn socket ->
       :gen_tcp.send(socket, headers())
 
       Enum.each(1..40, fn _ ->
         :gen_tcp.send(socket, encode(chunk))
         Process.sleep(every_ms)
       end)
-
-      :gen_tcp.close(socket)
-      :gen_tcp.close(listen)
     end)
-
-    port
   end
 
   defp complete_server(chunks) do
-    {listen, port} = listener()
-
-    spawn(fn ->
-      {:ok, socket} = :gen_tcp.accept(listen)
-      {:ok, _request} = :gen_tcp.recv(socket, 0)
-
+    serve(fn socket ->
       :gen_tcp.send(socket, [headers(), Enum.map(chunks, &encode/1), "0\r\n\r\n"])
 
       Process.sleep(50)
-      :gen_tcp.close(socket)
-      :gen_tcp.close(listen)
     end)
-
-    port
   end
 
   defp drain(port, opts) do
