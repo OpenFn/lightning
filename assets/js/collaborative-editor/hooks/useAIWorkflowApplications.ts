@@ -424,20 +424,22 @@ export function useAIWorkflowApplications({
   // server confirms, so without this the notice would come straight back.
   const seededFailuresRef = useRef<Set<string>>(new Set());
 
-
+  // Mirrors the state so an outcome can be compared without reading it inside
+  // an updater.
+  const failedApplyRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const unseen = (currentSession?.messages ?? []).filter(
-      message => message.apply_failed && !seededFailuresRef.current.has(message.id)
+      message =>
+        message.apply_failed && !seededFailuresRef.current.has(message.id)
     );
     if (unseen.length === 0) return;
 
-    for (const message of unseen) seededFailuresRef.current.add(message.id);
-    setFailedApplyMessageIds(previous => {
-      const next = new Set(previous);
-      for (const message of unseen) next.add(message.id);
-      return next;
-    });
+    for (const message of unseen) {
+      seededFailuresRef.current.add(message.id);
+      failedApplyRef.current.add(message.id);
+    }
+    setFailedApplyMessageIds(new Set(failedApplyRef.current));
   }, [currentSession?.messages]);
 
   const launchApply = useCallback(
@@ -454,18 +456,27 @@ export function useAIWorkflowApplications({
           }
           // A failed import is never retried automatically, so the reply is
           // a dead end unless the user is given the manual button back.
-          setFailedApplyMessageIds(previous => {
-            const failed = outcome === 'failed';
-            if (failed === previous.has(messageId)) return previous;
-            // Only when it was recorded as failed: an ordinary first apply
-            // has nothing to clear and the server should not be told about
+          const failed = outcome === 'failed';
+          const wasFailed = failedApplyRef.current.has(messageId);
+
+          if (failed !== wasFailed) {
+            // Outside the state updater: React may run an updater more than
+            // once, and each run would push again.
+            //
+            // Only when it was recorded as failed. An ordinary first apply
+            // has nothing to clear, and the server should not hear about
             // every successful import.
             if (!failed) onApplyApplied?.(messageId);
-            const next = new Set(previous);
-            if (failed) next.add(messageId);
-            else next.delete(messageId);
-            return next;
-          });
+
+            if (failed) failedApplyRef.current.add(messageId);
+            else failedApplyRef.current.delete(messageId);
+            // Read, either way: the flag on a loaded message stays true until
+            // the server confirms the clear, and the seeding effect would put
+            // the notice straight back.
+            seededFailuresRef.current.add(messageId);
+
+            setFailedApplyMessageIds(new Set(failedApplyRef.current));
+          }
         } finally {
           inFlightApplyRef.current.delete(messageId);
         }
@@ -543,12 +554,9 @@ export function useAIWorkflowApplications({
   );
 
   /**
-   * Preview the open job's diff from a global full-workflow YAML message
+   * Write an assistant's job code into the open job.
    *
-   * Mirrors handlePreviewJobCode, but extracts the open job's body from the
-   * workflow YAML (global messages carry the whole workflow in `code`).
-   * Shows a diff only when the open step's body actually changed; clears any
-   * stale diff otherwise.
+   * Job chat only: the code is a proposal there, and this is what lands it.
    */
   const handleApplyJobCode = useCallback(
     async (code: string, messageId: string) => {

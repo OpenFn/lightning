@@ -274,6 +274,41 @@ defmodule LightningWeb.AiAssistantChannelTest do
       refute Map.has_key?(Repo.reload!(message).meta, "apply_failed")
     end
 
+    test "survives the pseudo-id a streaming apply reports against", %{
+      joined: socket
+    } do
+      # A mid-stream apply has no saved message, so the client reports the
+      # failure against "__streaming__". Looking that up as a uuid took the
+      # channel down with it.
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => "__streaming__",
+          "stage" => "import",
+          "is_new_workflow" => false
+        })
+
+      assert_reply ref, :ok
+    end
+
+    test "will not mark a message belonging to another session", %{
+      joined: socket,
+      user: user,
+      job: job
+    } do
+      {:ok, other} = AiAssistant.create_session(job, user, "Elsewhere", [])
+      stranger = hd(other.messages)
+
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => stranger.id,
+          "stage" => "import",
+          "is_new_workflow" => false
+        })
+
+      assert_reply ref, :ok
+      refute Map.has_key?(Repo.reload!(stranger).meta, "apply_failed")
+    end
+
     test "accepts a report with fields missing", %{joined: socket} do
       ref = push(socket, "apply_failed", %{})
 

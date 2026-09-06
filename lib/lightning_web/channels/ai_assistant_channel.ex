@@ -186,7 +186,7 @@ defmodule LightningWeb.AiAssistantChannel do
 
       # Recorded on the message as well as reported: the apply happens in the
       # browser, so a reload has no other way to know the changes never landed.
-      mark_apply(params["message_id"], true)
+      mark_apply(socket, params["message_id"], true)
 
       {:reply, :ok, socket}
     end)
@@ -195,7 +195,7 @@ defmodule LightningWeb.AiAssistantChannel do
   @impl true
   def handle_in("apply_applied", params, socket) do
     with_authorized_frame(socket, :read, fn _session ->
-      mark_apply(params["message_id"], false)
+      mark_apply(socket, params["message_id"], false)
 
       {:reply, :ok, socket}
     end)
@@ -1046,11 +1046,15 @@ defmodule LightningWeb.AiAssistantChannel do
     }
   end
 
-  defp mark_apply(message_id, failed?) when is_binary(message_id) do
-    AiAssistant.set_apply_failed(message_id, failed?)
+  defp mark_apply(socket, message_id, failed?) when is_binary(message_id) do
+    AiAssistant.set_apply_failed(
+      socket.assigns.session_id,
+      message_id,
+      failed?
+    )
   end
 
-  defp mark_apply(_message_id, _failed?), do: :ok
+  defp mark_apply(_socket, _message_id, _failed?), do: :ok
 
   defp format_messages(messages) do
     Enum.map(messages, &format_message/1)

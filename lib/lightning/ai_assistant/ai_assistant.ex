@@ -773,27 +773,31 @@ defmodule Lightning.AiAssistant do
   Clearing on a later success is half the point, so a retry that works leaves
   nothing behind.
   """
-  @spec set_apply_failed(Ecto.UUID.t(), boolean()) ::
+  @spec set_apply_failed(Ecto.UUID.t(), Ecto.UUID.t(), boolean()) ::
           {:ok, ChatMessage.t()} | {:error, :not_found | Changeset.t()}
-  def set_apply_failed(message_id, failed?) do
-    case Repo.get(ChatMessage, message_id) do
-      nil ->
-        {:error, :not_found}
+  def set_apply_failed(session_id, message_id, failed?) do
+    # Cast before the lookup: the id comes from the browser, and the streaming
+    # apply reports failures against a pseudo-id that is not a uuid at all.
+    # Scoped to the session for the same reason retry_message is: a read-level
+    # frame must not reach a message in someone else's project.
+    with {:ok, uuid} <- Ecto.UUID.cast(message_id),
+         %ChatMessage{chat_session_id: ^session_id} = message <-
+           Repo.get(ChatMessage, uuid) do
+      meta = message.meta || %{}
 
-      message ->
-        meta = message.meta || %{}
+      meta =
+        if failed?,
+          do: Map.put(meta, "apply_failed", true),
+          else: Map.delete(meta, "apply_failed")
 
-        meta =
-          if failed?,
-            do: Map.put(meta, "apply_failed", true),
-            else: Map.delete(meta, "apply_failed")
-
-        # change/2 rather than the full changeset: this only touches an
-        # internal flag, and the message's own validations need associations
-        # this path has no reason to load.
-        message
-        |> Changeset.change(meta: meta)
-        |> Repo.update()
+      # change/2 rather than the full changeset: this only touches an
+      # internal flag, and the message's own validations need associations
+      # this path has no reason to load.
+      message
+      |> Changeset.change(meta: meta)
+      |> Repo.update()
+    else
+      _ -> {:error, :not_found}
     end
   end
 

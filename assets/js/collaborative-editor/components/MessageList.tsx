@@ -3,11 +3,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
-import {
-  TOKEN_CLASS,
-  tokenizeJs,
-  tokenizeJson,
-} from '../utils/highlightJs';
+import { TOKEN_CLASS, tokenizeJs, tokenizeJson } from '../utils/highlightJs';
 import { cn } from '#/utils/cn';
 
 import type {
@@ -79,7 +75,10 @@ const highlight = (source: string, language?: string | undefined) => {
   if (!tokenizer) return trimmed;
 
   return tokenizer(trimmed).map((tokens, line) => (
+    // A blank line has no tokens, and an empty div has no line box, so the
+    // row would collapse and the code would lose its shape.
     <div key={line}>
+      {tokens.length === 0 && '\u00a0'}
       {tokens.map((token, n) => (
         <span key={n} className={TOKEN_CLASS[token.kind]}>
           {token.text}
@@ -1270,7 +1269,7 @@ export function MessageList({
                             onClick={() => {
                               onApplyWorkflow?.(message.code!, message.id);
                             }}
-                            disabled={isWriteDisabled || !!applyingMessageId}
+                            disabled={isWriteDisabled || !onApplyWorkflow}
                             className={cn(
                               'inline-flex items-center gap-1.5 px-3 py-1.5',
                               'text-xs font-medium rounded-md',
