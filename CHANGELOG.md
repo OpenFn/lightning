@@ -40,7 +40,7 @@ and this project adheres to
   code...") that Apollo streams _after_ the text answer while it generates code,
   displayed below the answer in the same style as the initial "Thinking..."
   indicator. Statuses are surfaced in whatever order Apollo sends them.
-  [#5122](https://github.com/OpenFn/lightning/pull/5122)
+  [#PR](https://github.com/OpenFn/lightning/pull/PR)
 
 ### Changed
 
