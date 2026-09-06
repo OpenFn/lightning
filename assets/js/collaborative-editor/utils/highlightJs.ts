@@ -19,6 +19,7 @@
 import './prismManual';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-json';
 
 export type TokenKind =
   | 'comment'
@@ -27,6 +28,7 @@ export type TokenKind =
   | 'keyword'
   | 'function'
   | 'operator'
+  | 'property'
   | 'plain';
 
 export interface Token {
@@ -60,6 +62,7 @@ const KIND_BY_PRISM_TYPE: Record<string, TokenKind> = {
   'maybe-class-name': 'function',
   operator: 'operator',
   punctuation: 'operator',
+  property: 'property',
   arrow: 'operator',
 };
 
@@ -104,9 +107,9 @@ const flatten = (
  * it covers, each part keeping the same kind, so the result renders directly
  * row by row.
  */
-export const tokenizeJs = (source: string): Token[][] => {
+const tokenize = (source: string, grammar: string): Token[][] => {
   const flat: Token[] = [];
-  flatten(Prism.tokenize(source, Prism.languages['javascript']), 'plain', flat);
+  flatten(Prism.tokenize(source, Prism.languages[grammar]!), 'plain', flat);
 
   const lines: Token[][] = [];
   let current: Token[] = [];
@@ -126,6 +129,12 @@ export const tokenizeJs = (source: string): Token[][] => {
   return lines;
 };
 
+export const tokenizeJs = (source: string): Token[][] =>
+  tokenize(source, 'javascript');
+
+export const tokenizeJson = (source: string): Token[][] =>
+  tokenize(source, 'json');
+
 /**
  * Token colours, taken from GitHub's Primer light theme rather than
  * approximated with the nearest Tailwind shade.
@@ -141,5 +150,7 @@ export const TOKEN_CLASS: Record<TokenKind, string> = {
   keyword: 'text-[#cf222e]',
   function: 'text-[#8250df]',
   operator: 'text-[#1f2328]',
+  // JSON keys, which Primer tints the same blue it uses for numbers.
+  property: 'text-[#0550ae]',
   plain: 'text-[#1f2328]',
 };

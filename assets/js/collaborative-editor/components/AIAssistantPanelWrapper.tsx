@@ -95,6 +95,21 @@ import { MessageList } from './MessageList';
  * - Persists width in localStorage
  * - Syncs open/closed state with URL query param (?chat=true)
  */
+/**
+ * Add pastes into the open job, so it only makes sense when the answer was
+ * written for that job. Global replies are page-independent and apply their own
+ * changes, and a reply carrying a code field has its own Apply.
+ */
+export const showAddButtons = ({
+  page,
+  isGlobal,
+  hasCodeMessage,
+}: {
+  page: string | undefined;
+  isGlobal: boolean;
+  hasCodeMessage: boolean;
+}): boolean => page === 'job_code' && !isGlobal && !hasCodeMessage;
+
 export function AIAssistantPanelWrapper({
   aiAssistantEnabled = false,
 }: {
@@ -148,6 +163,7 @@ export function AIAssistantPanelWrapper({
     retryMessage: retryMessageViaChannel,
     updateContext: updateContextViaChannel,
     reportApplyFailure,
+    reportApplyApplied,
   } = useAISessionCommands();
   const messages = useAIMessages();
   const isLoading = useAIIsLoading();
@@ -664,7 +680,6 @@ export function AIAssistantPanelWrapper({
     launchApply,
     failedApplyMessageIds,
     handlePreviewJobCode,
-    handlePreviewGlobalStep,
     handleApplyJobCode,
   } = useAIWorkflowApplications({
     sessionId,
@@ -685,6 +700,7 @@ export function AIAssistantPanelWrapper({
     onValidationError,
     onCanvasApplied: appliedCanvas.record,
     onApplyFailure: reportApplyFailure,
+    onApplyApplied: reportApplyApplied,
     workflowActions: {
       importWorkflow,
       startApplyingWorkflow,
@@ -706,19 +722,18 @@ export function AIAssistantPanelWrapper({
     streamingApplyActions,
   });
 
-  // Route auto-preview to the right handler: global messages carry a full
-  // workflow YAML (the open step's diff is extracted from it), job-code
-  // messages carry the job body directly.
+  // A global reply is not a proposal: its changes are applied as they arrive,
+  // so a diff in the editor offered a choice already made, with only a close
+  // button to make it with. The panel's diff blocks are the record, and the
+  // footer's revert takes it back. Job chat still previews, where the code
+  // really is a proposal.
   const handleAutoPreview = useCallback(
     (code: string, messageId: string) => {
       const message = messages.find(m => m.id === messageId);
-      if (message?.from_global) {
-        handlePreviewGlobalStep(code, messageId);
-      } else {
-        handlePreviewJobCode(code, messageId);
-      }
+      if (message?.from_global) return;
+      handlePreviewJobCode(code, messageId);
     },
-    [messages, handlePreviewGlobalStep, handlePreviewJobCode]
+    [messages, handlePreviewJobCode]
   );
 
   // Auto-preview job code when AI responds with code
@@ -876,12 +891,13 @@ export function AIAssistantPanelWrapper({
                     : undefined
                 }
                 previewingMessageId={previewingMessageId}
-                showAddButtons={
-                  aiMode?.page === 'job_code'
-                    ? // For job_code: hide ADD buttons when message has code field
-                      !messages.some(m => m.role === 'assistant' && m.code)
-                    : false
-                }
+                showAddButtons={showAddButtons({
+                  page: aiMode?.page,
+                  isGlobal: isGlobalAssistantActive,
+                  hasCodeMessage: messages.some(
+                    m => m.role === 'assistant' && m.code
+                  ),
+                })}
                 showApplyButton={
                   aiMode?.page === 'workflow_template' ||
                   (aiMode?.page === 'job_code' && messages.some(m => m.code))
@@ -911,11 +927,13 @@ export function AIAssistantPanelWrapper({
         isOpen={isConfirmOpen}
         onClose={cancelUndoChanges}
         onConfirm={confirmUndoChanges}
-        title="Overwrite changes to the workflow?"
-        // Neutral about whose changes they are: a collaborator's edits are
-        // taken by the same whole-document replace.
-        description="The workflow has been edited since the assistant applied these changes. Continuing replaces the whole workflow, discarding those edits."
-        confirmLabel="Continue"
+        title="Undo replaces the whole workflow"
+        // States what undo does rather than claiming edits exist. The check
+        // behind this dialog also fires when it simply cannot tell, after a
+        // reload has lost the record of how the canvas was left, so copy that
+        // asserts the workflow has changed is wrong about half the time.
+        description="It goes back to how it was before this reply, so anything changed since will be lost."
+        confirmLabel="Undo anyway"
         variant="danger"
       />
     </div>

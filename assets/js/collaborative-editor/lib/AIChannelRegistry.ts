@@ -552,6 +552,23 @@ export class AIChannelRegistry {
       });
   }
 
+  /**
+   * Clears a recorded apply failure once the same changes land.
+   *
+   * Best effort, like the failure report: a clear that does not arrive leaves
+   * a stale notice on the next load, which is the safer way to be wrong.
+   */
+  reportApplyApplied(topic: string, messageId: string): void {
+    const entry = this.channels.get(topic);
+    if (!entry) return;
+
+    entry.channel
+      .push('apply_applied', { message_id: messageId })
+      .receive('error', (response: unknown) => {
+        logger.warn('Could not clear a recorded apply failure', response);
+      });
+  }
+
   retryMessage(topic: string, messageId: string): void {
     const entry = this.channels.get(topic);
 
