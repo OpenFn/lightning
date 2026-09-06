@@ -722,12 +722,11 @@ export function AIAssistantPanelWrapper({
     streamingApplyActions,
   });
 
-  // A global reply is not a proposal. Its changes are applied as they arrive,
-  // so showing the open step's diff in the editor offered an accept-or-reject
-  // choice that had already been made, with only a close button to make it
-  // with. The panel's diff blocks are the record of what changed, and Undo is
-  // how it gets taken back. Job chat still previews: there the code is a
-  // proposal and Apply is what lands it.
+  // A global reply is not a proposal: its changes are applied as they arrive,
+  // so a diff in the editor offered a choice already made, with only a close
+  // button to make it with. The panel's diff blocks are the record, and the
+  // footer's revert takes it back. Job chat still previews, where the code
+  // really is a proposal.
   const handleAutoPreview = useCallback(
     (code: string, messageId: string) => {
       const message = messages.find(m => m.id === messageId);

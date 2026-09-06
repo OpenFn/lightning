@@ -96,7 +96,7 @@ const CodeBlock = ({
   isWriteDisabled = false,
 }: {
   children: string;
-  /** Fence language, when the reply gave one. Only JavaScript is highlighted. */
+  /** Fence language, when the reply gave one. */
   language?: string | undefined;
   showAddButtons?: boolean;
   /** Whether Add button is disabled due to readonly mode */
