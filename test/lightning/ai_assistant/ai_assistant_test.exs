@@ -2580,7 +2580,7 @@ defmodule Lightning.AiAssistantTest do
          }}
       end)
 
-      assert {:error, "Bad request"} =
+      assert {:error, "AI server returned an error (HTTP 400)."} =
                AiAssistant.query_stream(session, "test")
     end
 
@@ -2769,7 +2769,7 @@ defmodule Lightning.AiAssistantTest do
          }}
       end)
 
-      assert {:error, "Internal error"} =
+      assert {:error, "AI server returned an error (HTTP 500)."} =
                AiAssistant.query_workflow_stream(
                  session,
                  "create workflow"
@@ -3461,7 +3461,7 @@ defmodule Lightning.AiAssistantTest do
          }}
       end)
 
-      assert {:error, "Internal error"} =
+      assert {:error, "AI server returned an error (HTTP 500)."} =
                AiAssistant.query_global_stream(session, "test")
     end
 
