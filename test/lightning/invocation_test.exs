@@ -2523,6 +2523,216 @@ defmodule Lightning.InvocationTest do
     end
   end
 
+  describe "scrubbed_io_for_run/2" do
+    setup do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      snapshot = insert(:snapshot, workflow: workflow)
+
+      work_order =
+        insert(:workorder, workflow: workflow, snapshot: snapshot)
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          snapshot: snapshot,
+          dataclip: build(:dataclip, project: project),
+          starting_job: build(:job, workflow: workflow)
+        )
+
+      %{project: project, workflow: workflow, snapshot: snapshot, run: run}
+    end
+
+    defp add_step(ctx, name, opts \\ []) do
+      step =
+        insert(
+          :step,
+          Keyword.merge(
+            [
+              job: insert(:job, workflow: ctx.workflow, name: name),
+              snapshot: ctx.snapshot
+            ],
+            opts
+          )
+        )
+
+      insert(:run_step, run: ctx.run, step: step)
+      step
+    end
+
+    defp clip(project, body), do: build(:dataclip, project: project, body: body)
+
+    test "replaces values with their types", ctx do
+      add_step(ctx, "one",
+        input_dataclip: clip(ctx.project, %{"n" => 1, "s" => "secret"}),
+        output_dataclip: clip(ctx.project, %{"ok" => true})
+      )
+
+      assert [
+               %{
+                 step_name: "one",
+                 input: %{"n" => "number", "s" => "string"},
+                 output: %{"ok" => "boolean"}
+               }
+             ] = Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+    end
+
+    test "returns every step in the run, in the order it ran", ctx do
+      # Inserted back to front, so row order cannot stand in for run order.
+      add_step(ctx, "second",
+        started_at: ~U[2026-09-01 10:00:05Z],
+        input_dataclip: clip(ctx.project, %{"b" => 2})
+      )
+
+      add_step(ctx, "first",
+        started_at: ~U[2026-09-01 10:00:00Z],
+        input_dataclip: clip(ctx.project, %{"a" => 1})
+      )
+
+      # A step that never started has no time to sort on and belongs last.
+      add_step(ctx, "never ran",
+        started_at: nil,
+        input_dataclip: clip(ctx.project, %{"c" => 3})
+      )
+
+      assert ["first", "second", "never ran"] =
+               ctx.run.id
+               |> Invocation.scrubbed_io_for_run(ctx.project.id)
+               |> Enum.map(& &1.step_name)
+    end
+
+    test "says so rather than lying when a dataclip was erased", ctx do
+      add_step(ctx, "wiped",
+        input_dataclip:
+          clip(ctx.project, nil) |> Map.put(:wiped_at, DateTime.utc_now())
+      )
+
+      assert [%{input: input}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      assert input =~ "erased"
+    end
+
+    test "describes a body too large to read instead of reading it", ctx do
+      # Incompressible, so it is over the cap by the measure Postgres uses.
+      big = for i <- 1..40_000, into: %{}, do: {"k#{i}", Ecto.UUID.generate()}
+
+      add_step(ctx, "huge", input_dataclip: clip(ctx.project, big))
+
+      assert [%{input: input}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      assert input =~ "too large"
+    end
+
+    test "measures the body rather than the compressed row", ctx do
+      # Over the cap as JSON and well under it once Postgres has compressed
+      # it, which is the shape these workflows carry and the case a cap on
+      # pg_column_size lets straight through.
+      compressible =
+        for i <- 1..60_000, into: %{}, do: {"key-#{i}", "the same value"}
+
+      add_step(ctx, "compressible",
+        input_dataclip: clip(ctx.project, compressible)
+      )
+
+      assert [%{input: input}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      assert input =~ "too large"
+    end
+
+    test "calls a null body null rather than too large", ctx do
+      step =
+        add_step(ctx, "null output",
+          output_dataclip: clip(ctx.project, %{"a" => 1})
+        )
+
+      # A body of JSON null, which is a value, not an absent one. Ecto writes
+      # SQL NULL for a nil map, so it has to be set as jsonb directly.
+      Lightning.Repo.query!(
+        "UPDATE dataclips SET body = 'null'::jsonb WHERE id = $1",
+        [Ecto.UUID.dump!(step.output_dataclip_id)]
+      )
+
+      assert [%{output: output}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      assert output == "null"
+    end
+
+    test "says nothing about a step that had no data to read", ctx do
+      add_step(ctx, "no input", input_dataclip: nil)
+
+      assert [%{input: nil}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+    end
+
+    test "keeps the run a sequence once the budget is spent", ctx do
+      # As much as one dataclip can carry once the key budget has had its say,
+      # repeated until the run's own budget runs out.
+      dense =
+        for i <- 1..50,
+            into: %{},
+            do:
+              {"a-long-enough-key-name-#{i}",
+               for(
+                 j <- 1..10,
+                 into: %{},
+                 do: {"another-long-key-name-#{j}", "v"}
+               )}
+
+      for n <- 1..8 do
+        add_step(ctx, "step-#{n}",
+          started_at: DateTime.add(~U[2026-09-01 10:00:00Z], n),
+          input_dataclip: clip(ctx.project, dense),
+          output_dataclip: clip(ctx.project, dense)
+        )
+      end
+
+      entries = Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      # Every step is still named, and the ones past the budget say why they
+      # are not there rather than going missing.
+      assert length(entries) == 8
+      assert Enum.any?(entries, &is_map(&1.input))
+
+      assert Enum.any?(
+               entries,
+               &(is_binary(&1.input) and &1.input =~ "ran past")
+             )
+    end
+
+    test "caps how many keys a wide map carries out", ctx do
+      wide = for i <- 1..500, into: %{}, do: {"patient-#{i}", "name"}
+
+      add_step(ctx, "wide", input_dataclip: clip(ctx.project, wide))
+
+      assert [%{input: input}] =
+               Invocation.scrubbed_io_for_run(ctx.run.id, ctx.project.id)
+
+      assert map_size(input) < 500
+      assert input["..."] =~ "more keys"
+    end
+
+    test "returns nothing for a run outside the project", ctx do
+      add_step(ctx, "one", input_dataclip: clip(ctx.project, %{"a" => 1}))
+
+      assert Invocation.scrubbed_io_for_run(ctx.run.id, insert(:project).id) ==
+               []
+    end
+
+    test "returns nothing without a project", ctx do
+      add_step(ctx, "one", input_dataclip: clip(ctx.project, %{"a" => 1}))
+
+      assert Invocation.scrubbed_io_for_run(ctx.run.id, nil) == []
+    end
+
+    test "returns nothing for a run id that is not a uuid", ctx do
+      assert Invocation.scrubbed_io_for_run("not-a-uuid", ctx.project.id) == []
+    end
+  end
+
   defp assert_dataclips_list(expected, returned) do
     assert expected
            |> Enum.map(&format_listed/1)

@@ -852,9 +852,6 @@ defmodule Lightning.AiAssistant do
   defp build_context(context, opts) do
     Enum.reduce(opts, context, fn opt, acc ->
       case opt do
-        {:code, false} ->
-          Map.drop(acc, [:expression])
-
         {:log, false} ->
           Map.drop(acc, [:log])
 
@@ -1254,11 +1251,11 @@ defmodule Lightning.AiAssistant do
     control =
       case details do
         %{"largest_attachment" => %{"type" => "log"}} ->
-          "“Send logs”"
+          "“Send run logs”"
 
         %{"largest_attachment" => %{"type" => dataclip}}
         when dataclip in ["input_dataclip", "output_dataclip"] ->
-          "“Send scrubbed I/O”"
+          "“Send run data”"
 
         _ ->
           nil

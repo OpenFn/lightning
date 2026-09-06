@@ -140,7 +140,7 @@ defmodule Lightning.AiAssistantTest do
       {:ok, _updated_session} = AiAssistant.query_stream(session, "Ping")
     end
 
-    test "job code can be excluded from the context via options", %{
+    test "job code is always in the context, with no option to leave it out", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
@@ -163,13 +163,15 @@ defmodule Lightning.AiAssistantTest do
         :call,
         fn %{method: :post, body: json_body}, _opts ->
           body = Jason.decode!(json_body)
-          refute Map.has_key?(body["context"], "expression")
+          assert body["context"]["expression"] == job_expression
           assert body["context"]["adaptor"] == adaptor
 
           {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
         end
       )
 
+      # The old `code: false` came from a tickbox that no longer exists, and a
+      # stale value in an old session's meta must not strip the code now.
       {:ok, _updated_session} =
         AiAssistant.query_stream(session, "Ping", code: false)
     end
@@ -2885,7 +2887,7 @@ defmodule Lightning.AiAssistantTest do
 
       assert_received {:ai_assistant, :streaming_error, %{error: message}}
       assert message =~ "300000 characters against a 250000 limit"
-      assert message =~ "Send logs"
+      assert message =~ "Send run logs"
       refute message =~ "deliberately ignore"
     end
 
@@ -2914,7 +2916,7 @@ defmodule Lightning.AiAssistantTest do
       assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
 
       assert_received {:ai_assistant, :streaming_error, %{error: message}}
-      assert message =~ "Send scrubbed I/O"
+      assert message =~ "Send run data"
     end
 
     # Apollo on main has no ATTACHMENT_TOO_LARGE, so an unrecognised type must
