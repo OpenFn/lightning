@@ -219,7 +219,7 @@ defmodule Lightning.CollectionsTest do
                |> Repo.preload(collection: :project)
     end
 
-    test "returns matching items for the given collection sorted by inserted_at" do
+    test "returns matching items for the given collection sorted by id" do
       collection = insert(:collection)
 
       insert(:collection_item, key: "rkeynomatch", collection: collection)
@@ -235,8 +235,7 @@ defmodule Lightning.CollectionsTest do
 
       get_items = Collections.get_all(collection, %{limit: 50}, "rkeymatch*")
 
-      assert List.last(get_items) ==
-               Enum.sort_by(items, & &1.inserted_at) |> List.last()
+      assert List.last(get_items) == Enum.max_by(items, & &1.id)
 
       assert MapSet.new(get_items) == MapSet.new(items)
     end

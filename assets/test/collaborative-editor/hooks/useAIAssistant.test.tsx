@@ -19,7 +19,6 @@ import {
   useAIMessages,
   useAIIsLoading,
   useAIIsSending,
-  useAIHasReadDisclaimer,
   useAIJobCodeContext,
   useAIWorkflowTemplateContext,
 } from '../../../js/collaborative-editor/hooks/useAIAssistant';
@@ -82,14 +81,12 @@ describe('useAIAssistant Hooks', () => {
       expect(result.current).toHaveProperty('disconnect');
       expect(result.current).toHaveProperty('setMessageSending');
       expect(result.current).toHaveProperty('retryMessage');
-      expect(result.current).toHaveProperty('markDisclaimerRead');
       expect(result.current).toHaveProperty('clearSession');
 
       expect(typeof result.current.connect).toBe('function');
       expect(typeof result.current.disconnect).toBe('function');
       expect(typeof result.current.setMessageSending).toBe('function');
       expect(typeof result.current.retryMessage).toBe('function');
-      expect(typeof result.current.markDisclaimerRead).toBe('function');
       expect(typeof result.current.clearSession).toBe('function');
     });
 
@@ -128,16 +125,6 @@ describe('useAIAssistant Hooks', () => {
       const state = mockStore.getSnapshot();
       expect(state.messages).toEqual([]);
       expect(state.sessionId).toBeNull();
-    });
-
-    it('should allow calling markDisclaimerRead command', () => {
-      const { result } = renderHook(() => useAICommands(), { wrapper });
-
-      expect(mockStore.getSnapshot().hasReadDisclaimer).toBe(false);
-
-      result.current.markDisclaimerRead();
-
-      expect(mockStore.getSnapshot().hasReadDisclaimer).toBe(true);
     });
   });
 
@@ -380,28 +367,6 @@ describe('useAIAssistant Hooks', () => {
 
       await waitFor(() => {
         expect(result.current).toBe(false);
-      });
-    });
-  });
-
-  describe('useAIHasReadDisclaimer', () => {
-    it('should return false initially', () => {
-      const { result } = renderHook(() => useAIHasReadDisclaimer(), {
-        wrapper,
-      });
-
-      expect(result.current).toBe(false);
-    });
-
-    it('should return true after marking as read', async () => {
-      const { result } = renderHook(() => useAIHasReadDisclaimer(), {
-        wrapper,
-      });
-
-      mockStore.markDisclaimerRead();
-
-      await waitFor(() => {
-        expect(result.current).toBe(true);
       });
     });
   });

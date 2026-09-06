@@ -34,4 +34,24 @@ defmodule Lightning.ApplicationHelpers do
       end
     end)
   end
+
+  @doc """
+  Captures `:info` log messages emitted by `fun`, alongside its return value.
+
+  The test logger level is `:warning` (see `config/test.exs`), which gates
+  `:info` messages at the primary `:logger` level before any capture handler
+  sees them. Per-process levels (`Logger.put_process_level/2`) can only restrict
+  below the primary level, not lift above it, so the primary level has to be
+  lowered for the duration of the capture and restored afterwards.
+  """
+  def capture_info_log(fun) do
+    previous_level = Logger.level()
+    Logger.configure(level: :info)
+
+    try do
+      ExUnit.CaptureLog.with_log([level: :info], fun)
+    after
+      Logger.configure(level: previous_level)
+    end
+  end
 end

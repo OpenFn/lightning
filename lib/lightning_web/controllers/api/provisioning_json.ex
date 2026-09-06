@@ -103,13 +103,6 @@ defmodule LightningWeb.API.ProvisioningJSON do
   def as_json(%module{} = trigger) when module in [Trigger, Snapshot.Trigger] do
     trigger = Ecto.embedded_dump(trigger, :json)
 
-    kafka_configuration =
-      trigger.kafka_configuration &&
-        Map.take(
-          trigger.kafka_configuration,
-          ~w(hosts topics initial_offset_reset_policy connect_timeout)a
-        )
-
     webhook_response_config =
       trigger.webhook_response_config &&
         Map.take(trigger.webhook_response_config, [
@@ -119,10 +112,9 @@ defmodule LightningWeb.API.ProvisioningJSON do
         |> drop_keys_with_nil_value()
 
     trigger
-    |> Map.take(
-      ~w(id type cron_expression enabled webhook_reply cron_cursor_job_id)a
-    )
-    |> Map.put(:kafka_configuration, kafka_configuration)
+    |> Map.take(~w(id type custom_path cron_expression enabled webhook_reply
+         cron_cursor_job_id)a)
+    |> drop_unusable_custom_path()
     |> Map.put(:webhook_response_config, webhook_response_config)
     |> drop_keys_with_nil_value()
   end
@@ -284,4 +276,18 @@ defmodule LightningWeb.API.ProvisioningJSON do
   defp find_item_by_id(items, id) do
     Enum.find(items, fn item -> item.id == id end)
   end
+
+  # A path written before the naming rules would fail validation when this
+  # document is deployed into another project and take the whole run with it,
+  # the same guard `ExportUtils` and `MergeProjects` apply.
+  defp drop_unusable_custom_path(%{custom_path: path} = trigger)
+       when is_binary(path) do
+    if Lightning.Workflows.Trigger.valid_custom_path?(path) do
+      trigger
+    else
+      Map.delete(trigger, :custom_path)
+    end
+  end
+
+  defp drop_unusable_custom_path(trigger), do: trigger
 end

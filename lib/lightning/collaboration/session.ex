@@ -39,12 +39,12 @@ defmodule Lightning.Collaboration.Session do
     :document_name
   ]
 
-  @pg_scope :workflow_collaboration
-
   @type start_opts :: [
           workflow: Lightning.Workflows.Workflow.t(),
           user: User.t(),
-          parent_pid: pid()
+          document_name: String.t(),
+          parent_pid: pid(),
+          pg_scope: atom()
         ]
 
   @doc """
@@ -96,6 +96,7 @@ defmodule Lightning.Collaboration.Session do
     user = Keyword.fetch!(opts, :user)
     parent_pid = Keyword.fetch!(opts, :parent_pid)
     document_name = Keyword.fetch!(opts, :document_name)
+    pg_scope = Keyword.get(opts, :pg_scope, :workflow_collaboration)
 
     Logger.info("Starting session for document #{document_name}")
 
@@ -110,7 +111,7 @@ defmodule Lightning.Collaboration.Session do
       document_name: document_name
     }
 
-    lookup_shared_doc(document_name)
+    lookup_shared_doc(pg_scope, document_name)
     |> case do
       nil ->
         {:stop, {:error, :shared_doc_not_found}}
@@ -119,8 +120,8 @@ defmodule Lightning.Collaboration.Session do
         SharedDoc.observe(shared_doc_pid)
         Logger.info("Joined SharedDoc for #{document_name}")
 
-        # We track the user presence here so the the original WorkflowLive.Edit
-        # can be stopped from editing the workflow when someone else is editing it.
+        # We track the user presence here so editors can see when someone else
+        # is editing the workflow.
         # Note: Presence tracking uses workflow.id, not document_name, because
         # presence is about showing who is editing the workflow, not which version
         Presence.track_user_presence(
@@ -139,11 +140,11 @@ defmodule Lightning.Collaboration.Session do
       Process.demonitor(state.parent_ref)
     end
 
-    # Don't check Process.alive? - it only works for local PIDs
-    # and shared_doc_pid can be on another node in a distributed cluster.
-    # Sending to a dead process is safe (message is discarded).
+    # Don't check Process.alive? - it only works for local PIDs and
+    # shared_doc_pid can be on another node in a distributed cluster.
+    # safe_unobserve/1 tolerates the remote being slow or gone (see #4817).
     if shared_doc_pid do
-      SharedDoc.unobserve(shared_doc_pid)
+      safe_unobserve(shared_doc_pid)
     end
 
     Presence.untrack_user_presence(
@@ -155,8 +156,19 @@ defmodule Lightning.Collaboration.Session do
     :ok
   end
 
-  def lookup_shared_doc(document_name) do
-    case :pg.get_members(@pg_scope, document_name) do
+  defp safe_unobserve(shared_doc_pid) do
+    SharedDoc.unobserve(shared_doc_pid)
+  catch
+    :exit, reason ->
+      Logger.warning(
+        "SharedDoc.unobserve skipped during session cleanup: #{inspect(reason)}"
+      )
+
+      :ok
+  end
+
+  def lookup_shared_doc(pg_scope \\ :workflow_collaboration, document_name) do
+    case :pg.get_members(pg_scope, document_name) do
       [] -> nil
       [shared_doc_pid | _] -> shared_doc_pid
     end
@@ -204,6 +216,8 @@ defmodule Lightning.Collaboration.Session do
   ## Returns
   - `{:ok, workflow}` - Successfully saved
   - `{:error, :workflow_deleted}` - Workflow has been deleted
+  - `{:error, :snapshot_failed}` - Snapshot creation failed; it shares the
+    save's transaction, so the whole save rolled back and nothing persisted
   - `{:error, changeset}` - Validation or persistence error
 
   ## Examples
@@ -218,6 +232,7 @@ defmodule Lightning.Collaboration.Session do
           {:ok, Lightning.Workflows.Workflow.t()}
           | {:error,
              :workflow_deleted
+             | :snapshot_failed
              | :deserialization_failed
              | :internal_error
              | Ecto.Changeset.t()}
@@ -396,10 +411,11 @@ defmodule Lightning.Collaboration.Session do
     if ref == parent_ref do
       Process.demonitor(parent_ref)
 
-      # Don't check Process.alive? - it only works for local PIDs
-      # and shared_doc_pid can be on another node in a distributed cluster.
+      # Don't check Process.alive? - it only works for local PIDs and
+      # shared_doc_pid can be on another node in a distributed cluster.
+      # safe_unobserve/1 tolerates the remote being slow or gone (see #4817).
       if shared_doc_pid do
-        SharedDoc.unobserve(shared_doc_pid)
+        safe_unobserve(shared_doc_pid)
       end
 
       {:stop, :normal, %{state | parent_ref: nil, shared_doc_pid: nil}}
@@ -498,6 +514,13 @@ defmodule Lightning.Collaboration.Session do
         )
 
         {:reply, {:error, :workflow_deleted}, state}
+
+      {:error, :snapshot_failed} ->
+        Logger.warning(
+          "Failed to save snapshot for workflow #{state.workflow.id}"
+        )
+
+        {:reply, {:error, :snapshot_failed}, state}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         all_errors =

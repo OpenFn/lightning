@@ -148,49 +148,12 @@ function setup(options: SetupOptions = {}) {
   return { workflowChannel, sessionChannel, wrapper, trigger };
 }
 
-describe('TriggerInspector - enable toggle footer placement', () => {
-  const renderInspector = (
-    wrapper: React.ComponentType<{ children: React.ReactNode }>,
-    trigger: Workflow.Trigger
-  ) =>
-    render(
-      <TriggerInspector
-        trigger={trigger}
-        onClose={vi.fn()}
-        onOpenRunPanel={vi.fn()}
-      />,
-      { wrapper }
-    );
+// The footer-placement coverage that lived here asserted the Enabled toggle
+// rendered inside TriggerInspector's footer. main's inspector rewrite removed
+// that footer, so TriggerEnabledControl currently has no production caller.
+// The control's own behaviour is still covered below; re-home the control and
+// restore placement coverage when the new panels get an enable affordance.
 
-  test('shows the "Enabled" toggle in the footer on an editable (non-live) workflow', () => {
-    const { wrapper, trigger } = setup({
-      permissions: { can_edit_workflow: true },
-    });
-
-    renderInspector(wrapper, trigger);
-
-    // Footer carries both the enable toggle and the Run button.
-    expect(screen.getByLabelText('Enabled')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
-  });
-
-  test('hides the enable toggle and run button on a live workflow', () => {
-    const { wrapper, trigger } = setup({
-      permissions: { can_edit_workflow: false, can_provision_sandbox: true },
-      workflow: liveWorkflow,
-    });
-
-    renderInspector(wrapper, trigger);
-
-    // A live workflow is read-only: the enable toggle is an edit action and the
-    // Run button creates a run, and neither is allowed. To run a live workflow
-    // you edit it in a sandbox.
-    expect(screen.queryByLabelText('Enabled')).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /run/i })
-    ).not.toBeInTheDocument();
-  });
-});
 
 describe('TriggerEnabledControl - enable/disable behavior', () => {
   beforeEach(() => {

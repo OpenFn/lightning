@@ -66,10 +66,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     # The Finch receive_timeout on the streaming client is the primary
     # timeout mechanism. The Oban worker timeout is a safety net that
     # should be slightly longer.
-    streaming_timeout_ms =
-      Lightning.Config.apollo(:streaming_timeout) || 120_000
+    timeout_ms = Lightning.Config.apollo(:timeout)
 
-    streaming_timeout_ms + 10_000
+    timeout_ms + 10_000
   end
 
   @doc false
@@ -129,7 +128,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   @spec dispatch_message_processing(
           AiAssistant.ChatSession.t(),
           ChatMessage.t()
-        ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+        ) ::
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, String.t() | Ecto.Changeset.t()}
   defp dispatch_message_processing(session, message) do
     if global_chat?(session) do
       process_global_message(session, message)
@@ -148,16 +149,94 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   end
 
   @spec process_global_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, String.t() | Ecto.Changeset.t()}
   defp process_global_message(session, message) do
     workflow_yaml = message.code
     page = get_in(session.meta, ["message_options", "page"])
 
+    if workflow_yaml in [nil, ""] do
+      Logger.warning(
+        "[AI Assistant] Global chat message #{message.id} has no workflow YAML; " <>
+          "Apollo will receive no workflow context (session #{session.id}, page #{inspect(page)})"
+      )
+    end
+
     AiAssistant.query_global_stream(session, message.content,
       workflow_yaml: workflow_yaml,
-      page: page
+      page: page,
+      attachments: build_attachments(session)
     )
   end
+
+  # Run context the user ticked on the chat input; an unresolvable source is
+  # omitted rather than sent as an empty attachment.
+  @spec build_attachments(AiAssistant.ChatSession.t()) :: [map()]
+  defp build_attachments(session) do
+    opts = get_in(session.meta, ["message_options"]) || %{}
+    run_id = get_in(session.meta, ["follow_run_id"])
+
+    log_attachments(opts["log"] == true, run_id, session.project_id) ++
+      io_attachments(
+        opts["attach_io_data"] == true,
+        opts["step_id"],
+        session.project_id
+      )
+  end
+
+  defp log_attachments(true, run_id, project_id) when is_binary(run_id) do
+    case Invocation.logs_for_run(run_id, project_id) do
+      [] ->
+        warn_unresolved("logs", run: run_id, project: project_id)
+        []
+
+      lines ->
+        [%{"type" => "log", "content" => lines}]
+    end
+  end
+
+  defp log_attachments(true, run_id, _project_id) do
+    warn_unresolved("logs", run: run_id)
+    []
+  end
+
+  defp log_attachments(_attach, _run_id, _project_id), do: []
+
+  defp io_attachments(true, step_id, project_id) when is_binary(step_id) do
+    case Ecto.UUID.cast(step_id) do
+      {:ok, uuid} ->
+        {input, output} = fetch_and_scrub_io_data(uuid, project_id)
+
+        if is_nil(input) and is_nil(output) do
+          warn_unresolved("I/O data", step: step_id, project: project_id)
+        end
+
+        attachment("input_dataclip", input) ++
+          attachment("output_dataclip", output)
+
+      :error ->
+        warn_unresolved("I/O data", step: step_id)
+        []
+    end
+  end
+
+  defp io_attachments(true, step_id, _project_id) do
+    warn_unresolved("I/O data", step: step_id)
+    []
+  end
+
+  defp io_attachments(_attach, _step_id, _project_id), do: []
+
+  # The assistant answers from context the user believes it has.
+  defp warn_unresolved(what, context) do
+    Logger.warning(
+      "[AI Assistant] #{what} requested but nothing resolved " <>
+        "(#{inspect(context)})"
+    )
+  end
+
+  defp attachment(_type, nil), do: []
+  defp attachment(type, content), do: [%{"type" => type, "content" => content}]
 
   @spec job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()
   defp job_chat?(session, message) do
@@ -172,7 +251,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @spec handle_processing_result(
           ChatMessage.t(),
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, String.t() | Ecto.Changeset.t()}
         ) :: {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp handle_processing_result(message, result) do
     case result do
@@ -181,6 +261,17 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           update_message_status(message, :success)
 
         {:ok, updated_session}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:ok, _updated_session, _updated_message} =
+          update_message_status(message, :error)
+
+        Logger.error(
+          "[MessageProcessor] Failed to save assistant response for message " <>
+            "#{message.id}: invalid changeset: #{inspect(changeset.errors)}"
+        )
+
+        {:error, "Failed to save assistant response"}
 
       {:error, error_message} ->
         {:ok, _updated_session, _updated_message} =
@@ -192,7 +283,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @doc false
   @spec process_job_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, String.t() | Ecto.Changeset.t()}
   defp process_job_message(session, message) do
     enriched_session = AiAssistant.enrich_session_with_job_context(session)
 
@@ -210,7 +302,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       case session.meta do
         %{"message_options" => %{"attach_io_data" => true, "step_id" => step_id}}
         when is_binary(step_id) ->
-          {input, output} = fetch_and_scrub_io_data(step_id)
+          {input, output} = fetch_and_scrub_io_data(step_id, session.project_id)
 
           options
           |> Keyword.put(:input, input)
@@ -223,9 +315,10 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     AiAssistant.query_stream(enriched_session, message.content, options)
   end
 
-  @spec fetch_and_scrub_io_data(String.t()) :: {map() | nil, map() | nil}
-  defp fetch_and_scrub_io_data(step_id) do
-    case Invocation.get_step_with_dataclips(step_id) do
+  @spec fetch_and_scrub_io_data(String.t(), Ecto.UUID.t()) ::
+          {map() | nil, map() | nil}
+  defp fetch_and_scrub_io_data(step_id, project_id) do
+    case Invocation.get_step_with_dataclips(step_id, project_id) do
       nil ->
         {nil, nil}
 
@@ -248,7 +341,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   @doc false
   @spec process_workflow_message(AiAssistant.ChatSession.t(), ChatMessage.t()) ::
-          {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
+          {:ok, AiAssistant.ChatSession.t()}
+          | {:error, String.t() | Ecto.Changeset.t()}
   defp process_workflow_message(session, message) do
     code = message.code || workflow_code_from_session(session)
 

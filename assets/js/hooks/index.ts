@@ -20,7 +20,6 @@ import {
   DefaultRunViaCtrlEnter,
   AltRunViaCtrlShiftEnter,
   CloseInspectorPanelViaEscape,
-  CloseNodePanelViaEscape,
   ToggleSidebarViaCtrlM,
   OpenProjectPickerViaCtrlP,
 } from './KeyHandlers';
@@ -48,7 +47,6 @@ export {
   DefaultRunViaCtrlEnter,
   AltRunViaCtrlShiftEnter,
   CloseInspectorPanelViaEscape,
-  CloseNodePanelViaEscape,
   ToggleSidebarViaCtrlM,
   OpenProjectPickerViaCtrlP,
   FileDropzone,

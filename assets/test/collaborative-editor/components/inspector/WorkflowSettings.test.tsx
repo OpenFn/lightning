@@ -152,7 +152,6 @@ function setupTest(projectConcurrency: number | null = null) {
       },
       config: {
         require_email_verification: false,
-        kafka_triggers_enabled: false,
       },
       permissions: {
         can_edit_workflow: true,
@@ -164,7 +163,6 @@ function setupTest(projectConcurrency: number | null = null) {
       project_repo_connection: null,
       webhook_auth_methods: [],
       workflow_template: null,
-      has_read_ai_disclaimer: true,
     });
   });
 

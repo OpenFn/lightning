@@ -10,12 +10,12 @@ defmodule LightningWeb.RunLive.Streaming do
   @doc """
   Starts an async process that will fetch the run with the given ID.
   """
-  @spec get_run_async(Phoenix.LiveView.Socket.t(), Ecto.UUID.t()) ::
+  @spec get_run_async(Phoenix.LiveView.Socket.t(), Ecto.UUID.t(), Ecto.UUID.t()) ::
           Phoenix.LiveView.Socket.t()
-  def get_run_async(socket, run_id) do
+  def get_run_async(socket, run_id, project_id) do
     socket
     |> start_async(:run, fn ->
-      Runs.get(run_id,
+      Runs.get_for_project(run_id, project_id,
         include: [
           :created_by,
           :starting_trigger,

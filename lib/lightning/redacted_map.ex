@@ -4,6 +4,7 @@ defmodule Lightning.RedactedMap do
   @type t :: %__MODULE__{value: map()}
   defstruct [:value]
 
+  # IMPORTANT: This does not do any redaction of the map.
   defimpl Jason.Encoder, for: Lightning.RedactedMap do
     def encode(%{value: map}, opts) do
       Jason.Encode.map(map, opts)

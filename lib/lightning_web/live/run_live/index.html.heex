@@ -595,7 +595,7 @@
           </:body>
           <:pagination_actions>
             <button
-              :if={@page.total_entries > 0}
+              :if={@can_run_workflow && @page.total_entries > 0}
               id="export-history-button"
               type="button"
               phx-click="show-export-modal"

@@ -47,7 +47,7 @@ defmodule Lightning.Channels.Handler do
 
   require Logger
 
-  @redacted_headers ~w(authorization x-api-key)
+  @redacted_headers ~w(authorization x-api-key cookie set-cookie)
 
   @known_transport_errors ~w(
     nxdomain econnrefused ehostunreach enetunreach

@@ -13,7 +13,10 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
-import { useSession } from '../../js/collaborative-editor/hooks/useSession';
+import {
+  selectIsConnecting,
+  useSession,
+} from '../../js/collaborative-editor/hooks/useSession';
 import type { SessionStoreInstance } from '../../js/collaborative-editor/stores/createSessionStore';
 import { createSessionStore } from '../../js/collaborative-editor/stores/createSessionStore';
 
@@ -113,6 +116,30 @@ describe('useSession', () => {
         isConnected: expect.any(Boolean),
         isSynced: expect.any(Boolean),
       });
+    });
+
+    test('selectIsConnecting is true only during the connecting status', () => {
+      const base = {
+        ydoc: null,
+        provider: null,
+        awareness: null,
+        userData: null,
+        isConnected: false,
+        isSynced: false,
+        settled: false,
+        lastStatus: null,
+      };
+
+      expect(selectIsConnecting({ ...base, lastStatus: 'connecting' })).toBe(
+        true
+      );
+      expect(selectIsConnecting({ ...base, lastStatus: 'connected' })).toBe(
+        false
+      );
+      expect(selectIsConnecting({ ...base, lastStatus: 'disconnected' })).toBe(
+        false
+      );
+      expect(selectIsConnecting({ ...base, lastStatus: null })).toBe(false);
     });
 
     test('throws error when used outside provider', () => {

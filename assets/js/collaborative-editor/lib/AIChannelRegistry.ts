@@ -55,6 +55,7 @@ import type {
   Message,
   MessageOptions,
   MessageStatus,
+  ResponseSegment,
   SessionType,
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
@@ -88,7 +89,6 @@ interface JoinResponse {
   session_id: string;
   session_type: SessionType;
   messages: Message[];
-  has_read_disclaimer: boolean;
 }
 
 interface MessageResponse {
@@ -115,6 +115,7 @@ interface ChannelEntry {
     messageStatusChanged: ChannelCallback;
     streamingChunk: ChannelCallback;
     streamingStatus: ChannelCallback;
+    streamingSegment: ChannelCallback;
     streamingChanges: ChannelCallback;
     streamingError: ChannelCallback;
   };
@@ -138,6 +139,21 @@ export class AIChannelRegistry {
   private streamingBuffer = '';
   private streamingDrainPos = 0;
   private streamingDrainTimer: ReturnType<typeof setInterval> | null = null;
+  // Timeline markers pinned to buffer positions. A status or workflow
+  // snapshot arriving over the wire enters the store's timeline only once
+  // every character buffered before it has drained, preserving wire order
+  // (same guarantee drainThenRun provides for new_message).
+  //
+  // Snapshots ride the same queue as statuses because Apollo emits them as
+  // a pair — the changed YAML, then the settled status describing it. If
+  // snapshots bypassed the drain they would land while earlier prose was
+  // still typing out, and attach to the wrong status line.
+  private pendingTimelineMarkers: Array<
+    { pos: number } & (
+      | { kind: 'status'; segment: ResponseSegment }
+      | { kind: 'snapshot'; yaml: string }
+    )
+  > = [];
   // Delay in ms between each letter. 15ms ≈ 65 chars/sec.
   private static readonly LETTER_INTERVAL_MS = 15;
   // Callback to run after the buffer finishes draining (e.g., finalize message)
@@ -164,10 +180,57 @@ export class AIChannelRegistry {
     this.startDraining();
   }
 
+  /**
+   * Enqueue a status marker at the current end of the streaming buffer so it
+   * enters the store's streamingSegments timeline only after the text that
+   * preceded it on the wire has drained.
+   */
+  private bufferStreamingStatusSegment(segment: ResponseSegment): void {
+    this.pendingTimelineMarkers.push({
+      kind: 'status',
+      pos: this.streamingBuffer.length,
+      segment,
+    });
+    this.startDraining();
+  }
+
+  /**
+   * Enqueue a workflow YAML snapshot at the current end of the streaming
+   * buffer, so it lands in the timeline immediately before the status
+   * segment Apollo sends next to describe it.
+   */
+  private bufferStreamingSnapshot(yaml: string): void {
+    this.pendingTimelineMarkers.push({
+      kind: 'snapshot',
+      pos: this.streamingBuffer.length,
+      yaml,
+    });
+    this.startDraining();
+  }
+
+  /**
+   * Emit any status markers whose buffer position has been reached by the
+   * char drain (i.e. all text before them has already been appended).
+   */
+  private flushDueStatusMarkers(): void {
+    let next = this.pendingTimelineMarkers.at(0);
+    while (next && next.pos <= this.streamingDrainPos) {
+      this.pendingTimelineMarkers.shift();
+      if (next.kind === 'status') {
+        this.store._appendStreamingSegment(next.segment);
+      } else {
+        this.store._appendStreamingSnapshot(next.yaml);
+      }
+      next = this.pendingTimelineMarkers.at(0);
+    }
+  }
+
   private startDraining(): void {
     if (this.streamingDrainTimer !== null) return;
 
     this.streamingDrainTimer = setInterval(() => {
+      this.flushDueStatusMarkers();
+
       if (this.streamingDrainPos >= this.streamingBuffer.length) {
         // Buffer fully drained — if a callback is waiting, run it now
         if (this.streamingDrainCallback) {
@@ -192,6 +255,7 @@ export class AIChannelRegistry {
     }
     this.streamingBuffer = '';
     this.streamingDrainPos = 0;
+    this.pendingTimelineMarkers = [];
   }
 
   /**
@@ -200,7 +264,9 @@ export class AIChannelRegistry {
    */
   private drainThenRun(callback: () => void): void {
     if (this.streamingDrainPos >= this.streamingBuffer.length) {
-      // Nothing left to drain
+      // Nothing left to drain — emit any statuses already due before the
+      // stream finalizes, so the timeline matches wire order to the end.
+      this.flushDueStatusMarkers();
       this.stopDraining();
       callback();
     } else {
@@ -453,6 +519,56 @@ export class AIChannelRegistry {
    * @param topic - Channel topic
    * @param messageId - Message ID to retry
    */
+  /**
+   * Report that a reply's workflow failed to reach the canvas.
+   *
+   * Sent to the server rather than to the browser's Sentry SDK, which is
+   * disabled. Without this the only trace is an alert and a console line,
+   * both of which die with the tab, so we cannot tell how often this
+   * happens. Carries no workflow content, only which step broke.
+   *
+   * Best effort: a report that does not arrive must never surface to the
+   * user on top of the failure they are already being told about.
+   */
+  reportApplyFailure(
+    topic: string,
+    details: {
+      messageId: string;
+      stage: 'parse' | 'validate_ids' | 'import' | 'save';
+      isNewWorkflow: boolean;
+    }
+  ): void {
+    const entry = this.channels.get(topic);
+    if (!entry) return;
+
+    entry.channel
+      .push('apply_failed', {
+        message_id: details.messageId,
+        stage: details.stage,
+        is_new_workflow: details.isNewWorkflow,
+      })
+      .receive('error', (response: unknown) => {
+        logger.warn('Could not report a failed apply', response);
+      });
+  }
+
+  /**
+   * Clears a recorded apply failure once the same changes land.
+   *
+   * Best effort, like the failure report: a clear that does not arrive leaves
+   * a stale notice on the next load, which is the safer way to be wrong.
+   */
+  reportApplyApplied(topic: string, messageId: string): void {
+    const entry = this.channels.get(topic);
+    if (!entry) return;
+
+    entry.channel
+      .push('apply_applied', { message_id: messageId })
+      .receive('error', (response: unknown) => {
+        logger.warn('Could not clear a recorded apply failure', response);
+      });
+  }
+
   retryMessage(topic: string, messageId: string): void {
     const entry = this.channels.get(topic);
 
@@ -486,30 +602,6 @@ export class AIChannelRegistry {
 
         // Keep the message status as 'error' and clear loading state
         this.store._updateMessageStatus(messageId, 'error');
-      });
-  }
-
-  /**
-   * Mark disclaimer as read through the channel
-   *
-   * @param topic - Channel topic
-   */
-  markDisclaimerRead(topic: string): void {
-    const entry = this.channels.get(topic);
-
-    if (!entry) {
-      logger.error('Cannot mark disclaimer: channel not found', { topic });
-      return;
-    }
-
-    entry.channel
-      .push('mark_disclaimer_read', {})
-      .receive('ok', () => {
-        this.store.markDisclaimerRead();
-      })
-      .receive('error', (response: unknown) => {
-        const typedResponse = response as ChannelError;
-        logger.error('Failed to mark disclaimer', typedResponse);
       });
   }
 
@@ -633,6 +725,7 @@ export class AIChannelRegistry {
       );
       entry.channel.off('streaming_chunk', entry.handlers.streamingChunk);
       entry.channel.off('streaming_status', entry.handlers.streamingStatus);
+      entry.channel.off('streaming_segment', entry.handlers.streamingSegment);
       entry.channel.off('streaming_changes', entry.handlers.streamingChanges);
       entry.channel.off('streaming_error', entry.handlers.streamingError);
       entry.channel.leave();
@@ -699,16 +792,71 @@ export class AIChannelRegistry {
       this.bufferStreamingChunk(typedPayload.content);
     };
 
+    // Transient "thinking" updates: scalar only. They replace each other and
+    // are cleared by any subsequent event (text chunk or status segment).
+    // They never enter the persistent segments timeline.
     const streamingStatusHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as { text: string };
       this.store.setStreamingStatus(typedPayload.text);
+    };
+
+    // Persistent completed-action statuses (same shape as a
+    // response_segments entry): supersede any active thinking status at
+    // network arrival, and enter the woven timeline through the char drain
+    // so they land after the text that preceded them on the wire.
+    const streamingSegmentHandler: ChannelCallback = (payload: unknown) => {
+      const typedPayload = payload as {
+        segment?: {
+          type?: string;
+          content?: string;
+          summary?: string;
+          steps?: Array<{ key?: string; name?: string }>;
+        };
+      };
+      // Only status segments exist on the wire today; anything else is a
+      // contract change and is ignored until the client learns about it.
+      const incoming = typedPayload.segment;
+      if (incoming?.type !== 'status') return;
+      if (typeof incoming.content !== 'string') return;
+
+      if (this.store.getSnapshot().streamingStatus) {
+        this.store.setStreamingStatus(null);
+      }
+
+      // `summary` and `steps` are optional: an older Apollo sends neither,
+      // and the timeline renders from `content` alone in that case.
+      const segment: ResponseSegment = {
+        type: 'status',
+        content: incoming.content,
+      };
+      if (typeof incoming.summary === 'string' && incoming.summary) {
+        segment.summary = incoming.summary;
+      }
+      const steps = Array.isArray(incoming.steps)
+        ? incoming.steps.filter(
+            (step): step is { key: string; name?: string } =>
+              !!step && typeof step.key === 'string' && step.key !== ''
+          )
+        : [];
+      if (steps.length > 0) segment.steps = steps;
+
+      this.bufferStreamingStatusSegment(segment);
     };
 
     const streamingChangesHandler: ChannelCallback = (payload: unknown) => {
       const typedPayload = payload as {
         changes: Record<string, unknown>;
       };
+      // Two consumers with deliberately different timing. The canvas wants
+      // the newest workflow as early as possible, so the scalar is set at
+      // network arrival and auto-apply runs off it. The chat timeline wants
+      // wire order against the prose, so the same YAML is also pinned into
+      // the drain queue and only becomes a snapshot when its turn comes.
       this.store._setStreamingChanges(typedPayload.changes);
+      const yaml = typedPayload.changes['yaml'];
+      if (typeof yaml === 'string' && yaml.trim()) {
+        this.bufferStreamingSnapshot(yaml);
+      }
     };
 
     const streamingErrorHandler: ChannelCallback = (_payload: unknown) => {
@@ -723,6 +871,7 @@ export class AIChannelRegistry {
     channel.on('message_status_changed', messageStatusChangedHandler);
     channel.on('streaming_chunk', streamingChunkHandler);
     channel.on('streaming_status', streamingStatusHandler);
+    channel.on('streaming_segment', streamingSegmentHandler);
     channel.on('streaming_changes', streamingChangesHandler);
     channel.on('streaming_error', streamingErrorHandler);
 
@@ -734,6 +883,7 @@ export class AIChannelRegistry {
       messageStatusChanged: messageStatusChangedHandler,
       streamingChunk: streamingChunkHandler,
       streamingStatus: streamingStatusHandler,
+      streamingSegment: streamingSegmentHandler,
       streamingChanges: streamingChangesHandler,
       streamingError: streamingErrorHandler,
     };
@@ -759,11 +909,6 @@ export class AIChannelRegistry {
             session_type: typedResponse.session_type,
             messages: typedResponse.messages || [],
           });
-        }
-
-        // Set disclaimer state from backend
-        if (typedResponse.has_read_disclaimer) {
-          this.store.markDisclaimerRead();
         }
 
         logger.debug('Channel joined successfully', { topic: entry.topic });
@@ -850,6 +995,7 @@ export class AIChannelRegistry {
     );
     entry.channel.off('streaming_chunk', entry.handlers.streamingChunk);
     entry.channel.off('streaming_status', entry.handlers.streamingStatus);
+    entry.channel.off('streaming_segment', entry.handlers.streamingSegment);
     entry.channel.off('streaming_changes', entry.handlers.streamingChanges);
 
     entry.channel.leave();
@@ -915,12 +1061,21 @@ export class AIChannelRegistry {
       if (context.workflow_id) {
         params['workflow_id'] = context.workflow_id;
       }
-      if (context.code) {
-        params['code'] = context.code;
-      }
       if (context.content) {
         params['content'] = context.content;
       }
+    }
+
+    // Workflow YAML (applicable to both session types). For global chat the
+    // `code` slot carries the FULL serialized workflow YAML (every step body
+    // embedded), not a single job's code. When a step is open the context is
+    // JobCodeContext-shaped and took the branch above, which does not forward
+    // `code`. Forwarding it here (outside the branch) ensures the YAML reaches
+    // Apollo on the *first* turn — the only message sent via the channel join.
+    // Later turns go through `new_message` and were never affected. Plain job
+    // chat never sets `context.code`, so this is a no-op there.
+    if ('code' in context && context.code) {
+      params['code'] = context.code;
     }
 
     // Global assistant flags (applicable to both session types)

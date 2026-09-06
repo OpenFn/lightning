@@ -3,19 +3,10 @@ defmodule LightningWeb.CredentialTransferController do
 
   alias Lightning.Credentials
 
-  def confirm(conn, %{
-        "token" => token,
-        "receiver_id" => receiver_id,
-        "credential_id" => credential_id
-      }) do
-    %{assigns: %{current_user: %{id: owner_id}}} = conn
+  def confirm(conn, %{"token" => token}) do
+    %{assigns: %{current_user: current_user}} = conn
 
-    case Credentials.confirm_transfer(
-           credential_id,
-           receiver_id,
-           owner_id,
-           token
-         ) do
+    case Credentials.confirm_transfer(token, current_user) do
       {:ok, _credential} ->
         conn
         |> put_flash(:info, "Credential transfer confirmed successfully.")

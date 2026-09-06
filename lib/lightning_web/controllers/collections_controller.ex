@@ -27,7 +27,7 @@ defmodule LightningWeb.CollectionsController do
 
   def put(conn, %{"name" => name, "key" => key, "value" => value}) do
     with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, collection),
+         :ok <- authorize(conn, :put_collection_item, collection),
          :ok <- Collections.put(collection, key, value) do
       json(conn, %{upserted: 1, error: nil})
     else
@@ -43,7 +43,7 @@ defmodule LightningWeb.CollectionsController do
 
   def put_all(conn, %{"name" => name, "items" => items}) do
     with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, collection),
+         :ok <- authorize(conn, :put_collection_item, collection),
          {:ok, count} <- Collections.put_all(collection, items) do
       json(conn, %{upserted: count, error: nil})
     else
@@ -61,7 +61,7 @@ defmodule LightningWeb.CollectionsController do
 
   def get(conn, %{"name" => name, "key" => key}) do
     with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, collection) do
+         :ok <- authorize(conn, :access_collection, collection) do
       case Collections.get(collection, key) do
         nil -> resp(conn, :no_content, "")
         item -> json(conn, item)
@@ -71,7 +71,7 @@ defmodule LightningWeb.CollectionsController do
 
   def delete(conn, %{"name" => name, "key" => key}) do
     with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, collection) do
+         :ok <- authorize(conn, :delete_collection_item, collection) do
       case Collections.delete(collection, key) do
         :ok ->
           json(conn, %{key: key, deleted: 1, error: nil})
@@ -84,7 +84,7 @@ defmodule LightningWeb.CollectionsController do
 
   def delete_all(conn, %{"name" => name} = params) do
     with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, collection) do
+         :ok <- authorize(conn, :delete_all_collection_items, collection) do
       key_param = params["key"]
       {:ok, n} = Collections.delete_all(collection, key_param)
       json(conn, %{key: key_param, deleted: n, error: nil})
@@ -93,7 +93,7 @@ defmodule LightningWeb.CollectionsController do
 
   def stream(conn, %{"name" => name}) do
     with {:ok, collection} <- resolve(conn, name),
-         :ok <- authorize(conn, collection),
+         :ok <- authorize(conn, :access_collection, collection),
          {:ok, filters} <-
            parse_query_params(Map.drop(conn.query_params, ["project_id"])) do
       key_pattern = conn.query_params["key"]
@@ -110,7 +110,7 @@ defmodule LightningWeb.CollectionsController do
   def download(conn, %{"project_id" => project_id, "name" => name}) do
     with {:ok, uuid} <- cast_uuid(project_id),
          {:ok, collection} <- Collections.get_collection(uuid, name),
-         :ok <- authorize(conn, collection) do
+         :ok <- authorize(conn, :access_collection, collection) do
       items_stream =
         stream_all_in_chunks(
           collection,
@@ -147,12 +147,12 @@ defmodule LightningWeb.CollectionsController do
     end
   end
 
-  defp authorize(conn, collection) do
+  defp authorize(conn, action, collection) do
     subject = conn.assigns[:subject] || conn.assigns[:current_user]
 
     Permissions.can(
       Lightning.Policies.Collections,
-      :access_collection,
+      action,
       subject,
       collection
     )

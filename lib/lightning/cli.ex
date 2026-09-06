@@ -83,14 +83,11 @@ defmodule Lightning.CLI do
     end
   end
 
-  @doc """
-  Execute a command in a child process and parse the results.
-  """
-  @spec execute(command :: String.t()) :: Result.t()
-  def execute(command) do
+  @spec execute(command :: [String.t()]) :: Result.t()
+  defp execute(command) when is_list(command) do
     start_time = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
 
-    {_, result} = run("/usr/bin/env", ["sh", "-c", command], opts())
+    {_, result} = run("/usr/bin/env", command, opts())
 
     end_time = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
 
@@ -107,11 +104,19 @@ defmodule Lightning.CLI do
   @spec metadata(state :: map(), adaptor_path :: String.t()) ::
           Result.t()
   def metadata(state, adaptor_path) when is_binary(adaptor_path) do
-    state = Jason.encode_to_iodata!(state)
+    state = Jason.encode!(state)
 
-    execute(
-      ~s(openfn metadata --log-json -S '#{state}' -a #{adaptor_path} --log debug)
-    )
+    execute([
+      "openfn",
+      "metadata",
+      "--log-json",
+      "-S",
+      state,
+      "-a",
+      adaptor_path,
+      "--log",
+      "debug"
+    ])
   end
 
   defp opts do

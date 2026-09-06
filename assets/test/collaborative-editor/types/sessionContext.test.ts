@@ -260,7 +260,6 @@ describe.concurrent('AppConfigSchema', () => {
   test('validates correct config with require_email_verification as true', () => {
     const validConfig = {
       require_email_verification: true,
-      kafka_triggers_enabled: false,
     };
 
     const result = AppConfigSchema.safeParse(validConfig);
@@ -274,7 +273,6 @@ describe.concurrent('AppConfigSchema', () => {
   test('validates correct config with require_email_verification as false', () => {
     const validConfig = {
       require_email_verification: false,
-      kafka_triggers_enabled: true,
     };
 
     const result = AppConfigSchema.safeParse(validConfig);
@@ -346,7 +344,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       },
       config: {
         require_email_verification: true,
-        kafka_triggers_enabled: false,
       },
       permissions: {
         can_edit_workflow: true,
@@ -359,7 +356,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project_repo_connection: null,
       webhook_auth_methods: [],
       workflow_template: null,
-      has_read_ai_disclaimer: true,
       suppress_enable_trigger_warning: false,
       experimental_features_enabled: false,
     };
@@ -419,7 +415,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       },
       config: {
         require_email_verification: false,
-        kafka_triggers_enabled: false,
       },
       permissions: {
         can_edit_workflow: true,
@@ -432,7 +427,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project_repo_connection: null,
       webhook_auth_methods: [],
       workflow_template: null,
-      has_read_ai_disclaimer: true,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -457,7 +451,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project: null,
       config: {
         require_email_verification: true,
-        kafka_triggers_enabled: false,
       },
       permissions: {
         can_edit_workflow: true,
@@ -470,7 +463,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project_repo_connection: null,
       webhook_auth_methods: [],
       workflow_template: null,
-      has_read_ai_disclaimer: true,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -487,7 +479,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project: null,
       config: {
         require_email_verification: false,
-        kafka_triggers_enabled: false,
       },
       permissions: {
         can_edit_workflow: true,
@@ -500,7 +491,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project_repo_connection: null,
       webhook_auth_methods: [],
       workflow_template: null,
-      has_read_ai_disclaimer: true,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);
@@ -552,7 +542,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project: null,
       config: {
         require_email_verification: true,
-        kafka_triggers_enabled: false,
       },
       permissions: {
         can_edit_workflow: true,
@@ -584,7 +573,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       },
       config: {
         require_email_verification: true,
-        kafka_triggers_enabled: false,
       },
       permissions: {
         can_edit_workflow: true,
@@ -661,7 +649,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       project: null,
       config: {
         require_email_verification: true,
-        kafka_triggers_enabled: false,
       },
       permissions: {
         can_edit_workflow: true,

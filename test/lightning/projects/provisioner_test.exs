@@ -2,6 +2,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Auditing.Audit
+  alias Lightning.Credentials.Scoping
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
   alias Lightning.Workflows.Snapshot
@@ -74,7 +75,67 @@ defmodule Lightning.Projects.ProvisionerTest do
              }
     end
 
-    test "with sensitive kafka trigger fields" do
+    test "with server-owned trigger fields" do
+      %{body: body} = valid_document()
+
+      for field <- ["project_id", "legacy_bare_path"] do
+        tampered =
+          Map.update!(body, "workflows", fn workflows ->
+            Enum.map(workflows, fn workflow ->
+              Map.update!(workflow, "triggers", fn [trigger] ->
+                [Map.put(trigger, field, "anything")]
+              end)
+            end)
+          end)
+
+        changeset =
+          Provisioner.parse_document(%Lightning.Projects.Project{}, tampered)
+
+        refute changeset.valid?
+
+        assert %{workflows: [%{triggers: [%{base: [error]}]}]} =
+                 flatten_errors(changeset)
+
+        assert error == "extraneous parameters: #{field}"
+      end
+    end
+
+    test "re-provisioning a project echoes its stored custom_path back without erroring" do
+      # The highest-risk compatibility case: `openfn pull` emits the stored
+      # custom_path, and `openfn deploy` sends it straight back. That round trip
+      # must not 422 for the projects that already have one.
+      Mox.verify_on_exit!()
+      user = insert(:user)
+
+      %{body: body} = valid_document()
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn _action, _context -> :ok end
+      )
+
+      {:ok, project} =
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
+
+      %{workflows: [%{triggers: [trigger]}]} = project
+
+      trigger
+      |> Ecto.Changeset.change(custom_path: "partner-feed")
+      |> Repo.update!()
+
+      assert {:ok, reprovisioned} =
+               Provisioner.import_document(
+                 Repo.reload(project),
+                 user,
+                 put_custom_path(body, "partner-feed")
+               )
+
+      %{workflows: [%{triggers: [reloaded]}]} = reprovisioned
+      assert reloaded.custom_path == "partner-feed"
+    end
+
+    test "rejects a job with a malformed adaptor" do
       %{body: body} = valid_document()
 
       body =
@@ -83,44 +144,55 @@ defmodule Lightning.Projects.ProvisionerTest do
           workflows
           |> Enum.map(fn workflow ->
             workflow
-            |> Map.update!("triggers", fn [trigger] ->
+            |> Map.update!("jobs", fn [first_job | rest] ->
               [
-                Map.merge(trigger, %{
-                  "type" => "kafka",
-                  "kafka_configuration" => %{
-                    "hosts" => [["localhost", "9092"]],
-                    "topics" => ["topic"],
-                    "initial_offset_reset_policy" => "earliest",
-                    "username" => "heyoo",
-                    "password" => "secret"
-                  }
-                })
+                Map.put(
+                  first_job,
+                  "adaptor",
+                  "@openfn/language-http@7.3.2; touch /tmp/x"
+                )
+                | rest
               ]
             end)
           end)
         end)
 
-      changeset =
-        Provisioner.parse_document(%Lightning.Projects.Project{}, body)
+      changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, body)
+
+      refute changeset.valid?
 
       assert %{
                workflows: [
-                 %{
-                   triggers: [
-                     %{
-                       kafka_configuration: %{
-                         username: [
-                           "credentials can only be changed through the dashboard"
-                           | _
-                         ],
-                         password: [
-                           "credentials can only be changed through the dashboard"
-                           | _
-                         ]
-                       }
-                     }
-                   ]
-                 }
+                 %{jobs: [%{adaptor: ["adaptor has invalid format"]} | _]}
+               ]
+             } = flatten_errors(changeset)
+    end
+
+    test "rejects a job with an adaptor that is not in the registry" do
+      %{body: body} = valid_document()
+
+      body =
+        body
+        |> Map.update!("workflows", fn workflows ->
+          workflows
+          |> Enum.map(fn workflow ->
+            workflow
+            |> Map.update!("jobs", fn [first_job | rest] ->
+              [
+                Map.put(first_job, "adaptor", "@openfn/language-foo@1.0.0")
+                | rest
+              ]
+            end)
+          end)
+        end)
+
+      changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, body)
+
+      refute changeset.valid?
+
+      assert %{
+               workflows: [
+                 %{jobs: [%{adaptor: ["is not a recognised adaptor"]} | _]}
                ]
              } = flatten_errors(changeset)
     end
@@ -1108,45 +1180,6 @@ defmodule Lightning.Projects.ProvisionerTest do
                true
     end
 
-    test "fires kafka_trigger_updated for kafka triggers on a workflow soft-deleted via provisioner",
-         %{
-           project: project,
-           user: user
-         } do
-      alias Lightning.Workflows.Triggers.Events
-      alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
-
-      kafka_trigger_id = Ecto.UUID.generate()
-
-      %{
-        body: body,
-        workflows: [%{id: workflow_id, trigger_id: webhook_trigger_id}]
-      } = valid_document(project.id)
-
-      body =
-        add_entity_to_workflow(body, workflow_id, "triggers", %{
-          "id" => kafka_trigger_id,
-          "type" => "kafka",
-          "enabled" => true,
-          "kafka_configuration" => %{
-            "hosts" => [["localhost", "9092"]],
-            "topics" => ["topic"],
-            "initial_offset_reset_policy" => "earliest",
-            "connect_timeout" => 30
-          }
-        })
-
-      {:ok, _} = Provisioner.import_document(project, user, body)
-
-      Events.subscribe_to_kafka_trigger_updated()
-
-      body = remove_workflow_from_document(body, workflow_id)
-      {:ok, _} = Provisioner.import_document(project, user, body)
-
-      assert_receive %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_id}
-      refute_received %KafkaTriggerUpdated{trigger_id: ^webhook_trigger_id}
-    end
-
     test "marking a new/changed record for deletion", %{
       project: project,
       user: user
@@ -1205,6 +1238,44 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert_received %Lightning.Workflows.Events.WorkflowUpdated{
         workflow: %{id: ^workflow_id}
       }
+    end
+
+    # A provisioning document that soft-deletes a workflow is the same
+    # disappearance as a delete driven from the UI, and has to reach the same
+    # sessions.
+    test "sends workflow deleted event for a soft-deleted workflow", %{
+      project: project,
+      user: user
+    } do
+      %{body: body, workflows: [%{id: workflow_id}]} = valid_document(project.id)
+
+      {:ok, project} = Provisioner.import_document(project, user, body)
+
+      Lightning.Projects.Events.subscribe(project.id)
+
+      assert {:ok, _project} =
+               Provisioner.import_document(
+                 project,
+                 user,
+                 remove_workflow_from_document(body, workflow_id)
+               )
+
+      assert_received %Lightning.Projects.Events.WorkflowDeleted{
+        workflow_id: ^workflow_id
+      }
+    end
+
+    test "a document that deletes nothing sends no deletion event", %{
+      project: project,
+      user: user
+    } do
+      %{body: body} = valid_document(project.id)
+
+      Lightning.Projects.Events.subscribe(project.id)
+
+      assert {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      refute_received %Lightning.Projects.Events.WorkflowDeleted{}
     end
 
     test "audits workflow events as a result of the provisioner", %{
@@ -1666,6 +1737,81 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       # Channel was not persisted
       refute Repo.get(Lightning.Channels.Channel, channel_id)
+    end
+
+    test "rejects a nonexistent destination_credential_id with the shared wording",
+         %{
+           project: %{id: project_id} = project,
+           user: user
+         } do
+      channel_id = Ecto.UUID.generate()
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel_id,
+            "name" => "leaky-channel",
+            "destination_url" => "https://example.com/destination",
+            "enabled" => true,
+            "destination_credential_id" => Ecto.UUID.generate()
+          }
+        ]
+      }
+
+      assert {:error, changeset} =
+               Provisioner.import_document(project, user, body)
+
+      assert %{
+               channels: [
+                 %{destination_auth_method: %{project_credential_id: [msg]}}
+               ]
+             } = flatten_errors(changeset)
+
+      assert msg == Scoping.violation_message(:project_credential_id)
+
+      # Channel was not persisted
+      refute Repo.get(Lightning.Channels.Channel, channel_id)
+    end
+
+    test "ignores a destination_auth_method param added directly",
+         %{project: %{id: project_id} = project, user: user} do
+      other_project = insert(:project)
+      foreign_wam = insert(:webhook_auth_method, project: other_project)
+
+      channel_id = Ecto.UUID.generate()
+
+      body = %{
+        "id" => project_id,
+        "name" => "test-project",
+        "channels" => [
+          %{
+            "id" => channel_id,
+            "name" => "harvester",
+            "destination_url" => "https://attacker.example/collect",
+            "enabled" => true,
+            "destination_auth_method" => %{
+              "role" => "client",
+              "webhook_auth_method_id" => foreign_wam.id
+            }
+          }
+        ]
+      }
+
+      assert {:ok, _project} = Provisioner.import_document(project, user, body)
+
+      # The channel is created, but the derived association is dropped: no auth
+      # method at all, and nothing pointing at the other project's secret.
+      assert Repo.get(Lightning.Channels.Channel, channel_id)
+
+      refute Repo.exists?(
+               from(cam in Lightning.Channels.ChannelAuthMethod,
+                 where:
+                   cam.channel_id == ^channel_id or
+                     cam.webhook_auth_method_id == ^foreign_wam.id
+               )
+             )
     end
 
     test "rejects a job project_credential_id from another project", %{
@@ -2448,6 +2594,16 @@ defmodule Lightning.Projects.ProvisionerTest do
       Enum.map(workflows, fn workflow ->
         update_in(workflow, ["triggers"], fn triggers ->
           Enum.map(triggers, &Map.put(&1, "enabled", false))
+        end)
+      end)
+    end)
+  end
+
+  defp put_custom_path(body, value) do
+    Map.update!(body, "workflows", fn workflows ->
+      Enum.map(workflows, fn workflow ->
+        Map.update!(workflow, "triggers", fn triggers ->
+          Enum.map(triggers, &Map.put(&1, "custom_path", value))
         end)
       end)
     end)

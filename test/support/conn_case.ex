@@ -46,6 +46,12 @@ defmodule LightningWeb.ConnCase do
   setup tags do
     Mox.stub_with(Lightning.MockConfig, Lightning.Config.API)
 
+    Mox.stub(Lightning.MockConfig, :storage, fn
+      :backend -> Lightning.Storage.Local
+      :path -> "."
+      key -> Lightning.Config.API.storage(key)
+    end)
+
     Mox.stub_with(LightningMock, Lightning.API)
 
     # Default to Hackney adapter so that Bypass dependent tests continue working
@@ -218,6 +224,13 @@ defmodule LightningWeb.ConnCase do
     conn
     |> Phoenix.ConnTest.init_test_session(%{})
     |> Plug.Conn.put_session(:user_token, token)
+  end
+
+  @doc """
+  Builds a fresh `conn` with `user` logged into it.
+  """
+  def user_conn(user) do
+    log_in_user(Phoenix.ConnTest.build_conn(), user)
   end
 
   @doc """
