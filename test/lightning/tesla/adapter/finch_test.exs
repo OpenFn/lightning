@@ -56,6 +56,28 @@ defmodule Lightning.Tesla.Adapter.FinchTest do
     port
   end
 
+  # Never goes quiet for long, so only a deadline on the whole request can stop
+  # it. Unlinked on purpose - see the moduledoc.
+  defp dripping_server(chunk, every_ms) do
+    {listen, port} = listener()
+
+    spawn(fn ->
+      {:ok, socket} = :gen_tcp.accept(listen)
+      {:ok, _request} = :gen_tcp.recv(socket, 0)
+      :gen_tcp.send(socket, headers())
+
+      Enum.each(1..40, fn _ ->
+        :gen_tcp.send(socket, encode(chunk))
+        Process.sleep(every_ms)
+      end)
+
+      :gen_tcp.close(socket)
+      :gen_tcp.close(listen)
+    end)
+
+    port
+  end
+
   defp complete_server(chunks) do
     {listen, port} = listener()
 
@@ -103,7 +125,19 @@ defmodule Lightning.Tesla.Adapter.FinchTest do
     # raise. Upstream behaves the same - the difference is the reason below,
     # which upstream throws away.
     assert Enum.join(chunks) == "partial"
-    assert Adapter.take_stream_error() == :timeout
+    assert_went_quiet(Adapter.take_stream_error())
+  end
+
+  # The whole-request deadline, which upstream's adapter drops on the floor.
+  # Chunks keep arriving well inside receive_timeout, so nothing but
+  # request_timeout can end this.
+  test "a stream that never goes quiet is still bounded by the request" do
+    port = dripping_server("tick", 50)
+
+    chunks = drain(port, receive_timeout: 5_000, request_timeout: 400)
+
+    assert length(chunks) < 40
+    assert_went_quiet(Adapter.take_stream_error())
   end
 
   # The other way a stream dies, and the one that has to read differently to
@@ -125,7 +159,16 @@ defmodule Lightning.Tesla.Adapter.FinchTest do
 
     drain(port, receive_timeout: @quiet_timeout)
 
-    assert Adapter.take_stream_error() == :timeout
+    assert_went_quiet(Adapter.take_stream_error())
     assert Adapter.take_stream_error() == nil
+  end
+
+  # Finch's own deadline and ours are handed the same number, so whichever the
+  # scheduler reaches first decides whether the reason arrives as our bare atom
+  # or as Finch's struct around the same thing. Both say the stream went quiet,
+  # and both produce the same sentence for the user.
+  defp assert_went_quiet(reason) do
+    assert reason == :timeout or
+             match?(%Finch.TransportError{reason: :timeout}, reason)
   end
 end

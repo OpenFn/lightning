@@ -131,9 +131,9 @@ config :lightning, :auth_providers_allow_insecure_loopback, true
 
 config :lightning, :apollo,
   endpoint: "http://localhost:3000",
-  # Generous locally: a dev Apollo may predate the keepalive, and a cold python
-  # start is slower than anything staging sees.
-  idle_timeout: 120_000,
+  # Roomier than prod for a cold python start, but the sum of the three still
+  # has to sit under Oban's drain window or every boot warns about it.
+  idle_timeout: 40_000,
   request_timeout: 300_000
 
 # Philter's egress guard blocks private/loopback ranges by default; allow

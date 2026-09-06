@@ -172,6 +172,7 @@ defmodule Lightning.Application do
       ]
       |> Enum.reject(&is_nil/1)
 
+    warn_if_apollo_timeout_still_set()
     warn_if_ai_jobs_outlive_the_drain_window()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
@@ -181,9 +182,11 @@ defmodule Lightning.Application do
   end
 
   # Finch already keys pools by {scheme, host, port}, so Apollo has its own
-  # either way. The only setting here that changes behaviour is the connect
-  # timeout; size and count restate Finch's defaults rather than shrink them,
-  # since an AI stream holds its connection for as long as the answer takes.
+  # either way, and size and count restate Finch's own defaults. Under the
+  # shipped configuration this changes nothing; it exists so that setting
+  # APOLLO_CONNECT_TIMEOUT_MS has somewhere to take effect, and so a change to
+  # Finch's defaults cannot quietly shrink a pool whose streams hold their
+  # connection for as long as an answer takes.
   #
   # http1 is Finch's default too, and is written out because this pool depends
   # on it: :request_timeout is HTTP/1-only, and on http2 receive_timeout
@@ -229,6 +232,17 @@ defmodule Lightning.Application do
   # whatever is still running, so a job that outlives the window is killed with
   # nothing left to report it. Its AI message would stay :processing until the
   # reaper picks it up, and no telemetry would fire.
+  # Left unread it would silently lift a ceiling an operator lowered on purpose.
+  defp warn_if_apollo_timeout_still_set do
+    if System.get_env("APOLLO_TIMEOUT") do
+      Logger.warning("""
+      [AI Assistant] APOLLO_TIMEOUT is no longer read and the value you set is \
+      being ignored. It is replaced by APOLLO_CONNECT_TIMEOUT_MS, \
+      APOLLO_IDLE_TIMEOUT_MS and APOLLO_REQUEST_TIMEOUT_MS.
+      """)
+    end
+  end
+
   defp warn_if_ai_jobs_outlive_the_drain_window do
     grace = Application.get_env(:lightning, Oban)[:shutdown_grace_period]
     ceiling = Lightning.AiAssistant.MessageProcessor.job_timeout()
@@ -238,7 +252,8 @@ defmodule Lightning.Application do
       [AI Assistant] An AI job may run for #{ceiling}ms but Oban stops draining \
       after #{grace}ms. A deploy landing on a running job will kill it without \
       emitting telemetry, leaving its message :processing until the reaper runs.
-      Lower APOLLO_REQUEST_TIMEOUT_MS or raise Oban's shutdown_grace_period.
+      Lower APOLLO_REQUEST_TIMEOUT_MS or APOLLO_IDLE_TIMEOUT_MS, or raise \
+      Oban's shutdown_grace_period.
       """)
     end
   end

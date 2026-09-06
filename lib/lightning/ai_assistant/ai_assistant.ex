@@ -1199,7 +1199,10 @@ defmodule Lightning.AiAssistant do
         transport_failure_message(reason)
 
       other ->
-        Logger.warning("[AI Assistant] Stream failed: #{inspect(other)}")
+        Logger.warning(
+          "[AI Assistant] Stream failed: #{inspect(other, printable_limit: 128)}"
+        )
+
         "The assistant stopped before it finished. Please try again."
     end
   end
@@ -1211,9 +1214,13 @@ defmodule Lightning.AiAssistant do
   end
 
   defp transport_failure_message(reason) do
-    # inspect/1, not interpolation: a reason is not always an atom, and a
-    # tuple like {:tls_alert, _} has no String.Chars.
-    Logger.warning("[AI Assistant] Stream lost mid-response: #{inspect(reason)}")
+    # inspect/1, not interpolation: a reason is not always an atom, and a tuple
+    # like {:tls_alert, _} has no String.Chars. Bounded because a reason can
+    # carry bytes off the socket, and those are the user's own data.
+    Logger.warning(
+      "[AI Assistant] Stream lost mid-response: " <>
+        inspect(reason, printable_limit: 128)
+    )
 
     "The connection to the assistant was lost. Please try again."
   end

@@ -1,7 +1,11 @@
 defmodule Lightning.Tesla.Adapter.Finch do
   @moduledoc """
-  Tesla's Finch adapter, with the failure reason preserved on a streamed
-  response.
+  Enough of Tesla's Finch adapter for the Apollo client, with the failure reason
+  preserved on a streamed response.
+
+  Not a faithful copy: it drops upstream's `build/4` clauses for multipart,
+  stream and function request bodies, so anything but a plain body raises here.
+  Apollo sends JSON.
 
   Upstream's streaming path returns `nil` from its `Stream.unfold` for a
   mid-stream error, a mid-stream timeout, and a clean end alike, discarding the
@@ -58,9 +62,9 @@ defmodule Lightning.Tesla.Adapter.Finch do
       {:ok, %Finch.Response{status: status, headers: headers, body: body}} ->
         {:ok, %Tesla.Env{env | status: status, headers: headers, body: body}}
 
-      {:error, %Mint.TransportError{reason: reason}} ->
-        {:error, reason}
-
+      # Upstream unwraps %Mint.TransportError{} here. Finch wraps every Mint
+      # transport error in one of its own before returning, so that clause
+      # cannot fire and is left out for the same reason as the one below.
       {:error, reason} ->
         {:error, reason}
     end

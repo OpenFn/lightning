@@ -52,11 +52,18 @@ and this project adheres to
 
 ### Fixed
 
-- `APOLLO_TIMEOUT` now governs every request to Apollo, including the streaming
-  requests all AI chats use. Streaming previously read an internal timeout key
-  that no environment could set, so it was always 120s regardless of
-  configuration; that dead key is removed.
-  [#5043](https://github.com/OpenFn/lightning/pull/5043)
+- A failed AI stream now says which way it failed. A hung Apollo, a severed
+  connection and a genuinely short answer all read as "Stream ended without
+  complete response"; they now read as three different things.
+  [#4882](https://github.com/OpenFn/lightning/issues/4882)
+
+- `APOLLO_TIMEOUT` is replaced by `APOLLO_CONNECT_TIMEOUT_MS`,
+  `APOLLO_IDLE_TIMEOUT_MS` and `APOLLO_REQUEST_TIMEOUT_MS`, which bound
+  reaching Apollo, a silence part-way through an answer, and a whole request.
+  One number had to be sized for the longest of those, so a broken path took as
+  long to notice as a slow answer. Setting the old name now logs a warning at
+  boot saying it is ignored.
+  [#4882](https://github.com/OpenFn/lightning/issues/4882)
 
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
