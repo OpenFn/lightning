@@ -85,6 +85,14 @@ defmodule Lightning.Adaptors.SchedulerTest do
     pid
   end
 
+  defp drain_tick_ran do
+    receive do
+      :tick_ran -> drain_tick_ran()
+    after
+      0 -> :ok
+    end
+  end
+
   defp adaptor_record(overrides \\ []) do
     overrides = Map.new(overrides)
 
@@ -386,6 +394,46 @@ defmodule Lightning.Adaptors.SchedulerTest do
     end
   end
 
+  describe "fetch timeout" do
+    test "per-adaptor fetch is bounded by the strategy's http_timeout, " <>
+           "not Task's 5s default",
+         %{sup: sup} do
+      original = Application.get_env(:lightning, Lightning.Adaptors.StrategyMock)
+
+      Application.put_env(
+        :lightning,
+        Lightning.Adaptors.StrategyMock,
+        Keyword.put(original, :http_timeout, 100)
+      )
+
+      on_exit(fn ->
+        Application.put_env(
+          :lightning,
+          Lightning.Adaptors.StrategyMock,
+          original
+        )
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:ok, [%{name: "@openfn/language-http", latest_version: "2.0.0"}]}
+      end)
+
+      # Never returns; only the async_stream timeout can end it. With the
+      # 5s default the await below would time out, so it passing shows
+      # the configured budget is what's being applied.
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
+        receive do
+        end
+      end)
+
+      start_scheduler(sup)
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+
+      assert {:ok, %{listed: 1, errors: 1}} =
+               Scheduler.await_refresh(sched_name, 2_000)
+    end
+  end
+
   describe "refresh_now/1" do
     test "triggers an immediate tick on the leader", %{sup: sup} do
       test_pid = self()
@@ -412,6 +460,45 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert :ok = Scheduler.refresh_now(sched_name)
 
       assert_receive :tick_ran, 2000
+    end
+
+    test "repeated calls do not leak extra recurring tick chains", %{sup: sup} do
+      test_pid = self()
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        send(test_pid, :tick_ran)
+        {:ok, []}
+      end)
+
+      start_scheduler(sup, interval: 200)
+
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+      {:global, gname} = sched_name
+      pid = :global.whereis_name(gname)
+
+      # Init tick, then two manual refresh_now calls — each waited out so it
+      # starts its own cycle instead of coalescing into the previous one.
+      assert_receive :tick_ran, 2000
+      assert_eventually(:sys.get_state(pid).refresh == nil, 2000)
+
+      assert :ok = Scheduler.refresh_now(sched_name)
+      assert_receive :tick_ran, 2000
+      assert_eventually(:sys.get_state(pid).refresh == nil, 2000)
+
+      assert :ok = Scheduler.refresh_now(sched_name)
+      assert_receive :tick_ran, 2000
+      assert_eventually(:sys.get_state(pid).refresh == nil, 2000)
+
+      # Drain any tick_ran messages belonging to the manual calls themselves
+      # before counting the chain(s) that fire on their own over one interval.
+      drain_tick_ran()
+
+      # Only the init-driven chain should still be ticking, arriving ~200ms
+      # out. A leaked chain per refresh_now call would fire almost
+      # immediately instead, since they were all armed within milliseconds
+      # of each other above.
+      assert_receive :tick_ran, 300
+      refute_receive :tick_ran, 100
     end
   end
 
@@ -541,6 +628,73 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert row != nil
       assert row.icon_square_ext == nil
       assert row.icon_square_sha256 == nil
+    end
+
+    test "updates an icon-only change on the periodic tick even when the " <>
+           "package's version did not bump",
+         %{sup: sup} do
+      source = AdaptorsSupervisor.source(sup)
+
+      old_sha = :crypto.hash(:sha256, "OLD")
+      rect_sha = :crypto.hash(:sha256, "RECT")
+
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            icon_square_ext: "png",
+            icon_square_sha256: old_sha,
+            # Both icon shapes already exist on the row; only the square
+            # shape's bytes changed upstream.
+            icon_rectangle_ext: "png",
+            icon_rectangle_sha256: rect_sha
+          )
+        )
+
+      new_bytes = "NEW_ICON_BYTES"
+      new_sha = :crypto.hash(:sha256, new_bytes)
+
+      # Upstream reports the same version, so the diff path marks this
+      # adaptor :touched instead of re-fetching it — only the icon changed.
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:ok, [%{name: "@openfn/language-http", latest_version: "1.0.0"}]}
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 0, fn _ ->
+        :unreachable
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok,
+         %{
+           "@openfn/language-http" => %{
+             square: %{data: new_bytes, ext: "png", sha256: new_sha}
+           }
+         }}
+      end)
+
+      source_topic = AdaptorsSupervisor.source_topic(sup)
+      :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
+      start_scheduler(sup)
+
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+      :ok = Scheduler.refresh_now(sched_name)
+
+      assert_receive {:changed, "@openfn/language-http", ^source}, 2000
+
+      row = Catalogue.get_adaptor("@openfn/language-http", source)
+      assert row.latest_version == "1.0.0"
+      assert row.icon_square_ext == "png"
+      assert row.icon_square_sha256 == new_sha
+
+      icon_path =
+        Lightning.Adaptors.IconCache.path(
+          source,
+          "@openfn/language-http",
+          :square,
+          "png"
+        )
+
+      File.rm(icon_path)
     end
 
     test "self-heals iconless rows on the periodic tick", %{sup: sup} do

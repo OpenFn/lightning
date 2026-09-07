@@ -49,16 +49,16 @@ defmodule Lightning.Adaptors.Strategy do
   `c:fetch_icons/1` — they are not stamped onto this record.
   """
   @type adaptor_record :: %{
-          name: String.t(),
-          description: String.t() | nil,
-          homepage: String.t() | nil,
-          repository: String.t() | nil,
-          license: String.t() | nil,
-          latest_version: String.t(),
-          deprecated: boolean(),
-          schema_data: map() | nil,
-          schema_sha256: String.t() | nil,
-          versions: [version_record()]
+          required(:name) => String.t(),
+          required(:description) => String.t() | nil,
+          required(:homepage) => String.t() | nil,
+          required(:repository) => String.t() | nil,
+          required(:license) => String.t() | nil,
+          required(:latest_version) => String.t(),
+          required(:deprecated) => boolean(),
+          optional(:schema_data) => map() | nil,
+          optional(:schema_sha256) => String.t() | nil,
+          required(:versions) => [version_record()]
         }
 
   @typedoc """

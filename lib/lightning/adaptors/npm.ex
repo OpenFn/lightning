@@ -68,22 +68,32 @@ defmodule Lightning.Adaptors.NPM do
   def fetch_adaptor(name) when is_binary(name) do
     with {:ok, packument} <- Registry.get_packument(name),
          {:ok, latest_version} <- Registry.latest_version(packument) do
-      {schema_data, schema_sha} = Schema.schema(name, latest_version)
+      base = %{
+        name: Map.get(packument, "name", name),
+        description: Map.get(packument, "description"),
+        homepage: Map.get(packument, "homepage"),
+        repository: Registry.repository_url(Map.get(packument, "repository")),
+        license: Map.get(packument, "license"),
+        latest_version: latest_version,
+        deprecated: Registry.deprecated?(packument, latest_version),
+        versions: Registry.build_versions(packument)
+      }
 
-      {:ok,
-       %{
-         name: Map.get(packument, "name", name),
-         description: Map.get(packument, "description"),
-         homepage: Map.get(packument, "homepage"),
-         repository: Registry.repository_url(Map.get(packument, "repository")),
-         license: Map.get(packument, "license"),
-         latest_version: latest_version,
-         deprecated: Registry.deprecated?(packument, latest_version),
-         schema_data: encode_schema(schema_data),
-         schema_sha256: schema_sha,
-         versions: Registry.build_versions(packument)
-       }}
+      {:ok, put_schema(base, Schema.schema(name, latest_version))}
     end
+  end
+
+  # A transient schema-fetch failure must leave `schema_data`/`schema_sha256`
+  # absent from the record entirely, not merely `nil` — `Ecto.Changeset.cast/3`
+  # overwrites a column whenever its key is present in `attrs`, even with a
+  # nil value, so an absent key is the only way to signal "leave the
+  # previously-persisted schema untouched."
+  defp put_schema(record, {nil, :fetch_failed}), do: record
+
+  defp put_schema(record, {schema_data, schema_sha}) do
+    record
+    |> Map.put(:schema_data, encode_schema(schema_data))
+    |> Map.put(:schema_sha256, schema_sha)
   end
 
   # Strategy boundary: re-encode the decoded schema map to a JSON binary

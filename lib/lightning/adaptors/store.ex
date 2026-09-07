@@ -54,7 +54,8 @@ defmodule Lightning.Adaptors.Store do
   @doc """
   Returns the adaptor's credential schema as a JSON binary, not decoded.
   """
-  @spec schema(sup(), String.t()) :: {:ok, String.t()} | {:error, term()}
+  @spec schema(sup(), String.t()) ::
+          {:ok, String.t() | nil} | {:error, term()}
   def schema(sup, name) do
     cache = AdaptorsSupervisor.cache_name(sup)
     source = AdaptorsSupervisor.source(sup)
@@ -112,14 +113,16 @@ defmodule Lightning.Adaptors.Store do
 
     with {:ok, meta} <- icon_meta(sup, name),
          {:ok, ext} <- ext_for_shape(meta, shape),
-         {:ok, _sha256} <- sha256_for_shape(meta, shape) do
-      if IconCache.cached?(source, name, shape, ext) do
+         {:ok, expected_sha} <- sha256_for_shape(meta, shape) do
+      if disk_cache_matches?(source, name, shape, ext, expected_sha) do
         {:ok, IconCache.path(source, name, shape, ext)}
       else
         cache
         |> Cachex.fetch(
           {:icon_bytes, source, name, shape},
-          fn _key -> fetch_icon_bytes(strategy, source, name, shape, ext) end,
+          fn _key ->
+            fetch_icon_bytes(strategy, source, name, shape, ext, expected_sha)
+          end,
           timeout: Config.cache_timeout_ms()
         )
         |> unwrap()
@@ -127,11 +130,29 @@ defmodule Lightning.Adaptors.Store do
     end
   end
 
-  defp fetch_icon_bytes(strategy, source, name, shape, ext) do
+  # A cached file existing proves nothing about its content — a node that
+  # cached an earlier version of this icon keeps that file forever
+  # otherwise. A sha mismatch, or the file being absent, are both treated
+  # as a miss so the fetch branch below re-pulls and overwrites it.
+  defp disk_cache_matches?(source, name, shape, ext, expected_sha) do
+    case source |> IconCache.path(name, shape, ext) |> File.read() do
+      {:ok, bytes} -> :crypto.hash(:sha256, bytes) == expected_sha
+      {:error, _} -> false
+    end
+  end
+
+  defp fetch_icon_bytes(strategy, source, name, shape, ext, expected_sha) do
     case strategy.fetch_icon(name, shape) do
       {:ok, %{data: bytes, ext: ^ext}} ->
-        {:ok, _sha} = IconCache.write!(source, name, shape, ext, bytes)
-        {:ignore, {:ok, IconCache.path(source, name, shape, ext)}}
+        if :crypto.hash(:sha256, bytes) == expected_sha do
+          {:ok, _sha} = IconCache.write!(source, name, shape, ext, bytes)
+          {:ignore, {:ok, IconCache.path(source, name, shape, ext)}}
+        else
+          {:ignore,
+           {:error,
+            {:icon_sha_mismatch,
+             expected: expected_sha, got: :crypto.hash(:sha256, bytes)}}}
+        end
 
       {:ok, %{ext: other_ext}} ->
         {:ignore, {:error, {:ext_mismatch, expected: ext, got: other_ext}}}
