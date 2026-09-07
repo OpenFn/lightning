@@ -123,13 +123,15 @@ connection, and a genuinely short answer were indistinguishable.</p><p>A sentine
 concatenates elements as binaries and would fail on anything else. But the
 <code class="inline">Stream.unfold</code> body runs in the calling process, so the reason is left in
 that process's dictionary and read back with <a href="#take_stream_error/0"><code class="inline">take_stream_error/0</code></a> once the
-stream has been consumed.</p><p>Also passes <code class="inline">:request_timeout</code> through to Finch, which the 1.18.3 we are
-pinned to drops. That one is already fixed upstream, in 1.19.0 and later, so
-a Tesla upgrade would cover it without this module.</p><p>Reported upstream as
-<a href="https://github.com/elixir-tesla/tesla/issues/912">tesla#912</a>. Delete this
-module once a release carries the fix; the reason will arrive as a raised
-<a href="https://hexdocs.pm/tesla/1.18.3/Tesla.Error.html"><code class="inline">Tesla.Error</code></a> rather than through <a href="#take_stream_error/0"><code class="inline">take_stream_error/0</code></a>, so the callers in
-<a href="Lightning.AiAssistant.html"><code class="inline">Lightning.AiAssistant</code></a> change with it.</p>
+stream has been consumed.</p><p>Also passes <code class="inline">:request_timeout</code> through to Finch, which the 1.18.3 we pin
+drops.</p><p>Both are fixed upstream, in separate releases: the option pass-through in
+1.19.0 (<a href="https://github.com/elixir-tesla/tesla/pull/879">tesla#879</a>), the
+stream reason in 1.21.1
+(<a href="https://github.com/elixir-tesla/tesla/issues/912">tesla#912</a>). This module
+exists only because we pin <code class="inline">~&gt; 1.18.2</code>; bumping to 1.21.1 deletes it, and the
+reason then arrives as a raised <a href="https://hexdocs.pm/tesla/1.18.3/Tesla.Error.html"><code class="inline">Tesla.Error</code></a> rather than through
+<a href="#take_stream_error/0"><code class="inline">take_stream_error/0</code></a>, so the caller in <a href="Lightning.AiAssistant.html"><code class="inline">Lightning.AiAssistant</code></a> changes with
+it. Tracked in <a href="https://github.com/OpenFn/lightning/issues/5080">#5080</a>.</p>
     </section>
 
 </div>
@@ -180,7 +182,7 @@ module once a release carries the fix; the reason will arrive as a raised
       <h1 class="signature" translate="no">take_stream_error()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/tesla/adapter/finch.ex#L49" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/tesla/adapter/finch.ex#L50" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
