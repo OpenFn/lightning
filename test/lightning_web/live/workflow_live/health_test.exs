@@ -18,6 +18,20 @@ defmodule LightningWeb.WorkflowLive.HealthTest do
     assert html =~ workflow.name
   end
 
+  test "the workflow crumb leads back to its editor", %{
+    conn: conn,
+    project: project
+  } do
+    workflow = insert(:workflow, project: project)
+
+    {:ok, view, _html} =
+      live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/health")
+
+    assert view
+           |> element("nav[aria-label='Breadcrumbs'] a", workflow.name)
+           |> render() =~ ~p"/projects/#{project.id}/w/#{workflow.id}"
+  end
+
   test "redirects when the workflow is in another project", %{
     conn: conn,
     project: project
