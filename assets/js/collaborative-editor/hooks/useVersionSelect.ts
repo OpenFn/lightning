@@ -9,12 +9,14 @@
  * - components/ide/IDEHeader.tsx
  *
  * Version switching works by:
- * 1. Updating the URL parameter (?v=22 or no param for latest)
+ * 1. Updating the URL parameter (?v=1, a release version_number, or no param
+ *    for latest)
  * 2. SessionProvider detects the change and creates a new Y.Doc/provider
  * 3. The new provider connects to the appropriate room:
  *    - Latest: workflow:collaborate:{id}
- *    - Snapshot: workflow:collaborate:{id}:v{version}
+ *    - Snapshot: workflow:collaborate:{id}:v{version_number}
  * 4. Y.Doc syncs fresh data from the server for the selected version
+ *
  */
 
 import { useURLState } from '#/react/lib/use-url-state';
@@ -29,11 +31,11 @@ export function useVersionSelect() {
 
   const handleVersionSelect = (version: number | 'latest') => {
     // Update URL parameter to trigger version switch
-    // SessionProvider will detect the change and recreate the Y.Doc/provider
+    // A run belongs to one version, so it must not leak across a switch.
     if (version === 'latest') {
-      updateSearchParams({ v: null }); // Remove version param
+      updateSearchParams({ v: null, run: null, as_run: null }); // Remove version param
     } else {
-      updateSearchParams({ v: String(version) }); // Set version param
+      updateSearchParams({ v: String(version), run: null, as_run: null }); // Set version param
     }
   };
 

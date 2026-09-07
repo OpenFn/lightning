@@ -2998,6 +2998,177 @@ defmodule Lightning.WorkOrdersTest do
     end
   end
 
+  describe "get_workorders_for_version/2 and get_workorders_unversioned/1" do
+    setup do
+      user = insert(:user)
+      workflow = insert(:simple_workflow)
+      trigger = hd(workflow.triggers)
+
+      snapshot_v1 = insert(:snapshot, workflow: workflow, lock_version: 1)
+      snapshot_v2 = insert(:snapshot, workflow: workflow, lock_version: 2)
+      draft_snapshot = insert(:snapshot, workflow: workflow, lock_version: 3)
+
+      {:ok, release_v1} = release_for(workflow, snapshot_v1, user)
+      {:ok, release_v2} = release_for(workflow, snapshot_v2, user)
+
+      %{
+        workflow: workflow,
+        trigger: trigger,
+        snapshot_v1: snapshot_v1,
+        snapshot_v2: snapshot_v2,
+        draft_snapshot: draft_snapshot,
+        release_v1: release_v1,
+        release_v2: release_v2
+      }
+    end
+
+    test "returns only the work orders whose runs ran at that version's snapshot",
+         %{
+           workflow: workflow,
+           trigger: trigger,
+           snapshot_v1: snapshot_v1,
+           snapshot_v2: snapshot_v2,
+           draft_snapshot: draft_snapshot,
+           release_v1: release_v1
+         } do
+      {wo_v1, _} = workorder_with_run(workflow, trigger, snapshot_v1, :success)
+      {_wo_v2, _} = workorder_with_run(workflow, trigger, snapshot_v2, :success)
+
+      {_wo_draft, _} =
+        workorder_with_run(workflow, trigger, draft_snapshot, :success)
+
+      results =
+        WorkOrders.get_workorders_for_version(
+          workflow.id,
+          release_v1.version_number
+        )
+
+      assert [%{id: id, runs: [run]}] = results
+      assert id == wo_v1.id
+      assert run.snapshot.lock_version == 1
+    end
+
+    test "includes only the matching runs within a work order retried across versions",
+         %{
+           workflow: workflow,
+           trigger: trigger,
+           snapshot_v1: snapshot_v1,
+           snapshot_v2: snapshot_v2,
+           release_v1: release_v1
+         } do
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          snapshot: snapshot_v1
+        )
+
+      run_v1 =
+        insert(:run,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          snapshot: snapshot_v1,
+          state: :success
+        )
+
+      _run_v2 =
+        insert(:run,
+          work_order: work_order,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          snapshot: snapshot_v2,
+          state: :success
+        )
+
+      results =
+        WorkOrders.get_workorders_for_version(
+          workflow.id,
+          release_v1.version_number
+        )
+
+      assert [%{id: wo_id, runs: [run]}] = results
+      assert wo_id == work_order.id
+      assert run.id == run_v1.id
+      assert run.snapshot.lock_version == 1
+    end
+
+    test "returns an empty list for an unknown version_number", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot_v1: snapshot_v1
+    } do
+      workorder_with_run(workflow, trigger, snapshot_v1, :success)
+
+      assert WorkOrders.get_workorders_for_version(workflow.id, 99) == []
+    end
+
+    test "caps the version-filtered feed at 20 work orders", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot_v1: snapshot_v1,
+      release_v1: release_v1
+    } do
+      for _ <- 1..25 do
+        workorder_with_run(workflow, trigger, snapshot_v1, :success)
+      end
+
+      results =
+        WorkOrders.get_workorders_for_version(
+          workflow.id,
+          release_v1.version_number
+        )
+
+      assert length(results) == 20
+    end
+
+    test "get_workorders_unversioned returns only the draft/unreleased runs", %{
+      workflow: workflow,
+      trigger: trigger,
+      snapshot_v1: snapshot_v1,
+      draft_snapshot: draft_snapshot
+    } do
+      {_wo_v1, _} = workorder_with_run(workflow, trigger, snapshot_v1, :success)
+
+      {wo_draft, _} =
+        workorder_with_run(workflow, trigger, draft_snapshot, :success)
+
+      results = WorkOrders.get_workorders_unversioned(workflow.id)
+
+      assert [%{id: id, runs: [run]}] = results
+      assert id == wo_draft.id
+      assert run.snapshot.lock_version == 3
+    end
+
+    test "get_workorders_unversioned returns all runs when no releases exist" do
+      workflow = insert(:simple_workflow)
+      trigger = hd(workflow.triggers)
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 1)
+
+      workorder_with_run(workflow, trigger, snapshot, :success)
+      workorder_with_run(workflow, trigger, snapshot, :failed)
+
+      results = WorkOrders.get_workorders_unversioned(workflow.id)
+
+      assert length(results) == 2
+    end
+
+    test "get_workorders_unversioned caps at 20 work orders" do
+      workflow = insert(:simple_workflow)
+      trigger = hd(workflow.triggers)
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 1)
+
+      for _ <- 1..25 do
+        workorder_with_run(workflow, trigger, snapshot, :success)
+      end
+
+      assert length(WorkOrders.get_workorders_unversioned(workflow.id)) == 20
+    end
+  end
+
   describe "cancel_many/2" do
     test "returns {:ok, 0} for empty list" do
       assert {:ok, 0} =
@@ -3196,5 +3367,37 @@ defmodule Lightning.WorkOrdersTest do
 
       assert Repo.reload!(run).state == :cancelled
     end
+  end
+
+  defp release_for(workflow, snapshot, user) do
+    Lightning.Workflows.WorkflowReleases.insert_release(Repo, %{
+      workflow_id: workflow.id,
+      kind: :go_live,
+      snapshot_id: snapshot.id,
+      published_by_id: user.id
+    })
+  end
+
+  defp workorder_with_run(workflow, trigger, snapshot, state) do
+    dataclip = insert(:dataclip)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot
+      )
+
+    run =
+      insert(:run,
+        work_order: work_order,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot,
+        state: state
+      )
+
+    {work_order, run}
   end
 end

@@ -26,6 +26,11 @@ export const RunSummarySchema = z.object({
   started_at: isoDateTimeSchema.nullable(),
   finished_at: isoDateTimeSchema.nullable(),
   version: z.number(),
+  // The run's release version_number (what the UI shows as vN). null means the
+  // run executed against an unreleased/draft snapshot, rendered as "Draft".
+  // Optional so historical payloads (and fixtures) without the field still
+  // parse; the backend always includes it.
+  version_number: z.number().int().nullable().optional(),
 });
 
 /**
@@ -205,7 +210,7 @@ export interface HistoryState {
  */
 interface HistoryCommands {
   // Existing history commands
-  requestHistory: (runId?: string) => Promise<void>;
+  requestHistory: (runId?: string, versionNumber?: string) => Promise<void>;
   requestRunSteps: (runId: string) => Promise<RunStepsData | null>;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;

@@ -20,6 +20,7 @@ import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 
 import Docs from '../../../adaptor-docs/Docs';
+import { Tooltip } from '../../../components/Tooltip';
 import Metadata from '../../../metadata-explorer/Explorer';
 import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
@@ -32,7 +33,6 @@ import {
   useCredentialsCommands,
 } from '../../hooks/useCredentials';
 import {
-  useActiveRun,
   useFollowRun,
   useHistory,
   useHistoryCommands,
@@ -40,13 +40,11 @@ import {
   useHistoryLoading,
   useJobMatchesRun,
 } from '../../hooks/useHistory';
-import { useRunRetry } from '../../hooks/useRunRetry';
 import { useMetadata } from '../../hooks/useMetadata';
+import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
 import { useProject } from '../../hooks/useSessionContext';
-import { useVersionMismatch } from '../../hooks/useVersionMismatch';
-import { useVersionSelect } from '../../hooks/useVersionSelect';
 import {
   useCanRun,
   useCanSave,
@@ -63,7 +61,6 @@ import { CollaborativeMonaco, type MonacoHandle } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import MiniHistory from '../diagram/MiniHistory';
-import { VersionMismatchBanner } from '../diagram/VersionMismatchBanner';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
@@ -74,7 +71,6 @@ import { RunRetryButton } from '../RunRetryButton';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { ShortcutKeys } from '../ShortcutKeys';
 import { Tabs } from '../Tabs';
-import { Tooltip } from '../../../components/Tooltip';
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -570,7 +566,7 @@ export function FullScreenIDE({
     }
   }, [jobIdFromURL, currentRun, runIdFromURL, updateSearchParams]);
 
-  // Request history when entering history state
+  // Request history (top-20, all versions) when entering history state.
   useEffect(() => {
     if (rightPanelSubState === 'history') {
       void requestHistory();
@@ -730,17 +726,6 @@ export function FullScreenIDE({
 
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
-
-  // Detect version mismatch between run and current workflow
-  const run = useActiveRun();
-  const versionMismatch = useVersionMismatch(run?.id ?? null);
-  const handleVersionSelect = useVersionSelect();
-
-  const handleGoToVersion = useCallback(() => {
-    if (versionMismatch) {
-      handleVersionSelect(versionMismatch.runVersion);
-    }
-  }, [versionMismatch, handleVersionSelect]);
 
   // Check loading state but don't use early return (violates rules of hooks)
   // Only check for job existence, not ytext/awareness
@@ -1051,7 +1036,7 @@ export function FullScreenIDE({
                               <Tabs
                                 value={selectedDocsTab}
                                 onChange={tab =>
-                                  setSelectedDocsTab(tab as 'docs' | 'metadata')
+                                  setSelectedDocsTab(tab)
                                 }
                                 variant="pills"
                                 options={[
@@ -1200,16 +1185,6 @@ export function FullScreenIDE({
                 </div>
               ) : (
                 <div className="h-full flex flex-col">
-                  {/* Version mismatch banner - shown when viewing a run from different version */}
-                  {panelState === 'run-viewer' && versionMismatch && (
-                    <VersionMismatchBanner
-                      runVersion={versionMismatch.runVersion}
-                      currentVersion={versionMismatch.currentVersion}
-                      onGoToVersion={handleGoToVersion}
-                      className="py-1"
-                    />
-                  )}
-
                   {/* Panel heading - only for run-viewer */}
                   {panelState === 'run-viewer' && (
                     <div className="shrink-0">

@@ -262,6 +262,14 @@ export function Header({
   // When ?v= is present, user is viewing a specific version (even if latest)
   const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
 
+  const isViewingAsExecuted =
+    params['as_run'] !== undefined && params['as_run'] !== null;
+
+  // The Live badge describes the workflow's current state, which would be a lie
+  // on these views, so it is suppressed and the version badge carries the
+  // context instead.
+  const isViewingNonCurrentVersion = isPinnedVersion || isViewingAsExecuted;
+
   // Determine AI button disabled message based on priority
   const aiButtonDisabledMessage = !aiAssistantEnabled
     ? 'Your instance does not have build-time AI enabled. Contact your administrator or support@openfn.org to configure it.'
@@ -547,30 +555,34 @@ export function Header({
             !isNewWorkflow &&
             !isSandbox &&
             readOnlyReason !== 'pinned_version' &&
+            readOnlyReason !== 'as_run' &&
             readOnlyReason !== 'deleted'
           ) && <ReadOnlyWarning className="ml-3" />}
-          {lifecycleState && !isNewWorkflow && !isSandbox && (
-            <Tooltip
-              content={
-                lifecycleState === 'live'
-                  ? "This is the live version. It's running in production with its triggers on, and it's read-only here, so switch it to draft or edit it in a sandbox to make changes."
-                  : 'This is the editable working version, not the one live in production. Go live to promote it, or enable a trigger to test it against real events first.'
-              }
-              side="bottom"
-            >
-              <span
-                data-testid="workflow-lifecycle-badge"
-                className={
-                  'self-center rounded-md px-2 py-1 text-xs font-medium ' +
-                  (lifecycleState === 'live'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-700')
+          {lifecycleState &&
+            !isNewWorkflow &&
+            !isSandbox &&
+            !isViewingNonCurrentVersion && (
+              <Tooltip
+                content={
+                  lifecycleState === 'live'
+                    ? "This is the live version. It's running in production with its triggers on, and it's read-only here, so switch it to draft or edit it in a sandbox to make changes."
+                    : 'This is the editable working version, not the one live in production. Go live to promote it, or enable a trigger to test it against real events first.'
                 }
+                side="bottom"
               >
-                {lifecycleState === 'live' ? 'Live' : 'Draft'}
-              </span>
-            </Tooltip>
-          )}
+                <span
+                  data-testid="workflow-lifecycle-badge"
+                  className={
+                    'self-center rounded-md px-2 py-1 text-xs font-medium ' +
+                    (lifecycleState === 'live'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-700')
+                  }
+                >
+                  {lifecycleState === 'live' ? 'Live' : 'Draft'}
+                </span>
+              </Tooltip>
+            )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
@@ -675,7 +687,7 @@ export function Header({
                       if (!canProvisionSandbox) return;
                       setShowEditInSandboxPicker(true);
                     }}
-                    className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-gray-50"
+                    className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
                   >
                     Edit in sandbox
                   </button>

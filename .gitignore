@@ -51,6 +51,9 @@ adaptor_registry_cache.json
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log
 /assets/node_modules/
+# Also match a symlink of that name: the trailing-slash pattern above only
+# matches a real directory, so a symlinked node_modules would be committed.
+/assets/node_modules
 /assets/**/*.tsbuildinfo
 /examples/**/node_modules/
 

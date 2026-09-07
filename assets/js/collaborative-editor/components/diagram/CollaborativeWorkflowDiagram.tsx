@@ -25,8 +25,8 @@ import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
 } from '../../hooks/useSessionContext';
-import { useVersionMismatch } from '../../hooks/useVersionMismatch';
-import { useNodeSelection } from '../../hooks/useWorkflow';
+import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
+import { useNodeSelection, useWorkflowState } from '../../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../../keyboard';
 import type { RunSummary } from '../../types/history';
 
@@ -47,19 +47,19 @@ export function CollaborativeWorkflowDiagram({
   const isHistoryChannelConnected = useHistoryChannelConnected();
   const { params, updateSearchParams } = useURLState();
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
+  const workflow = useWorkflowState(state => state.workflow);
 
-  // Get history data and commands
   const history = useHistory();
   const historyLoading = useHistoryLoading();
   const historyError = useHistoryError();
   const historyCommands = useHistoryCommands();
 
-  // Use EditorPreferencesStore for history panel collapsed state
+  const viewAsExecuted = useViewAsExecuted();
+
   const historyCollapsed = useHistoryPanelCollapsed();
   const { setHistoryPanelCollapsed } = useEditorPreferencesCommands();
 
-  // Read selected run ID from URL, falling back to the history store's active run.
-  // The fallback prevents losing the run when LiveView push_patch strips
+  // Falls back to the store's active run because LiveView push_patch strips
   // client-only URL params.
   const activeRunId = useSelectedRunId();
   const selectedRunId = params['run'] ?? activeRunId;
@@ -79,13 +79,39 @@ export function CollaborativeWorkflowDiagram({
     { enabled: !isNewWorkflow }
   );
 
-  // Restore the URL run param if it was stripped (e.g. by LiveView push_patch)
-  // but the history store still has an active run.
-  // The ref ensures we only attempt one restore per activeRunId to avoid loops
-  // if LiveView repeatedly strips the param.
   const runParam = params['run'] ?? null;
+  const versionParam = params['v'] ?? null;
   const restoredRunRef = useRef<string | null>(null);
+  const previousVersionRef = useRef<string | null>(versionParam);
+  // A `?v` change means two different things: a dropdown switch, which must
+  // clear the selected run, or selecting a run of another version, which must
+  // not. Set on run-select, consumed by the reconcile effect below.
+  const runSelectInProgressRef = useRef(false);
+
+  const { clearRun } = useFollowRun(selectedRunId);
+
+  // Both jobs live in one effect so their order is deterministic: split apart,
+  // the restore would race to re-add the run the switch is dropping. The ref
+  // limits the restore to once per run to avoid a loop.
   useEffect(() => {
+    const versionChanged = previousVersionRef.current !== versionParam;
+    const wasRunSelect = runSelectInProgressRef.current;
+    runSelectInProgressRef.current = false;
+
+    if (versionChanged) {
+      previousVersionRef.current = versionParam;
+      if (!wasRunSelect) {
+        restoredRunRef.current = null;
+        if (activeRunId) {
+          clearRun();
+        }
+        if (runParam) {
+          updateSearchParams({ run: null });
+        }
+        return;
+      }
+    }
+
     if (!runParam && activeRunId && restoredRunRef.current !== activeRunId) {
       restoredRunRef.current = activeRunId;
       updateSearchParams({ run: activeRunId });
@@ -93,53 +119,45 @@ export function CollaborativeWorkflowDiagram({
     if (runParam) {
       restoredRunRef.current = null;
     }
-  }, [runParam, activeRunId, updateSearchParams]);
+  }, [versionParam, runParam, activeRunId, clearRun, updateSearchParams]);
 
-  // Follow the run to receive real-time step updates via run:${runId} channel
-  // This is essential for highlighting steps as they execute in real-time
-  const { clearRun } = useFollowRun(selectedRunId);
-
-  // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);
 
-  // Detect version mismatch for warning banner
-  const versionMismatch = useVersionMismatch(selectedRunId);
-
-  // Update URL when run selection changes
-  // URLStore notifies subscribers synchronously, triggering immediate re-render
+  // A run of the current version overlays on the live document; a run of any
+  // other version loads that run's own snapshot, which covers draft runs that
+  // no release can address.
   const handleRunSelect = useCallback(
     (run: RunSummary) => {
-      // Only include version parameter if the run's version differs from latest
-      // This prevents pinning to read-only mode when viewing latest version runs
-      const runVersion = run.version;
-      const shouldPinVersion =
-        runVersion !== null &&
-        runVersion !== undefined &&
-        runVersion !== latestSnapshotLockVersion;
+      runSelectInProgressRef.current = true;
 
-      // Single atomic update - both version and run in one call
-      // This prevents race conditions between two separate updateSearchParams calls
-      updateSearchParams({
-        v: shouldPinVersion ? String(runVersion) : null,
-        run: run.id,
-      });
+      const currentLockVersion =
+        workflow?.lock_version ?? latestSnapshotLockVersion ?? null;
+      const isDifferentVersion =
+        run.version !== null &&
+        run.version !== undefined &&
+        currentLockVersion !== null &&
+        run.version !== currentLockVersion;
+
+      if (isDifferentVersion) {
+        viewAsExecuted(run.id);
+      } else {
+        updateSearchParams({ v: null, as_run: null, run: run.id });
+      }
     },
-    [latestSnapshotLockVersion, updateSearchParams]
+    [workflow, latestSnapshotLockVersion, updateSearchParams, viewAsExecuted]
   );
 
-  // Clear URL parameter when deselecting run
-  // Also close the run viewer in the history store so the restore effect
-  // (which watches activeRunId) does not immediately re-add the URL param.
+  // Closes the run viewer in the store too, or the restore effect re-adds the
+  // URL param immediately.
   const handleDeselectRun = useCallback(() => {
     clearRun();
-    updateSearchParams({ run: null });
+    updateSearchParams({ run: null, as_run: null });
   }, [clearRun, updateSearchParams]);
 
-  // Request history when panel is first expanded OR when there's a run ID selected
-  // Wait for channel to be connected before making request
+  // The run_id ensures that run's work order is included even if it is older
+  // than the top 20.
   const hasRequestedHistory = useRef(false);
   useEffect(() => {
-    // Request if: channel connected AND (panel expanded OR run ID selected) AND not already requested AND not new workflow
     const shouldRequest =
       isHistoryChannelConnected &&
       !hasRequestedHistory.current &&
@@ -147,7 +165,10 @@ export function CollaborativeWorkflowDiagram({
       (!historyCollapsed || selectedRunId);
 
     if (shouldRequest) {
-      void historyCommands.requestHistory(selectedRunId || undefined);
+      void historyCommands.requestHistory(
+        selectedRunId || undefined,
+        versionParam || undefined
+      );
       hasRequestedHistory.current = true;
     }
   }, [
@@ -156,7 +177,17 @@ export function CollaborativeWorkflowDiagram({
     isHistoryChannelConnected,
     historyCommands,
     selectedRunId,
+    versionParam,
   ]);
+
+  // A pinned version is a different feed, so allow one more request.
+  const lastVersionParam = useRef(versionParam);
+  useEffect(() => {
+    if (lastVersionParam.current !== versionParam) {
+      lastVersionParam.current = versionParam;
+      hasRequestedHistory.current = false;
+    }
+  }, [versionParam]);
 
   // Find the selected run object in history
   const selectedRun = useMemo(() => {
@@ -214,7 +245,6 @@ export function CollaborativeWorkflowDiagram({
               historyCommands.clearError();
               void historyCommands.requestHistory();
             }}
-            versionMismatch={versionMismatch}
           />
         )}
       </ReactFlowProvider>

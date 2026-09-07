@@ -71,6 +71,8 @@ export const SessionProvider = ({
   // Get version from URL reactively
   const { params } = useURLState();
   const version = params['v'] ?? null;
+  // "View as executed": load the workflow exactly as a specific run executed it.
+  const asRun = params['as_run'] ?? null;
 
   // Create store instance once - stable reference
   const [sessionStore] = useState(() => createSessionStore());
@@ -81,15 +83,22 @@ export const SessionProvider = ({
   const [connectionError, setConnectionError] = useState<Error | null>(null);
 
   // Room naming strategy for snapshots vs collaborative editing:
-  // - NO version param → `workflow:collaborate:${workflowId}` (latest/collaborative)
-  // - WITH version param → `workflow:collaborate:${workflowId}:v${version}` (snapshot)
-  const roomname = useMemo(
-    () =>
-      version
-        ? `workflow:collaborate:${workflowId}:v${version}`
-        : `workflow:collaborate:${workflowId}`,
-    [version, workflowId]
-  );
+  // - `as_run` param → `workflow:collaborate:${workflowId}:run:${asRun}`
+  //   (read-only, loaded exactly as that run executed; works for draft runs)
+  // - version param → `workflow:collaborate:${workflowId}:v${version}` (release snapshot)
+  // - neither → `workflow:collaborate:${workflowId}` (latest/collaborative)
+  //
+  // `as_run` wins over `v`: it is the more specific "view as executed" intent
+  // and the two are mutually exclusive views.
+  const roomname = useMemo(() => {
+    if (asRun) {
+      return `workflow:collaborate:${workflowId}:run:${asRun}`;
+    }
+    if (version) {
+      return `workflow:collaborate:${workflowId}:v${version}`;
+    }
+    return `workflow:collaborate:${workflowId}`;
+  }, [asRun, version, workflowId]);
 
   // Track the live "new workflow" status in a ref so the channel-join `action`
   // is read at connect/reconnect time rather than frozen at mount.

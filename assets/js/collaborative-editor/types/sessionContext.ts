@@ -55,9 +55,20 @@ export const WebhookAuthMethodSchema = z.object({
 
 export type WebhookAuthMethod = z.infer<typeof WebhookAuthMethodSchema>;
 
+/**
+ * A published release of a workflow: either a go-live (draft published to live)
+ * or a promote (a sandbox version promoted up). The backend returns releases
+ * rather than every save. Version pinning via the `?v=` param uses the
+ * `version_number` (what the UI shows as vN); `lock_version` is retained as the
+ * snapshot identifier the backend maps that version_number to.
+ */
 export const VersionSchema = z.object({
-  lock_version: z.number().int(),
+  version_number: z.number().int(),
+  kind: z.string(),
   inserted_at: z.string(),
+  published_by: z.string().nullable(),
+  source_project: z.string().nullable(),
+  lock_version: z.number().int(),
   is_latest: z.boolean(),
 });
 

@@ -379,7 +379,6 @@ describe('createHistoryStore', () => {
       expect(state.isLoading).toBe(false);
     });
   });
-
   describe('real-time updates', () => {
     test('handles work order created event', () => {
       store._connectChannel(mockChannelProvider as any);

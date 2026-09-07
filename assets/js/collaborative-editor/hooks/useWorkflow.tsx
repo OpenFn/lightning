@@ -865,8 +865,12 @@ const useWorkflowConditions = () => {
   const isConnected = isSynced;
   const isDeleted = workflow !== null && workflow.deleted_at !== null;
 
-  // Check if version is pinned via URL parameter
-  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+  // Check if version is pinned via URL parameter, or viewing a workflow as a
+  // past run executed it (?as_run=). Both are read-only views that must block
+  // save/run.
+  const isPinnedVersion =
+    (params['v'] !== undefined && params['v'] !== null) ||
+    (params['as_run'] !== undefined && params['as_run'] !== null);
 
   return {
     hasEditPermission,
@@ -1018,6 +1022,7 @@ export type WorkflowReadOnlyReason =
   | 'live'
   | 'no_permission'
   | 'pinned_version'
+  | 'as_run'
   | 'unsaved_new'
   | null;
 
@@ -1041,6 +1046,10 @@ export const useWorkflowReadOnly = (): {
 
   // Check if version is pinned via URL parameter
   const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+
+  // "View as executed" loads the workflow read-only exactly as a run ran it.
+  const isViewingAsExecuted =
+    params['as_run'] !== undefined && params['as_run'] !== null;
 
   // Check if this is a new workflow with content (from template or AI)
   // Users must click "Create" before they can edit
@@ -1085,6 +1094,14 @@ export const useWorkflowReadOnly = (): {
       isReadOnly: true,
       tooltipMessage: 'You do not have permission to edit this workflow',
       reason: 'no_permission',
+    };
+  }
+  if (isViewingAsExecuted) {
+    return {
+      isReadOnly: true,
+      tooltipMessage:
+        'You are viewing this workflow as a past run executed it',
+      reason: 'as_run',
     };
   }
   if (isPinnedVersion) {

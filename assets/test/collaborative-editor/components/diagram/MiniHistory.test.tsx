@@ -19,6 +19,7 @@ import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import MiniHistory from '../../../../js/collaborative-editor/components/diagram/MiniHistory';
 import {
+  createMockRun,
   createMockWorkOrder,
   mockHistoryList,
   mockMultiRunWorkOrder,
@@ -415,7 +416,7 @@ describe('MiniHistory', () => {
       expect(allText).toContain('s'); // Duration should be present
     });
 
-    test('run selection highlights selected run and displays X icon', () => {
+    test('run selection highlights the selected run (no deselect X)', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
 
@@ -437,9 +438,10 @@ describe('MiniHistory', () => {
       expect(runElement?.className).toContain('bg-indigo-50');
       expect(runElement?.className).toContain('border-l-indigo-500');
 
-      // X icon should be visible for selected run
+      // No trailing X icon: deselect is by clicking the selected run again.
+      // The X used to sit after the run id and pushed it out of column alignment.
       const xIcon = runElement?.querySelector('span.hero-x-mark');
-      expect(xIcon).toBeInTheDocument();
+      expect(xIcon).not.toBeInTheDocument();
     });
 
     test('clicking run calls selectRunHandler', () => {
@@ -506,92 +508,52 @@ describe('MiniHistory', () => {
   // STATUS PILLS
   // ==========================================================================
 
-  describe('status pills show correct colors for each state', () => {
+  describe('status indicator shows correct dot color for each state', () => {
     test.each([
-      {
-        state: 'success',
-        expectedColor: 'bg-green-200',
-        textColor: 'text-green-800',
-      },
-      {
-        state: 'failed',
-        expectedColor: 'bg-red-200',
-        textColor: 'text-red-800',
-      },
-      {
-        state: 'crashed',
-        expectedColor: 'bg-orange-200',
-        textColor: 'text-orange-800',
-      },
-      {
-        state: 'started',
-        expectedColor: 'bg-blue-200',
-        textColor: 'text-blue-800',
-      },
-      {
-        state: 'available',
-        expectedColor: 'bg-gray-200',
-        textColor: 'text-gray-800',
-      },
-      {
-        state: 'claimed',
-        expectedColor: 'bg-blue-200',
-        textColor: 'text-blue-800',
-      },
-      {
-        state: 'cancelled',
-        expectedColor: 'bg-gray-500',
-        textColor: 'text-gray-800',
-      },
-      {
-        state: 'killed',
-        expectedColor: 'bg-yellow-200',
-        textColor: 'text-yellow-800',
-      },
-      {
-        state: 'exception',
-        expectedColor: 'bg-gray-800',
-        textColor: 'text-white',
-      },
-      { state: 'lost', expectedColor: 'bg-gray-800', textColor: 'text-white' },
-    ])(
-      '$state state has correct colors',
-      ({ state, expectedColor, textColor }) => {
-        const onCollapseHistory = vi.fn();
-        const selectRunHandler = vi.fn();
-        const workOrder = createMockWorkOrder({
-          id: `test-wo-${state}`,
-          state: state as any,
-          runs: [
-            {
-              id: `test-run-${state}`,
-              state: state as any,
-              started_at: '2025-10-23T20:00:00Z',
-              finished_at: '2025-10-23T20:00:01Z',
-              error_type: null,
-              selected: false,
-            },
-          ],
-        });
+      { state: 'success', dotColor: 'bg-green-500' },
+      { state: 'failed', dotColor: 'bg-red-500' },
+      { state: 'crashed', dotColor: 'bg-orange-500' },
+      { state: 'started', dotColor: 'bg-blue-500' },
+      { state: 'available', dotColor: 'bg-gray-300' },
+      { state: 'claimed', dotColor: 'bg-blue-500' },
+      { state: 'cancelled', dotColor: 'bg-gray-400' },
+      { state: 'killed', dotColor: 'bg-yellow-500' },
+      { state: 'exception', dotColor: 'bg-gray-700' },
+      { state: 'lost', dotColor: 'bg-gray-700' },
+    ])('$state state has correct dot color', ({ state, dotColor }) => {
+      const onCollapseHistory = vi.fn();
+      const selectRunHandler = vi.fn();
+      const workOrder = createMockWorkOrder({
+        id: `test-wo-${state}`,
+        state: state as any,
+        runs: [
+          {
+            id: `test-run-${state}`,
+            state: state as any,
+            started_at: '2025-10-23T20:00:00Z',
+            finished_at: '2025-10-23T20:00:01Z',
+            error_type: null,
+            selected: false,
+          },
+        ],
+      });
 
-        render(
-          <MiniHistory
-            collapsed={false}
-            history={[workOrder]}
-            onCollapseHistory={onCollapseHistory}
-            selectRunHandler={selectRunHandler}
-          />
-        );
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={[workOrder]}
+          onCollapseHistory={onCollapseHistory}
+          selectRunHandler={selectRunHandler}
+        />
+      );
 
-        // Find the status pill by text (capitalize first letter)
-        const pillText = state.charAt(0).toUpperCase() + state.slice(1);
-        const pill = screen.getByText(pillText);
-
-        // Check that the pill has the correct color classes
-        expect(pill.className).toContain(expectedColor);
-        expect(pill.className).toContain(textColor);
-      }
-    );
+      // The muted label carries the state text; the colour lives on the
+      // adjacent dot (its previous sibling within the status indicator).
+      const label = screen.getByText(state.charAt(0).toUpperCase() + state.slice(1));
+      const dot = label.previousElementSibling;
+      expect(dot?.className).toContain(dotColor);
+      expect(dot?.className).toContain('rounded-full');
+    });
 
     test('all possible states render with appropriate colors', () => {
       const onCollapseHistory = vi.fn();
@@ -1271,6 +1233,42 @@ describe('MiniHistory', () => {
         .getByText('Recent History')
         .closest('div.absolute');
       expect(container).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // VERSION-AWARE HISTORY (cross-version model)
+  // ==========================================================================
+
+  describe('version-aware history', () => {
+    test('renders a per-run version tag (vN / Draft) prefixing the run id', () => {
+      const workOrder = createMockWorkOrder({
+        id: 'wo-tags',
+        runs: [
+          createMockRun({ id: 'run-released', version_number: 2 }),
+          createMockRun({
+            id: 'run-draft',
+            state: 'failed',
+            version_number: null,
+          }),
+        ],
+      });
+
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={[workOrder]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+        />
+      );
+
+      fireEvent.click(
+        screen.getByRole('button', { name: /Expand work order details/i })
+      );
+
+      expect(screen.getByText('v2')).toBeInTheDocument();
+      expect(screen.getByText('Draft')).toBeInTheDocument();
     });
   });
 });

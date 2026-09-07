@@ -54,6 +54,18 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
     end
 
+    test "go_live pushes a session context whose permissions reflect the new state",
+         %{socket: socket} do
+      # can_edit_workflow folds in the lifecycle lock and is resolved at join, so
+      # without a refresh the client keeps Save/Run until a reload.
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :ok, _
+
+      assert_push "session_context_updated", %{
+        permissions: %{can_edit_workflow: false}
+      }
+    end
+
     test "go_live is rejected for a user without edit access" do
       viewer = insert(:user)
 
@@ -1757,6 +1769,182 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "version-pinned join (?v=version_number)" do
+    test "loads the snapshot belonging to the release with that version_number",
+         %{project: project, workflow: workflow, user: user} do
+      # A published snapshot whose lock_version deliberately differs from the
+      # release's version_number, so a pass genuinely proves resolution keys on
+      # version_number and not on lock_version.
+      snapshot =
+        insert(:snapshot,
+          workflow: workflow,
+          lock_version: 7,
+          name: "Pinned content"
+        )
+
+      {:ok, release} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :go_live,
+          snapshot_id: snapshot.id,
+          published_by_id: user.id
+        })
+
+      assert release.version_number == 1
+      assert snapshot.lock_version == 7
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{release.version_number}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      # The pinned view carries the release's snapshot content, addressed by
+      # version_number (1) but resolved to lock_version 7.
+      loaded = pinned_socket.assigns.workflow
+      assert loaded.lock_version == snapshot.lock_version
+      assert loaded.name == snapshot.name
+
+      assert Enum.map(loaded.jobs, & &1.name) |> Enum.sort() ==
+               Enum.map(snapshot.jobs, & &1.name) |> Enum.sort()
+    end
+
+    test "returns not-found for an unknown version_number", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      # No release with version_number 99 (hand-typed, or an old lock_version
+      # that was never published) resolves to the same not-found as a missing
+      # snapshot.
+      assert {:error, %{reason: "snapshot version 99 not found"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}:v99",
+                 %{project_id: project.id, action: "edit"}
+               )
+    end
+
+    test "returns invalid-version-format for a non-integer version", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      assert {:error, %{reason: "invalid version format"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}:vabc",
+                 %{project_id: project.id, action: "edit"}
+               )
+    end
+  end
+
+  describe "view-as-executed join (:run:<run_id>)" do
+    test "loads the exact snapshot a run executed against, including drafts", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      # A draft/test snapshot that was never released, so this genuinely proves
+      # as-executed works off the run's own snapshot, not the release table.
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 4)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      {_wo, run} = history_workorder_with_run(workflow, trigger, snapshot)
+
+      {:ok, _, executed_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:run:#{run.id}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      loaded = executed_socket.assigns.workflow
+      assert loaded.lock_version == snapshot.lock_version
+      assert loaded.name == snapshot.name
+
+      assert Enum.map(loaded.jobs, & &1.name) |> Enum.sort() ==
+               Enum.map(snapshot.jobs, & &1.name) |> Enum.sort()
+
+      # Resolved via the same read-only version-view path as ?v=.
+      assert executed_socket.assigns.workflow_kind == :version
+    end
+
+    test "returns not-found for a run from a different workflow", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      other_workflow = insert(:workflow, project: project)
+
+      other_snapshot =
+        insert(:snapshot, workflow: other_workflow, lock_version: 1)
+
+      other_trigger = insert(:trigger, type: :webhook, workflow: other_workflow)
+
+      {_wo, other_run} =
+        history_workorder_with_run(other_workflow, other_trigger, other_snapshot)
+
+      assert {:error, %{reason: "run not found"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}:run:#{other_run.id}",
+                 %{project_id: project.id, action: "edit"}
+               )
+    end
+
+    test "returns not-found for a malformed run id", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      assert {:error, %{reason: "run not found"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}:run:not-a-uuid",
+                 %{project_id: project.id, action: "edit"}
+               )
+    end
+
+    test "a release ?v= join still resolves by version_number, not run id", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      # The release's snapshot lock_version deliberately differs from its
+      # version_number, proving the ?v= contract is untouched by the run path.
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 8)
+      {:ok, release} = publish_release(workflow, snapshot, user)
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{release.version_number}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      assert pinned_socket.assigns.workflow.lock_version == 8
+    end
+  end
+
   describe "request_adaptors and request_credentials" do
     test "handles multiple concurrent requests independently", %{
       socket: socket
@@ -2114,8 +2302,17 @@ defmodule LightningWeb.WorkflowChannelTest do
       workflow: workflow,
       user: user
     } do
-      # Create initial snapshot so v0 is available for viewing
-      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+      # Create initial snapshot (lock_version 0) and publish it as a release so
+      # it is pinnable by version_number.
+      {:ok, snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, release_v1} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :go_live,
+          snapshot_id: snapshot_v0.id,
+          published_by_id: user.id
+        })
 
       # Update workflow to create v1
       workflow_changeset =
@@ -2136,8 +2333,13 @@ defmodule LightningWeb.WorkflowChannelTest do
       {:ok, updated_workflow_v2} =
         Lightning.Workflows.save_workflow(v2_changeset, user)
 
-      # Join viewing old snapshot (v0 - the original workflow)
-      topic_with_version = "workflow:collaborate:#{workflow.id}:v0"
+      # Join pinning the release (version_number 1), which resolves to the old
+      # snapshot (lock_version 0). version_number != lock_version here.
+      assert release_v1.version_number == 1
+      assert snapshot_v0.lock_version == 0
+
+      topic_with_version =
+        "workflow:collaborate:#{workflow.id}:v#{release_v1.version_number}"
 
       {:ok, _, snapshot_socket} =
         LightningWeb.UserSocket
@@ -3742,38 +3944,92 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert old_work_order.id in work_order_ids
     end
 
-    test "does not surface a work order from another project via a foreign run_id",
-         %{socket: socket, workflow: workflow, project: project} do
+    test "attributes each run to its release version_number, null when unreleased",
+         %{socket: socket, workflow: workflow, user: user} do
       workflow = with_snapshot(workflow)
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
-      own_dataclip = insert(:dataclip, project: project)
 
-      {:ok, own_work_order} =
-        Lightning.WorkOrders.create_for(trigger,
-          dataclip: own_dataclip,
-          workflow: workflow
-        )
+      released_snapshot = insert(:snapshot, workflow: workflow, lock_version: 5)
+      draft_snapshot = insert(:snapshot, workflow: workflow, lock_version: 6)
 
-      # A run belonging to a DIFFERENT project the socket has no access to.
-      other_project = insert(:project)
-      other_workflow = insert(:workflow, project: other_project)
-      job = insert(:job, workflow: other_workflow)
-      dataclip = insert(:dataclip, project: other_project)
-      foreign_work_order = insert(:workorder, workflow: other_workflow)
+      {:ok, release} = publish_release(workflow, released_snapshot, user)
 
-      foreign_run =
-        insert(:run,
-          work_order: foreign_work_order,
-          starting_job: job,
-          dataclip: dataclip
-        )
+      {_wo, released_run} =
+        history_workorder_with_run(workflow, trigger, released_snapshot)
 
-      ref = push(socket, "request_history", %{"run_id" => foreign_run.id})
+      {_wo, draft_run} =
+        history_workorder_with_run(workflow, trigger, draft_snapshot)
+
+      ref = push(socket, "request_history", %{})
+      assert_reply ref, :ok, %{history: history}
+
+      runs = Enum.flat_map(history, & &1.runs)
+
+      assert %{version: 5, version_number: version_number} =
+               Enum.find(runs, &(&1.id == released_run.id))
+
+      assert version_number == release.version_number
+
+      # An unreleased (draft/test) snapshot carries its lock_version but no
+      # version_number, so the client renders "Draft".
+      assert %{version: 6, version_number: nil} =
+               Enum.find(runs, &(&1.id == draft_run.id))
+    end
+  end
+
+  describe "request_history version filter" do
+    setup %{workflow: workflow, user: user} do
+      workflow = with_snapshot(workflow)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+
+      snapshot_v1 = insert(:snapshot, workflow: workflow, lock_version: 1)
+      snapshot_v2 = insert(:snapshot, workflow: workflow, lock_version: 2)
+      draft_snapshot = insert(:snapshot, workflow: workflow, lock_version: 3)
+
+      {:ok, release_v1} = publish_release(workflow, snapshot_v1, user)
+      {:ok, release_v2} = publish_release(workflow, snapshot_v2, user)
+
+      {wo_v1, _} = history_workorder_with_run(workflow, trigger, snapshot_v1)
+      {wo_v2, _} = history_workorder_with_run(workflow, trigger, snapshot_v2)
+
+      {wo_draft, _} =
+        history_workorder_with_run(workflow, trigger, draft_snapshot)
+
+      %{
+        release_v1: release_v1,
+        release_v2: release_v2,
+        wo_v1: wo_v1,
+        wo_v2: wo_v2,
+        wo_draft: wo_draft
+      }
+    end
+
+    test "an integer version_number returns only that release's work orders", %{
+      socket: socket,
+      release_v1: release_v1,
+      wo_v1: wo_v1
+    } do
+      ref =
+        push(socket, "request_history", %{
+          "version_number" => release_v1.version_number
+        })
 
       assert_reply ref, :ok, %{history: history}
-      work_order_ids = Enum.map(history, & &1.id)
-      refute foreign_work_order.id in work_order_ids
-      assert own_work_order.id in work_order_ids
+
+      assert [%{id: id, runs: [%{version: 1, version_number: 1}]}] = history
+      assert id == wo_v1.id
+    end
+
+    test "the \"draft\" filter returns only the unreleased work orders", %{
+      socket: socket,
+      wo_draft: wo_draft
+    } do
+      ref = push(socket, "request_history", %{"version_number" => "draft"})
+
+      assert_reply ref, :ok, %{history: history}
+
+      assert [%{id: id, runs: [%{version: 3, version_number: nil}]}] = history
+      assert id == wo_draft.id
     end
   end
 
@@ -5187,35 +5443,74 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "request_versions" do
-    test "returns versions for saved workflow", %{
-      socket: socket,
-      workflow: workflow,
-      user: user
-    } do
-      # Create some snapshots
-      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+    test "returns published releases newest-first with author, kind, source and lock_version",
+         %{
+           socket: socket,
+           workflow: workflow,
+           user: user
+         } do
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 7)
+      source = insert(:project, name: "the-sandbox")
 
-      # Update workflow to create v1
-      workflow_changeset =
-        workflow
-        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
-        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+      {:ok, _v1} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :go_live,
+          snapshot_id: snapshot.id,
+          published_by_id: user.id
+        })
 
-      {:ok, _updated_workflow_v1} =
-        Lightning.Workflows.save_workflow(workflow_changeset, user)
+      {:ok, _v2} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :promote,
+          snapshot_id: snapshot.id,
+          published_by_id: user.id,
+          source_project_id: source.id
+        })
 
       ref = push(socket, "request_versions", %{})
 
       assert_reply ref, :ok, %{versions: versions}
 
-      assert is_list(versions)
-      assert length(versions) >= 1
+      assert [
+               %{
+                 version_number: 2,
+                 kind: :promote,
+                 published_by: published_by,
+                 source_project: "the-sandbox",
+                 lock_version: 7,
+                 is_latest: true,
+                 inserted_at: %DateTime{}
+               },
+               %{
+                 version_number: 1,
+                 kind: :go_live,
+                 source_project: nil,
+                 lock_version: 7,
+                 is_latest: false
+               }
+             ] = versions
 
-      # Verify version structure
-      [first_version | _] = versions
-      assert Map.has_key?(first_version, :lock_version)
-      assert Map.has_key?(first_version, :inserted_at)
-      assert Map.has_key?(first_version, :is_latest)
+      assert is_binary(published_by) and published_by =~ "anna"
+    end
+
+    test "does not include ordinary saves, only releases", %{
+      socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # An ordinary save captures a snapshot but records no release.
+      workflow_changeset =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Just a save"})
+
+      {:ok, _saved} = Lightning.Workflows.save_workflow(workflow_changeset, user)
+
+      ref = push(socket, "request_versions", %{})
+
+      assert_reply ref, :ok, %{versions: []}
     end
 
     test "returns empty versions list for unsaved workflow", %{
@@ -5296,14 +5591,21 @@ defmodule LightningWeb.WorkflowChannelTest do
       })
 
       save_ref = push(socket, "save_workflow", %{})
-      assert_reply save_ref, :ok, %{lock_version: lv}
+      assert_reply save_ref, :ok, %{lock_version: _lv}
 
-      # Same socket, no rejoin: the first save produces exactly one version,
-      # and it is the latest.
+      # A save is not a published version, so the list is still empty here.
+      versions_ref = push(socket, "request_versions", %{})
+      assert_reply versions_ref, :ok, %{versions: []}
+
+      # Going live publishes v1. Same socket, no rejoin: the channel must have
+      # self-promoted out of :new on save, or this keeps short-circuiting to [].
+      live_ref = push(socket, "go_live", %{})
+      assert_reply live_ref, :ok, _
+
       versions_ref = push(socket, "request_versions", %{})
       assert_reply versions_ref, :ok, %{versions: versions}
 
-      assert [%{lock_version: ^lv, is_latest: true}] = versions
+      assert [%{version_number: 1, is_latest: true}] = versions
     end
 
     test "does not short-circuit for a version-view socket", %{
@@ -5311,21 +5613,22 @@ defmodule LightningWeb.WorkflowChannelTest do
       user: user,
       project: project
     } do
-      # Snapshot v0, then bump to v1 so there is genuine version history.
-      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+      # Snapshot v0 with a release, so there is genuine published history.
+      {:ok, snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
 
-      workflow_changeset =
-        workflow
-        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
-        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+      {:ok, release} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :go_live,
+          snapshot_id: snapshot_v0.id,
+          published_by_id: user.id
+        })
 
-      {:ok, _updated} =
-        Lightning.Workflows.save_workflow(workflow_changeset, user)
-
-      # Join viewing the old snapshot (v0). The resolver hydrates a :built struct
-      # with lock_version == 0, BUT this is a version-view, not a genuinely-new
-      # workflow, so request_versions must NOT short-circuit to [].
-      topic_with_version = "workflow:collaborate:#{workflow.id}:v0"
+      # Join pinning the release (version_number 1). The resolver hydrates a
+      # :built struct with lock_version == 0, BUT this is a version-view, not a
+      # genuinely-new workflow, so request_versions must NOT short-circuit to [].
+      topic_with_version =
+        "workflow:collaborate:#{workflow.id}:v#{release.version_number}"
 
       {:ok, _, snapshot_socket} =
         LightningWeb.UserSocket
@@ -5343,42 +5646,29 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert length(versions) >= 1
     end
 
-    test "marks latest version correctly", %{
+    test "marks only the newest release as latest", %{
       socket: socket,
       workflow: workflow,
       user: user
     } do
-      # Create initial snapshot
-      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 1)
 
-      # Update workflow multiple times to create more snapshots
-      workflow_v1 =
-        workflow
-        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
-        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
-
-      {:ok, updated_v1} = Lightning.Workflows.save_workflow(workflow_v1, user)
-
-      workflow_v2 =
-        updated_v1
-        |> Lightning.Repo.reload!()
-        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
-        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 2"})
-
-      {:ok, _updated_v2} = Lightning.Workflows.save_workflow(workflow_v2, user)
+      for _ <- 1..3 do
+        {:ok, _} =
+          Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+            workflow_id: workflow.id,
+            kind: :go_live,
+            snapshot_id: snapshot.id,
+            published_by_id: user.id
+          })
+      end
 
       ref = push(socket, "request_versions", %{})
 
       assert_reply ref, :ok, %{versions: versions}
 
-      # Find the version marked as latest
-      latest_versions = Enum.filter(versions, & &1.is_latest)
-      assert length(latest_versions) == 1
-
-      # The latest should have the highest lock_version
-      latest = hd(latest_versions)
-      max_lock_version = versions |> Enum.map(& &1.lock_version) |> Enum.max()
-      assert latest.lock_version == max_lock_version
+      assert [%{version_number: 3, is_latest: true} | rest] = versions
+      assert Enum.all?(rest, &(&1.is_latest == false))
     end
   end
 
@@ -5679,11 +5969,43 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
-  defp edit_single_job_body!(workflow_id, body) do
-    [job] =
-      Lightning.Workflows.get_workflow(workflow_id, include: [:jobs]).jobs
+  defp add_member(project, user, role) do
+    project
+    |> membership_params(%{}, [%{user_id: user.id, role: role}])
+    |> submit_membership()
+  end
 
-    Lightning.Repo.update!(Ecto.Changeset.change(job, body: body))
+  defp await_channel_processed(socket) do
+    :sys.get_state(socket.channel_pid)
+  end
+
+  defp change_role(project, project_user, role) do
+    project
+    |> membership_params(%{project_user => role})
+    |> submit_membership()
+  end
+
+  defp join_as(user, project, workflow) do
+    {:ok, _reply, socket} =
+      LightningWeb.UserSocket
+      |> socket("user_#{user.id}", %{current_user: user})
+      |> subscribe_and_join(
+        LightningWeb.WorkflowChannel,
+        "workflow:collaborate:#{workflow.id}",
+        %{"project_id" => project.id, "action" => "edit"}
+      )
+
+    socket
+  end
+
+  defp submit_membership({project, params}) do
+    {:ok, _project} =
+      Lightning.Projects.update_project_with_users(
+        project,
+        params,
+        insert(:user),
+        false
+      )
   end
 
   defp workflow_name(session_pid) do
@@ -5723,42 +6045,47 @@ defmodule LightningWeb.WorkflowChannelTest do
     Yex.Sync.message_encode!({:sync, sync_message})
   end
 
-  defp await_channel_processed(socket) do
-    :sys.get_state(socket.channel_pid)
+  defp edit_single_job_body!(workflow_id, body) do
+    [job] =
+      Lightning.Workflows.get_workflow(workflow_id, include: [:jobs]).jobs
+
+    Lightning.Repo.update!(Ecto.Changeset.change(job, body: body))
   end
 
-  defp join_as(user, project, workflow) do
-    {:ok, _reply, socket} =
-      LightningWeb.UserSocket
-      |> socket("user_#{user.id}", %{current_user: user})
-      |> subscribe_and_join(
-        LightningWeb.WorkflowChannel,
-        "workflow:collaborate:#{workflow.id}",
-        %{"project_id" => project.id, "action" => "edit"}
+  defp publish_release(workflow, snapshot, user) do
+    Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+      workflow_id: workflow.id,
+      kind: :go_live,
+      snapshot_id: snapshot.id,
+      published_by_id: user.id
+    })
+  end
+
+  defp history_workorder_with_run(
+         workflow,
+         trigger,
+         snapshot,
+         state \\ :success
+       ) do
+    dataclip = insert(:dataclip)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot
       )
 
-    socket
-  end
-
-  defp change_role(project, project_user, role) do
-    project
-    |> membership_params(%{project_user => role})
-    |> submit_membership()
-  end
-
-  defp add_member(project, user, role) do
-    project
-    |> membership_params(%{}, [%{user_id: user.id, role: role}])
-    |> submit_membership()
-  end
-
-  defp submit_membership({project, params}) do
-    {:ok, _project} =
-      Lightning.Projects.update_project_with_users(
-        project,
-        params,
-        insert(:user),
-        false
+    run =
+      insert(:run,
+        work_order: work_order,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot,
+        state: state
       )
+
+    {work_order, run}
   end
 end

@@ -39,8 +39,10 @@ const promote = vi.fn<
 >();
 const archiveSandbox = vi.fn<() => Promise<{ parent_project_id: string }>>();
 
+let urlParams: Record<string, string> = {};
+
 vi.mock('../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({ params: {}, updateSearchParams: vi.fn() }),
+  useURLState: () => ({ params: urlParams, updateSearchParams: vi.fn() }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
@@ -250,6 +252,7 @@ describe('Header - lifecycle actions', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     canArchiveSandbox = true;
+    urlParams = {};
     readOnly = { isReadOnly: false, reason: null };
     goLive.mockReset();
     switchToDraft.mockReset();
@@ -278,6 +281,30 @@ describe('Header - lifecycle actions', () => {
     renderHeader();
     const badges = screen.getAllByTestId('workflow-lifecycle-badge');
     expect(badges.at(-1)).toHaveTextContent('Draft');
+  });
+
+  test('hides the Live badge when viewing a pinned older version', () => {
+    // The workflow is live, but we are pinned to a release (?v=), so the
+    // current "Live" state does not describe what's on screen.
+    lifecycleState = 'live';
+    urlParams = { v: '2' };
+
+    renderHeader();
+
+    expect(
+      screen.queryByTestId('workflow-lifecycle-badge')
+    ).not.toBeInTheDocument();
+  });
+
+  test('hides the Live badge in an as-executed run view', () => {
+    lifecycleState = 'live';
+    urlParams = { as_run: 'run-123' };
+
+    renderHeader();
+
+    expect(
+      screen.queryByTestId('workflow-lifecycle-badge')
+    ).not.toBeInTheDocument();
   });
 
   test('suppresses the redundant Read-only badge on a live workflow but keeps it on a draft', () => {

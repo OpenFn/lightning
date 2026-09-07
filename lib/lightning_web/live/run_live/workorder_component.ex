@@ -186,7 +186,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                      @work_order.snapshot.lock_version do
                   ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?run=#{@last_run.id}"
                 else
-                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?run=#{@last_run.id}&v=#{@work_order.snapshot.lock_version}"
+                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?run=#{@last_run.id}&as_run=#{@last_run.id}"
                 end
               }
               class="inline-block"
