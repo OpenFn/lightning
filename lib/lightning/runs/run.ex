@@ -136,7 +136,6 @@ defmodule Lightning.Run do
     # UUIDs with no association/FK; independent of the
     # `has_one :workflow, through:` above, which is unaffected.
     field :workflow_id, Ecto.UUID
-    field :project_id, Ecto.UUID
 
     timestamps(type: :utc_datetime_usec)
   end

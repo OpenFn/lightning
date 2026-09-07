@@ -1,4 +1,4 @@
-defmodule Lightning.Repo.Migrations.AddDenormalisedWorkflowAndProjectToRuns do
+defmodule Lightning.Repo.Migrations.AddDenormalisedWorkflowToRuns do
   use Ecto.Migration
 
   # EXPERIMENTAL (load-testing): denormalise workflow_id and project_id onto the
@@ -12,7 +12,6 @@ defmodule Lightning.Repo.Migrations.AddDenormalisedWorkflowAndProjectToRuns do
   def change do
     alter table(:runs) do
       add :workflow_id, :binary_id
-      add :project_id, :binary_id
     end
   end
 end

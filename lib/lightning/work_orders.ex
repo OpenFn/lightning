@@ -784,7 +784,6 @@ defmodule Lightning.WorkOrders do
   defp put_denormalised_ids(run_changeset, %Workflow{} = workflow) do
     run_changeset
     |> put_change(:workflow_id, workflow.id)
-    |> put_change(:project_id, workflow.project_id)
   end
 
   defp put_denormalised_ids(run_changeset, _workflow), do: run_changeset
