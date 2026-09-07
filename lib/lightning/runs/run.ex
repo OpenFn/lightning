@@ -131,6 +131,13 @@ defmodule Lightning.Run do
 
     field :worker_name, :string
 
+    # EXPERIMENTAL denormalised columns (load-testing). Populated only on the
+    # webhook ingress path and its retries (see Lightning.WorkOrders). Bare
+    # UUIDs with no association/FK; independent of the
+    # `has_one :workflow, through:` above, which is unaffected.
+    field :workflow_id, Ecto.UUID
+    field :project_id, Ecto.UUID
+
     timestamps(type: :utc_datetime_usec)
   end
 

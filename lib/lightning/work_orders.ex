@@ -238,6 +238,7 @@ defmodule Lightning.WorkOrders do
               queue: queue,
               options: run_options
             })
+            |> put_denormalised_ids(attrs[:workflow])
           ])
       end
     end)
@@ -768,12 +769,25 @@ defmodule Lightning.WorkOrders do
     |> put_assoc(:starting_job, starting_job)
     |> put_assoc(:steps, steps)
     |> put_assoc(:created_by, creating_user)
+    |> put_denormalised_ids(workorder.workflow)
     |> put_embed(:options, run_options)
     |> validate_required_assoc(:snapshot)
     |> validate_required_assoc(:work_order)
     |> validate_required_assoc(:created_by)
     |> validate_required(:dataclip_id)
   end
+
+  # EXPERIMENTAL (load-testing): stamp the denormalised workflow_id / project_id
+  # onto a run changeset so the claim query can avoid joining through
+  # work_order -> workflow -> project. No-ops unless a loaded Workflow struct is
+  # given, so non-webhook callers are unaffected.
+  defp put_denormalised_ids(run_changeset, %Workflow{} = workflow) do
+    run_changeset
+    |> put_change(:workflow_id, workflow.id)
+    |> put_change(:project_id, workflow.project_id)
+  end
+
+  defp put_denormalised_ids(run_changeset, _workflow), do: run_changeset
 
   defp update_workorder_query(run) do
     state_query = Query.state_for(run)
