@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-92EE0EDB.js"></script>
+    <script defer src="dist/sidebar_items-0F7728F6.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -109,10 +109,27 @@ Lightning
 
 <p>All notable changes to this project will be documented in this file.</p><ul><li><code class="inline">Added</code> for new features.</li><li><code class="inline">Changed</code> for changes in existing functionality.</li><li><code class="inline">Deprecated</code> for soon-to-be removed features.</li><li><code class="inline">Removed</code> for now removed features.</li><li><code class="inline">Fixed</code> for any bug fixes.</li><li><code class="inline">Security</code> in case of vulnerabilities.</li></ul><p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
 and this project adheres to
-<a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p><h2 id="unreleased" class="section-heading"><a href="#unreleased" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[Unreleased]</span></h2><h3 id="changed" class="section-heading"><a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising
+<a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p><h2 id="unreleased" class="section-heading"><a href="#unreleased" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[Unreleased]</span></h2><h3 id="changed" class="section-heading"><a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li><p>The AI assistant is the global assistant for everyone. It was behind the
+experimental features setting and an opt-in tickbox on the chat input, and
+both are gone: every message goes to it, and the badge naming which assistant
+answered goes with them. Existing workflow conversations still open and read
+as they always did, and replying in one moves it to the global assistant from
+that message on.
+<a href="https://github.com/OpenFn/lightning/issues/5042">#5042</a></p></li><li><p>The AI assistant's attachment tickboxes are now about the run you are looking
+at, and they appear wherever you are. &quot;Send run logs&quot; and &quot;Send run data&quot; sit
+above the message box on the canvas and in the run history as well as in the
+step editor, and appear once a run is loaded rather than sitting greyed out.
+&quot;Send run data&quot; now covers every step in the run rather than the one that
+happened to be highlighted, and still sends the shape of the data with the
+values removed. The &quot;Press Enter to send&quot; hint below the box is gone, since
+the notice and the send button now share that row.
+<a href="https://github.com/OpenFn/lightning/issues/5037">#5037</a></p></li><li><p>Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising
 the first character of a string, which breaks names in many languages.
 Lightning does not normalise anything today, but #4577 adds it on every name,
-so the runtime moves first.</li></ul><h3 id="added" class="section-heading"><a href="#added" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li><p>The AI assistant now shows what changed as a global reply edits your workflow.
+so the runtime moves first.</p></li></ul><h3 id="removed" class="section-heading"><a href="#removed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Removed</span></h3><ul><li>The AI assistant's &quot;Send code&quot; tickbox. The assistant reads your workflow to
+answer anything about it, so the box did nothing except in one case, where it
+looked like a choice and was not one.
+<a href="https://github.com/OpenFn/lightning/issues/5037">#5037</a></li></ul><h3 id="added" class="section-heading"><a href="#added" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li><p>The AI assistant now shows what changed as a global reply edits your workflow.
 Each change renders under the status that made it, while the reply is still
 streaming, as a per-step code diff with syntax highlighting, old and new line
 numbers and a link to open that step in the editor, alongside a compact
@@ -188,7 +205,7 @@ routing. The field was never finished or exposed in the UI; a webhook trigger
 is reached at <code class="inline">/i/&lt;trigger id&gt;</code>.</li><li>Webhook requests refused by a rate or usage limit now answer
 <code class="inline">429 Too Many Requests</code> rather than <code class="inline">402 Payment Required</code>. Lightning has no
 notion of payments — the usage limiter is an extension — and the response body
-still names the specific limit in <code class="inline">error</code>.</li></ul><h3 id="removed" class="section-heading"><a href="#removed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Removed</span></h3><ul><li><p><strong>[BREAKING CHANGE] Kafka triggers have been removed.</strong> A workflow can no
+still names the specific limit in <code class="inline">error</code>.</li></ul><h3 id="removed-1" class="section-heading"><a href="#removed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Removed</span></h3><ul><li><p><strong>[BREAKING CHANGE] Kafka triggers have been removed.</strong> A workflow can no
 longer be started by consuming from a Kafka cluster, and the <code class="inline">KAFKA_*</code>
 environment variables no longer do anything. If you had
 <code class="inline">KAFKA_TRIGGERS_ENABLED</code> switched on, take a backup and switch it off before
@@ -397,7 +414,7 @@ users are now served the collaborative editor.</li><li><strong>AI chat sessions 
 to, instead of being left orphaned.</li></ul><p>Migrations in this release, all in <code class="inline">priv/repo/migrations/</code>:</p><ul><li><code class="inline">20260629143825_clear_prefer_legacy_editor</code></li><li><code class="inline">20260701152255_remove_legacy_credential_transfers</code></li><li><code class="inline">20260703124106_require_project_credentials_project_id</code></li><li><code class="inline">20260707043053_cascade_delete_ai_chat_sessions_with_job_and_workflow</code></li><li><code class="inline">20260707060146_delete_orphaned_ai_chat_sessions</code></li><li><code class="inline">20260711013100_add_allow_unverified_email_to_auth_providers</code></li></ul><h3 id="added-5" class="section-heading"><a href="#added-5" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Add <code class="inline">bin/worktree</code>, a helper that creates a git worktree for a branch and runs
 the per-worktree slice of <code class="inline">bin/bootstrap</code> (environment copy, dependencies,
 assets, database create/migrate) so the worktree is immediately runnable.</li></ul><h3 id="changed-6" class="section-heading"><a href="#changed-6" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Replaced the legacy workflow editor with the collaborative editor for all
-users. <a href="https://github.com/OpenFn/lightning/issues/4402">#4402</a></li></ul><h3 id="removed-1" class="section-heading"><a href="#removed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Removed</span></h3><ul><li>Removed the legacy workflow editor and its route, together with dead code it
+users. <a href="https://github.com/OpenFn/lightning/issues/4402">#4402</a></li></ul><h3 id="removed-2" class="section-heading"><a href="#removed-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Removed</span></h3><ul><li>Removed the legacy workflow editor and its route, together with dead code it
 left behind and other unreferenced modules and functions surfaced while
 auditing for the removal.</li></ul><h3 id="fixed-6" class="section-heading"><a href="#fixed-6" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fixed the work-order history export, which was broken for all users and never
 produced a file.</li></ul><h3 id="security-3" class="section-heading"><a href="#security-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Security</span></h3><ul><li>Enforce project scoping consistently across LiveViews, channels, controllers
@@ -1639,20 +1656,20 @@ existing snapshots could be incorrect (e.g. missing steps, missing edges).
 In order to fix this, you will need to manually create new snapshots for
 each of your workflows. This can be done either by modifying the workflow in
 the UI and saving it. Or running a command on the running instance:</p><pre><code class="makeup elixir" translate="no"><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Repo</span><span class="w">
-</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="5841538844-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="5841538844-1">}</span><span class="w">
+</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="3696387530-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="3696387530-1">}</span><span class="w">
 
-</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="5841538844-2">(</span><span class="k" data-group-id="5841538844-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="3696387530-2">(</span><span class="k" data-group-id="3696387530-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
   </span><span class="n">snapshots</span><span class="w"> </span><span class="o">=</span><span class="w">
-    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="5841538844-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="5841538844-4">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="5841538844-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="5841538844-5">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="5841538844-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="5841538844-6">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="5841538844-7">(</span><span class="k" data-group-id="5841538844-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-      </span><span class="p" data-group-id="5841538844-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="5841538844-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="5841538844-10">(</span><span class="n">workflow</span><span class="p" data-group-id="5841538844-10">)</span><span class="w">
+    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="3696387530-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="3696387530-4">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="3696387530-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="3696387530-5">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="3696387530-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="3696387530-6">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="3696387530-7">(</span><span class="k" data-group-id="3696387530-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+      </span><span class="p" data-group-id="3696387530-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="3696387530-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="3696387530-10">(</span><span class="n">workflow</span><span class="p" data-group-id="3696387530-10">)</span><span class="w">
       </span><span class="n">snapshot</span><span class="w">
-    </span><span class="k" data-group-id="5841538844-8">end</span><span class="p" data-group-id="5841538844-7">)</span><span class="w">
+    </span><span class="k" data-group-id="3696387530-8">end</span><span class="p" data-group-id="3696387530-7">)</span><span class="w">
 
- </span><span class="p" data-group-id="5841538844-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="5841538844-11">}</span><span class="w">
-</span><span class="k" data-group-id="5841538844-3">end</span><span class="p" data-group-id="5841538844-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-82" class="section-heading"><a href="#added-82" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
+ </span><span class="p" data-group-id="3696387530-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="3696387530-11">}</span><span class="w">
+</span><span class="k" data-group-id="3696387530-3">end</span><span class="p" data-group-id="3696387530-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-82" class="section-heading"><a href="#added-82" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
 <a href="https://github.com/OpenFn/lightning/pull/2438">#2438</a></li><li>Persist AI Assistant conversations and enable it for all users
 <a href="https://github.com/OpenFn/lightning/issues/2296">#2296</a></li></ul><h3 id="changed-94" class="section-heading"><a href="#changed-94" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Rename <code class="inline">new_table</code> component to <code class="inline">table</code>.
 <a href="https://github.com/OpenFn/lightning/pull/2448">#2448</a></li></ul><h3 id="fixed-124" class="section-heading"><a href="#fixed-124" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix <code class="inline">workflow_id</code> presence in state.json during Github sync
@@ -2101,7 +2118,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="6823121723-1">(</span><span class="p" data-group-id="6823121723-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="9535468860-1">(</span><span class="p" data-group-id="9535468860-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-120" class="section-heading"><a href="#added-120" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Fix flaky job name input behavior on error
