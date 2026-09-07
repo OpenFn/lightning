@@ -1315,8 +1315,7 @@ export const createWorkflowStore = (
         // Type assertion needed because Y.Map.get returns unknown
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         const typedEntityErrors = entityErrors as
-          | Record<string, Record<string, string[]>>
-          | undefined;
+          Record<string, Record<string, string[]>> | undefined;
 
         const updatedEntityErrors = {
           ...(typedEntityErrors ?? {}),
@@ -1417,8 +1416,7 @@ export const createWorkflowStore = (
           // Type assertion needed because Y.Map.get returns unknown
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           const typedEntityErrors = entityErrors as
-            | Record<string, Record<string, string[]>>
-            | undefined;
+            Record<string, Record<string, string[]>> | undefined;
 
           return typedEntityErrors?.[entityId] ?? {};
         }
@@ -1656,6 +1654,21 @@ export const createWorkflowStore = (
       logger.error('Failed to promote workflow', error);
       throw error;
     }
+  };
+
+  // Whether the parent has changed this workflow since the sandbox forked. The
+  // merge rebuilds the parent from the sandbox, so anything the parent gained
+  // in the meantime is removed rather than kept.
+  const checkPromote = async (): Promise<{
+    diverged: boolean;
+    parent_name: string | null;
+  }> => {
+    const { provider } = ensureConnected();
+
+    return await channelRequest<{
+      diverged: boolean;
+      parent_name: string | null;
+    }>(provider.channel, 'request_promote_check', {});
   };
 
   // Archive this sandbox after promoting. Archiving turns off the sandbox's
@@ -2188,6 +2201,7 @@ export const createWorkflowStore = (
     editInSandbox,
     promote,
     archiveSandbox,
+    checkPromote,
     saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,

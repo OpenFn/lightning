@@ -23,6 +23,7 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Projects.Events.ProjectUserRoleChanged
   alias Lightning.Projects.Events.SupportAccessUpdated
   alias Lightning.Projects.Events.WorkflowDeleted
+  alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.Sandboxes
   alias Lightning.Projects.Scope
@@ -503,6 +504,29 @@ defmodule LightningWeb.WorkflowChannel do
     else
       error -> workflow_error_reply(socket, error)
     end
+  end
+
+  # Whether promoting would overwrite work the parent has done since this
+  # sandbox forked. `diverged_workflows/2` answers for every workflow in the
+  # project, so it is narrowed to the one being promoted.
+  @impl true
+  def handle_in("request_promote_check", _params, socket) do
+    sandbox = socket.assigns.project
+    workflow = socket.assigns.workflow
+    user = socket.assigns.current_user
+
+    async_task(socket, "request_promote_check", fn ->
+      with %_{} = parent <- fetch_parent_project(sandbox),
+           :ok <- authorize_merge_sandbox(user, parent) do
+        %{
+          diverged:
+            workflow.name in MergeProjects.diverged_workflows(sandbox, parent),
+          parent_name: parent.name
+        }
+      else
+        _ -> %{diverged: false, parent_name: nil}
+      end
+    end)
   end
 
   @impl true
@@ -1134,6 +1158,7 @@ defmodule LightningWeb.WorkflowChannel do
               "get_context",
               "request_history",
               "request_versions",
+              "request_promote_check",
               "request_trigger_auth_methods",
               "get_limits"
             ] do

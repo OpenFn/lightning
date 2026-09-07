@@ -37,6 +37,15 @@ interface PromoteDialogProps {
   onKeep: () => void;
   /** Phase one dismissal. Close without saving or promoting. */
   onCancel: () => void;
+  /**
+   * Asks the server whether the parent has changed this workflow since the
+   * sandbox forked. Called when the dialog opens; a failure is treated as no
+   * divergence, because a missing warning must not block a valid promote.
+   */
+  onCheckDivergence: () => Promise<{
+    diverged: boolean;
+    parent_name: string | null;
+  }>;
 }
 
 type Phase = 'confirm' | 'success';
@@ -60,10 +69,16 @@ export function PromoteDialog({
   onArchive,
   onKeep,
   onCancel,
+  onCheckDivergence,
 }: PromoteDialogProps) {
   const [phase, setPhase] = useState<Phase>('confirm');
   const [isPromoting, setIsPromoting] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  // Non-null once the server says the parent has moved on; the name inside it
+  // can still be null, so absence and anonymity stay distinguishable.
+  const [divergence, setDivergence] = useState<{
+    parentName: string | null;
+  } | null>(null);
 
   const isBusy = isPromoting || isArchiving;
 
@@ -74,8 +89,29 @@ export function PromoteDialog({
       setPhase('confirm');
       setIsPromoting(false);
       setIsArchiving(false);
+      setDivergence(null);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
+
+    void onCheckDivergence()
+      .then(({ diverged, parent_name }) => {
+        if (!cancelled && diverged) {
+          setDivergence({ parentName: parent_name });
+        }
+      })
+      .catch(() => {
+        // Deliberately silent. The dialog still works without the warning.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, onCheckDivergence]);
 
   // Dismissing means different things per phase: cancel on confirm, keep on
   // success. Never dismiss mid-flight so a save/merge/archive can't be orphaned.
@@ -153,6 +189,27 @@ export function PromoteDialog({
                   into the parent project's live workflow. The parent stays live
                   and starts processing data with these changes.
                 </p>
+
+                {divergence && (
+                  <div
+                    className="mt-4 flex gap-2.5 rounded-md bg-amber-50 p-3
+                      text-sm text-amber-800"
+                  >
+                    <span
+                      className="hero-exclamation-triangle mt-0.5 h-4 w-4
+                        shrink-0 text-amber-500"
+                      aria-hidden="true"
+                    />
+                    <p>
+                      This workflow has changed in{' '}
+                      <span className="font-semibold">
+                        {divergence.parentName ?? 'the parent project'}
+                      </span>{' '}
+                      since this sandbox was created. Promoting replaces that
+                      version with yours, and anything added there is removed.
+                    </p>
+                  </div>
+                )}
 
                 <div className="mt-6 flex justify-end gap-3">
                   <Button

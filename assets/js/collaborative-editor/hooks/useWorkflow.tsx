@@ -728,6 +728,7 @@ export const useWorkflowActions = () => {
     // Promote merges only; archiving the sandbox is the separate archiveSandbox
     // command below, offered as an optional second step after a successful merge.
     promote: store.promote,
+    checkPromote: store.checkPromote,
     archiveSandbox: store.archiveSandbox,
 
     resetWorkflow: store.resetWorkflow,
@@ -1099,8 +1100,7 @@ export const useWorkflowReadOnly = (): {
   if (isViewingAsExecuted) {
     return {
       isReadOnly: true,
-      tooltipMessage:
-        'You are viewing this workflow as a past run executed it',
+      tooltipMessage: 'You are viewing this workflow as a past run executed it',
       reason: 'as_run',
     };
   }

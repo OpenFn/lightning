@@ -870,6 +870,103 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "request_promote_check" do
+    setup %{user: user} do
+      Mox.stub_with(
+        Lightning.Extensions.MockProjectHook,
+        Lightning.Extensions.ProjectHook
+      )
+
+      parent =
+        insert(:project,
+          name: "parent-project",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      alpha = insert(:workflow, project: parent, name: "alpha")
+      trigger = insert(:trigger, workflow: alpha, type: :webhook)
+      job = insert(:job, workflow: alpha, name: "A1")
+
+      insert(:edge,
+        workflow: alpha,
+        source_trigger: trigger,
+        target_job: job,
+        condition_type: :always
+      )
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(alpha, "aaa111aaa111", "app")
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, user, %{name: "sb"})
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          sandbox_alpha,
+          "aaa111aaa111",
+          "app"
+        )
+
+      {:ok, _, sandbox_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
+
+      %{
+        parent: parent,
+        parent_alpha: alpha,
+        sandbox_socket: sandbox_socket
+      }
+    end
+
+    test "reports no divergence while the parent has not moved on", %{
+      sandbox_socket: socket
+    } do
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: "parent-project"}
+    end
+
+    test "reports divergence once the parent gains a version the sandbox never saw",
+         %{sandbox_socket: socket, parent_alpha: parent_alpha} do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_alpha,
+          "bbb222bbb222",
+          "app"
+        )
+
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: true, parent_name: "parent-project"}
+    end
+
+    test "reports no divergence for a sibling workflow that moved on", %{
+      sandbox_socket: socket,
+      parent: parent
+    } do
+      beta = insert(:workflow, project: parent, name: "beta")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(beta, "ccc333ccc333", "app")
+
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false}
+    end
+
+    test "reports no divergence outside a sandbox", %{socket: socket} do
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: nil}
+    end
+  end
+
   describe "archive_sandbox" do
     setup %{user: user} do
       Mox.stub_with(
