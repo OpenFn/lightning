@@ -283,6 +283,16 @@ export class AIChannelRegistry {
     this.stopDraining();
   }
 
+  private finishDrainNow(): void {
+    this.streamingDrainPos = this.streamingBuffer.length;
+    this.flushDueStatusMarkers();
+    this.stopDraining();
+
+    const callback = this.streamingDrainCallback;
+    this.streamingDrainCallback = null;
+    if (callback) callback();
+  }
+
   /**
    * Subscribe to a channel topic
    *
@@ -773,6 +783,13 @@ export class AIChannelRegistry {
         status: MessageStatus;
         failure_message?: string;
       };
+
+      // Get the saved partial into the store before the error clears the
+      // buffer it is queued behind. Only when something is actually waiting:
+      // message_error names any message, and the reaper reports on ones
+      // several exchanges back while a newer reply may still be streaming.
+      if (this.streamingDrainCallback) this.finishDrainNow();
+
       this.store._updateMessageStatus(
         typedPayload.message_id,
         'error',

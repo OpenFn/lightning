@@ -268,16 +268,16 @@ The idle default assumes Apollo v3.1.1 or later, which sends a keepalive every
 is thinking, and 30 seconds will cut it off, so raise `APOLLO_IDLE_TIMEOUT_MS`
 or upgrade Apollo.
 
-The three added together bound how long one AI job may run, and that has to stay
-under Oban's shutdown grace period, which is six minutes. Raising them past it
-means a deploy landing on a running answer kills it with nothing left to report
-the failure, so Lightning warns at boot if the sum gets too close. Note that the
-longer grace period also makes rolling restarts slower, since Oban now waits up
-to six minutes for a running job rather than two.
+The three added together, plus a ten-second buffer, bound how long one AI job
+may run, and that has to stay under Oban's shutdown grace period of six minutes.
+Raising them past it means a deploy landing on a running answer kills it with
+nothing left to report the failure, so Lightning warns at boot if the sum gets
+too close. Note that the longer grace period also makes rolling restarts slower,
+since Oban now waits up to six minutes for a running job rather than two.
 
-`APOLLO_TIMEOUT` is the old name for `APOLLO_IDLE_TIMEOUT_MS`. It only ever
-covered the silence, never the other two. It is no longer read, and Lightning
-logs a warning at boot if it is still set.
+`APOLLO_TIMEOUT` is the old name for `APOLLO_IDLE_TIMEOUT_MS`. On the wire it
+only ever covered the silence, never the other two. It is no longer read, and
+Lightning logs a warning at boot if it is still set.
 
 ### OAuth credential connections (Google, Salesforce, etc.)
 

@@ -343,9 +343,8 @@ describe('MessageList', () => {
       ).toBeInTheDocument();
     });
 
-    // The prompt is marked failed before the partial reply reaches the client,
-    // so the notice would otherwise sit above text still typing itself out.
-    it('holds the notice back while a reply is still arriving', () => {
+    // A failed reply speaks for its prompt, so the prompt stays quiet.
+    it('leaves the notice to the reply when there is one', () => {
       const messages = [
         createMockAIMessage({
           id: 'prompt-1',
@@ -353,18 +352,137 @@ describe('MessageList', () => {
           content: 'My message',
           status: 'error',
         }),
+        createMockAIMessage({
+          id: 'reply-1',
+          role: 'assistant',
+          content: 'half an answer',
+          status: 'error',
+          failure_message: 'The assistant stopped responding partway through.',
+        }),
+      ];
+
+      render(<MessageList messages={messages} onRetryMessage={vi.fn()} />);
+
+      const notice = screen.getByTestId('ai-failure-notice');
+      expect(notice.closest('[data-role]')).toHaveAttribute(
+        'data-role',
+        'assistant-message'
+      );
+    });
+
+    // Timestamps are stored to the second, so a reply that dies in the same
+    // second as its prompt can load ahead of it. Pairing has to survive that
+    // wherever it happens, not only on the session's first exchange.
+    it('shows one notice when a later reply loads before its prompt', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'prompt-1',
+          role: 'user',
+          content: 'first question',
+          status: 'success',
+        }),
+        createMockAIMessage({
+          id: 'reply-1',
+          role: 'assistant',
+          content: 'a clean answer',
+          status: 'success',
+        }),
+        createMockAIMessage({
+          id: 'reply-2',
+          role: 'assistant',
+          content: 'half an answer',
+          status: 'error',
+          failure_message: 'The connection to the assistant was lost.',
+        }),
+        createMockAIMessage({
+          id: 'prompt-2',
+          role: 'user',
+          content: 'second question',
+          status: 'error',
+          failure_message: 'The connection to the assistant was lost.',
+        }),
+      ];
+
+      render(<MessageList messages={messages} onRetryMessage={vi.fn()} />);
+
+      expect(screen.getAllByTestId('ai-failure-notice')).toHaveLength(1);
+    });
+
+    // The reply above belongs to the prompt it sorted ahead of, not to the one
+    // two exchanges back that already succeeded.
+    it('retries the question the failed reply actually answers', async () => {
+      const onRetryMessage = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'prompt-1',
+          role: 'user',
+          content: 'first question',
+          status: 'success',
+        }),
+        createMockAIMessage({
+          id: 'reply-1',
+          role: 'assistant',
+          content: 'a clean answer',
+          status: 'success',
+        }),
+        createMockAIMessage({
+          id: 'reply-2',
+          role: 'assistant',
+          content: 'half an answer',
+          status: 'error',
+          failure_message: 'The connection to the assistant was lost.',
+        }),
+        createMockAIMessage({
+          id: 'prompt-2',
+          role: 'user',
+          content: 'second question',
+          status: 'error',
+        }),
       ];
 
       render(
-        <MessageList
-          messages={messages}
-          isLoading={true}
-          streamingContent="half an answ"
-          onRetryMessage={vi.fn()}
-        />
+        <MessageList messages={messages} onRetryMessage={onRetryMessage} />
       );
 
-      expect(screen.queryByTestId('ai-failure-notice')).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /try again/i }));
+
+      expect(onRetryMessage).toHaveBeenCalledWith('prompt-2');
+    });
+
+    // Two failures in a row: the first left a reply behind, the second did not.
+    // Reading only the neighbour above would let the older reply speak for the
+    // newer prompt, and the question just asked would fail in silence.
+    it('still speaks for a prompt whose own reply never arrived', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'prompt-1',
+          role: 'user',
+          content: 'first question',
+          status: 'error',
+        }),
+        createMockAIMessage({
+          id: 'reply-1',
+          role: 'assistant',
+          content: 'half an answer',
+          status: 'error',
+          failure_message: 'The assistant stopped responding partway through.',
+        }),
+        createMockAIMessage({
+          id: 'prompt-2',
+          role: 'user',
+          content: 'second question',
+          status: 'error',
+          failure_message: 'The connection to the assistant was lost.',
+        }),
+      ];
+
+      render(<MessageList messages={messages} onRetryMessage={vi.fn()} />);
+
+      const notices = screen.getAllByTestId('ai-failure-notice');
+      expect(notices).toHaveLength(2);
+      expect(notices[1]).toHaveTextContent(
+        'The connection to the assistant was lost'
+      );
     });
 
     it('falls back to a plain sentence when the server sent no reason', () => {

@@ -1096,16 +1096,9 @@ defmodule LightningWeb.AiAssistantChannel do
   # is already on screen, and a session whose newest assistant reply succeeded
   # has nothing partial to send.
   defp broadcast_partial_answer(socket, session) do
-    # Picked by role rather than by taking the last message. Messages are
-    # ordered by inserted_at and that is stored to the second, so a turn that
-    # dies quickly ties with the question that started it and can come back
-    # either way round. Taking the last one then finds the question, matches
-    # nothing here, and the answer the user watched appear is never sent - the
-    # loss this whole path exists to prevent.
-    #
-    # Re-sending is the safe direction: the client keys messages by id and
-    # ignores one it already has, so a partial kept from an earlier turn is
-    # dropped there rather than shown twice.
+    # By role, not by taking the last: inserted_at is stored to the second, so a
+    # turn that dies quickly ties with its own question and can sort either way
+    # round. Re-sending is safe, since the client dedupes by id.
     partial =
       session.messages
       |> Enum.filter(&(&1.role == :assistant))
@@ -1120,10 +1113,8 @@ defmodule LightningWeb.AiAssistantChannel do
     end
   end
 
-  # The broadcaster says which message it is reporting on. Falling back to the
-  # newest user message is only right when nothing said - anything reporting on
-  # an older one, like the reaper clearing something stranded several exchanges
-  # back, would otherwise mark the wrong message failed.
+  # Falling back to the newest is only right when the broadcaster named nothing;
+  # the reaper reports on messages several exchanges back.
   defp failed_message(session, nil) do
     session.messages
     |> Enum.reverse()

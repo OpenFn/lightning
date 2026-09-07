@@ -181,18 +181,11 @@ defmodule Lightning.Application do
     Supervisor.start_link(children, opts)
   end
 
-  # Finch already keys pools by {scheme, host, port}, so Apollo has its own
-  # either way, and size and count restate Finch's own defaults. Under the
-  # shipped configuration this changes nothing; it exists so that setting
-  # APOLLO_CONNECT_TIMEOUT_MS has somewhere to take effect, and so a change to
-  # Finch's defaults cannot quietly shrink a pool whose streams hold their
-  # connection for as long as an answer takes.
-  #
-  # http1 is Finch's default too, and is written out because this pool depends
-  # on it: :request_timeout is HTTP/1-only, and on http2 receive_timeout
-  # becomes a deadline for the whole request rather than the gap between
-  # chunks, which would silently cap the length of an answer. Pinned so a
-  # change to that default cannot quietly take both settings with it.
+  # Size, count and protocol restate Finch's own defaults, so this changes
+  # nothing as shipped. It exists to give APOLLO_CONNECT_TIMEOUT_MS somewhere to
+  # take effect, and to pin http1: :request_timeout is HTTP/1-only, and on http2
+  # receive_timeout becomes a whole-request deadline instead of the gap between
+  # chunks, which would silently cap how long an answer may be.
   @doc false
   def apollo_pools do
     base = %{default: [size: 50, count: 1]}
@@ -229,10 +222,8 @@ defmodule Lightning.Application do
 
   defp poolable_url?(_endpoint), do: false
 
-  # Reaching Apollo happens inside the adapter's wait for the first byte, which
-  # the idle timeout bounds, so a connect timeout above it can never expire.
-  # Silently, and on the setting an operator most expects to control a slow or
-  # unreachable host.
+  # Reaching Apollo happens inside the adapter's wait for the first byte, so a
+  # connect timeout above the idle one can never expire.
   @doc false
   def warn_if_connect_timeout_is_unreachable do
     connect = Lightning.Config.apollo(:connect_timeout)
@@ -261,10 +252,9 @@ defmodule Lightning.Application do
     end
   end
 
-  # Oban stops its producer once the grace period expires and only then kills
-  # whatever is still running, so a job that outlives the window is killed with
-  # nothing left to report it. Its AI message would stay :processing until the
-  # reaper picks it up, and no telemetry would fire.
+  # Oban stops its producer before killing what is still running, so a job that
+  # outlives the window dies with nothing left to report it and its message sits
+  # :processing until the reaper finds it.
   @doc false
   def warn_if_ai_jobs_outlive_the_drain_window do
     grace = Application.get_env(:lightning, Oban)[:shutdown_grace_period]

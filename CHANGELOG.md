@@ -83,12 +83,12 @@ and this project adheres to
   typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - **Breaking:** `APOLLO_TIMEOUT` is renamed `APOLLO_IDLE_TIMEOUT_MS` and joined
   by `APOLLO_CONNECT_TIMEOUT_MS` and `APOLLO_REQUEST_TIMEOUT_MS`. The old name
-  is no longer read and logs a warning at boot if it is still set. It only ever
-  measured silence, so put its value on `APOLLO_IDLE_TIMEOUT_MS` if you were
-  setting it. All three have defaults, so a deployment need not set any of them.
-  The idle default is 30s, which assumes Apollo v3.1.1 or later and its 15s
-  keepalive; on an older Apollo a working stream can go quiet for longer than
-  that, so raise it or upgrade Apollo.
+  is no longer read and logs a warning at boot if it is still set. On the wire
+  it only ever measured silence, so put its value on `APOLLO_IDLE_TIMEOUT_MS` if
+  you were setting it. All three have defaults, so a deployment need not set any
+  of them. The idle default is 30s, which assumes Apollo v3.1.1 or later and its
+  15s keepalive; on an older Apollo a working stream can go quiet for longer
+  than that, so raise it or upgrade Apollo.
   [#4882](https://github.com/OpenFn/lightning/issues/4882)
 
 ### Fixed
@@ -101,11 +101,12 @@ and this project adheres to
   sweep is what recovers the message when that happens.
   [#4260](https://github.com/OpenFn/lightning/issues/4260)
   [#5124](https://github.com/OpenFn/lightning/issues/5124)
-- Why an AI chat failed is now recorded on the message and sent to the client: a
-  hung Apollo, a lost connection and a rate limit are no longer the same event
-  to us. The panel still renders one generic error, so this is the groundwork
-  for telling them apart rather than the change a user will see.
-  [#5125](https://github.com/OpenFn/lightning/issues/5125)
+- Why an AI chat failed is now recorded on the message and shown on the reply it
+  belongs to, rather than as one generic banner: a hung Apollo, a lost
+  connection and a rate limit each read differently. A failed reply keeps its
+  text as an answer, with the reason and a Try again beneath it, and the
+  question you asked is no longer marked "Failed to send" when it was sent and
+  half answered. [#5125](https://github.com/OpenFn/lightning/issues/5125)
 - An AI answer that is cut off partway through is kept rather than discarded.
   The text and any workflow YAML the user already watched appear are saved,
   along with the status updates, in the order they were shown.

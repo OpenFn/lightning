@@ -65,18 +65,15 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   """
   @spec job_timeout() :: pos_integer()
   def job_timeout do
-    # Sits just outside the transport's own worst case, so the HTTP layer gets
-    # to fail first and say why. request_timeout is only checked between reads,
-    # so it can overrun by up to one idle_timeout - hence adding both rather
-    # than a flat margin. Must stay below Oban's shutdown_grace_period: if it
-    # doesn't, an interrupted job is killed after its producer has stopped and
-    # no telemetry fires at all.
+    # Just outside the transport's worst case, so the HTTP layer fails first and
+    # says why. request_timeout is only checked between reads, so it can overrun
+    # by one idle_timeout; hence both, not a flat margin. Must stay under Oban's
+    # shutdown_grace_period.
     Lightning.Config.apollo(:connect_timeout) +
       Lightning.Config.apollo(:request_timeout) +
       Lightning.Config.apollo(:idle_timeout) + 10_000
   end
 
-  @doc false
   @spec process_message(String.t()) ::
           {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp process_message(message_id) do
@@ -302,10 +299,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
         {:error, "Failed to save assistant response"}
 
-      # Something raised on our side. The text describes our internals, so the
-      # user gets the generic sentence instead. It is not logged again here:
-      # whoever raised it already logged the exception, and each extra
-      # Logger.error is a second Sentry event for one failure.
+      # Raised on our side, so the text describes our internals. Not logged
+      # again: whoever raised it already did, and a second Logger.error is a
+      # second Sentry event for one failure.
       {:error, {:internal, raw}} ->
         {:ok, _updated_session, _updated_message} =
           update_message_status(
@@ -317,9 +313,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
         {:error, raw}
 
       {:error, error_message} ->
-        # Every string reaching here is already written for a person to read,
-        # whether it came from handle_error_response or from the partial-save
-        # path.
+        # Every string reaching here is already written for a person to read.
         {:ok, _updated_session, _updated_message} =
           update_message_status(
             message,
@@ -405,10 +399,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
           atom() | {atom(), AiAssistant.ChatSession.t()},
           Ecto.UUID.t() | nil
         ) :: :ok
-  # message_id is carried so a listener does not have to guess which message
-  # this is about. It guessed by taking the newest, which is wrong the moment
-  # anything reports on an older one - the reaper clearing a message stranded
-  # several exchanges back would have marked the newest as failed instead.
+  # Carries message_id so a listener need not guess. It guessed by taking the
+  # newest, which marks the wrong one the moment the reaper reports on a message
+  # stranded several exchanges back.
   defp broadcast_status(session_id, status, message_id) do
     Lightning.broadcast(
       "ai_session:#{session_id}",
@@ -430,10 +423,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   """
   @spec broadcast_message_error(Ecto.UUID.t(), Ecto.UUID.t()) :: :ok
   def broadcast_message_error(session_id, message_id) do
-    # get/1 rather than get!/1: the reaper calls this per message inside an
-    # Enum.each, so a session deleted since it selected its candidates would
-    # raise and abandon the rest of the sweep. Nobody is listening to a
-    # deleted session anyway.
+    # get/1, not get!/1: the reaper calls this per message, so a session deleted
+    # since it selected its candidates would abandon the rest of the sweep.
     case AiAssistant.get_session(session_id) do
       {:ok, session} ->
         broadcast_status(session_id, {:error, session}, message_id)
@@ -490,7 +481,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   # :processing clears the last attempt's failure. A retry writes only :pending,
   # so without that a message which failed and then succeeded keeps the old
   # category and sentence, and the channel attaches both to a :success message.
-  @doc false
   @spec build_status_changes(atom()) :: map()
   defp build_status_changes(:processing) do
     %{
@@ -517,10 +507,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   defp put_failure(changes, nil), do: changes
 
-  # Clamped here rather than in the changeset, because this writes through
-  # Ecto.Changeset.change/2, which applies no validation at all. The column is
-  # read back and re-sent on every channel join, so an unbounded string would
-  # be paid for on each one.
+  # Clamped here, not in the changeset: this writes through change/2, which
+  # validates nothing, and the column is re-sent on every channel join.
   defp put_failure(changes, {category, message}) do
     Map.merge(changes, %{
       failure_category: category,
@@ -529,7 +517,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     })
   end
 
-  @doc false
   @spec workflow_code_from_session(AiAssistant.ChatSession.t()) ::
           String.t() | nil
   defp workflow_code_from_session(session) do
@@ -553,10 +540,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     error = meta.error
     timeout? = is_map(error) and Map.get(error, :reason) == :timeout
 
-    # A timeout is an upstream condition, not a fault of ours, and the Sentry
-    # capture below already treats it as a warning. Logging it at :error would
-    # raise a second, louder Sentry event for the same thing - see
-    # .claude/rules/logging.md.
+    # An upstream condition, not our fault, and the capture below is already a
+    # warning. See .claude/rules/logging.md.
     Logger.log(if(timeout?, do: :warning, else: :error), ~s"""
     AI Assistant exception:
     Worker: #{job.worker}
@@ -566,9 +551,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     Duration: #{measure.duration / 1_000_000}ms
     """)
 
-    # get/2 rather than get!/2: a session deleted while its job was running would
-    # raise here, and a raise in a telemetry handler detaches it, silently ending
-    # Oban error reporting for the rest of the node's life.
+    # get/2, not get!/2: a raise in a telemetry handler detaches it, silently
+    # ending Oban error reporting for the life of the node.
     ChatMessage
     |> Repo.get(job.args["message_id"])
     |> case do
@@ -651,9 +635,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
         :ok
 
       other ->
-        # Cancelled or discarded, most often because a deploy interrupted the
-        # job. Expected rather than faulty, and the Sentry capture below is
-        # already a warning.
+        # Cancelled or discarded, usually a deploy. Expected, not faulty.
         Logger.warning("""
         AI Assistant stop (non-success):
         Worker: #{meta.job.worker}

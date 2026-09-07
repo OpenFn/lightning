@@ -32,17 +32,14 @@ defmodule Lightning.AiAssistant do
   @title_max_length 40
   @success_status_range 200..299
 
-  # What a user sees when the reason is ours and not fit to show them.
   @internal_failure "Something went wrong. Please try again."
 
-  # Apollo names every error it raises, but a name is not a promise that the
-  # text is safe to show. It wraps unhandled exceptions as `str(e)` under
-  # INTERNAL_ERROR, UNKNOWN_ERROR, BAD_REQUEST, INVALID_REQUEST, DATABASE_ERROR,
-  # FETCH_ERROR and ADAPTOR_API_ERROR, and `str(e)` carries internal hostnames,
-  # upstream URLs and container paths. These are the ones whose message Apollo
-  # writes for a person instead, read off apollo at v3.1.1. A type not on the
-  # list is treated the same as no type at all: logged, not shown. Revisit when
-  # Apollo adds error types.
+  # A name is not a promise the text is safe: most apollo services catch broadly
+  # and rewrap as `str(e)` under a type of their own - BAD_REQUEST,
+  # INVALID_REQUEST, UNKNOWN_ERROR, DATABASE_ERROR, FETCH_ERROR,
+  # ADAPTOR_API_ERROR - and `str(e)` carries hostnames and container paths.
+  # These are the types whose message apollo writes for a person, read off
+  # v3.1.1. Anything else is logged, not shown.
   @apollo_readable_errors ~w(
     AUTH_ERROR
     CONNECTION_ERROR
@@ -1191,7 +1188,7 @@ defmodule Lightning.AiAssistant do
 
       broadcast_streaming_error(session.id, message)
 
-      Logger.error(
+      Logger.warning(
         "[AI Assistant] Stream exited for session #{session.id}: #{inspect(reason)}"
       )
 
@@ -1214,11 +1211,9 @@ defmodule Lightning.AiAssistant do
     save_partial_response(session, content, code, acc)
   end
 
-  # Nothing arrived that a reader could use, so there is nothing to keep. Status
-  # updates alone are not worth a message: they describe work that did not
-  # produce anything. Decided on the trimmed text rather than on whether any
-  # chunks arrived at all, because a reply that sent only whitespace before
-  # dying would otherwise be saved as a message reading "(no response)".
+  # Status updates alone are not worth keeping: they describe work that
+  # produced nothing. Decided on the trimmed text, so a reply that sent only
+  # whitespace saves nothing rather than a message reading "(no response)".
   defp save_partial_response(_session, "", nil, acc) do
     {:error, acc.apollo_error || stream_failure_message()}
   end
@@ -1230,9 +1225,8 @@ defmodule Lightning.AiAssistant do
     attrs =
       %{
         role: :assistant,
-        # Only reachable with code and no text, since no text and no code is
-        # handled above. `content` is required, and yaml on its own is still
-        # worth keeping.
+        # Reachable only with code and no text; content is required and yaml
+        # alone is still worth keeping.
         content: if(content == "", do: "(no response)", else: content),
         status: :error,
         failure_category: :incomplete_response,
@@ -1257,10 +1251,8 @@ defmodule Lightning.AiAssistant do
     end
   end
 
-  # A global chat's reply carries workflow YAML and never a job, and the flag
-  # is what says so. Without it the partial is treated as job code and has the
-  # session's job attached, so the YAML the user watched appear comes back
-  # rendered as a code suggestion.
+  # Without the flag the partial is filed as job code with the session's job
+  # attached, and the YAML comes back rendered as a code suggestion.
   defp partial_meta(session) do
     if get_in(session.meta, ["message_options", "use_global_assistant"]) do
       %{meta: %{"from_global" => true}}
@@ -1290,13 +1282,9 @@ defmodule Lightning.AiAssistant do
   defp append_segment(acc, segment),
     do: %{acc | segments: [segment | acc.segments]}
 
-  # Only worth persisting when the reply actually had a shape to it. A stream
-  # of plain text renders the same from `content` alone, and writing a
-  # one-segment timeline for it would change how every job chat failure looks.
-  #
-  # Bounded the way the complete path bounds Apollo's own segments: an
-  # over-long, empty or over-numerous timeline would make the changeset
-  # invalid, and a partial save that fails saves nothing at all.
+  # Only when the reply had a shape to it: plain text renders the same from
+  # `content` alone. Bounded like the complete path, since an invalid timeline
+  # fails the changeset and a partial save that fails saves nothing at all.
   defp put_partial_segments(attrs, acc) do
     segments =
       acc
@@ -1304,12 +1292,8 @@ defmodule Lightning.AiAssistant do
       |> Map.fetch!(:segments)
       |> Enum.reverse()
       |> Enum.map(&clamp_segment/1)
-      # Dropped rather than carried, matching what the complete path does with
-      # Apollo's own segments: an empty content fails the embed's
-      # validate_required, which would invalidate the whole changeset and lose
-      # the text as well - the loss this function exists to prevent. Trimmed,
-      # because validate_required trims before it checks, so whitespace alone
-      # fails it too.
+      # An empty segment fails validate_required and takes the whole changeset
+      # with it. Trimmed, because validate_required trims before it checks.
       |> Enum.reject(&(String.trim(&1.content) == ""))
       |> Enum.take(ChatMessage.max_response_segments())
 
@@ -1340,9 +1324,8 @@ defmodule Lightning.AiAssistant do
       :timeout ->
         transport_failure_message(:timeout)
 
-      # Anything Finch reports. It wraps Mint's error in a struct of its own,
-      # and both carry :reason, so the reason is taken out before it is matched
-      # on rather than matching one struct and missing the other.
+      # Binds the struct module so one clause covers both: Finch wraps Mint's
+      # error in its own, and matching only Mint's missed every real failure.
       %s{reason: reason}
       when s in [Finch.TransportError, Mint.TransportError] ->
         transport_failure_message(reason)
@@ -1358,11 +1341,9 @@ defmodule Lightning.AiAssistant do
 
   # A silence long enough to give up on reaches us two ways, from our own
   # adapter and from Finch, and both have to read the same to the user.
-  # APOLLO_REQUEST_TIMEOUT_MS lands here too: Finch reports the whole-request
-  # cap as the same :timeout, so an answer arriving steadily and cut off for
-  # running long is, at this layer, the same value as one that went quiet. The
-  # two settings are logged so that whoever reads an incident can tell which
-  # ceiling was hit from how long the request lasted.
+  # APOLLO_REQUEST_TIMEOUT_MS lands here too, as the same :timeout, so an
+  # answer cut off for running long is indistinguishable from one that went
+  # quiet. Both ceilings are logged; how long it ran is what tells them apart.
   defp transport_failure_message(:timeout) do
     Logger.warning(
       "[AI Assistant] Stream timed out. Either it went quiet for " <>
@@ -1403,9 +1384,7 @@ defmodule Lightning.AiAssistant do
     message =
       case Jason.decode(data) do
         # On /stream the HTTP status is already 200 by the time this arrives,
-        # so the type in the payload is the only thing that identifies it. This
-        # sentence is built from `details` rather than Apollo's prose, so it is
-        # ours to show.
+        # so the type in the payload is the only thing that identifies it.
         {:ok, %{"type" => "ATTACHMENT_TOO_LARGE", "details" => details}} ->
           attachment_too_large_message(details)
 

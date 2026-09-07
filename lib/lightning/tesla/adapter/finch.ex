@@ -20,22 +20,23 @@ defmodule Lightning.Tesla.Adapter.Finch do
   that process's dictionary and read back with `take_stream_error/0` once the
   stream has been consumed.
 
-  Also passes `:request_timeout` through to Finch, which the 1.18.3 we are
-  pinned to drops. That one is already fixed upstream, in 1.19.0 and later, so
-  a Tesla upgrade would cover it without this module.
+  Also passes `:request_timeout` through to Finch, which the 1.18.3 we pin
+  drops.
 
-  Reported upstream as
-  [tesla#912](https://github.com/elixir-tesla/tesla/issues/912). Delete this
-  module once a release carries the fix; the reason will arrive as a raised
-  `Tesla.Error` rather than through `take_stream_error/0`, so the callers in
-  `Lightning.AiAssistant` change with it.
+  Both are fixed upstream, in separate releases: the option pass-through in
+  1.19.0 ([tesla#879](https://github.com/elixir-tesla/tesla/pull/879)), the
+  stream reason in 1.21.1
+  ([tesla#912](https://github.com/elixir-tesla/tesla/issues/912)). This module
+  exists only because we pin `~> 1.18.2`; bumping to 1.21.1 deletes it, and the
+  reason then arrives as a raised `Tesla.Error` rather than through
+  `take_stream_error/0`, so the caller in `Lightning.AiAssistant` changes with
+  it. Tracked in [#5080](https://github.com/OpenFn/lightning/issues/5080).
   """
 
   @behaviour Tesla.Adapter
 
-  # receive_timeout covers two waits, not one: the wait for status and headers
-  # in stream/3, and each gap between chunks in body_stream/3. Whichever
-  # elapses first ends the request.
+  # receive_timeout covers two waits: for status and headers in stream/3, and
+  # each gap between chunks in body_stream/3.
   @defaults [receive_timeout: 15_000]
   @stream_error_key {__MODULE__, :stream_error}
 
@@ -86,10 +87,9 @@ defmodule Lightning.Tesla.Adapter.Finch do
     owner = self()
     ref = make_ref()
 
-    # Upstream's callback carries two `{:error, _}` clauses. `Finch.stream/5`
-    # only ever passes `:status`, `:headers`, `:data` and `:trailers` to it and
-    # reports a failure through its return value, which handle_stream_response/3
-    # below reads. Those clauses cannot fire, so they are left out.
+    # Upstream's two `{:error, _}` clauses are left out: Finch.stream/5 passes
+    # only :status, :headers, :data and :trailers here and reports failures
+    # through its return value, which handle_stream_response/3 reads.
     fun = fn
       {:status, status}, _acc ->
         status
@@ -140,9 +140,8 @@ defmodule Lightning.Tesla.Adapter.Finch do
           Task.await(task)
           nil
 
-        # The two clauses upstream discards. Both still halt the stream, so a
-        # consumer sees what it would on upstream; the difference is that the
-        # reason survives.
+        # The two clauses upstream discards. Both still halt the stream; the
+        # difference is that the reason survives.
         {^ref, {:error, error}} ->
           Process.put(@stream_error_key, error)
           Task.shutdown(task, :brutal_kill)
@@ -156,10 +155,8 @@ defmodule Lightning.Tesla.Adapter.Finch do
     end)
   end
 
-  # Upstream keeps a bare `{:error, reason}` clause behind a version check, for
-  # Finch below 0.20. We pin 0.23, where `Finch.stream/5` returns only
-  # `{:ok, acc}` or `{:error, exception, acc}`, so upstream compiles the same two
-  # clauses this does. Restore it if the pin ever moves below 0.20.
+  # Upstream's third clause is gated on Finch below 0.20. We pin 0.23, where
+  # Finch.stream/5 returns only {:ok, acc} or {:error, exception, acc}.
   defp handle_stream_response({:ok, _acc}, ref, owner) do
     send(owner, {ref, :eof})
   end
