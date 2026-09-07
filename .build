@@ -17,6 +17,7 @@ Lightning.AiAssistant.ChatMessage.html
 Lightning.AiAssistant.ChatSession.html
 Lightning.AiAssistant.Limiter.html
 Lightning.AiAssistant.MessageProcessor.html
+Lightning.AiAssistant.StuckMessageReaper.html
 Lightning.AiAssistant.html
 Lightning.ApolloClient.html
 Lightning.Auditing.Audit.html
@@ -199,6 +200,7 @@ Lightning.Storage.Local.html
 Lightning.Storage.ProjectFileDefinition.html
 Lightning.Storage.html
 Lightning.TaskWorker.html
+Lightning.Tesla.Adapter.Finch.html
 Lightning.Tokens.CredentialTransferToken.html
 Lightning.Tokens.html
 Lightning.UnixDateTime.html
@@ -438,8 +440,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-8DA7B77A.js
-dist/sidebar_items-0F7728F6.js
+dist/search_data-54062BF7.js
+dist/sidebar_items-EFDC1888.js
 index.html
 provisioning.html
 readme.html
