@@ -652,9 +652,8 @@ export const createHistoryStore = (
    * Optionally includes a specific run_id to ensure that run's work order
    * is included even if it's older than the top 20
    */
-  // `versionNumber` scopes the feed to one release (the same vN the `?v=`
-  // contract uses) or to "draft" for the unversioned runs. Omitted → the
-  // default top-20 across all versions.
+  // `versionNumber` is a release version number, or "draft" for runs that
+  // executed against an unreleased snapshot.
   const requestHistory = async (
     runId?: string,
     versionNumber?: string

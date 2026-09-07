@@ -186,9 +186,8 @@ export function CollaborativeWorkflowDiagram({
     updateSearchParams({ run: null, as_run: null });
   }, [clearRun, updateSearchParams]);
 
-  // Request history when the panel is first expanded OR when there's a run ID
-  // selected. Pinning a version scopes the feed to that version's runs, so the
-  // one-shot guard resets when the pinned version changes. Wait for the channel to be connected. The
+  // Request history (top-20, all versions) when the panel is first expanded OR
+  // when there's a run ID selected. Wait for the channel to be connected. The
   // one-shot ref avoids duplicate requests; the run_id ensures that run's work
   // order is included even if it's older than the top 20.
   const hasRequestedHistory = useRef(false);
@@ -215,7 +214,7 @@ export function CollaborativeWorkflowDiagram({
     versionParam,
   ]);
 
-  // A different pinned version is a different feed, so allow one more request.
+  // A pinned version is a different feed, so allow one more request.
   const lastVersionParam = useRef(versionParam);
   useEffect(() => {
     if (lastVersionParam.current !== versionParam) {

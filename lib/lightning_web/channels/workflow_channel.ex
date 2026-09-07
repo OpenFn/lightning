@@ -1568,10 +1568,8 @@ defmodule LightningWeb.WorkflowChannel do
         workflow: workflow
       })
 
-      # can_edit_workflow folds in the lifecycle lock, and it is resolved at
-      # join. Going live makes it stale on every socket in the room, so
-      # recompute it here and push the new context rather than waiting for a
-      # reload.
+      # Editability folds in the lifecycle lock and is resolved at join, so going
+      # live makes it stale on every socket in the room.
       socket = refresh_lifecycle_permissions(socket, workflow)
       push(socket, "session_context_updated", build_session_context(socket))
 
@@ -1582,8 +1580,7 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Re-resolves the permissions that depend on the workflow's lifecycle state and
-  # re-assigns the workflow itself, so later authorization reads the new state.
+  # Re-assigns the workflow too, so later authorization reads the new state.
   defp refresh_lifecycle_permissions(socket, workflow) do
     %{current_user: user, project_user: project_user, project: project} =
       socket.assigns
@@ -1859,15 +1856,16 @@ defmodule LightningWeb.WorkflowChannel do
     resolve_as_executed(workflow_id, run_id, project, user)
   end
 
-  # Edit latest. Resolve before auth, so workflow-not-found and wrong-project
-  # both beat the auth error.
+  # Authorise before resolving, so a non-member cannot learn whether a workflow
+  # exists from the error.
   defp load_workflow("edit", workflow_id, project, user, :latest) do
-    case WorkflowResolver.resolve(workflow_id, :edit, project: project) do
-      {:ok, workflow, kind} ->
-        case Permissions.can(:workflows, :access_read, user, project) do
-          :ok -> {:ok, workflow, kind}
-          {:error, :unauthorized} -> {:error, "unauthorized"}
-        end
+    with :ok <- Permissions.can(:workflows, :access_read, user, project),
+         {:ok, workflow, kind} <-
+           WorkflowResolver.resolve(workflow_id, :edit, project: project) do
+      {:ok, workflow, kind}
+    else
+      {:error, :unauthorized} ->
+        {:error, "unauthorized"}
 
       {:error, reason} when reason in [:workflow_not_found, :wrong_project] ->
         {:error, "workflow not found"}
@@ -1904,10 +1902,8 @@ defmodule LightningWeb.WorkflowChannel do
   # hand-typed number, or an old lock_version that was never published) yields
   # the same not-found the resolver returns for a missing snapshot.
   defp resolve_release(workflow_id, version_number, version, project, user) do
-    # Authorise before resolving, so a non-member gets a uniform "unauthorized"
-    # and cannot learn which versions exist from the error. A workflow in another
-    # project reads as "workflow not found", the same as a non-existent one, so
-    # the version path is no more of an existence oracle than the latest path.
+    # Authorise before resolving, and read a foreign workflow as not found, so
+    # this path is no more of an existence oracle than the latest one.
     with :ok <- Permissions.can(:workflows, :access_read, user, project),
          %Workflows.Workflow{} <-
            Workflows.get_workflow_for_project(project, workflow_id) do
@@ -1939,8 +1935,8 @@ defmodule LightningWeb.WorkflowChannel do
   # release table. The run must belong to this workflow (checked via the
   # snapshot's workflow_id), so a run id from another workflow reads as not-found.
   defp resolve_as_executed(workflow_id, run_id, project, user) do
-    # Authorise first, for the same reason as the version view: a non-member must
-    # not be able to tell a real run id from a made-up one.
+    # Authorise first, so a non-member cannot tell a real run id from a made-up
+    # one.
     with :ok <- Permissions.can(:workflows, :access_read, user, project),
          {:ok, run_id} <- cast_run_id(run_id),
          lock_version when is_integer(lock_version) <-
