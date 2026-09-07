@@ -69,7 +69,7 @@ export const HealthContent = ({
           <h1 className="text-2xl font-semibold text-gray-900">
             {workflowName}
           </h1>
-          <Subtitle outcomes={outcomes.data} loading={outcomes.loading} />
+          <Subtitle outcomes={outcomes.data} error={outcomes.error} />
         </div>
         {/* The picker and the freshness stamp both belong to the whole page,
             so they stack in the header rather than sitting on any one card. */}
@@ -204,18 +204,20 @@ const UpdatedAt = ({ at }: { at: Query<Outcomes>['fetchedAt'] }) => {
 // window the numbers beside it came from, and goes back to "Loading…" on a
 // range switch rather than naming a window no panel is showing yet. The page's
 // one polite live region: a first load and a range switch are each read out
-// here once, rather than by every card in turn.
+// here once, rather than by every card in turn. Falls silent on a failure
+// rather than announcing a load that isn't happening — the cards raise that as
+// an alert, which is read out at once where this region would have to wait.
 const Subtitle = ({
   outcomes,
-  loading,
+  error,
 }: {
   outcomes: Outcomes | null;
-  loading: boolean;
+  error: string | null;
 }) => (
   <p role="status" className="min-h-5 text-sm text-gray-500">
     {outcomes
       ? `Last ${windowLabel(outcomes.window)} · ${workOrders(outcomes.counts)}`
-      : loading && 'Loading…'}
+      : !error && 'Loading…'}
   </p>
 );
 

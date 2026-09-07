@@ -5,12 +5,14 @@ export interface Query<T> {
   error: string | null;
   /** When the data on screen was fetched, or null while there is none. */
   fetchedAt: Date | null;
-  loading: boolean;
 }
 
 const MESSAGE = 'Could not load workflow stats. Refresh to try again.';
 
-const EMPTY = { data: null, error: null, fetchedAt: null, loading: true };
+// Both fields null is the loading state: a request is out and nothing has
+// answered it yet. A reply sets one or the other, so there is no fourth
+// combination to name and no separate flag to keep in step with these two.
+const EMPTY = { data: null, error: null, fetchedAt: null };
 
 /** Base path for one workflow's health endpoints. */
 export const healthBase = (projectId: string, workflowId: string) =>
@@ -58,14 +60,8 @@ export function useHealthQuery<T>(url: string): Query<T> {
       .then(data => {
         // Same reason as the catch below: a reply that lands after the url
         // changed is an answer to a question nobody is asking any more.
-        if (!controller.signal.aborted) {
-          setState({
-            data,
-            error: null,
-            fetchedAt: new Date(),
-            loading: false,
-          });
-        }
+        if (!controller.signal.aborted)
+          setState({ data, error: null, fetchedAt: new Date() });
 
         return data;
       })
@@ -75,12 +71,7 @@ export function useHealthQuery<T>(url: string): Query<T> {
 
         console.error('workflow health request failed:', error);
 
-        setState({
-          data: null,
-          error: MESSAGE,
-          fetchedAt: null,
-          loading: false,
-        });
+        setState({ data: null, error: MESSAGE, fetchedAt: null });
       });
 
     return () => {
