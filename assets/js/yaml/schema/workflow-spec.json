@@ -15,11 +15,21 @@
         "^.*$": {
           "type": "object",
           "properties": {
-            "id": { "type": ["string", "null"] },
-            "name": { "type": "string" },
-            "adaptor": { "type": "string" },
-            "body": { "type": "string" },
-            "credential": { "type": ["string", "null"] },
+            "id": {
+              "type": ["string", "null"]
+            },
+            "name": {
+              "type": "string"
+            },
+            "adaptor": {
+              "type": "string"
+            },
+            "body": {
+              "type": "string"
+            },
+            "credential": {
+              "type": ["string", "null"]
+            },
             "pos": {
               "type": "object",
               "properties": {
@@ -44,10 +54,12 @@
         "^.*$": {
           "type": "object",
           "properties": {
-            "id": { "type": ["string", "null"] },
+            "id": {
+              "type": ["string", "null"]
+            },
             "type": {
               "type": "string",
-              "enum": ["cron", "webhook", "kafka"]
+              "enum": ["cron", "webhook"]
             },
             "enabled": {
               "type": "boolean"
@@ -65,8 +77,12 @@
             "webhook_response_config": {
               "type": ["object", "null"],
               "properties": {
-                "success_code": { "type": ["integer", "null"] },
-                "error_code": { "type": ["integer", "null"] }
+                "success_code": {
+                  "type": ["integer", "null"]
+                },
+                "error_code": {
+                  "type": ["integer", "null"]
+                }
               },
               "additionalProperties": false
             },
@@ -80,6 +96,9 @@
                   "type": "number"
                 }
               }
+            },
+            "custom_path": {
+              "type": ["string", "null"]
             }
           },
           "required": ["type", "enabled"],
@@ -87,18 +106,21 @@
           "oneOf": [
             {
               "properties": {
-                "type": { "const": "webhook" }
+                "type": {
+                  "const": "webhook"
+                }
               }
             },
             {
               "properties": {
-                "type": { "const": "cron" },
-                "cron_expression": { "type": "string" }
+                "type": {
+                  "const": "cron"
+                },
+                "cron_expression": {
+                  "type": "string"
+                }
               },
               "required": ["cron_expression"]
-            },
-            {
-              "properties": { "type": { "const": "kafka" } }
             }
           ]
         }
@@ -111,14 +133,30 @@
         "^.*$": {
           "type": "object",
           "properties": {
-            "id": { "type": ["string", "null"] },
-            "source_trigger": { "type": "string" },
-            "source_job": { "type": "string" },
-            "target_job": { "type": "string" },
-            "condition_type": { "type": "string" },
-            "condition_label": { "type": "string" },
-            "condition_expression": { "type": ["string", "null"] },
-            "enabled": { "type": "boolean" }
+            "id": {
+              "type": ["string", "null"]
+            },
+            "source_trigger": {
+              "type": "string"
+            },
+            "source_job": {
+              "type": "string"
+            },
+            "target_job": {
+              "type": "string"
+            },
+            "condition_type": {
+              "type": "string"
+            },
+            "condition_label": {
+              "type": "string"
+            },
+            "condition_expression": {
+              "type": ["string", "null"]
+            },
+            "enabled": {
+              "type": "boolean"
+            }
           },
           "required": ["target_job", "condition_type", "enabled"],
           "additionalProperties": false

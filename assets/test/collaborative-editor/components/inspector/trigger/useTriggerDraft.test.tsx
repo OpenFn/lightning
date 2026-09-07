@@ -6,7 +6,7 @@
  * `commit()`, and only when the relevant state actually changed.
  */
 
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
@@ -87,6 +87,13 @@ describe('useTriggerDraft', () => {
     trigger = workflowStore.getSnapshot().triggers[0];
     commitAuthMethods = vi.fn(async () => {});
   });
+
+  // The errors live on the entity in the store snapshot, so this reads the
+  // outcome rather than the call that produced it.
+  function triggerErrors() {
+    return workflowStore.getSnapshot().triggers.find(t => t.id === TRIGGER_ID)
+      ?.errors;
+  }
 
   function renderDraft(initialAuthMethodIds: string[] = []) {
     return renderHook(
@@ -184,6 +191,54 @@ describe('useTriggerDraft', () => {
         TRIGGER_ID,
         expect.objectContaining({ webhook_reply: 'after_completion' })
       );
+    });
+
+    test('drops a server path error once the path changes', async () => {
+      // The error was raised for the value that was there at the time. Leaving
+      // it makes the panel complain about a name that is no longer on screen.
+      ydoc.getArray('triggers').get(0).set('custom_path', 'facility-001');
+      workflowStore.setError(`triggers.${TRIGGER_ID}`, {
+        custom_path: ['is already used by another workflow in this project'],
+      });
+
+      const { result } = renderDraft();
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: 'facility-002' });
+      });
+
+      await act(async () => {
+        await result.current.commit();
+      });
+
+      await waitFor(() => {
+        expect(triggerErrors()).not.toHaveProperty('custom_path');
+      });
+    });
+
+    test("leaves the trigger's other errors alone", async () => {
+      // Clearing the path error must not take the rest of the trigger's errors
+      // with it, or a real problem elsewhere disappears off the panel.
+      ydoc.getArray('triggers').get(0).set('custom_path', 'facility-001');
+      workflowStore.setError(`triggers.${TRIGGER_ID}`, {
+        custom_path: ['is already used by another workflow in this project'],
+        type: ['is invalid'],
+      });
+
+      const { result } = renderDraft();
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: 'facility-002' });
+      });
+
+      await act(async () => {
+        await result.current.commit();
+      });
+
+      await waitFor(() => {
+        expect(triggerErrors()).not.toHaveProperty('custom_path');
+      });
+      expect(triggerErrors()?.['type']).toEqual(['is invalid']);
     });
 
     test('calls commitAuthMethods only when the auth id set changed', async () => {
@@ -371,6 +426,179 @@ describe('useTriggerDraft', () => {
       expect(result.current.draft.webhook_reply).toBe('before_start');
       expect(result.current.draftAuthMethodIds).toEqual(['auth-1']);
       expect(result.current.isDirty).toBe(false);
+    });
+  });
+
+  describe('custom path', () => {
+    test('refuses to commit a path the server would reject', async () => {
+      const { result } = renderDraft();
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: 'orders/intake' });
+      });
+
+      expect(result.current.validationError).toMatch(/highlighted field/i);
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: false });
+      expect(
+        workflowStore.getSnapshot().triggers[0]?.custom_path ?? null
+      ).toBeNull();
+    });
+
+    test('refuses a UUID as a path', async () => {
+      const { result } = renderDraft();
+
+      act(() => {
+        result.current.mergeDraft({
+          custom_path: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+        });
+      });
+
+      expect(result.current.validationError).toMatch(/highlighted field/i);
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: false });
+    });
+
+    test('a path left over from before the rules does not block other edits', async () => {
+      ydoc.getArray('triggers').get(0).set('custom_path', 'orders.v1');
+      const legacyTrigger = workflowStore.getSnapshot().triggers[0];
+
+      const { result } = renderHook(
+        () =>
+          useTriggerDraft(legacyTrigger, {
+            initialAuthMethodIds: [],
+            commitAuthMethods,
+          }),
+        { wrapper: createWrapper(workflowStore) }
+      );
+
+      act(() => {
+        result.current.mergeDraft({ webhook_reply: 'after_completion' });
+      });
+
+      expect(result.current.validationError).toBeNull();
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: true });
+    });
+
+    test('but touching that path still blocks the save', async () => {
+      ydoc.getArray('triggers').get(0).set('custom_path', 'orders.v1');
+      const legacyTrigger = workflowStore.getSnapshot().triggers[0];
+
+      const { result } = renderHook(
+        () =>
+          useTriggerDraft(legacyTrigger, {
+            initialAuthMethodIds: [],
+            commitAuthMethods,
+          }),
+        { wrapper: createWrapper(workflowStore) }
+      );
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: 'orders.v2' });
+      });
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: false });
+    });
+
+    test('refuses to save a name that derives to nothing', async () => {
+      // The regression the display-only fix missed: the field showed an error
+      // while commit still returned ok and wrote the clear.
+      ydoc.getArray('triggers').get(0).set('custom_path', 'facility-001');
+      const seeded = workflowStore.getSnapshot().triggers[0];
+
+      const { result } = renderHook(
+        () =>
+          useTriggerDraft(seeded, {
+            initialAuthMethodIds: [],
+            commitAuthMethods,
+          }),
+        { wrapper: createWrapper(workflowStore) }
+      );
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: '...' });
+      });
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: false });
+      expect(workflowStore.getSnapshot().triggers[0]?.custom_path).toBe(
+        'facility-001'
+      );
+    });
+
+    test('refuses to become a webhook on a path the server would reject', async () => {
+      // A path that meant nothing on a cron row becomes a live URL, and the
+      // server checks it then.
+      ydoc.getArray('triggers').get(0).set('type', 'cron');
+      ydoc.getArray('triggers').get(0).set('cron_expression', '0 0 * * *');
+      ydoc.getArray('triggers').get(0).set('custom_path', 'Orders.v1');
+      const cron = workflowStore.getSnapshot().triggers[0];
+
+      const { result } = renderHook(
+        () =>
+          useTriggerDraft(cron, {
+            initialAuthMethodIds: [],
+            commitAuthMethods,
+          }),
+        { wrapper: createWrapper(workflowStore) }
+      );
+
+      act(() => {
+        result.current.mergeDraft({
+          type: 'webhook',
+          cron_expression: null,
+          webhook_reply: 'before_start',
+        });
+      });
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: false });
+    });
+
+    test('commits a valid path', async () => {
+      const { result } = renderDraft();
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: 'facility-001' });
+      });
+
+      expect(result.current.validationError).toBeNull();
+
+      let outcome: { ok: boolean } | undefined;
+      await act(async () => {
+        outcome = await result.current.commit();
+      });
+
+      expect(outcome).toEqual({ ok: true });
     });
   });
 });

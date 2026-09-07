@@ -135,9 +135,6 @@ const fromWorkflow = (
             ...(triggerNode.type === 'webhook' && {
               has_auth_method: triggerNode.has_auth_method,
             }),
-            ...(triggerNode.type === 'kafka' && {
-              has_auth_method: triggerNode.has_auth_method,
-            }),
           };
         }
         styleNode(model);

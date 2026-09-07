@@ -24,6 +24,7 @@ defmodule Lightning.WebhookAuthMethods do
 
   alias Ecto.Multi
   alias Lightning.Accounts.User
+  alias Lightning.Channels.Audit, as: ChannelAudit
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Workflows.Trigger
@@ -91,11 +92,8 @@ defmodule Lightning.WebhookAuthMethods do
   end
 
   defp disassociate_from_triggers(wam) do
-    wam_uuid = Ecto.UUID.dump!(wam.id)
-
-    from(j in "trigger_webhook_auth_methods",
-      where: j.webhook_auth_method_id == ^wam_uuid
-    )
+    wam
+    |> trigger_associations_query()
     |> Repo.delete_all()
     |> case do
       {count, _} when count > 0 ->
@@ -104,6 +102,20 @@ defmodule Lightning.WebhookAuthMethods do
       {0, _} ->
         :no_associations
     end
+  end
+
+  defp trigger_associations_query(%WebhookAuthMethod{id: id}) do
+    from(j in "trigger_webhook_auth_methods",
+      where: j.webhook_auth_method_id == ^Ecto.UUID.dump!(id),
+      select: type(j.trigger_id, Ecto.UUID)
+    )
+  end
+
+  defp channel_associations_query(%WebhookAuthMethod{id: id}) do
+    from(j in "channel_auth_methods",
+      where: j.webhook_auth_method_id == ^Ecto.UUID.dump!(id),
+      select: type(j.channel_id, Ecto.UUID)
+    )
   end
 
   @doc """
@@ -611,6 +623,22 @@ defmodule Lightning.WebhookAuthMethods do
   This function does not delete the record immediately. Instead, it sets the `scheduled_deletion` field to a date in the future as defined by the application's environment settings.
   The default behavior, in the absence of environment configuration, is to schedule the deletion for the current date and time, effectively marking it for immediate deletion.
 
+  The method's `trigger_webhook_auth_methods` and `channel_auth_methods` rows
+  *are* removed straight away, in the same transaction, so the credential
+  stops authenticating `/i/*` and `/channels/:id/*` requests at once rather
+  than at the next purge.
+
+  A trigger left with no auth methods becomes unauthenticated, and a channel
+  left with no client auth method accepts unauthenticated requests and keeps
+  forwarding them with its destination credential attached. The delete modal
+  warns about both before the operator confirms.
+
+  Each detachment is audited alongside the `"deleted"` event: a
+  `"removed_from_trigger"` event per trigger, and a channel-scoped
+  `"auth_method_removed"` event per channel, matching what
+  `update_trigger_auth_methods/4` and `Lightning.Channels` write when the same
+  links are broken from the other side.
+
   The scheduled deletion date is determined by the `:purge_deleted_after_days` configuration in the application environment.
   If this configuration is not present, the function defaults to 0 days, which schedules the deletion for the current date and time.
 
@@ -665,6 +693,14 @@ defmodule Lightning.WebhookAuthMethods do
           "scheduled_deletion" => deletion_date
         })
       )
+      |> Multi.delete_all(
+        :trigger_associations,
+        trigger_associations_query(webhook_auth_method)
+      )
+      |> Multi.delete_all(
+        :channel_associations,
+        channel_associations_query(webhook_auth_method)
+      )
       |> Multi.insert(:audit, fn %{auth_method: auth_method} ->
         WebhookAuthMethodAudit.event(
           "deleted",
@@ -676,18 +712,60 @@ defmodule Lightning.WebhookAuthMethods do
           }
         )
       end)
+      |> Multi.merge(fn
+        %{
+          trigger_associations: {_, trigger_ids},
+          channel_associations: {_, channel_ids}
+        } ->
+          Multi.new()
+          |> audit_trigger_detachments(trigger_ids, webhook_auth_method, user)
+          |> audit_channel_detachments(channel_ids, webhook_auth_method, user)
+      end)
       |> Repo.transaction()
       |> case do
         {:ok, %{auth_method: auth_method}} ->
           {:ok, auth_method}
 
-        {:error, :auth_method, changeset, _} ->
-          {:error, changeset}
-
-        {:error, :audit, changeset, _} ->
+        {:error, _step, changeset, _changes} ->
           {:error, changeset}
       end
     end
+  end
+
+  defp audit_trigger_detachments(multi, trigger_ids, auth_method, user) do
+    Enum.reduce(trigger_ids, multi, fn trigger_id, multi ->
+      Multi.insert(
+        multi,
+        "removed_from_trigger_#{trigger_id}",
+        WebhookAuthMethodAudit.event(
+          "removed_from_trigger",
+          auth_method.id,
+          user,
+          %{before: %{trigger_id: trigger_id}, after: %{trigger_id: nil}}
+        )
+      )
+    end)
+  end
+
+  defp audit_channel_detachments(multi, channel_ids, auth_method, user) do
+    Enum.reduce(channel_ids, multi, fn channel_id, multi ->
+      Multi.insert(
+        multi,
+        "removed_from_channel_#{channel_id}",
+        ChannelAudit.event(
+          "auth_method_removed",
+          channel_id,
+          user,
+          %{
+            before: %{
+              "role" => "client",
+              "webhook_auth_method_id" => auth_method.id
+            },
+            after: nil
+          }
+        )
+      )
+    end)
   end
 
   defp scheduled_deletion_date do

@@ -629,7 +629,7 @@ defmodule LightningWeb.SandboxLive.Index do
         Lightning.Config.max_sandbox_nesting_depth()
 
     manage_permissions =
-      Lightning.Policies.Sandboxes.check_manage_permissions(
+      Lightning.Policies.Sandboxes.manage_permissions(
         [access_root | descendants],
         current_user,
         workspace_root

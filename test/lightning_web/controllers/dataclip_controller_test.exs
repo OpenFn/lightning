@@ -254,6 +254,39 @@ defmodule LightningWeb.DataclipControllerTest do
       end)
     end
 
+    # `Policies.Dataclips.authorize/3` asks
+    # `Projects.member_of?(%Project{id: project_id}, user)` about a project it
+    # built from an id, so `scheduled_deletion` is never read. Scheduling
+    # deletion removes no membership rows, so the viewer below is still a
+    # member and still gets the body.
+    test "returns 403 for a :viewer on a project scheduled for deletion", %{
+      conn: conn
+    } do
+      viewer = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [%{user_id: viewer.id, role: :viewer}],
+          scheduled_deletion: DateTime.utc_now() |> DateTime.add(7, :day)
+        )
+
+      dataclip =
+        insert(:dataclip,
+          project: project,
+          type: :global,
+          body: %{"secret_looking_thing" => "hunter2"}
+        )
+
+      conn =
+        conn |> log_in_user(viewer) |> get(~p"/dataclip/body/#{dataclip.id}")
+
+      assert conn.status == 403,
+             "expected the dataclip body to be refused on a shut-down project"
+
+      refute conn.resp_body =~ "hunter2",
+             "the dataclip body was served for a project scheduled for deletion"
+    end
+
     test "returns 200 with \"null\" body when the dataclip body is nil", %{
       conn: conn,
       user: user

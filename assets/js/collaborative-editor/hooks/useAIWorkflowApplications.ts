@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { WorkflowState as YAMLWorkflowState } from '../../yaml/types';
 import {
@@ -21,67 +21,11 @@ import type {
   WorkflowTemplateContext,
 } from '../types/ai-assistant';
 import { STREAMING_MESSAGE_ID } from '../types/ai-assistant';
+import { validateWorkflowIds } from '../utils/validateWorkflowIds';
 
 import type { AIModeResult } from './useAIMode';
 import { NOT_CONNECTED_ALERT, STILL_CONNECTING_ALERT } from './useWorkflow';
 import type { SaveWorkflowOptions } from './useWorkflow';
-
-/**
- * Helper function to validate workflow IDs before applying
- *
- * Ensures that all IDs in the workflow spec are strings or null,
- * not objects. This prevents YAML parsing issues where the AI
- * might incorrectly generate object IDs.
- */
-function validateIds(spec: Record<string, unknown>): void {
-  if (spec['jobs']) {
-    for (const [jobKey, job] of Object.entries(spec['jobs'] as object)) {
-      const jobItem = job as Record<string, unknown>;
-      if (
-        jobItem['id'] &&
-        typeof jobItem['id'] === 'object' &&
-        jobItem['id'] !== null
-      ) {
-        throw new Error(
-          `Invalid ID format for job "${jobKey}". IDs must be strings or null, not objects. ` +
-            `Please ask the AI to regenerate the workflow with proper ID format.`
-        );
-      }
-    }
-  }
-  if (spec['triggers']) {
-    for (const [triggerKey, trigger] of Object.entries(
-      spec['triggers'] as object
-    )) {
-      const triggerItem = trigger as Record<string, unknown>;
-      if (
-        triggerItem['id'] &&
-        typeof triggerItem['id'] === 'object' &&
-        triggerItem['id'] !== null
-      ) {
-        throw new Error(
-          `Invalid ID format for trigger "${triggerKey}". IDs must be strings or null, not objects. ` +
-            `Please ask the AI to regenerate the workflow with proper ID format.`
-        );
-      }
-    }
-  }
-  if (spec['edges']) {
-    for (const [edgeKey, edge] of Object.entries(spec['edges'] as object)) {
-      const edgeItem = edge as Record<string, unknown>;
-      if (
-        edgeItem['id'] &&
-        typeof edgeItem['id'] === 'object' &&
-        edgeItem['id'] !== null
-      ) {
-        throw new Error(
-          `Invalid ID format for edge "${edgeKey}". IDs must be strings or null, not objects. ` +
-            `Please ask the AI to regenerate the workflow with proper ID format.`
-        );
-      }
-    }
-  }
-}
 
 /**
  * Hook to manage workflow and job code application from AI Assistant
@@ -115,6 +59,9 @@ export function useAIWorkflowApplications({
   isSessionConnected,
   isSessionConnecting,
   onValidationError,
+  onCanvasApplied,
+  onApplyFailure,
+  onApplyApplied,
   workflowActions,
   monacoRef,
   jobs,
@@ -154,6 +101,19 @@ export function useAIWorkflowApplications({
    */
   isSessionConnecting: boolean;
   onValidationError?: (message: string) => void;
+  /** Called after a successful import, so undo can record the new canvas */
+  onCanvasApplied?: () => void;
+  /**
+   * Report that a reply's workflow never reached the canvas. Best effort and
+   * never surfaced to the user: they are already being told it failed.
+   */
+  /** Clears a recorded failure once the same changes land. */
+  onApplyApplied?: (messageId: string) => void;
+  onApplyFailure?: (details: {
+    messageId: string;
+    stage: 'parse' | 'validate_ids' | 'import' | 'save';
+    isNewWorkflow: boolean;
+  }) => void;
   workflowActions: {
     importWorkflow: (state: YAMLWorkflowState) => Promise<void>;
     startApplyingWorkflow: (messageId: string) => Promise<boolean>;
@@ -325,9 +285,14 @@ export function useAIWorkflowApplications({
       // saveSucceeded covers the subsequent save for new workflows.
       let applySucceeded = false;
       let saveSucceeded = true;
+      // Which step we reached, so a report says what actually broke rather
+      // than only that applying failed.
+      let stage: 'parse' | 'validate_ids' | 'import' | 'save' = 'parse';
       try {
         const workflowSpec = parseWorkflowYAML(yaml);
-        validateIds(workflowSpec);
+        stage = 'validate_ids';
+        validateWorkflowIds(workflowSpec);
+        stage = 'import';
 
         // IDs are already in the YAML from AI (sent with IDs, like legacy editor)
         const workflowState = convertWorkflowSpecToState(workflowSpec);
@@ -339,6 +304,7 @@ export function useAIWorkflowApplications({
 
         await importWorkflow(workflowStateWithCreds);
         applySucceeded = true;
+        onCanvasApplied?.();
 
         if (messageId === STREAMING_MESSAGE_ID) {
           // Record the applied YAML so the auto-apply effect can skip the
@@ -349,10 +315,18 @@ export function useAIWorkflowApplications({
         }
 
         if (isNewWorkflow) {
+          stage = 'save';
           saveSucceeded = await saveNewWorkflow();
         }
       } catch (error) {
         console.error('[AI Assistant] Failed to apply workflow:', error);
+
+        // Reported through the channel rather than the browser's Sentry
+        // SDK, which is disabled (`assets/js/app.js`). Otherwise the alert
+        // below is the whole trace and it dies with the tab, so we cannot
+        // tell how often this happens. Carries no YAML, job code or names,
+        // only where in the pipeline it broke.
+        onApplyFailure?.({ messageId, stage, isNewWorkflow });
 
         const errorMessage =
           error instanceof Error ? error.message : 'Invalid workflow YAML';
@@ -385,6 +359,12 @@ export function useAIWorkflowApplications({
         }
       }
 
+      if (applySucceeded && !saveSucceeded) {
+        // The import landed and the save did not, which returns false rather
+        // than raising, so the catch above never ran.
+        onApplyFailure?.({ messageId, stage: 'save', isNewWorkflow });
+      }
+
       return applySucceeded && saveSucceeded ? 'applied' : 'failed';
     },
     [
@@ -400,6 +380,8 @@ export function useAIWorkflowApplications({
       isSessionConnected,
       isSessionConnecting,
       onValidationError,
+      onCanvasApplied,
+      onApplyFailure,
       saveNewWorkflow,
       streamingApplyActions,
       monacoRef,
@@ -432,6 +414,34 @@ export function useAIWorkflowApplications({
    * (it calls handleApplyWorkflow directly) so it never lands in
    * appliedMessageIdsRef and can be superseded by the final new_message.
    */
+  /** Replies whose auto-apply failed, so the manual button can come back */
+  const [failedApplyMessageIds, setFailedApplyMessageIds] = useState<
+    Set<string>
+  >(() => new Set());
+
+  // Messages whose recorded failure has already been read. A retry that works
+  // removes the id, and the flag on the loaded message stays true until the
+  // server confirms, so without this the notice would come straight back.
+  const seededFailuresRef = useRef<Set<string>>(new Set());
+
+  // Mirrors the state so an outcome can be compared without reading it inside
+  // an updater.
+  const failedApplyRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const unseen = (currentSession?.messages ?? []).filter(
+      message =>
+        message.apply_failed && !seededFailuresRef.current.has(message.id)
+    );
+    if (unseen.length === 0) return;
+
+    for (const message of unseen) {
+      seededFailuresRef.current.add(message.id);
+      failedApplyRef.current.add(message.id);
+    }
+    setFailedApplyMessageIds(new Set(failedApplyRef.current));
+  }, [currentSession?.messages]);
+
   const launchApply = useCallback(
     (messageId: string, code: string) => {
       if (inFlightApplyRef.current.has(messageId)) return;
@@ -444,12 +454,35 @@ export function useAIWorkflowApplications({
           } else {
             appliedMessageIdsRef.current.add(messageId);
           }
+          // A failed import is never retried automatically, so the reply is
+          // a dead end unless the user is given the manual button back.
+          const failed = outcome === 'failed';
+          const wasFailed = failedApplyRef.current.has(messageId);
+
+          if (failed !== wasFailed) {
+            // Outside the state updater: React may run an updater more than
+            // once, and each run would push again.
+            //
+            // Only when it was recorded as failed. An ordinary first apply
+            // has nothing to clear, and the server should not hear about
+            // every successful import.
+            if (!failed) onApplyApplied?.(messageId);
+
+            if (failed) failedApplyRef.current.add(messageId);
+            else failedApplyRef.current.delete(messageId);
+            // Read, either way: the flag on a loaded message stays true until
+            // the server confirms the clear, and the seeding effect would put
+            // the notice straight back.
+            seededFailuresRef.current.add(messageId);
+
+            setFailedApplyMessageIds(new Set(failedApplyRef.current));
+          }
         } finally {
           inFlightApplyRef.current.delete(messageId);
         }
       })();
     },
-    [handleApplyWorkflow, appliedMessageIdsRef]
+    [handleApplyWorkflow, appliedMessageIdsRef, onApplyApplied]
   );
 
   /**
@@ -521,87 +554,9 @@ export function useAIWorkflowApplications({
   );
 
   /**
-   * Preview the open job's diff from a global full-workflow YAML message
+   * Write an assistant's job code into the open job.
    *
-   * Mirrors handlePreviewJobCode, but extracts the open job's body from the
-   * workflow YAML (global messages carry the whole workflow in `code`).
-   * Shows a diff only when the open step's body actually changed; clears any
-   * stale diff otherwise.
-   */
-  const handlePreviewGlobalStep = useCallback(
-    (yaml: string, messageId: string) => {
-      if (!aiMode || aiMode.page !== 'job_code') return; // only when a step is open
-      const jobId = (aiMode.context as JobCodeContext).job_id;
-      if (!jobId) return;
-
-      // Same dedup guards as handlePreviewJobCode
-      if (previewingMessageId === messageId) return;
-      if (previewingMessageId === STREAMING_MESSAGE_ID) {
-        setPreviewingMessageId(messageId);
-        return;
-      }
-
-      const currentJob = jobs.find(j => j.id === jobId);
-      const currentBody = currentJob?.body ?? '';
-
-      let newBody: string | undefined;
-      try {
-        const spec = parseWorkflowYAML(yaml);
-        // ids from the YAML are preserved, so we match the open step by id
-        const state = convertWorkflowSpecToState(spec);
-        newBody = state.jobs.find(j => j.id === jobId)?.body;
-      } catch (error) {
-        console.error(
-          '[AI Assistant] Failed to parse global workflow YAML:',
-          error
-        );
-        notifications.alert({
-          title: 'Could not preview step',
-          description:
-            error instanceof Error
-              ? error.message
-              : 'The AI server returned invalid workflow YAML.',
-        });
-        return;
-      }
-
-      if (newBody === undefined) {
-        // Open step's id wasn't in the YAML, so the server likely didn't preserve it
-        console.warn(
-          '[AI Assistant] Open step not found in global workflow YAML',
-          { jobId }
-        );
-        notifications.warning({
-          title: 'Could not preview this step',
-          description: `Step "${
-            currentJob?.name ?? jobId
-          }" was not found in the AI response (id: ${jobId}). Its ID may not have been preserved by the server.`,
-        });
-        if (previewingMessageId) monacoRef?.current?.clearDiff();
-        return;
-      }
-
-      if (newBody === currentBody) {
-        // open step genuinely unchanged -> ensure no stale diff is shown
-        if (previewingMessageId) monacoRef?.current?.clearDiff();
-        return;
-      }
-
-      const monaco = monacoRef?.current;
-      if (previewingMessageId && monaco) monaco.clearDiff();
-      if (monaco) {
-        monaco.showDiff(currentBody, newBody);
-        setPreviewingMessageId(messageId);
-      }
-    },
-    [aiMode, jobs, previewingMessageId, monacoRef, setPreviewingMessageId]
-  );
-
-  /**
-   * Apply job code to Y.Doc
-   *
-   * Updates the job body in Y.Doc, which syncs to all collaborators.
-   * Clears any active diff preview and shows success notification.
+   * Job chat only: the code is a proposal there, and this is what lands it.
    */
   const handleApplyJobCode = useCallback(
     async (code: string, messageId: string) => {
@@ -813,8 +768,8 @@ export function useAIWorkflowApplications({
      * handleApplyWorkflow's (yaml, messageId).
      */
     launchApply,
+    failedApplyMessageIds,
     handlePreviewJobCode,
-    handlePreviewGlobalStep,
     handleApplyJobCode,
   };
 }

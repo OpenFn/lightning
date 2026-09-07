@@ -92,14 +92,38 @@ defmodule Lightning.Scrubber do
   end
 
   def scrub(agent, data) when is_binary(data) do
-    state = agent |> Agent.get(fn state -> state end)
+    agent |> Agent.get(fn state -> state end) |> scrub_string(data)
+  end
 
+  def scrub(_agent, data), do: data
+
+  @doc """
+  Builds the state `scrub_string/2` takes, without starting a process.
+
+  `scrub/2` needs an agent because a run accumulates samples as it goes. A
+  caller that already knows every sample would otherwise start - and stay
+  linked to - an agent per string it scrubs.
+
+  Takes `{samples, basic_auth}` pairs, the same shape `add_samples/3` takes.
+  """
+  @spec build_state([{[String.t()], [String.t()]}]) :: State.t()
+  def build_state(sample_pairs) do
+    Enum.reduce(sample_pairs, State.new([]), fn {samples, basic_auth}, state ->
+      State.add_samples(state, encode_samples(samples, basic_auth))
+    end)
+  end
+
+  @doc """
+  Process-free counterpart to `scrub/2` for a single string.
+  """
+  @spec scrub_string(State.t(), String.t() | nil) :: String.t() | nil
+  def scrub_string(state, data) when is_binary(data) do
     # Process line-by-line to avoid keeping multiple copies of large strings in memory
     String.split(data, "\n")
     |> Enum.map_join("\n", fn line -> State.scrub(state, line) end)
   end
 
-  def scrub(_agent, data), do: data
+  def scrub_string(_state, data), do: data
 
   @doc """
   Prepare a list of sensitive samples (strings) into a potentially bigger list

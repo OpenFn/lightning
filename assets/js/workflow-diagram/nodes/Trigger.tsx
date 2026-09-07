@@ -3,7 +3,7 @@ import { Position } from '@xyflow/react';
 import cronstrue from 'cronstrue';
 import { memo } from 'react';
 
-import { kafkaIcon, lockClosedIcon } from '../components/trigger-icons';
+import { lockClosedIcon } from '../components/trigger-icons';
 import type { Lightning } from '../types';
 
 import Node from './Node';
@@ -47,6 +47,11 @@ TriggerNode.displayName = 'TriggerWorkflowNode';
 export default memo(TriggerNode);
 
 function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
+  // Read before the switch narrows it away: a snapshot taken while a
+  // since-removed trigger type existed still reaches here, whatever the union
+  // says.
+  const declaredType: string = trigger.type;
+
   switch (trigger.type) {
     case 'webhook':
       return {
@@ -54,13 +59,6 @@ function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
         sublabel: `On each request received`,
         tooltip: 'Click to copy webhook URL',
         primaryIcon: <GlobeAltIcon />,
-        secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
-      };
-    case 'kafka':
-      return {
-        label: 'Kafka trigger',
-        sublabel: `On each message consumed from the cluster`,
-        primaryIcon: kafkaIcon,
         secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
       };
     case 'cron':
@@ -79,5 +77,5 @@ function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
         secondaryIcon: null,
       };
   }
-  return { label: '', sublabel: '' };
+  return { label: 'Unsupported trigger', sublabel: declaredType };
 }

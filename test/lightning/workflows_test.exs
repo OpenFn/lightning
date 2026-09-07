@@ -6,11 +6,16 @@ defmodule Lightning.WorkflowsTest do
   import Lightning.Factories
 
   alias Lightning.Auditing.Audit
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.Step
+  alias Lightning.Projects.Project
   alias Lightning.Workflows
+  alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Triggers.Events
-  alias Lightning.Workflows.Triggers.Events.KafkaTriggerUpdated
+  alias Lightning.Workflows.Workflow
+  alias Lightning.WorkOrder
 
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
@@ -283,120 +288,6 @@ defmodule Lightning.WorkflowsTest do
                from(a in Audit, where: a.event in ["enabled", "disabled"]),
                :count
              ) == 1
-    end
-
-    test "save_workflow/1 publishes event for updated Kafka triggers" do
-      kafka_configuration = build(:triggers_kafka_configuration)
-
-      workflow = insert(:workflow) |> Repo.preload(:triggers)
-
-      kafka_trigger_1 =
-        insert(
-          :trigger,
-          type: :kafka,
-          workflow: workflow,
-          kafka_configuration: kafka_configuration,
-          enabled: false
-        )
-
-      cron_trigger_1 =
-        insert(
-          :trigger,
-          type: :cron,
-          workflow: workflow,
-          enabled: false
-        )
-
-      kafka_trigger_2 =
-        insert(
-          :trigger,
-          type: :kafka,
-          workflow: workflow,
-          kafka_configuration: kafka_configuration,
-          enabled: false
-        )
-
-      triggers = [
-        {kafka_trigger_1, %{enabled: true}},
-        {cron_trigger_1, %{enabled: true}},
-        {kafka_trigger_2, %{enabled: true}}
-      ]
-
-      kafka_trigger_1_id = kafka_trigger_1.id
-      cron_trigger_1_id = cron_trigger_1.id
-      kafka_trigger_2_id = kafka_trigger_2.id
-
-      changeset = workflow |> build_changeset(triggers)
-
-      Events.subscribe_to_kafka_trigger_updated()
-
-      changeset |> Workflows.save_workflow(insert(:user))
-
-      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
-      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
-      refute_received %KafkaTriggerUpdated{trigger_id: ^cron_trigger_1_id}
-    end
-
-    test "save_workflow/1 does not publish events if save fails" do
-      kafka_configuration = build(:triggers_kafka_configuration)
-
-      workflow = insert(:workflow) |> Repo.preload(:triggers)
-
-      kafka_trigger_1 =
-        insert(
-          :trigger,
-          type: :kafka,
-          workflow: workflow,
-          kafka_configuration: kafka_configuration,
-          enabled: false
-        )
-
-      cron_trigger_1 =
-        insert(
-          :trigger,
-          type: :cron,
-          workflow: workflow,
-          enabled: false
-        )
-
-      kafka_trigger_2 =
-        insert(
-          :trigger,
-          type: :kafka,
-          workflow: workflow,
-          kafka_configuration: kafka_configuration,
-          enabled: false
-        )
-
-      triggers = [
-        {kafka_trigger_1, %{enabled: true}},
-        {cron_trigger_1, %{type: :unobtainium}},
-        {kafka_trigger_2, %{enabled: true}}
-      ]
-
-      kafka_trigger_1_id = kafka_trigger_1.id
-      cron_trigger_1_id = cron_trigger_1.id
-      kafka_trigger_2_id = kafka_trigger_2.id
-
-      changeset = workflow |> build_changeset(triggers)
-
-      Events.subscribe_to_kafka_trigger_updated()
-
-      changeset |> Workflows.save_workflow(nil)
-
-      refute_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
-      refute_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
-      refute_received %KafkaTriggerUpdated{trigger_id: ^cron_trigger_1_id}
-    end
-
-    defp build_changeset(workflow, triggers_and_attrs) do
-      triggers_changes =
-        triggers_and_attrs
-        |> Enum.map(fn {trigger, attrs} ->
-          Trigger.changeset(trigger, attrs)
-        end)
-
-      Ecto.Changeset.change(workflow, triggers: triggers_changes)
     end
 
     test "save_workflow/1 using attrs" do
@@ -1594,18 +1485,23 @@ defmodule Lightning.WorkflowsTest do
   end
 
   describe "finders" do
-    test "get_webhook_trigger/1 returns the trigger for a path" do
+    test "get_webhook_trigger/1 returns the trigger for its id" do
       %{triggers: [trigger]} =
         insert(:simple_workflow) |> Repo.preload(:triggers)
 
-      assert Workflows.get_webhook_trigger(trigger.id).id == trigger.id
+      assert Workflows.get_webhook_trigger([trigger.id]).id == trigger.id
 
       Ecto.Changeset.change(trigger, custom_path: "foo")
       |> Lightning.Repo.update!()
 
-      assert Workflows.get_webhook_trigger(trigger.id) == nil
+      # Setting a custom path adds a URL rather than replacing one, so anything
+      # already posting to the generated URL keeps working.
+      assert Workflows.get_webhook_trigger([trigger.id]).id == trigger.id
 
-      assert Workflows.get_webhook_trigger("foo").id == trigger.id
+      workflow = Repo.get!(Lightning.Workflows.Workflow, trigger.workflow_id)
+
+      assert Workflows.get_webhook_trigger([workflow.project_id, "foo"]).id ==
+               trigger.id
     end
 
     test "get_webhook_trigger/1 does not return a trigger when type is cron" do
@@ -1617,13 +1513,13 @@ defmodule Lightning.WorkflowsTest do
       |> Lightning.Repo.update!()
 
       # Should not return the trigger even though the ID matches
-      assert Workflows.get_webhook_trigger(trigger.id) == nil
+      assert Workflows.get_webhook_trigger([trigger.id]) == nil
 
       # Set a custom path and verify it still doesn't return
       Ecto.Changeset.change(trigger, custom_path: "cron_path")
       |> Lightning.Repo.update!()
 
-      assert Workflows.get_webhook_trigger("cron_path") == nil
+      assert Workflows.get_webhook_trigger([trigger.id, "cron_path"]) == nil
     end
 
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
@@ -1656,24 +1552,30 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
-  describe "get_webhook_trigger/1" do
+  describe "get_webhook_trigger/2" do
     test "returns a trigger when a matching custom_path is provided" do
-      trigger = insert(:trigger, custom_path: "some_path")
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow, custom_path: "some_path")
 
       assert trigger |> unload_relation(:workflow) ==
-               Workflows.get_webhook_trigger("some_path")
+               Workflows.get_webhook_trigger([project.id, "some_path"])
     end
 
     test "returns a trigger when a matching id is provided" do
       trigger = insert(:trigger)
 
       assert trigger |> unload_relation(:workflow) ==
-               Workflows.get_webhook_trigger(trigger.id)
+               Workflows.get_webhook_trigger([trigger.id])
     end
 
     test "returns nil when no matching trigger is found" do
-      insert(:trigger, custom_path: "some_path")
-      assert Workflows.get_webhook_trigger("non_existent_path") == nil
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      insert(:trigger, workflow: workflow, custom_path: "some_path")
+
+      assert Workflows.get_webhook_trigger([project.id, "non_existent_path"]) ==
+               nil
     end
   end
 
@@ -1895,6 +1797,49 @@ defmodule Lightning.WorkflowsTest do
       assert Repo.get(Trigger, trigger_3_id) |> Map.get(:enabled) == true
     end
 
+    # A workflow disappearing under a live editor session is only visible to it
+    # through this broadcast: the join-time authorisation decision never
+    # mentions the workflow again.
+    #
+    # On the *project's* topic, not `Workflows.Events`. Sessions cannot subscribe
+    # to a topic that also fires on every save just to hear about deletions, so
+    # the second half of this test is as load-bearing as the first.
+    test "mark_for_deletion/3 broadcasts the deletion on the project's topic",
+         %{
+           project: %{id: project_id},
+           w1: %{id: workflow_id} = workflow,
+           w2: %{id: other_workflow_id}
+         } do
+      assert :ok = Lightning.Projects.Events.subscribe(project_id)
+
+      assert {:ok, _workflow} =
+               Workflows.mark_for_deletion(workflow, insert(:user))
+
+      assert_receive %Lightning.Projects.Events.WorkflowDeleted{
+        workflow_id: ^workflow_id,
+        project_id: ^project_id
+      }
+
+      refute_received %Lightning.Projects.Events.WorkflowDeleted{
+        workflow_id: ^other_workflow_id
+      }
+    end
+
+    test "saving a workflow puts nothing on the project's topic", %{
+      project: %{id: project_id},
+      w1: workflow
+    } do
+      assert :ok = Lightning.Projects.Events.subscribe(project_id)
+
+      assert {:ok, _workflow} =
+               Workflows.save_workflow(
+                 Workflows.change_workflow(workflow, %{name: "Renamed"}),
+                 insert(:user)
+               )
+
+      refute_received _message
+    end
+
     test "mark_for_deletion/3 creates an audit event", %{
       w1: %{id: workflow_id} = workflow
     } do
@@ -1909,27 +1854,6 @@ defmodule Lightning.WorkflowsTest do
                item_id: ^workflow_id,
                actor_id: ^user_id
              } = audit
-    end
-
-    test "mark_for_deletion/3 publishes events for Kafka triggers", %{w1: w1} do
-      user = insert(:user)
-
-      %{id: kafka_trigger_1_id} =
-        insert(:trigger, workflow: w1, enabled: true, type: :kafka)
-
-      %{id: webhook_trigger_id} =
-        insert(:trigger, workflow: w1, enabled: true, type: :webhook)
-
-      %{id: kafka_trigger_2_id} =
-        insert(:trigger, workflow: w1, enabled: true, type: :kafka)
-
-      Events.subscribe_to_kafka_trigger_updated()
-
-      assert {:ok, _workflow} = Workflows.mark_for_deletion(w1, user)
-
-      refute_received %KafkaTriggerUpdated{trigger_id: ^webhook_trigger_id}
-      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_2_id}
-      assert_received %KafkaTriggerUpdated{trigger_id: ^kafka_trigger_1_id}
     end
 
     test "soft_delete_changeset/1 marks deleted and frees the name in one step" do
@@ -2189,6 +2113,120 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "Workflows.perform/1 for purge_deleted" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> 7 end)
+
+      :ok
+    end
+
+    test "purges every history-free workflow whose deletion window has closed when called with type 'purge_deleted'" do
+      project = insert(:project)
+
+      past_window =
+        insert(:simple_workflow, project: project, deleted_at: days_ago(8))
+
+      inside_window =
+        insert(:simple_workflow, project: project, deleted_at: days_ago(1))
+
+      never_deleted = insert(:simple_workflow, project: project)
+
+      with_history =
+        insert(:simple_workflow, project: project, deleted_at: days_ago(8))
+
+      insert_history(with_history)
+
+      assert :ok =
+               Workflows.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      refute Repo.get(Workflow, past_window.id)
+      assert Repo.get(Workflow, inside_window.id)
+      assert Repo.get(Workflow, never_deleted.id)
+
+      assert Repo.get(Workflow, with_history.id),
+             "a workflow is only purged once data retention has taken its history"
+    end
+
+    test "permanently deletes a workflow and everything hanging off it" do
+      project = insert(:project)
+
+      %{jobs: jobs, triggers: [trigger], edges: [edge]} =
+        workflow =
+        insert(:simple_workflow, project: project, deleted_at: days_ago(8))
+
+      snapshot = insert(:snapshot, workflow: workflow)
+      dataclip = insert(:dataclip, project: project)
+
+      untouched = insert(:simple_workflow, project: project)
+
+      assert :ok =
+               Workflows.perform(%Oban.Job{
+                 args: %{
+                   "workflow_id" => workflow.id,
+                   "type" => "purge_deleted"
+                 }
+               })
+
+      refute Repo.get(Workflow, workflow.id)
+      refute Repo.get(Trigger, trigger.id)
+      refute Repo.get(Edge, edge.id)
+      refute Repo.get(Snapshot, snapshot.id)
+      for job <- jobs, do: refute(Repo.get(Job, job.id))
+
+      assert Repo.get(Project, project.id),
+             "the project outlives its workflows"
+
+      assert Repo.get(Dataclip, dataclip.id),
+             "dataclips belong to the project, not the workflow"
+
+      assert Repo.get(Workflow, untouched.id)
+    end
+
+    test "leaves a workflow whose history has not expired yet alone" do
+      workflow = insert(:simple_workflow, deleted_at: days_ago(8))
+
+      %{work_order: work_order, step: step} = insert_history(workflow)
+
+      assert {:error, :has_history} = Workflows.delete_workflow(workflow)
+
+      assert {:cancel, :has_history} =
+               Workflows.perform(%Oban.Job{
+                 args: %{
+                   "workflow_id" => workflow.id,
+                   "type" => "purge_deleted"
+                 }
+               })
+
+      assert Repo.get(Workflow, workflow.id)
+      assert Repo.get(WorkOrder, work_order.id)
+      assert Repo.get(Step, step.id)
+    end
+
+    test "leaves a workflow that is no longer marked for deletion alone" do
+      workflow = insert(:simple_workflow, deleted_at: nil)
+
+      assert :ok =
+               Workflows.perform(%Oban.Job{
+                 args: %{
+                   "workflow_id" => workflow.id,
+                   "type" => "purge_deleted"
+                 }
+               })
+
+      assert Repo.get(Workflow, workflow.id)
+    end
+
+    test "no-ops when the workflow is already gone" do
+      assert :ok =
+               Workflows.perform(%Oban.Job{
+                 args: %{
+                   "workflow_id" => Ecto.UUID.generate(),
+                   "type" => "purge_deleted"
+                 }
+               })
+    end
+  end
+
   defp assert_trigger_state_audit(
          workflow_id,
          user_id,
@@ -2221,5 +2259,34 @@ defmodule Lightning.WorkflowsTest do
     |> with_trigger(trigger)
     |> with_edge({trigger, job})
     |> insert()
+  end
+
+  defp days_ago(days) do
+    DateTime.utc_now() |> DateTime.add(-days, :day) |> DateTime.truncate(:second)
+  end
+
+  defp insert_history(%{jobs: [job | _], triggers: [trigger]} = workflow) do
+    snapshot = insert(:snapshot, workflow: workflow)
+    dataclip = insert(:dataclip, project: workflow.project)
+
+    step = insert(:step, job: job, input_dataclip: dataclip, snapshot: snapshot)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot,
+        runs: [
+          build(:run,
+            starting_trigger: trigger,
+            dataclip: dataclip,
+            snapshot: snapshot,
+            steps: [step]
+          )
+        ]
+      )
+
+    %{work_order: work_order, step: step, snapshot: snapshot}
   end
 end

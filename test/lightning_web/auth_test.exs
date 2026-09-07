@@ -131,4 +131,42 @@ defmodule LightningWeb.AuthTest do
       refute Auth.has_credentials?(conn)
     end
   end
+
+  describe "auth methods scheduled for deletion" do
+    setup do
+      %{revoked_at: DateTime.utc_now() |> Timex.shift(days: 7)}
+    end
+
+    test "valid_key? rejects a revoked API key", %{revoked_at: revoked_at} do
+      conn = conn(:get, "/") |> with_header("x-api-key", "my-secret")
+
+      revoked = %{api_method("my-secret") | scheduled_deletion: revoked_at}
+
+      refute Auth.valid_key?(conn, [revoked])
+    end
+
+    test "valid_key? still accepts a live key alongside a revoked one", %{
+      revoked_at: revoked_at
+    } do
+      conn = conn(:get, "/") |> with_header("x-api-key", "live-key")
+
+      revoked = %{api_method("revoked-key") | scheduled_deletion: revoked_at}
+
+      assert Auth.valid_key?(conn, [revoked, api_method("live-key")])
+    end
+
+    test "valid_user? rejects revoked basic credentials", %{
+      revoked_at: revoked_at
+    } do
+      encoded = Base.encode64("admin:secret123")
+      conn = conn(:get, "/") |> with_header("authorization", "Basic #{encoded}")
+
+      revoked = %{
+        basic_method("admin", "secret123")
+        | scheduled_deletion: revoked_at
+      }
+
+      refute Auth.valid_user?(conn, [revoked])
+    end
+  end
 end

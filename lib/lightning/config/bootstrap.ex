@@ -281,7 +281,6 @@ defmodule Lightning.Config.Bootstrap do
        args: %{"type" => "monthly_project_digest"}},
       #  TODO - move this into an ENV?
       {"17 */2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
-      {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker},
       {"* * * * *", Lightning.LogLines.SearchVectorWorker},
       {"* * * * *", Lightning.Invocation.DataclipSearchVectorWorker}
     ]
@@ -294,7 +293,8 @@ defmodule Lightning.Config.Bootstrap do
            args: %{"type" => "purge_deleted"}},
           {"45 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}},
           {"0 3 * * *", Lightning.WebhookAuthMethods,
-           args: %{"type" => "purge_deleted"}}
+           args: %{"type" => "purge_deleted"}},
+          {"15 3 * * *", Lightning.Workflows, args: %{"type" => "purge_deleted"}}
         ],
         else: []
 
@@ -775,49 +775,6 @@ defmodule Lightning.Config.Bootstrap do
         env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10),
       daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10),
       run_chunk_size: env!("USAGE_TRACKING_RUN_CHUNK_SIZE", :integer, 100)
-
-    config :lightning, :kafka_triggers,
-      alternate_storage_enabled:
-        env!(
-          "KAFKA_ALTERNATE_STORAGE_ENABLED",
-          &Utils.ensure_boolean/1,
-          false
-        )
-        |> tap(fn enabled ->
-          if enabled do
-            touch_result =
-              env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil)
-              |> to_string()
-              |> then(fn path ->
-                if File.exists?(path) do
-                  path
-                  |> Path.join(".lightning_storage_check")
-                  |> File.touch()
-                else
-                  :error
-                end
-              end)
-
-            unless touch_result == :ok do
-              raise """
-              KAFKA_ALTERNATE_STORAGE_ENABLED is set to yes/true.
-
-              KAFKA_ALTERNATE_STORAGE_FILE_PATH must be a writable directory.
-              """
-            end
-          end
-        end),
-      alternate_storage_file_path:
-        env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil),
-      duplicate_tracking_retention_seconds:
-        env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600),
-      enabled: env!("KAFKA_TRIGGERS_ENABLED", &Utils.ensure_boolean/1, false),
-      notification_embargo_seconds:
-        env!("KAFKA_NOTIFICATION_EMBARGO_SECONDS", :integer, 3600),
-      number_of_consumers: env!("KAFKA_NUMBER_OF_CONSUMERS", :integer, 1),
-      number_of_messages_per_second:
-        env!("KAFKA_NUMBER_OF_MESSAGES_PER_SECOND", :float, 1),
-      number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1)
 
     config :lightning,
            :broadcast_work_available,
