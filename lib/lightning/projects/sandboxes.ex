@@ -290,7 +290,7 @@ defmodule Lightning.Projects.Sandboxes do
         release: %{
           kind: :promote,
           source_project_id: source.id,
-          workflow_ids: promoted_target_ids(selected_ids, merge_doc)
+          workflow_ids: promoted_target_ids(source, selected_ids, merge_doc)
         }
       ]
     else
@@ -329,7 +329,7 @@ defmodule Lightning.Projects.Sandboxes do
         # back. Writing "app" instead would lose it to the next editor save,
         # which happens far more often.
         %WorkflowVersion{}
-        |> Ecto.Changeset.change(%{
+        |> WorkflowVersion.changeset(%{
           workflow_id: source_id,
           hash: hash,
           source: version_source
@@ -363,7 +363,7 @@ defmodule Lightning.Projects.Sandboxes do
           entries
 
         selected_ids ->
-          target_ids = promoted_target_ids(selected_ids, merge_doc)
+          target_ids = promoted_target_ids(source, selected_ids, merge_doc)
           Enum.filter(entries, &MapSet.member?(target_ids, &1["id"]))
       end
 
@@ -410,10 +410,15 @@ defmodule Lightning.Projects.Sandboxes do
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
-  defp promoted_target_ids(selected_source_ids, merge_doc) do
+  defp promoted_target_ids(source, selected_source_ids, merge_doc) do
+    # Scoped to the source project: these ids decide both what a release records
+    # and which workflows are brought into step, so an id from elsewhere must
+    # not resolve to a name here.
     selected_names =
       from(w in Workflow,
-        where: w.id in ^selected_source_ids,
+        where:
+          w.id in ^selected_source_ids and w.project_id == ^source.id and
+            is_nil(w.deleted_at),
         select: w.name
       )
       |> Repo.all()

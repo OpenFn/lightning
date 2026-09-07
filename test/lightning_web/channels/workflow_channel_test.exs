@@ -977,7 +977,9 @@ defmodule LightningWeb.WorkflowChannelTest do
 
     test "warns when the working name lands on a workflow the parent gained", %{
       sandbox_socket: socket,
-      parent: parent
+      sandbox: sandbox,
+      parent: parent,
+      user: user
     } do
       # The parent gained gamma after the fork, so the sandbox has no history
       # under that name at all. Promoting an unsaved rename onto it overwrites
@@ -989,6 +991,21 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       ref = push(socket, "request_promote_check", %{"workflow_name" => "gamma"})
       assert_reply ref, :ok, %{diverged: true}
+
+      # And it stops warning once the promote has actually happened.
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      Lightning.Repo.update!(Ecto.Changeset.change(sandbox_alpha, name: "gamma"))
+
+      {:ok, _} =
+        Lightning.Projects.promote_workflow(
+          Lightning.Repo.reload!(sandbox_alpha),
+          user
+        )
+
+      ref = push(socket, "request_promote_check", %{"workflow_name" => "gamma"})
+      assert_reply ref, :ok, %{diverged: false}
     end
 
     test "stays quiet when the working name is one the parent does not hold", %{

@@ -507,8 +507,9 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   # Whether promoting would overwrite work the parent has done since this
-  # sandbox forked. `diverged_workflows/2` answers for every workflow in the
-  # project, so it is narrowed to the one being promoted.
+  # sandbox forked. Not a filtered `diverged_workflows/2`: that one only reports
+  # names it finds on both sides, so it reads a rename onto a name the parent
+  # already holds as safe when it is the case that destroys the most.
   @impl true
   def handle_in("request_promote_check", params, socket) do
     sandbox = socket.assigns.project

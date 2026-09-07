@@ -1044,6 +1044,62 @@ defmodule Lightning.Projects.SandboxesTest do
              )
     end
 
+    test "brings a workflow the merge created on the target into step", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      Repo.update!(Ecto.Changeset.change(sandbox_alpha, name: "gamma"))
+
+      # The parent has no gamma, so the merge creates it under a fresh id rather
+      # than matching one. The sync point has to follow that id back to the
+      # sandbox workflow, or the next promote warns about a workflow this
+      # sandbox just created.
+      assert {:ok, _} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [sandbox_alpha.id],
+                 record_release: :promote
+               })
+
+      refute Lightning.Projects.MergeProjects.workflow_diverged?(
+               sandbox,
+               parent,
+               "gamma"
+             )
+    end
+
+    test "ignores a selected id that belongs to another project", %{
+      actor: actor,
+      parent: parent,
+      parent_alpha: parent_alpha,
+      sandbox: sandbox
+    } do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_alpha,
+          "ccc111ccc111",
+          "app"
+        )
+
+      # A workflow of the same name somewhere else must not stand in for this
+      # project's alpha and bring it into step with the parent.
+      elsewhere = insert(:project)
+      foreign_alpha = insert(:simple_workflow, project: elsewhere, name: "alpha")
+
+      assert {:ok, _} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [foreign_alpha.id]
+               })
+
+      assert "alpha" in Lightning.Projects.MergeProjects.diverged_workflows(
+               sandbox,
+               parent
+             )
+    end
+
     test "does not silence a divergence outside the workflows a promote selected",
          %{
            actor: actor,

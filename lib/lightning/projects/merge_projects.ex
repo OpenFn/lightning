@@ -1111,8 +1111,9 @@ defmodule Lightning.Projects.MergeProjects do
   never seen that target workflow at all, and merging it overwrites the lot.
   Here an unknown name on the source side is divergence, not silence.
 
-  A name the target does not hold is not divergence, because the merge creates
-  it rather than replacing anything.
+  A name with no recorded version on the target is not divergence: either the
+  target does not hold the workflow, in which case the merge creates it, or it
+  holds nothing this could overwrite.
   """
   @spec workflow_diverged?(Project.t(), Project.t(), String.t()) :: boolean()
   def workflow_diverged?(
