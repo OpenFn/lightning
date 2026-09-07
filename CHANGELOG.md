@@ -31,7 +31,7 @@ and this project adheres to
   snapshot that was never published. Pinning a version scopes the history feed
   to that version's runs. A single run can be pinned instead, which opens the
   workflow exactly as that run saw it, including runs that were never published.
-  [#PR](https://github.com/OpenFn/lightning/pull/PR)
+  [#5128](https://github.com/OpenFn/lightning/pull/5128)
 - The AI assistant now shows what changed as a global reply edits your workflow.
   Each change renders under the status that made it, while the reply is still
   streaming, as a per-step code diff with syntax highlighting, old and new line
