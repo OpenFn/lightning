@@ -39,8 +39,8 @@ interface PromoteDialogProps {
   onCancel: () => void;
   /**
    * Asks the server whether the parent has changed this workflow since the
-   * sandbox forked. Called when the dialog opens; a failure is treated as no
-   * divergence, because a missing warning must not block a valid promote.
+   * sandbox forked. Called when the dialog opens. A rejection is shown as a
+   * failed check rather than as no divergence, and never blocks the promote.
    */
   onCheckDivergence: () => Promise<{
     diverged: boolean;

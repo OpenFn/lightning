@@ -517,7 +517,8 @@ defmodule LightningWeb.WorkflowChannel do
 
     # The merge matches workflows across projects by name, and promote saves
     # before merging, so the answer has to be about the working name. The client
-    # sends it; the last saved name is the fallback.
+    # sends it. The fallback is the name this socket joined on, which a rename
+    # since then has already made wrong, so it is a floor rather than an answer.
     workflow_name =
       case params do
         %{"workflow_name" => name} when is_binary(name) and name != "" -> name
