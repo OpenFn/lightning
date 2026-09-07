@@ -332,6 +332,41 @@ defmodule Lightning.Workflows.StatsTest do
              }
     end
 
+    # `"" || x` returns `""` in Elixir, so an empty error type would otherwise
+    # coalesce to itself instead of falling through — splitting one signature
+    # into two rows that render identically and each half the count.
+    test "treats an empty error type the same as a missing one", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      job = hd(workflow.jobs)
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: "")
+      ])
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: nil)
+      ])
+
+      assert %{signatures: [%{count: 2, error_type: nil}]} =
+               Stats.failure_signatures(workflow)
+    end
+
+    # And on the run's own error type, which the step falls through to: it is
+    # read straight into the signature, so an empty one splits the rows there
+    # instead.
+    test "treats an empty error type on the run the same as a missing one", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      failed_run(workflow, trigger, state: :crashed, error_type: "")
+      failed_run(workflow, trigger, state: :crashed, error_type: nil)
+
+      assert %{signatures: [%{count: 2, exit_reason: "crash", error_type: nil}]} =
+               Stats.failure_signatures(workflow)
+    end
+
     test "groups matching work orders and sorts the heaviest first", %{
       workflow: workflow,
       trigger: trigger

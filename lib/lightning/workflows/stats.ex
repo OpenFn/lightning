@@ -280,11 +280,20 @@ defmodule Lightning.Workflows.Stats do
     %{
       count: row.count,
       exit_reason: row.exit_reason || @state_reasons[row.run_state],
-      error_type: row.error_type || row.run_error_type,
+      error_type:
+        blank_to_nil(row.error_type) || blank_to_nil(row.run_error_type),
       step_name: step_name,
       adaptor: adaptor
     }
   end
+
+  # `"" || x` returns `""` — empty string is truthy in Elixir — so a step that
+  # reported an empty error type would coalesce to `""` instead of falling
+  # through to the run's, splitting one signature into two identical-looking
+  # rows. The run's error type can be empty the same way, and would land in
+  # the signature unread, so both sides are normalised: empty is absent.
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(other), do: other
 
   # Two groups can collapse into one signature — a crashed run and a failed run
   # whose steps both reported `fail`, say — so the fold happens after the
