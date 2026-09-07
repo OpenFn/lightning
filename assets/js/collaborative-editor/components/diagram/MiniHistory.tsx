@@ -50,9 +50,7 @@ type WorkOrderWithSelection = Omit<WorkOrder, 'runs'> & {
   selected?: boolean;
 };
 
-// One quiet colour per state, carried by a small dot rather than a filled
-// block. The label stays a uniform muted grey so a screenful of runs reads as
-// calm text with a single dot of colour each, not a wall of coloured pills.
+// A dot rather than a filled pill, so a screenful of runs reads as calm text.
 const STATUS_DOT: Record<string, string> = {
   // only workorder states...
   rejected: 'bg-red-500',
@@ -76,8 +74,6 @@ const displayTextFromState = (state: string): string => {
   return state.charAt(0).toUpperCase() + state.substring(1);
 };
 
-// A small coloured dot + muted label. The single point of colour tells the
-// status at a glance without a loud filled block competing for attention.
 const StatusIndicator: React.FC<{ state: string }> = ({ state }) => {
   const dot = STATUS_DOT[state] || STATUS_DOT['pending'];
   const text = displayTextFromState(state);
@@ -93,10 +89,7 @@ const StatusIndicator: React.FC<{ state: string }> = ({ state }) => {
   );
 };
 
-// Subtle per-run version label rendered as a prefix to the run id, e.g.
-// "v2 · 8271c0f6". Runs whose snapshot was never released show "Draft". Kept
-// low-contrast so it reads as one light identifier alongside the id, never a
-// second competing pill.
+// Runs whose snapshot was never released show "Draft".
 const VersionTag: React.FC<{ versionNumber: number | null | undefined }> = ({
   versionNumber,
 }) => (
@@ -372,7 +365,6 @@ export default function MiniHistory({
     }
   };
 
-  // The work order / run list, shared by both variants.
   const timelineList = (
     <div className="divide-y divide-gray-100">
       {history.map(workorder => (

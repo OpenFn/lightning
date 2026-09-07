@@ -49,21 +49,17 @@ export function CollaborativeWorkflowDiagram({
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
   const workflow = useWorkflowState(state => state.workflow);
 
-  // Get history data and commands
   const history = useHistory();
   const historyLoading = useHistoryLoading();
   const historyError = useHistoryError();
   const historyCommands = useHistoryCommands();
 
-  // Load a run's model read-only exactly as it executed (?as_run → :run: room).
   const viewAsExecuted = useViewAsExecuted();
 
-  // Use EditorPreferencesStore for history panel collapsed state
   const historyCollapsed = useHistoryPanelCollapsed();
   const { setHistoryPanelCollapsed } = useEditorPreferencesCommands();
 
-  // Read selected run ID from URL, falling back to the history store's active run.
-  // The fallback prevents losing the run when LiveView push_patch strips
+  // Falls back to the store's active run because LiveView push_patch strips
   // client-only URL params.
   const activeRunId = useSelectedRunId();
   const selectedRunId = params['run'] ?? activeRunId;
@@ -87,42 +83,24 @@ export function CollaborativeWorkflowDiagram({
   const versionParam = params['v'] ?? null;
   const restoredRunRef = useRef<string | null>(null);
   const previousVersionRef = useRef<string | null>(versionParam);
-  // Distinguishes the two sources of a `?v` change: an explicit dropdown version
-  // switch (which must clear the selected run) vs. selecting a run of a
-  // different version (which sets/clears `?v` as part of loading that run and
-  // must NOT clear it). handleRunSelect sets this; the reconcile effect consumes
-  // it on the next run.
+  // A `?v` change means two different things: a dropdown switch, which must
+  // clear the selected run, or selecting a run of another version, which must
+  // not. Set on run-select, consumed by the reconcile effect below.
   const runSelectInProgressRef = useRef(false);
 
-  // Follow the run to receive real-time step updates via run:${runId} channel
-  // This is essential for highlighting steps as they execute in real-time
   const { clearRun } = useFollowRun(selectedRunId);
 
-  // Reconcile the selected run with the URL and the current version.
-  //
-  // Two jobs, in one effect so their ordering is deterministic (a separate
-  // earlier effect would race to re-add a run we are trying to drop):
-  //
-  // 1. Dropdown version switch: the previously selected run belongs to the OLD
-  //    version, so it must not survive. Clear it from the history store (which
-  //    stops the canvas step overlay, since `selectedRunId` falls back to the
-  //    store's activeRun) and from the URL. This is scoped to an *explicit*
-  //    version switch: a run-select that changes `?v` (as-executed) sets
-  //    runSelectInProgressRef so we do NOT clear the run it is selecting.
-  // 2. Otherwise, restore `?run` if LiveView push_patch stripped it while the
-  //    store still has an active run. The ref limits this to one restore per
-  //    activeRunId to avoid loops.
+  // Both jobs live in one effect so their order is deterministic: split apart,
+  // the restore would race to re-add the run the switch is dropping. The ref
+  // limits the restore to once per run to avoid a loop.
   useEffect(() => {
     const versionChanged = previousVersionRef.current !== versionParam;
-    // Consume the run-select marker once (covers both the version-changing and
-    // non-version-changing run selections, so it never goes stale).
     const wasRunSelect = runSelectInProgressRef.current;
     runSelectInProgressRef.current = false;
 
     if (versionChanged) {
       previousVersionRef.current = versionParam;
       if (!wasRunSelect) {
-        // Explicit dropdown switch → drop the previously selected run.
         restoredRunRef.current = null;
         if (activeRunId) {
           clearRun();
@@ -143,17 +121,11 @@ export function CollaborativeWorkflowDiagram({
     }
   }, [versionParam, runParam, activeRunId, clearRun, updateSearchParams]);
 
-  // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);
 
-  // Render the selected run faithfully:
-  // - Same version as the current canvas → overlay its step highlighting on the
-  //   live/current document (also covers watching an in-progress run).
-  // - A different version → load that run's model read-only, exactly as it
-  //   executed, via the `?as_run` → `:run:<id>` room (works for draft runs too).
-  //
-  // Either way this is a run-select, NOT a dropdown version switch, so mark it
-  // so the reconcile effect does not clear the run it is selecting.
+  // A run of the current version overlays on the live document; a run of any
+  // other version loads that run's own snapshot, which covers draft runs that
+  // no release can address.
   const handleRunSelect = useCallback(
     (run: RunSummary) => {
       runSelectInProgressRef.current = true;
@@ -167,29 +139,23 @@ export function CollaborativeWorkflowDiagram({
         run.version !== currentLockVersion;
 
       if (isDifferentVersion) {
-        // Sets ?as_run=<id> (+ run for step highlighting), clears any ?v= pin.
         viewAsExecuted(run.id);
       } else {
-        // Overlay on the current document; clear any as-executed / pin view.
         updateSearchParams({ v: null, as_run: null, run: run.id });
       }
     },
     [workflow, latestSnapshotLockVersion, updateSearchParams, viewAsExecuted]
   );
 
-  // Clear the run selection on deselect, including any as-executed view, so we
-  // return to the current editable canvas.
-  // Also close the run viewer in the history store so the restore effect
-  // (which watches activeRunId) does not immediately re-add the URL param.
+  // Closes the run viewer in the store too, or the restore effect re-adds the
+  // URL param immediately.
   const handleDeselectRun = useCallback(() => {
     clearRun();
     updateSearchParams({ run: null, as_run: null });
   }, [clearRun, updateSearchParams]);
 
-  // Request history (top-20, all versions) when the panel is first expanded OR
-  // when there's a run ID selected. Wait for the channel to be connected. The
-  // one-shot ref avoids duplicate requests; the run_id ensures that run's work
-  // order is included even if it's older than the top 20.
+  // The run_id ensures that run's work order is included even if it is older
+  // than the top 20.
   const hasRequestedHistory = useRef(false);
   useEffect(() => {
     const shouldRequest =

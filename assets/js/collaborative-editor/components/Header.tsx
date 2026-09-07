@@ -262,15 +262,12 @@ export function Header({
   // When ?v= is present, user is viewing a specific version (even if latest)
   const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
 
-  // "View as executed" (?as_run=) loads an older run's model read-only.
   const isViewingAsExecuted =
     params['as_run'] !== undefined && params['as_run'] !== null;
 
-  // Whether the version currently on screen is NOT the live/current one: either
-  // pinned to a release (?v=) or looking at a past run as-executed. The Live
-  // lifecycle badge reflects the workflow's *current* state, which would be
-  // misleading here, so it is suppressed for these views (the version badge and
-  // read-only pill carry the context instead).
+  // The Live badge describes the workflow's current state, which would be a lie
+  // on these views, so it is suppressed and the version badge carries the
+  // context instead.
   const isViewingNonCurrentVersion = isPinnedVersion || isViewingAsExecuted;
 
   // Determine AI button disabled message based on priority
@@ -565,27 +562,27 @@ export function Header({
             !isNewWorkflow &&
             !isSandbox &&
             !isViewingNonCurrentVersion && (
-            <Tooltip
-              content={
-                lifecycleState === 'live'
-                  ? "This is the live version. It's running in production with its triggers on, and it's read-only here, so switch it to draft or edit it in a sandbox to make changes."
-                  : 'This is the editable working version, not the one live in production. Go live to promote it, or enable a trigger to test it against real events first.'
-              }
-              side="bottom"
-            >
-              <span
-                data-testid="workflow-lifecycle-badge"
-                className={
-                  'self-center rounded-md px-2 py-1 text-xs font-medium ' +
-                  (lifecycleState === 'live'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-700')
+              <Tooltip
+                content={
+                  lifecycleState === 'live'
+                    ? "This is the live version. It's running in production with its triggers on, and it's read-only here, so switch it to draft or edit it in a sandbox to make changes."
+                    : 'This is the editable working version, not the one live in production. Go live to promote it, or enable a trigger to test it against real events first.'
                 }
+                side="bottom"
               >
-                {lifecycleState === 'live' ? 'Live' : 'Draft'}
-              </span>
-            </Tooltip>
-          )}
+                <span
+                  data-testid="workflow-lifecycle-badge"
+                  className={
+                    'self-center rounded-md px-2 py-1 text-xs font-medium ' +
+                    (lifecycleState === 'live'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-700')
+                  }
+                >
+                  {lifecycleState === 'live' ? 'Live' : 'Draft'}
+                </span>
+              </Tooltip>
+            )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 

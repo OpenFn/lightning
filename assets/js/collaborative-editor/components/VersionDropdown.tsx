@@ -35,8 +35,7 @@ export function VersionDropdown({
   const versionsError = useVersionsError();
   const requestVersions = useRequestVersions();
 
-  // Check if version is pinned via URL parameter. `?v=` now carries the release
-  // version_number (e.g. `?v=1`), not the snapshot lock_version.
+  // `?v=` carries a release version_number, not a snapshot lock_version.
   const { params } = useURLState();
   const pinnedParam = params['v'];
   const isPinnedVersion = pinnedParam !== undefined && pinnedParam !== null;
@@ -49,8 +48,6 @@ export function VersionDropdown({
   const isLatestVersion =
     !isLoadingVersion && currentVersion === latestVersion && !isPinnedVersion;
 
-  // Format version display. When pinned, `?v=` is already the version_number the
-  // rows show, so display it directly (no lock_version mapping needed).
   const currentVersionDisplay = isLoadingVersion
     ? '•'
     : isLatestVersion
@@ -111,9 +108,8 @@ export function VersionDropdown({
     }
   }, [versionsError]);
 
-  // Selecting the newest release returns to the live document (clears the ?v=
-  // pin); selecting any older release pins it read-only via its version_number
-  // (the value `?v=` now carries).
+  // The newest release means "follow live", so it clears the pin rather than
+  // pinning to itself.
   const handleVersionClick = (version: Version) => {
     if (version.is_latest) {
       onVersionSelect('latest');
@@ -171,9 +167,8 @@ export function VersionDropdown({
                 </p>
 
                 {versions.map(version => {
-                  // The currently-viewed row: when unpinned it is the newest
-                  // release (following live); when pinned via ?v= it is the row
-                  // whose version_number matches the pinned param.
+                  // Unpinned follows live, so the newest release is the one
+                  // being viewed.
                   const isActive =
                     pinnedVersionNumber === null
                       ? version.is_latest
@@ -224,7 +219,9 @@ export function VersionDropdown({
                             </>
                           )}
                           <Tooltip content={exact} side="top">
-                            <span className="whitespace-nowrap">{absolute}</span>
+                            <span className="whitespace-nowrap">
+                              {absolute}
+                            </span>
                           </Tooltip>
                         </span>
                       </span>
