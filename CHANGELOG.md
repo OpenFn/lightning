@@ -61,6 +61,10 @@ and this project adheres to
 
 ### Fixed
 
+- Cmd/Ctrl+E now closes the IDE while the code editor has focus. Monaco claimed
+  the combination for "Use Selection for Find", so the shortcut that opened the
+  IDE could not close it again. Cmd/Ctrl+F still opens Monaco's find widget.
+  [#4959](https://github.com/OpenFn/lightning/issues/4959)
 - The global assistant no longer offers to paste a reply's code block into
   whichever job you have open. It applies its own changes and shows them as
   diffs, so those blocks are data it quoted back or work it has already done.

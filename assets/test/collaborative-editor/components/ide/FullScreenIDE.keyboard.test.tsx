@@ -3,6 +3,7 @@
  *
  * Tests keyboard shortcuts for the FullScreenIDE component:
  * - Escape: Smart behavior (blur Monaco first, then close IDE)
+ * - Mod+E: Close the IDE, including while Monaco has focus
  * - Mod+Enter: Run or retry (prioritizes retry when available)
  * - Mod+Shift+Enter: Force new run (ignores retry)
  *
@@ -592,6 +593,57 @@ describe('FullScreenIDE Keyboard Shortcuts', () => {
       await waitFor(() => expect(onClose).toHaveBeenCalled());
 
       document.body.removeChild(input);
+    });
+  });
+
+  describe('Mod+E - Close IDE', () => {
+    test('closes IDE when Monaco is not focused (Mac)', async () => {
+      const user = userEvent.setup();
+      setupMockUseRunRetry();
+      const onClose = vi.fn();
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() =>
+        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
+      );
+
+      await user.keyboard('{Meta>}e{/Meta}');
+
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+    });
+
+    test('closes IDE while Monaco has focus (Mac)', async () => {
+      const user = userEvent.setup();
+      setupMockUseRunRetry();
+      const onClose = vi.fn();
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() =>
+        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
+      );
+
+      focusElement(screen.getByTestId('monaco-contenteditable'));
+
+      await user.keyboard('{Meta>}e{/Meta}');
+
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+    });
+
+    test('closes IDE while Monaco has focus (Windows)', async () => {
+      const user = userEvent.setup();
+      setupMockUseRunRetry();
+      const onClose = vi.fn();
+      renderFullScreenIDE({ onClose });
+
+      await waitFor(() =>
+        expect(screen.getByTestId('collaborative-monaco')).toBeInTheDocument()
+      );
+
+      focusElement(screen.getByTestId('monaco-contenteditable'));
+
+      await user.keyboard('{Control>}e{/Control}');
+
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
     });
   });
 

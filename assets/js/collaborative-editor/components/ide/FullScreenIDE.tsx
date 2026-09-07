@@ -701,8 +701,12 @@ export function FullScreenIDE({
     });
   }, [onCredentialSaved, currentJob, updateJob, requestCredentials]);
 
+  const isShortcutEnabled =
+    !isConfigureModalOpen && !isAdaptorPickerOpen && !isCredentialModalOpen;
+
+  // Escape steps out of the editor before it closes the IDE.
   useKeyboardShortcut(
-    'Escape, Control+e, Meta+e',
+    'Escape',
     () => {
       const activeElement = document.activeElement;
       const isMonacoFocused = activeElement?.closest('.monaco-editor');
@@ -714,10 +718,18 @@ export function FullScreenIDE({
       }
     },
     50, // IDE priority
-    {
-      enabled:
-        !isConfigureModalOpen && !isAdaptorPickerOpen && !isCredentialModalOpen,
-    }
+    { enabled: isShortcutEnabled }
+  );
+
+  // Mod+E always closes the IDE, including from inside Monaco, so that it
+  // mirrors the Mod+E that opened it.
+  useKeyboardShortcut(
+    'Control+e, Meta+e',
+    () => {
+      onClose();
+    },
+    50, // IDE priority
+    { enabled: isShortcutEnabled }
   );
 
   // Save docs panel collapsed state to localStorage
