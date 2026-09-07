@@ -451,7 +451,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
       true ->
         socket.assigns.workspace_projects
-        |> find_target_project(target_id)
+        |> find_target_project(target_id, source, root_project)
         |> case do
           nil ->
             socket
@@ -818,13 +818,9 @@ defmodule LightningWeb.SandboxLive.Index do
     root_project = socket.assigns.root_project
 
     socket.assigns.workspace_projects
-    |> Enum.reject(fn potential_target ->
-      not is_nil(potential_target.scheduled_deletion) or
-        potential_target.id == source_sandbox.id or
-        Projects.descendant_of?(potential_target, source_sandbox, root_project)
-    end)
     |> Enum.filter(fn project ->
-      user_role_on_project(project, current_user) in [:owner, :admin, :editor]
+      mergeable_target?(project, source_sandbox, root_project) and
+        user_role_on_project(project, current_user) in [:owner, :admin, :editor]
     end)
     |> Enum.map(fn project ->
       %{
@@ -841,8 +837,23 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp find_target_project(workspace_projects, target_id) do
-    Enum.find(workspace_projects, fn project -> project.id == target_id end)
+  # Only a project the screen actually offered. The option list leaves out the
+  # sandbox itself, its descendants and anything scheduled for deletion, and
+  # searching the whole workspace would let a hand-made event name one of those
+  # anyway.
+  # A target the screen would never have offered is not a target. The role check
+  # belongs to the caller, which has its own message for it; this only enforces
+  # the structural exclusions, which nothing downstream re-checks.
+  defp find_target_project(workspace_projects, target_id, source, root_project) do
+    Enum.find(workspace_projects, fn project ->
+      project.id == target_id and
+        mergeable_target?(project, source, root_project)
+    end)
+  end
+
+  defp mergeable_target?(project, source_sandbox, root_project) do
+    is_nil(project.scheduled_deletion) and project.id != source_sandbox.id and
+      not Projects.descendant_of?(project, source_sandbox, root_project)
   end
 
   defp build_merge_workflow_list(

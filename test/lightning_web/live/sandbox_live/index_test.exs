@@ -3688,6 +3688,64 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute html =~ "Added Later"
     end
 
+    test "refuses a target the merge screen never offered", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox,
+      user: user
+    } do
+      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+
+      retiring =
+        insert(:project,
+          name: "retiring",
+          parent: parent,
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second),
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      # The dropdown leaves out a project on its way to deletion, so naming it
+      # by hand must not get past that.
+      refute Enum.any?(assigns.merge_target_options, &(&1.value == retiring.id))
+
+      html =
+        render_click(view, "confirm-merge", %{
+          "merge" => %{"target_id" => retiring.id}
+        })
+
+      assert html =~ "Target project not found"
+      assert Lightning.Repo.all(Lightning.Workflows.Workflow) |> length() == 1
+    end
+
+    test "refuses the sandbox itself as a merge target", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      html =
+        render_click(view, "confirm-merge", %{
+          "merge" => %{"target_id" => sandbox.id}
+        })
+
+      assert html =~ "Target project not found"
+    end
+
     test "explicitly checking a target-only workflow deletes it on merge",
          %{conn: conn, parent: parent, sandbox: sandbox} do
       parent_alpha = insert(:workflow, project: parent, name: "Alpha")
