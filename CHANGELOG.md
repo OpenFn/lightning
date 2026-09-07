@@ -69,6 +69,12 @@ and this project adheres to
 
 ### Fixed
 
+- Opening the merge dialog no longer crashes in a workspace with a branch more
+  than two levels below the project you are in. Working out whether a candidate
+  target sits under the sandbox climbed a chain of parents that was only loaded
+  one level deep.
+  [#5141](https://github.com/OpenFn/lightning/issues/5141)
+
 - Reading an older version of a workflow no longer offers actions that change
   the current one. Switch to draft, Go live, Promote and Edit in sandbox are
   hidden while a version or a run's view is pinned, so clicking one cannot take

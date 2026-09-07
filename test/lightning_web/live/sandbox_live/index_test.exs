@@ -3688,6 +3688,86 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       refute html =~ "Added Later"
     end
 
+    test "opens the merge modal in a workspace deeper than two levels", %{
+      conn: conn,
+      parent: parent,
+      sandbox: sandbox,
+      user: user
+    } do
+      # The workspace list preloads one level of parent, so working out whether
+      # a candidate sits under the sandbox by climbing that chain ran out of
+      # struct on the second hop and raised.
+      a =
+        insert(:project,
+          name: "a",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      b =
+        insert(:project,
+          name: "b",
+          parent: a,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      _c =
+        insert(:project,
+          name: "c",
+          parent: b,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      html =
+        view
+        |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+        |> render_click()
+
+      assert html =~ "Merge"
+    end
+
+    test "does not preview a merge into a target the confirm path would refuse",
+         %{
+           conn: conn,
+           parent: parent,
+           sandbox: sandbox,
+           user: user
+         } do
+      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+
+      child =
+        insert(:project,
+          name: "child-of-sandbox",
+          parent: sandbox,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      insert(:workflow, project: child, name: "Only In Child")
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      render_click(view, "select-merge-target", %{
+        "merge" => %{"target_id" => child.id}
+      })
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      # Previewing a merge the confirm step will refuse only teaches the user
+      # something untrue, and it is the target's side of the diff that says so.
+      refute Enum.any?(
+               assigns.merge_source_workflows,
+               &(&1.name == "Only In Child")
+             )
+    end
+
     test "refuses a target the merge screen never offered", %{
       conn: conn,
       parent: parent,

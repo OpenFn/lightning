@@ -358,10 +358,14 @@ defmodule LightningWeb.SandboxLive.Index do
       ) do
     merge_changeset = merge_changeset(%{target_id: target_id})
 
+    # Same gate as the confirm path, so the preview cannot show a merge that
+    # confirming would then refuse.
     target_project =
-      Enum.find(socket.assigns.workspace_projects, fn project ->
-        project.id == target_id
-      end)
+      find_target_project(
+        socket.assigns.workspace_projects,
+        target_id,
+        socket.assigns.merge_source_sandbox
+      )
 
     {sandbox, target_project} =
       preload_merge_projects(socket.assigns.merge_source_sandbox, target_project)
@@ -451,7 +455,7 @@ defmodule LightningWeb.SandboxLive.Index do
 
       true ->
         socket.assigns.workspace_projects
-        |> find_target_project(target_id, source, root_project)
+        |> find_target_project(target_id, source)
         |> case do
           nil ->
             socket
@@ -815,11 +819,11 @@ defmodule LightningWeb.SandboxLive.Index do
 
   defp get_merge_target_options(socket, source_sandbox) do
     current_user = socket.assigns.current_user
-    root_project = socket.assigns.root_project
+    descendant_ids = sandbox_descendant_ids(source_sandbox)
 
     socket.assigns.workspace_projects
     |> Enum.filter(fn project ->
-      mergeable_target?(project, source_sandbox, root_project) and
+      mergeable_target?(project, source_sandbox, descendant_ids) and
         user_role_on_project(project, current_user) in [:owner, :admin, :editor]
     end)
     |> Enum.map(fn project ->
@@ -841,19 +845,34 @@ defmodule LightningWeb.SandboxLive.Index do
   # sandbox itself, its descendants and anything scheduled for deletion, and
   # searching the whole workspace would let a hand-made event name one of those
   # anyway.
-  # A target the screen would never have offered is not a target. The role check
-  # belongs to the caller, which has its own message for it; this only enforces
-  # the structural exclusions, which nothing downstream re-checks.
-  defp find_target_project(workspace_projects, target_id, source, root_project) do
+  # No source means no merge, so no target either.
+  defp find_target_project(_workspace_projects, _target_id, nil), do: nil
+
+  defp find_target_project(workspace_projects, target_id, source) do
+    descendant_ids = sandbox_descendant_ids(source)
+
     Enum.find(workspace_projects, fn project ->
       project.id == target_id and
-        mergeable_target?(project, source, root_project)
+        mergeable_target?(project, source, descendant_ids)
     end)
   end
 
-  defp mergeable_target?(project, source_sandbox, root_project) do
+  # A merge into the sandbox itself or into anything under it retires what it
+  # just wrote, because archiving the source schedules its whole subtree for
+  # deletion. Nothing downstream refuses either, so the confirm path enforces it
+  # rather than trusting the dropdown to have been the only way in. Whether the
+  # user may merge into the target is the caller's question and has its own
+  # message.
+  defp mergeable_target?(project, source_sandbox, descendant_ids) do
     is_nil(project.scheduled_deletion) and project.id != source_sandbox.id and
-      not Projects.descendant_of?(project, source_sandbox, root_project)
+      not MapSet.member?(descendant_ids, project.id)
+  end
+
+  # Read rather than walked. `Projects.descendant_of?/3` climbs `parent` and
+  # needs the whole chain preloaded, which the workspace list does not do beyond
+  # one level, so it raised on any branch deeper than that.
+  defp sandbox_descendant_ids(sandbox) do
+    MapSet.new(Projects.descendant_ids([sandbox.id]))
   end
 
   defp build_merge_workflow_list(
