@@ -168,6 +168,26 @@ defmodule Lightning.AiAssistant.StreamFailureTest do
       assert message.failure_category == :incomplete_response
     end
 
+    # The two ceilings are indistinguishable in the value Finch reports, so the
+    # log has to carry both for an incident to be readable after the fact.
+    test "names both ceilings in the log when a stream times out" do
+      port = apollo_that_dies([text_delta("half an answer")])
+
+      stub_apollo(port)
+
+      session = workflow_session()
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:error, _} =
+                   AiAssistant.query_workflow_stream(session, "build it")
+        end)
+
+      assert log =~ "[AI Assistant] Stream timed out"
+      assert log =~ "went quiet for #{@idle_timeout}ms"
+      assert log =~ "request ceiling"
+    end
+
     test "keeps the status updates in the order they were shown" do
       port =
         apollo_that_dies([

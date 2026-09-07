@@ -3143,9 +3143,13 @@ defmodule Lightning.AiAssistantTest do
       assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
 
       assert_received {:ai_assistant, :streaming_error, %{error: message}}
-      assert message =~ "300000 characters against a 250000 limit"
       assert message =~ "Send logs"
+      assert message =~ "paste the part you need into the chat"
       refute message =~ "deliberately ignore"
+
+      # The sizes are for support, not for the reader, so they stay in the log.
+      refute message =~ "300000"
+      refute message =~ "250000"
     end
 
     test "names the I/O checkbox when a dataclip is the largest attachment", %{

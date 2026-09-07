@@ -119,7 +119,7 @@ describe('MessageList', () => {
       expect(assistantMessage).toBeInTheDocument();
 
       // User message should be right-aligned (justify-end class)
-      expect(userMessage).toHaveClass('justify-end');
+      expect(userMessage.querySelector('.justify-end')).toBeInTheDocument();
 
       // User message should have a bubble (rounded-2xl with background)
       const userBubble = userMessage.querySelector('.rounded-2xl.bg-gray-100');
@@ -202,25 +202,35 @@ describe('MessageList', () => {
   });
 
   describe('Message Status', () => {
-    it('should show error content in styled box for assistant error with content', () => {
+    // Whatever arrived before the stream died is the answer, so it renders as
+    // one, with the reason underneath rather than wrapped around it.
+    it('renders a failed reply as text, with the reason below it', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
-          content: 'YAML parse failed: unexpected token',
+          content: 'I was part way through writing this when',
           status: 'error',
+          failure_message:
+            'The assistant stopped responding partway through. Please try again.',
         }),
       ];
 
       render(<MessageList messages={messages} />);
 
-      // Non-empty content renders inline in a red validation error box
-      expect(screen.getByTestId('ai-validation-error')).toBeInTheDocument();
+      expect(screen.queryByTestId('ai-validation-error')).not.toBeInTheDocument();
       expect(
-        screen.getByText('YAML parse failed: unexpected token')
+        screen.getByText('I was part way through writing this when')
       ).toBeInTheDocument();
+
+      const notice = screen.getByTestId('ai-failure-notice');
+      // The button says "Try again", so the sentence does not repeat it.
+      expect(notice).toHaveTextContent(
+        'The assistant stopped responding partway through'
+      );
+      expect(notice).not.toHaveTextContent('Please try again');
     });
 
-    it('should show "Failed to send message" banner for assistant error with no content', () => {
+    it('falls back to a plain sentence when the server sent no reason', () => {
       const messages = [
         createMockAIMessage({
           role: 'assistant',
@@ -231,7 +241,9 @@ describe('MessageList', () => {
 
       render(<MessageList messages={messages} />);
 
-      expect(screen.getByText(/Failed to send message/)).toBeInTheDocument();
+      expect(screen.getByTestId('ai-failure-notice')).toHaveTextContent(
+        'The assistant did not finish'
+      );
     });
 
     it('should show processing state for processing messages', () => {
@@ -250,22 +262,49 @@ describe('MessageList', () => {
       expect(bouncingDots.length).toBeGreaterThanOrEqual(3);
     });
 
-    it('should show error for failed user messages', () => {
+    // The prompt was sent; what failed was the answer. It carries the notice
+    // only because there is no reply to carry it.
+    it('puts the reason after the prompt when no reply arrived', () => {
       const messages = [
         createMockAIMessage({
           role: 'user',
           content: 'My message',
           status: 'error',
+          failure_message: 'The assistant did not respond.',
         }),
       ];
 
       render(<MessageList messages={messages} />);
 
-      // User message error shows the message content
       expect(screen.getByText('My message')).toBeInTheDocument();
-      // And an error indicator
-      const errorElements = screen.getAllByText(/Failed to send/i);
-      expect(errorElements.length).toBeGreaterThan(0);
+      expect(screen.queryByText(/Failed to send/i)).not.toBeInTheDocument();
+      expect(screen.getByTestId('ai-failure-notice')).toHaveTextContent(
+        'The assistant did not respond'
+      );
+    });
+
+    // One failure, one notice: the reply owns it whenever there is a reply.
+    it('does not repeat the notice on the prompt when a reply failed', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'u1',
+          role: 'user',
+          content: 'My message',
+          status: 'error',
+          failure_message: 'The assistant stopped responding partway through.',
+        }),
+        createMockAIMessage({
+          id: 'a1',
+          role: 'assistant',
+          content: 'half an answer',
+          status: 'error',
+          failure_message: 'The assistant stopped responding partway through.',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(screen.getAllByTestId('ai-failure-notice')).toHaveLength(1);
     });
   });
 

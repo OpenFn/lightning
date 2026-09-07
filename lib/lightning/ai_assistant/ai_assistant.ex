@@ -1362,10 +1362,18 @@ defmodule Lightning.AiAssistant do
   # A silence long enough to give up on reaches us two ways, from our own
   # adapter and from Finch, and both have to read the same to the user.
   # APOLLO_REQUEST_TIMEOUT_MS lands here too: Finch reports the whole-request
-  # cap as the same :timeout, so a healthy answer cut off for running long
-  # reads as a stall. Nothing at this layer separates them, and neither does
-  # the log. How long the message took is the only thing that does.
+  # cap as the same :timeout, so an answer arriving steadily and cut off for
+  # running long is, at this layer, the same value as one that went quiet. The
+  # two settings are logged so that whoever reads an incident can tell which
+  # ceiling was hit from how long the request lasted.
   defp transport_failure_message(:timeout) do
+    Logger.warning(
+      "[AI Assistant] Stream timed out. Either it went quiet for " <>
+        "#{Lightning.Config.apollo(:idle_timeout)}ms, or it ran past the " <>
+        "#{Lightning.Config.apollo(:request_timeout)}ms request ceiling; " <>
+        "how long it lasted is what tells them apart."
+    )
+
     "The assistant stopped responding partway through. Please try again."
   end
 
@@ -1509,34 +1517,40 @@ defmodule Lightning.AiAssistant do
   # Catch-all for anything unexpected
   defp handle_sse_event(_session_id, _event, acc), do: acc
 
-  # Built from `details`, not Apollo's prose, so the wording stays ours.
+  # Built from `details`, not Apollo's prose, so the wording stays ours. The
+  # sizes go to the log rather than into the sentence: they are what support
+  # needs, and not what the reader has to do next.
   defp attachment_too_large_message(
          %{"total_characters" => total, "limit_characters" => limit} = details
        ) do
-    control =
-      case details do
-        %{"largest_attachment" => %{"type" => "log"}} ->
-          "“Send logs”"
+    Logger.warning(
+      "[AI Assistant] Attachments too large: #{total} characters " <>
+        "against a #{limit} limit"
+    )
 
-        %{"largest_attachment" => %{"type" => dataclip}}
-        when dataclip in ["input_dataclip", "output_dataclip"] ->
-          "“Send scrubbed I/O”"
-
-        _ ->
-          nil
-      end
-
-    advice =
-      if control,
-        do: "Untick #{control} and send again, or pick a run with less data.",
-        else: "Untick one of the attachment boxes, or pick a run with less data."
-
-    "The attached run context is too large to analyse " <>
-      "(#{total} characters against a #{limit} limit). " <> advice
+    "The attached run data is too large. " <> untick_advice(details)
   end
 
-  defp attachment_too_large_message(_details),
-    do: "The attached run context is too large to analyse."
+  defp attachment_too_large_message(details),
+    do: "The attached run data is too large. " <> untick_advice(details)
+
+  # Naming the box beats naming the limit: unticking it is the thing that gets
+  # an answer, and the part of the log that matters is usually a few lines.
+  defp untick_advice(%{"largest_attachment" => %{"type" => "log"}}),
+    do:
+      "Untick “Send logs” and paste the part you need " <>
+        "into the chat instead."
+
+  defp untick_advice(%{"largest_attachment" => %{"type" => dataclip}})
+       when dataclip in ["input_dataclip", "output_dataclip"],
+       do:
+         "Untick “Send scrubbed I/O” and paste the part you need " <>
+           "into the chat instead."
+
+  defp untick_advice(_details),
+    do:
+      "Untick one of the attachment boxes and paste the part you need " <>
+        "into the chat instead."
 
   defp handle_stream_event(
          session_id,

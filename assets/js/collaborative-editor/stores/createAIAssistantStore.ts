@@ -497,11 +497,19 @@ export const createAIAssistantStore = (): AIAssistantStore => {
    * Update message status
    * @internal Called by useAIAssistantChannel hook
    */
-  const _updateMessageStatus = (messageId: string, status: MessageStatus) => {
+  const _updateMessageStatus = (
+    messageId: string,
+    status: MessageStatus,
+    failureMessage?: string
+  ) => {
     state = produce(state, draft => {
       const message = draft.messages.find(m => m.id === messageId);
       if (message) {
         message.status = status;
+
+        if (failureMessage) {
+          message.failure_message = failureMessage;
+        }
 
         if (status === 'success' || status === 'error') {
           draft.isLoading = false;
