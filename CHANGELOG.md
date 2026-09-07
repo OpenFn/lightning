@@ -93,6 +93,11 @@ and this project adheres to
 
 ### Fixed
 
+- Starting an AI chat with a message over the 10,000 character limit no longer
+  kills the connection. The reply carried a raw changeset, which cannot be
+  encoded, so the socket died before answering and the assistant appeared to do
+  nothing. The limit is also shown in the box now, once you are near it.
+  [#4883](https://github.com/OpenFn/lightning/issues/4883)
 - AI chat messages no longer sit in "processing" forever when the job running
   them is interrupted. Oban's job-stop event now has a handler, the shutdown
   grace period is longer than the longest an AI job can run, and a cron sweep

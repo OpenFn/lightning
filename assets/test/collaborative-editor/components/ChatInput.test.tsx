@@ -273,6 +273,49 @@ describe('ChatInput', () => {
     });
   });
 
+  describe('Message Length', () => {
+    const type = async (text: string) => {
+      const textarea = screen.getByPlaceholderText('Ask me anything...');
+      // fireEvent, not userEvent: typing ten thousand characters one keystroke
+      // at a time takes minutes.
+      fireEvent.change(textarea, { target: { value: text } });
+    };
+
+    it('says nothing until you are close to the limit', async () => {
+      render(<ChatInput />);
+      await type('x'.repeat(9000));
+
+      expect(screen.queryByTestId('chat-input-length')).not.toBeInTheDocument();
+    });
+
+    it('counts down once you are within five hundred', async () => {
+      render(<ChatInput />);
+      await type('x'.repeat(9600));
+
+      expect(screen.getByTestId('chat-input-length')).toHaveTextContent(
+        '9,600 / 10,000'
+      );
+    });
+
+    // The server rejects this on the channel join, a path that cannot report
+    // back, so the assistant would appear to do nothing at all.
+    it('refuses to send once over it', async () => {
+      const onSendMessage = vi.fn();
+      render(<ChatInput onSendMessage={onSendMessage} />);
+      await type('x'.repeat(10001));
+
+      const counter = screen.getByTestId('chat-input-length');
+      expect(counter).toHaveTextContent('too long to send');
+
+      const sendButton = screen.getByRole('button', { name: /send message/i });
+      expect(sendButton).toBeDisabled();
+
+      const textarea = screen.getByPlaceholderText('Ask me anything...');
+      await userEvent.type(textarea, '{Enter}');
+      expect(onSendMessage).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Run Attachment Controls', () => {
     it('should include both flags and the run when a run is selected', async () => {
       render(

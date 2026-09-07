@@ -318,6 +318,43 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
+  describe "join with an invalid first message" do
+    # The reply is JSON-encoded before it reaches the client, and a changeset
+    # has no encoder, so a raw one kills the socket before any reply goes out
+    # and the assistant simply does nothing.
+    test "returns a clean error rather than crashing the socket", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      too_long =
+        String.duplicate(
+          "x",
+          Lightning.AiAssistant.ChatMessage.max_content_length() + 1
+        )
+
+      params = %{
+        "project_id" => project.id,
+        "workflow_id" => workflow.id,
+        "content" => too_long
+      }
+
+      assert {:error, reply} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 params
+               )
+
+      assert {:ok, _json} = Jason.encode(reply)
+
+      assert %{reason: "validation_error", errors: errors} = reply
+      assert %{"content" => [message]} = errors
+      assert message =~ "should be at most 10000 character(s)"
+    end
+  end
+
   describe "message serialization" do
     test "serializes from_global marker with nil job_id", %{
       socket: socket,

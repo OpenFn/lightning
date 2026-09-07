@@ -74,6 +74,16 @@ defmodule LightningWeb.AiAssistantChannel do
       {:parse_topic, {:error, :invalid_topic}} ->
         {:error, %{reason: "invalid topic format"}}
 
+      # A changeset here has no Jason encoder, so putting it in the reply kills
+      # the socket before any reply goes out and the assistant just does
+      # nothing. Same shape new_message already replies with.
+      {:session, {:error, %Ecto.Changeset{} = changeset}} ->
+        {:error,
+         %{
+           reason: "validation_error",
+           errors: format_changeset_errors(changeset)
+         }}
+
       {:session, {:error, reason}} ->
         {:error, %{reason: reason}}
 
