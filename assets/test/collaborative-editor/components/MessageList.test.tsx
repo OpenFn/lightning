@@ -563,6 +563,85 @@ describe('MessageList', () => {
     });
   });
 
+  describe('Failed code edit', () => {
+    const exchange = (extra = {}) => [
+      createMockAIMessage({
+        id: 'prompt-1',
+        role: 'user',
+        content: 'fix the mapping',
+        status: 'success',
+      }),
+      createMockAIMessage({
+        id: 'reply-1',
+        role: 'assistant',
+        content: 'Here is what I changed.',
+        status: 'success',
+        code_change_failed: true,
+        ...extra,
+      }),
+    ];
+
+    // The reply succeeded, so nothing else on screen says the edit did not.
+    it('says so when the edit did not apply', () => {
+      render(<MessageList messages={exchange()} onRetryMessage={vi.fn()} />);
+
+      expect(screen.getByTestId('ai-failure-notice')).toHaveTextContent(
+        "I tried to update the code but couldn't apply the change"
+      );
+    });
+
+    // Every way a patch fails comes from what the model produced that turn, and
+    // Apollo has already tried once to correct itself, so another go can work.
+    it('offers to try again, re-running the prompt', async () => {
+      const onRetryMessage = vi.fn();
+      render(
+        <MessageList messages={exchange()} onRetryMessage={onRetryMessage} />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /try again/i }));
+
+      expect(onRetryMessage).toHaveBeenCalledWith('prompt-1');
+    });
+
+    // A retry appends a new reply and leaves the old one saying the same thing
+    // for good, so an older exchange must not keep a live button.
+    it('does not offer it on an older exchange', () => {
+      const messages = [
+        ...exchange(),
+        createMockAIMessage({
+          id: 'prompt-2',
+          role: 'user',
+          content: 'another question',
+          status: 'success',
+        }),
+        createMockAIMessage({
+          id: 'reply-2',
+          role: 'assistant',
+          content: 'a clean answer',
+          status: 'success',
+        }),
+      ];
+
+      render(<MessageList messages={messages} onRetryMessage={vi.fn()} />);
+
+      expect(screen.getByTestId('ai-failure-notice')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /try again/i })
+      ).not.toBeInTheDocument();
+    });
+
+    it('says nothing when the edit applied', () => {
+      render(
+        <MessageList
+          messages={exchange({ code_change_failed: false })}
+          onRetryMessage={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByTestId('ai-failure-notice')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Code Blocks', () => {
     it('should render code block when message has code property', () => {
       const messages = [

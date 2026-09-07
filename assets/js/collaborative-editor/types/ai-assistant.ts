@@ -95,6 +95,11 @@ export interface Message {
   /** Recorded server-side when this reply's changes never reached the canvas. */
   apply_failed?: boolean;
   /**
+   * Recorded server-side when Apollo attempted a code edit and none of its
+   * patches applied, so the reply arrives with nothing to apply.
+   */
+  code_change_failed?: boolean;
+  /**
    * Why this message failed, in words meant for the person reading it. Set by
    * the server on the message that failed; absent on anything that did not.
    */

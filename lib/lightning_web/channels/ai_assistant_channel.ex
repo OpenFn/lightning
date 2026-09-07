@@ -1097,7 +1097,8 @@ defmodule LightningWeb.AiAssistantChannel do
       user: format_user(message.user),
       job_id: job_id,
       from_global: from_global,
-      apply_failed: match?(%{"apply_failed" => true}, message.meta)
+      apply_failed: match?(%{"apply_failed" => true}, message.meta),
+      code_change_failed: match?(%{"code_change_failed" => true}, message.meta)
     }
     |> put_failure(message)
   end

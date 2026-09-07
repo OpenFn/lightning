@@ -1698,11 +1698,16 @@ defmodule Lightning.AiAssistant do
   defp build_global_message(body) do
     code = extract_global_workflow_yaml(body["attachments"])
 
+    meta =
+      if code_change_failed?(body),
+        do: %{"from_global" => true, "code_change_failed" => true},
+        else: %{"from_global" => true}
+
     message_attrs =
       %{
         role: :assistant,
         content: body["response"],
-        meta: %{"from_global" => true}
+        meta: meta
       }
       |> put_response_segments(
         normalize_response_segments(body["response_segments"])
@@ -1710,6 +1715,29 @@ defmodule Lightning.AiAssistant do
 
     opts = [usage: body["usage"] || %{}, meta: body["meta"], code: code]
     {message_attrs, opts}
+  end
+
+  # Apollo's job-code subagent reports how many of its edits landed. Zero means
+  # it tried and could not, which reaches the user as a reply with nothing to
+  # apply and no reason given. Its `warning` is built partly from `str(e)`, so
+  # that goes to the log and the panel gets a sentence of ours.
+  defp code_change_failed?(body) do
+    failed =
+      body
+      |> get_in(["meta", "subagent_calls"])
+      |> List.wrap()
+      |> Enum.filter(&match?(%{"diff" => %{"patches_applied" => 0}}, &1))
+
+    Enum.each(failed, fn call ->
+      if warning = get_in(call, ["diff", "warning"]) do
+        Logger.warning(
+          "[AI Assistant] Apollo applied no code edits: " <>
+            inspect(warning, printable_limit: 128)
+        )
+      end
+    end)
+
+    failed != []
   end
 
   # Flat replies omit the key entirely: casting nil into embeds_many is an

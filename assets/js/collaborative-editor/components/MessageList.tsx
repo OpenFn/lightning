@@ -1161,6 +1161,22 @@ export function MessageList({
         const promptCarriesNotice =
           message.status === 'error' && !failedPairs.claimed.has(message.id);
 
+        // A reply whose edit failed succeeded in every other way, so it has no
+        // pairing to lean on. Offered only on the newest exchange: a retry
+        // appends a new reply and leaves this one saying the same thing for
+        // good, so an older one would keep a button that starts a fresh job.
+        const editedPrompt =
+          message.code_change_failed && index >= displayMessages.length - 2
+            ? displayMessages.slice(0, index).findLast(m => m.role === 'user')
+            : undefined;
+
+        const retryEditedPrompt =
+          onRetryMessage && editedPrompt
+            ? () => {
+                onRetryMessage(editedPrompt.id);
+              }
+            : undefined;
+
         const showMessageAddButtons =
           !isStreaming(message) &&
           message.status !== 'error' &&
@@ -1377,6 +1393,17 @@ export function MessageList({
                         onRetry={retry}
                       />
                     )}
+
+                    {/* The reply itself succeeded; the edit inside it did not,
+                        so there is nothing to apply and nothing saying why. */}
+                    {!isStreaming(message) &&
+                      message.status !== 'error' &&
+                      message.code_change_failed && (
+                        <FailureNotice
+                          reason="I tried to update the code but couldn't apply the change."
+                          onRetry={retryEditedPrompt}
+                        />
+                      )}
 
                     {!isStreaming(message) &&
                       message.status === 'processing' && (
