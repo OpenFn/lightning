@@ -184,6 +184,19 @@ defmodule LightningWeb.AiAssistantChannel do
         }
       )
 
+      # Recorded on the message as well as reported: the apply happens in the
+      # browser, so a reload has no other way to know the changes never landed.
+      mark_apply(socket, params["message_id"], true)
+
+      {:reply, :ok, socket}
+    end)
+  end
+
+  @impl true
+  def handle_in("apply_applied", params, socket) do
+    with_authorized_frame(socket, :read, fn _session ->
+      mark_apply(socket, params["message_id"], false)
+
       {:reply, :ok, socket}
     end)
   end
@@ -590,7 +603,12 @@ defmodule LightningWeb.AiAssistantChannel do
 
           is_new_workflow = params["workflow_id"] && is_nil(workflow)
 
-          base_opts = extract_session_options("workflow_template", params)
+          base_opts =
+            extract_session_options(
+              "workflow_template",
+              sanitize_follow_run_id(params, project.id)
+            )
+
           base_meta = Keyword.get(base_opts, :meta, %{})
 
           opts =
@@ -952,7 +970,9 @@ defmodule LightningWeb.AiAssistantChannel do
         meta = Keyword.get(opts, :meta, %{})
 
         meta =
-          Map.put(meta, "message_options", build_message_options(params))
+          meta
+          |> Map.put("message_options", build_message_options(params))
+          |> maybe_put_follow_run_id(params)
 
         Keyword.put(opts, :meta, meta)
       else
@@ -961,6 +981,15 @@ defmodule LightningWeb.AiAssistantChannel do
 
     opts
   end
+
+  # Global chat resolves its log attachment from the followed run, so the run
+  # id has to survive session creation as well as the new_message path.
+  defp maybe_put_follow_run_id(meta, %{"follow_run_id" => run_id})
+       when not is_nil(run_id) do
+    Map.put(meta, "follow_run_id", run_id)
+  end
+
+  defp maybe_put_follow_run_id(meta, _params), do: meta
 
   defp extract_message_options(%{"use_global_assistant" => true} = params) do
     opts = [meta: %{"message_options" => build_message_options(params)}]
@@ -1017,6 +1046,16 @@ defmodule LightningWeb.AiAssistantChannel do
     }
   end
 
+  defp mark_apply(socket, message_id, failed?) when is_binary(message_id) do
+    AiAssistant.set_apply_failed(
+      socket.assigns.session_id,
+      message_id,
+      failed?
+    )
+  end
+
+  defp mark_apply(_socket, _message_id, _failed?), do: :ok
+
   defp format_messages(messages) do
     Enum.map(messages, &format_message/1)
   end
@@ -1045,7 +1084,8 @@ defmodule LightningWeb.AiAssistantChannel do
       user_id: message.user_id,
       user: format_user(message.user),
       job_id: job_id,
-      from_global: from_global
+      from_global: from_global,
+      apply_failed: match?(%{"apply_failed" => true}, message.meta)
     }
   end
 

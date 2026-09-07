@@ -220,7 +220,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{}
         )
 
-      %{joined: socket}
+      %{joined: socket, session: session}
     end
 
     test "accepts a report of a failed apply", %{joined: socket} do
@@ -248,6 +248,65 @@ defmodule LightningWeb.AiAssistantChannelTest do
         })
 
       assert_reply ref, :ok
+    end
+
+    test "records the failure on the message, and clears it on a later success",
+         %{joined: socket, session: session} do
+      message = hd(session.messages)
+
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => message.id,
+          "stage" => "import",
+          "is_new_workflow" => false
+        })
+
+      assert_reply ref, :ok
+
+      # The apply happens in the browser, so without this a reload has no way
+      # to know the changes never landed.
+      assert %{"apply_failed" => true} = Repo.reload!(message).meta
+
+      ref = push(socket, "apply_applied", %{"message_id" => message.id})
+      assert_reply ref, :ok
+
+      # A retry that works has to leave nothing behind.
+      refute Map.has_key?(Repo.reload!(message).meta, "apply_failed")
+    end
+
+    test "survives the pseudo-id a streaming apply reports against", %{
+      joined: socket
+    } do
+      # A mid-stream apply has no saved message, so the client reports the
+      # failure against "__streaming__". Looking that up as a uuid took the
+      # channel down with it.
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => "__streaming__",
+          "stage" => "import",
+          "is_new_workflow" => false
+        })
+
+      assert_reply ref, :ok
+    end
+
+    test "will not mark a message belonging to another session", %{
+      joined: socket,
+      user: user,
+      job: job
+    } do
+      {:ok, other} = AiAssistant.create_session(job, user, "Elsewhere", [])
+      stranger = hd(other.messages)
+
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => stranger.id,
+          "stage" => "import",
+          "is_new_workflow" => false
+        })
+
+      assert_reply ref, :ok
+      refute Map.has_key?(Repo.reload!(stranger).meta, "apply_failed")
     end
 
     test "accepts a report with fields missing", %{joined: socket} do
@@ -4218,6 +4277,124 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       assert message_options["use_global_assistant"] == true
       assert message_options["page"] == "/projects/p1/workflows/w1"
+    end
+
+    test "attaches run logs to the first message's Apollo request", %{
+      socket: socket,
+      project: project,
+      workflow: workflow,
+      job: job
+    } do
+      run =
+        insert(:run,
+          work_order: insert(:workorder, workflow: workflow),
+          starting_job: job,
+          dataclip: insert(:dataclip, project: project)
+        )
+
+      step = insert(:step, job: job)
+      insert(:run_step, run: run, step: step)
+      insert(:log_line, run: run, step: step, message: "boom")
+
+      test_pid = self()
+
+      # Oban runs :inline inside the channel process, so the first message is
+      # already sent by the time the join returns.
+      Mox.stub(Lightning.Tesla.Mock, :call, fn env, opts ->
+        send(test_pid, {:apollo_body, Jason.decode!(env.body)})
+
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Global response"
+        }).(env, opts)
+      end)
+
+      assert {:ok, _response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 %{
+                   "project_id" => project.id,
+                   "workflow_id" => workflow.id,
+                   "job_id" => job.id,
+                   "content" => "why did this fail?",
+                   "code" => "workflow:\n  name: test",
+                   "use_global_assistant" => true,
+                   "follow_run_id" => run.id,
+                   "attach_logs" => true
+                 }
+               )
+
+      assert_receive {:apollo_body, body}
+
+      assert [%{"type" => "log", "content" => [line]}] = body["attachments"]
+      assert line["message"] == "boom"
+    end
+
+    test "stores follow_run_id in the new session's meta", %{
+      socket: socket,
+      project: project,
+      workflow: workflow,
+      job: job
+    } do
+      run =
+        insert(:run,
+          work_order: insert(:workorder, workflow: workflow),
+          starting_job: job,
+          dataclip: insert(:dataclip, project: project)
+        )
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 %{
+                   "project_id" => project.id,
+                   "content" => "why did this fail?",
+                   "use_global_assistant" => true,
+                   "follow_run_id" => run.id,
+                   "attach_logs" => true
+                 }
+               )
+
+      session = AiAssistant.get_session!(response.session_id)
+
+      assert session.meta["follow_run_id"] == run.id
+      assert session.meta["message_options"]["log"] == true
+    end
+
+    test "does not store a follow_run_id from another project", %{
+      socket: socket,
+      project: project
+    } do
+      foreign_project = insert(:project)
+      foreign_workflow = insert(:workflow, project: foreign_project)
+
+      foreign_run =
+        insert(:run,
+          work_order: insert(:workorder, workflow: foreign_workflow),
+          starting_job: insert(:job, workflow: foreign_workflow),
+          dataclip: insert(:dataclip, project: foreign_project)
+        )
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 %{
+                   "project_id" => project.id,
+                   "content" => "why did this fail?",
+                   "use_global_assistant" => true,
+                   "follow_run_id" => foreign_run.id,
+                   "attach_logs" => true
+                 }
+               )
+
+      session = AiAssistant.get_session!(response.session_id)
+
+      refute Map.has_key?(session.meta, "follow_run_id")
     end
 
     test "new_message with use_global_assistant stores options and code",

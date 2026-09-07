@@ -90,7 +90,7 @@ describe('MessageList - undo applied changes', () => {
     );
 
     const button = screen.getByTestId('undo-changes-button');
-    expect(button).toHaveTextContent('Redo these changes');
+    expect(button).toHaveTextContent('Restore this reply');
 
     await userEvent.click(button);
     // Redo restores the reply's own YAML, which the model wrote
