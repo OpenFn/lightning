@@ -3182,6 +3182,54 @@ defmodule Lightning.AiAssistantTest do
       assert message =~ "Send run data"
     end
 
+    # Apollo can report the size without saying which attachment caused it, and
+    # can report nothing at all. Neither should cost the reader a sentence.
+    test "still says what to do when Apollo names no attachment", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{"type" => "ATTACHMENT_TOO_LARGE", "details" => %{}})
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error, %{error: message}}
+      assert message =~ "The attached run data is too large"
+      assert message =~ "one of the attachment boxes"
+      assert message =~ "paste the part you need into the chat"
+    end
+
+    # Anything the clauses above did not name reaches the reader as ours, and
+    # goes to the log as itself.
+    test "falls back to a sentence of ours for a shape it cannot read", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, :some_reason_we_have_never_seen}
+      end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+        end)
+
+      assert log =~ "Unexpected error for session #{session.id}"
+      assert log =~ "some_reason_we_have_never_seen"
+    end
+
     # Apollo names its internal wrapper too, so a type on its own is not enough
     # to trust the text: entry.py rewraps any unhandled exception as
     # ApolloError(500, str(e), type="INTERNAL_ERROR").

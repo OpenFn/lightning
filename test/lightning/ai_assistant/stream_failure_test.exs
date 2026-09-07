@@ -106,14 +106,20 @@ defmodule Lightning.AiAssistant.StreamFailureTest do
     |> Lightning.Repo.preload(:messages)
   end
 
-  defp workflow_session do
+  defp workflow_session(opts \\ []) do
     project = insert(:project)
 
-    insert(:chat_session,
-      session_type: "workflow_template",
-      project: project,
-      workflow: insert(:workflow, project: project),
-      user: insert(:user)
+    insert(
+      :chat_session,
+      Keyword.merge(
+        [
+          session_type: "workflow_template",
+          project: project,
+          workflow: insert(:workflow, project: project),
+          user: insert(:user)
+        ],
+        opts
+      )
     )
     |> Lightning.Repo.preload(:messages)
   end
@@ -188,6 +194,29 @@ defmodule Lightning.AiAssistant.StreamFailureTest do
       assert log =~ "ran past the 30000ms request ceiling"
     end
 
+    # Without the flag the partial is filed as job code with the session's job
+    # attached, so the YAML the user watched appear comes back rendered as a
+    # code suggestion rather than as the workflow it is.
+    test "a global chat's partial is still marked as coming from global" do
+      port = apollo_that_dies([text_delta("Building your workflow")])
+
+      stub_apollo(port)
+
+      session =
+        workflow_session(
+          meta: %{
+            "message_options" => %{"use_global_assistant" => true}
+          }
+        )
+
+      assert {:error, _} = AiAssistant.query_workflow_stream(session, "build it")
+
+      message = saved_message(session)
+
+      assert message.meta["from_global"] == true
+      refute message.job_id
+    end
+
     test "keeps the status updates in the order they were shown" do
       port =
         apollo_that_dies([
@@ -238,6 +267,28 @@ defmodule Lightning.AiAssistant.StreamFailureTest do
                  summary: "Adding 1 step",
                  steps: [%{key: "send-to-gmail", name: "Send to Gmail"}]
                }
+             ] = saved_message(session).response_segments
+    end
+
+    # Whitespace between two status updates is not a segment. Closing it off as
+    # one would put an empty row in the timeline the user never saw.
+    test "blank text between statuses does not become a segment" do
+      port =
+        apollo_that_dies([
+          text_delta("   "),
+          sse("status", %{"type" => "status", "content" => "Validating..."}),
+          text_delta("Nearly there")
+        ])
+
+      stub_apollo(port)
+
+      session = workflow_session()
+
+      assert {:error, _} = AiAssistant.query_workflow_stream(session, "build it")
+
+      assert [
+               %{type: :status, content: "Validating..."},
+               %{type: :text, content: "Nearly there"}
              ] = saved_message(session).response_segments
     end
 

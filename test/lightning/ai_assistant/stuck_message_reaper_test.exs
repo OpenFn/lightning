@@ -146,4 +146,19 @@ defmodule Lightning.AiAssistant.StuckMessageReaperTest do
     assert reloaded.status == :success
     assert reloaded.failure_category == nil
   end
+
+  # The sweep reports each message it reaps, one at a time. A session deleted
+  # between selecting the candidates and reporting on them used to raise, which
+  # would abandon every message after it in the same sweep.
+  test "reporting on a deleted session does not stop the sweep", %{
+    session: session,
+    user: user
+  } do
+    message = processing_message(session, user, long_ago())
+
+    Repo.delete!(session)
+
+    assert :ok =
+             MessageProcessor.broadcast_message_error(session.id, message.id)
+  end
 end
