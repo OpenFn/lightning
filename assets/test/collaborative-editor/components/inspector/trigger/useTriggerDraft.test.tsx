@@ -6,7 +6,7 @@
  * `commit()`, and only when the relevant state actually changed.
  */
 
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
@@ -87,6 +87,13 @@ describe('useTriggerDraft', () => {
     trigger = workflowStore.getSnapshot().triggers[0];
     commitAuthMethods = vi.fn(async () => {});
   });
+
+  // The errors live on the entity in the store snapshot, so this reads the
+  // outcome rather than the call that produced it.
+  function triggerErrors() {
+    return workflowStore.getSnapshot().triggers.find(t => t.id === TRIGGER_ID)
+      ?.errors;
+  }
 
   function renderDraft(initialAuthMethodIds: string[] = []) {
     return renderHook(
@@ -184,6 +191,54 @@ describe('useTriggerDraft', () => {
         TRIGGER_ID,
         expect.objectContaining({ webhook_reply: 'after_completion' })
       );
+    });
+
+    test('drops a server path error once the path changes', async () => {
+      // The error was raised for the value that was there at the time. Leaving
+      // it makes the panel complain about a name that is no longer on screen.
+      ydoc.getArray('triggers').get(0).set('custom_path', 'facility-001');
+      workflowStore.setError(`triggers.${TRIGGER_ID}`, {
+        custom_path: ['is already used by another workflow in this project'],
+      });
+
+      const { result } = renderDraft();
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: 'facility-002' });
+      });
+
+      await act(async () => {
+        await result.current.commit();
+      });
+
+      await waitFor(() => {
+        expect(triggerErrors()).not.toHaveProperty('custom_path');
+      });
+    });
+
+    test("leaves the trigger's other errors alone", async () => {
+      // Clearing the path error must not take the rest of the trigger's errors
+      // with it, or a real problem elsewhere disappears off the panel.
+      ydoc.getArray('triggers').get(0).set('custom_path', 'facility-001');
+      workflowStore.setError(`triggers.${TRIGGER_ID}`, {
+        custom_path: ['is already used by another workflow in this project'],
+        type: ['is invalid'],
+      });
+
+      const { result } = renderDraft();
+
+      act(() => {
+        result.current.mergeDraft({ custom_path: 'facility-002' });
+      });
+
+      await act(async () => {
+        await result.current.commit();
+      });
+
+      await waitFor(() => {
+        expect(triggerErrors()).not.toHaveProperty('custom_path');
+      });
+      expect(triggerErrors()?.['type']).toEqual(['is invalid']);
     });
 
     test('calls commitAuthMethods only when the auth id set changed', async () => {

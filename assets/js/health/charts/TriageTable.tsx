@@ -69,42 +69,49 @@ export const TriageTable = ({ signatures, emptyMessage }: TriageTableProps) => {
   }
 
   return (
-    <table className="w-full text-left text-sm">
-      <thead>
-        <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
-          <th scope="col" className="w-28 py-2 pr-4 font-medium">
-            Work orders
-          </th>
-          <th scope="col" className="py-2 font-medium">
-            Signature
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {signatures.map(signature => (
-          <tr
-            key={[
-              signature.exit_reason,
-              signature.error_type,
-              signature.step_name,
-              signature.adaptor,
-            ].join('|')}
-            className="border-b border-gray-100 align-top last:border-0"
-          >
-            <td className="py-3 pr-4 tabular-nums text-gray-900">
-              {signature.count.toLocaleString()}
-            </td>
-            <td className="py-3">
-              <Signature signature={signature} />
-              <p className="mt-1">
-                <span className="font-medium text-gray-500">Tip: </span>
-                <span className="text-gray-600">{tipFor(signature)}</span>
-              </p>
-            </td>
+    // A rename forks a job's history into a signature per name, so a long-lived
+    // workflow can list far more rows than it has ways of breaking. Capped in
+    // height rather than in rows: the tail is still worth reading, just not
+    // worth pushing the rest of the page down for. `max-h` over a row count so
+    // a short list keeps the card short.
+    <div className="max-h-96 overflow-y-auto">
+      <table className="w-full text-left text-sm">
+        <thead className="sticky top-0 bg-white">
+          <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
+            <th scope="col" className="w-28 py-2 pr-4 font-medium">
+              Work orders
+            </th>
+            <th scope="col" className="py-2 font-medium">
+              Signature
+            </th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {signatures.map(signature => (
+            <tr
+              key={[
+                signature.exit_reason,
+                signature.error_type,
+                signature.step_name,
+                signature.adaptor,
+              ].join('|')}
+              className="border-b border-gray-100 align-top last:border-0"
+            >
+              <td className="py-3 pr-4 tabular-nums text-gray-900">
+                {signature.count.toLocaleString()}
+              </td>
+              <td className="py-3">
+                <Signature signature={signature} />
+                <p className="mt-1">
+                  <span className="font-medium text-gray-500">Tip: </span>
+                  <span className="text-gray-600">{tipFor(signature)}</span>
+                </p>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 

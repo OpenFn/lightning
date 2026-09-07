@@ -15,6 +15,8 @@ interface WizardFooterProps {
   onCancel?: (() => void) | undefined;
   /** Validation error surfaced in red above the buttons (Configure steps). */
   validationError?: string | null | undefined;
+  /** Blocks the primary action while something on the step is still wrong. */
+  primaryDisabled?: boolean;
 }
 
 /**
@@ -30,11 +32,13 @@ export function WizardFooter({
   onPrimary,
   onCancel,
   validationError,
+  primaryDisabled = false,
 }: WizardFooterProps) {
   const primaryButton = (
     <Button
       variant="primary"
       onClick={onPrimary}
+      disabled={primaryDisabled}
       className={onCancel ? '' : 'w-full'}
     >
       <span className="inline-flex items-center gap-1.5">

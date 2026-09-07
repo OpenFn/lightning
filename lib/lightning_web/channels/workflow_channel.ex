@@ -433,6 +433,22 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_in(
+        "check_custom_path",
+        %{"custom_path" => custom_path, "trigger_id" => trigger_id},
+        socket
+      ) do
+    taken =
+      Lightning.Workflows.custom_path_taken?(
+        custom_path,
+        socket.assigns.project.id,
+        trigger_id
+      )
+
+    {:reply, {:ok, %{taken: taken}}, socket}
+  end
+
+  @impl true
   def handle_in("request_versions", _payload, socket) do
     Logger.info("====== RECEIVED request_versions ======")
     workflow = socket.assigns.workflow

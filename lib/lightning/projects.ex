@@ -1676,14 +1676,55 @@ defmodule Lightning.Projects do
 
   defp wipe_dataclips_for(%Project{dataclip_retention_period: period} = project)
        when is_integer(period) do
-    update_query =
-      from d in Lightning.Invocation.Query.wipe_dataclips(),
+    batch_size = Config.activity_cleanup_chunk_size()
+    # Wiping only sets a column, it doesn't remove the row from the index like
+    # a delete would - so a small per-update batch re-walks a growing prefix
+    # of already-wiped rows on every iteration. Fetch a much larger slice of
+    # ids up front to amortise that walk, then apply the actual updates in
+    # batch_size-sized chunks by primary key.
+    fetch_size = batch_size * 100
+
+    eligible_query =
+      from d in Dataclip,
         where: d.project_id == ^project.id,
-        where: d.inserted_at < ago(^period, "day")
+        where: d.inserted_at < ago(^period, "day"),
+        where: d.type in [:http_request, :step_result, :saved_input, :kafka],
+        where: is_nil(d.name),
+        where: is_nil(d.wiped_at),
+        # Matches dataclips_pending_wipe_idx's sort column, so this is
+        # satisfied by the index scan itself - no extra Sort node, and each
+        # page still stops after fetch_size instead of scanning every
+        # eligible row to find an arbitrary top-N.
+        order_by: [asc: d.inserted_at],
+        select: d.id
 
-    {count, _} = Repo.update_all(update_query, [])
+    Stream.repeatedly(fn ->
+      ids =
+        eligible_query
+        |> limit(^fetch_size)
+        |> Repo.all(timeout: Config.default_ecto_database_timeout() * 10)
 
-    {:ok, count}
+      if ids == [], do: nil, else: ids
+    end)
+    |> Stream.take_while(& &1)
+    |> Enum.reduce(0, fn ids, acc ->
+      wiped =
+        ids
+        |> Enum.chunk_every(batch_size)
+        |> Enum.reduce(0, fn chunk, chunk_acc ->
+          {count, _} =
+            from(d in Dataclip, where: d.id in ^chunk)
+            |> Lightning.Invocation.Query.wipe_dataclips()
+            |> Repo.update_all([],
+              timeout: Config.default_ecto_database_timeout() * 10
+            )
+
+          chunk_acc + count
+        end)
+
+      acc + wiped
+    end)
+    |> then(&{:ok, &1})
   end
 
   defp wipe_dataclips_for(_project) do

@@ -320,6 +320,56 @@ defmodule Lightning.Workflows.WebhookTriggerPathTest do
     end
   end
 
+  describe "custom_path_taken?/3" do
+    test "is true for a path another webhook in the project holds" do
+      {project, _trigger} = webhook_trigger(custom_path: "taken")
+
+      assert Workflows.custom_path_taken?("taken", project.id)
+    end
+
+    test "is false for the trigger that already holds it" do
+      {project, trigger} = webhook_trigger(custom_path: "taken")
+
+      refute Workflows.custom_path_taken?("taken", project.id, trigger.id)
+    end
+
+    test "is false in another project" do
+      {_project, _trigger} = webhook_trigger(custom_path: "taken")
+
+      refute Workflows.custom_path_taken?("taken", insert(:project).id)
+    end
+
+    test "is false for a free path" do
+      {project, _trigger} = webhook_trigger(custom_path: "taken")
+
+      refute Workflows.custom_path_taken?("free", project.id)
+    end
+
+    test "ignores a path on a cron trigger, which never served a URL" do
+      {project, _trigger} = webhook_trigger(custom_path: "taken")
+      workflow = insert(:workflow, project: project)
+      cron = insert(:trigger, type: :cron, workflow: workflow)
+
+      Lightning.Repo.update_all(from(t in Trigger, where: t.id == ^cron.id),
+        set: [custom_path: "cron-path"]
+      )
+
+      refute Workflows.custom_path_taken?("cron-path", project.id)
+    end
+
+    test "a malformed exclusion id excludes nothing rather than raising" do
+      {project, _trigger} = webhook_trigger(custom_path: "taken")
+
+      assert Workflows.custom_path_taken?("taken", project.id, "not-a-uuid")
+    end
+
+    test "is false for a blank path" do
+      {project, _trigger} = webhook_trigger(custom_path: "taken")
+
+      refute Workflows.custom_path_taken?(nil, project.id)
+    end
+  end
+
   describe "custom_path" do
     test "is unique within a project" do
       {project, _first} = webhook_trigger(custom_path: "facility-001")

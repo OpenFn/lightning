@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { useCopyToClipboard } from '#/collaborative-editor/hooks/useCopyToClipboard';
 import { isValidCustomPath } from '#/collaborative-editor/types/trigger';
@@ -14,17 +14,89 @@ import { notifications } from '../../../lib/notifications';
 import type { WebhookAuthMethod } from '../../../types/sessionContext';
 import type { Workflow } from '../../../types/workflow';
 
+/** One address this trigger answers on. */
+export interface WebhookEndpoint {
+  /** Full ingest URL. */
+  url: string;
+  /** What it is called in the list. */
+  label: string;
+  /** The permanent `/i/<trigger-id>` URL, which every trigger always has. */
+  generated: boolean;
+  /**
+   * False while a path is being typed and is not yet something the lookup can
+   * match. The row stays visible so it does not vanish mid-edit, but it is not
+   * offered for copying.
+   */
+  usable?: boolean;
+}
+
+/**
+ * The URLs a webhook trigger answers on, default first.
+ *
+ * Shared by the show panel, which builds them from the saved trigger, and the
+ * Configure step, which builds them from the draft so the list shows the URL
+ * taking shape as you type.
+ *
+ * Only a path the lookup can match earns a row: a legacy one holding a slash is
+ * stored verbatim but is not addressable, and the default URL is what works. The
+ * path is not encoded, because the plug runs before the router and compares raw
+ * segments.
+ */
+export function buildWebhookEndpoints({
+  triggerId,
+  projectId,
+  customPath,
+  rejected = false,
+}: {
+  triggerId: string;
+  projectId: string | null;
+  customPath: string | null;
+  /**
+   * The server refused this path, so it is not this trigger's. A duplicate
+   * resolves to whichever workflow owns it, so the row shows but does not copy.
+   */
+  rejected?: boolean;
+}): WebhookEndpoint[] {
+  const addressable =
+    customPath !== null && customPath !== '' && isValidCustomPath(customPath);
+
+  // Default first: it never changes, and it puts the custom row next to the
+  // field that edits it.
+  return [
+    {
+      url: new URL(`/i/${triggerId}`, window.location.origin).toString(),
+      label: 'Default',
+      generated: true,
+    },
+    ...(addressable && projectId
+      ? [
+          {
+            url: new URL(
+              `/i/${projectId}/${customPath}`,
+              window.location.origin
+            ).toString(),
+            label: 'Custom',
+            generated: false,
+            usable: !rejected,
+          },
+        ]
+      : []),
+  ];
+}
+
 /**
  * Return shape of the {@link useWebhookTrigger} hook.
  */
 export interface UseWebhookTriggerResult {
   /**
-   * The webhook ingest URL for this trigger: `<origin>/i/<project.id>/<path>`
-   * when it has a custom path, `<origin>/i/<trigger.id>` otherwise.
+   * Every URL this trigger answers on, default first. Naming a webhook adds an
+   * address, it never replaces the default, so that one is always here.
    */
-  webhookUrl: string;
+  endpoints: WebhookEndpoint[];
   /** Display text for the copy button ('' | 'Copied!' | 'Failed'). */
   copyText: string;
+  /** The URL the last copy applied to, so only that row shows feedback. */
+  copiedUrl: string | null;
   /** Copies the given text to the clipboard with feedback. */
   copyToClipboard: (text: string) => Promise<void>;
   /** Auth methods currently associated with this trigger (empty while loading). */
@@ -58,7 +130,16 @@ export function useWebhookTrigger(
   trigger: Workflow.Trigger
 ): UseWebhookTriggerResult {
   const { requestTriggerAuthMethods } = useWorkflowActions();
-  const { copyText, copyToClipboard } = useCopyToClipboard();
+  const { copyText, copyToClipboard: copy } = useCopyToClipboard();
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+
+  const copyToClipboard = useCallback(
+    async (text: string) => {
+      setCopiedUrl(text);
+      await copy(text);
+    },
+    [copy]
+  );
   const { provider } = useSession();
   const project = useProject();
   const channel = provider?.channel;
@@ -89,22 +170,12 @@ export function useWebhookTrigger(
   const customPath =
     trigger.type === 'webhook' ? (trigger.custom_path ?? null) : null;
 
-  // A refused path is not this trigger's. It stays in the Y.Doc, and a duplicate
-  // resolves to whichever workflow legitimately owns it.
-  const rejected = Boolean(trigger.errors?.['custom_path']?.length);
-
-  // Only a path the lookup can match. A legacy one holding a slash is stored
-  // verbatim but is not addressable, so the generated URL is the one that works.
-  const addressable =
-    !rejected && customPath !== null && isValidCustomPath(customPath);
-
-  // Not encoded: the plug runs before the router and compares raw segments.
-  const path =
-    addressable && project?.id
-      ? `/i/${project.id}/${customPath}`
-      : `/i/${trigger.id}`;
-
-  const webhookUrl = new URL(path, window.location.origin).toString();
+  const endpoints = buildWebhookEndpoints({
+    triggerId: trigger.id,
+    projectId: project?.id ?? null,
+    customPath,
+    rejected: Boolean(trigger.errors?.['custom_path']?.length),
+  });
 
   const commitAuthMethods = useCallback(
     async (ids: string[]) => {
@@ -140,8 +211,9 @@ export function useWebhookTrigger(
   );
 
   return {
-    webhookUrl,
+    endpoints,
     copyText,
+    copiedUrl,
     copyToClipboard,
     triggerAuthMethods,
     loadingAuthMethods,

@@ -15,7 +15,7 @@
  *      for the backend `update_trigger_auth_methods` permission tightening.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -29,6 +29,7 @@ import type { Workflow } from '../../../../../js/collaborative-editor/types/work
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
+  createMockChannelPushOk,
 } from '../../../__helpers__/channelMocks';
 import { createTriggerTestHarness } from '../../../__helpers__/triggerInspectorHelpers';
 import { createWorkflowYDoc } from '../../../__helpers__/workflowFactory';
@@ -104,6 +105,10 @@ interface SetupOptions {
   project?: { id: string; name: string } | null;
   /** Whether the path is the one the trigger opened with. */
   pathUnchanged?: boolean;
+  /** What the server answers when asked whether the path is free. */
+  pathTaken?: boolean;
+  /** False to leave the check unanswered, as a slow connection would. */
+  pathAnswers?: boolean;
 }
 
 async function setup({
@@ -117,8 +122,10 @@ async function setup({
   webhookAuthMethods = [],
   project = null,
   pathUnchanged = false,
+  pathTaken = false,
+  pathAnswers = true,
 }: SetupOptions = {}) {
-  const { wrapper } = await createTriggerTestHarness({
+  const { wrapper, sessionChannel } = await createTriggerTestHarness({
     canEdit: true,
     canWriteWebhookAuthMethod,
     webhookAuthMethods,
@@ -127,12 +134,18 @@ async function setup({
     liveViewActions: mockLiveViewActions,
   });
 
+  sessionChannel.push = pathAnswers
+    ? createMockChannelPushOk({ taken: pathTaken })
+    : (vi.fn(() => ({
+        receive: () => ({ receive: () => ({ receive: () => ({}) }) }),
+      })) as never);
+
   const onClose = vi.fn();
   const onCancel = vi.fn();
   const onBack = vi.fn();
   const onFinish = vi.fn();
 
-  render(
+  const { container } = render(
     <WebhookConfigureStep
       draft={draft}
       pathUnchanged={pathUnchanged}
@@ -150,6 +163,7 @@ async function setup({
   );
 
   return {
+    container,
     onClose,
     onCancel,
     onBack,
@@ -175,7 +189,7 @@ describe('WebhookConfigureStep', () => {
 
       // Collapsed: description text inside the auth body is not visible.
       expect(
-        screen.queryByText(/Require requests to this webhook/i)
+        screen.queryByText(/Require requests to use specific authentication/i)
       ).not.toBeInTheDocument();
 
       await userEvent.click(
@@ -183,7 +197,7 @@ describe('WebhookConfigureStep', () => {
       );
 
       expect(
-        screen.getByText(/Require requests to this webhook/i)
+        screen.getByText(/Require requests to use specific authentication/i)
       ).toBeInTheDocument();
 
       // Clicking again collapses it.
@@ -191,7 +205,7 @@ describe('WebhookConfigureStep', () => {
         screen.getByRole('button', { name: 'Authentication' })
       );
       expect(
-        screen.queryByText(/Require requests to this webhook/i)
+        screen.queryByText(/Require requests to use specific authentication/i)
       ).not.toBeInTheDocument();
     });
 
@@ -217,7 +231,7 @@ describe('WebhookConfigureStep', () => {
 
       // Should already be open — description body visible without any click.
       expect(
-        screen.getByText(/Require requests to this webhook/i)
+        screen.getByText(/Require requests to use specific authentication/i)
       ).toBeInTheDocument();
     });
 
@@ -459,14 +473,23 @@ describe('WebhookConfigureStep — custom URL path', () => {
     id: '33333333-3333-4333-8333-333333333333',
     name: 'ET EMR',
   };
+
+  // The list is the resting state: with no custom URL you add one, with one
+  // already set you ask to edit it.
+  const pathField = () => {
+    const add = screen.queryByRole('button', { name: 'Add custom URL' });
+
+    fireEvent.click(
+      add ?? screen.getByRole('button', { name: 'Edit custom URL' })
+    );
+
+    return screen.getByLabelText('Custom path');
+  };
   test('suggests the workflow name', async () => {
     // Offered, not written: an empty field still keeps the generated URL.
     await setup({ project: PROJECT });
 
-    expect(screen.getByLabelText('Custom URL path')).toHaveAttribute(
-      'placeholder',
-      'et-emr-facility-003'
-    );
+    expect(pathField()).toHaveAttribute('placeholder', 'et-emr-facility-003');
   });
 
   test('shows the current path', async () => {
@@ -476,68 +499,137 @@ describe('WebhookConfigureStep — custom URL path', () => {
       pathUnchanged: true,
     });
 
-    expect(screen.getByLabelText('Custom URL path')).toHaveValue(
-      'facility-001'
-    );
+    expect(pathField()).toHaveValue('facility-001');
   });
 
-  test('leaves the URL to the panel that already shows it', async () => {
-    // The show panel owns the URL and its copy button.
+  test('shows the full prefix, with only the path editable', async () => {
+    // The row is edited in place, so there is room for the whole prefix and no
+    // second copy of the URL anywhere.
+    await setup({ project: PROJECT });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add custom URL' }));
+
+    expect(
+      screen.getByText(`${window.location.origin}/i/${PROJECT.id}/`)
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Custom path')).toHaveValue('');
+  });
+
+  test('the edit icon becomes a save icon while editing, and Enter does it too', async () => {
     await setup({
       project: PROJECT,
       draft: makeWebhookDraft({ custom_path: 'facility-001' }),
       pathUnchanged: true,
     });
 
-    expect(screen.queryByText(new RegExp(`/i/${PROJECT.id}/`))).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit custom URL' }));
+    expect(
+      screen.getByRole('button', { name: 'Save custom URL' })
+    ).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByLabelText('Custom path'), { key: 'Enter' });
+
+    // Back to the resting row, which offers Edit again.
+    expect(
+      screen.getByRole('button', { name: 'Edit custom URL' })
+    ).toBeInTheDocument();
   });
 
-  test('keeps what is typed and stores what it derives to', async () => {
+  test('will not leave the field while the path is refused', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'a'.repeat(256) }),
+      pathUnchanged: false,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit custom URL' }));
+
+    expect(
+      screen.getByRole('button', { name: 'Save custom URL' })
+    ).toBeDisabled();
+  });
+
+  test('Tab takes the suggestion when nothing is typed', async () => {
     const mergeDraft = vi.fn();
     await setup({ project: PROJECT, mergeDraft });
 
-    const input = screen.getByLabelText('Custom URL path');
-
-    fireEvent.change(input, { target: { value: 'ET EMR Facility 003' } });
-
-    expect(input).toHaveValue('ET EMR Facility 003');
+    fireEvent.click(screen.getByRole('button', { name: 'Add custom URL' }));
+    fireEvent.keyDown(screen.getByLabelText('Custom path'), { key: 'Tab' });
 
     expect(mergeDraft).toHaveBeenCalledWith({
       custom_path: 'et-emr-facility-003',
     });
   });
 
-  test('says what the typed value will be named', async () => {
+  test('Tab still moves focus once something is typed', async () => {
+    const mergeDraft = vi.fn();
     await setup({
       project: PROJECT,
-      draft: makeWebhookDraft({ custom_path: 'et-emr-facility-003' }),
+      mergeDraft,
+      draft: makeWebhookDraft({ custom_path: 'fac' }),
+      pathUnchanged: false,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit custom URL' }));
+    mergeDraft.mockClear();
+    fireEvent.keyDown(screen.getByLabelText('Custom path'), { key: 'Tab' });
+
+    expect(mergeDraft).not.toHaveBeenCalled();
+  });
+
+  test('shows a custom row as soon as you start adding one', async () => {
+    // The row has to exist while the path is still empty, or it appears and
+    // disappears as you type and clear. It is muted and not copyable until the
+    // path is something the lookup can match.
+    await setup({ project: PROJECT });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add custom URL' }));
+
+    expect(screen.getByText('Custom')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Not a usable URL yet' })
+    ).toBeDisabled();
+  });
+
+  test('lists the URLs, default included', async () => {
+    // The list is what you act on here, and the default is always in it so it
+    // is clear a custom URL adds an address rather than replacing one.
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-001' }),
       pathUnchanged: true,
     });
 
-    fireEvent.change(screen.getByLabelText('Custom URL path'), {
-      target: { value: 'ET EMR Facility 003' },
-    });
-
-    expect(screen.getByText(/will be named/i)).toBeInTheDocument();
-    expect(screen.getByText('et-emr-facility-003')).toBeInTheDocument();
+    expect(
+      screen.getByText(`${window.location.origin}/i/${PROJECT.id}/facility-001`)
+    ).toBeInTheDocument();
+    expect(screen.getByText('Default')).toBeInTheDocument();
+    expect(screen.getByText('Custom')).toBeInTheDocument();
   });
 
-  test('derives the way the project form derives a name', async () => {
+  test('takes the path as typed, without rewriting it', async () => {
+    // The field is the URL itself, so a character it will not accept is an
+    // error to fix rather than something to silently correct.
     const mergeDraft = vi.fn();
     await setup({ project: PROJECT, mergeDraft });
 
-    const input = screen.getByLabelText('Custom URL path');
+    fireEvent.change(pathField(), { target: { value: 'ET EMR Facility 003' } });
 
-    fireEvent.change(input, { target: { value: 'orders.v1?x=2' } });
-    expect(mergeDraft).toHaveBeenCalledWith({ custom_path: 'orders-v1-x-2' });
+    expect(mergeDraft).toHaveBeenCalledWith({
+      custom_path: 'ET EMR Facility 003',
+    });
+  });
 
-    fireEvent.change(input, { target: { value: '  spaced  ' } });
-    expect(mergeDraft).toHaveBeenCalledWith({ custom_path: 'spaced' });
+  test('says what is wrong instead of correcting it', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'hello!' }),
+      pathUnchanged: false,
+    });
 
-    // Nothing survives, so the raw value is held for the save to refuse rather
-    // than being read as "cleared".
-    fireEvent.change(input, { target: { value: '...' } });
-    expect(mergeDraft).toHaveBeenCalledWith({ custom_path: '...' });
+    expect(
+      screen.getByText(/lowercase letters, numbers, hyphens and underscores/i)
+    ).toBeInTheDocument();
   });
 
   test('clearing the field clears the path', async () => {
@@ -549,7 +641,7 @@ describe('WebhookConfigureStep — custom URL path', () => {
       mergeDraft,
     });
 
-    fireEvent.change(screen.getByLabelText('Custom URL path'), {
+    fireEvent.change(pathField(), {
       target: { value: '' },
     });
 
@@ -563,7 +655,7 @@ describe('WebhookConfigureStep — custom URL path', () => {
       pathUnchanged: false,
     });
 
-    const input = screen.getByLabelText('Custom URL path');
+    const input = pathField();
 
     expect(input).toHaveAttribute('aria-invalid', 'true');
     expect(
@@ -580,10 +672,7 @@ describe('WebhookConfigureStep — custom URL path', () => {
       pathUnchanged: false,
     });
 
-    expect(screen.getByLabelText('Custom URL path')).toHaveAttribute(
-      'aria-invalid',
-      'true'
-    );
+    expect(pathField()).toHaveAttribute('aria-invalid', 'true');
   });
 
   test('does not flag a legacy path the user has not changed', async () => {
@@ -594,9 +683,7 @@ describe('WebhookConfigureStep — custom URL path', () => {
       pathUnchanged: true,
     });
 
-    expect(screen.getByLabelText('Custom URL path')).not.toHaveAttribute(
-      'aria-invalid'
-    );
+    expect(pathField()).not.toHaveAttribute('aria-invalid');
   });
 
   test('flags it once the user changes it', async () => {
@@ -606,10 +693,7 @@ describe('WebhookConfigureStep — custom URL path', () => {
       pathUnchanged: false,
     });
 
-    expect(screen.getByLabelText('Custom URL path')).toHaveAttribute(
-      'aria-invalid',
-      'true'
-    );
+    expect(pathField()).toHaveAttribute('aria-invalid', 'true');
   });
 
   test('holds a name that derives to nothing instead of clearing', async () => {
@@ -622,25 +706,26 @@ describe('WebhookConfigureStep — custom URL path', () => {
       mergeDraft,
     });
 
-    fireEvent.change(screen.getByLabelText('Custom URL path'), {
+    fireEvent.change(pathField(), {
       target: { value: '...' },
     });
 
     expect(mergeDraft).toHaveBeenCalledWith({ custom_path: '...' });
   });
 
-  test('flags a stored name that derives to nothing', async () => {
+  test('flags a name made only of unusable characters', async () => {
     await setup({
       project: PROJECT,
       draft: makeWebhookDraft({ custom_path: '...' }),
       pathUnchanged: false,
     });
 
-    const input = screen.getByLabelText('Custom URL path');
+    const input = pathField();
 
     expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByText(/no letters or numbers/i)).toBeInTheDocument();
-    expect(screen.queryByText(/will be named/i)).toBeNull();
+    expect(
+      screen.getByText(/lowercase letters, numbers, hyphens and underscores/i)
+    ).toBeInTheDocument();
   });
 
   test('drops a server error once the path is edited', async () => {
@@ -683,6 +768,167 @@ describe('WebhookConfigureStep — custom URL path', () => {
     ).toBeInTheDocument();
   });
 
+  test('says nothing about a name that is free', async () => {
+    const { container } = await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-009' }),
+      pathUnchanged: false,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /finish/i })).toBeEnabled();
+    });
+
+    expect(container.textContent).not.toMatch(/available/i);
+  });
+
+  test('leaves no empty line under a row with nothing to say', async () => {
+    const { container } = await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-009' }),
+      pathUnchanged: true,
+    });
+
+    expect(
+      [...container.querySelectorAll('p')].some(
+        el => el.textContent?.trim() === ''
+      )
+    ).toBe(false);
+  });
+
+  test('offers a path still being edited as a URL to copy', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-009' }),
+      pathUnchanged: false,
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Copy Custom URL' })
+    ).toBeInTheDocument();
+  });
+
+  test('offers the saved path as a URL to copy', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-009' }),
+      pathUnchanged: true,
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Copy Custom URL' })
+    ).toBeInTheDocument();
+  });
+
+  test('will not let you finish before the name has been checked', async () => {
+    // Letting it through is how the failure ends up on the panel this closes
+    // to, which is the thing the check exists to prevent.
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-009' }),
+      pathUnchanged: false,
+      pathAnswers: false,
+    });
+
+    expect(screen.getByRole('button', { name: /finish/i })).toBeDisabled();
+  });
+
+  test('asks before deleting, whatever state the path is in', async () => {
+    const mergeDraft = vi.fn();
+    await setup({
+      project: PROJECT,
+      mergeDraft,
+      draft: makeWebhookDraft({ custom_path: 'facility-009' }),
+      pathUnchanged: false,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete custom URL' }));
+
+    expect(
+      screen.getByText(/anything posting to it will stop working/i)
+    ).toBeInTheDocument();
+    expect(mergeDraft).not.toHaveBeenCalled();
+  });
+
+  test('asks before deleting a URL that is live', async () => {
+    const mergeDraft = vi.fn();
+    await setup({
+      project: PROJECT,
+      mergeDraft,
+      draft: makeWebhookDraft({ custom_path: 'facility-009' }),
+      pathUnchanged: true,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete custom URL' }));
+
+    expect(
+      screen.getByText(/anything posting to it will stop working/i)
+    ).toBeInTheDocument();
+    expect(mergeDraft).not.toHaveBeenCalled();
+  });
+
+  test('trims a pasted path the way the server does', async () => {
+    // Otherwise a trailing space fails against a character you cannot see.
+    const mergeDraft = vi.fn();
+    await setup({ project: PROJECT, mergeDraft, pathUnchanged: false });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add custom URL' }));
+    fireEvent.change(screen.getByLabelText('Custom path'), {
+      target: { value: '  orders  ' },
+    });
+
+    expect(mergeDraft).toHaveBeenCalledWith({ custom_path: 'orders' });
+  });
+
+  test('will not let you finish on a name in use', async () => {
+    // Otherwise the wizard closes and the failure lands on a panel you have
+    // already left, which is the thing the live check exists to prevent.
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-009' }),
+      pathUnchanged: false,
+      pathTaken: true,
+    });
+
+    await screen.findByText(/already used by another workflow/i);
+    expect(screen.getByRole('button', { name: /finish/i })).toBeDisabled();
+  });
+
+  test('lets you finish once the name is free', async () => {
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({ custom_path: 'facility-009' }),
+      pathUnchanged: false,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /finish/i })).toBeEnabled();
+    });
+  });
+
+  test('never offers a refused path as a URL to copy', async () => {
+    // A refused duplicate is not this trigger's URL. Posting to it reaches
+    // whichever workflow legitimately owns the name, so the row is visible but
+    // must not be copyable.
+    await setup({
+      project: PROJECT,
+      draft: makeWebhookDraft({
+        custom_path: 'facility-001',
+        errors: {
+          custom_path: ['is already used by another workflow in this project'],
+        },
+      }),
+      pathUnchanged: true,
+    });
+
+    expect(
+      screen.getByRole('button', { name: /not a usable url/i })
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: 'Copy Custom URL' })
+    ).not.toBeInTheDocument();
+  });
+
   test('links the error to the field for screen readers', async () => {
     await setup({
       project: PROJECT,
@@ -690,9 +936,9 @@ describe('WebhookConfigureStep — custom URL path', () => {
       pathUnchanged: false,
     });
 
-    expect(screen.getByLabelText('Custom URL path')).toHaveAttribute(
+    expect(pathField()).toHaveAttribute(
       'aria-describedby',
-      'webhook-custom-path-hint webhook-custom-path-error'
+      'webhook-custom-path-error'
     );
   });
 
@@ -705,7 +951,7 @@ describe('WebhookConfigureStep — custom URL path', () => {
       pathUnchanged: false,
     });
 
-    const input = screen.getByLabelText('Custom URL path');
+    const input = pathField();
 
     expect(input).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByText(/cannot be used as a path/i)).toBeInTheDocument();
@@ -718,7 +964,7 @@ describe('WebhookConfigureStep — custom URL path', () => {
       pathUnchanged: false,
     });
 
-    const input = screen.getByLabelText('Custom URL path');
+    const input = pathField();
 
     expect(input).not.toHaveAttribute('aria-invalid');
   });

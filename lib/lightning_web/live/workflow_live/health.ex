@@ -21,34 +21,28 @@ defmodule LightningWeb.WorkflowLive.Health do
   @final_states Lightning.WorkOrder.final_states()
 
   @impl true
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, active_menu_item: :overview, refresh: :idle)}
-  end
-
-  @impl true
-  def handle_params(%{"id" => id}, _url, socket) do
+  def mount(%{"id" => id}, _session, socket) do
     workflow = Workflows.get_workflow!(id)
 
-    if connected?(socket), do: WorkOrders.subscribe(workflow)
+    if connected?(socket), do: WorkOrders.subscribe(workflow.project_id)
 
-    {:noreply,
-     socket
-     |> assign(:workflow, workflow)
-     |> assign(:page_title, workflow.name)}
+    {:ok,
+     assign(socket,
+       active_menu_item: :overview,
+       refresh: :idle,
+       workflow: workflow,
+       page_title: "Health Stats for #{workflow.name}"
+     )}
   end
 
   @impl true
-  def handle_info(
-        %Events.WorkOrderUpdated{work_order: %{state: state}},
-        socket
-      )
-      when state in @final_states do
-    {:noreply, throttled_refresh(socket)}
+  def handle_info(%Events.WorkOrderUpdated{work_order: work_order}, socket) do
+    {:noreply, maybe_refresh(socket, work_order)}
   end
 
-  # A work order that started or was retried has nothing this page draws — it
-  # counts final states only.
-  def handle_info(%Events.WorkOrderUpdated{}, socket), do: {:noreply, socket}
+  def handle_info(%Events.WorkOrderCreated{work_order: work_order}, socket) do
+    {:noreply, maybe_refresh(socket, work_order)}
+  end
 
   def handle_info(
         :refresh_window_closed,
@@ -62,6 +56,17 @@ defmodule LightningWeb.WorkflowLive.Health do
   end
 
   def handle_info(_event, socket), do: {:noreply, socket}
+
+  # A work order that started or was retried has nothing this page draws — it
+  # counts final states only.
+  defp maybe_refresh(
+         %{assigns: %{workflow: %{id: workflow_id}}} = socket,
+         %{workflow_id: workflow_id, state: state}
+       )
+       when state in @final_states,
+       do: throttled_refresh(socket)
+
+  defp maybe_refresh(socket, _work_order), do: socket
 
   defp throttled_refresh(%{assigns: %{refresh: :idle}} = socket) do
     socket |> assign(refresh: :cooling) |> push_refresh()
@@ -91,8 +96,12 @@ defmodule LightningWeb.WorkflowLive.Health do
                 project={@project}
                 label={@project_label}
               />
+              <LayoutComponents.breadcrumb_items items={[
+                {"Workflows", ~p"/projects/#{@project}/w"},
+                {@workflow.name, ~p"/projects/#{@project}/w/#{@workflow}"}
+              ]} />
               <LayoutComponents.breadcrumb>
-                <:label>{@workflow.name}</:label>
+                <:label>Health</:label>
               </LayoutComponents.breadcrumb>
             </LayoutComponents.breadcrumbs>
           </:breadcrumbs>

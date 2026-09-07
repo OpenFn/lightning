@@ -764,6 +764,44 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
+  Records whether a reply's changes reached the canvas.
+
+  The apply happens in the browser, so nothing else knows it failed. Without
+  this the reply reads as a success on the next page load: its diff blocks
+  stand as a record of changes that never landed, and it offers to undo them.
+
+  Clearing on a later success is half the point, so a retry that works leaves
+  nothing behind.
+  """
+  @spec set_apply_failed(Ecto.UUID.t(), Ecto.UUID.t(), boolean()) ::
+          {:ok, ChatMessage.t()} | {:error, :not_found | Changeset.t()}
+  def set_apply_failed(session_id, message_id, failed?) do
+    # Cast before the lookup: the id comes from the browser, and the streaming
+    # apply reports failures against a pseudo-id that is not a uuid at all.
+    # Scoped to the session for the same reason retry_message is: a read-level
+    # frame must not reach a message in someone else's project.
+    with {:ok, uuid} <- Ecto.UUID.cast(message_id),
+         %ChatMessage{chat_session_id: ^session_id} = message <-
+           Repo.get(ChatMessage, uuid) do
+      meta = message.meta || %{}
+
+      meta =
+        if failed?,
+          do: Map.put(meta, "apply_failed", true),
+          else: Map.delete(meta, "apply_failed")
+
+      # change/2 rather than the full changeset: this only touches an
+      # internal flag, and the message's own validations need associations
+      # this path has no reason to load.
+      message
+      |> Changeset.change(meta: meta)
+      |> Repo.update()
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  @doc """
   Queries the AI service for job-specific code assistance with streaming.
 
   Sends a user query to the Apollo AI service along with job context
@@ -907,6 +945,7 @@ defmodule Lightning.AiAssistant do
   def query_global_stream(session, content, opts \\ []) do
     workflow_yaml = Keyword.get(opts, :workflow_yaml)
     page = Keyword.get(opts, :page)
+    attachments = Keyword.get(opts, :attachments, [])
     history = build_history(session)
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
@@ -918,7 +957,8 @@ defmodule Lightning.AiAssistant do
            page: page,
            history: history,
            meta: meta,
-           metrics_opt_in: metrics_opt_in
+           metrics_opt_in: metrics_opt_in,
+           attachments: attachments
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
@@ -1122,6 +1162,14 @@ defmodule Lightning.AiAssistant do
   # Bridge event: error
   defp handle_sse_event(session_id, %{event: "error", data: data}, acc) do
     case Jason.decode(data) do
+      # On /stream the HTTP status is already 200 by the time this arrives, so
+      # the type in the payload is the only thing that identifies it.
+      {:ok, %{"type" => "ATTACHMENT_TOO_LARGE", "details" => details}} ->
+        broadcast_streaming_error(
+          session_id,
+          attachment_too_large_message(details)
+        )
+
       {:ok, %{"message" => message}} ->
         broadcast_streaming_error(session_id, message)
 
@@ -1159,10 +1207,15 @@ defmodule Lightning.AiAssistant do
       {:ok, %{"type" => "status", "content" => content} = segment}
       when is_binary(content) ->
         # Take only the contract fields so stray keys from Apollo never
-        # reach the client.
+        # reach the client. `steps` and `summary` are optional: `steps`
+        # names what the action touched as data, which is how the client
+        # attaches per-step detail without parsing `content`.
         broadcast_streaming_segment(
           session_id,
-          Map.take(segment, ["type", "content"])
+          segment
+          |> Map.take(["type", "content", "summary", "steps"])
+          |> normalize_segment_steps()
+          |> normalize_segment_summary()
         )
 
       _ ->
@@ -1193,6 +1246,35 @@ defmodule Lightning.AiAssistant do
 
   # Catch-all for anything unexpected
   defp handle_sse_event(_session_id, _event, acc), do: acc
+
+  # Built from `details`, not Apollo's prose, so the wording stays ours.
+  defp attachment_too_large_message(
+         %{"total_characters" => total, "limit_characters" => limit} = details
+       ) do
+    control =
+      case details do
+        %{"largest_attachment" => %{"type" => "log"}} ->
+          "“Send logs”"
+
+        %{"largest_attachment" => %{"type" => dataclip}}
+        when dataclip in ["input_dataclip", "output_dataclip"] ->
+          "“Send scrubbed I/O”"
+
+        _ ->
+          nil
+      end
+
+    advice =
+      if control,
+        do: "Untick #{control} and send again, or pick a run with less data.",
+        else: "Untick one of the attachment boxes, or pick a run with less data."
+
+    "The attached run context is too large to analyse " <>
+      "(#{total} characters against a #{limit} limit). " <> advice
+  end
+
+  defp attachment_too_large_message(_details),
+    do: "The attached run context is too large to analyse."
 
   defp handle_stream_event(session_id, %{
          "type" => "content_block_delta",
@@ -1354,8 +1436,19 @@ defmodule Lightning.AiAssistant do
   # save: absent or all-invalid segments mean a flat legacy message. The
   # segment contract itself lives in `ChatMessage.Segment`.
   defp normalize_response_segments(segments) when is_list(segments) do
+    # Sanitise before validating, not after. A malformed `steps` entry would
+    # otherwise fail the whole segment and lose its prose, and a non-map entry
+    # would reach cast_embed and raise rather than simply being dropped.
     {valid, dropped} =
-      Enum.split_with(segments, fn segment ->
+      segments
+      |> Enum.map(fn segment ->
+        if is_map(segment) do
+          segment |> normalize_segment_steps() |> normalize_segment_summary()
+        else
+          segment
+        end
+      end)
+      |> Enum.split_with(fn segment ->
         is_map(segment) and
           ChatMessage.Segment.changeset(%ChatMessage.Segment{}, segment).valid?
       end)
@@ -1372,12 +1465,65 @@ defmodule Lightning.AiAssistant do
     end
 
     case kept do
-      [] -> nil
-      kept -> Enum.map(kept, &Map.take(&1, ["type", "content"]))
+      [] ->
+        nil
+
+      kept ->
+        Enum.map(kept, &Map.take(&1, ["type", "content", "summary", "steps"]))
     end
   end
 
   defp normalize_response_segments(_segments), do: nil
+
+  # Keeps only the step fields we persist, and drops the key entirely when
+  # Apollo sent nothing usable — an empty list would otherwise read as "this
+  # action touched no steps", which is not the same as "this Apollo version
+  # does not report steps".
+  # `summary` is optional decoration, so it must never be the reason a segment
+  # is thrown away: anything the embed would reject is dropped here instead.
+  defp normalize_segment_summary(%{"summary" => summary} = segment)
+       when is_binary(summary) do
+    if String.length(summary) <= ChatMessage.Segment.max_content_length() do
+      segment
+    else
+      Map.delete(segment, "summary")
+    end
+  end
+
+  defp normalize_segment_summary(segment), do: Map.delete(segment, "summary")
+
+  defp normalize_segment_steps(%{"steps" => steps} = segment)
+       when is_list(steps) do
+    max_steps = ChatMessage.Segment.max_steps()
+
+    steps
+    |> Enum.filter(&is_map/1)
+    |> Enum.map(&Map.take(&1, ["key", "name"]))
+    |> Enum.filter(&valid_segment_step?/1)
+    |> Enum.take(max_steps)
+    |> case do
+      [] -> Map.delete(segment, "steps")
+      kept -> Map.put(segment, "steps", kept)
+    end
+  end
+
+  defp normalize_segment_steps(segment), do: Map.delete(segment, "steps")
+
+  # Anything the embed would reject has to be dropped here rather than left to
+  # fail the cast: an invalid step invalidates its whole segment, which loses
+  # a status line the user already saw live.
+  defp valid_segment_step?(%{"key" => key} = step) when is_binary(key) do
+    max = ChatMessage.Segment.max_step_field_length()
+
+    key != "" and String.length(key) <= max and
+      case Map.get(step, "name") do
+        nil -> true
+        name when is_binary(name) -> String.length(name) <= max
+        _other -> false
+      end
+  end
+
+  defp valid_segment_step?(_step), do: false
 
   # Global chat always returns a full workflow YAML (job bodies embedded).
   # The frontend handles per-step diffing and full-workflow apply.

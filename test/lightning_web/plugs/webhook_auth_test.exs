@@ -106,6 +106,53 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
     assert conn.assigns[:trigger] == expected_trigger
   end
 
+  describe "a trigger reached by its custom path" do
+    setup %{auth_method: auth_method} do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook,
+          custom_path: "et-emr-facility-001"
+        )
+
+      associate_auth_method(trigger, auth_method)
+
+      %{
+        project: project,
+        trigger: trigger,
+        url: "/i/#{project.id}/et-emr-facility-001"
+      }
+    end
+
+    test "is protected by the same auth method as its default URL", %{url: url} do
+      conn = conn(:post, url) |> WebhookAuth.call([])
+
+      assert conn.halted
+      assert conn.status == 401
+      assert Jason.decode!(conn.resp_body) == %{"error" => "Unauthorized"}
+    end
+
+    test "lets a correctly authenticated request through", %{
+      url: url,
+      trigger: trigger,
+      auth_method: auth_method
+    } do
+      credentials =
+        Base.encode64("#{auth_method.username}:#{auth_method.password}")
+
+      conn =
+        conn(:post, url)
+        |> put_req_header("authorization", "Basic #{credentials}")
+        |> WebhookAuth.call([])
+
+      refute conn.halted
+      assert conn.assigns[:trigger].id == trigger.id
+    end
+  end
+
   test "responds with 401 for an unauthenticated request to a protected trigger",
        %{trigger: trigger, auth_method: auth_method} do
     associate_auth_method(trigger, auth_method)

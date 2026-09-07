@@ -1071,6 +1071,36 @@ defmodule Lightning.Workflows do
     Trigger |> where([t], t.id == ^id) |> fetch_webhook(opts)
   end
 
+  @doc """
+  Whether another webhook trigger in the project already answers on this path.
+
+  Advisory, so the editor can say so while the field is still open. The partial
+  unique index is what actually guarantees it, and a save still has to handle
+  losing the race.
+  """
+  @spec custom_path_taken?(term(), Ecto.UUID.t(), term()) :: boolean()
+  def custom_path_taken?(custom_path, project_id, except_trigger_id \\ nil)
+
+  def custom_path_taken?(custom_path, project_id, except_trigger_id)
+      when is_binary(custom_path) do
+    Trigger
+    |> where(
+      [t],
+      t.project_id == ^project_id and t.custom_path == ^custom_path and
+        t.type == :webhook
+    )
+    |> then(fn query ->
+      # A malformed id excludes nothing rather than raising.
+      case Ecto.UUID.cast(except_trigger_id) do
+        {:ok, id} -> where(query, [t], t.id != ^id)
+        :error -> query
+      end
+    end)
+    |> Repo.exists?()
+  end
+
+  def custom_path_taken?(_custom_path, _project_id, _except), do: false
+
   defp by_project_path(project_id, [custom_path | _rest], opts) do
     Trigger
     |> where([t], t.project_id == ^project_id and t.custom_path == ^custom_path)

@@ -102,6 +102,7 @@ function transformTrigger(trigger: Trigger) {
       output.cron_cursor_job_id = trigger.cron_cursor_job_id ?? null;
       break;
     case 'webhook':
+      output.custom_path = trigger.custom_path ?? null;
       output.webhook_reply = trigger.webhook_reply ?? 'before_start';
       output.webhook_response_config = trigger.webhook_response_config ?? null;
       break;

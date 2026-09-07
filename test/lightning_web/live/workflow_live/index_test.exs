@@ -134,7 +134,10 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # 10 total runs (4 pending)
       # 2 successful runs out of 4 completed
       # 2 work orders failed out of 10
-      assert Regex.match?(~r/Work Orders.*?<div>\s*10.*\(6 pending\)/s, html)
+      assert Regex.match?(
+               ~r|Work Orders\s*</h2>\s*<div[^>]*>\s*10\s*</div>.*?6 pending|s,
+               html
+             )
 
       pending_and_date_filter =
         Timex.now()
@@ -151,15 +154,18 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                "6 pending"
              )
 
-      assert Regex.match?(~r/Runs.*?<div>\s*10.*">\s*\(6 pending\)/s, html)
-
       assert Regex.match?(
-               ~r/Successful Runs.*<div>\s*2.*">\s*\(50.0%\)/s,
+               ~r|Runs\s*</h2>\s*<div[^>]*>\s*10\s*</div>.*?6 pending|s,
                html
              )
 
       assert Regex.match?(
-               ~r/Work Orders in failed state.*<div>\s*2.*">\s*\(20.0%\)/s,
+               ~r|Successful Runs\s*</h2>\s*<div[^>]*>\s*2\s*</div>.*?50\.0%|s,
+               html
+             )
+
+      assert Regex.match?(
+               ~r|Work Orders in failed state\s*</h2>\s*<div[^>]*>\s*2\s*</div>.*?20\.0%|s,
                html
              )
 
@@ -400,6 +406,20 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # The click has no effect; the trigger stays disabled.
       refute Lightning.Workflows.get_workflow!(workflow.id, include: [:triggers]).triggers
              |> Enum.any?(& &1.enabled)
+    end
+
+    test "each workflow row links to its health page", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert view
+             |> has_element?(
+               ~s{tr#workflow-#{workflow.id} a#health-#{workflow.id}[href="/projects/#{project.id}/w/#{workflow.id}/health"]},
+               "Health"
+             )
     end
   end
 

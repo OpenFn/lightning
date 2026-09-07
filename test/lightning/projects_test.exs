@@ -2288,6 +2288,71 @@ defmodule Lightning.ProjectsTest do
       refute is_nil(dataclip.wiped_at)
     end
 
+    test "wipes dataclips past the retention period across multiple batches" do
+      stub(Lightning.MockConfig, :activity_cleanup_chunk_size, fn -> 2 end)
+
+      project =
+        insert(:project,
+          history_retention_period: 14,
+          dataclip_retention_period: 10
+        )
+
+      dataclips =
+        for _ <- 1..5 do
+          insert(:dataclip,
+            project: project,
+            request: %{star: "sadio mane"},
+            type: :step_result,
+            body: %{team: "senegal"},
+            inserted_at: Timex.now() |> Timex.shift(days: -11)
+          )
+        end
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      for dataclip <- dataclips do
+        dataclip = dataclip_with_body_and_request(dataclip)
+
+        refute dataclip.request
+        refute dataclip.body
+        refute is_nil(dataclip.wiped_at)
+      end
+    end
+
+    test "wipes dataclips across multiple fetches of the outer batch loop" do
+      # fetch_size is batch_size * 100, so a chunk size of 1 means the outer
+      # loop must fetch twice to see all 101 rows - proving it re-fetches
+      # instead of stopping after the first page.
+      stub(Lightning.MockConfig, :activity_cleanup_chunk_size, fn -> 1 end)
+
+      project =
+        insert(:project,
+          history_retention_period: 14,
+          dataclip_retention_period: 10
+        )
+
+      dataclips =
+        for _ <- 1..101 do
+          insert(:dataclip,
+            project: project,
+            request: %{star: "sadio mane"},
+            type: :step_result,
+            body: %{team: "senegal"},
+            inserted_at: Timex.now() |> Timex.shift(days: -11)
+          )
+        end
+
+      :ok = Projects.perform(%Oban.Job{args: %{"type" => "data_retention"}})
+
+      for dataclip <- dataclips do
+        dataclip = dataclip_with_body_and_request(dataclip)
+
+        refute dataclip.request
+        refute dataclip.body
+        refute is_nil(dataclip.wiped_at)
+      end
+    end
+
     test "does not wipe dataclips having names" do
       project =
         insert(:project,

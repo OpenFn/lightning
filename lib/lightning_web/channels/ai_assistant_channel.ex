@@ -159,6 +159,48 @@ defmodule LightningWeb.AiAssistantChannel do
     end)
   end
 
+  @doc false
+  # A workflow the assistant produced failed to reach the canvas. Nothing else
+  # records that: the client shows an alert and logs to a console, both of
+  # which die with the tab, and the browser Sentry SDK is disabled. Without a
+  # report we cannot say whether a failed apply is rare enough to leave the
+  # user re-prompting or common enough to be worth a durable retry.
+  #
+  # Carries no workflow content, only which step broke.
+  @impl true
+  def handle_in("apply_failed", params, socket) do
+    with_authorized_frame(socket, :read, fn session ->
+      Lightning.Sentry.capture_message(
+        "AI assistant workflow apply failed",
+        level: :warning,
+        tags: %{
+          feature: "ai_assistant_apply",
+          apply_stage: apply_stage(params["stage"]),
+          is_new_workflow: to_string(params["is_new_workflow"] == true)
+        },
+        extra: %{
+          session_id: session.id,
+          message_id: params["message_id"]
+        }
+      )
+
+      # Recorded on the message as well as reported: the apply happens in the
+      # browser, so a reload has no other way to know the changes never landed.
+      mark_apply(socket, params["message_id"], true)
+
+      {:reply, :ok, socket}
+    end)
+  end
+
+  @impl true
+  def handle_in("apply_applied", params, socket) do
+    with_authorized_frame(socket, :read, fn _session ->
+      mark_apply(socket, params["message_id"], false)
+
+      {:reply, :ok, socket}
+    end)
+  end
+
   @impl true
   def handle_in("list_sessions", params, socket) do
     with_authorized_frame(socket, :read, fn _authorized_session ->
@@ -561,7 +603,12 @@ defmodule LightningWeb.AiAssistantChannel do
 
           is_new_workflow = params["workflow_id"] && is_nil(workflow)
 
-          base_opts = extract_session_options("workflow_template", params)
+          base_opts =
+            extract_session_options(
+              "workflow_template",
+              sanitize_follow_run_id(params, project.id)
+            )
+
           base_meta = Keyword.get(base_opts, :meta, %{})
 
           opts =
@@ -923,7 +970,9 @@ defmodule LightningWeb.AiAssistantChannel do
         meta = Keyword.get(opts, :meta, %{})
 
         meta =
-          Map.put(meta, "message_options", build_message_options(params))
+          meta
+          |> Map.put("message_options", build_message_options(params))
+          |> maybe_put_follow_run_id(params)
 
         Keyword.put(opts, :meta, meta)
       else
@@ -932,6 +981,15 @@ defmodule LightningWeb.AiAssistantChannel do
 
     opts
   end
+
+  # Global chat resolves its log attachment from the followed run, so the run
+  # id has to survive session creation as well as the new_message path.
+  defp maybe_put_follow_run_id(meta, %{"follow_run_id" => run_id})
+       when not is_nil(run_id) do
+    Map.put(meta, "follow_run_id", run_id)
+  end
+
+  defp maybe_put_follow_run_id(meta, _params), do: meta
 
   defp extract_message_options(%{"use_global_assistant" => true} = params) do
     opts = [meta: %{"message_options" => build_message_options(params)}]
@@ -988,6 +1046,16 @@ defmodule LightningWeb.AiAssistantChannel do
     }
   end
 
+  defp mark_apply(socket, message_id, failed?) when is_binary(message_id) do
+    AiAssistant.set_apply_failed(
+      socket.assigns.session_id,
+      message_id,
+      failed?
+    )
+  end
+
+  defp mark_apply(_socket, _message_id, _failed?), do: :ok
+
   defp format_messages(messages) do
     Enum.map(messages, &format_message/1)
   end
@@ -1016,7 +1084,8 @@ defmodule LightningWeb.AiAssistantChannel do
       user_id: message.user_id,
       user: format_user(message.user),
       job_id: job_id,
-      from_global: from_global
+      from_global: from_global,
+      apply_failed: match?(%{"apply_failed" => true}, message.meta)
     }
   end
 
@@ -1383,6 +1452,15 @@ defmodule LightningWeb.AiAssistantChannel do
   # The row the decision was made against is handed to the closure: a handler
   # that writes must write from that row rather than from the join-time snapshot
   # in `socket.assigns`, which may have been superseded in between.
+  # The stage names a step in the client's apply pipeline. It arrives from the
+  # browser, so it is matched against what we know rather than passed through
+  # into a Sentry tag.
+  defp apply_stage(stage)
+       when stage in ["parse", "validate_ids", "import", "save"],
+       do: stage
+
+  defp apply_stage(_stage), do: "unknown"
+
   defp with_authorized_frame(socket, mode, fun) do
     case authorize_frame(socket, mode) do
       {:ok, session} ->

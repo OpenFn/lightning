@@ -140,6 +140,37 @@ describe('WorkflowHealth', () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
+  test('re-reads once more after the push, when the cache has aged out', async () => {
+    const { fetchMock } = mount({ ...both });
+
+    await screen.findByText('Last 30 days · 1,287 work orders');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Faked only now, and only the timer functions: Testing Library's own
+    // waiting runs on `setTimeout`, so the first load has to land first.
+    // Random is pinned so the jitter is a known number.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    act(() => {
+      window.dispatchEvent(new Event('phx:health:changed'));
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    // The push's read may have been answered by another node's stale cache, so
+    // one more read lands after that cache's 30s has passed.
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+
+    // And then it stops — the trailing read does not schedule one of its own.
+    await act(async () => {
+      vi.advanceTimersByTime(120_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+  });
+
   test('moves the updated clock when the numbers arrive', async () => {
     // Only `Date` is faked — faking timers wholesale would stall the promises
     // the fetch stub resolves through.

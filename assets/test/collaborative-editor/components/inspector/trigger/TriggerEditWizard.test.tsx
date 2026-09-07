@@ -356,7 +356,7 @@ describe('TriggerEditWizard — webhook', () => {
       await userEvent.click(
         screen.getByRole('option', { name: /Basic Login/i })
       );
-      await userEvent.click(screen.getByRole('button', { name: /add/i }));
+      await userEvent.click(screen.getByRole('button', { name: 'Add' }));
       expect(
         screen.getByRole('button', { name: 'Authentication credential 2' })
       ).toBeInTheDocument();

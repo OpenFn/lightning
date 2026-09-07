@@ -302,6 +302,7 @@ defmodule Lightning.Invocation.Query do
     from(d in query,
       where: d.type in [:http_request, :step_result, :saved_input, :kafka],
       where: is_nil(d.name),
+      where: is_nil(d.wiped_at),
       update: [
         set: [request: nil, body: nil, wiped_at: ^Lightning.current_time()]
       ]

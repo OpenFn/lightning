@@ -18,6 +18,20 @@ defmodule LightningWeb.WorkflowLive.HealthTest do
     assert html =~ workflow.name
   end
 
+  test "the workflow crumb leads back to its editor", %{
+    conn: conn,
+    project: project
+  } do
+    workflow = insert(:workflow, project: project)
+
+    {:ok, view, _html} =
+      live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/health")
+
+    assert view
+           |> element("nav[aria-label='Breadcrumbs'] a", workflow.name)
+           |> render() =~ ~p"/projects/#{project.id}/w/#{workflow.id}"
+  end
+
   test "redirects when the workflow is in another project", %{
     conn: conn,
     project: project
@@ -54,6 +68,20 @@ defmodule LightningWeb.WorkflowLive.HealthTest do
 
       assert {:ok, nil} =
                Cachex.get(:workflow_stats, {:outcomes, workflow.id, 30})
+    end
+
+    test "tells the page to refresh when a work order is rejected on arrival",
+         ctx do
+      %{view: view, workflow: workflow, project: project} = ctx
+
+      # Over the run limit: no run is ever created, so nothing updates this
+      # work order after the insert.
+      work_order =
+        insert(:workorder, workflow: workflow, state: :rejected, snapshot: nil)
+
+      Events.work_order_created(project.id, work_order)
+
+      assert_push_event(view, "health:changed", %{})
     end
 
     test "stays quiet for a work order that has not settled yet", ctx do

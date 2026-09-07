@@ -9,6 +9,6 @@ defmodule Lightning.Repo.Migrations.AddWorkOrdersWorkflowActivityIndex do
     # `workflow_id` and a `last_activity` window; the existing single-column
     # indexes make the planner pick one and heap-filter the rest, which degrades
     # with total volume rather than with the size of the answer.
-    create index(:work_orders, [:workflow_id, :last_activity], concurrently: true)
+    create_if_not_exists index(:work_orders, [:workflow_id, :last_activity], concurrently: true)
   end
 end

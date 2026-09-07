@@ -53,13 +53,9 @@ export function TriggerEditWizard({
 }: TriggerEditWizardProps) {
   const isWebhook = trigger.type === 'webhook';
 
-  const {
-    webhookUrl,
-    copyText,
-    copyToClipboard,
-    triggerAuthMethods,
-    commitAuthMethods,
-  } = useWebhookTrigger(trigger);
+  // The wizard needs the auth methods only. The URLs are built from the draft
+  // inside the Configure step, so they follow what is being typed.
+  const { triggerAuthMethods, commitAuthMethods } = useWebhookTrigger(trigger);
 
   const {
     draft,
@@ -145,9 +141,6 @@ export function TriggerEditWizard({
       return (
         <TriggerChooseStep
           type="webhook"
-          webhookUrl={webhookUrl}
-          copyText={copyText}
-          copyToClipboard={copyToClipboard}
           onClose={onClose}
           onCancel={onDone}
           onChangeType={() => setStep('picker')}

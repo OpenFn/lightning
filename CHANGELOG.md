@@ -15,25 +15,97 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising
+  the first character of a string, which breaks names in many languages.
+  Lightning does not normalise anything today, but #4577 adds it on every name,
+  so the runtime moves first.
+
 ### Added
 
+- The AI assistant now shows what changed as a global reply edits your workflow.
+  Each change renders under the status that made it, while the reply is still
+  streaming, as a per-step code diff with syntax highlighting, old and new line
+  numbers and a link to open that step in the editor, alongside a compact
+  summary of structural changes like added or removed paths, trigger changes and
+  step renames. Each diff block copies the step's code, and the latest reply can
+  be undone, restoring the workflow to how it stood before that reply and
+  offering to redo it. Undo confirms first when the workflow has been edited
+  since, because it replaces the whole workflow.
+  [#5036](https://github.com/OpenFn/lightning/issues/5036)
 - Webhook triggers can be given a custom URL path, so an endpoint's URL is known
-  before it is deployed. A trigger with a path of `facility-001` in project
-  `abc-123` answers at `/i/abc-123/facility-001`. Set it in the trigger panel,
-  in `project.yaml`, or through the workflows API. Existing `/i/<trigger-id>`
-  URLs are unchanged. [#4952](https://github.com/OpenFn/lightning/issues/4952)
+  before it is deployed. A trigger with a path of `facility-001` answers at
+  `/i/<project-id>/facility-001`, where `<project-id>` is the project's UUID.
+  Set it in the trigger panel, in `project.yaml`, or through the workflows API.
+  Existing `/i/<trigger-id>` URLs are unchanged.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - A workflow health page at `/projects/:project_id/w/:workflow_id/health`,
   summarising one workflow over a selectable window (last 24 hours, 7 days, or
   30 days): a donut of work order outcomes, a breakdown of the failing ones, and
   a triage table grouping failures by error signature, heaviest first. The page
   refreshes itself as that workflow's work orders settle, at most once every 30
-  seconds.
+  seconds. Reachable from the workflows list via a "Health" link in each row's
+  Actions column.
+- Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
+  scenario file (users, API tokens, credentials, projects, workflows) via
+  `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and
+  external test harnesses. Workflows in a scenario are written in the existing
+  workflow-spec format — the same YAML the collaborative editor imports and
+  exports, validated against the same JSON Schema.
+  [#4974](https://github.com/OpenFn/lightning/issues/4974)
+
+### Changed
+
+- The webhook trigger panel now lists every URL a trigger answers on. The
+  default URL is always there and the custom one sits next to it, editable in
+  place, with add, edit, delete and copy on the row itself. A path already used
+  by another workflow in the project is reported while you type, not after you
+  save. A path the server would reject shows what is wrong and is left as you
+  typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
 
 ### Fixed
 
+- The global assistant no longer offers to paste a reply's code block into
+  whichever job you have open. It applies its own changes and shows them as
+  diffs, so those blocks are data it quoted back or work it has already done.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- AI assistant code blocks share the surface the workflow diffs use, so a reply
+  and the diff below it no longer read as two different products.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- A global assistant reply whose changes could not be applied now says so on
+  the reply itself, beside the diffs that did not land, and offers to try
+  again. It used to fall back to a raw YAML panel.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- A failed apply is now remembered, so reloading no longer turns it back into
+  a success. The reply kept its diff blocks and offered to undo changes that
+  had never landed. A retry that works clears the record.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- Editing an open step with the global assistant no longer puts a diff in the
+  code editor. The change is already applied, so the diff read as a proposal
+  to accept or reject when the only control was a close button, and reloading
+  revealed the change had been written all along.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+
+- Changing a webhook trigger's custom path now marks the workflow as unsaved, so
+  the Save button offers to save it. The unsaved-changes check did not look at
+  the field, so the edit could be lost by navigating away.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - `eligible_for_claim/0` now breaks ties with `id` after `priority` and
   `inserted_at`, so two runs inserted in the same microsecond no longer get
   claimed in a nondeterministic order.
+- Dataclip retention wiping now runs in batches instead of one unbatched update,
+  so projects with a large backlog of eligible dataclips no longer time out the
+  retention job.
+
+### Security
+
+- Bumped `mint` to 1.10.0, clearing
+  [EEF-CVE-2026-82728](https://osv.dev/vulnerability/EEF-CVE-2026-82728) and
+  [EEF-CVE-2026-82729](https://osv.dev/vulnerability/EEF-CVE-2026-82729), both
+  denial of service in Mint's HTTP/1 parser. Mint is our HTTP client, so they
+  are reachable from a response rather than from a request into Lightning, and
+  the exposure is the outbound calls Lightning makes.
 
 ## [2.18.2] - 2026-09-02
 
@@ -125,6 +197,13 @@ and this project adheres to
 
 ### Fixed
 
+- The global AI chat now honours its "Send logs" and "Send scrubbed I/O"
+  checkboxes. Run logs and scrubbed step input and output are forwarded to
+  Apollo as attachments, with each log line carrying its job, step and level;
+  previously the UI said the data was attached but nothing was sent. When Apollo
+  rejects an oversized attachment, the chat now names the checkbox to untick
+  instead of showing raw Apollo output.
+  [#5096](https://github.com/OpenFn/lightning/pull/5096)
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.

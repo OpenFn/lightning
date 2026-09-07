@@ -251,6 +251,10 @@ export function ChatInput({
     if (showJobControls) {
       if (selectedRunId) {
         options.attach_logs = attachLogs;
+        // The run the checkbox was gated on, so what we promise to attach and
+        // what the backend looks up cannot drift. useAIMode reads the run from
+        // the URL, and LiveView push_patch strips that param.
+        options.follow_run_id = selectedRunId;
       }
       if (selectedJobId) {
         options.attach_code = attachCode;
