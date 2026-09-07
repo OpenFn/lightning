@@ -296,6 +296,55 @@ describe('Header - lifecycle actions', () => {
     ).not.toBeInTheDocument();
   });
 
+  test('hides the lifecycle and sandbox actions on a pinned older version', () => {
+    // They all act on the current workflow, so offering them here would reach
+    // past what is on screen.
+    lifecycleState = 'live';
+    urlParams = { v: '2' };
+
+    renderHeader();
+
+    expect(
+      screen.queryByTestId('switch-to-draft-button')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('edit-in-sandbox-button')
+    ).not.toBeInTheDocument();
+  });
+
+  test('hides Go live on a pinned older version of a draft workflow', () => {
+    lifecycleState = 'draft';
+    urlParams = { v: '1' };
+
+    renderHeader();
+
+    expect(screen.queryByTestId('go-live-button')).not.toBeInTheDocument();
+  });
+
+  test('hides the lifecycle and sandbox actions in an as-executed run view', () => {
+    lifecycleState = 'live';
+    urlParams = { as_run: 'run-123' };
+
+    renderHeader();
+
+    expect(
+      screen.queryByTestId('switch-to-draft-button')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('edit-in-sandbox-button')
+    ).not.toBeInTheDocument();
+  });
+
+  test('offers the actions again on the current version', () => {
+    lifecycleState = 'live';
+    urlParams = {};
+
+    renderHeader();
+
+    expect(screen.getByTestId('switch-to-draft-button')).toBeInTheDocument();
+    expect(screen.getByTestId('edit-in-sandbox-button')).toBeInTheDocument();
+  });
+
   test('hides the Live badge in an as-executed run view', () => {
     lifecycleState = 'live';
     urlParams = { as_run: 'run-123' };

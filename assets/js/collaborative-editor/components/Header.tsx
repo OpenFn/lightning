@@ -268,6 +268,9 @@ export function Header({
   // The Live badge describes the workflow's current state, which would be a lie
   // on these views, so it is suppressed and the version badge carries the
   // context instead.
+  // A view of the past is for reading. The lifecycle and sandbox actions all act
+  // on the current workflow, so offering them here reaches past what is on
+  // screen: Switch to draft would take production offline while you read history.
   const isViewingNonCurrentVersion = isPinnedVersion || isViewingAsExecuted;
 
   // Determine AI button disabled message based on priority
@@ -615,50 +618,56 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {!isNewWorkflow && !isSandbox && lifecycleState === 'draft' && (
-                <Tooltip
-                  content={
-                    isReadOnly ? 'You cannot go live on this version' : null
-                  }
-                  side="bottom"
-                >
+              {!isNewWorkflow &&
+                !isSandbox &&
+                !isViewingNonCurrentVersion &&
+                lifecycleState === 'draft' && (
+                  <Tooltip
+                    content={
+                      isReadOnly ? 'You cannot go live on this version' : null
+                    }
+                    side="bottom"
+                  >
+                    <button
+                      type="button"
+                      data-testid="go-live-button"
+                      disabled={isReadOnly || isTransitioning}
+                      onClick={() => {
+                        setIsTransitioning(true);
+                        void goLive()
+                          .catch(() =>
+                            notifications.alert({
+                              title: 'Could not go live',
+                              description: 'Please try again.',
+                            })
+                          )
+                          .finally(() => {
+                            setIsTransitioning(false);
+                          });
+                      }}
+                      className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
+                    >
+                      Go live
+                    </button>
+                  </Tooltip>
+                )}
+              {!isNewWorkflow &&
+                !isSandbox &&
+                !isViewingNonCurrentVersion &&
+                lifecycleState === 'live' && (
                   <button
                     type="button"
-                    data-testid="go-live-button"
-                    disabled={isReadOnly || isTransitioning}
+                    data-testid="switch-to-draft-button"
+                    disabled={isTransitioning}
                     onClick={() => {
-                      setIsTransitioning(true);
-                      void goLive()
-                        .catch(() =>
-                          notifications.alert({
-                            title: 'Could not go live',
-                            description: 'Please try again.',
-                          })
-                        )
-                        .finally(() => {
-                          setIsTransitioning(false);
-                        });
+                      setShowSwitchToDraftDialog(true);
                     }}
-                    className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
+                    className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-gray-50"
                   >
-                    Go live
+                    Switch to draft
                   </button>
-                </Tooltip>
-              )}
-              {!isNewWorkflow && !isSandbox && lifecycleState === 'live' && (
-                <button
-                  type="button"
-                  data-testid="switch-to-draft-button"
-                  disabled={isTransitioning}
-                  onClick={() => {
-                    setShowSwitchToDraftDialog(true);
-                  }}
-                  className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-gray-50"
-                >
-                  Switch to draft
-                </button>
-              )}
-              {!isNewWorkflow && isSandbox && (
+                )}
+              {!isNewWorkflow && isSandbox && !isViewingNonCurrentVersion && (
                 <button
                   type="button"
                   data-testid="promote-sandbox-button"
@@ -670,29 +679,32 @@ export function Header({
                   Promote
                 </button>
               )}
-              {lifecycleState === 'live' && !isSandbox && !isNewWorkflow && (
-                <Tooltip
-                  content={
-                    canProvisionSandbox
-                      ? null
-                      : 'You do not have permission to create a sandbox in this project.'
-                  }
-                  side="bottom"
-                >
-                  <button
-                    type="button"
-                    data-testid="edit-in-sandbox-button"
-                    disabled={!canProvisionSandbox}
-                    onClick={() => {
-                      if (!canProvisionSandbox) return;
-                      setShowEditInSandboxPicker(true);
-                    }}
-                    className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+              {lifecycleState === 'live' &&
+                !isSandbox &&
+                !isNewWorkflow &&
+                !isViewingNonCurrentVersion && (
+                  <Tooltip
+                    content={
+                      canProvisionSandbox
+                        ? null
+                        : 'You do not have permission to create a sandbox in this project.'
+                    }
+                    side="bottom"
                   >
-                    Edit in sandbox
-                  </button>
-                </Tooltip>
-              )}
+                    <button
+                      type="button"
+                      data-testid="edit-in-sandbox-button"
+                      disabled={!canProvisionSandbox}
+                      onClick={() => {
+                        if (!canProvisionSandbox) return;
+                        setShowEditInSandboxPicker(true);
+                      }}
+                      className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                    >
+                      Edit in sandbox
+                    </button>
+                  </Tooltip>
+                )}
               {projectId && workflowId && firstTriggerId && !isReadOnly && (
                 <NewRunButton
                   onClick={() => {
