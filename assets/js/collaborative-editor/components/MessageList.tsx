@@ -1064,8 +1064,7 @@ export function MessageList({
     return null;
   };
 
-  // The user message a reply answers. Walks back rather than pairing by index,
-  // since a session can hold prompts with no reply at all.
+  // The user message a reply answers; a session can hold prompts with no reply.
   const promptFor = (message: Message, index: number): Message | undefined => {
     if (message.role === 'user') return message;
 
@@ -1125,11 +1124,9 @@ export function MessageList({
         const segments = timelineSegments(message);
         const prompt = promptFor(message, index);
 
-        // Retry re-runs the prompt, and only while that prompt is still the
-        // failed one. The server flips it to :pending and broadcasts that, so
-        // this is what stops a second click firing a second job: the reply it
-        // sits under keeps :error for good and would otherwise stay clickable
-        // for the life of the session.
+        // Gated on the prompt, not on the reply: a reply keeps :error for good,
+        // so reading its status would leave the button live for the session and
+        // every click would start another job.
         const retry =
           onRetryMessage && prompt?.status === 'error'
             ? () => {
@@ -1137,22 +1134,21 @@ export function MessageList({
               }
             : undefined;
 
-        // A failed reply carries the notice; the prompt carries it only when
-        // no reply arrived at all. Both neighbours are checked because a reply
-        // that dies in the same second as its prompt can come back either way
-        // round, timestamps being stored to the second.
-        const adjacentFailedReply = [index - 1, index + 1].some(i => {
-          const neighbour = displayMessages[i];
-          return (
-            neighbour?.role === 'assistant' && neighbour.status === 'error'
-          );
-        });
+        const failedReply = (m: Message | undefined) =>
+          m?.role === 'assistant' && m.status === 'error';
 
-        // Nothing has failed yet while a reply is still arriving. The prompt is
-        // marked failed before the partial reply reaches the client, so without
-        // this the notice appears above text that is still typing itself out.
+        // A failed reply carries the notice; the prompt carries it only when no
+        // reply arrived. The reply before a prompt counts as its own only when
+        // nothing precedes it, since a reply that dies in the same second as
+        // its prompt sorts either way round. Otherwise it belongs to an earlier
+        // exchange, and this prompt's failure would go unmentioned.
+        const ownFailedReply =
+          failedReply(displayMessages[index + 1]) ||
+          (failedReply(displayMessages[index - 1]) &&
+            !displayMessages.slice(0, index - 1).some(m => m.role === 'user'));
+
         const promptCarriesNotice =
-          message.status === 'error' && !adjacentFailedReply && !isLoading;
+          message.status === 'error' && !ownFailedReply;
 
         const showMessageAddButtons =
           !isStreaming(message) &&

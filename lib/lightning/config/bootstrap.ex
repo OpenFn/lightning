@@ -138,7 +138,6 @@ defmodule Lightning.Config.Bootstrap do
            :apollo_timeout_env_still_set,
            env!("APOLLO_TIMEOUT", :string, nil) != nil
 
-    # How long to wait to reach Apollo at all.
     apollo_connect_timeout =
       env!(
         "APOLLO_CONNECT_TIMEOUT_MS",
@@ -146,11 +145,9 @@ defmodule Lightning.Config.Bootstrap do
         Utils.get_env([:lightning, :apollo, :connect_timeout])
       )
 
-    # Longest acceptable silence, both before the first byte of an answer and
-    # between the chunks after it. Apollo sends a keepalive every 15s from
-    # v3.1.1, so half a minute of nothing means the path is broken rather than
-    # that a model is thinking. Raise it if you run an older Apollo that has no
-    # keepalive.
+    # Covers the wait for the first byte as well as the gaps after it. Apollo
+    # sends a keepalive every 15s from v3.1.1, so half a minute of silence means
+    # the path is broken rather than a model thinking. Raise it on an older one.
     apollo_idle_timeout =
       env!(
         "APOLLO_IDLE_TIMEOUT_MS",
@@ -158,7 +155,6 @@ defmodule Lightning.Config.Bootstrap do
         Utils.get_env([:lightning, :apollo, :idle_timeout])
       )
 
-    # Longest one whole request may take, however steadily it is streaming.
     apollo_request_timeout =
       env!(
         "APOLLO_REQUEST_TIMEOUT_MS",
@@ -333,19 +329,13 @@ defmodule Lightning.Config.Bootstrap do
       plugins: [
         {Oban.Plugins.Cron, crontab: all_cron}
       ],
-      # Should exceed MessageProcessor.timeout/1: below it, an AI job interrupted
-      # by a deploy is killed after Oban's producer has stopped, so no telemetry
-      # fires and nothing reports the failure. Application start warns if that
-      # inverts.
-      #
-      # It only has that effect if the platform lets the node live that long.
-      # Kubernetes force-kills after terminationGracePeriodSeconds, which is
-      # set in the deployment manifests rather than here, and defaults to 30s if
-      # left out - well short of this.
-      # Until that is raised a deploy landing on a running AI job still severs
-      # it, and StuckMessageReaper is what recovers the message rather than the
-      # :stop handler. Raising it trades slower rolling restarts for users
-      # keeping an in-flight answer.
+      # Must exceed MessageProcessor.job_timeout/0, or an interrupted AI job is
+      # killed after Oban's producer has stopped and nothing reports it; boot
+      # warns if that inverts. This only holds if the platform lets the node
+      # live that long: Kubernetes force-kills after
+      # terminationGracePeriodSeconds, set in the deployment manifests and 30s
+      # if left out, so until that is raised the reaper is what recovers a
+      # severed message.
       shutdown_grace_period: :timer.minutes(6),
       dispatch_cooldown: 100,
       queues: [

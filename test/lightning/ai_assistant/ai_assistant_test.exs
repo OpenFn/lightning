@@ -3207,9 +3207,8 @@ defmodule Lightning.AiAssistantTest do
       assert message =~ "paste the part you need into the chat"
     end
 
-    # Anything the clauses above did not name reaches the reader as ours, and
-    # goes to the log as itself.
-    test "falls back to a sentence of ours for a shape it cannot read", %{
+    # A transport error no clause names: the reader gets ours, the log gets it.
+    test "logs an unrecognised transport error before generalising it", %{
       user: user,
       project: project,
       workflow: workflow
@@ -3287,9 +3286,9 @@ defmodule Lightning.AiAssistantTest do
                Lightning.AiAssistant.ChatMessage.max_failure_message_length()
     end
 
-    # Apollo on main has no ATTACHMENT_TOO_LARGE, so an unrecognised type must
-    # keep falling through to its own message rather than being swallowed.
-    test "passes through an error type it does not recognise", %{
+    # PROMPT_TOO_LONG is on the allowlist, so Apollo's own sentence reaches the
+    # reader. Anything off it is swallowed; see the INTERNAL_ERROR test above.
+    test "passes through an error type on the allowlist", %{
       user: user,
       project: project,
       workflow: workflow

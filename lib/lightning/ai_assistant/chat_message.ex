@@ -172,11 +172,9 @@ defmodule Lightning.AiAssistant.ChatMessage do
     field :status, Ecto.Enum,
       values: [:pending, :processing, :success, :error, :cancelled]
 
-    # Why a message failed, kept alongside the status rather than broadcast.
-    # The failure people care about most is a deploy interrupting a run, and
-    # that is exactly when the browser reconnects to a different node - a
-    # PubSub-only signal is gone by then. It is also often written by a
-    # different process than the one that failed.
+    # Kept on the row as well as broadcast: the failure that matters most is a
+    # deploy interrupting a run, which is exactly when the browser reconnects
+    # to a different node and a PubSub-only signal is already gone.
     field :failure_category, Ecto.Enum,
       values: [
         :upstream_error,

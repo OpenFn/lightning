@@ -284,6 +284,25 @@ export class AIChannelRegistry {
   }
 
   /**
+   * Stop drip-feeding and run whatever was waiting on the drain.
+   *
+   * A dead stream leaves the saved partial queued behind the remaining buffer,
+   * which drains a letter at a time and far slower than Apollo fills it. The
+   * error that follows clears the buffer, so the reply the user just watched
+   * appear would restart from the middle and type itself out again before the
+   * saved message arrived.
+   */
+  private finishDrainNow(): void {
+    this.streamingDrainPos = this.streamingBuffer.length;
+    this.flushDueStatusMarkers();
+    this.stopDraining();
+
+    const callback = this.streamingDrainCallback;
+    this.streamingDrainCallback = null;
+    if (callback) callback();
+  }
+
+  /**
    * Subscribe to a channel topic
    *
    * - Creates and joins channel if it doesn't exist
@@ -773,6 +792,10 @@ export class AIChannelRegistry {
         status: MessageStatus;
         failure_message?: string;
       };
+
+      // Land the partial before clearing the buffer it is queued behind.
+      this.finishDrainNow();
+
       this.store._updateMessageStatus(
         typedPayload.message_id,
         'error',

@@ -26,7 +26,7 @@ defmodule Lightning.AiAssistant.StuckMessageReaper do
 
   require Logger
 
-  @worker "Lightning.AiAssistant.MessageProcessor"
+  @worker inspect(MessageProcessor)
   @live_states ~w(available scheduled executing retryable)
   @message "The assistant was interrupted before it finished. Please try again."
   @batch_size 200
@@ -56,10 +56,8 @@ defmodule Lightning.AiAssistant.StuckMessageReaper do
       where: m.status == :processing,
       where: m.processing_started_at < ^cutoff,
       order_by: [asc: m.processing_started_at],
-      # Bounded because each one reaped loads its whole session to tell the
-      # panel. The backlog this worker exists for is exactly when that would
-      # be largest, and it runs on a single-slot queue; the oldest go first
-      # and the rest wait five minutes.
+      # Each one reaped loads its whole session to tell the panel, and this runs
+      # on a single-slot queue. Oldest first; the rest wait five minutes.
       limit: @batch_size,
       select: %{id: m.id, chat_session_id: m.chat_session_id}
     )
@@ -73,12 +71,10 @@ defmodule Lightning.AiAssistant.StuckMessageReaper do
   defp live_message_ids(cutoff) do
     from(j in Oban.Job,
       where: j.worker == ^@worker and j.state in ^@live_states,
-      # An executing row only means the job is alive while it is fresh. Oban
-      # leaves the row executing when a node dies mid-job, and nothing here
-      # moves it out again: Cron is the only plugin configured, and Lifeline
-      # is what would rescue it. Counting a stale one as live would let an
-      # orphaned row shield its message from every future sweep, which is the
-      # exact case this worker exists to catch.
+      # An executing row means the job is alive only while it is fresh: Oban
+      # leaves it executing when a node dies mid-job and nothing moves it out,
+      # since Lifeline is not configured. Counting a stale one as live would let
+      # it shield its message from every future sweep.
       where: j.state != "executing" or j.attempted_at >= ^cutoff,
       select: fragment("?->>'message_id'", j.args)
     )
