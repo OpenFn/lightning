@@ -162,6 +162,10 @@ defmodule Lightning.Projects.Sandboxes do
   provisioner and synchronises collection names. Runs inside a single
   transaction. Collection data is never copied.
 
+  Also writes to the source: each workflow this merge carried gains the target's
+  resulting head in its version history, so a later merge can tell the target
+  moving on from this merge's own work.
+
   Callers must authorise the merge before calling (e.g. `:merge_sandbox`).
 
   ## Parameters
@@ -307,19 +311,36 @@ defmodule Lightning.Projects.Sandboxes do
     merged
     |> Map.keys()
     |> latest_versions_by_workflow()
-    |> Enum.each(fn %{workflow_id: target_id, hash: hash, source: version_source} ->
+    |> Enum.reduce_while(:ok, fn %{
+                                   workflow_id: target_id,
+                                   hash: hash,
+                                   source: version_source
+                                 },
+                                 :ok ->
       source_id = Map.fetch!(merged, target_id)
 
-      unless hash in Map.get(source_hashes, source_id, []) do
-        Repo.insert!(%WorkflowVersion{
+      if hash in Map.get(source_hashes, source_id, []) do
+        {:cont, :ok}
+      else
+        # The target's own source is carried over rather than chosen. It is
+        # normally "cli", and `WorkflowVersions.record_version/3` squashes a
+        # write that repeats the latest row's source, so a later CLI deploy into
+        # this sandbox can delete the sync point and bring the false warning
+        # back. Writing "app" instead would lose it to the next editor save,
+        # which happens far more often.
+        %WorkflowVersion{}
+        |> Ecto.Changeset.change(%{
           workflow_id: source_id,
           hash: hash,
           source: version_source
         })
+        |> Repo.insert()
+        |> case do
+          {:ok, _} -> {:cont, :ok}
+          {:error, changeset} -> {:halt, {:error, changeset}}
+        end
       end
     end)
-
-    :ok
   end
 
   # Target workflow id => source workflow id, for the workflows this merge wrote.
@@ -331,14 +352,19 @@ defmodule Lightning.Projects.Sandboxes do
       |> Map.get("workflows", [])
       |> Enum.reject(&(&1["delete"] == true))
 
+    # An empty selection is a selection, not the absence of one: a merge that
+    # carries only deletions writes no workflow content, so nothing has been
+    # brought into step. Reading it as "everything" would stamp the parent's
+    # head onto workflows the merge never touched and silence their divergence
+    # for good.
     entries =
       case Map.get(opts, :selected_workflow_ids) do
-        [_ | _] = selected_ids ->
+        nil ->
+          entries
+
+        selected_ids ->
           target_ids = promoted_target_ids(selected_ids, merge_doc)
           Enum.filter(entries, &MapSet.member?(target_ids, &1["id"]))
-
-        _ ->
-          entries
       end
 
     source_ids_by_name = Map.new(source.workflows, &{&1.name, &1.id})

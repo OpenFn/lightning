@@ -1100,7 +1100,8 @@ export const useWorkflowReadOnly = (): {
   if (isViewingAsExecuted) {
     return {
       isReadOnly: true,
-      tooltipMessage: 'You are viewing this workflow as a past run executed it',
+      tooltipMessage:
+        'You are viewing this workflow as a past run executed it',
       reason: 'as_run',
     };
   }

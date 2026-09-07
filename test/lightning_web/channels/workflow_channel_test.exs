@@ -975,19 +975,29 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, %{diverged: false}
     end
 
-    test "answers for the working name when the workflow has been renamed but not saved",
-         %{sandbox_socket: socket, parent_beta: parent_beta} do
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          parent_beta,
-          "ccc333ccc333",
-          "app"
-        )
+    test "warns when the working name lands on a workflow the parent gained", %{
+      sandbox_socket: socket,
+      parent: parent
+    } do
+      # The parent gained gamma after the fork, so the sandbox has no history
+      # under that name at all. Promoting an unsaved rename onto it overwrites
+      # gamma wholesale, which is the case a both-sides comparison reads as safe.
+      gamma = insert(:workflow, project: parent, name: "gamma")
 
-      # The editor holds an unsaved rename of alpha to beta. Promote saves first,
-      # so the merge will match the parent's diverged beta, not alpha.
-      ref = push(socket, "request_promote_check", %{"workflow_name" => "beta"})
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(gamma, "ddd111ddd111", "app")
+
+      ref = push(socket, "request_promote_check", %{"workflow_name" => "gamma"})
       assert_reply ref, :ok, %{diverged: true}
+    end
+
+    test "stays quiet when the working name is one the parent does not hold", %{
+      sandbox_socket: socket
+    } do
+      # A rename onto a fresh name creates a workflow on the parent rather than
+      # replacing one, so there is nothing to warn about.
+      ref = push(socket, "request_promote_check", %{"workflow_name" => "delta"})
+      assert_reply ref, :ok, %{diverged: false}
     end
 
     test "stays quiet for a user who cannot merge into the parent", %{

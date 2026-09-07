@@ -528,7 +528,7 @@ defmodule LightningWeb.WorkflowChannel do
            :ok <- authorize_merge_sandbox(user, parent) do
         %{
           diverged:
-            workflow_name in MergeProjects.diverged_workflows(sandbox, parent),
+            MergeProjects.workflow_diverged?(sandbox, parent, workflow_name),
           parent_name: parent.name
         }
       else
