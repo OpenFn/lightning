@@ -22,7 +22,8 @@ defmodule LightningWeb.WorkflowLive.Health do
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     workflow = Workflows.get_workflow!(id)
-    if connected?(socket), do: WorkOrders.subscribe(workflow)
+
+    if connected?(socket), do: WorkOrders.subscribe(workflow.project_id)
 
     {:ok,
      assign(socket,
@@ -57,8 +58,12 @@ defmodule LightningWeb.WorkflowLive.Health do
 
   # A work order that started or was retried has nothing this page draws — it
   # counts final states only.
-  defp maybe_refresh(socket, %{state: state}) when state in @final_states,
-    do: throttled_refresh(socket)
+  defp maybe_refresh(
+         %{assigns: %{workflow: %{id: workflow_id}}} = socket,
+         %{workflow_id: workflow_id, state: state}
+       )
+       when state in @final_states,
+       do: throttled_refresh(socket)
 
   defp maybe_refresh(socket, _work_order), do: socket
 
