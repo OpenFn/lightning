@@ -7,6 +7,7 @@ import { OutcomesDonut } from './charts/OutcomesDonut';
 import { TriageTable } from './charts/TriageTable';
 import { DEFAULT_DAYS, RangePicker } from './RangePicker';
 import type { FailureSignatures, Outcomes } from './types';
+import { FAILURE_STATES } from './types';
 import type { Query } from './useHealthQuery';
 import { healthBase, useHealthQuery } from './useHealthQuery';
 
@@ -95,7 +96,13 @@ export const HealthContent = ({
 
         {/* Same reply as the panel beside it — one aggregate read two ways, so
             the wedge here and the red wedge there cannot disagree. */}
-        <Card title="Failure breakdown" meta="by work order state">
+        <Card
+          title="Failure breakdown"
+          meta={
+            outcomes.data &&
+            `${failures(outcomes.data.counts)} · by work order state`
+          }
+        >
           <Panel data={outcomes.data} error={outcomes.error}>
             {({ counts, window }) => (
               <FailureBreakdownDonut
@@ -218,6 +225,16 @@ const workOrders = (counts: Outcomes['counts']) => {
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
 
   return `${total.toLocaleString()} work order${total === 1 ? '' : 's'}`;
+};
+
+// The donut's centre total sits inside the `aria-hidden` frame and the legend
+// below lists slices but never their sum, so this is the only place a screen
+// reader can reach the number of failures. Summed from `FAILURE_STATES` rather
+// than the drawn slices, which drop the states that never happened.
+const failures = (counts: Outcomes['counts']) => {
+  const total = FAILURE_STATES.reduce((sum, state) => sum + counts[state], 0);
+
+  return `${total.toLocaleString()} failure${total === 1 ? '' : 's'}`;
 };
 
 const emptyMessage = (
