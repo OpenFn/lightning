@@ -6,6 +6,7 @@ defmodule Lightning.Runs.Query do
 
   alias Lightning.Invocation.Step
   alias Lightning.Run
+  alias Lightning.Workflows.Workflow
 
   require Lightning.Run
 
@@ -89,7 +90,6 @@ defmodule Lightning.Runs.Query do
 
   Returns a query that selects:
   - `id` - the run ID
-  - `state` - the current state of the run
   - `row_number` - sequential number within the concurrency partition
   - `project_id` - the project ID
   - `concurrency` - the maximum concurrent runs allowed (workflow or project level)
@@ -113,7 +113,6 @@ defmodule Lightning.Runs.Query do
     )
     |> select([wlr], %{
       id: wlr.id,
-      state: wlr.state,
       row_number: row_number() |> over(:partition_window),
       project_id: wlr.project_id,
       concurrency: wlr.concurrency,
@@ -233,43 +232,56 @@ defmodule Lightning.Runs.Query do
   """
   @spec workflow_limited_runs(pos_integer()) :: Ecto.Queryable.t()
   def workflow_limited_runs(per_workflow_limit \\ 50) do
-    # Step 1: Rank runs within each workflow by priority and insertion time
+    # Step 1: Rank runs within each workflow by priority and insertion time.
+    #
+    # EXPERIMENTAL (load-testing): this ranking scans `runs` ALONE, using the
+    # denormalised `workflow_id`, and projects nothing beyond the columns
+    # covered by runs_workflow_active_window_idx (workflow_id, priority,
+    # inserted_at) plus id. There are deliberately NO joins to
+    # work_order/workflow/project here, so the expensive per-claim window runs
+    # over a single table and stays index-only-eligible.
     ranked_runs_query =
       from(r in Run,
         where: r.state in ^Run.active_states(),
-        join: wo in assoc(r, :work_order),
-        join: w in assoc(wo, :workflow),
-        join: p in assoc(w, :project)
+        windows: [
+          workflow_window: [
+            partition_by: r.workflow_id,
+            order_by: [asc: r.priority, asc: r.inserted_at]
+          ]
+        ],
+        select: %{
+          id: r.id,
+          workflow_id: r.workflow_id,
+          inserted_at: r.inserted_at,
+          priority: r.priority,
+          workflow_rn: row_number() |> over(:workflow_window)
+        }
       )
-      |> windows([r, _wo, w, _p],
-        workflow_window: [
-          partition_by: w.id,
-          order_by: [asc: r.priority, asc: r.inserted_at]
-        ]
-      )
-      |> select([r, _wo, w, p], %{
-        id: r.id,
-        state: r.state,
+
+    # Step 2: Keep the top N runs per workflow, THEN join workflows/projects on
+    # the (small) limited set to resolve concurrency, project_id and the
+    # concurrency partition key. project_id is sourced from workflows.project_id
+    # so runs.project_id is never projected through the window scan above,
+    # keeping that scan covering.
+    from(wlr in subquery(ranked_runs_query),
+      where: wlr.workflow_rn <= ^per_workflow_limit,
+      join: w in Workflow,
+      on: w.id == wlr.workflow_id,
+      join: p in assoc(w, :project),
+      select: %{
+        id: wlr.id,
+        inserted_at: wlr.inserted_at,
+        priority: wlr.priority,
         project_id: w.project_id,
         concurrency: coalesce(w.concurrency, p.concurrency),
-        inserted_at: r.inserted_at,
-        priority: r.priority,
-        workflow_id: w.id,
-        project_id_alt: p.id,
         partition_key:
           fragment(
             "CASE WHEN ? IS NOT NULL THEN ? ELSE ? END",
             w.concurrency,
             w.id,
             p.id
-          ),
-        workflow_rn: row_number() |> over(:workflow_window)
-      })
-
-    # Step 2: Filter to only keep top N runs per workflow
-    from(wlr in subquery(ranked_runs_query),
-      where: wlr.workflow_rn <= ^per_workflow_limit,
-      select: wlr
+          )
+      }
     )
   end
 end
