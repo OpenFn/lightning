@@ -1568,11 +1568,29 @@ defmodule LightningWeb.WorkflowChannel do
         workflow: workflow
       })
 
+      # can_edit_workflow folds in the lifecycle lock, and it is resolved at
+      # join. Going live makes it stale on every socket in the room, so
+      # recompute it here and push the new context rather than waiting for a
+      # reload.
+      socket = refresh_lifecycle_permissions(socket, workflow)
+      push(socket, "session_context_updated", build_session_context(socket))
+
       {:reply, {:ok, %{lock_version: workflow.lock_version, workflow: workflow}},
        socket}
     else
       error -> workflow_error_reply(socket, error)
     end
+  end
+
+  # Re-resolves the permissions that depend on the workflow's lifecycle state and
+  # re-assigns the workflow itself, so later authorization reads the new state.
+  defp refresh_lifecycle_permissions(socket, workflow) do
+    %{current_user: user, project_user: project_user, project: project} =
+      socket.assigns
+
+    socket
+    |> assign(:workflow, workflow)
+    |> assign(user_permissions(user, project_user, project, workflow))
   end
 
   # Content edits (save, save-and-sync, reset) are gated on top of the role

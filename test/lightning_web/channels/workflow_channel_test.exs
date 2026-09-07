@@ -54,6 +54,18 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
     end
 
+    test "go_live pushes a session context whose permissions reflect the new state",
+         %{socket: socket} do
+      # can_edit_workflow folds in the lifecycle lock and is resolved at join, so
+      # without a refresh the client keeps Save/Run until a reload.
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :ok, _
+
+      assert_push "session_context_updated", %{
+        permissions: %{can_edit_workflow: false}
+      }
+    end
+
     test "go_live is rejected for a user without edit access" do
       viewer = insert(:user)
 
