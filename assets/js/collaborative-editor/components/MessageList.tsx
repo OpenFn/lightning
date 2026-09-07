@@ -777,6 +777,57 @@ interface MessageListProps {
   isGlobalAssistantActive?: boolean;
 }
 
+/** Shown when the server recorded no reason, which should be rare. */
+const FAILURE_FALLBACK = 'The assistant did not finish.';
+
+const withoutRetryTail = (reason: string) =>
+  reason.replace(/\s*Please try again\.?\s*$/i, '');
+
+/**
+ * The one notice a failed exchange gets, in the assistant's column.
+ *
+ * A failure belongs on the reply, not on the prompt: the prompt was sent, and
+ * often answered in part, so marking it failed is both untrue and a second
+ * thing to read. Grey rather than red, because whatever text sits above it is
+ * the answer, not an error.
+ *
+ * The trailing "Please try again" is dropped only when there is a button to
+ * say it instead; without one the reader still needs telling.
+ */
+const FailureNotice = ({
+  reason,
+  onRetry,
+}: {
+  reason?: string | null | undefined;
+  onRetry?: (() => void) | undefined;
+}) => (
+  <div
+    className="flex items-center gap-2 text-xs text-gray-500"
+    data-testid="ai-failure-notice"
+  >
+    <span className="hero-exclamation-circle h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+    <span className="flex-1 min-w-0">
+      {onRetry
+        ? withoutRetryTail(reason?.trim() || FAILURE_FALLBACK)
+        : reason?.trim() || FAILURE_FALLBACK}
+    </span>
+    {onRetry && (
+      <button
+        type="button"
+        onClick={onRetry}
+        className={cn(
+          'inline-flex items-center gap-1 flex-shrink-0',
+          'font-medium text-indigo-600 hover:text-indigo-700',
+          'focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded'
+        )}
+      >
+        <span className="hero-arrow-path h-3.5 w-3.5" />
+        Try again
+      </button>
+    )}
+  </div>
+);
+
 export function MessageList({
   messages = [],
   isLoading = false,
@@ -817,8 +868,8 @@ export function MessageList({
   const lastMessage = messages.at(-1);
   const viewerJustSent = Boolean(
     lastMessage?.role === 'user' &&
-      currentUserId &&
-      lastMessage.user?.id === currentUserId
+    currentUserId &&
+    lastMessage.user?.id === currentUserId
   );
 
   useEffect(() => {
@@ -962,12 +1013,12 @@ export function MessageList({
       ? isGlobalAssistantActive
       : Boolean(
           message.from_global &&
-            // Only a successful reply was auto-applied. An errored or
-            // cancelled one can still carry code, and rendering its blocks
-            // would present changes that never reached the canvas as a
-            // record of what happened.
-            message.status === 'success' &&
-            (message.code || snapshotsByMessageId[message.id]?.length)
+          // Only a successful reply was auto-applied. An errored or
+          // cancelled one can still carry code, and rendering its blocks
+          // would present changes that never reached the canvas as a
+          // record of what happened.
+          message.status === 'success' &&
+          (message.code || snapshotsByMessageId[message.id]?.length)
         );
 
   /**
@@ -978,18 +1029,18 @@ export function MessageList({
   const canUndoChanges = (message: Message): boolean =>
     Boolean(
       onUndoChanges &&
-        !isApplyInFlight &&
-        !isWriteDisabled &&
-        !isStreaming(message) &&
-        displayMessages.at(-1)?.id === message.id &&
-        message.from_global &&
-        // Only a successful reply was auto-applied; an error or cancelled one
-        // can still carry code, and undoing it would offer to "redo" changes
-        // that never landed.
-        message.status === 'success' &&
-        message.code &&
-        !failedApplyMessageIds?.has(message.id) &&
-        beforeYamlByMessageId.get(message.id)
+      !isApplyInFlight &&
+      !isWriteDisabled &&
+      !isStreaming(message) &&
+      displayMessages.at(-1)?.id === message.id &&
+      message.from_global &&
+      // Only a successful reply was auto-applied; an error or cancelled one
+      // can still carry code, and undoing it would offer to "redo" changes
+      // that never landed.
+      message.status === 'success' &&
+      message.code &&
+      !failedApplyMessageIds?.has(message.id) &&
+      beforeYamlByMessageId.get(message.id)
     );
 
   const snapshotsFor = (message: Message): WorkflowSnapshot[] =>
@@ -1011,6 +1062,21 @@ export function MessageList({
       if (candidate?.role === 'user') return candidate.code ?? null;
     }
     return null;
+  };
+
+  // The user message a reply answers. Walks back rather than pairing by index,
+  // since a session can hold prompts with no reply at all.
+  const promptFor = (message: Message, index: number): Message | undefined => {
+    if (message.role === 'user') return message;
+
+    for (let i = index - 1; i >= 0; i--) {
+      const candidate = displayMessages[i];
+      if (candidate?.role === 'user') return candidate;
+    }
+
+    // A reply that arrived before its own prompt, which the second-precision
+    // ordering allows when both land in the same second.
+    return displayMessages.find(m => m.role === 'user');
   };
 
   // Only the global endpoint emits status segments today.
@@ -1055,10 +1121,44 @@ export function MessageList({
         }
       }}
     >
-      {displayMessages.map(message => {
+      {displayMessages.map((message, index) => {
         const segments = timelineSegments(message);
+        const prompt = promptFor(message, index);
+
+        // Retry re-runs the prompt, and only while that prompt is still the
+        // failed one. The server flips it to :pending and broadcasts that, so
+        // this is what stops a second click firing a second job: the reply it
+        // sits under keeps :error for good and would otherwise stay clickable
+        // for the life of the session.
+        const retry =
+          onRetryMessage && prompt?.status === 'error'
+            ? () => {
+                onRetryMessage(prompt.id);
+              }
+            : undefined;
+
+        // A failed reply carries the notice; the prompt carries it only when
+        // no reply arrived at all. Both neighbours are checked because a reply
+        // that dies in the same second as its prompt can come back either way
+        // round, timestamps being stored to the second.
+        const adjacentFailedReply = [index - 1, index + 1].some(i => {
+          const neighbour = displayMessages[i];
+          return (
+            neighbour?.role === 'assistant' && neighbour.status === 'error'
+          );
+        });
+
+        // Nothing has failed yet while a reply is still arriving. The prompt is
+        // marked failed before the partial reply reaches the client, so without
+        // this the notice appears above text that is still typing itself out.
+        const promptCarriesNotice =
+          message.status === 'error' && !adjacentFailedReply && !isLoading;
+
         const showMessageAddButtons =
-          !isStreaming(message) && showAddButtons && !message.code;
+          !isStreaming(message) &&
+          message.status !== 'error' &&
+          showAddButtons &&
+          !message.code;
 
         return (
           <div
@@ -1076,21 +1176,7 @@ export function MessageList({
                   }
                 >
                   <div className="space-y-3">
-                    {message.status === 'error' &&
-                    !isStreaming(message) &&
-                    message.content.trim() ? (
-                      <div
-                        className="rounded-lg border border-red-200 bg-red-50 px-3 py-2"
-                        data-testid="ai-validation-error"
-                      >
-                        <div className="flex items-start gap-2">
-                          <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-red-700 leading-relaxed">
-                            {message.content}
-                          </p>
-                        </div>
-                      </div>
-                    ) : segments ? (
+                    {segments ? (
                       isGlobalReply(message) ? (
                         <WorkflowReplyTimeline
                           segments={segments}
@@ -1278,35 +1364,12 @@ export function MessageList({
                         </div>
                       )}
 
-                    {!isStreaming(message) &&
-                      message.status === 'error' &&
-                      !message.content.trim() && (
-                        <div
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200"
-                          data-testid="ai-error-message"
-                        >
-                          <span className="hero-exclamation-circle h-4 w-4 text-red-600 flex-shrink-0" />
-                          <span className="text-sm text-red-700 flex-1">
-                            Failed to send message. Please try again.
-                          </span>
-                          {onRetryMessage && (
-                            <button
-                              type="button"
-                              onClick={() => onRetryMessage(message.id)}
-                              className={cn(
-                                'inline-flex items-center gap-1.5 px-3 py-1.5',
-                                'text-xs font-medium rounded-md',
-                                'bg-red-100 text-red-700 hover:bg-red-200',
-                                'transition-colors duration-150',
-                                'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
-                              )}
-                            >
-                              <span className="hero-arrow-path h-3.5 w-3.5" />
-                              Retry
-                            </button>
-                          )}
-                        </div>
-                      )}
+                    {!isStreaming(message) && message.status === 'error' && (
+                      <FailureNotice
+                        reason={message.failure_message}
+                        onRetry={retry}
+                      />
+                    )}
 
                     {!isStreaming(message) &&
                       message.status === 'processing' && (
@@ -1387,56 +1450,42 @@ export function MessageList({
                   </div>
                 </div>
               ) : (
-                <div className="flex justify-end" data-testid="user-message">
-                  <div className="flex flex-col items-end max-w-[85%] min-w-0">
-                    <div className="rounded-2xl bg-gray-100 px-4 py-2 max-w-full">
-                      <div
-                        style={{ overflowWrap: 'break-word' }}
-                        className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap max-w-full"
-                      >
-                        {message.content}
+                <div data-testid="user-message">
+                  <div className="flex justify-end">
+                    <div className="flex flex-col items-end max-w-[85%] min-w-0">
+                      <div className="rounded-2xl bg-gray-100 px-4 py-2 max-w-full">
+                        <div
+                          style={{ overflowWrap: 'break-word' }}
+                          className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap max-w-full"
+                        >
+                          {message.content}
+                        </div>
                       </div>
-                    </div>
 
-                    {message.status === 'error' && (
-                      <div
-                        className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200"
-                        data-testid="ai-error-message"
-                      >
-                        <span className="hero-exclamation-circle h-3.5 w-3.5 text-red-600" />
-                        <span className="text-xs text-red-700 flex-1">
-                          Failed to send
-                        </span>
-                        {onRetryMessage && (
-                          <button
-                            type="button"
-                            onClick={() => onRetryMessage(message.id)}
-                            className={cn(
-                              'inline-flex items-center gap-1 px-2 py-1',
-                              'text-xs font-medium rounded-md',
-                              'bg-red-100 text-red-700 hover:bg-red-200',
-                              'transition-colors duration-150',
-                              'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
-                            )}
-                          >
-                            <span className="hero-arrow-path h-3 w-3" />
-                            Retry
-                          </button>
+                      <span className="text-xs text-gray-400 mt-1">
+                        {formatUserName(message.user) ? (
+                          <>
+                            Sent by {formatUserName(message.user)} •{' '}
+                            {formatTimestamp(message.inserted_at)}
+                          </>
+                        ) : (
+                          formatTimestamp(message.inserted_at)
                         )}
-                      </div>
-                    )}
-
-                    <span className="text-xs text-gray-400 mt-1">
-                      {formatUserName(message.user) ? (
-                        <>
-                          Sent by {formatUserName(message.user)} •{' '}
-                          {formatTimestamp(message.inserted_at)}
-                        </>
-                      ) : (
-                        formatTimestamp(message.inserted_at)
-                      )}
-                    </span>
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Nothing came back at all, so there is no reply to hang
+                      this on. It still sits in the assistant's column, which
+                      is where the answer would have been. */}
+                  {promptCarriesNotice && (
+                    <div className="mt-3">
+                      <FailureNotice
+                        reason={message.failure_message}
+                        onRetry={retry}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>

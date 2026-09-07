@@ -31,7 +31,9 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       case key do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
-        :timeout -> 5_000
+        :connect_timeout -> 1_000
+        :idle_timeout -> 5_000
+        :request_timeout -> 5_000
       end
     end)
 
@@ -332,6 +334,103 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_msg.content == "Global response"
       # Flat-string responses have no timeline
       assert assistant_msg.response_segments == []
+    end
+
+    # A raise on our side is the one failure whose text must not reach the
+    # panel: it carries module names, SQL detail and inspected payloads.
+    test "an exception mid-stream is recorded without its text", %{
+      user: user,
+      project: project
+    } do
+      session = insert(:chat_session, user: user, project: project)
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "help",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        raising =
+          Stream.map([:boom], fn _ ->
+            raise "postgrex disconnected on internal-host-7"
+          end)
+
+        {:ok, %Tesla.Env{status: 200, body: raising}}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      reloaded = Repo.get!(ChatMessage, user_message.id)
+
+      assert reloaded.status == :error
+      assert reloaded.failure_category == :internal
+
+      assert reloaded.failure_message ==
+               "Something went wrong. Please try again."
+
+      refute reloaded.failure_message =~ "internal-host-7"
+    end
+
+    # A retry writes only :pending, so the run that follows it has to be what
+    # clears the last attempt's failure. Otherwise a message that failed and
+    # then succeeded is broadcast as :success carrying the old reason.
+    test "a retry that succeeds leaves no failure behind", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "help",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, %Finch.TransportError{reason: :econnrefused}}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      failed = Repo.get!(ChatMessage, user_message.id)
+      assert failed.status == :error
+      assert failed.failure_category == :upstream_error
+      assert failed.failure_message
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "here you go",
+          "usage" => %{}
+        })
+      )
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      retried = Repo.get!(ChatMessage, user_message.id)
+      assert retried.status == :success
+      refute retried.failure_category
+      refute retried.failure_message
     end
 
     test "persists the segments timeline alongside the flat response",

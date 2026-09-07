@@ -29,7 +29,9 @@ defmodule LightningWeb.AiAssistantChannelTest do
       case key do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
-        :timeout -> 5_000
+        :connect_timeout -> 1_000
+        :idle_timeout -> 5_000
+        :request_timeout -> 5_000
       end
     end)
 
@@ -360,6 +362,125 @@ defmodule LightningWeb.AiAssistantChannelTest do
                },
                %{from_global: false}
              ] = messages
+    end
+
+    # Everyone in the session sees a failure, not just whoever sent the message.
+    # The partial has to go out before the error, or the client clears its
+    # streaming buffer and the reply the user watched appear vanishes until
+    # they reload.
+    test "sends the partial before the error, and says why it failed", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :user,
+              content: "how?",
+              user: user,
+              status: :error,
+              failure_category: :upstream_error,
+              failure_message: "The connection to the assistant was lost."
+            },
+            %{
+              role: :assistant,
+              content: "half an answer",
+              status: :error,
+              failure_category: :incomplete_response,
+              failure_message: "The connection to the assistant was lost.",
+              inserted_at: DateTime.utc_now() |> DateTime.add(1)
+            }
+          ]
+        )
+
+      assert {:ok, _reply, socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      loaded = AiAssistant.get_session!(session.id)
+      user_message = Enum.find(loaded.messages, &(&1.role == :user))
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:error, loaded},
+           session_id: session.id,
+           message_id: user_message.id
+         }}
+      )
+
+      assert_broadcast "new_message", %{message: %{content: "half an answer"}}
+
+      assert_broadcast "message_error", %{
+        message_id: broadcast_id,
+        status: "error",
+        failure_category: "upstream_error",
+        failure_message: "The connection to the assistant was lost."
+      }
+
+      # The broadcaster named the message, so the reason lands on that one
+      # rather than on whichever happens to be newest.
+      assert broadcast_id == user_message.id
+    end
+
+    # The panel reads these two off the message to show why a reply failed, so
+    # a reconnecting client has to be told the same thing as one that was
+    # watching when it happened.
+    test "serializes the failure reason on a failed message", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :assistant,
+              content: "half an answer",
+              status: :error,
+              failure_category: :incomplete_response,
+              failure_message: "The connection to the assistant was lost."
+            },
+            %{
+              role: :assistant,
+              content: "a clean answer",
+              status: :success,
+              inserted_at: DateTime.utc_now() |> DateTime.add(1)
+            }
+          ]
+        )
+
+      assert {:ok, %{messages: messages}, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      assert [failed, clean] = messages
+
+      assert failed.failure_category == "incomplete_response"
+
+      assert failed.failure_message ==
+               "The connection to the assistant was lost."
+
+      # Nothing failed, so nothing is said about failing.
+      refute Map.has_key?(clean, :failure_category)
+      refute Map.has_key?(clean, :failure_message)
     end
 
     test "serializes segments timeline when present", %{

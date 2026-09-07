@@ -131,6 +131,41 @@ defmodule Lightning.Config.Bootstrap do
           end
         end)
 
+    # Read here rather than from System.get_env: envs come through Dotenvy, so
+    # a value set in a .env file never reaches the system environment. Recorded
+    # for the boot warning in Lightning.Application, where Logger is up.
+    config :lightning,
+           :apollo_timeout_env_still_set,
+           env!("APOLLO_TIMEOUT", :string, nil) != nil
+
+    # How long to wait to reach Apollo at all.
+    apollo_connect_timeout =
+      env!(
+        "APOLLO_CONNECT_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :connect_timeout])
+      )
+
+    # Longest acceptable silence, both before the first byte of an answer and
+    # between the chunks after it. Apollo sends a keepalive every 15s from
+    # v3.1.1, so half a minute of nothing means the path is broken rather than
+    # that a model is thinking. Raise it if you run an older Apollo that has no
+    # keepalive.
+    apollo_idle_timeout =
+      env!(
+        "APOLLO_IDLE_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :idle_timeout])
+      )
+
+    # Longest one whole request may take, however steadily it is streaming.
+    apollo_request_timeout =
+      env!(
+        "APOLLO_REQUEST_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :request_timeout])
+      )
+
     config :lightning, :apollo,
       endpoint:
         env!(
@@ -138,18 +173,9 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, :apollo, :endpoint])
         ),
-      # APOLLO_TIMEOUT (ms) bounds every request to Apollo. For streaming
-      # (all AI chat) it is the time-to-headers and the max gap between SSE
-      # chunks — and because the AI job's total-runtime ceiling is derived
-      # from the same value, it effectively bounds the whole run too, so
-      # size it above the longest expected AI run. Unset, it falls back to
-      # the per-env compiled config.
-      timeout:
-        env!(
-          "APOLLO_TIMEOUT",
-          :integer,
-          Utils.get_env([:lightning, :apollo, :timeout])
-        ),
+      connect_timeout: apollo_connect_timeout,
+      idle_timeout: apollo_idle_timeout,
+      request_timeout: apollo_request_timeout,
       ai_assistant_api_key: env!("AI_ASSISTANT_API_KEY", :string, nil)
 
     config :lightning, Lightning.Runtime.RuntimeManager,
@@ -273,6 +299,7 @@ defmodule Lightning.Config.Bootstrap do
       {"* * * * *", Lightning.Workflows.Scheduler},
       {"* * * * *", ObanPruner},
       {"*/5 * * * *", Lightning.Janitor},
+      {"*/5 * * * *", Lightning.AiAssistant.StuckMessageReaper},
       {"0 10 * * *", Lightning.DigestEmailWorker,
        args: %{"type" => "daily_project_digest"}},
       {"0 10 * * 1", Lightning.DigestEmailWorker,
@@ -306,7 +333,20 @@ defmodule Lightning.Config.Bootstrap do
       plugins: [
         {Oban.Plugins.Cron, crontab: all_cron}
       ],
-      shutdown_grace_period: :timer.minutes(2),
+      # Should exceed MessageProcessor.timeout/1: below it, an AI job interrupted
+      # by a deploy is killed after Oban's producer has stopped, so no telemetry
+      # fires and nothing reports the failure. Application start warns if that
+      # inverts.
+      #
+      # It only has that effect if the platform lets the node live that long.
+      # Kubernetes force-kills after terminationGracePeriodSeconds, which is
+      # set in the deployment manifests rather than here, and defaults to 30s if
+      # left out - well short of this.
+      # Until that is raised a deploy landing on a running AI job still severs
+      # it, and StuckMessageReaper is what recovers the message rather than the
+      # :stop handler. Raising it trades slower rolling restarts for users
+      # keeping an in-flight answer.
+      shutdown_grace_period: :timer.minutes(6),
       dispatch_cooldown: 100,
       queues: [
         scheduler: 1,

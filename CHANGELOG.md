@@ -22,8 +22,7 @@ and this project adheres to
   both are gone: every message goes to it, and the badge naming which assistant
   answered goes with them. Existing workflow conversations still open and read
   as they always did, and replying in one moves it to the global assistant from
-  that message on.
-  [#5042](https://github.com/OpenFn/lightning/issues/5042)
+  that message on. [#5042](https://github.com/OpenFn/lightning/issues/5042)
 
 - The AI assistant's attachment tickboxes are now about the run you are looking
   at, and they appear wherever you are. "Send run logs" and "Send run data" sit
@@ -35,10 +34,10 @@ and this project adheres to
   the notice and the send button now share that row.
   [#5037](https://github.com/OpenFn/lightning/issues/5037)
 
-- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising
-  the first character of a string, which breaks names in many languages.
-  Lightning does not normalise anything today, but #4577 adds it on every name,
-  so the runtime moves first.
+- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
+  first character of a string, which breaks names in many languages. Lightning
+  does not normalise anything today, but #4577 adds it on every name, so the
+  runtime moves first.
 
 ### Removed
 
@@ -81,10 +80,41 @@ and this project adheres to
   place, with add, edit, delete and copy on the row itself. A path already used
   by another workflow in the project is reported while you type, not after you
   save. A path the server would reject shows what is wrong and is left as you
-  typed it.
-  [#4952](https://github.com/OpenFn/lightning/issues/4952)
+  typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
+- **Breaking:** `APOLLO_TIMEOUT` is renamed `APOLLO_IDLE_TIMEOUT_MS` and joined
+  by `APOLLO_CONNECT_TIMEOUT_MS` and `APOLLO_REQUEST_TIMEOUT_MS`. The old name
+  is no longer read and logs a warning at boot if it is still set. It only ever
+  measured silence, so put its value on `APOLLO_IDLE_TIMEOUT_MS` if you were
+  setting it. All three have defaults, so a deployment need not set any of them.
+  The idle default is 30s, which assumes Apollo v3.1.1 or later and its 15s
+  keepalive; on an older Apollo a working stream can go quiet for longer than
+  that, so raise it or upgrade Apollo.
+  [#4882](https://github.com/OpenFn/lightning/issues/4882)
 
 ### Fixed
+
+- AI chat messages no longer sit in "processing" forever when the job running
+  them is interrupted. Oban's job-stop event now has a handler, the shutdown
+  grace period is longer than the longest an AI job can run, and a cron sweep
+  clears anything still stranded. A deploy can still sever a running answer,
+  because the platform's own kill deadline is shorter than the grace period; the
+  sweep is what recovers the message when that happens.
+  [#4260](https://github.com/OpenFn/lightning/issues/4260)
+  [#5124](https://github.com/OpenFn/lightning/issues/5124)
+- Why an AI chat failed is now recorded on the message and sent to the client: a
+  hung Apollo, a lost connection and a rate limit are no longer the same event
+  to us. The panel still renders one generic error, so this is the groundwork
+  for telling them apart rather than the change a user will see.
+  [#5125](https://github.com/OpenFn/lightning/issues/5125)
+- An AI answer that is cut off partway through is kept rather than discarded.
+  The text and any workflow YAML the user already watched appear are saved,
+  along with the status updates, in the order they were shown.
+  [#5126](https://github.com/OpenFn/lightning/issues/5126)
+  [#5127](https://github.com/OpenFn/lightning/issues/5127)
+- A failed AI stream now says which way it failed. A hung Apollo, a severed
+  connection and a genuinely short answer all read as "Stream ended without
+  complete response"; they now read as three different things.
+  [#4882](https://github.com/OpenFn/lightning/issues/4882)
 
 - The global assistant no longer offers to paste a reply's code block into
   whichever job you have open. It applies its own changes and shows them as
@@ -93,17 +123,17 @@ and this project adheres to
 - AI assistant code blocks share the surface the workflow diffs use, so a reply
   and the diff below it no longer read as two different products.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
-- A global assistant reply whose changes could not be applied now says so on
-  the reply itself, beside the diffs that did not land, and offers to try
-  again. It used to fall back to a raw YAML panel.
+- A global assistant reply whose changes could not be applied now says so on the
+  reply itself, beside the diffs that did not land, and offers to try again. It
+  used to fall back to a raw YAML panel.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
-- A failed apply is now remembered, so reloading no longer turns it back into
-  a success. The reply kept its diff blocks and offered to undo changes that
-  had never landed. A retry that works clears the record.
+- A failed apply is now remembered, so reloading no longer turns it back into a
+  success. The reply kept its diff blocks and offered to undo changes that had
+  never landed. A retry that works clears the record.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
 - Editing an open step with the global assistant no longer puts a diff in the
-  code editor. The change is already applied, so the diff read as a proposal
-  to accept or reject when the only control was a close button, and reloading
+  code editor. The change is already applied, so the diff read as a proposal to
+  accept or reject when the only control was a close button, and reloading
   revealed the change had been written all along.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
 
