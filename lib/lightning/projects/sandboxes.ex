@@ -47,6 +47,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.Scoping
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects.Events
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
@@ -82,7 +83,7 @@ defmodule Lightning.Projects.Sandboxes do
   owner who is demoted to `:admin`. The `actor` is then set as the sandbox
   owner (replacing any other role they may have had on the parent). To add
   a user to the sandbox who is not on the parent, call
-  `Lightning.Projects.add_project_users/3` after provision returns — that
+  `Lightning.Projects.add_project_users/4` after provision returns — that
   path goes through the seat-limit check.
   """
   @type provision_attrs :: %{
@@ -187,6 +188,10 @@ defmodule Lightning.Projects.Sandboxes do
   over keychains used by the selected workflows. A keychain whose name already
   exists in the target is left as the target's own.
 
+  Attaching one creates a keychain in the target, which needs owner or admin
+  there. Merging does not. When the actor cannot create one, the keychain is not
+  attached and the job arrives without it, rather than the merge failing.
+
   ## Returns
   * `{:ok, updated_target}` - Merge succeeded
   * `{:error, merge_error}` - Merge failed, classified into a domain reason
@@ -221,7 +226,7 @@ defmodule Lightning.Projects.Sandboxes do
 
       with :ok <-
              attach_selected_credentials(source, target, selected_credential_ids),
-           :ok <- attach_sandbox_keychains(source, target, opts),
+           :ok <- attach_sandbox_keychains(source, target, actor, opts),
            # Re-preload so the credential and keychain remaps see the
            # just-attached associations; merge_project skips the preload if
            # they're already loaded.
@@ -334,7 +339,7 @@ defmodule Lightning.Projects.Sandboxes do
   # KeychainCredential changeset's validate_default_credential_belongs_to_project
   # passes against the target. Returns `{:error, changeset}` on the first genuine
   # insert failure so the merge transaction rolls back.
-  defp attach_sandbox_keychains(source, target, opts) do
+  defp attach_sandbox_keychains(source, target, actor, opts) do
     target_keychain_names =
       from(k in KeychainCredential,
         where: k.project_id == ^target.id,
@@ -343,20 +348,46 @@ defmodule Lightning.Projects.Sandboxes do
       |> Repo.all()
       |> MapSet.new()
 
-    source
-    |> MergeProjects.carried_source_workflows(opts)
-    |> Enum.flat_map(& &1.jobs)
-    |> Enum.map(& &1.keychain_credential_id)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-    |> load_source_keychains(source.id)
-    |> Enum.reject(&MapSet.member?(target_keychain_names, &1.name))
-    |> Enum.reduce_while(:ok, fn keychain, :ok ->
-      case attach_keychain_to_target(keychain, target) do
-        {:ok, _} -> {:cont, :ok}
-        {:error, _} = error -> {:halt, error}
-      end
-    end)
+    to_attach =
+      source
+      |> MergeProjects.carried_source_workflows(opts)
+      |> Enum.flat_map(& &1.jobs)
+      |> Enum.map(& &1.keychain_credential_id)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> load_source_keychains(source.id)
+      |> Enum.reject(&MapSet.member?(target_keychain_names, &1.name))
+
+    # Attaching one of these creates a keychain in the target, which is an
+    # owner/admin action, while merging is not: `:merge_sandbox` allows editors.
+    # Without asking, an editor could make a keychain in a sandbox they own,
+    # where they are allowed to, and carry it into a project where they are not.
+    #
+    # Not attaching it is enough. `build_keychain_remap/2` maps a source
+    # keychain with no counterpart in the target to nil, so the job arrives
+    # without one rather than pointing at the sandbox's. That matches the
+    # collection
+    # deletions gated a few lines up, which an editor also merges without
+    # performing, rather than failing the whole merge over one part of it.
+    if may_create_keychain?(actor, target) do
+      Enum.reduce_while(to_attach, :ok, fn keychain, :ok ->
+        case attach_keychain_to_target(keychain, target) do
+          {:ok, _} -> {:cont, :ok}
+          {:error, _} = error -> {:halt, error}
+        end
+      end)
+    else
+      :ok
+    end
+  end
+
+  defp may_create_keychain?(%User{} = actor, %Project{} = target) do
+    Permissions.can?(
+      :credentials,
+      :create_keychain_credential,
+      actor,
+      %KeychainCredential{project_id: target.id}
+    )
   end
 
   # Only ever loads source-owned keychains: a job could, via changeset bypass,
@@ -374,9 +405,9 @@ defmodule Lightning.Projects.Sandboxes do
   defp attach_keychain_to_target(keychain, target) do
     attach_keychain_default_credential(keychain, target)
 
-    # The project must be on the base struct so that
-    # validate_default_credential_belongs_to_project can see it when
-    # changeset/2 runs; put_assoc after the fact would skip the check.
+    # `project_id` on the base struct is what
+    # validate_default_credential_belongs_to_project reads first, so it is set
+    # here rather than put_assoc'd afterwards, where the guard would not see it.
     %KeychainCredential{
       project: target,
       project_id: target.id,
@@ -633,7 +664,10 @@ defmodule Lightning.Projects.Sandboxes do
 
   ## Parameters
   * `sandbox` - Sandbox project to restore (or sandbox ID as string)
-  * `actor` - User performing the action (needs `:delete_sandbox` permission)
+  * `actor` - User performing the action (needs `:cancel_scheduled_deletion`
+    permission — the same owner/admin rule as `:delete_sandbox`, read directly
+    rather than through Scope, since the subject is by definition a project
+    scheduled for deletion)
 
   ## Returns
   * `{:ok, restored_sandbox}` - Sandbox subtree restored
@@ -649,7 +683,7 @@ defmodule Lightning.Projects.Sandboxes do
           | {:error, :unauthorized | :not_found | term()}
           | Lightning.Extensions.UsageLimiting.error()
   def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
-    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
+    if Permissions.can?(:sandboxes, :cancel_scheduled_deletion, actor, sandbox) do
       case ProjectLimiter.limit_new_sandbox(sandbox.id) do
         :ok -> do_cancel_scheduled_sandbox_deletion(sandbox)
         {:error, _reason, _message} = error -> error
@@ -690,6 +724,14 @@ defmodule Lightning.Projects.Sandboxes do
       SandboxPromExPlugin.fire_sandbox_scheduled_for_deletion_event()
 
       {:ok, %{sandbox | scheduled_deletion: date}}
+    end)
+    # Every descendant was wound down too, so every descendant's sessions have
+    # to hear about it. After the commit, not inside it: a subscriber that
+    # re-reads its project must not see it still live.
+    |> tap(fn result ->
+      with {:ok, _sandbox} <- result do
+        Enum.each(subtree_ids, &Events.project_deletion_scheduled/1)
+      end
     end)
   end
 
@@ -863,9 +905,9 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   defp create_keychain_in_sandbox(original_keychain, sandbox, actor) do
-    # The project must be on the base struct so that
-    # validate_default_credential_belongs_to_project can see it when
-    # changeset/2 runs; put_assoc after the fact would skip the check.
+    # `project_id` on the base struct is what
+    # validate_default_credential_belongs_to_project reads first, so it is set
+    # here rather than put_assoc'd afterwards, where the guard would not see it.
     %KeychainCredential{
       project: sandbox,
       project_id: sandbox.id,
@@ -986,18 +1028,10 @@ defmodule Lightning.Projects.Sandboxes do
           enabled: false,
           comment: parent_trigger.comment,
           custom_path: parent_trigger.custom_path,
-          cron_expression: parent_trigger.cron_expression,
-          kafka_configuration:
-            case parent_trigger.kafka_configuration do
-              %_{} = config -> Map.from_struct(config)
-              other -> other
-            end
+          cron_expression: parent_trigger.cron_expression
         }
 
-        {:ok, sandbox_trigger} =
-          %Trigger{}
-          |> Trigger.changeset(sandbox_trigger_attrs)
-          |> Repo.insert()
+        {:ok, sandbox_trigger} = insert_sandbox_trigger(sandbox_trigger_attrs)
 
         if parent_trigger.webhook_auth_methods &&
              parent_trigger.webhook_auth_methods != [] do
@@ -1015,6 +1049,45 @@ defmodule Lightning.Projects.Sandboxes do
       end)
     end)
     |> Map.new()
+  end
+
+  # A parent can hold a pre-migration path the clone's changeset rejects. The
+  # clone is written without it and the value copied in directly. Verbatim
+  # matters: an empty clone would clear the parent's path on promote.
+  defp insert_sandbox_trigger(attrs) do
+    # `mode: :savepoint` so a DB-level failure leaves the retry below usable.
+    %Trigger{}
+    |> Trigger.changeset(attrs)
+    |> Repo.insert(mode: :savepoint)
+    |> case do
+      {:ok, trigger} ->
+        {:ok, trigger}
+
+      {:error, changeset} ->
+        # Only a format failure. The other two rules keyed to `:custom_path`,
+        # a duplicate and a missing project, must not end with the path being
+        # written back. Neither is reachable through a provision today.
+        if Trigger.custom_path_shape_error?(changeset) do
+          insert_with_legacy_custom_path(attrs)
+        else
+          {:error, changeset}
+        end
+    end
+  end
+
+  defp insert_with_legacy_custom_path(attrs) do
+    with {:ok, trigger} <-
+           %Trigger{}
+           |> Trigger.changeset(%{attrs | custom_path: nil})
+           |> Repo.insert() do
+      {1, _} =
+        Repo.update_all(
+          from(t in Trigger, where: t.id == ^trigger.id),
+          set: [custom_path: attrs.custom_path]
+        )
+
+      {:ok, %{trigger | custom_path: attrs.custom_path}}
+    end
   end
 
   defp clone_workflow_edges(sandbox, parent) do

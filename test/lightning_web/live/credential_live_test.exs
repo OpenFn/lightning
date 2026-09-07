@@ -296,10 +296,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "cancel a scheduled for deletion credential", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
       insert(:step, credential: credential)
-      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+
+      {:ok, credential} =
+        Credentials.schedule_credential_deletion(credential, user)
 
       assert credential.scheduled_deletion
 
@@ -327,9 +330,11 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "can delete credential that has no activity in projects", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
-      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+      {:ok, credential} =
+        Credentials.schedule_credential_deletion(credential, user)
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -364,10 +369,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "cannot delete credential that has activity in projects", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
       insert(:step, credential: credential)
-      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+
+      {:ok, credential} =
+        Credentials.schedule_credential_deletion(credential, user)
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -1146,10 +1154,15 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "displays external_id in credentials table", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
       # Update credential with external_id
-      Credentials.update_credential(credential, %{external_id: "display-test-id"})
+      Credentials.update_credential(
+        credential,
+        %{external_id: "display-test-id"},
+        user
+      )
 
       {:ok, _index_live, html} = live(conn, ~p"/credentials")
 

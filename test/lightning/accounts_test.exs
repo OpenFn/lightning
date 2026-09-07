@@ -13,12 +13,26 @@ defmodule Lightning.AccountsTest do
   alias Lightning.Projects
   alias Lightning.Accounts
   alias Lightning.Projects.ProjectUser
+  alias LightningWeb.UserAuth
 
   import Lightning.AccountsFixtures
   import Lightning.Factories
   import Swoosh.TestAssertions
 
-  describe "confirmation_required?/1" do
+  defp user_created_hours_ago(hours, attrs \\ []) do
+    build(
+      :user,
+      Keyword.merge(
+        [
+          confirmed_at: nil,
+          inserted_at: DateTime.utc_now() |> DateTime.add(-hours, :hour)
+        ],
+        attrs
+      )
+    )
+  end
+
+  describe "locked_out?/1" do
     setup do
       Mox.stub(
         Lightning.MockConfig,
@@ -29,40 +43,173 @@ defmodule Lightning.AccountsTest do
       :ok
     end
 
-    test "returns false for users who are already confirmed" do
-      user = insert(:user, confirmed_at: DateTime.utc_now())
-      refute Accounts.confirmation_required?(user)
+    test "is true for an unconfirmed account past the grace period" do
+      assert Accounts.locked_out?(user_created_hours_ago(50))
     end
 
-    test "returns false for users who just created their accounts before 48 hours" do
-      user = insert(:user, confirmed_at: nil, inserted_at: DateTime.utc_now())
-      refute Accounts.confirmation_required?(user)
-    end
+    test "is false inside the grace period, for a confirmed account, and with the flag off" do
+      refute Accounts.locked_out?(user_created_hours_ago(1))
 
-    test "returns true for users who created their accounts more than 48 hours ago and haven't confirmed them" do
-      user =
-        insert(:user,
-          confirmed_at: nil,
-          inserted_at: DateTime.utc_now() |> Timex.shift(hours: -50)
-        )
+      refute Accounts.locked_out?(
+               user_created_hours_ago(50, confirmed_at: DateTime.utc_now())
+             )
 
-      assert Accounts.confirmation_required?(user)
-    end
-
-    test "returns false when :require_email_verification has been set to false" do
-      Mox.expect(
+      Mox.stub(
         Lightning.MockConfig,
         :check_flag?,
         fn :require_email_verification -> false end
       )
 
-      user =
-        insert(:user,
-          confirmed_at: nil,
-          inserted_at: DateTime.utc_now() |> Timex.shift(hours: -50)
-        )
+      refute Accounts.locked_out?(user_created_hours_ago(50))
+    end
 
-      refute Accounts.confirmation_required?(user)
+    test "raises rather than answering for a caller that has not resolved a user" do
+      unresolved_user = Map.get(%{}, :current_user)
+
+      assert_raise FunctionClauseError, fn ->
+        Accounts.locked_out?(unresolved_user)
+      end
+    end
+  end
+
+  describe "remind_account_confirmation/1" do
+    test "sends the link three times per window, then refuses" do
+      user = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..3 do
+        assert {:ok, _email} = Accounts.remind_account_confirmation(user)
+
+        assert_email_sent(
+          subject: "Confirm your OpenFn account",
+          to: user.email
+        )
+      end
+
+      assert {:error, :rate_limited} = Accounts.remind_account_confirmation(user)
+      refute_email_sent(subject: "Confirm your OpenFn account")
+    end
+
+    test "meters each account separately" do
+      spent = insert(:user, confirmed_at: nil)
+      other = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..4, do: Accounts.remind_account_confirmation(spent)
+
+      assert {:ok, _email} = Accounts.remind_account_confirmation(other)
+    end
+  end
+
+  describe "request_email_correction/2" do
+    test "sends the correction three times per window, then refuses" do
+      user = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..3 do
+        assert {:ok, _email} =
+                 Accounts.request_email_correction(user, unique_user_email())
+
+        assert_email_sent(subject: "Your OpenFn email was changed")
+        assert_email_sent(subject: "Please confirm your new email")
+      end
+
+      assert {:error, :rate_limited} =
+               Accounts.request_email_correction(user, unique_user_email())
+
+      refute_email_sent(subject: "Your OpenFn email was changed")
+      refute_email_sent(subject: "Please confirm your new email")
+    end
+
+    test "meters each account separately" do
+      spent = insert(:user, confirmed_at: nil)
+      other = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..4,
+          do: Accounts.request_email_correction(spent, unique_user_email())
+
+      assert {:ok, _email} =
+               Accounts.request_email_correction(other, unique_user_email())
+    end
+
+    test "does not share an allowance with remind_account_confirmation/1" do
+      spent_resends = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..4, do: Accounts.remind_account_confirmation(spent_resends)
+
+      assert {:ok, _email} =
+               Accounts.request_email_correction(
+                 spent_resends,
+                 unique_user_email()
+               )
+
+      spent_corrections = insert(:user, confirmed_at: nil)
+
+      for _ <- 1..4,
+          do:
+            Accounts.request_email_correction(
+              spent_corrections,
+              unique_user_email()
+            )
+
+      assert {:ok, _email} =
+               Accounts.remind_account_confirmation(spent_corrections)
+    end
+  end
+
+  describe "validate_change_user_email/2" do
+    test "accepts a new address authorised by the current password" do
+      user = insert(:user)
+
+      changeset =
+        Accounts.validate_change_user_email(user, %{
+          "email" => "new@example.com",
+          "current_password" => "hello world!"
+        })
+
+      assert changeset.valid?
+    end
+
+    test "refuses a wrong password, an unchanged address and a missing field" do
+      user = insert(:user)
+
+      wrong_password =
+        Accounts.validate_change_user_email(user, %{
+          "email" => "new@example.com",
+          "current_password" => "not the password"
+        })
+
+      refute wrong_password.valid?
+
+      assert {"does not match password", _} =
+               wrong_password.errors[:current_password]
+
+      unchanged =
+        Accounts.validate_change_user_email(user, %{
+          "email" => user.email,
+          "current_password" => "hello world!"
+        })
+
+      refute unchanged.valid?
+      assert {"has not changed", _} = unchanged.errors[:email]
+
+      assert %{errors: errors} = Accounts.validate_change_user_email(user, %{})
+      assert {"can't be blank", _} = errors[:email]
+      assert {"can't be blank", _} = errors[:current_password]
+    end
+
+    test "gives a password-less account a changeset error rather than raising" do
+      # AccountHook is adapter-pluggable, so an SSO-provisioned account can have
+      # no hash at all. This form is the one page such an account can reach.
+      user = build(:user, hashed_password: nil)
+
+      changeset =
+        Accounts.validate_change_user_email(user, %{
+          "email" => "new@example.com",
+          "current_password" => "hello world!"
+        })
+
+      refute changeset.valid?
+
+      assert {"does not match password", _} =
+               changeset.errors[:current_password]
     end
   end
 
@@ -754,6 +901,9 @@ defmodule Lightning.AccountsTest do
           dataclip: dataclip
         )
 
+      project_user = insert(:project_user, project: insert(:project), user: user)
+      credential = insert(:credential, user: user)
+
       result = Accounts.purge_user(user.id)
 
       # purge_user should propagate the delete_user failure, not return :ok
@@ -761,6 +911,32 @@ defmodule Lightning.AccountsTest do
 
       # The user should still exist since deletion was blocked by RESTRICT
       assert Repo.get(User, user.id)
+
+      # ...and nothing destructive should have been committed on the way there
+      assert Repo.get(ProjectUser, project_user.id)
+      assert Repo.get(Credentials.Credential, credential.id)
+    end
+
+    test "purging a user who created a keychain credential fails cleanly instead of raising" do
+      user = insert(:user)
+      project = insert(:project)
+      project_user = insert(:project_user, project: project, user: user)
+      credential = insert(:credential, user: user)
+
+      keychain =
+        insert(:keychain_credential, project: project, created_by: user)
+
+      assert {:error, changeset} = Accounts.purge_user(user.id)
+
+      assert {"user has associated keychain credentials and cannot be deleted",
+              _} = changeset.errors[:keychain_credentials]
+
+      # The user, their memberships and their credentials must all survive: a
+      # partially purged user cannot be reconstructed.
+      assert Repo.get(User, user.id)
+      assert Repo.get(ProjectUser, project_user.id)
+      assert Repo.get(Credentials.Credential, credential.id)
+      assert Repo.get(Credentials.KeychainCredential, keychain.id)
     end
   end
 
@@ -792,12 +968,9 @@ defmodule Lightning.AccountsTest do
 
       assert count_for(User) >= 1
 
-      {:ok, %{users_deleted: users_deleted}} =
-        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
       assert Repo.get(User, user.id)
-
-      refute user.id in Enum.map(users_deleted, & &1.id)
     end
 
     test "doesn't delete users that have a project file" do
@@ -818,11 +991,50 @@ defmodule Lightning.AccountsTest do
       _project_file1 =
         insert(:project_file, project: project, created_by: user1)
 
-      {:ok, %{users_deleted: users_deleted}} =
-        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
-      refute Enum.any?(users_deleted, &(&1.id == user1.id))
-      assert Enum.any?(users_deleted, &(&1.id == user2.id))
+      assert Repo.get(User, user1.id)
+      refute Repo.get(User, user2.id)
+    end
+
+    test "doesn't delete, or stall on, users that created a keychain credential" do
+      project = insert(:project)
+
+      %{user: user1} =
+        insert(:project_user,
+          project: project,
+          user: build(:user, scheduled_deletion: DateTime.utc_now())
+        )
+
+      %{user: user2} =
+        insert(:project_user,
+          project: project,
+          user: build(:user, scheduled_deletion: DateTime.utc_now())
+        )
+
+      insert(:keychain_credential, project: project, created_by: user1)
+
+      # user1 holds an ON DELETE RESTRICT reference, so no purge job should even
+      # be enqueued for them — the same treatment run and project-file owners get.
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+        refute_enqueued(
+          worker: Accounts,
+          args: %{user_id: user1.id, type: "purge_deleted"}
+        )
+
+        assert_enqueued(
+          worker: Accounts,
+          args: %{user_id: user2.id, type: "purge_deleted"}
+        )
+      end)
+
+      # This whole tick used to die on user1, taking user2's deletion with it.
+      :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      assert Repo.get(User, user1.id)
+      refute Repo.get(User, user2.id)
     end
 
     test "removes all users past deletion date when called with type 'purge_deleted'" do
@@ -831,12 +1043,79 @@ defmodule Lightning.AccountsTest do
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
         )
 
-      user_fixture(
-        scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
-      )
+      %{id: id_of_kept} =
+        user_fixture(
+          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
+        )
 
-      {:ok, %{users_deleted: [%{id: ^id_of_deleted}]}} =
-        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      refute Repo.get(User, id_of_deleted)
+      assert Repo.get(User, id_of_kept)
+    end
+
+    test "enqueues one job per user rather than purging them in a single batch" do
+      users =
+        for _ <- 1..3 do
+          user_fixture(
+            scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
+          )
+        end
+
+      _not_yet_due =
+        user_fixture(
+          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
+        )
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+        for user <- users do
+          assert_enqueued(
+            worker: Accounts,
+            args: %{user_id: user.id, type: "purge_deleted"}
+          )
+        end
+
+        # Nothing was purged by the batch job itself; each user is its own job.
+        assert Enum.all?(users, &Repo.get(User, &1.id))
+      end)
+    end
+
+    test "purges a single user when called with a user_id" do
+      user = insert(:user)
+      project_user = insert(:project_user, project: insert(:project), user: user)
+
+      assert :ok =
+               Accounts.perform(%Oban.Job{
+                 args: %{"user_id" => user.id, "type" => "purge_deleted"}
+               })
+
+      refute Repo.get(User, user.id)
+      refute Repo.get(ProjectUser, project_user.id)
+    end
+
+    test "no-ops when the per-user purge target is already gone" do
+      assert :ok =
+               Accounts.perform(%Oban.Job{
+                 args: %{
+                   "user_id" => Ecto.UUID.generate(),
+                   "type" => "purge_deleted"
+                 }
+               })
+    end
+
+    test "returns the error when a single user's purge is refused" do
+      user = insert(:user)
+      project = insert(:project)
+      insert(:keychain_credential, project: project, created_by: user)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Accounts.perform(%Oban.Job{
+                 args: %{"user_id" => user.id, "type" => "purge_deleted"}
+               })
+
+      assert Repo.get(User, user.id)
     end
 
     test "removes user from project users before deleting them" do
@@ -855,12 +1134,10 @@ defmodule Lightning.AccountsTest do
           ]
         )
 
-      {:ok, %{users_deleted: users_deleted}} =
-        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      :ok = Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
-      assert 1 == users_deleted |> Enum.count()
-
-      assert user_to_delete.id == users_deleted |> Enum.at(0) |> Map.get(:id)
+      refute Repo.get(User, user_to_delete.id)
+      assert Repo.get(User, another_user.id)
 
       project = Projects.get_project!(project.id) |> Repo.preload(:project_users)
 
@@ -1041,27 +1318,35 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "update_user_details/2" do
-    test "disabling a user revokes sessions but keeps their api tokens" do
-      user = insert(:user)
-      session_token = Accounts.generate_user_session_token(user)
-      api_token = Accounts.generate_api_token(user)
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+    # A disable or a privilege change is reversible, so the PAT stays (the
+    # request-time gate re-reads the user); only the session is dropped.
+    for {change, attrs} <- [
+          {"disabling a user", %{"disabled" => true}},
+          {"resetting a user's password", %{"password" => "new valid password"}},
+          {"changing a user's email", %{"email" => "moved@example.com"}},
+          {"revoking support access", %{"support_user" => false}},
+          {"demoting a superuser", %{"role" => "user"}}
+        ] do
+      test "#{change} revokes their sessions but keeps their api tokens" do
+        user = insert(:user, role: :superuser, support_user: true)
+        session_token = Accounts.generate_user_session_token(user)
+        api_token = Accounts.generate_api_token(user)
+        watch_transports(user)
 
-      {:ok, user} = Accounts.update_user_details(user, %{"disabled" => true})
+        {:ok, user} =
+          Accounts.update_user_details(user, unquote(Macro.escape(attrs)))
 
-      assert user.disabled
-      refute Accounts.get_user_by_session_token(session_token)
-      # A disable is reversible, so the PAT stays (the request-time gate blocks
-      # it while disabled); only the session is dropped.
-      assert Repo.get_by(UserToken, token: api_token, context: "api")
-      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+        refute Accounts.get_user_by_session_token(session_token)
+        assert Repo.get_by(UserToken, token: api_token, context: "api")
+        assert_transports_disconnected(user)
+      end
     end
 
     test "scheduling a user for deletion revokes all of their tokens" do
       user = insert(:user)
       session_token = Accounts.generate_user_session_token(user)
       Accounts.generate_api_token(user)
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+      watch_transports(user)
 
       {:ok, _user} =
         Accounts.update_user_details(user, %{
@@ -1071,13 +1356,13 @@ defmodule Lightning.AccountsTest do
 
       refute Accounts.get_user_by_session_token(session_token)
       assert UserToken.user_and_contexts_query(user, :all) |> Repo.all() == []
-      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+      assert_transports_disconnected(user)
     end
 
     test "editing other fields leaves the user's sessions untouched" do
       user = insert(:user)
       session_token = Accounts.generate_user_session_token(user)
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+      watch_transports(user)
 
       {:ok, _user} =
         Accounts.update_user_details(user, %{"first_name" => "Renamed"})
@@ -1148,14 +1433,14 @@ defmodule Lightning.AccountsTest do
     end
 
     test "disconnects the user's websockets", %{user: user} do
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+      watch_transports(user)
 
       {:ok, _} =
         Accounts.update_user_password(user, valid_user_password(), %{
           password: "new valid password"
         })
 
-      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+      assert_transports_disconnected(user)
     end
   end
 
@@ -1411,6 +1696,35 @@ defmodule Lightning.AccountsTest do
       assert user_token.sent_to == user.email
       assert user_token.context == "confirm"
     end
+
+    test "sends the link three times per window, then refuses", %{user: user} do
+      for _ <- 1..3 do
+        assert {:ok, _email} =
+                 Accounts.deliver_user_confirmation_instructions(user)
+
+        assert_email_sent(subject: "Confirm your OpenFn account", to: user)
+      end
+
+      assert {:error, :rate_limited} =
+               Accounts.deliver_user_confirmation_instructions(user)
+
+      refute_email_sent(subject: "Confirm your OpenFn account")
+    end
+
+    test "does not share an allowance with remind_account_confirmation/1", %{
+      user: user
+    } do
+      for _ <- 1..4, do: Accounts.deliver_user_confirmation_instructions(user)
+
+      assert {:ok, _email} = Accounts.remind_account_confirmation(user)
+
+      other = insert(:user)
+
+      for _ <- 1..4, do: Accounts.remind_account_confirmation(other)
+
+      assert {:ok, _email} =
+               Accounts.deliver_user_confirmation_instructions(other)
+    end
   end
 
   describe "deliver_user_confirmation_instructions/3" do
@@ -1577,12 +1891,12 @@ defmodule Lightning.AccountsTest do
     end
 
     test "disconnects the user's websockets", %{user: user} do
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+      watch_transports(user)
 
       {:ok, _} =
         Accounts.reset_user_password(user, %{password: "new valid password"})
 
-      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+      assert_transports_disconnected(user)
     end
   end
 
@@ -1639,7 +1953,7 @@ defmodule Lightning.AccountsTest do
       user = insert(:user)
       session_token = Accounts.generate_user_session_token(user)
       Accounts.generate_api_token(user)
-      LightningWeb.Endpoint.subscribe("user_socket:#{user.id}")
+      watch_transports(user)
 
       {:ok, _user} = Accounts.schedule_user_deletion(user, user.email)
 
@@ -1647,7 +1961,7 @@ defmodule Lightning.AccountsTest do
       refute Accounts.get_user_by_session_token(session_token)
       assert UserToken.user_and_contexts_query(user, :all) |> Repo.all() == []
       # ...and any live socket is torn down immediately.
-      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+      assert_transports_disconnected(user)
     end
   end
 
@@ -1760,6 +2074,39 @@ defmodule Lightning.AccountsTest do
 
       assert updated_user.preferences["notifications.enabled"] == true
     end
+  end
+
+  # A bystander is watched alongside the user so that anything left in the
+  # mailbox after the assertions is a broadcast that went to the wrong account.
+  defp watch_transports(user) do
+    bystander = %User{id: Ecto.UUID.generate()}
+
+    for watched <- [user, bystander],
+        topic <- [
+          UserAuth.user_socket_topic(watched),
+          UserAuth.live_socket_topic(watched)
+        ] do
+      LightningWeb.Endpoint.subscribe(topic)
+    end
+
+    :ok
+  end
+
+  defp assert_transports_disconnected(user) do
+    socket_topic = UserAuth.user_socket_topic(user)
+    live_topic = UserAuth.live_socket_topic(user)
+
+    assert_receive %Phoenix.Socket.Broadcast{
+      event: "disconnect",
+      topic: ^socket_topic
+    }
+
+    assert_receive %Phoenix.Socket.Broadcast{
+      event: "disconnect",
+      topic: ^live_topic
+    }
+
+    refute_received %Phoenix.Socket.Broadcast{event: "disconnect"}
   end
 
   defp count_project_credentials_for_user(user) do

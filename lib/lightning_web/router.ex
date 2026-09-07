@@ -194,6 +194,12 @@ defmodule LightningWeb.Router do
       live "/auth/confirm_access", ReAuthenticateLive.New, :new
     end
 
+    # No `on_mount`: this is where the lockout redirect sends people, so the
+    # hook that performs it would loop.
+    live_session :confirmation_required do
+      live "/users/confirm-required", UserConfirmationRequiredLive, :show
+    end
+
     scope "/" do
       pipe_through [
         :reauth_sudo_mode,
@@ -302,7 +308,12 @@ defmodule LightningWeb.Router do
   scope "/" do
     pipe_through [:browser, :require_authenticated_user, :require_superuser]
 
-    live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
+    live_dashboard "/dashboard",
+      metrics: LightningWeb.Telemetry,
+      on_mount: [
+        {LightningWeb.InitAssigns, :default},
+        {LightningWeb.Hooks, :ensure_admin}
+      ]
   end
 
   do_in(:dev) do

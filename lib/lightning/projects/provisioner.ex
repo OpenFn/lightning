@@ -35,7 +35,6 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowUsageLimiter
@@ -83,13 +82,16 @@ defmodule Lightning.Projects.Provisioner do
              build_import_changeset(project, user_or_repo_connection, data),
            edges_to_cleanup <-
              edges_referencing_deleted_jobs(project_changeset),
+           # Before the insert, or a workflow being dropped in this same
+           # document still holds the name the incoming one wants.
+           :ok <- release_paths_of_soft_deleted_workflows(project_changeset),
            {:ok, %{workflows: workflows} = project} <-
              Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
            :ok <- check_credential_scoping(project, project_changeset),
            :ok <- cleanup_orphaned_edges(edges_to_cleanup),
            :ok <-
              disable_triggers_for_soft_deleted_workflows(project_changeset),
-           :ok <- notify_kafka_for_soft_deleted_workflows(project_changeset),
+           :ok <- release_paths_of_hidden_workflows(project),
            :ok <- handle_collection_deletion(project_changeset),
            updated_project <- preload_dependencies(project),
            {:ok, _changes} <-
@@ -109,9 +111,13 @@ defmodule Lightning.Projects.Provisioner do
              ) do
         Enum.each(workflows, &Workflows.Events.workflow_updated/1)
 
-        project_changeset
-        |> get_assoc(:workflows)
-        |> Enum.each(&Workflows.publish_kafka_trigger_events/1)
+        # A provisioning document can soft-delete a workflow, which is the same
+        # disappearance as a delete driven from the UI and has to reach the same
+        # sessions. On the project's topic, not this one — see
+        # `Lightning.Projects.Events`.
+        workflows
+        |> Enum.filter(& &1.deleted_at)
+        |> Enum.each(&Lightning.Projects.Events.workflow_deleted/1)
 
         Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
           Lightning.Projects.Project.sandbox?(updated_project)
@@ -644,7 +650,7 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   defp channel_changeset(channel, attrs) do
-    attrs = maybe_add_destination_auth_param(attrs, channel)
+    attrs = resolve_destination_auth_param(attrs, channel)
 
     channel
     |> cast(attrs, [
@@ -678,10 +684,10 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  defp maybe_add_destination_auth_param(attrs, %Channel{} = channel) do
+  defp resolve_destination_auth_param(attrs, %Channel{} = channel) do
     case Map.fetch(attrs, "destination_credential_id") do
       :error ->
-        attrs
+        Map.delete(attrs, "destination_auth_method")
 
       {:ok, project_credential_id} ->
         attrs
@@ -746,31 +752,31 @@ defmodule Lightning.Projects.Provisioner do
     trigger
     |> Trigger.cast_changeset(attrs)
     |> cast_embed(
-      :kafka_configuration,
-      required: false,
-      with: &kafka_config_changeset/2
-    )
-    |> cast_embed(
       :webhook_response_config,
       required: false,
       with: &WebhookResponseConfig.changeset/2
     )
     |> Trigger.validate()
     |> cast(attrs, [:delete])
+    |> reject_server_owned_trigger_params(attrs)
     |> validate_required([:id])
     |> unique_constraint(:id, name: :triggers_pkey)
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
   end
 
-  defp kafka_config_changeset(kafka_config, attrs) do
-    kafka_config
-    |> KafkaConfiguration.changeset(attrs)
-    |> validate_change(:username, fn :username, _change ->
-      [username: "credentials can only be changed through the dashboard"]
-    end)
-    |> validate_change(:password, fn :password, _change ->
-      [password: "credentials can only be changed through the dashboard"]
+  # `validate_extraneous_params/2` builds its allow-list from `changeset.types`,
+  # so adding these as schema fields silently started accepting them.
+  defp reject_server_owned_trigger_params(changeset, attrs) do
+    Enum.reduce([:project_id, :legacy_bare_path], changeset, fn field, acc ->
+      key = to_string(field)
+
+      if is_map(attrs) and
+           (Map.has_key?(attrs, key) or Map.has_key?(attrs, field)) do
+        add_error(acc, :base, "extraneous parameters: %{params}", params: key)
+      else
+        acc
+      end
     end)
   end
 
@@ -900,28 +906,58 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  defp notify_kafka_for_soft_deleted_workflows(project_changeset) do
+  # A hidden row must not keep a name reserved. Released whatever the trigger's
+  # enabled state, and before the insert so one document can drop a workflow and
+  # claim its path in the same breath.
+  defp release_paths_of_soft_deleted_workflows(project_changeset) do
+    case soft_deleted_workflow_ids(project_changeset) do
+      [] ->
+        :ok
+
+      ids ->
+        from(t in Trigger, where: t.workflow_id in ^ids)
+        |> Repo.update_all(set: [custom_path: nil, legacy_bare_path: false])
+
+        :ok
+    end
+  end
+
+  # Project-wide and after the write: a checked-in yaml can still name the path
+  # of a workflow deleted since, and the cast would put it back on a row nobody
+  # can see. Disabled rows only, since webhook ingest ignores `deleted_at` and a
+  # hidden workflow with an enabled trigger is still serving.
+  defp release_paths_of_hidden_workflows(%Project{id: project_id}) do
+    from(t in Trigger,
+      join: w in Workflow,
+      on: w.id == t.workflow_id,
+      where:
+        w.project_id == ^project_id and not is_nil(w.deleted_at) and
+          not t.enabled and not is_nil(t.custom_path)
+    )
+    |> Repo.update_all(set: [custom_path: nil, legacy_bare_path: false])
+
+    :ok
+  end
+
+  defp soft_deleted_workflow_ids(project_changeset) do
     project_changeset
     |> get_assoc(:workflows)
-    |> Enum.filter(
-      &(&1.action == :update and not is_nil(get_change(&1, :deleted_at)))
-    )
+    |> Enum.filter(fn cs ->
+      cs.action == :update and not is_nil(get_change(cs, :deleted_at))
+    end)
     |> Enum.map(&get_field(&1, :id))
-    |> Workflows.notify_kafka_triggers_for_workflows()
   end
 
   defp disable_triggers_for_soft_deleted_workflows(project_changeset) do
-    deleted_workflow_ids =
-      project_changeset
-      |> get_assoc(:workflows)
-      |> Enum.filter(fn cs ->
-        cs.action == :update and not is_nil(get_change(cs, :deleted_at))
-      end)
-      |> Enum.map(&get_field(&1, :id))
+    deleted_workflow_ids = soft_deleted_workflow_ids(project_changeset)
 
     if deleted_workflow_ids == [] do
       :ok
     else
+      # Released whatever the trigger's state, or a hidden row keeps the name.
+      from(t in Trigger, where: t.workflow_id in ^deleted_workflow_ids)
+      |> Repo.update_all(set: [custom_path: nil, legacy_bare_path: false])
+
       from(t in Trigger,
         where: t.workflow_id in ^deleted_workflow_ids and t.enabled
       )

@@ -26,6 +26,14 @@ step() { printf '%s==>%s %s%s%s\n' "$BOLD" "$RESET" "$BOLD" "$*" "$RESET"; }
 # ok: green success line.
 ok() { printf '%s%s%s\n' "$GREEN" "$*" "$RESET"; }
 
+# note: cyan status line, for a script's own narration (as opposed to
+# whatever it shells out to) so the two are easy to tell apart in scrollback.
+note() { printf '%s%s%s\n' "$CYAN" "$*" "$RESET"; }
+
+# hint: cyan suggestion, to stderr. Not a warning — nothing is wrong, this is
+# just "here's a flag/command you might want."
+hint() { printf '%sHint:%s %s\n' "$CYAN" "$RESET" "$*" >&2; }
+
 # warn: yellow advisory, to stderr.
 warn() { printf '%sWarning:%s %s\n' "$YELLOW" "$RESET" "$*" >&2; }
 

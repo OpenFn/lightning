@@ -400,7 +400,7 @@ export const createWorkflowStore = (
    * This prevents unnecessary object updates in Immer when errors haven't
    * changed, maintaining referential stability for React memoization.
    *
-   * Handles both flat error structures and nested ones (e.g. kafka_configuration)
+   * Handles both flat error structures and nested ones
    */
   function areErrorsEqual(
     a: Record<string, unknown>,
@@ -423,7 +423,7 @@ export const createWorkflowStore = (
         return valsA.every((val, i) => val === valsB[i]);
       }
 
-      // If both values are objects (nested errors like kafka_configuration), recurse
+      // If both values are objects (nested errors), recurse
       if (
         typeof valsA === 'object' &&
         typeof valsB === 'object' &&
@@ -1195,6 +1195,39 @@ export const createWorkflowStore = (
    *
    * Pattern 1: Y.Doc → Observer → Immer → Notify
    */
+  /**
+   * Reads straight from the Y.Doc and writes straight back, so a clear cannot
+   * outlive the value it was about. `setClientErrors` is debounced by 500ms,
+   * which is long enough for a save to land a fresh error in between and have
+   * it deleted by a clear that was already in flight.
+   */
+  const clearErrorField = (path: string, field: string) => {
+    if (!ydoc) throw new Error('Y.Doc not connected');
+
+    const parts = path.split('.');
+    const [entityType, entityId] = parts;
+
+    if (
+      parts.length !== 2 ||
+      !entityId ||
+      (entityType !== 'jobs' &&
+        entityType !== 'triggers' &&
+        entityType !== 'edges')
+    ) {
+      throw new Error(`Unsupported error path: ${path}`);
+    }
+
+    const entityErrors: Record<string, Record<string, string[]>> = ydoc
+      .getMap('errors')
+      .get(entityType) ?? {};
+    const current = entityErrors[entityId] ?? {};
+
+    if (!(field in current)) return;
+
+    const { [field]: _dropped, ...rest } = current;
+    setError(path, rest);
+  };
+
   const setError = (path: string, errors: Record<string, string[]>) => {
     if (!ydoc) throw new Error('Y.Doc not connected');
 
@@ -2005,6 +2038,7 @@ export const createWorkflowStore = (
     importWorkflow,
     setError,
     setClientErrors,
+    clearErrorField,
 
     // =============================================================================
     // PATTERN 2: Y.Doc + Immediate Immer → Notify (Hybrid Operations - Use Sparingly)

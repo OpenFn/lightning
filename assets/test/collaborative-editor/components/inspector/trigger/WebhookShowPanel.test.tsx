@@ -30,7 +30,13 @@ const TRIGGER_ID = '11111111-1111-4111-8111-111111111111';
 interface SetupOptions {
   canEdit?: boolean;
   authMethods?: WebhookAuthMethod[];
+  project?: { id: string; name: string };
 }
+
+const PROJECT = {
+  id: '33333333-3333-4333-8333-333333333333',
+  name: 'ET EMR',
+};
 
 /**
  * Builds a connected workflow store whose channel resolves
@@ -58,11 +64,12 @@ function createConnectedWorkflowStore(
 async function setup(
   trigger: Workflow.Trigger,
   workflowStore: WorkflowStoreInstance,
-  { canEdit = true }: SetupOptions = {}
+  { canEdit = true, project }: SetupOptions = {}
 ) {
   const { wrapper } = await createTriggerTestHarness({
     canEdit,
     workflowStore,
+    ...(project ? { project } : {}),
   });
 
   const onClose = vi.fn();
@@ -84,7 +91,6 @@ function makeWebhookTrigger(): Workflow.Trigger {
     has_auth_method: false,
     cron_expression: null,
     cron_cursor_job_id: null,
-    kafka_configuration: null,
     webhook_reply: 'before_start',
     webhook_response_config: null,
   } as Workflow.Trigger;
@@ -124,7 +130,7 @@ describe('WebhookShowPanel', () => {
       screen.getByText(`${window.location.origin}/i/${TRIGGER_ID}`)
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Copy URL' })
+      screen.getByRole('button', { name: 'Copy Default URL' })
     ).toBeInTheDocument();
   });
 
@@ -223,6 +229,60 @@ describe('WebhookShowPanel', () => {
           ).length
         ).toBeGreaterThan(0);
       });
+    });
+  });
+
+  describe('a path the server rejected', () => {
+    test('says so, since the wizard closed before the answer arrived', async () => {
+      const trigger = {
+        ...makeWebhookTrigger(),
+        custom_path: 'facility-001',
+        errors: {
+          custom_path: ['is already used by another workflow in this project'],
+        },
+      } as Workflow.Trigger;
+
+      await setup(trigger, createConnectedWorkflowStore(ydoc, []));
+
+      expect(
+        screen.getByText(/already used by another workflow/i)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/custom path was not saved/i)
+      ).toBeInTheDocument();
+    });
+
+    test('shows the refused name but will not offer it as a URL', () => {
+      // Hiding it left the panel saying a path was not saved without saying
+      // which, and no way to see what to fix. It is never copyable: for a
+      // duplicate that URL resolves to whichever workflow owns the name.
+      const trigger = {
+        ...makeWebhookTrigger(),
+        custom_path: 'facility-001',
+        errors: {
+          custom_path: ['is already used by another workflow in this project'],
+        },
+      } as Workflow.Trigger;
+
+      return setup(trigger, createConnectedWorkflowStore(ydoc, []), {
+        project: PROJECT,
+      }).then(() => {
+        expect(
+          screen.getByText(`${window.location.origin}/i/${TRIGGER_ID}`)
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText(new RegExp(`${PROJECT.id}/facility-001`))
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole('button', { name: 'Not a usable URL yet' })
+        ).toBeDisabled();
+      });
+    });
+
+    test('stays quiet when there is no error', async () => {
+      await setup(makeWebhookTrigger(), createConnectedWorkflowStore(ydoc, []));
+
+      expect(screen.queryByText(/custom path was not saved/i)).toBeNull();
     });
   });
 });

@@ -303,7 +303,8 @@ defmodule Lightning.Projects.Project do
     changeset
     |> get_assoc(:project_users)
     |> Enum.count(fn project_user ->
-      get_field(project_user, :role) == :owner
+      project_user.action != :delete and
+        get_field(project_user, :role) == :owner
     end)
     |> case do
       1 ->

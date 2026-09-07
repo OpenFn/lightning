@@ -177,7 +177,7 @@ defmodule Lightning.Runs.Query do
     Run
     |> with_cte("subset", as: ^available_within_concurrency_limits())
     |> join(:inner, [r], subset in fragment(~s("subset")), on: r.id == subset.id)
-    |> order_by([r], asc: r.priority, asc: r.inserted_at)
+    |> order_by([r], asc: r.priority, asc: r.inserted_at, asc: r.id)
   end
 
   @doc """

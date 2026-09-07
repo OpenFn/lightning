@@ -1984,14 +1984,12 @@ defmodule Lightning.SessionTest do
       drain_document(instance, document_name)
     end
 
-    test "writes kafka_configuration validation errors correctly (not double-nested)",
-         %{
-           session: session,
-           user: user,
-           instance: instance,
-           document_name: document_name
-         } do
-      # Add a kafka trigger with blank/invalid kafka_configuration
+    test "writes an embedded schema's validation errors at one level, not two",
+         %{session: session, user: user} do
+      # A trigger's configuration lives in an embedded schema, and errors from
+      # it used to arrive wrapped in their own name twice over -
+      # trigger => webhook_response_config => webhook_response_config => field.
+      # The client reads one level, so the doubled shape hid the error.
       doc = Session.get_doc(session)
       triggers_array = Yex.Doc.get_array(doc, "triggers")
 
@@ -2000,47 +1998,42 @@ defmodule Lightning.SessionTest do
       trigger_map =
         Yex.MapPrelim.from(%{
           "id" => trigger_id,
-          "type" => "kafka",
+          "type" => "webhook",
           "enabled" => false,
-          "kafka_configuration" =>
+          "webhook_reply" => "after_completion",
+          "webhook_response_config" =>
             Yex.MapPrelim.from(%{
-              "hosts_string" => "",
-              "topics_string" => "",
-              "initial_offset_reset_policy" => "earliest",
-              "connect_timeout" => 30
+              "success_code" => "definitely not a status code",
+              "error_code" => "nor is this one"
             })
         })
 
-      Yex.Doc.transaction(doc, "test_add_kafka_trigger", fn ->
+      Yex.Doc.transaction(doc, "test_add_trigger_with_bad_embed", fn ->
         Yex.Array.push(triggers_array, trigger_map)
       end)
 
-      # Attempt save (should fail validation)
       assert {:error, %Ecto.Changeset{}} = Session.save_workflow(session, user)
 
-      # Check kafka_configuration errors are NOT double-nested
-      errors_map = Yex.Doc.get_map(doc, "errors")
-      errors = Yex.Map.to_json(errors_map)
+      errors =
+        doc
+        |> Yex.Doc.get_map("errors")
+        |> Yex.Map.to_json()
 
-      # Errors should be nested: %{triggers: %{trigger-id: %{kafka_configuration: %{hosts: ["error"]}}}}
-      # NOT: %{triggers: %{trigger-id: %{kafka_configuration: %{kafka_configuration: %{hosts: ["error"]}}}}}
-      assert Map.has_key?(errors, "triggers")
       assert is_map(errors["triggers"])
-      assert Map.has_key?(errors["triggers"], trigger_id)
       assert is_map(errors["triggers"][trigger_id])
-      assert Map.has_key?(errors["triggers"][trigger_id], "kafka_configuration")
 
-      kafka_errors = errors["triggers"][trigger_id]["kafka_configuration"]
+      embed_errors = errors["triggers"][trigger_id]["webhook_response_config"]
 
-      # Should have direct error fields, NOT another nested kafka_configuration
-      refute Map.has_key?(kafka_errors, "kafka_configuration"),
-             "kafka_configuration errors should not be double-nested"
+      assert is_map(embed_errors)
 
-      # Should have actual validation errors
-      assert Map.has_key?(kafka_errors, "hosts_string")
-      assert Map.has_key?(kafka_errors, "topics_string")
+      refute Map.has_key?(embed_errors, "webhook_response_config"),
+             "embedded schema errors should not be nested inside their own name"
 
-      drain_document(instance, document_name)
+      # Both siblings, not just the last one written: the point of the original
+      # test was that errors from one embed sit next to each other rather than
+      # merging or clobbering.
+      assert Map.has_key?(embed_errors, "success_code")
+      assert Map.has_key?(embed_errors, "error_code")
     end
 
     test "returns error when existing workflow tries to activate trigger at limit",

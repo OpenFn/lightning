@@ -75,7 +75,14 @@ defmodule Lightning.Projects.SandboxesTest do
     pc = attach_credential!(parent, actor)
 
     w1 = insert(:workflow, %{project: parent, name: "Alpha"})
-    t1 = insert(:trigger, %{workflow: w1, enabled: true, type: :webhook})
+
+    t1 =
+      insert(:trigger, %{
+        workflow: w1,
+        enabled: true,
+        type: :webhook,
+        custom_path: "parent-partner-feed"
+      })
 
     j1 =
       insert(:job, %{
@@ -248,7 +255,7 @@ defmodule Lightning.Projects.SandboxesTest do
     test "delete_sandbox does not emit telemetry event on unauthorized" do
       actor = insert(:user)
       other_user = insert(:user)
-      sandbox = insert(:project, name: "unauthorized")
+      sandbox = insert(:sandbox, name: "unauthorized")
       ensure_member!(sandbox, other_user, :owner)
 
       event = [:lightning, :sandbox, :deleted]
@@ -388,6 +395,23 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert s_triggers != []
       assert Enum.all?(s_triggers, &match?(false, &1.enabled))
+
+      # `custom_path` is namespaced per project, so a sandbox carries the
+      # parent's name onto its own URL rather than colliding with it. Covered
+      # end to end in `Lightning.Workflows.WebhookTriggerPathTest`.
+      assert "parent-partner-feed" in Enum.map(s_triggers, & &1.custom_path),
+             "a sandbox trigger keeps the parent's custom_path"
+
+      parent_custom_paths =
+        from(t in Trigger,
+          join: w in assoc(t, :workflow),
+          where: w.project_id == ^parent.id,
+          select: t.custom_path
+        )
+        |> Repo.all()
+
+      assert "parent-partner-feed" in parent_custom_paths,
+             "the parent's own custom_path is untouched"
 
       s_edges =
         from(e in Edge,
@@ -1570,52 +1594,6 @@ defmodule Lightning.Projects.SandboxesTest do
     end
   end
 
-  describe "provision with Kafka triggers" do
-    test "clones Kafka trigger configuration without crashing" do
-      actor = insert(:user)
-      parent = insert(:project, name: "kafka-parent")
-      ensure_member!(parent, actor, :owner)
-
-      w = insert(:workflow, project: parent, name: "KafkaFlow")
-      kafka_config = build(:triggers_kafka_configuration)
-
-      t =
-        insert(:trigger,
-          workflow: w,
-          type: :kafka,
-          enabled: true,
-          kafka_configuration: kafka_config
-        )
-
-      j = insert(:job, workflow: w, name: "K1", body: "fn(s => s);")
-
-      insert(:edge,
-        workflow: w,
-        source_trigger_id: t.id,
-        target_job_id: j.id,
-        condition_type: :always,
-        enabled: true
-      )
-
-      add_version!(w, "kafkahash1234")
-
-      assert {:ok, sandbox} =
-               Sandboxes.provision(parent, actor, %{name: "kafka-child"})
-
-      sandbox_trigger =
-        sandbox
-        |> Repo.preload(workflows: :triggers)
-        |> then(& &1.workflows)
-        |> List.first()
-        |> then(& &1.triggers)
-        |> List.first()
-
-      assert sandbox_trigger.type == :kafka
-      assert sandbox_trigger.enabled == false
-      assert sandbox_trigger.kafka_configuration != nil
-    end
-  end
-
   describe "update errors" do
     setup do
       parent = insert(:project, name: "parent")
@@ -1655,7 +1633,7 @@ defmodule Lightning.Projects.SandboxesTest do
     test "returns unauthorized for insufficient permissions" do
       actor = insert(:user)
       other_user = insert(:user)
-      sandbox = insert(:project, name: "unauthorized")
+      sandbox = insert(:sandbox, name: "unauthorized")
       ensure_member!(sandbox, other_user, :owner)
 
       assert {:error, :unauthorized} = Sandboxes.delete_sandbox(sandbox, actor)
@@ -2008,7 +1986,7 @@ defmodule Lightning.Projects.SandboxesTest do
   describe "delete_sandbox/2" do
     test "deletes simple parent-child lineage" do
       actor = insert(:user)
-      parent = insert(:project, name: "parent")
+      parent = insert(:sandbox, name: "parent")
       child = insert(:project, name: "child", parent: parent)
 
       ensure_member!(parent, actor, :owner)
@@ -2027,7 +2005,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "deletes three-level lineage (grandparent -> parent -> child)" do
       actor = insert(:user)
-      grandparent = insert(:project, name: "grandparent")
+      grandparent = insert(:sandbox, name: "grandparent")
       parent = insert(:project, name: "parent", parent: grandparent)
       child = insert(:project, name: "child", parent: parent)
 
@@ -2051,7 +2029,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "deletes complex tree with multiple branches" do
       actor = insert(:user)
-      root = insert(:project, name: "root")
+      root = insert(:sandbox, name: "root")
 
       branch_a = insert(:project, name: "branch_a", parent: root)
       branch_b = insert(:project, name: "branch_b", parent: root)
@@ -2188,7 +2166,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "deletes projects with complex associated data (workorders, steps, credentials)" do
       actor = insert(:user)
-      parent = insert(:project, name: "parent")
+      parent = insert(:sandbox, name: "parent")
       child = insert(:project, name: "child", parent: parent)
 
       ensure_member!(parent, actor, :owner)
@@ -2285,7 +2263,7 @@ defmodule Lightning.Projects.SandboxesTest do
       actor = insert(:user)
       unauthorized_user = insert(:user)
 
-      root = insert(:project, name: "root")
+      root = insert(:sandbox, name: "root")
       middle = insert(:project, name: "middle", parent: root)
 
       authorized_child = insert(:project, name: "auth_child", parent: middle)
@@ -2319,7 +2297,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "empty project with no associated data" do
       actor = insert(:user)
-      empty_parent = insert(:project, name: "empty_parent")
+      empty_parent = insert(:sandbox, name: "empty_parent")
       empty_child = insert(:project, name: "empty_child", parent: empty_parent)
 
       ensure_member!(empty_parent, actor, :owner)
@@ -2384,12 +2362,7 @@ defmodule Lightning.Projects.SandboxesTest do
     end
 
     test "uses PURGE_DELETED_AFTER_DAYS to compute the grace period" do
-      previous = Application.get_env(:lightning, :purge_deleted_after_days)
-      Application.put_env(:lightning, :purge_deleted_after_days, 7)
-
-      on_exit(fn ->
-        Application.put_env(:lightning, :purge_deleted_after_days, previous)
-      end)
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> 7 end)
 
       actor = insert(:user)
       parent = insert(:project, name: "parent")
@@ -2404,12 +2377,7 @@ defmodule Lightning.Projects.SandboxesTest do
     end
 
     test "schedules at now when PURGE_DELETED_AFTER_DAYS is nil" do
-      previous = Application.get_env(:lightning, :purge_deleted_after_days)
-      Application.put_env(:lightning, :purge_deleted_after_days, nil)
-
-      on_exit(fn ->
-        Application.put_env(:lightning, :purge_deleted_after_days, previous)
-      end)
+      Mox.stub(Lightning.MockConfig, :purge_deleted_after_days, fn -> nil end)
 
       actor = insert(:user)
       parent = insert(:project, name: "parent")
@@ -2423,9 +2391,33 @@ defmodule Lightning.Projects.SandboxesTest do
       assert abs(diff_seconds) <= 5
     end
 
+    # Every project in the subtree is wound down, so every project's sessions
+    # have to hear about it — a descendant's editor is no less stale than the
+    # target's.
+    test "broadcasts on every scheduled project's topic" do
+      actor = insert(:user)
+      %{id: parent_id} = parent = insert(:sandbox, name: "p")
+      %{id: child_id} = child = insert(:project, name: "c", parent: parent)
+
+      for project <- [parent, child] do
+        ensure_member!(project, actor, :owner)
+        assert :ok = Lightning.Projects.Events.subscribe(project.id)
+      end
+
+      {:ok, _} = Sandboxes.schedule_sandbox_deletion(parent, actor)
+
+      assert_receive %Lightning.Projects.Events.ProjectDeletionScheduled{
+        project_id: ^parent_id
+      }
+
+      assert_receive %Lightning.Projects.Events.ProjectDeletionScheduled{
+        project_id: ^child_id
+      }
+    end
+
     test "cascades scheduled_deletion to descendants" do
       actor = insert(:user)
-      grandparent = insert(:project, name: "gp")
+      grandparent = insert(:sandbox, name: "gp")
       parent = insert(:project, name: "p", parent: grandparent)
       child = insert(:project, name: "c", parent: parent)
 
@@ -2442,7 +2434,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "disables enabled triggers across the subtree" do
       actor = insert(:user)
-      parent = insert(:project, name: "parent")
+      parent = insert(:sandbox, name: "parent")
       child = insert(:project, name: "child", parent: parent)
 
       for project <- [parent, child] do
@@ -2471,7 +2463,7 @@ defmodule Lightning.Projects.SandboxesTest do
     test "leaves projects outside the subtree untouched" do
       actor = insert(:user)
       sibling_root = insert(:project, name: "sibling_root")
-      target = insert(:project, name: "target")
+      target = insert(:sandbox, name: "target")
 
       ensure_member!(target, actor, :owner)
 
@@ -2482,7 +2474,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "scheduling a parent overwrites a child's earlier scheduled_deletion" do
       actor = insert(:user)
-      parent = insert(:project, name: "parent")
+      parent = insert(:sandbox, name: "parent")
       child = insert(:project, name: "child", parent: parent)
 
       for project <- [parent, child] do
@@ -2532,7 +2524,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "returns :unauthorized when actor lacks delete_sandbox permission" do
       actor = insert(:user)
-      sandbox = insert(:project, name: "no-perm")
+      sandbox = insert(:sandbox, name: "no-perm")
 
       event = [:lightning, :sandbox, :scheduled_for_deletion]
       ref = :telemetry_test.attach_event_handlers(self(), [event])
@@ -2582,7 +2574,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "cascades the cancel through descendants" do
       actor = insert(:user)
-      parent = insert(:project, name: "parent")
+      parent = insert(:sandbox, name: "parent")
       child = insert(:project, name: "child", parent: parent)
       grandchild = insert(:project, name: "grandchild", parent: child)
 
@@ -2628,7 +2620,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "leaves un-scheduled siblings untouched when cancelling" do
       actor = insert(:user)
-      parent = insert(:project, name: "parent")
+      parent = insert(:sandbox, name: "parent")
       scheduled_child = insert(:project, name: "scheduled", parent: parent)
       active_sibling = insert(:project, name: "active", parent: parent)
 
@@ -2649,7 +2641,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "returns :unauthorized when actor lacks delete_sandbox permission" do
       actor = insert(:user)
-      sandbox = insert(:project, name: "no-perm")
+      sandbox = insert(:sandbox, name: "no-perm")
 
       assert {:error, :unauthorized} =
                Sandboxes.cancel_scheduled_sandbox_deletion(sandbox, actor)
@@ -2708,7 +2700,7 @@ defmodule Lightning.Projects.SandboxesTest do
 
     test "permission check runs before the limit check" do
       actor = insert(:user)
-      sandbox = insert(:project, name: "no-perm")
+      sandbox = insert(:sandbox, name: "no-perm")
 
       Mox.stub(
         Lightning.Extensions.MockUsageLimiter,

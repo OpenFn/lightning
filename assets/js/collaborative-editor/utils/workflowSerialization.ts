@@ -106,6 +106,31 @@ export function prepareWorkflowForSerialization(
 }
 
 /**
+ * Serializes the canvas for change detection, omitting positions so moving a
+ * node does not read as an edit.
+ *
+ * Both sides of a comparison must come from here: the assistant's own YAML is
+ * written by Apollo's serializer, and `importWorkflow` mutates further on the
+ * way in, so comparing against either would report changes nobody made.
+ */
+export function serializeCanvasForComparison(canvas: {
+  workflow: WorkflowMetadata | null;
+  jobs: unknown[];
+  triggers: unknown[];
+  edges: unknown[];
+}): string | undefined {
+  const prepared = prepareWorkflowForSerialization(
+    canvas.workflow,
+    canvas.jobs,
+    canvas.triggers,
+    canvas.edges,
+    {}
+  );
+
+  return prepared ? serializeWorkflowToYAML(prepared) : undefined;
+}
+
+/**
  * Serializes a workflow to YAML format for AI Assistant context.
  *
  * This utility converts the workflow state from the Zustand store into YAML format

@@ -83,7 +83,7 @@ export function TemplateBrowserModalWrapper() {
     setTemplates,
   ]);
 
-  const { run: handleSelect, isPending: isSaving } = useActionLock(
+  const { run: handleCreate, isPending: isSaving } = useActionLock(
     async (template: Template) => {
       const created = await createWorkflowFrom(() =>
         templateToWorkflowState(template)
@@ -102,7 +102,7 @@ export function TemplateBrowserModalWrapper() {
       templates={templates}
       loading={loading}
       isSaving={isSaving}
-      onSelect={template => void handleSelect(template)}
+      onCreate={template => void handleCreate(template)}
       searchQuery={searchQuery}
       onSearchChange={setTemplateSearchQuery}
     />

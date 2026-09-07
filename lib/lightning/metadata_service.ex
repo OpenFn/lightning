@@ -36,7 +36,7 @@ defmodule Lightning.MetadataService do
   ## Parameters
     - `adaptor`: The adaptor npm specification (e.g., "@openfn/language-http")
     - `credential`: The credential struct
-    - `environment`: The environment name (defaults to "main")
+    - `environment`: the environment whose credential body to read
 
   ## Returns
     - `{:ok, metadata}` - The metadata as a map
@@ -44,7 +44,7 @@ defmodule Lightning.MetadataService do
   """
   @spec fetch(adaptor :: String.t(), Credential.t(), environment :: String.t()) ::
           {:ok, %{optional(binary) => binary}} | {:error, Error.t()}
-  def fetch(adaptor, credential, environment \\ "main") do
+  def fetch(adaptor, credential, environment) do
     Lightning.TaskWorker.start_task(@cli_task_worker, fn ->
       LightningWeb.Telemetry.with_span(
         [:lightning, :fetch_metadata],

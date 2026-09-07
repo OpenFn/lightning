@@ -35,6 +35,10 @@ defmodule Lightning.Invocation.Dataclip do
 
   @type source_type ::
           :http_request | :global | :step_result | :saved_input | :kafka
+  # :kafka is retained deliberately. The Kafka trigger is gone, so no new
+  # dataclip can be created with this type, but dataclips already stored are the
+  # inputs of real work orders. Relabelling them would make the record claim they
+  # arrived some other way, which is not true and cannot be undone.
   @source_types [:http_request, :global, :step_result, :saved_input, :kafka]
 
   @derive {Jason.Encoder,
@@ -124,12 +128,10 @@ defmodule Lightning.Invocation.Dataclip do
     type = fetch_field!(changeset, :type)
 
     case {type, request} do
-      {:kafka, nil} ->
-        add_error(changeset, :request, "must be set for kafka type")
-
       {:http_request, _request} ->
         changeset
 
+      # A stored Kafka dataclip keeps its request; it must stay valid on update.
       {:kafka, _request} ->
         changeset
 
