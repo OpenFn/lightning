@@ -11,7 +11,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { AIChannelRegistry } from '../../../js/collaborative-editor/lib/AIChannelRegistry';
 import { createAIAssistantStore } from '../../../js/collaborative-editor/stores/createAIAssistantStore';
-import type { AIAssistantStore } from '../../../js/collaborative-editor/types/ai-assistant';
+import type {
+  AIAssistantStore,
+  WorkflowTemplateContext,
+} from '../../../js/collaborative-editor/types/ai-assistant';
 import { createMockJobCodeContext } from '../__helpers__/aiAssistantHelpers';
 import { createMockPhoenixChannel } from '../mocks/phoenixChannel';
 import type { MockPhoenixChannel } from '../mocks/phoenixChannel';
@@ -287,5 +290,81 @@ describe('AIChannelRegistry streaming', () => {
     expect(store.getSnapshot().streamingSegments).toEqual([
       { type: 'text', content: 'New' },
     ]);
+  });
+});
+
+describe('AIChannelRegistry join params', () => {
+  type RegistryArgs = ConstructorParameters<typeof AIChannelRegistry>;
+
+  const joinParamsFor = (context: WorkflowTemplateContext) => {
+    const store = createAIAssistantStore();
+    const channel = createMockPhoenixChannel(
+      'ai_assistant:workflow_template:new'
+    );
+    const channelFn = vi.fn(
+      (_topic: string, _params: Record<string, unknown>) => channel
+    );
+
+    const socket = {
+      channel: channelFn,
+      isConnected: () => true,
+    } as unknown as RegistryArgs[0];
+
+    const registry = new AIChannelRegistry(
+      socket,
+      store as unknown as RegistryArgs[1]
+    );
+
+    registry.subscribe(
+      'ai_assistant:workflow_template:new',
+      'subscriber-1',
+      context
+    );
+    registry.destroy();
+
+    return channelFn.mock.calls[0]?.[1];
+  };
+
+  // The join is the only way a session's first message reaches the server, so
+  // anything the user attached has to ride on it. It used to ride only when a
+  // step was open, which lost the run context for anyone asking from canvas.
+  it('forwards the run attachments without a job in context', () => {
+    const params = joinParamsFor({
+      project_id: 'project-1',
+      workflow_id: 'workflow-1',
+      content: 'what went wrong?',
+      use_global_assistant: true,
+      follow_run_id: 'run-1',
+      attach_logs: true,
+      attach_io_data: true,
+      step_id: 'step-1',
+    });
+
+    expect(params).toMatchObject({
+      follow_run_id: 'run-1',
+      attach_logs: true,
+      attach_io_data: true,
+      step_id: 'step-1',
+    });
+  });
+
+  it('still forwards them with a job in context', () => {
+    const params = joinParamsFor({
+      job_id: 'job-1',
+      project_id: 'project-1',
+      content: 'what went wrong?',
+      follow_run_id: 'run-1',
+      attach_logs: true,
+      attach_io_data: true,
+      step_id: 'step-1',
+    });
+
+    expect(params).toMatchObject({
+      job_id: 'job-1',
+      follow_run_id: 'run-1',
+      attach_logs: true,
+      attach_io_data: true,
+      step_id: 'step-1',
+    });
   });
 });

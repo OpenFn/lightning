@@ -887,9 +887,6 @@ defmodule Lightning.AiAssistant do
   defp build_context(context, opts) do
     Enum.reduce(opts, context, fn opt, acc ->
       case opt do
-        {:code, false} ->
-          Map.drop(acc, [:expression])
-
         {:log, false} ->
           Map.drop(acc, [:log])
 
@@ -1542,11 +1539,11 @@ defmodule Lightning.AiAssistant do
   # Naming the box beats naming the limit: unticking it is the thing that gets
   # an answer, and the part of the run log that matters is usually a few lines.
   defp attachment_box(%{"largest_attachment" => %{"type" => "log"}}),
-    do: "“Send logs”"
+    do: "“Send run logs”"
 
   defp attachment_box(%{"largest_attachment" => %{"type" => dataclip}})
        when dataclip in ["input_dataclip", "output_dataclip"],
-       do: "“Send scrubbed I/O”"
+       do: "“Send run data”"
 
   defp attachment_box(_details), do: "one of the attachment boxes"
 

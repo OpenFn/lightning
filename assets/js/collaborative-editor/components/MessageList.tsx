@@ -1064,14 +1064,6 @@ export function MessageList({
     return null;
   };
 
-  // Woven text/status timeline to render instead of flat content, or null.
-  // - Completed messages: persisted `response_segments` (global replies).
-  // - Streaming placeholder: live `streamingSegments`. Gated on the global
-  //   assistant being active as a deliberate blast-radius hold: job and
-  //   workflow chat are live services, and keeping their streaming render
-  //   on the flat `streamingContent` path means this PR cannot change what
-  //   they display. Only Apollo's global endpoint emits status segments
-  //   today; lift the gate when that changes.
   // The user message a reply answers. Walks back rather than pairing by index,
   // since a session can hold prompts with no reply at all.
   const promptFor = (message: Message, index: number): Message | undefined => {
@@ -1087,6 +1079,7 @@ export function MessageList({
     return displayMessages.find(m => m.role === 'user');
   };
 
+  // Only the global endpoint emits status segments today.
   const timelineSegments = (message: Message): ResponseSegment[] | null => {
     if (isStreaming(message)) {
       return isGlobalAssistantActive && streamingSegments?.length
