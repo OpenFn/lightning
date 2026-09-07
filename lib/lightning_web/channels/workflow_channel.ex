@@ -510,17 +510,25 @@ defmodule LightningWeb.WorkflowChannel do
   # sandbox forked. `diverged_workflows/2` answers for every workflow in the
   # project, so it is narrowed to the one being promoted.
   @impl true
-  def handle_in("request_promote_check", _params, socket) do
+  def handle_in("request_promote_check", params, socket) do
     sandbox = socket.assigns.project
-    workflow = socket.assigns.workflow
     user = socket.assigns.current_user
+
+    # The merge matches workflows across projects by name, and promote saves
+    # before merging, so the answer has to be about the working name. The client
+    # sends it; the last saved name is the fallback.
+    workflow_name =
+      case params do
+        %{"workflow_name" => name} when is_binary(name) and name != "" -> name
+        _ -> socket.assigns.workflow.name
+      end
 
     async_task(socket, "request_promote_check", fn ->
       with %_{} = parent <- fetch_parent_project(sandbox),
            :ok <- authorize_merge_sandbox(user, parent) do
         %{
           diverged:
-            workflow.name in MergeProjects.diverged_workflows(sandbox, parent),
+            workflow_name in MergeProjects.diverged_workflows(sandbox, parent),
           parent_name: parent.name
         }
       else

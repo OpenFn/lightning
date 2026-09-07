@@ -897,18 +897,27 @@ defmodule LightningWeb.WorkflowChannelTest do
       {:ok, _} =
         Lightning.WorkflowVersions.record_version(alpha, "aaa111aaa111", "app")
 
+      # Beta is a sibling carried into the sandbox by the fork, so it can be
+      # made to diverge independently of alpha.
+      beta = insert(:workflow, project: parent, name: "beta")
+      beta_trigger = insert(:trigger, workflow: beta, type: :webhook)
+      beta_job = insert(:job, workflow: beta, name: "B1")
+
+      insert(:edge,
+        workflow: beta,
+        source_trigger: beta_trigger,
+        target_job: beta_job,
+        condition_type: :always
+      )
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(beta, "bbb000bbb000", "app")
+
       {:ok, sandbox} =
         Lightning.Projects.provision_sandbox(parent, user, %{name: "sb"})
 
       sandbox_alpha =
         Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
-
-      {:ok, _} =
-        Lightning.WorkflowVersions.record_version(
-          sandbox_alpha,
-          "aaa111aaa111",
-          "app"
-        )
 
       {:ok, _, sandbox_socket} =
         LightningWeb.UserSocket
@@ -924,6 +933,9 @@ defmodule LightningWeb.WorkflowChannelTest do
       %{
         parent: parent,
         parent_alpha: alpha,
+        parent_beta: beta,
+        sandbox: sandbox,
+        sandbox_alpha_id: sandbox_alpha.id,
         sandbox_socket: sandbox_socket
       }
     end
@@ -948,17 +960,82 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, %{diverged: true, parent_name: "parent-project"}
     end
 
-    test "reports no divergence for a sibling workflow that moved on", %{
-      sandbox_socket: socket,
-      parent: parent
-    } do
-      beta = insert(:workflow, project: parent, name: "beta")
-
+    test "reports no divergence when a sibling workflow is the one that moved on",
+         %{sandbox_socket: socket, parent_beta: parent_beta} do
       {:ok, _} =
-        Lightning.WorkflowVersions.record_version(beta, "ccc333ccc333", "app")
+        Lightning.WorkflowVersions.record_version(
+          parent_beta,
+          "ccc333ccc333",
+          "app"
+        )
 
+      # beta exists in both projects and has diverged, but alpha is the workflow
+      # being promoted, so this socket must stay quiet.
       ref = push(socket, "request_promote_check", %{})
       assert_reply ref, :ok, %{diverged: false}
+    end
+
+    test "answers for the working name when the workflow has been renamed but not saved",
+         %{sandbox_socket: socket, parent_beta: parent_beta} do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_beta,
+          "ccc333ccc333",
+          "app"
+        )
+
+      # The editor holds an unsaved rename of alpha to beta. Promote saves first,
+      # so the merge will match the parent's diverged beta, not alpha.
+      ref = push(socket, "request_promote_check", %{"workflow_name" => "beta"})
+      assert_reply ref, :ok, %{diverged: true}
+    end
+
+    test "stays quiet for a user who cannot merge into the parent", %{
+      sandbox: sandbox,
+      parent_alpha: parent_alpha,
+      sandbox_alpha_id: sandbox_alpha_id
+    } do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_alpha,
+          "bbb222bbb222",
+          "app"
+        )
+
+      viewer = insert(:user)
+      insert(:project_user, project: sandbox, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha_id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      # A viewer has no rights on the parent, so it is never named to them.
+      ref = push(viewer_socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: nil}
+    end
+
+    test "does not warn about this sandbox's own promote", %{
+      sandbox_socket: socket,
+      sandbox: sandbox,
+      user: user
+    } do
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      edit_single_job_body!(sandbox_alpha.id, "console.log('promoted');")
+
+      {:ok, _} = Lightning.Projects.promote_workflow(sandbox_alpha, user)
+
+      # The promote records a new version on the parent, computed from the
+      # merged content, so without a sync point the parent's head is a hash this
+      # sandbox has never held and every promote after the first warns.
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: "parent-project"}
     end
 
     test "reports no divergence outside a sandbox", %{socket: socket} do

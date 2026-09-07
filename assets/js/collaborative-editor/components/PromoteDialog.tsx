@@ -74,11 +74,12 @@ export function PromoteDialog({
   const [phase, setPhase] = useState<Phase>('confirm');
   const [isPromoting, setIsPromoting] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
-  // Non-null once the server says the parent has moved on; the name inside it
-  // can still be null, so absence and anonymity stay distinguishable.
-  const [divergence, setDivergence] = useState<{
-    parentName: string | null;
-  } | null>(null);
+  // The parent's name once the server says it has moved on, null while it has
+  // not. The server only names the parent on the diverged reply.
+  const [divergedParentName, setDivergedParentName] = useState<string | null>(
+    null
+  );
+  const [checkFailed, setCheckFailed] = useState(false);
 
   const isBusy = isPromoting || isArchiving;
 
@@ -89,7 +90,8 @@ export function PromoteDialog({
       setPhase('confirm');
       setIsPromoting(false);
       setIsArchiving(false);
-      setDivergence(null);
+      setDivergedParentName(null);
+      setCheckFailed(false);
     }
   }, [isOpen]);
 
@@ -100,12 +102,15 @@ export function PromoteDialog({
 
     void onCheckDivergence()
       .then(({ diverged, parent_name }) => {
-        if (!cancelled && diverged) {
-          setDivergence({ parentName: parent_name });
+        if (!cancelled && diverged && parent_name) {
+          setDivergedParentName(parent_name);
         }
       })
       .catch(() => {
-        // Deliberately silent. The dialog still works without the warning.
+        // Say so rather than reading a failed check as "nothing has changed".
+        if (!cancelled) {
+          setCheckFailed(true);
+        }
       });
 
     return () => {
@@ -190,7 +195,14 @@ export function PromoteDialog({
                   and starts processing data with these changes.
                 </p>
 
-                {divergence && (
+                {checkFailed && (
+                  <p className="mt-4 text-sm text-gray-500">
+                    We could not check whether the parent has changed since this
+                    sandbox was created.
+                  </p>
+                )}
+
+                {divergedParentName !== null && (
                   <div
                     className="mt-4 flex gap-2.5 rounded-md bg-amber-50 p-3
                       text-sm text-amber-800"
@@ -203,7 +215,7 @@ export function PromoteDialog({
                     <p>
                       This workflow has changed in{' '}
                       <span className="font-semibold">
-                        {divergence.parentName ?? 'the parent project'}
+                        {divergedParentName}
                       </span>{' '}
                       since this sandbox was created. Promoting replaces that
                       version with yours, and anything added there is removed.

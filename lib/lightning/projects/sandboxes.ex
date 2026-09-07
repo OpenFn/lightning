@@ -255,7 +255,8 @@ defmodule Lightning.Projects.Sandboxes do
            {:ok, _} <-
              sync_collections(source, target,
                allow_deletions: allow_collection_deletions?
-             ) do
+             ),
+           :ok <- record_merge_sync_points(source, merge_doc, opts) do
         {:ok, {updated_target, merge_doc}}
       end
     end)
@@ -291,6 +292,96 @@ defmodule Lightning.Projects.Sandboxes do
     else
       _ -> []
     end
+  end
+
+  # A merge leaves the target holding a state this source produced, so the source
+  # has now seen that state. Recording it on the source is what stops
+  # `MergeProjects.diverged_workflows/2` reading the source's own merge as the
+  # target having moved on, which would warn on every promote after the first.
+  # The mirror of `copy_workflow_version_history/2`, which seeds a new sandbox
+  # with the parent's head.
+  defp record_merge_sync_points(source, merge_doc, opts) do
+    merged = merged_workflow_pairs(source, merge_doc, opts)
+    source_hashes = existing_hashes(Map.values(merged))
+
+    merged
+    |> Map.keys()
+    |> latest_versions_by_workflow()
+    |> Enum.each(fn %{workflow_id: target_id, hash: hash, source: version_source} ->
+      source_id = Map.fetch!(merged, target_id)
+
+      unless hash in Map.get(source_hashes, source_id, []) do
+        Repo.insert!(%WorkflowVersion{
+          workflow_id: source_id,
+          hash: hash,
+          source: version_source
+        })
+      end
+    end)
+
+    :ok
+  end
+
+  # Target workflow id => source workflow id, for the workflows this merge wrote.
+  # A promote scopes to its selection; a whole-project merge carries everything
+  # the document did not mark deleted.
+  defp merged_workflow_pairs(source, merge_doc, opts) do
+    entries =
+      merge_doc
+      |> Map.get("workflows", [])
+      |> Enum.reject(&(&1["delete"] == true))
+
+    entries =
+      case Map.get(opts, :selected_workflow_ids) do
+        [_ | _] = selected_ids ->
+          target_ids = promoted_target_ids(selected_ids, merge_doc)
+          Enum.filter(entries, &MapSet.member?(target_ids, &1["id"]))
+
+        _ ->
+          entries
+      end
+
+    source_ids_by_name = Map.new(source.workflows, &{&1.name, &1.id})
+
+    entries
+    |> Enum.flat_map(fn entry ->
+      case Map.fetch(source_ids_by_name, entry["name"]) do
+        {:ok, source_id} -> [{entry["id"], source_id}]
+        :error -> []
+      end
+    end)
+    |> Map.new()
+  end
+
+  defp latest_versions_by_workflow([]), do: []
+
+  defp latest_versions_by_workflow(workflow_ids) do
+    from(version in WorkflowVersion,
+      where: version.workflow_id in ^workflow_ids,
+      distinct: version.workflow_id,
+      order_by: [
+        asc: version.workflow_id,
+        desc: version.inserted_at,
+        desc: version.id
+      ],
+      select: %{
+        workflow_id: version.workflow_id,
+        hash: version.hash,
+        source: version.source
+      }
+    )
+    |> Repo.all()
+  end
+
+  defp existing_hashes([]), do: %{}
+
+  defp existing_hashes(workflow_ids) do
+    from(version in WorkflowVersion,
+      where: version.workflow_id in ^workflow_ids,
+      select: {version.workflow_id, version.hash}
+    )
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
   defp promoted_target_ids(selected_source_ids, merge_doc) do

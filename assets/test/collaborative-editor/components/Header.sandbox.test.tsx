@@ -507,6 +507,10 @@ describe('Header - lifecycle actions', () => {
 
     await user.click(screen.getByTestId('promote-sandbox-button'));
 
+    await waitFor(() => {
+      expect(checkPromote).toHaveBeenCalledTimes(1);
+    });
+
     const dialog = screen.getByRole('dialog');
     expect(
       within(dialog).getByRole('button', { name: 'Save and promote' })
@@ -514,6 +518,40 @@ describe('Header - lifecycle actions', () => {
     expect(
       within(dialog).queryByText(/has changed in/i)
     ).not.toBeInTheDocument();
+    // Silence would read as "nothing has changed", which we do not know.
+    expect(
+      within(dialog).getByText(
+        /could not check whether the parent has changed/i
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('reopening the dialog re-runs the check and clears a stale warning', async () => {
+    const user = userEvent.setup();
+    checkPromote.mockResolvedValue({
+      diverged: true,
+      parent_name: 'Production',
+    });
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+    expect(
+      await within(screen.getByRole('dialog')).findByText(/has changed in/i)
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' })
+    );
+
+    // The parent has since been promoted into, so the second open must not
+    // inherit the first open's warning.
+    checkPromote.mockResolvedValue({ diverged: false, parent_name: null });
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+
+    await waitFor(() => {
+      expect(checkPromote).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.queryByText(/has changed in/i)).not.toBeInTheDocument();
   });
 
   test('confirming saves before merging, then shows the success step without navigating', async () => {

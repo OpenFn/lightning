@@ -1315,7 +1315,8 @@ export const createWorkflowStore = (
         // Type assertion needed because Y.Map.get returns unknown
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         const typedEntityErrors = entityErrors as
-          Record<string, Record<string, string[]>> | undefined;
+          | Record<string, Record<string, string[]>>
+          | undefined;
 
         const updatedEntityErrors = {
           ...(typedEntityErrors ?? {}),
@@ -1416,7 +1417,8 @@ export const createWorkflowStore = (
           // Type assertion needed because Y.Map.get returns unknown
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           const typedEntityErrors = entityErrors as
-            Record<string, Record<string, string[]>> | undefined;
+            | Record<string, Record<string, string[]>>
+            | undefined;
 
           return typedEntityErrors?.[entityId] ?? {};
         }
@@ -1663,12 +1665,17 @@ export const createWorkflowStore = (
     diverged: boolean;
     parent_name: string | null;
   }> => {
-    const { provider } = ensureConnected();
+    const { ydoc, provider } = ensureConnected();
+
+    // The merge matches workflows across projects by name, and promote saves
+    // before merging, so the name it will act on is the working one, not the
+    // last saved one.
+    const { name } = ydoc.getMap('workflow').toJSON() as { name?: string };
 
     return await channelRequest<{
       diverged: boolean;
       parent_name: string | null;
-    }>(provider.channel, 'request_promote_check', {});
+    }>(provider.channel, 'request_promote_check', { workflow_name: name });
   };
 
   // Archive this sandbox after promoting. Archiving turns off the sandbox's
