@@ -355,7 +355,7 @@ defmodule LightningWeb.RunLive.ShowTest do
       refute html =~ ~r/&v=/
     end
 
-    test "includes version param when run snapshot differs from current workflow",
+    test "pins the run's own snapshot when it differs from the current workflow",
          %{
            conn: conn,
            project: project
@@ -386,7 +386,7 @@ defmodule LightningWeb.RunLive.ShowTest do
       # Find the workflow link - should include version param
       # Note: & is HTML-escaped as &amp; in rendered output
       assert html =~
-               ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?run=#{run_id}&amp;v=#{snapshot.lock_version}"/
+               ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?run=#{run_id}&amp;as_run=#{run_id}"/
     end
   end
 

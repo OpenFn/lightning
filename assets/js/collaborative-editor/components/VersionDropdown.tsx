@@ -1,7 +1,9 @@
+import { format } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { Tooltip } from '../../components/Tooltip';
 import { cn } from '../../utils/cn';
 import {
   useRequestVersions,
@@ -11,6 +13,7 @@ import {
 } from '../hooks/useSessionContext';
 import { notifications } from '../lib/notifications';
 import type { Version } from '../types/sessionContext';
+import { releaseActionLabel } from '../utils/releaseLabel';
 
 interface VersionDropdownProps {
   currentVersion: number | null;
@@ -32,9 +35,12 @@ export function VersionDropdown({
   const versionsError = useVersionsError();
   const requestVersions = useRequestVersions();
 
-  // Check if version is pinned via URL parameter
+  // Check if version is pinned via URL parameter. `?v=` now carries the release
+  // version_number (e.g. `?v=1`), not the snapshot lock_version.
   const { params } = useURLState();
-  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+  const pinnedParam = params['v'];
+  const isPinnedVersion = pinnedParam !== undefined && pinnedParam !== null;
+  const pinnedVersionNumber = isPinnedVersion ? Number(pinnedParam) : null;
 
   // Show placeholder while loading version information
   const isLoadingVersion = currentVersion === null || latestVersion === null;
@@ -43,12 +49,15 @@ export function VersionDropdown({
   const isLatestVersion =
     !isLoadingVersion && currentVersion === latestVersion && !isPinnedVersion;
 
-  // Format version display
+  // Format version display. When pinned, `?v=` is already the version_number the
+  // rows show, so display it directly (no lock_version mapping needed).
   const currentVersionDisplay = isLoadingVersion
     ? '•'
     : isLatestVersion
       ? 'latest'
-      : `v${String(currentVersion).substring(0, 7)}`;
+      : isPinnedVersion
+        ? `v${pinnedParam}`
+        : `v${String(currentVersion).substring(0, 7)}`;
 
   // Style based on version (matching snapshot_version_chip)
   const buttonStyles = isLoadingVersion
@@ -102,11 +111,14 @@ export function VersionDropdown({
     }
   }, [versionsError]);
 
-  const handleVersionClick = (version: Version | 'latest') => {
-    if (version === 'latest') {
+  // Selecting the newest release returns to the live document (clears the ?v=
+  // pin); selecting any older release pins it read-only via its version_number
+  // (the value `?v=` now carries).
+  const handleVersionClick = (version: Version) => {
+    if (version.is_latest) {
       onVersionSelect('latest');
     } else {
-      onVersionSelect(version.lock_version);
+      onVersionSelect(version.version_number);
     }
     setIsOpen(false);
   };
@@ -133,7 +145,7 @@ export function VersionDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-56 rounded-md bg-white shadow-lg outline-1 outline-black/5 z-50 max-h-80 overflow-y-auto">
+        <div className="absolute left-0 mt-2 w-72 rounded-md bg-white shadow-lg outline-1 outline-black/5 z-50 max-h-80 overflow-y-auto">
           <div
             className="py-1"
             role="menu"
@@ -154,38 +166,25 @@ export function VersionDropdown({
               </div>
             ) : (
               <>
-                {/* First, show "latest" option that removes version parameter */}
-                {versions.length > 0 && versions[0].is_latest && (
-                  <button
-                    key="latest"
-                    type="button"
-                    onClick={() => handleVersionClick('latest')}
-                    className={cn(
-                      'w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between',
-                      isLatestVersion
-                        ? 'bg-primary-50 text-primary-900'
-                        : 'text-gray-700'
-                    )}
-                    role="menuitem"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">latest</span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(versions[0].inserted_at).toLocaleString()}
-                      </span>
-                    </div>
-                    {isLatestVersion && (
-                      <span className="hero-check h-4 w-4 text-primary-600" />
-                    )}
-                  </button>
-                )}
+                <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                  Version history
+                </p>
 
-                {/* Then show all versions with version numbers (including latest) */}
                 {versions.map(version => {
-                  const isSelected =
-                    !isLatestVersion && version.lock_version === currentVersion;
+                  // The currently-viewed row: when unpinned it is the newest
+                  // release (following live); when pinned via ?v= it is the row
+                  // whose version_number matches the pinned param.
+                  const isActive =
+                    pinnedVersionNumber === null
+                      ? version.is_latest
+                      : version.version_number === pinnedVersionNumber;
 
-                  const displayText = `v${String(version.lock_version).substring(0, 7)}`;
+                  const date = new Date(version.inserted_at);
+                  const validDate = !Number.isNaN(date.getTime());
+                  const absolute = validDate ? format(date, 'd MMM yyyy') : '';
+                  const exact = validDate
+                    ? format(date, 'd MMM yyyy, HH:mm')
+                    : '';
 
                   return (
                     <button
@@ -193,21 +192,45 @@ export function VersionDropdown({
                       type="button"
                       onClick={() => handleVersionClick(version)}
                       className={cn(
-                        'w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between',
-                        isSelected
+                        'w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 flex items-start gap-3',
+                        isActive
                           ? 'bg-primary-50 text-primary-900'
                           : 'text-gray-700'
                       )}
                       role="menuitem"
                     >
-                      <div className="flex flex-col">
-                        <span className="font-medium">{displayText}</span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(version.inserted_at).toLocaleString()}
+                      <span
+                        className={cn(
+                          'mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset',
+                          version.is_latest
+                            ? 'bg-green-100 text-green-800 ring-green-600/20'
+                            : 'bg-gray-100 text-gray-600 ring-gray-500/10'
+                        )}
+                      >
+                        v{version.version_number}
+                      </span>
+
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="truncate">
+                          {releaseActionLabel(version)}
                         </span>
-                      </div>
-                      {isSelected && (
-                        <span className="hero-check h-4 w-4 text-primary-600" />
+                        <span className="flex min-w-0 items-center gap-1 text-xs text-gray-500">
+                          {version.published_by && (
+                            <>
+                              <span className="min-w-0 truncate">
+                                {version.published_by}
+                              </span>
+                              <span aria-hidden="true">·</span>
+                            </>
+                          )}
+                          <Tooltip content={exact} side="top">
+                            <span className="whitespace-nowrap">{absolute}</span>
+                          </Tooltip>
+                        </span>
+                      </span>
+
+                      {isActive && (
+                        <span className="hero-check mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
                       )}
                     </button>
                   );

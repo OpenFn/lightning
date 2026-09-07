@@ -141,6 +141,7 @@ describe('CollaborativeWorkflowDiagram - Real-time Run Updates', () => {
         getSnapshot: sessionGetSnapshot,
         subscribe: () => () => {},
         withSelector: createWithSelectorMock(sessionGetSnapshot),
+        requestVersions: vi.fn(),
       } as any,
       historyStore: {
         getSnapshot: historyGetSnapshot,

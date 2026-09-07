@@ -24,6 +24,14 @@ and this project adheres to
 
 ### Added
 
+- The editor's version list now shows published versions rather than every
+  intermediate save, each with who published it, when, and whether it came from
+  going live or a promote. Picking one opens it read-only, and Recent History
+  tags each run with the version it ran against, or Draft when it ran against a
+  snapshot that was never published. Pinning a version scopes the history feed
+  to that version's runs. A single run can be pinned instead, which opens the
+  workflow exactly as that run saw it, including runs that were never published.
+  [#PR](https://github.com/OpenFn/lightning/pull/PR)
 - The AI assistant now shows what changed as a global reply edits your workflow.
   Each change renders under the status that made it, while the reply is still
   streaming, as a per-step code diff with syntax highlighting, old and new line

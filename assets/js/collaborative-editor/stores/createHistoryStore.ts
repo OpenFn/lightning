@@ -37,7 +37,7 @@
  * - `useHistoryChannelConnected()` - Returns channel status
  *
  * **Commands (via useHistoryCommands):**
- * - `requestHistory(runId?)` - Fetch history from server
+ * - `requestHistory(runId?, versionNumber?)` - Fetch history from server
  * - `requestRunSteps(runId)` - Fetch run steps from server
  * - `getRunSteps(runId)` - Read cached run steps (no fetch)
  * - `clearError()` - Clear error state
@@ -652,7 +652,13 @@ export const createHistoryStore = (
    * Optionally includes a specific run_id to ensure that run's work order
    * is included even if it's older than the top 20
    */
-  const requestHistory = async (runId?: string): Promise<void> => {
+  // `versionNumber` scopes the feed to one release (the same vN the `?v=`
+  // contract uses) or to "draft" for the unversioned runs. Omitted → the
+  // default top-20 across all versions.
+  const requestHistory = async (
+    runId?: string,
+    versionNumber?: string
+  ): Promise<void> => {
     if (!_channelProvider?.channel) {
       logger.warn('Cannot request history - no channel connected');
       setError('No connection available');
@@ -666,7 +672,11 @@ export const createHistoryStore = (
       const response = await channelRequest<{ history: unknown }>(
         _channelProvider.channel,
         'request_history',
-        runId ? { run_id: runId } : {}
+        versionNumber
+          ? { version_number: versionNumber }
+          : runId
+            ? { run_id: runId }
+            : {}
       );
 
       if (response.history) {

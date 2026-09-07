@@ -23,27 +23,46 @@ import {
 import { setupSessionContextStoreTest } from '../__helpers__/storeHelpers';
 import { waitForAsync } from '../mocks/phoenixChannel';
 
+// Builds a release entry matching the current channel payload shape. Tests
+// override only the fields they care about; the round-trip through
+// VersionSchema leaves these objects unchanged, so `toEqual` comparisons hold.
+const makeVersion = (overrides: Partial<Version> = {}): Version => ({
+  version_number: 1,
+  kind: 'go_live',
+  inserted_at: '2024-01-13T10:30:00Z',
+  published_by: 'Test User',
+  source_project: null,
+  lock_version: 1,
+  is_latest: false,
+  ...overrides,
+});
+
 describe('createSessionContextStore - Version Management', () => {
   describe('requestVersions', () => {
     test('fetches versions from channel and updates state', async () => {
       const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
 
       const mockVersions: Version[] = [
-        {
+        makeVersion({
+          version_number: 3,
+          kind: 'promote',
+          source_project: 'staging',
           lock_version: 5,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
-        },
-        {
+        }),
+        makeVersion({
+          version_number: 2,
           lock_version: 4,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: false,
-        },
-        {
+        }),
+        makeVersion({
+          version_number: 1,
           lock_version: 3,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: false,
-        },
+        }),
       ];
 
       // Configure channel to return versions
@@ -71,11 +90,12 @@ describe('createSessionContextStore - Version Management', () => {
       const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
 
       const mockVersions: Version[] = [
-        {
+        makeVersion({
+          version_number: 1,
           lock_version: 3,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
-        },
+        }),
       ];
 
       // Configure channel with slight delay to observe loading state
@@ -154,11 +174,12 @@ describe('createSessionContextStore - Version Management', () => {
 
       let pushCallCount = 0;
       const mockVersions: Version[] = [
-        {
+        makeVersion({
+          version_number: 1,
           lock_version: 2,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
-        },
+        }),
       ];
 
       // Track push calls
@@ -209,24 +230,27 @@ describe('createSessionContextStore - Version Management', () => {
       const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
 
       const mockVersions1: Version[] = [
-        {
+        makeVersion({
+          version_number: 1,
           lock_version: 2,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
-        },
+        }),
       ];
 
       const mockVersions2: Version[] = [
-        {
+        makeVersion({
+          version_number: 2,
           lock_version: 3,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: true,
-        },
-        {
+        }),
+        makeVersion({
+          version_number: 1,
           lock_version: 2,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: false,
-        },
+        }),
       ];
 
       // First request
@@ -276,11 +300,12 @@ describe('createSessionContextStore - Version Management', () => {
 
       // Manually populate versions
       const mockVersions: Version[] = [
-        {
+        makeVersion({
+          version_number: 1,
           lock_version: 1,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
-        },
+        }),
       ];
 
       // Directly modify state to add versions (simulating requestVersions)
@@ -335,11 +360,12 @@ describe('createSessionContextStore - Version Management', () => {
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
 
       const mockVersions: Version[] = [
-        {
+        makeVersion({
+          version_number: 1,
           lock_version: 1,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
-        },
+        }),
       ];
 
       mockChannel.push = createMockChannelPushOk({
@@ -372,11 +398,12 @@ describe('createSessionContextStore - Version Management', () => {
       const mockProvider = createMockPhoenixChannelProvider(mockChannel);
 
       const mockVersions: Version[] = [
-        {
+        makeVersion({
+          version_number: 1,
           lock_version: 1,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
-        },
+        }),
       ];
 
       mockChannel.push = createMockChannelPushOk({
@@ -419,16 +446,18 @@ describe('createSessionContextStore - Version Management', () => {
       const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
 
       const mockVersions: Version[] = [
-        {
+        makeVersion({
+          version_number: 2,
           lock_version: 3,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
-        },
-        {
+        }),
+        makeVersion({
+          version_number: 1,
           lock_version: 2,
           inserted_at: '2024-01-12T10:30:00Z',
           is_latest: false,
-        },
+        }),
       ];
 
       // First, populate versions
@@ -466,11 +495,12 @@ describe('createSessionContextStore - Version Management', () => {
       const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
 
       const mockVersions: Version[] = [
-        {
+        makeVersion({
+          version_number: 1,
           lock_version: 2,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
-        },
+        }),
       ];
 
       // Populate versions
@@ -511,11 +541,12 @@ describe('createSessionContextStore - Version Management', () => {
       });
 
       const mockVersions: Version[] = [
-        {
+        makeVersion({
+          version_number: 1,
           lock_version: 2,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
-        },
+        }),
       ];
 
       mockChannel.push = createMockChannelPushOk({

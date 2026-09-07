@@ -26,11 +26,13 @@
 import { formatRelative } from 'date-fns';
 import React, { useState } from 'react';
 
+import { cn } from '#/utils/cn';
+
+import { Tooltip } from '../../../components/Tooltip';
 import { relativeLocale } from '../../../hooks';
 import { duration } from '../../../utils/duration';
 import truncateUid from '../../../utils/truncateUID';
 import { useProject } from '../../hooks/useSessionContext';
-import { useVersionSelect } from '../../hooks/useVersionSelect';
 import { useWorkflowState } from '../../hooks/useWorkflow';
 import type { RunSummary, WorkOrder } from '../../types/history';
 import {
@@ -40,9 +42,6 @@ import {
 } from '../../utils/navigation';
 import { RunBadge } from '../common/RunBadge';
 import { ShortcutKeys } from '../ShortcutKeys';
-import { Tooltip } from '../../../components/Tooltip';
-
-import { VersionMismatchBanner } from './VersionMismatchBanner';
 
 // Extended types with selection state for UI
 type RunWithSelection = RunSummary & { selected?: boolean };
@@ -51,22 +50,25 @@ type WorkOrderWithSelection = Omit<WorkOrder, 'runs'> & {
   selected?: boolean;
 };
 
-const CHIP_STYLES: Record<string, string> = {
+// One quiet colour per state, carried by a small dot rather than a filled
+// block. The label stays a uniform muted grey so a screenful of runs reads as
+// calm text with a single dot of colour each, not a wall of coloured pills.
+const STATUS_DOT: Record<string, string> = {
   // only workorder states...
-  rejected: 'bg-red-300 text-gray-800',
-  pending: 'bg-gray-200 text-gray-800',
-  running: 'bg-blue-200 text-blue-800',
+  rejected: 'bg-red-500',
+  pending: 'bg-gray-300',
+  running: 'bg-blue-500',
   //  run and workorder states...
-  available: 'bg-gray-200 text-gray-800',
-  claimed: 'bg-blue-200 text-blue-800',
-  started: 'bg-blue-200 text-blue-800',
-  success: 'bg-green-200 text-green-800',
-  failed: 'bg-red-200 text-red-800',
-  crashed: 'bg-orange-200 text-orange-800',
-  cancelled: 'bg-gray-500 text-gray-800',
-  killed: 'bg-yellow-200 text-yellow-800',
-  exception: 'bg-gray-800 text-white',
-  lost: 'bg-gray-800 text-white',
+  available: 'bg-gray-300',
+  claimed: 'bg-blue-500',
+  started: 'bg-blue-500',
+  success: 'bg-green-500',
+  failed: 'bg-red-500',
+  crashed: 'bg-orange-500',
+  cancelled: 'bg-gray-400',
+  killed: 'bg-yellow-500',
+  exception: 'bg-gray-700',
+  lost: 'bg-gray-700',
 };
 
 const displayTextFromState = (state: string): string => {
@@ -74,22 +76,34 @@ const displayTextFromState = (state: string): string => {
   return state.charAt(0).toUpperCase() + state.substring(1);
 };
 
-const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
-  state,
-  mini = false,
-}) => {
-  const classes = CHIP_STYLES[state] || CHIP_STYLES['pending'];
+// A small coloured dot + muted label. The single point of colour tells the
+// status at a glance without a loud filled block competing for attention.
+const StatusIndicator: React.FC<{ state: string }> = ({ state }) => {
+  const dot = STATUS_DOT[state] || STATUS_DOT['pending'];
   const text = displayTextFromState(state);
 
-  const baseClasses =
-    'my-auto whitespace-nowrap rounded-full text-center ' +
-    'align-baseline font-medium leading-none';
-  const sizeClasses = mini ? 'py-1 px-2 text-[10px]' : 'py-2 px-4 text-xs';
-
   return (
-    <span className={`${baseClasses} ${sizeClasses} ${classes}`}>{text}</span>
+    <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+      <span
+        className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dot)}
+        aria-hidden="true"
+      />
+      <span className="text-xs font-medium text-gray-600">{text}</span>
+    </span>
   );
 };
+
+// Subtle per-run version label rendered as a prefix to the run id, e.g.
+// "v2 · 8271c0f6". Runs whose snapshot was never released show "Draft". Kept
+// low-contrast so it reads as one light identifier alongside the id, never a
+// second competing pill.
+const VersionTag: React.FC<{ versionNumber: number | null | undefined }> = ({
+  versionNumber,
+}) => (
+  <span className="whitespace-nowrap font-medium text-gray-400">
+    {versionNumber == null ? 'Draft' : `v${versionNumber}`}
+  </span>
+);
 
 // Extracted RunItem component for displaying individual runs
 interface RunItemProps {
@@ -113,14 +127,13 @@ const RunItem: React.FC<RunItemProps> = ({
   */
   // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
   <div
-    className={[
-      'px-3 py-1.5 text-xs hover:bg-gray-50 ' +
-        'transition-colors cursor-pointer border-l-2 ' +
-        'w-full text-left',
+    className={cn(
+      `flex w-full cursor-pointer items-center gap-2 border-l-2 px-3 py-2 pl-9
+        text-xs text-left transition-colors`,
       run.selected
         ? 'bg-indigo-50 border-l-indigo-500'
-        : ' border-l-transparent',
-    ].join(' ')}
+        : 'border-l-transparent hover:bg-gray-50'
+    )}
     onClick={e => {
       e.stopPropagation();
       if (run.selected) {
@@ -130,55 +143,41 @@ const RunItem: React.FC<RunItemProps> = ({
       }
     }}
   >
-    <div className="flex items-center justify-between w-full mr-2">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        {run.selected && (
-          <button
-            type="button"
-            onClick={e => {
-              e.preventDefault();
-              e.stopPropagation();
-              onDeselect?.();
-            }}
-            className="flex items-center text-gray-400
-              hover:text-gray-600 transition-colors"
-            aria-label="Deselect run"
-          >
-            <span className="hero-x-mark w-4 h-4" />
-          </button>
+    {/* Primary line: status + when it ran. */}
+    <StatusIndicator state={run.state} />
+    {(run.started_at || run.finished_at) && (
+      <span className="whitespace-nowrap text-gray-400">
+        {formatRelative(
+          new Date((run.started_at || run.finished_at) as string),
+          now,
+          { locale: relativeLocale }
         )}
-        {!run.selected && <span className="w-4 h-4 invisible" />}
-        <button
-          type="button"
-          onClick={e => onNavigateToRun(e, run.id)}
-          className="link-uuid"
-          title={run.id}
-          aria-label={`View full details for run ${truncateUid(run.id)}`}
-        >
-          {truncateUid(run.id)}
-        </button>
-        {(run.started_at || run.finished_at) && (
-          <>
-            <span className="text-xs text-gray-800">&bull;</span>
-            {formatRelative(
-              new Date((run.started_at || run.finished_at) as string),
-              now,
-              { locale: relativeLocale }
-            )}
-          </>
-        )}
-        {run.started_at && run.finished_at && (
-          <>
-            <span className="text-xs text-gray-800">&bull;</span>
-            <span className="text-gray-400 text-xs">
-              {duration(run.started_at, run.finished_at)}
-            </span>
-          </>
-        )}
-      </div>
-      <div className="flex items-center gap-1">
-        <StatePill state={run.state} mini={true} />
-      </div>
+      </span>
+    )}
+    {run.started_at && run.finished_at && (
+      <span className="whitespace-nowrap text-gray-400">
+        {duration(run.started_at, run.finished_at)}
+      </span>
+    )}
+
+    <div className="flex-1" />
+
+    {/* Secondary, de-emphasised: one light identifier (version + run id). */}
+    <div className="flex items-center gap-1.5 whitespace-nowrap text-[11px]">
+      <VersionTag versionNumber={run.version_number} />
+      <span className="text-gray-300" aria-hidden="true">
+        &middot;
+      </span>
+      <button
+        type="button"
+        onClick={e => onNavigateToRun(e, run.id)}
+        className="font-mono text-gray-400 underline-offset-2
+          transition-colors hover:text-gray-600 hover:underline"
+        title={run.id}
+        aria-label={`View full details for run ${truncateUid(run.id)}`}
+      >
+        {truncateUid(run.id)}
+      </button>
     </div>
   </div>
 );
@@ -206,58 +205,66 @@ const WorkOrderItem: React.FC<WorkOrderItemProps> = ({
   onNavigateToRun,
 }) => (
   <div>
-    <div className="px-3 py-2 hover:bg-gray-50 transition-colors">
-      {/*
-        Mouse-only clickable area for convenience - keyboard users
-        can use the chevron button and UUID link below for full accessibility.
-        This matches the LiveView implementation's keyboard navigation pattern.
-      */}
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-      <div
-        className="flex items-center justify-between cursor-pointer w-full text-left"
-        onClick={e => {
-          e.stopPropagation();
-          onExpand(workorder);
-        }}
+    {/*
+      Mouse-only clickable area for convenience - keyboard users
+      can use the chevron button and UUID link below for full accessibility.
+      This matches the LiveView implementation's keyboard navigation pattern.
+    */}
+    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+    <div
+      className="flex w-full cursor-pointer items-center gap-2 px-3 py-2
+        text-left transition-colors hover:bg-gray-50"
+      onClick={e => {
+        e.stopPropagation();
+        onExpand(workorder);
+      }}
+    >
+      {workorder.runs.length > 0 && (
+        <button
+          type="button"
+          onClick={e => {
+            e.preventDefault();
+            e.stopPropagation();
+            onExpand(workorder);
+          }}
+          className={cn(
+            'flex shrink-0 items-center transition-colors',
+            workorder.selected
+              ? 'text-indigo-600'
+              : 'text-gray-500 hover:text-gray-700'
+          )}
+          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} work order details`}
+        >
+          {isExpanded || workorder.selected ? (
+            <span className="hero-chevron-down h-4 w-4" />
+          ) : (
+            <span className="hero-chevron-right h-4 w-4" />
+          )}
+        </button>
+      )}
+
+      {/* Primary line: status + when it last ran. */}
+      <StatusIndicator state={workorder.state} />
+      <span className="whitespace-nowrap text-xs text-gray-400">
+        {formatRelative(new Date(workorder.last_activity), now, {
+          locale: relativeLocale,
+        })}
+      </span>
+
+      <div className="flex-1" />
+
+      {/* Secondary, de-emphasised: the work order id. */}
+      <button
+        type="button"
+        onClick={e => onNavigateToWorkorder(e, workorder.id)}
+        className="whitespace-nowrap font-mono text-[11px] text-gray-400
+          underline-offset-2 transition-colors hover:text-gray-600
+          hover:underline"
+        title={workorder.id}
+        aria-label={`View full details for work order ${truncateUid(workorder.id)}`}
       >
-        <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-          <button
-            type="button"
-            onClick={e => {
-              e.preventDefault();
-              e.stopPropagation();
-              onExpand(workorder);
-            }}
-            className="flex items-center text-gray-400
-              hover:text-gray-600 transition-colors"
-            aria-label={`${isExpanded ? 'Collapse' : 'Expand'} work order details`}
-          >
-            {workorder.selected ? (
-              <span className="hero-chevron-down w-4 h-4 font-bold text-indigo-600" />
-            ) : isExpanded ? (
-              <span className="hero-chevron-down w-4 h-4" />
-            ) : (
-              <span className="hero-chevron-right w-4 h-4" />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={e => onNavigateToWorkorder(e, workorder.id)}
-            className="link-uuid"
-            title={workorder.id}
-            aria-label={`View full details for work order ${truncateUid(workorder.id)}`}
-          >
-            {truncateUid(workorder.id)}
-          </button>
-          <span className="text-xs text-gray-800">&bull;</span>
-          <span className="text-xs text-gray-500">
-            {formatRelative(new Date(workorder.last_activity), now, {
-              locale: relativeLocale,
-            })}
-          </span>
-        </div>
-        <StatePill state={workorder.state} mini={true} />
-      </div>
+        {truncateUid(workorder.id)}
+      </button>
     </div>
 
     {(isExpanded || workorder.selected) &&
@@ -287,11 +294,6 @@ interface MiniHistoryProps {
   // New props for panel variant
   variant?: 'floating' | 'panel';
   onBack?: () => void;
-  // Version mismatch detection
-  versionMismatch?: {
-    runVersion: number;
-    currentVersion: number;
-  } | null;
 }
 
 export default function MiniHistory({
@@ -306,7 +308,6 @@ export default function MiniHistory({
   onRetry,
   variant = 'floating',
   onBack,
-  versionMismatch,
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState('');
   const now = new Date();
@@ -314,14 +315,6 @@ export default function MiniHistory({
   // Get project and workflow IDs from state for navigation
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
-  const handleVersionSelect = useVersionSelect();
-
-  // Handler to navigate to the run's version
-  const handleGoToVersion = () => {
-    if (versionMismatch) {
-      handleVersionSelect(versionMismatch.runVersion);
-    }
-  };
 
   // Clear expanded work order when panel collapses
   React.useEffect(() => {
@@ -378,6 +371,25 @@ export default function MiniHistory({
       navigateToRun(project.id, runId);
     }
   };
+
+  // The work order / run list, shared by both variants.
+  const timelineList = (
+    <div className="divide-y divide-gray-100">
+      {history.map(workorder => (
+        <WorkOrderItem
+          key={workorder.id}
+          workorder={workorder}
+          isExpanded={expandedWorder === workorder.id}
+          now={now}
+          onExpand={expandWorkorderHandler}
+          onSelectRun={selectRunHandler}
+          onDeselectRun={onDeselectRun}
+          onNavigateToWorkorder={handleNavigateToWorkorderHistory}
+          onNavigateToRun={handleNavigateToRunView}
+        />
+      ))}
+    </div>
+  );
 
   // Panel variant header with back button
   const PanelHeader = () => (
@@ -441,8 +453,9 @@ export default function MiniHistory({
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="mt-3 px-3 py-1 text-xs bg-blue-500
-                    text-white rounded hover:bg-blue-600"
+                  className="mt-3 rounded-md bg-primary-600 px-3 py-1 text-xs
+                    font-medium text-white transition-colors
+                    hover:bg-primary-500"
                 >
                   Retry
                 </button>
@@ -463,21 +476,7 @@ export default function MiniHistory({
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
-              {history.map(workorder => (
-                <WorkOrderItem
-                  key={workorder.id}
-                  workorder={workorder}
-                  isExpanded={expandedWorder === workorder.id}
-                  now={now}
-                  onExpand={expandWorkorderHandler}
-                  onSelectRun={selectRunHandler}
-                  onDeselectRun={onDeselectRun}
-                  onNavigateToWorkorder={handleNavigateToWorkorderHistory}
-                  onNavigateToRun={handleNavigateToRunView}
-                />
-              ))}
-            </div>
+            timelineList
           )}
         </div>
       </div>
@@ -549,16 +548,6 @@ export default function MiniHistory({
         </div>
       )}
 
-      {/* Version mismatch banner when collapsed */}
-      {collapsed && versionMismatch && (
-        <VersionMismatchBanner
-          runVersion={versionMismatch.runVersion}
-          currentVersion={versionMismatch.currentVersion}
-          onGoToVersion={handleGoToVersion}
-          compact={true}
-        />
-      )}
-
       <div
         className={`overflow-y-auto no-scrollbar max-h-82
           transition-opacity duration-200 ${
@@ -593,8 +582,9 @@ export default function MiniHistory({
               <button
                 type="button"
                 onClick={onRetry}
-                className="mt-3 px-3 py-1 text-xs bg-blue-500
-                  text-white rounded hover:bg-blue-600"
+                className="mt-3 rounded-md bg-primary-600 px-3 py-1 text-xs
+                  font-medium text-white transition-colors
+                  hover:bg-primary-500"
               >
                 Retry
               </button>
@@ -615,32 +605,9 @@ export default function MiniHistory({
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {history.map(workorder => (
-              <WorkOrderItem
-                key={workorder.id}
-                workorder={workorder}
-                isExpanded={expandedWorder === workorder.id}
-                now={now}
-                onExpand={expandWorkorderHandler}
-                onSelectRun={selectRunHandler}
-                onDeselectRun={onDeselectRun}
-                onNavigateToWorkorder={handleNavigateToWorkorderHistory}
-                onNavigateToRun={handleNavigateToRunView}
-              />
-            ))}
-          </div>
+          timelineList
         )}
       </div>
-
-      {/* Version mismatch banner at bottom of panel */}
-      {!collapsed && versionMismatch && (
-        <VersionMismatchBanner
-          runVersion={versionMismatch.runVersion}
-          currentVersion={versionMismatch.currentVersion}
-          onGoToVersion={handleGoToVersion}
-        />
-      )}
     </div>
   );
 }

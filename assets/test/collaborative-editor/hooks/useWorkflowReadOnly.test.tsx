@@ -435,6 +435,30 @@ describe('useWorkflowReadOnly - Version Pinning', () => {
       expect(result.current.tooltipMessage).toBe('');
     });
   });
+
+  test('returns read-only with an as-executed reason when ?as_run is present', async () => {
+    // "View as executed" loads the workflow exactly as a run ran it.
+    urlState.setParam('as_run', 'run-123');
+
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
+      workflowDeletedAt: null,
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('as_run');
+      expect(result.current.tooltipMessage).toBe(
+        'You are viewing this workflow as a past run executed it'
+      );
+    });
+  });
 });
 
 // =============================================================================

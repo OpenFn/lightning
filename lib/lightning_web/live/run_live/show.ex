@@ -114,7 +114,7 @@ defmodule LightningWeb.RunLive.Show do
                         if run.snapshot.lock_version == @workflow.lock_version do
                           ~p"/projects/#{@project}/w/#{@workflow.id}?run=#{run.id}"
                         else
-                          ~p"/projects/#{@project}/w/#{@workflow.id}?run=#{run.id}&v=#{run.snapshot.lock_version}"
+                          ~p"/projects/#{@project}/w/#{@workflow.id}?run=#{run.id}&as_run=#{run.id}"
                         end
                       }
                       class="link text-ellipsis"

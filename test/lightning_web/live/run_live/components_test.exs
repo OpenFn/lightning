@@ -138,7 +138,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     refute html
            |> Floki.find(
-             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, v: snapshot.lock_version}}"}#log']}
+             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, as_run: run.id}}"}#log']}
            )
            |> Enum.any?()
 
@@ -163,7 +163,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert html
            |> Floki.find(
-             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, v: snapshot.lock_version}}"}#log']}
+             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, as_run: run.id}}"}#log']}
            )
            |> Enum.any?()
 
@@ -324,7 +324,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
       refute html
              |> Floki.find(
-               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, v: snapshot.lock_version}}"}#log']}
+               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, as_run: run.id}}"}#log']}
              )
              |> Enum.any?()
 
@@ -346,7 +346,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
       assert html
              |> Floki.find(
-               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, v: snapshot.lock_version}}"}#log']}
+               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, as_run: run.id}}"}#log']}
              )
              |> Enum.any?()
     end
