@@ -470,6 +470,61 @@ defmodule Lightning.Adaptors.StoreTest do
       assert File.read!(path) == "PRE_WARMED"
     end
 
+    test "stale disk cache (sha mismatch) self-heals by re-fetching", %{
+      sup: sup
+    } do
+      source = AdaptorsSupervisor.source(sup)
+      name = unique_name("stale")
+
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            name: name,
+            icon_square_ext: "png",
+            icon_square_sha256: :crypto.hash(:sha256, "FRESH_BYTES")
+          )
+        )
+
+      {:ok, _} =
+        Lightning.Adaptors.IconCache.write!(
+          source,
+          name,
+          :square,
+          "png",
+          "STALE_BYTES"
+        )
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icon, 1, fn ^name,
+                                                                 :square ->
+        {:ok, %{data: "FRESH_BYTES", ext: "png"}}
+      end)
+
+      assert {:ok, path} = Store.icon(sup, name, :square)
+      assert File.read!(path) == "FRESH_BYTES"
+    end
+
+    test "Strategy returns bytes that don't match the row's expected sha", %{
+      sup: sup
+    } do
+      name = unique_name("corrupt")
+
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            name: name,
+            icon_square_ext: "png",
+            icon_square_sha256: :crypto.hash(:sha256, "EXPECTED_BYTES")
+          )
+        )
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_icon, 1, fn ^name,
+                                                                 :square ->
+        {:ok, %{data: "WRONG_BYTES", ext: "png"}}
+      end)
+
+      assert {:error, {:icon_sha_mismatch, _}} = Store.icon(sup, name, :square)
+    end
+
     test "disk miss + Strategy success writes to disk and returns path", %{
       sup: sup,
       cache: cache

@@ -108,10 +108,11 @@ defmodule Lightning.Adaptors.NPMTest do
       assert old.deprecated == true
     end
 
-    test "degrades to nil schema when jsDelivr returns 5xx", %{
-      registry: registry,
-      jsdelivr: jsdelivr
-    } do
+    test "omits schema_data/schema_sha256 entirely when jsDelivr returns 5xx",
+         %{
+           registry: registry,
+           jsdelivr: jsdelivr
+         } do
       packument = build_packument()
 
       Bypass.expect(registry, "GET", "/" <> @package, fn conn ->
@@ -124,8 +125,10 @@ defmodule Lightning.Adaptors.NPMTest do
 
       {:ok, record} = NPM.fetch_adaptor(@package)
 
-      assert record.schema_data == nil
-      assert record.schema_sha256 == nil
+      refute Map.has_key?(record, :schema_data),
+             "a transient schema-fetch failure must omit the key, not set it to nil, so cast/3 leaves the persisted schema untouched"
+
+      refute Map.has_key?(record, :schema_sha256)
       assert record.name == @package
       assert record.latest_version == @latest_version
     end

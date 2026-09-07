@@ -62,25 +62,29 @@ defmodule Lightning.Adaptors.NPM.SchemaTest do
       assert {nil, nil} = Schema.schema(@package, @version)
     end
 
-    test "returns {nil, nil} on 5xx", %{bypass: bypass} do
+    test "returns {nil, :fetch_failed} on 5xx", %{bypass: bypass} do
       Bypass.expect(bypass, "GET", @path, fn conn ->
         Plug.Conn.resp(conn, 500, "")
       end)
 
-      assert {nil, nil} = Schema.schema(@package, @version)
+      assert {nil, :fetch_failed} = Schema.schema(@package, @version)
     end
 
-    test "returns {nil, nil} on invalid JSON body", %{bypass: bypass} do
+    test "returns {nil, :fetch_failed} on invalid JSON body", %{
+      bypass: bypass
+    } do
       Bypass.expect(bypass, "GET", @path, fn conn ->
         Plug.Conn.resp(conn, 200, "this is not json {")
       end)
 
-      assert {nil, nil} = Schema.schema(@package, @version)
+      assert {nil, :fetch_failed} = Schema.schema(@package, @version)
     end
 
-    test "returns {nil, nil} on connection refused", %{bypass: bypass} do
+    test "returns {nil, :fetch_failed} on connection refused", %{
+      bypass: bypass
+    } do
       Bypass.down(bypass)
-      assert {nil, nil} = Schema.schema(@package, @version)
+      assert {nil, :fetch_failed} = Schema.schema(@package, @version)
     end
   end
 end
