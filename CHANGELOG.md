@@ -69,6 +69,12 @@ and this project adheres to
 
 ### Fixed
 
+- Reading an older version of a workflow no longer offers actions that change
+  the current one. Switch to draft, Go live, Promote and Edit in sandbox are
+  hidden while a version or a run's view is pinned, so clicking one cannot take
+  production offline while you are looking at history.
+  [#5136](https://github.com/OpenFn/lightning/pull/5136)
+
 - The global assistant no longer offers to paste a reply's code block into
   whichever job you have open. It applies its own changes and shows them as
   diffs, so those blocks are data it quoted back or work it has already done.
