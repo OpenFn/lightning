@@ -15,6 +15,7 @@ import type { Monaco } from './index';
  * - Cmd/Ctrl+Enter: Dispatches to window for run/retry actions
  * - Cmd/Ctrl+Shift+Enter: Dispatches to window for force-run actions
  * - Cmd/Ctrl+K: Dispatches to window for AI chat shortcut
+ * - Cmd/Ctrl+E: Dispatches to window for the IDE open/close shortcut
  *
  * Usage:
  * ```typescript
@@ -70,6 +71,21 @@ export function addKeyboardShortcutOverrides(
     const event = new KeyboardEvent('keydown', {
       key: 'k',
       code: 'KeyK',
+      metaKey: isMac,
+      ctrlKey: !isMac,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+  });
+
+  // Override Monaco's Cmd/Ctrl+E ("Use Selection for Find") so the IDE toggle
+  // still works while the editor has focus. Cmd/Ctrl+F is left alone, so the
+  // find widget remains reachable.
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE, () => {
+    const event = new KeyboardEvent('keydown', {
+      key: 'e',
+      code: 'KeyE',
       metaKey: isMac,
       ctrlKey: !isMac,
       bubbles: true,
