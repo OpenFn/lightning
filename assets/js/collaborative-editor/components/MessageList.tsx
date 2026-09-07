@@ -777,6 +777,12 @@ interface MessageListProps {
   isGlobalAssistantActive?: boolean;
 }
 
+/** Shown when the server recorded no reason, which should be rare. */
+const FAILURE_FALLBACK = 'The assistant did not finish.';
+
+const withoutRetryTail = (reason: string) =>
+  reason.replace(/\s*Please try again\.?\s*$/i, '');
+
 /**
  * The one notice a failed exchange gets, in the assistant's column.
  *
@@ -784,13 +790,10 @@ interface MessageListProps {
  * often answered in part, so marking it failed is both untrue and a second
  * thing to read. Grey rather than red, because whatever text sits above it is
  * the answer, not an error.
+ *
+ * The trailing "Please try again" is dropped only when there is a button to
+ * say it instead; without one the reader still needs telling.
  */
-const FAILURE_FALLBACK = 'The assistant did not finish.';
-
-// The button already says it, so the sentence does not have to.
-const withoutRetryTail = (reason: string) =>
-  reason.replace(/\s*Please try again\.?\s*$/i, '');
-
 const FailureNotice = ({
   reason,
   onRetry,
@@ -804,7 +807,9 @@ const FailureNotice = ({
   >
     <span className="hero-exclamation-circle h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
     <span className="flex-1 min-w-0">
-      {withoutRetryTail(reason?.trim() || FAILURE_FALLBACK)}
+      {onRetry
+        ? withoutRetryTail(reason?.trim() || FAILURE_FALLBACK)
+        : reason?.trim() || FAILURE_FALLBACK}
     </span>
     {onRetry && (
       <button
@@ -1067,6 +1072,21 @@ export function MessageList({
   //   on the flat `streamingContent` path means this PR cannot change what
   //   they display. Only Apollo's global endpoint emits status segments
   //   today; lift the gate when that changes.
+  // The user message a reply answers. Walks back rather than pairing by index,
+  // since a session can hold prompts with no reply at all.
+  const promptFor = (message: Message, index: number): Message | undefined => {
+    if (message.role === 'user') return message;
+
+    for (let i = index - 1; i >= 0; i--) {
+      const candidate = displayMessages[i];
+      if (candidate?.role === 'user') return candidate;
+    }
+
+    // A reply that arrived before its own prompt, which the second-precision
+    // ordering allows when both land in the same second.
+    return displayMessages.find(m => m.role === 'user');
+  };
+
   const timelineSegments = (message: Message): ResponseSegment[] | null => {
     if (isStreaming(message)) {
       return isGlobalAssistantActive && streamingSegments?.length
@@ -1110,31 +1130,42 @@ export function MessageList({
     >
       {displayMessages.map((message, index) => {
         const segments = timelineSegments(message);
+        const prompt = promptFor(message, index);
 
-        // Retry re-runs the prompt, so the id is always the user message this
-        // reply answers, never the reply's own.
-        const promptId =
-          message.role === 'user'
-            ? message.id
-            : displayMessages
-                .slice(0, index)
-                .reverse()
-                .find(m => m.role === 'user')?.id;
-
+        // Retry re-runs the prompt, and only while that prompt is still the
+        // failed one. The server flips it to :pending and broadcasts that, so
+        // this is what stops a second click firing a second job: the reply it
+        // sits under keeps :error for good and would otherwise stay clickable
+        // for the life of the session.
         const retry =
-          onRetryMessage && promptId
+          onRetryMessage && prompt?.status === 'error'
             ? () => {
-                onRetryMessage(promptId);
+                onRetryMessage(prompt.id);
               }
             : undefined;
 
-        // A failed reply carries the notice. Only when no reply arrived at all
-        // does the prompt carry it, so one failure never shows twice.
-        const nextIsFailedReply =
-          displayMessages[index + 1]?.role === 'assistant' &&
-          displayMessages[index + 1]?.status === 'error';
+        // A failed reply carries the notice; the prompt carries it only when
+        // no reply arrived at all. Both neighbours are checked because a reply
+        // that dies in the same second as its prompt can come back either way
+        // round, timestamps being stored to the second.
+        const adjacentFailedReply = [index - 1, index + 1].some(i => {
+          const neighbour = displayMessages[i];
+          return (
+            neighbour?.role === 'assistant' && neighbour.status === 'error'
+          );
+        });
+
+        // Nothing has failed yet while a reply is still arriving. The prompt is
+        // marked failed before the partial reply reaches the client, so without
+        // this the notice appears above text that is still typing itself out.
+        const promptCarriesNotice =
+          message.status === 'error' && !adjacentFailedReply && !isLoading;
+
         const showMessageAddButtons =
-          !isStreaming(message) && showAddButtons && !message.code;
+          !isStreaming(message) &&
+          message.status !== 'error' &&
+          showAddButtons &&
+          !message.code;
 
         return (
           <div
@@ -1454,7 +1485,7 @@ export function MessageList({
                   {/* Nothing came back at all, so there is no reply to hang
                       this on. It still sits in the assistant's column, which
                       is where the answer would have been. */}
-                  {message.status === 'error' && !nextIsFailedReply && (
+                  {promptCarriesNotice && (
                     <div className="mt-3">
                       <FailureNotice
                         reason={message.failure_message}

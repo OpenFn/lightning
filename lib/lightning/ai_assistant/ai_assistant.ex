@@ -1520,37 +1520,35 @@ defmodule Lightning.AiAssistant do
   # Built from `details`, not Apollo's prose, so the wording stays ours. The
   # sizes go to the log rather than into the sentence: they are what support
   # needs, and not what the reader has to do next.
-  defp attachment_too_large_message(
-         %{"total_characters" => total, "limit_characters" => limit} = details
-       ) do
+  defp attachment_too_large_message(details) do
+    log_attachment_sizes(details)
+
+    "The attached run data is too large. Untick #{attachment_box(details)} " <>
+      "and paste the part you need into the chat instead."
+  end
+
+  defp log_attachment_sizes(%{
+         "total_characters" => total,
+         "limit_characters" => limit
+       }) do
     Logger.warning(
       "[AI Assistant] Attachments too large: #{total} characters " <>
         "against a #{limit} limit"
     )
-
-    "The attached run data is too large. " <> untick_advice(details)
   end
 
-  defp attachment_too_large_message(details),
-    do: "The attached run data is too large. " <> untick_advice(details)
+  defp log_attachment_sizes(_details), do: :ok
 
   # Naming the box beats naming the limit: unticking it is the thing that gets
-  # an answer, and the part of the log that matters is usually a few lines.
-  defp untick_advice(%{"largest_attachment" => %{"type" => "log"}}),
-    do:
-      "Untick “Send logs” and paste the part you need " <>
-        "into the chat instead."
+  # an answer, and the part of the run log that matters is usually a few lines.
+  defp attachment_box(%{"largest_attachment" => %{"type" => "log"}}),
+    do: "“Send logs”"
 
-  defp untick_advice(%{"largest_attachment" => %{"type" => dataclip}})
+  defp attachment_box(%{"largest_attachment" => %{"type" => dataclip}})
        when dataclip in ["input_dataclip", "output_dataclip"],
-       do:
-         "Untick “Send scrubbed I/O” and paste the part you need " <>
-           "into the chat instead."
+       do: "“Send scrubbed I/O”"
 
-  defp untick_advice(_details),
-    do:
-      "Untick one of the attachment boxes and paste the part you need " <>
-        "into the chat instead."
+  defp attachment_box(_details), do: "one of the attachment boxes"
 
   defp handle_stream_event(
          session_id,
@@ -1680,8 +1678,16 @@ defmodule Lightning.AiAssistant do
 
   # Streaming requests carry a lazy Stream (a fun or %Stream{} struct) as the
   # body, so error responses can't be indexed like decoded JSON maps.
-  defp error_message_from_body(body) when is_map(body) and not is_struct(body),
-    do: body["message"]
+  #
+  # Note this does not answer to @apollo_readable_errors, unlike the stream
+  # path that writes the same column. It does not have to: the client is built
+  # with no JSON middleware, so a non-2xx body reaches here as a binary and this
+  # returns nil every time. Add JSON decoding and that stops being true, and
+  # this needs the same gate.
+  defp error_message_from_body(body) when is_map(body) and not is_struct(body) do
+    # A message that is not a string would raise in the clamp downstream.
+    if is_binary(body["message"]), do: body["message"]
+  end
 
   defp error_message_from_body(_body), do: nil
 

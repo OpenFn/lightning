@@ -185,7 +185,7 @@ defmodule Lightning.AiAssistant.StreamFailureTest do
 
       assert log =~ "[AI Assistant] Stream timed out"
       assert log =~ "went quiet for #{@idle_timeout}ms"
-      assert log =~ "request ceiling"
+      assert log =~ "ran past the 30000ms request ceiling"
     end
 
     test "keeps the status updates in the order they were shown" do

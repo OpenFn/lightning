@@ -207,6 +207,13 @@ describe('MessageList', () => {
     it('renders a failed reply as text, with the reason below it', () => {
       const messages = [
         createMockAIMessage({
+          id: 'prompt-1',
+          role: 'user',
+          content: 'My message',
+          status: 'error',
+        }),
+        createMockAIMessage({
+          id: 'reply-1',
           role: 'assistant',
           content: 'I was part way through writing this when',
           status: 'error',
@@ -215,9 +222,11 @@ describe('MessageList', () => {
         }),
       ];
 
-      render(<MessageList messages={messages} />);
+      render(<MessageList messages={messages} onRetryMessage={vi.fn()} />);
 
-      expect(screen.queryByTestId('ai-validation-error')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('ai-validation-error')
+      ).not.toBeInTheDocument();
       expect(
         screen.getByText('I was part way through writing this when')
       ).toBeInTheDocument();
@@ -228,6 +237,134 @@ describe('MessageList', () => {
         'The assistant stopped responding partway through'
       );
       expect(notice).not.toHaveTextContent('Please try again');
+    });
+
+    // Without a button nothing else tells the reader what to do, so the
+    // sentence keeps its own advice.
+    it('keeps "Please try again" when there is no retry button', () => {
+      const messages = [
+        createMockAIMessage({
+          role: 'user',
+          content: 'My message',
+          status: 'error',
+          failure_message:
+            'The connection to the assistant was lost. Please try again.',
+        }),
+      ];
+
+      render(<MessageList messages={messages} />);
+
+      expect(screen.getByTestId('ai-failure-notice')).toHaveTextContent(
+        'Please try again'
+      );
+    });
+
+    // Retry re-runs the prompt. Sending the reply's own id would have the
+    // server process an assistant message as though it were a question.
+    it('retries the prompt, not the reply it sits under', async () => {
+      const onRetryMessage = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'prompt-1',
+          role: 'user',
+          content: 'My message',
+          status: 'error',
+        }),
+        createMockAIMessage({
+          id: 'reply-1',
+          role: 'assistant',
+          content: 'half an answer',
+          status: 'error',
+          failure_message: 'The connection to the assistant was lost.',
+        }),
+      ];
+
+      render(
+        <MessageList messages={messages} onRetryMessage={onRetryMessage} />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /try again/i }));
+
+      expect(onRetryMessage).toHaveBeenCalledWith('prompt-1');
+    });
+
+    // The reply keeps :error for good; only the prompt goes back to :pending.
+    // Reading the reply's own status would leave the button live for the life
+    // of the session, and every click starts another job.
+    it('hides the button once the retry is under way', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'prompt-1',
+          role: 'user',
+          content: 'My message',
+          status: 'pending',
+        }),
+        createMockAIMessage({
+          id: 'reply-1',
+          role: 'assistant',
+          content: 'half an answer',
+          status: 'error',
+          failure_message: 'The connection to the assistant was lost.',
+        }),
+      ];
+
+      render(<MessageList messages={messages} onRetryMessage={vi.fn()} />);
+
+      expect(screen.getByTestId('ai-failure-notice')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /try again/i })
+      ).not.toBeInTheDocument();
+    });
+
+    // Timestamps are stored to the second, so a reply that dies in the same
+    // second as its prompt can load either way round.
+    it('shows one notice when the reply loads before its prompt', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'reply-1',
+          role: 'assistant',
+          content: 'half an answer',
+          status: 'error',
+          failure_message: 'The connection to the assistant was lost.',
+        }),
+        createMockAIMessage({
+          id: 'prompt-1',
+          role: 'user',
+          content: 'My message',
+          status: 'error',
+        }),
+      ];
+
+      render(<MessageList messages={messages} onRetryMessage={vi.fn()} />);
+
+      expect(screen.getAllByTestId('ai-failure-notice')).toHaveLength(1);
+      expect(
+        screen.getByRole('button', { name: /try again/i })
+      ).toBeInTheDocument();
+    });
+
+    // The prompt is marked failed before the partial reply reaches the client,
+    // so the notice would otherwise sit above text still typing itself out.
+    it('holds the notice back while a reply is still arriving', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'prompt-1',
+          role: 'user',
+          content: 'My message',
+          status: 'error',
+        }),
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          isLoading={true}
+          streamingContent="half an answ"
+          onRetryMessage={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByTestId('ai-failure-notice')).not.toBeInTheDocument();
     });
 
     it('falls back to a plain sentence when the server sent no reason', () => {
