@@ -276,7 +276,8 @@ defmodule Lightning.Application do
       after #{grace}ms. A deploy landing on a running job will kill it without \
       emitting telemetry, leaving its message :processing until the reaper runs.
       Lower APOLLO_CONNECT_TIMEOUT_MS, APOLLO_IDLE_TIMEOUT_MS or \
-      APOLLO_REQUEST_TIMEOUT_MS, or raise Oban's shutdown_grace_period.
+      APOLLO_REQUEST_TIMEOUT_MS. Oban's shutdown_grace_period is the other side \
+      of this, but it is compiled in rather than read from the environment.
       """)
     end
   end

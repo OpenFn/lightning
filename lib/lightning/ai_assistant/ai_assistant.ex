@@ -35,6 +35,29 @@ defmodule Lightning.AiAssistant do
   # What a user sees when the reason is ours and not fit to show them.
   @internal_failure "Something went wrong. Please try again."
 
+  # Apollo names every error it raises, but a name is not a promise that the
+  # text is safe to show. It wraps unhandled exceptions as `str(e)` under
+  # INTERNAL_ERROR, UNKNOWN_ERROR, BAD_REQUEST, INVALID_REQUEST, DATABASE_ERROR,
+  # FETCH_ERROR and ADAPTOR_API_ERROR, and `str(e)` carries internal hostnames,
+  # upstream URLs and container paths. These are the ones whose message Apollo
+  # writes for a person instead, read off apollo at v3.1.1. A type not on the
+  # list is treated the same as no type at all: logged, not shown. Revisit when
+  # Apollo adds error types.
+  @apollo_readable_errors ~w(
+    AUTH_ERROR
+    CONNECTION_ERROR
+    EMPTY_LLM_RESPONSE
+    EMPTY_OUTPUT
+    FORBIDDEN
+    INVALID_LLM_RESPONSE
+    MISSING_API_KEY
+    NOT_FOUND
+    OUTPUT_TRUNCATED
+    PROMPT_TOO_LONG
+    PROVIDER_ERROR
+    RATE_LIMIT
+  )
+
   @type opts :: keyword()
 
   @typedoc """
@@ -1381,14 +1404,12 @@ defmodule Lightning.AiAssistant do
         {:ok, %{"type" => "ATTACHMENT_TOO_LARGE", "details" => details}} ->
           attachment_too_large_message(details)
 
-        # A type means Apollo raised this on purpose and its sentence was
-        # written for a person to read, so it is shown. Without one it is most
-        # likely the str(e) wrapper around an unhandled exception, which
-        # carries internal hostnames, upstream URLs and container paths, so
-        # that text goes to the log and the reader gets ours.
         {:ok, %{"type" => type, "message" => text}}
-        when is_binary(type) and is_binary(text) ->
-          text
+        when type in @apollo_readable_errors and is_binary(text) ->
+          # Clamped for the same reason the content beside it is: this is
+          # written to a column that validates its length, and a sentence that
+          # ran past it would fail the changeset and take the partial with it.
+          String.slice(text, 0, ChatMessage.max_failure_message_length())
 
         {:ok, %{"message" => text}} when is_binary(text) ->
           Logger.warning(
@@ -1431,7 +1452,7 @@ defmodule Lightning.AiAssistant do
   # shape as a persisted `response_segments` entry, so the client renders
   # live and reloaded status segments identically. Transient "thinking"
   # updates arrive separately as Anthropic thinking events (see
-  # handle_stream_event/2).
+  # handle_stream_event/3).
   defp handle_sse_event(session_id, %{event: "status", data: data}, acc) do
     case Jason.decode(data) do
       {:ok, %{"type" => "status", "content" => content} = segment}
@@ -1440,19 +1461,26 @@ defmodule Lightning.AiAssistant do
         # reach the client. `steps` and `summary` are optional: `steps`
         # names what the action touched as data, which is how the client
         # attaches per-step detail without parsing `content`.
-        broadcast_streaming_segment(
-          session_id,
+        normalized =
           segment
           |> Map.take(["type", "content", "summary", "steps"])
           |> normalize_segment_steps()
           |> normalize_segment_summary()
-        )
+
+        broadcast_streaming_segment(session_id, normalized)
 
         # Close off the text that came before it, so a partial save keeps the
-        # same order the user watched.
+        # same order the user watched. The same normalized segment is saved as
+        # was shown, summary and steps included, or a reload would drop the
+        # per-step detail the user had in front of them.
         acc
         |> flush_pending_text()
-        |> append_segment(%{type: :status, content: content})
+        |> append_segment(%{
+          type: :status,
+          content: content,
+          summary: normalized["summary"],
+          steps: normalized["steps"] || []
+        })
 
       _ ->
         Logger.warning(
@@ -1591,41 +1619,25 @@ defmodule Lightning.AiAssistant do
   end
 
   defp handle_error_response(error_response, session) do
-    case error_response do
+    case unwrap_transport(error_response) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status not in @success_status_range ->
         error_message =
           error_message_from_body(body) ||
             "AI server returned an error (HTTP #{status})."
 
-        Logger.error(
+        Logger.warning(
           "AI query failed for session #{session.id}: #{error_message}"
         )
 
         {:error, error_message}
 
       {:error, :timeout} ->
-        Logger.error("AI query timed out for session #{session.id}")
+        Logger.warning("AI query timed out for session #{session.id}")
         {:error, "Request timed out. Please try again."}
 
-      # One failure arriving two ways: a bare atom from our adapter's own
-      # deadline, and a struct from Finch. Finch wraps Mint's error before
-      # returning it, so Mint's struct should not reach here; it is named
-      # anyway because the cost is a word in a guard, and the cost of missing
-      # it is the generic error below.
-      {:error, %s{reason: :timeout}}
-      when s in [Finch.TransportError, Mint.TransportError] ->
-        Logger.error("AI query timed out for session #{session.id}")
-        {:error, "Request timed out. Please try again."}
-
-      {:error, :econnrefused} ->
-        Logger.error("Connection refused to AI server for session #{session.id}")
-        {:error, "Unable to reach the AI server. Please try again later."}
-
-      {:error, %s{reason: reason}}
-      when s in [Finch.TransportError, Mint.TransportError] and
-             reason in [:econnrefused, :closed, :nxdomain] ->
-        Logger.error(
+      {:error, reason} when reason in [:econnrefused, :closed, :nxdomain] ->
+        Logger.warning(
           "Cannot reach AI server for session #{session.id}: #{inspect(reason)}"
         )
 
@@ -1640,6 +1652,17 @@ defmodule Lightning.AiAssistant do
         {:error, "Oops! Something went wrong. Please try again."}
     end
   end
+
+  # One failure arrives three shapes: a bare atom from our adapter's own
+  # deadline, and a struct from Finch, which wraps Mint's before returning it.
+  # Reduced to the reason here so each clause above can say one thing. Mint's
+  # struct is named too; it should not reach us, but the cost is a word in a
+  # guard and the cost of missing it is the generic error.
+  defp unwrap_transport({:error, %s{reason: reason}})
+       when s in [Finch.TransportError, Mint.TransportError],
+       do: {:error, reason}
+
+  defp unwrap_transport(other), do: other
 
   # Streaming requests carry a lazy Stream (a fun or %Stream{} struct) as the
   # body, so error responses can't be indexed like decoded JSON maps.

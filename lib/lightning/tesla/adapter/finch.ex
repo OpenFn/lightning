@@ -156,10 +156,10 @@ defmodule Lightning.Tesla.Adapter.Finch do
     end)
   end
 
-  # Upstream carries a third clause for a bare `{:error, reason}`. Finch.stream/5
-  # returns only `{:ok, acc}` or `{:error, exception, acc}`, so dialyzer proves
-  # that clause unreachable; it is left out rather than ignored. Restore it if a
-  # Finch upgrade widens the return.
+  # Upstream keeps a bare `{:error, reason}` clause behind a version check, for
+  # Finch below 0.20. We pin 0.23, where `Finch.stream/5` returns only
+  # `{:ok, acc}` or `{:error, exception, acc}`, so upstream compiles the same two
+  # clauses this does. Restore it if the pin ever moves below 0.20.
   defp handle_stream_response({:ok, _acc}, ref, owner) do
     send(owner, {ref, :eof})
   end

@@ -297,8 +297,9 @@ defmodule Lightning.AiAssistant.MessageProcessor do
         {:error, raw}
 
       {:error, error_message} ->
-        # The strings built by handle_error_response are already written for a
-        # user to read.
+        # Every string reaching here is already written for a person to read,
+        # whether it came from handle_error_response or from the partial-save
+        # path.
         {:ok, _updated_session, _updated_message} =
           update_message_status(
             message,
@@ -420,8 +421,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       {:error, :not_found} ->
         :ok
     end
-
-    :ok
   end
 
   @doc """
@@ -435,6 +434,8 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
     - `message` - The `ChatMessage` struct to update
     - `status` - The new status atom (`:processing`, `:success`, or `:error`)
+    - `failure` - `{category, sentence}` to record why it failed, or `nil` to
+      leave the failure columns as they are
 
   ## Returns
 
@@ -466,12 +467,17 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     {:ok, updated_session, updated_message}
   end
 
+  # :processing clears the last attempt's failure. A retry writes only :pending,
+  # so without that a message which failed and then succeeded keeps the old
+  # category and sentence, and the channel attaches both to a :success message.
   @doc false
   @spec build_status_changes(atom()) :: map()
   defp build_status_changes(:processing) do
     %{
       status: :processing,
-      processing_started_at: DateTime.utc_now()
+      processing_started_at: DateTime.utc_now(),
+      failure_category: nil,
+      failure_message: nil
     }
   end
 

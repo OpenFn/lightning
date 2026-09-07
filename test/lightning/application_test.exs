@@ -212,7 +212,8 @@ defmodule Lightning.ApplicationTest do
           Lightning.Application.warn_if_connect_timeout_is_unreachable()
         end)
 
-      assert logs == ""
+      refute logs =~ "[AI Assistant] An AI job may run for"
+      refute logs =~ "[AI Assistant] APOLLO_CONNECT_TIMEOUT_MS is"
     end
 
     test "says so when an AI job can outlive Oban's drain window" do

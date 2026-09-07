@@ -50,19 +50,25 @@ defmodule Lightning.AiAssistant.StreamFailureTest do
 
     {:ok, port} = :inet.port(listen)
 
-    spawn(fn ->
-      {:ok, socket} = :gen_tcp.accept(listen)
-      {:ok, _request} = :gen_tcp.recv(socket, 0, 5_000)
+    server =
+      spawn(fn ->
+        {:ok, socket} = :gen_tcp.accept(listen)
+        {:ok, _request} = :gen_tcp.recv(socket, 0, 5_000)
 
-      :gen_tcp.send(socket, [
-        "HTTP/1.1 200 OK\r\n",
-        "Content-Type: text/event-stream\r\n",
-        "Transfer-Encoding: chunked\r\n\r\n",
-        Enum.map(frames, &chunk/1)
-      ])
+        :gen_tcp.send(socket, [
+          "HTTP/1.1 200 OK\r\n",
+          "Content-Type: text/event-stream\r\n",
+          "Transfer-Encoding: chunked\r\n\r\n",
+          Enum.map(frames, &chunk/1)
+        ])
 
-      Process.sleep(@idle_timeout * 10)
-      :gen_tcp.close(socket)
+        Process.sleep(@idle_timeout * 10)
+      end)
+
+    # The server owns the accepted socket and outlives the test by an order of
+    # magnitude, so without this each test leaves one open behind it.
+    on_exit(fn ->
+      Process.exit(server, :kill)
       :gen_tcp.close(listen)
     end)
 
@@ -182,6 +188,37 @@ defmodule Lightning.AiAssistant.StreamFailureTest do
                %{type: :text, content: "Nearly there"}
              ] =
                saved_message(session).response_segments
+    end
+
+    # The live broadcast carries the summary and the steps; a partial that keeps
+    # only `content` gives the user less on reload than they already had.
+    test "keeps the per-step detail a status update showed" do
+      port =
+        apollo_that_dies([
+          text_delta("Adding a step"),
+          sse("status", %{
+            "type" => "status",
+            "content" => "Adding step send-to-gmail...",
+            "summary" => "Adding 1 step",
+            "steps" => [%{"key" => "send-to-gmail", "name" => "Send to Gmail"}]
+          })
+        ])
+
+      stub_apollo(port)
+
+      session = workflow_session()
+
+      assert {:error, _} = AiAssistant.query_workflow_stream(session, "build it")
+
+      assert [
+               %{type: :text, content: "Adding a step"},
+               %{
+                 type: :status,
+                 content: "Adding step send-to-gmail...",
+                 summary: "Adding 1 step",
+                 steps: [%{key: "send-to-gmail", name: "Send to Gmail"}]
+               }
+             ] = saved_message(session).response_segments
     end
 
     test "a blank status update does not cost us the whole partial" do

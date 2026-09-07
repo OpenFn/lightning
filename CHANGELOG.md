@@ -71,9 +71,11 @@ and this project adheres to
 
 - AI chat messages no longer sit in "processing" forever when the job running
   them is interrupted. Oban's job-stop event now has a handler, the shutdown
-  grace period is longer than the longest an AI job can run so a deploy waits
-  for an answer rather than severing it, and a cron sweep clears anything still
-  stranded. [#4260](https://github.com/OpenFn/lightning/issues/4260)
+  grace period is longer than the longest an AI job can run, and a cron sweep
+  clears anything still stranded. A deploy can still sever a running answer,
+  because the platform's own kill deadline is shorter than the grace period; the
+  sweep is what recovers the message when that happens.
+  [#4260](https://github.com/OpenFn/lightning/issues/4260)
   [#5124](https://github.com/OpenFn/lightning/issues/5124)
 - Why an AI chat failed is now recorded on the message and sent to the client: a
   hung Apollo, a lost connection and a rate limit are no longer the same event

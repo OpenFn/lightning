@@ -340,7 +340,8 @@ defmodule Lightning.Config.Bootstrap do
       #
       # It only has that effect if the platform lets the node live that long.
       # Kubernetes force-kills after terminationGracePeriodSeconds, which is
-      # unset in our manifests and so defaults to 30s - well short of this.
+      # set in the deployment manifests rather than here, and defaults to 30s if
+      # left out - well short of this.
       # Until that is raised a deploy landing on a running AI job still severs
       # it, and StuckMessageReaper is what recovers the message rather than the
       # :stop handler. Raising it trades slower rolling restarts for users

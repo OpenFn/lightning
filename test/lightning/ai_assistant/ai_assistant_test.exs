@@ -3176,6 +3176,63 @@ defmodule Lightning.AiAssistantTest do
       assert message =~ "Send scrubbed I/O"
     end
 
+    # Apollo names its internal wrapper too, so a type on its own is not enough
+    # to trust the text: entry.py rewraps any unhandled exception as
+    # ApolloError(500, str(e), type="INTERNAL_ERROR").
+    test "swallows a named error whose message is an exception string", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{
+          "type" => "INTERNAL_ERROR",
+          "message" =>
+            "HTTPConnectionPool(host='apollo-internal.default.svc', port=3000)"
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error, %{error: shown}}
+      assert shown == "Something went wrong. Please try again."
+      refute shown =~ "apollo-internal"
+    end
+
+    # The column validates its length, so an unclamped sentence would fail the
+    # changeset and take the partial reply down with it.
+    test "clamps a readable error to what the column accepts", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{
+          "type" => "RATE_LIMIT",
+          "message" => String.duplicate("a", 900)
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error, %{error: shown}}
+
+      assert String.length(shown) ==
+               Lightning.AiAssistant.ChatMessage.max_failure_message_length()
+    end
+
     # Apollo on main has no ATTACHMENT_TOO_LARGE, so an unrecognised type must
     # keep falling through to its own message rather than being swallowed.
     test "passes through an error type it does not recognise", %{

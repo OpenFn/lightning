@@ -14,7 +14,12 @@ defmodule Lightning.AiAssistant.ChatMessage do
     for assistant messages (global chat); `[]` for flat messages (the column
     is NULL, which `embeds_many` loads as an empty list)
   * `role` - Who sent the message: `:user` or `:assistant`
-  * `status` - Processing status: `:pending`, `:success`, `:error`, or `:cancelled`
+  * `status` - Processing status: `:pending`, `:processing`, `:success`,
+    `:error`, or `:cancelled`
+  * `failure_category` - Why a failed message failed, for grouping; `nil` on
+    anything that has not failed
+  * `failure_message` - The sentence a person reads for that failure, at most
+    500 characters; `nil` alongside a `nil` category
   * `is_deleted` - Soft deletion flag (defaults to false)
   * `is_public` - Whether the message is publicly visible (defaults to true)
   * `meta` - Additional metadata (e.g., `"unsaved_job"` for job data not yet saved)
@@ -174,7 +179,6 @@ defmodule Lightning.AiAssistant.ChatMessage do
     # different process than the one that failed.
     field :failure_category, Ecto.Enum,
       values: [
-        :upstream_unavailable,
         :upstream_error,
         :timeout,
         :interrupted,

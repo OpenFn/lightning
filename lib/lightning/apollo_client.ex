@@ -200,8 +200,8 @@ defmodule Lightning.ApolloClient do
         {
           Lightning.Tesla.Adapter.Finch,
           # Both the wait for the first byte and each gap after it, not the
-          # length of the whole answer. A reply that keeps arriving never
-          # trips this - MessageProcessor's job timeout bounds total duration.
+          # length of the whole answer. A reply that keeps arriving never trips
+          # this; request_timeout below is what caps the whole answer.
           name: Lightning.Finch,
           receive_timeout: Lightning.Config.apollo(:idle_timeout),
           request_timeout: Lightning.Config.apollo(:request_timeout)
