@@ -27,7 +27,7 @@ ignore:
   # Mix tasks — one-shot CLI utilities, not exercised by the suite
   - "lib/mix/tasks/**"
 
-  # A copy of Tesla's Finch adapter, carried until we bump past 1.21.1, which
-  # carries the fix (tesla#912). Upstream owns and tests these branches; the
+  # A copy of Tesla's Finch adapter, carried until we bump to 1.21.1 or later,
+  # which carries the fix (tesla#912). Upstream owns and tests these branches; the
   # deviations we made have tests of our own.
   - "lib/lightning/tesla/adapter/finch.ex"

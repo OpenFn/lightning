@@ -155,6 +155,7 @@ defmodule Lightning.Config.Bootstrap do
         Utils.get_env([:lightning, :apollo, :idle_timeout])
       )
 
+    # The whole request, however steadily it is streaming.
     apollo_request_timeout =
       env!(
         "APOLLO_REQUEST_TIMEOUT_MS",

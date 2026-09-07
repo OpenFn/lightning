@@ -283,15 +283,6 @@ export class AIChannelRegistry {
     this.stopDraining();
   }
 
-  /**
-   * Stop drip-feeding and run whatever was waiting on the drain.
-   *
-   * A dead stream leaves the saved partial queued behind the remaining buffer,
-   * which drains a letter at a time and far slower than Apollo fills it. The
-   * error that follows clears the buffer, so the reply the user just watched
-   * appear would restart from the middle and type itself out again before the
-   * saved message arrived.
-   */
   private finishDrainNow(): void {
     this.streamingDrainPos = this.streamingBuffer.length;
     this.flushDueStatusMarkers();
@@ -793,8 +784,11 @@ export class AIChannelRegistry {
         failure_message?: string;
       };
 
-      // Land the partial before clearing the buffer it is queued behind.
-      this.finishDrainNow();
+      // Get the saved partial into the store before the error clears the
+      // buffer it is queued behind. Only when something is actually waiting:
+      // message_error names any message, and the reaper reports on ones
+      // several exchanges back while a newer reply may still be streaming.
+      if (this.streamingDrainCallback) this.finishDrainNow();
 
       this.store._updateMessageStatus(
         typedPayload.message_id,

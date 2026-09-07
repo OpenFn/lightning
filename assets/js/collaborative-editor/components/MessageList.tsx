@@ -1064,19 +1064,37 @@ export function MessageList({
     return null;
   };
 
-  // The user message a reply answers; a session can hold prompts with no reply.
-  const promptFor = (message: Message, index: number): Message | undefined => {
-    if (message.role === 'user') return message;
+  // Pairs each failed reply with the prompt it answers, once, rather than each
+  // message peeking at its neighbours. Timestamps are stored to the second, so
+  // a reply that dies in the same second as its prompt sorts either side of it
+  // and neighbours cannot be trusted. The server marks a prompt failed whenever
+  // its reply failed, so a failed prompt is what a failed reply is looking for:
+  // the nearest one before it, or after it when it sorted ahead of its own.
+  const failedPairs = useMemo(() => {
+    const owners = new Map<string, Message>();
+    const claimed = new Set<string>();
+    const unclaimedPrompt = (m: Message | undefined) =>
+      m?.role === 'user' && m.status === 'error' && !claimed.has(m.id);
 
-    for (let i = index - 1; i >= 0; i--) {
-      const candidate = displayMessages[i];
-      if (candidate?.role === 'user') return candidate;
-    }
+    displayMessages.forEach((reply, index) => {
+      if (reply.role !== 'assistant' || reply.status !== 'error') return;
 
-    // A reply that arrived before its own prompt, which the second-precision
-    // ordering allows when both land in the same second.
-    return displayMessages.find(m => m.role === 'user');
-  };
+      let owner: Message | undefined;
+      for (let i = index - 1; i >= 0 && !owner; i--) {
+        if (unclaimedPrompt(displayMessages[i])) owner = displayMessages[i];
+      }
+      for (let i = index + 1; i < displayMessages.length && !owner; i++) {
+        if (unclaimedPrompt(displayMessages[i])) owner = displayMessages[i];
+      }
+
+      if (owner) {
+        owners.set(reply.id, owner);
+        claimed.add(owner.id);
+      }
+    });
+
+    return { owners, claimed };
+  }, [displayMessages]);
 
   // Only the global endpoint emits status segments today.
   const timelineSegments = (message: Message): ResponseSegment[] | null => {
@@ -1122,7 +1140,11 @@ export function MessageList({
     >
       {displayMessages.map((message, index) => {
         const segments = timelineSegments(message);
-        const prompt = promptFor(message, index);
+
+        const prompt =
+          message.role === 'user'
+            ? message
+            : failedPairs.owners.get(message.id);
 
         // Gated on the prompt, not on the reply: a reply keeps :error for good,
         // so reading its status would leave the button live for the session and
@@ -1134,21 +1156,10 @@ export function MessageList({
               }
             : undefined;
 
-        const failedReply = (m: Message | undefined) =>
-          m?.role === 'assistant' && m.status === 'error';
-
-        // A failed reply carries the notice; the prompt carries it only when no
-        // reply arrived. The reply before a prompt counts as its own only when
-        // nothing precedes it, since a reply that dies in the same second as
-        // its prompt sorts either way round. Otherwise it belongs to an earlier
-        // exchange, and this prompt's failure would go unmentioned.
-        const ownFailedReply =
-          failedReply(displayMessages[index + 1]) ||
-          (failedReply(displayMessages[index - 1]) &&
-            !displayMessages.slice(0, index - 1).some(m => m.role === 'user'));
-
+        // A failed reply carries the notice; the prompt carries it only when
+        // no reply claimed it.
         const promptCarriesNotice =
-          message.status === 'error' && !ownFailedReply;
+          message.status === 'error' && !failedPairs.claimed.has(message.id);
 
         const showMessageAddButtons =
           !isStreaming(message) &&

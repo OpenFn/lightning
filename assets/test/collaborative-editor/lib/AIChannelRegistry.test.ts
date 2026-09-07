@@ -164,6 +164,41 @@ describe('AIChannelRegistry streaming', () => {
     });
   });
 
+  // The server sends the saved partial and then the error, and the partial is
+  // queued behind a drain that runs far slower than Apollo fills it. The error
+  // clears the buffer, so unless the drain is finished first the reply the user
+  // watched appear never reaches the store.
+  it('lands a partial reply before the error that follows it', () => {
+    channel._test.emit('streaming_chunk', {
+      content: 'a long answer that is still draining',
+    });
+
+    channel._test.emit('new_message', {
+      message: {
+        id: 'reply-1',
+        role: 'assistant',
+        content: 'a long answer that is still draining',
+        status: 'error',
+        inserted_at: new Date().toISOString(),
+      },
+    });
+
+    // Mid-drain: the partial is still waiting on the buffer.
+    vi.advanceTimersByTime(30);
+    expect(store.getSnapshot().messages).toHaveLength(0);
+
+    channel._test.emit('message_error', {
+      message_id: 'prompt-1',
+      status: 'error',
+      failure_message: 'The connection to the assistant was lost.',
+    });
+
+    const saved = store.getSnapshot().messages;
+    expect(saved).toHaveLength(1);
+    expect(saved[0]?.content).toBe('a long answer that is still draining');
+    expect(store.getSnapshot().streamingContent).toBeNull();
+  });
+
   it('clears an active status when a text chunk arrives over the wire', () => {
     // A status is showing (e.g. "Writing code...") when text starts streaming.
     channel._test.emit('streaming_status', { text: 'Writing code...' });

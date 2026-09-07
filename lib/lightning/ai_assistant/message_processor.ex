@@ -74,7 +74,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
       Lightning.Config.apollo(:idle_timeout) + 10_000
   end
 
-  @doc false
   @spec process_message(String.t()) ::
           {:ok, AiAssistant.ChatSession.t()} | {:error, String.t()}
   defp process_message(message_id) do
@@ -482,7 +481,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   # :processing clears the last attempt's failure. A retry writes only :pending,
   # so without that a message which failed and then succeeded keeps the old
   # category and sentence, and the channel attaches both to a :success message.
-  @doc false
   @spec build_status_changes(atom()) :: map()
   defp build_status_changes(:processing) do
     %{
@@ -519,7 +517,6 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     })
   end
 
-  @doc false
   @spec workflow_code_from_session(AiAssistant.ChatSession.t()) ::
           String.t() | nil
   defp workflow_code_from_session(session) do

@@ -57,7 +57,7 @@ defmodule Lightning.AiAssistant.StuckMessageReaper do
       where: m.processing_started_at < ^cutoff,
       order_by: [asc: m.processing_started_at],
       # Each one reaped loads its whole session to tell the panel, and this runs
-      # on a single-slot queue. Oldest first; the rest wait five minutes.
+      # on a single-slot queue; the rest wait five minutes.
       limit: @batch_size,
       select: %{id: m.id, chat_session_id: m.chat_session_id}
     )

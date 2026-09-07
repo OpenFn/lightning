@@ -364,11 +364,89 @@ describe('MessageList', () => {
       render(<MessageList messages={messages} onRetryMessage={vi.fn()} />);
 
       const notice = screen.getByTestId('ai-failure-notice');
-      // Under the reply, not under the prompt.
       expect(notice.closest('[data-role]')).toHaveAttribute(
         'data-role',
         'assistant-message'
       );
+    });
+
+    // Timestamps are stored to the second, so a reply that dies in the same
+    // second as its prompt can load ahead of it. Pairing has to survive that
+    // wherever it happens, not only on the session's first exchange.
+    it('shows one notice when a later reply loads before its prompt', () => {
+      const messages = [
+        createMockAIMessage({
+          id: 'prompt-1',
+          role: 'user',
+          content: 'first question',
+          status: 'success',
+        }),
+        createMockAIMessage({
+          id: 'reply-1',
+          role: 'assistant',
+          content: 'a clean answer',
+          status: 'success',
+        }),
+        createMockAIMessage({
+          id: 'reply-2',
+          role: 'assistant',
+          content: 'half an answer',
+          status: 'error',
+          failure_message: 'The connection to the assistant was lost.',
+        }),
+        createMockAIMessage({
+          id: 'prompt-2',
+          role: 'user',
+          content: 'second question',
+          status: 'error',
+          failure_message: 'The connection to the assistant was lost.',
+        }),
+      ];
+
+      render(<MessageList messages={messages} onRetryMessage={vi.fn()} />);
+
+      expect(screen.getAllByTestId('ai-failure-notice')).toHaveLength(1);
+    });
+
+    // The reply above belongs to the prompt it sorted ahead of, not to the one
+    // two exchanges back that already succeeded.
+    it('retries the question the failed reply actually answers', async () => {
+      const onRetryMessage = vi.fn();
+      const messages = [
+        createMockAIMessage({
+          id: 'prompt-1',
+          role: 'user',
+          content: 'first question',
+          status: 'success',
+        }),
+        createMockAIMessage({
+          id: 'reply-1',
+          role: 'assistant',
+          content: 'a clean answer',
+          status: 'success',
+        }),
+        createMockAIMessage({
+          id: 'reply-2',
+          role: 'assistant',
+          content: 'half an answer',
+          status: 'error',
+          failure_message: 'The connection to the assistant was lost.',
+        }),
+        createMockAIMessage({
+          id: 'prompt-2',
+          role: 'user',
+          content: 'second question',
+          status: 'error',
+        }),
+      ];
+
+      render(
+        <MessageList messages={messages} onRetryMessage={onRetryMessage} />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /try again/i }));
+
+      expect(onRetryMessage).toHaveBeenCalledWith('prompt-2');
     });
 
     // Two failures in a row: the first left a reply behind, the second did not.

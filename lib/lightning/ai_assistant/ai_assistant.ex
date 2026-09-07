@@ -34,11 +34,12 @@ defmodule Lightning.AiAssistant do
 
   @internal_failure "Something went wrong. Please try again."
 
-  # A name is not a promise the text is safe: apollo's entry.py rewraps any
-  # unhandled exception as `str(e)` under a type of its own, and `str(e)`
-  # carries hostnames and container paths. These are the types whose message
-  # apollo writes for a person, read off v3.1.1. Anything else is logged, not
-  # shown.
+  # A name is not a promise the text is safe: most apollo services catch broadly
+  # and rewrap as `str(e)` under a type of their own - BAD_REQUEST,
+  # INVALID_REQUEST, UNKNOWN_ERROR, DATABASE_ERROR, FETCH_ERROR,
+  # ADAPTOR_API_ERROR - and `str(e)` carries hostnames and container paths.
+  # These are the types whose message apollo writes for a person, read off
+  # v3.1.1. Anything else is logged, not shown.
   @apollo_readable_errors ~w(
     AUTH_ERROR
     CONNECTION_ERROR

@@ -23,13 +23,14 @@ defmodule Lightning.Tesla.Adapter.Finch do
   Also passes `:request_timeout` through to Finch, which the 1.18.3 we pin
   drops.
 
-  Both are fixed upstream, in
-  [tesla#912](https://github.com/elixir-tesla/tesla/issues/912), released in
-  1.21.1. This module exists only because we pin `~> 1.18.2`; bumping deletes
-  it, and the reason then arrives as a raised `Tesla.Error` rather than through
-  `take_stream_error/0`, so the two callers in `Lightning.AiAssistant` change
-  with it. Tracked in
-  [#5080](https://github.com/OpenFn/lightning/issues/5080).
+  Both are fixed upstream, in separate releases: the option pass-through in
+  1.19.0 ([tesla#879](https://github.com/elixir-tesla/tesla/pull/879)), the
+  stream reason in 1.21.1
+  ([tesla#912](https://github.com/elixir-tesla/tesla/issues/912)). This module
+  exists only because we pin `~> 1.18.2`; bumping to 1.21.1 deletes it, and the
+  reason then arrives as a raised `Tesla.Error` rather than through
+  `take_stream_error/0`, so the caller in `Lightning.AiAssistant` changes with
+  it. Tracked in [#5080](https://github.com/OpenFn/lightning/issues/5080).
   """
 
   @behaviour Tesla.Adapter
