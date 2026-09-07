@@ -15,19 +15,21 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
     %{conn: conn, user: user, project: project, workflow: workflow}
   end
 
-  defp get_outcomes(conn, user, project_id, workflow_id) do
+  defp get_outcomes(conn, user, project_id, workflow_id, params \\ %{}) do
     conn
     |> log_in_user(user)
     |> get(
-      ~p"/api/projects/#{project_id}/workflows/#{workflow_id}/health/outcomes"
+      ~p"/api/projects/#{project_id}/workflows/#{workflow_id}/health/outcomes",
+      params
     )
   end
 
-  defp get_failures(conn, user, project_id, workflow_id) do
+  defp get_failures(conn, user, project_id, workflow_id, params \\ %{}) do
     conn
     |> log_in_user(user)
     |> get(
-      ~p"/api/projects/#{project_id}/workflows/#{workflow_id}/health/failures"
+      ~p"/api/projects/#{project_id}/workflows/#{workflow_id}/health/failures",
+      params
     )
   end
 
@@ -62,6 +64,21 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
     } do
       assert %{status: 404} =
                get_outcomes(conn, insert(:user), project.id, workflow.id)
+    end
+
+    # :validate_days runs after :authorize_workflow, so a bad `days` value
+    # never gets the chance to produce a 400 for someone who can't see the
+    # workflow in the first place.
+    test "a non-member is refused with 404, not 400, even with an invalid days value",
+         %{
+           conn: conn,
+           project: project,
+           workflow: workflow
+         } do
+      assert %{status: 404} =
+               get_outcomes(conn, insert(:user), project.id, workflow.id, %{
+                 "days" => "banana"
+               })
     end
 
     test "a member of another project cannot read this workflow", %{
@@ -325,6 +342,62 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
         |> json_response(200)
 
       assert body["signatures"] == []
+    end
+  end
+
+  describe "?days=" do
+    @accepted_days [1, 7, 30]
+
+    test "each accepted value returns a window that many days wide", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      for days <- @accepted_days do
+        outcomes =
+          conn
+          |> get_outcomes(user, project.id, workflow.id, %{
+            "days" => Integer.to_string(days)
+          })
+          |> json_response(200)
+
+        assert %{"from" => from, "to" => to} = outcomes["window"]
+        assert {:ok, from, _} = DateTime.from_iso8601(from)
+        assert {:ok, to, _} = DateTime.from_iso8601(to)
+        assert DateTime.diff(to, from, :day) == days
+
+        failures =
+          conn
+          |> get_failures(user, project.id, workflow.id, %{
+            "days" => Integer.to_string(days)
+          })
+          |> json_response(200)
+
+        assert %{"from" => from, "to" => to} = failures["window"]
+        assert {:ok, from, _} = DateTime.from_iso8601(from)
+        assert {:ok, to, _} = DateTime.from_iso8601(to)
+        assert DateTime.diff(to, from, :day) == days
+      end
+    end
+
+    test "an unaccepted value is refused", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      for bad_days <- ["banana", "36500", "0", "7.5", "007"] do
+        assert %{status: 400} =
+                 get_outcomes(conn, user, project.id, workflow.id, %{
+                   "days" => bad_days
+                 })
+
+        assert %{status: 400} =
+                 get_failures(conn, user, project.id, workflow.id, %{
+                   "days" => bad_days
+                 })
+      end
     end
   end
 end

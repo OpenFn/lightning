@@ -41,11 +41,12 @@ and this project adheres to
   Existing `/i/<trigger-id>` URLs are unchanged.
   [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - A workflow health page at `/projects/:project_id/w/:workflow_id/health`,
-  summarising one workflow's last 30 days: a donut of work order outcomes, a
-  breakdown of the failing ones, and a triage table grouping failures by error
-  signature, heaviest first. The page refreshes itself as that workflow's work
-  orders settle, at most once every 30 seconds. Reachable from the workflows
-  list via a "Health" link in each row's Actions column.
+  summarising one workflow over a selectable window (last 24 hours, 7 days, or
+  30 days): a donut of work order outcomes, a breakdown of the failing ones, and
+  a triage table grouping failures by error signature, heaviest first. The page
+  refreshes itself as that workflow's work orders settle, at most once every 30
+  seconds. Reachable from the workflows list via a "Health" link in each row's
+  Actions column.
 - Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
   scenario file (users, API tokens, credentials, projects, workflows) via
   `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and

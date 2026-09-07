@@ -9,6 +9,9 @@ export interface Query<T> {
 
 const MESSAGE = 'Could not load workflow stats. Refresh to try again.';
 
+// Both fields null is the loading state: a request is out and nothing has
+// answered it yet. A reply sets one or the other, so there is no fourth
+// combination to name and no separate flag to keep in step with these two.
 const EMPTY = { data: null, error: null, fetchedAt: null };
 
 /** Base path for one workflow's health endpoints. */
@@ -33,7 +36,9 @@ export function useHealthQuery<T>(url: string): Query<T> {
   useEffect(() => {
     // A new url is a new question, so the last answer stops being an answer.
     // Without this the panel keeps drawing the previous range's numbers under
-    // the new heading until the request lands.
+    // the new heading until the request lands — and since the panels answer at
+    // their own speeds, the fast one would put the new window on screen beside
+    // the slow one's old one.
     //
     // A tick is the *same* question asked again, which is why it is not in
     // here: the last answer stays on screen until the new one lands, rather
@@ -65,6 +70,7 @@ export function useHealthQuery<T>(url: string): Query<T> {
         if (controller.signal.aborted) return;
 
         console.error('workflow health request failed:', error);
+
         setState({ data: null, error: MESSAGE, fetchedAt: null });
       });
 

@@ -17,13 +17,41 @@ defmodule LightningWeb.API.WorkflowHealthController do
   alias Lightning.Workflows
 
   plug :authorize_workflow
+  # After :authorize_workflow so a 404 wins over a 400.
+  plug :validate_days
 
   def outcomes(conn, _params) do
-    json(conn, Workflows.Stats.outcomes(conn.assigns.workflow))
+    json(
+      conn,
+      Workflows.Stats.outcomes(conn.assigns.workflow, conn.assigns.days_back)
+    )
   end
 
   def failure_signatures(conn, _params) do
-    json(conn, Workflows.Stats.failure_signatures(conn.assigns.workflow))
+    json(
+      conn,
+      Workflows.Stats.failure_signatures(
+        conn.assigns.workflow,
+        conn.assigns.days_back
+      )
+    )
+  end
+
+  # Closed set, string-matched — no free integer, no parse to defend.
+  @days %{"1" => 1, "7" => 7, "30" => 30}
+  @default_days "30"
+
+  defp validate_days(conn, _opts) do
+    case Map.fetch(@days, conn.params["days"] || @default_days) do
+      {:ok, days_back} ->
+        assign(conn, :days_back, days_back)
+
+      :error ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "days must be one of 1, 7, 30"})
+        |> halt()
+    end
   end
 
   defp authorize_workflow(conn, _opts) do
