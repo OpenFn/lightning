@@ -19,12 +19,30 @@ defmodule Lightning.Tesla.Adapter.FinchTest do
   # A second is still far below the ten the servers below stay silent for.
   @quiet_timeout 1_000
 
-  defp listener do
+  # Accepts one connection, hands the socket to `fun`, then closes. The server
+  # is unlinked on purpose - see the moduledoc - so the test has to take it
+  # down itself: without on_exit, a server still sleeping out its hold time
+  # keeps an accepted socket open long after the test that started it passed.
+  defp serve(fun) do
     {:ok, listen} =
       :gen_tcp.listen(0, [:binary, packet: :raw, active: false, reuseaddr: true])
 
     {:ok, port} = :inet.port(listen)
-    {listen, port}
+
+    server =
+      spawn(fn ->
+        {:ok, socket} = :gen_tcp.accept(listen)
+        {:ok, _request} = :gen_tcp.recv(socket, 0)
+        fun.(socket)
+        :gen_tcp.close(socket)
+      end)
+
+    on_exit(fn ->
+      Process.exit(server, :kill)
+      :gen_tcp.close(listen)
+    end)
+
+    port
   end
 
   defp headers do
@@ -39,38 +57,33 @@ defmodule Lightning.Tesla.Adapter.FinchTest do
     [Integer.to_string(byte_size(chunk), 16), "\r\n", chunk, "\r\n"]
   end
 
-  # Sends one chunk then holds the connection open in silence. Unlinked on
-  # purpose - see the moduledoc.
+  # Sends one chunk then holds the connection open in silence.
   defp stalling_server(chunk, hold_ms) do
-    {listen, port} = listener()
-
-    spawn(fn ->
-      {:ok, socket} = :gen_tcp.accept(listen)
-      {:ok, _request} = :gen_tcp.recv(socket, 0)
+    serve(fn socket ->
       :gen_tcp.send(socket, [headers(), encode(chunk)])
       Process.sleep(hold_ms)
-      :gen_tcp.close(socket)
-      :gen_tcp.close(listen)
     end)
+  end
 
-    port
+  # Never goes quiet for long, so only a deadline on the whole request can stop
+  # it.
+  defp dripping_server(chunk, every_ms) do
+    serve(fn socket ->
+      :gen_tcp.send(socket, headers())
+
+      Enum.each(1..40, fn _ ->
+        :gen_tcp.send(socket, encode(chunk))
+        Process.sleep(every_ms)
+      end)
+    end)
   end
 
   defp complete_server(chunks) do
-    {listen, port} = listener()
-
-    spawn(fn ->
-      {:ok, socket} = :gen_tcp.accept(listen)
-      {:ok, _request} = :gen_tcp.recv(socket, 0)
-
+    serve(fn socket ->
       :gen_tcp.send(socket, [headers(), Enum.map(chunks, &encode/1), "0\r\n\r\n"])
 
       Process.sleep(50)
-      :gen_tcp.close(socket)
-      :gen_tcp.close(listen)
     end)
-
-    port
   end
 
   defp drain(port, opts) do
@@ -103,7 +116,19 @@ defmodule Lightning.Tesla.Adapter.FinchTest do
     # raise. Upstream behaves the same - the difference is the reason below,
     # which upstream throws away.
     assert Enum.join(chunks) == "partial"
-    assert Adapter.take_stream_error() == :timeout
+    assert_went_quiet(Adapter.take_stream_error())
+  end
+
+  # The whole-request deadline, which upstream's adapter drops on the floor.
+  # Chunks keep arriving well inside receive_timeout, so nothing but
+  # request_timeout can end this.
+  test "a stream that never goes quiet is still bounded by the request" do
+    port = dripping_server("tick", 50)
+
+    chunks = drain(port, receive_timeout: 5_000, request_timeout: 400)
+
+    assert length(chunks) < 40
+    assert_went_quiet(Adapter.take_stream_error())
   end
 
   # The other way a stream dies, and the one that has to read differently to
@@ -120,12 +145,33 @@ defmodule Lightning.Tesla.Adapter.FinchTest do
     assert %Finch.TransportError{reason: :closed} = Adapter.take_stream_error()
   end
 
-  test "reading the reason clears it, so the next request starts clean" do
+  test "reading the reason clears it" do
     port = stalling_server("partial", 10_000)
 
     drain(port, receive_timeout: @quiet_timeout)
 
-    assert Adapter.take_stream_error() == :timeout
+    assert_went_quiet(Adapter.take_stream_error())
     assert Adapter.take_stream_error() == nil
+  end
+
+  # Reading cannot be what guarantees this on its own: a stream that ends
+  # cleanly never reads, so only the delete on the way into call/2 stops the
+  # next request inheriting the last one's reason.
+  test "a failed reason nobody read does not reach the next request" do
+    drain(stalling_server("partial", 10_000), receive_timeout: @quiet_timeout)
+
+    chunks = drain(complete_server(["one", "two"]), receive_timeout: 2_000)
+
+    assert Enum.join(chunks) == "onetwo"
+    assert Adapter.take_stream_error() == nil
+  end
+
+  # Finch's own deadline and ours are handed the same number, so whichever the
+  # scheduler reaches first decides whether the reason arrives as our bare atom
+  # or as Finch's struct around the same thing. Both say the stream went quiet,
+  # and both produce the same sentence for the user.
+  defp assert_went_quiet(reason) do
+    assert reason == :timeout or
+             match?(%Finch.TransportError{reason: :timeout}, reason)
   end
 end

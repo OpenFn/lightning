@@ -731,6 +731,49 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "apollo timeouts" do
+    test "fall back to the compiled defaults" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      apollo = get_env(:lightning, :apollo)
+
+      assert apollo[:connect_timeout] == 5_000
+      assert apollo[:idle_timeout] == 30_000
+      assert apollo[:request_timeout] == 300_000
+    end
+
+    # The names are the contract DEPLOYMENT.md documents; a typo in one would
+    # fall back to its default and ship without a failure anywhere.
+    test "each one is read from its own variable" do
+      Dotenvy.source([
+        %{
+          "APOLLO_CONNECT_TIMEOUT_MS" => "1000",
+          "APOLLO_IDLE_TIMEOUT_MS" => "2000",
+          "APOLLO_REQUEST_TIMEOUT_MS" => "3000"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      apollo = get_env(:lightning, :apollo)
+
+      assert apollo[:connect_timeout] == 1_000
+      assert apollo[:idle_timeout] == 2_000
+      assert apollo[:request_timeout] == 3_000
+    end
+
+    test "records APOLLO_TIMEOUT only when it is set" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      refute get_env(:lightning, :apollo_timeout_env_still_set)
+
+      Dotenvy.source([%{"APOLLO_TIMEOUT" => "120000"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :apollo_timeout_env_still_set)
+    end
+  end
+
   describe "claim_work_mem" do
     test "defaults to nil" do
       Dotenvy.source([%{}])

@@ -51,14 +51,10 @@ defmodule Lightning.AiAssistant.MessageProcessor do
   end
 
   @doc """
-  Defines the job timeout based on Apollo configuration.
+  How long one AI job may run, in milliseconds.
 
-  Adds a 10-second buffer to the Apollo timeout to account for
-  network overhead and processing time.
-
-  ## Returns
-
-  Timeout in milliseconds
+  The three Apollo timeouts added together, plus a 10-second buffer, so the
+  transport gets to fail first and say why.
   """
   @impl Oban.Worker
   @spec timeout(Oban.Job.t()) :: pos_integer()

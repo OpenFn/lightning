@@ -68,18 +68,32 @@ and this project adheres to
   them is interrupted. Oban's job-stop event now has a handler, the shutdown
   grace period is longer than the longest an AI job can run so a deploy waits
   for an answer rather than severing it, and a cron sweep clears anything still
-  stranded. [#5069](https://github.com/OpenFn/lightning/pull/5069)
-  [#5071](https://github.com/OpenFn/lightning/pull/5071)
-- Why an AI chat failed is now recorded on the message and sent to the client:
-  a hung Apollo, a lost connection and a rate limit are no longer the same
-  event to us. The panel still renders one generic error, so this is the
-  groundwork for telling them apart rather than the change a user will see.
-  [#5070](https://github.com/OpenFn/lightning/pull/5070)
+  stranded. [#4260](https://github.com/OpenFn/lightning/issues/4260)
+  [#5124](https://github.com/OpenFn/lightning/issues/5124)
+- Why an AI chat failed is now recorded on the message and sent to the client: a
+  hung Apollo, a lost connection and a rate limit are no longer the same event
+  to us. The panel still renders one generic error, so this is the groundwork
+  for telling them apart rather than the change a user will see.
+  [#5125](https://github.com/OpenFn/lightning/issues/5125)
 - An AI answer that is cut off partway through is kept rather than discarded.
   The text and any workflow YAML the user already watched appear are saved,
   along with the status updates, in the order they were shown.
-  [#5072](https://github.com/OpenFn/lightning/pull/5072)
-  [#5074](https://github.com/OpenFn/lightning/pull/5074)
+  [#5126](https://github.com/OpenFn/lightning/issues/5126)
+  [#5127](https://github.com/OpenFn/lightning/issues/5127)
+- A failed AI stream now says which way it failed. A hung Apollo, a severed
+  connection and a genuinely short answer all read as "Stream ended without
+  complete response"; they now read as three different things.
+  [#4882](https://github.com/OpenFn/lightning/issues/4882)
+- `APOLLO_TIMEOUT` is renamed `APOLLO_IDLE_TIMEOUT_MS`, and joined by
+  `APOLLO_CONNECT_TIMEOUT_MS` and `APOLLO_REQUEST_TIMEOUT_MS`. The old setting
+  only ever measured silence. Connecting used a fixed five seconds you could not
+  change, and nothing bounded a whole request at the HTTP layer, so a slow but
+  steady stream ran until Oban killed the job. Setting the old name now logs a
+  warning at boot saying it is ignored. The idle default drops to 30s, which
+  assumes Apollo v3.1.1 or later and its 15s keepalive; on an older Apollo a
+  working stream can go quiet for longer than that, so raise
+  `APOLLO_IDLE_TIMEOUT_MS` or upgrade Apollo.
+  [#4882](https://github.com/OpenFn/lightning/issues/4882)
 - The AI assistant no longer appends " 1" to a workflow's name each time it
   edits an already-saved workflow. Name-uniqueness validation now excludes the
   workflow being edited, so its own name isn't treated as a clash.

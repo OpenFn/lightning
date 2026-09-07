@@ -1,7 +1,12 @@
 defmodule Lightning.Tesla.Adapter.Finch do
   @moduledoc """
-  Tesla's Finch adapter, with the failure reason preserved on a streamed
-  response.
+  Enough of Tesla's Finch adapter for the Apollo client, with the failure reason
+  preserved on a streamed response.
+
+  Not a faithful copy: it drops upstream's `build/4` clauses for multipart,
+  stream and function request bodies, and hands the body to `Finch.build/4` as
+  it stands. Anything but a plain body therefore fails further down, in Mint,
+  rather than here. Apollo sends JSON.
 
   Upstream's streaming path returns `nil` from its `Stream.unfold` for a
   mid-stream error, a mid-stream timeout, and a clean end alike, discarding the
@@ -28,6 +33,9 @@ defmodule Lightning.Tesla.Adapter.Finch do
 
   @behaviour Tesla.Adapter
 
+  # receive_timeout covers two waits, not one: the wait for status and headers
+  # in stream/3, and each gap between chunks in body_stream/3. Whichever
+  # elapses first ends the request.
   @defaults [receive_timeout: 15_000]
   @stream_error_key {__MODULE__, :stream_error}
 
@@ -58,9 +66,9 @@ defmodule Lightning.Tesla.Adapter.Finch do
       {:ok, %Finch.Response{status: status, headers: headers, body: body}} ->
         {:ok, %Tesla.Env{env | status: status, headers: headers, body: body}}
 
-      {:error, %Mint.TransportError{reason: reason}} ->
-        {:error, reason}
-
+      # Upstream unwraps %Mint.TransportError{} here. Finch wraps every Mint
+      # transport error in one of its own before returning, so that clause
+      # cannot fire and is left out.
       {:error, reason} ->
         {:error, reason}
     end
@@ -78,6 +86,10 @@ defmodule Lightning.Tesla.Adapter.Finch do
     owner = self()
     ref = make_ref()
 
+    # Upstream's callback carries two `{:error, _}` clauses. `Finch.stream/5`
+    # only ever passes `:status`, `:headers`, `:data` and `:trailers` to it and
+    # reports a failure through its return value, which handle_stream_response/3
+    # below reads. Those clauses cannot fire, so they are left out.
     fun = fn
       {:status, status}, _acc ->
         status
@@ -90,12 +102,6 @@ defmodule Lightning.Tesla.Adapter.Finch do
 
       {:trailers, trailers}, _acc ->
         trailers
-
-      {:error, error}, _acc ->
-        send(owner, {ref, {:error, error}})
-
-      {:error, error, _}, _acc ->
-        send(owner, {ref, {:error, error}})
     end
 
     task =

@@ -1288,21 +1288,32 @@ defmodule Lightning.AiAssistant do
         transport_failure_message(reason)
 
       other ->
-        Logger.warning("[AI Assistant] Stream failed: #{inspect(other)}")
+        Logger.warning(
+          "[AI Assistant] Stream failed: #{inspect(other, printable_limit: 128)}"
+        )
+
         "The assistant stopped before it finished. Please try again."
     end
   end
 
   # A silence long enough to give up on reaches us two ways, from our own
   # adapter and from Finch, and both have to read the same to the user.
+  # APOLLO_REQUEST_TIMEOUT_MS lands here too: Finch reports the whole-request
+  # cap as the same :timeout, so a healthy answer cut off for running long
+  # reads as a stall. Nothing at this layer separates them, and neither does
+  # the log. How long the message took is the only thing that does.
   defp transport_failure_message(:timeout) do
     "The assistant stopped responding partway through. Please try again."
   end
 
   defp transport_failure_message(reason) do
-    # inspect/1, not interpolation: a reason is not always an atom, and a
-    # tuple like {:tls_alert, _} has no String.Chars.
-    Logger.warning("[AI Assistant] Stream lost mid-response: #{inspect(reason)}")
+    # inspect/1, not interpolation: a reason is not always an atom, and a tuple
+    # like {:tls_alert, _} has no String.Chars. Bounded because a reason can
+    # carry bytes off the socket, and those are the user's own data.
+    Logger.warning(
+      "[AI Assistant] Stream lost mid-response: " <>
+        inspect(reason, printable_limit: 128)
+    )
 
     "The connection to the assistant was lost. Please try again."
   end
@@ -1332,7 +1343,7 @@ defmodule Lightning.AiAssistant do
       other ->
         Logger.warning(
           "[AI Assistant] Unreadable error event for session #{session_id}: " <>
-            inspect(other)
+            inspect(other, printable_limit: 128)
         )
     end
 
@@ -1503,13 +1514,33 @@ defmodule Lightning.AiAssistant do
         Logger.error("AI query timed out for session #{session.id}")
         {:error, "Request timed out. Please try again."}
 
+      # One failure arriving two ways: a bare atom from our adapter's own
+      # deadline, and a struct from Finch. Finch wraps Mint's error before
+      # returning it, so Mint's struct should not reach here; it is named
+      # anyway because the cost is a word in a guard, and the cost of missing
+      # it is the generic error below.
+      {:error, %s{reason: :timeout}}
+      when s in [Finch.TransportError, Mint.TransportError] ->
+        Logger.error("AI query timed out for session #{session.id}")
+        {:error, "Request timed out. Please try again."}
+
       {:error, :econnrefused} ->
         Logger.error("Connection refused to AI server for session #{session.id}")
         {:error, "Unable to reach the AI server. Please try again later."}
 
+      {:error, %s{reason: reason}}
+      when s in [Finch.TransportError, Mint.TransportError] and
+             reason in [:econnrefused, :closed, :nxdomain] ->
+        Logger.error(
+          "Cannot reach AI server for session #{session.id}: #{inspect(reason)}"
+        )
+
+        {:error, "Unable to reach the AI server. Please try again later."}
+
       unexpected_error ->
         Logger.error(
-          "Unexpected error for session #{session.id}: #{inspect(unexpected_error)}"
+          "Unexpected error for session #{session.id}: " <>
+            inspect(unexpected_error, printable_limit: 128)
         )
 
         {:error, "Oops! Something went wrong. Please try again."}

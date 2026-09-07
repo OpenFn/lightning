@@ -131,6 +131,13 @@ defmodule Lightning.Config.Bootstrap do
           end
         end)
 
+    # Read here rather than from System.get_env: envs come through Dotenvy, so
+    # a value set in a .env file never reaches the system environment. Recorded
+    # for the boot warning in Lightning.Application, where Logger is up.
+    config :lightning,
+           :apollo_timeout_env_still_set,
+           env!("APOLLO_TIMEOUT", :string, nil) != nil
+
     # How long to wait to reach Apollo at all.
     apollo_connect_timeout =
       env!(
@@ -139,10 +146,11 @@ defmodule Lightning.Config.Bootstrap do
         Utils.get_env([:lightning, :apollo, :connect_timeout])
       )
 
-    # Longest acceptable silence part-way through an answer. Apollo sends a
-    # keepalive every 15s from v3.1.1, so half a minute of nothing means the
-    # path is broken rather than that a model is thinking. Raise it if you run
-    # an older Apollo that has no keepalive.
+    # Longest acceptable silence, both before the first byte of an answer and
+    # between the chunks after it. Apollo sends a keepalive every 15s from
+    # v3.1.1, so half a minute of nothing means the path is broken rather than
+    # that a model is thinking. Raise it if you run an older Apollo that has no
+    # keepalive.
     apollo_idle_timeout =
       env!(
         "APOLLO_IDLE_TIMEOUT_MS",

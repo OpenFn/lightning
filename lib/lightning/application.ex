@@ -172,6 +172,8 @@ defmodule Lightning.Application do
       ]
       |> Enum.reject(&is_nil/1)
 
+    warn_if_apollo_timeout_still_set()
+    warn_if_connect_timeout_is_unreachable()
     warn_if_ai_jobs_outlive_the_drain_window()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
@@ -181,16 +183,19 @@ defmodule Lightning.Application do
   end
 
   # Finch already keys pools by {scheme, host, port}, so Apollo has its own
-  # either way. The only setting here that changes behaviour is the connect
-  # timeout; size and count restate Finch's defaults rather than shrink them,
-  # since an AI stream holds its connection for as long as the answer takes.
+  # either way, and size and count restate Finch's own defaults. Under the
+  # shipped configuration this changes nothing; it exists so that setting
+  # APOLLO_CONNECT_TIMEOUT_MS has somewhere to take effect, and so a change to
+  # Finch's defaults cannot quietly shrink a pool whose streams hold their
+  # connection for as long as an answer takes.
   #
   # http1 is Finch's default too, and is written out because this pool depends
   # on it: :request_timeout is HTTP/1-only, and on http2 receive_timeout
   # becomes a deadline for the whole request rather than the gap between
   # chunks, which would silently cap the length of an answer. Pinned so a
   # change to that default cannot quietly take both settings with it.
-  defp apollo_pools do
+  @doc false
+  def apollo_pools do
     base = %{default: [size: 50, count: 1]}
 
     endpoint = Lightning.Config.apollo(:endpoint)
@@ -225,11 +230,44 @@ defmodule Lightning.Application do
 
   defp poolable_url?(_endpoint), do: false
 
+  # Reaching Apollo happens inside the adapter's wait for the first byte, which
+  # the idle timeout bounds, so a connect timeout above it can never expire.
+  # Silently, and on the setting an operator most expects to control a slow or
+  # unreachable host.
+  @doc false
+  def warn_if_connect_timeout_is_unreachable do
+    connect = Lightning.Config.apollo(:connect_timeout)
+    idle = Lightning.Config.apollo(:idle_timeout)
+
+    if is_integer(connect) and is_integer(idle) and connect > idle do
+      Logger.warning("""
+      [AI Assistant] APOLLO_CONNECT_TIMEOUT_MS is #{connect}ms but \
+      APOLLO_IDLE_TIMEOUT_MS is #{idle}ms, and the wait to reach Apollo sits \
+      inside the idle budget. Connecting will give up after #{idle}ms whatever \
+      the connect setting says. Raise APOLLO_IDLE_TIMEOUT_MS to at least \
+      #{connect}ms, or lower APOLLO_CONNECT_TIMEOUT_MS.
+      """)
+    end
+  end
+
+  # Left unread it would silently lift a ceiling an operator lowered on purpose.
+  @doc false
+  def warn_if_apollo_timeout_still_set do
+    if Application.get_env(:lightning, :apollo_timeout_env_still_set) do
+      Logger.warning("""
+      [AI Assistant] APOLLO_TIMEOUT is no longer read and the value you set is \
+      being ignored. It is replaced by APOLLO_CONNECT_TIMEOUT_MS, \
+      APOLLO_IDLE_TIMEOUT_MS and APOLLO_REQUEST_TIMEOUT_MS.
+      """)
+    end
+  end
+
   # Oban stops its producer once the grace period expires and only then kills
   # whatever is still running, so a job that outlives the window is killed with
   # nothing left to report it. Its AI message would stay :processing until the
   # reaper picks it up, and no telemetry would fire.
-  defp warn_if_ai_jobs_outlive_the_drain_window do
+  @doc false
+  def warn_if_ai_jobs_outlive_the_drain_window do
     grace = Application.get_env(:lightning, Oban)[:shutdown_grace_period]
     ceiling = Lightning.AiAssistant.MessageProcessor.job_timeout()
 
@@ -238,7 +276,8 @@ defmodule Lightning.Application do
       [AI Assistant] An AI job may run for #{ceiling}ms but Oban stops draining \
       after #{grace}ms. A deploy landing on a running job will kill it without \
       emitting telemetry, leaving its message :processing until the reaper runs.
-      Lower APOLLO_REQUEST_TIMEOUT_MS or raise Oban's shutdown_grace_period.
+      Lower APOLLO_CONNECT_TIMEOUT_MS, APOLLO_IDLE_TIMEOUT_MS or \
+      APOLLO_REQUEST_TIMEOUT_MS, or raise Oban's shutdown_grace_period.
       """)
     end
   end

@@ -2598,9 +2598,7 @@ defmodule Lightning.AiAssistantTest do
           {"a timeout raised by Finch", %Finch.TransportError{reason: :timeout},
            "stopped responding partway through"},
           {"a dropped connection", %Finch.TransportError{reason: :closed},
-           "connection to the assistant was lost"},
-          {"a reason we do not recognise", {:something, :unexpected},
-           "stopped before it finished"}
+           "connection to the assistant was lost"}
         ] do
       test "#{name} is reported as \"#{expected}\"", %{
         user: user,
@@ -2633,6 +2631,46 @@ defmodule Lightning.AiAssistantTest do
         assert {:error, message} = AiAssistant.query_stream(session, "test")
         assert message =~ unquote(expected)
       end
+    end
+
+    # Says the same thing to the user as a stream that simply stopped, so what
+    # separates them is the log: this one has a reason worth reading.
+    test "a reason we do not recognise is logged before it is generalised", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Process.put(
+        {Lightning.Tesla.Adapter.Finch, :stream_error},
+        {:something, :unexpected}
+      )
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: []}}
+      end)
+
+      logs =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:error, message} = AiAssistant.query_stream(session, "test")
+          assert message =~ "stopped before it finished"
+        end)
+
+      assert logs =~ "Stream failed"
+      assert logs =~ "something"
     end
 
     test "keeps the text that arrived when the stream dies before completing",
