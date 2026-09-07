@@ -445,7 +445,7 @@ export class AIChannelRegistry {
    *
    * @param topic - Channel topic
    * @param content - Message content
-   * @param options - Message options (attach_code, attach_logs, etc.)
+   * @param options - Message options (attach_logs, attach_io_data, etc.)
    */
   sendMessage(topic: string, content: string, options?: MessageOptions): void {
     const entry = this.channels.get(topic);
@@ -1021,9 +1021,6 @@ export class AIChannelRegistry {
       // JobCodeContext
       params['job_id'] = context.job_id;
 
-      if (context.follow_run_id) {
-        params['follow_run_id'] = context.follow_run_id;
-      }
       if (context.job_name) {
         params['job_name'] = context.job_name;
       }
@@ -1041,18 +1038,6 @@ export class AIChannelRegistry {
       }
       if (context.content) {
         params['content'] = context.content;
-      }
-      if (context.attach_code) {
-        params['attach_code'] = true;
-      }
-      if (context.attach_logs) {
-        params['attach_logs'] = true;
-      }
-      if (context.attach_io_data) {
-        params['attach_io_data'] = true;
-      }
-      if (context.step_id) {
-        params['step_id'] = context.step_id;
       }
     } else {
       // WorkflowTemplateContext
@@ -1078,12 +1063,26 @@ export class AIChannelRegistry {
       params['code'] = context.code;
     }
 
+    // For both context shapes, for the same reason as `code` above.
+    if ('follow_run_id' in context && context.follow_run_id) {
+      params['follow_run_id'] = context.follow_run_id;
+    }
+    if ('attach_logs' in context && context.attach_logs) {
+      params['attach_logs'] = true;
+    }
+    if ('attach_io_data' in context && context.attach_io_data) {
+      params['attach_io_data'] = true;
+    }
+    if ('step_id' in context && context.step_id) {
+      params['step_id'] = context.step_id;
+    }
+
     // Global assistant flags (applicable to both session types)
     if ('use_global_assistant' in context && context.use_global_assistant) {
       params['use_global_assistant'] = true;
     }
     if ('page' in context && context.page) {
-      params['page'] = context.page as string;
+      params['page'] = context.page;
     }
 
     return params;

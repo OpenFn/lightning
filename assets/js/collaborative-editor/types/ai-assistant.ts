@@ -110,7 +110,6 @@ export interface Message {
  */
 export interface JobCodeContext {
   job_id: string;
-  attach_code?: boolean;
   attach_logs?: boolean;
   attach_io_data?: boolean;
   step_id?: string;
@@ -138,14 +137,24 @@ export type WorkflowTemplateContext =
       code?: string;
       errors?: string;
       content?: string;
+
+      // Carried on the channel join, which is how a session's first message
+      // reaches the server.
+      follow_run_id?: string;
+      attach_logs?: boolean;
+      attach_io_data?: boolean;
+      step_id?: string;
+      use_global_assistant?: boolean;
+      page?: string;
     }
   | {
       job_id: string;
-      attach_code?: boolean;
       attach_logs?: boolean;
       attach_io_data?: boolean;
       step_id?: string;
       follow_run_id?: string;
+      use_global_assistant?: boolean;
+      page?: string;
       content?: string;
 
       job_name?: string;
@@ -334,7 +343,6 @@ export interface AIAssistantStore {
  * Options for sending a message
  */
 export interface MessageOptions {
-  attach_code?: boolean;
   attach_logs?: boolean;
   attach_io_data?: boolean;
   step_id?: string;

@@ -941,7 +941,7 @@ defmodule LightningWeb.AiAssistantChannel do
 
     # Include message_options for the initial message (attach_io_data, step_id, etc.)
     meta =
-      if params["attach_io_data"] || params["step_id"] || params["attach_code"] ||
+      if params["attach_io_data"] || params["step_id"] ||
            params["attach_logs"] || params["use_global_assistant"] do
         Map.put(meta, "message_options", build_message_options(params))
       else
@@ -1037,7 +1037,6 @@ defmodule LightningWeb.AiAssistantChannel do
 
   defp build_message_options(params) do
     %{
-      "code" => params["attach_code"] == true,
       "log" => params["attach_logs"] == true,
       "attach_io_data" => params["attach_io_data"] == true,
       "step_id" => params["step_id"],

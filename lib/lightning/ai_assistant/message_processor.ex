@@ -179,7 +179,7 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     log_attachments(opts["log"] == true, run_id, session.project_id) ++
       io_attachments(
         opts["attach_io_data"] == true,
-        opts["step_id"],
+        run_id,
         session.project_id
       )
   end
@@ -202,30 +202,46 @@ defmodule Lightning.AiAssistant.MessageProcessor do
 
   defp log_attachments(_attach, _run_id, _project_id), do: []
 
-  defp io_attachments(true, step_id, project_id) when is_binary(step_id) do
-    case Ecto.UUID.cast(step_id) do
-      {:ok, uuid} ->
-        {input, output} = fetch_and_scrub_io_data(uuid, project_id)
-
-        if is_nil(input) and is_nil(output) do
-          warn_unresolved("I/O data", step: step_id, project: project_id)
-        end
-
-        attachment("input_dataclip", input) ++
-          attachment("output_dataclip", output)
-
-      :error ->
-        warn_unresolved("I/O data", step: step_id)
+  defp io_attachments(true, run_id, project_id) when is_binary(run_id) do
+    case Invocation.scrubbed_io_for_run(run_id, project_id) do
+      # No steps: the run is not this project's, or has yet to start one.
+      [] ->
+        warn_unresolved("I/O data", run: run_id, project: project_id)
         []
+
+      steps ->
+        # Steps that kept no dataclip. Ordinary, unlike the case above.
+        case Enum.flat_map(steps, &step_io_attachments/1) do
+          [] ->
+            warn_no_data(run_id, project_id, length(steps))
+            []
+
+          attachments ->
+            attachments
+        end
     end
   end
 
-  defp io_attachments(true, step_id, _project_id) do
-    warn_unresolved("I/O data", step: step_id)
+  defp io_attachments(true, run_id, _project_id) do
+    warn_unresolved("I/O data", run: run_id)
     []
   end
 
-  defp io_attachments(_attach, _step_id, _project_id), do: []
+  defp io_attachments(_attach, _run_id, _project_id), do: []
+
+  # The name goes inside the content because Apollo renders an attachment as
+  # its type and its content, and nothing else.
+  defp step_io_attachments(step) do
+    attachment("input_dataclip", step.step_name, step.input) ++
+      attachment("output_dataclip", step.step_name, step.output)
+  end
+
+  defp warn_no_data(run_id, project_id, steps) do
+    Logger.warning(
+      "[AI Assistant] I/O data requested but the run's steps kept none " <>
+        "(#{inspect(run: run_id, project: project_id, steps: steps)})"
+    )
+  end
 
   # The assistant answers from context the user believes it has.
   defp warn_unresolved(what, context) do
@@ -235,8 +251,12 @@ defmodule Lightning.AiAssistant.MessageProcessor do
     )
   end
 
-  defp attachment(_type, nil), do: []
-  defp attachment(type, content), do: [%{"type" => type, "content" => content}]
+  defp attachment(_type, _step_name, nil), do: []
+
+  defp attachment(type, step_name, content),
+    do: [
+      %{"type" => type, "content" => %{"step" => step_name, "data" => content}}
+    ]
 
   @spec job_chat?(AiAssistant.ChatSession.t(), ChatMessage.t()) :: boolean()
   defp job_chat?(session, message) do

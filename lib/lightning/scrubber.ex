@@ -16,6 +16,15 @@ defmodule Lightning.Scrubber do
   """
   use Agent
 
+  # Wide enough for an ordinary record, narrow enough for one keyed by id.
+  @map_key_limit 50
+
+  # A ceiling on the whole structure, which nesting would otherwise multiply.
+  @key_budget 500
+
+  # The budget counts keys, not their length.
+  @max_key_length 200
+
   defmodule State do
     @moduledoc false
     @typep samples :: [String.t()]
@@ -165,7 +174,12 @@ defmodule Lightning.Scrubber do
 
   @doc """
   Recursively scrubs all values from a data structure, replacing them with type placeholders.
-  Preserves keys and structure while hiding actual values. Arrays are sampled up to `array_limit`
+  Keeps the structure and the field names, and hides the values.
+
+  Field names are not values and survive as they are, so a body keyed by
+  record identifier would carry those identifiers out. Long lists keep two
+  samples and keys are capped across the whole structure, and a map that was
+  truncated says how many it dropped under a `"..."` key. Arrays are sampled up to `array_limit`
   elements with a "...N more" indicator if truncated.
 
   ## Examples
@@ -175,36 +189,76 @@ defmodule Lightning.Scrubber do
 
       iex> scrub_values([1, 2, 3])
       ["number", "number", "...1 more"]
+
   """
   @spec scrub_values(any(), non_neg_integer()) :: any()
-  def scrub_values(value, array_limit \\ 2)
+  def scrub_values(value, array_limit \\ 2) do
+    {scrubbed, _left} = scrub_value(value, array_limit, @key_budget)
+    scrubbed
+  end
 
-  def scrub_values(nil, _array_limit), do: "null"
+  defp scrub_value(nil, _array_limit, budget), do: {"null", budget}
 
-  def scrub_values([], _array_limit), do: []
+  defp scrub_value([], _array_limit, budget), do: {[], budget}
 
-  def scrub_values(list, array_limit) when is_list(list) do
-    samples =
+  defp scrub_value(list, array_limit, budget) when is_list(list) do
+    {samples, budget} =
       list
       |> Enum.take(array_limit)
-      |> Enum.map(&scrub_values(&1, array_limit))
+      |> Enum.map_reduce(budget, &scrub_value(&1, array_limit, &2))
 
     remaining = length(list) - array_limit
 
     if remaining > 0 do
-      samples ++ ["...#{remaining} more"]
+      {samples ++ ["...#{remaining} more"], budget}
     else
-      samples
+      {samples, budget}
     end
   end
 
-  def scrub_values(map, array_limit) when is_map(map) do
-    Map.new(map, fn {key, value} -> {key, scrub_values(value, array_limit)} end)
+  # Keys survive as they are, so the budget is spent across the whole
+  # structure rather than per map.
+  defp scrub_value(map, array_limit, budget) when is_map(map) do
+    {kept, dropped} =
+      map
+      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.split(min(budget, @map_key_limit))
+
+    {pairs, budget} =
+      Enum.map_reduce(kept, budget - length(kept), fn {key, value}, left ->
+        {scrubbed, left} = scrub_value(value, array_limit, left)
+        {{truncate_key(key), scrubbed}, left}
+      end)
+
+    scrubbed = Map.new(pairs)
+
+    case length(dropped) do
+      0 -> {scrubbed, budget}
+      remaining -> {Map.put(scrubbed, "...", "#{remaining} more keys"), budget}
+    end
   end
 
-  def scrub_values(value, _array_limit) when is_binary(value), do: "string"
-  def scrub_values(value, _array_limit) when is_integer(value), do: "number"
-  def scrub_values(value, _array_limit) when is_float(value), do: "number"
-  def scrub_values(value, _array_limit) when is_boolean(value), do: "boolean"
-  def scrub_values(_value, _array_limit), do: "unknown"
+  defp scrub_value(value, _array_limit, budget) when is_binary(value),
+    do: {"string", budget}
+
+  defp scrub_value(value, _array_limit, budget) when is_integer(value),
+    do: {"number", budget}
+
+  defp scrub_value(value, _array_limit, budget) when is_float(value),
+    do: {"number", budget}
+
+  defp scrub_value(value, _array_limit, budget) when is_boolean(value),
+    do: {"boolean", budget}
+
+  defp scrub_value(_value, _array_limit, budget), do: {"unknown", budget}
+
+  defp truncate_key(key) when is_binary(key) do
+    if String.length(key) > @max_key_length do
+      String.slice(key, 0, @max_key_length)
+    else
+      key
+    end
+  end
+
+  defp truncate_key(key), do: key
 end

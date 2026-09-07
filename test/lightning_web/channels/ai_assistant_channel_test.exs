@@ -744,32 +744,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert errors.base == ["Message cannot be empty"]
     end
 
-    test "includes code when attach_code is true", %{
-      socket: socket,
-      job: job,
-      user: user
-    } do
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
-
-      ref =
-        push(socket, "new_message", %{
-          "content" => "Explain this code",
-          "attach_code" => true
-        })
-
-      assert_reply ref, :ok, %{message: message}
-      assert message.content == "Explain this code"
-    end
-
     test "returns limit error when quota is exceeded", %{
       socket: socket,
       job: job,
@@ -887,7 +861,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{}
         )
 
-      # Simulate user selecting a run and checking "Send logs"
+      # Simulate user selecting a run and checking "Send run logs"
       ref =
         push(socket, "new_message", %{
           "content" => "Help me debug these logs",
@@ -3004,65 +2978,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
-  describe "extract_message_options edge cases" do
-    test "handles attach_code and attach_logs for job_code", %{
-      socket: socket,
-      job: job,
-      user: user
-    } do
-      # Use manual mode to prevent AI response from being generated inline
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
-
-      # Test with both attach_code and attach_logs true
-      ref =
-        push(socket, "new_message", %{
-          "content" => "Help with logs",
-          "attach_code" => true,
-          "attach_logs" => true
-        })
-
-      assert_reply ref, :ok, %{message: message}
-      assert message.role == "user"
-    end
-
-    test "handles attach_code false for job_code", %{
-      socket: socket,
-      job: job,
-      user: user
-    } do
-      # Use manual mode to prevent AI response from being generated inline
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
-
-      # Test with attach_code explicitly false
-      ref =
-        push(socket, "new_message", %{
-          "content" => "Help without code",
-          "attach_code" => false
-        })
-
-      assert_reply ref, :ok, %{message: message}
-      assert message.role == "user"
-    end
-  end
-
   describe "extract_session_options edge cases" do
     test "creates workflow_template session without follow_run_id", %{
       socket: socket,
@@ -3150,7 +3065,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert message_options["step_id"] == step.id
     end
 
-    test "includes attach_code and attach_logs when creating new session", %{
+    test "includes attach_logs when creating new session", %{
       socket: socket,
       job: job,
       project: project
@@ -3159,7 +3074,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
         "job_id" => job.id,
         "project_id" => project.id,
         "content" => "Help me with logs",
-        "attach_code" => true,
         "attach_logs" => true
       }
 
@@ -3174,8 +3088,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
       session = AiAssistant.get_session!(response.session_id)
       message_options = session.meta["message_options"]
 
-      assert message_options["code"] == true
       assert message_options["log"] == true
+      refute Map.has_key?(message_options, "code")
     end
 
     test "excludes message_options when not opted in", %{
