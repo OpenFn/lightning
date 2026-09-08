@@ -483,7 +483,6 @@ describe('Header - lifecycle actions', () => {
     await user.click(screen.getByTestId('promote-sandbox-button'));
 
     const dialog = screen.getByRole('dialog');
-    // Silence while the answer is in flight would read as "nothing changed".
     expect(
       within(dialog).getByRole('button', { name: 'Save and promote' })
     ).toBeDisabled();
@@ -515,7 +514,6 @@ describe('Header - lifecycle actions', () => {
       await within(dialog).findByText(/has changed in/i)
     ).toBeInTheDocument();
     expect(within(dialog).getByText('Production')).toBeInTheDocument();
-    // Informational only: the promote stays available.
     expect(
       within(dialog).getByRole('button', { name: 'Save and promote' })
     ).toBeEnabled();
@@ -551,7 +549,6 @@ describe('Header - lifecycle actions', () => {
     expect(
       within(dialog).queryByText(/has changed in/i)
     ).not.toBeInTheDocument();
-    // Silence would read as "nothing has changed", which we do not know.
     expect(
       within(dialog).getByText(
         /could not check whether the parent has changed/i
@@ -576,8 +573,6 @@ describe('Header - lifecycle actions', () => {
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' })
     );
 
-    // The parent has since been promoted into, so the second open must not
-    // inherit the first open's warning.
     checkPromote.mockResolvedValue({ diverged: false, parent_name: null });
     await user.click(screen.getByTestId('promote-sandbox-button'));
 

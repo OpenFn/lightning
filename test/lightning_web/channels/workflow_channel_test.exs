@@ -969,8 +969,6 @@ defmodule LightningWeb.WorkflowChannelTest do
           "app"
         )
 
-      # beta exists in both projects and has diverged, but alpha is the workflow
-      # being promoted, so this socket must stay quiet.
       ref = push(socket, "request_promote_check", %{})
       assert_reply ref, :ok, %{diverged: false}
     end
@@ -981,9 +979,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       parent: parent,
       user: user
     } do
-      # The parent gained gamma after the fork, so the sandbox has no history
-      # under that name at all. Promoting an unsaved rename onto it overwrites
-      # gamma wholesale, which is the case a both-sides comparison reads as safe.
       gamma = insert(:workflow, project: parent, name: "gamma")
 
       {:ok, _} =
@@ -992,7 +987,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(socket, "request_promote_check", %{"workflow_name" => "gamma"})
       assert_reply ref, :ok, %{diverged: true}
 
-      # And it stops warning once the promote has actually happened.
       sandbox_alpha =
         Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
 
@@ -1011,8 +1005,6 @@ defmodule LightningWeb.WorkflowChannelTest do
     test "stays quiet when the working name is one the parent does not hold", %{
       sandbox_socket: socket
     } do
-      # A rename onto a fresh name creates a workflow on the parent rather than
-      # replacing one, so there is nothing to warn about.
       ref = push(socket, "request_promote_check", %{"workflow_name" => "delta"})
       assert_reply ref, :ok, %{diverged: false}
     end
@@ -1041,7 +1033,6 @@ defmodule LightningWeb.WorkflowChannelTest do
           %{"project_id" => sandbox.id, "action" => "edit"}
         )
 
-      # A viewer has no rights on the parent, so it is never named to them.
       ref = push(viewer_socket, "request_promote_check", %{})
       assert_reply ref, :ok, %{diverged: false, parent_name: nil}
     end
@@ -1058,9 +1049,6 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       {:ok, _} = Lightning.Projects.promote_workflow(sandbox_alpha, user)
 
-      # The promote records a new version on the parent, computed from the
-      # merged content, so without a sync point the parent's head is a hash this
-      # sandbox has never held and every promote after the first warns.
       ref = push(socket, "request_promote_check", %{})
       assert_reply ref, :ok, %{diverged: false, parent_name: "parent-project"}
     end

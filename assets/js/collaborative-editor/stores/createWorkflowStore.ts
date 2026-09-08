@@ -1658,18 +1658,13 @@ export const createWorkflowStore = (
     }
   };
 
-  // Whether the parent has changed this workflow since the sandbox forked. The
-  // merge rebuilds the parent from the sandbox, so anything the parent gained
-  // in the meantime is removed rather than kept.
   const checkPromote = async (): Promise<{
     diverged: boolean;
     parent_name: string | null;
   }> => {
     const { ydoc, provider } = ensureConnected();
 
-    // The merge matches workflows across projects by name, and promote saves
-    // before merging, so the name it will act on is the working one, not the
-    // last saved one.
+    // Promote saves before merging, so the name it acts on is the working one.
     const { name } = ydoc.getMap('workflow').toJSON() as { name?: string };
 
     return await channelRequest<{

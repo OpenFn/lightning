@@ -37,11 +37,6 @@ interface PromoteDialogProps {
   onKeep: () => void;
   /** Phase one dismissal. Close without saving or promoting. */
   onCancel: () => void;
-  /**
-   * Asks the server whether the parent has changed this workflow since the
-   * sandbox forked. Called when the dialog opens. A rejection is shown as a
-   * failed check rather than as no divergence, and never blocks the promote.
-   */
   onCheckDivergence: () => Promise<{
     diverged: boolean;
     parent_name: string | null;
@@ -74,8 +69,6 @@ export function PromoteDialog({
   const [phase, setPhase] = useState<Phase>('confirm');
   const [isPromoting, setIsPromoting] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
-  // The parent's name once the server says it has moved on, null while it has
-  // not. The server only names the parent on the diverged reply.
   const [divergedParentName, setDivergedParentName] = useState<string | null>(
     null
   );
@@ -109,7 +102,6 @@ export function PromoteDialog({
         }
       })
       .catch(() => {
-        // Say so rather than reading a failed check as "nothing has changed".
         if (!cancelled) {
           setCheckFailed(true);
         }

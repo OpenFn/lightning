@@ -991,8 +991,6 @@ defmodule Lightning.Projects.SandboxesTest do
 
       assert {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
 
-      # Without a sync point the merge's own new version on the parent reads as
-      # the parent having moved on, and every later merge warns.
       assert [] =
                Lightning.Projects.MergeProjects.diverged_workflows(
                  sandbox,
@@ -1006,7 +1004,6 @@ defmodule Lightning.Projects.SandboxesTest do
       parent_alpha: parent_alpha,
       sandbox: sandbox
     } do
-      # Someone else moves the parent's alpha on after the fork.
       {:ok, _} =
         Lightning.WorkflowVersions.record_version(
           parent_alpha,
@@ -1030,8 +1027,6 @@ defmodule Lightning.Projects.SandboxesTest do
         )
       )
 
-      # Merging only beta's deletion writes nothing to alpha, so alpha's
-      # divergence must survive it.
       assert {:ok, _} =
                Sandboxes.merge(sandbox, parent, actor, %{
                  selected_workflow_ids: [],
@@ -1054,10 +1049,6 @@ defmodule Lightning.Projects.SandboxesTest do
 
       Repo.update!(Ecto.Changeset.change(sandbox_alpha, name: "gamma"))
 
-      # The parent has no gamma, so the merge creates it under a fresh id rather
-      # than matching one. The sync point has to follow that id back to the
-      # sandbox workflow, or the next promote warns about a workflow this
-      # sandbox just created.
       assert {:ok, _} =
                Sandboxes.merge(sandbox, parent, actor, %{
                  selected_workflow_ids: [sandbox_alpha.id],
@@ -1084,8 +1075,6 @@ defmodule Lightning.Projects.SandboxesTest do
           "app"
         )
 
-      # A workflow of the same name somewhere else must not stand in for this
-      # project's alpha and bring it into step with the parent.
       elsewhere = insert(:project)
       foreign_alpha = insert(:simple_workflow, project: elsewhere, name: "alpha")
 
@@ -1123,7 +1112,6 @@ defmodule Lightning.Projects.SandboxesTest do
                  record_release: :promote
                })
 
-      # Promoting alpha says nothing about beta.
       assert "beta" in Lightning.Projects.MergeProjects.diverged_workflows(
                sandbox,
                parent

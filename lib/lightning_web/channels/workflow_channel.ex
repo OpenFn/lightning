@@ -506,19 +506,14 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Whether promoting would overwrite work the parent has done since this
-  # sandbox forked. Not a filtered `diverged_workflows/2`: that one only reports
-  # names it finds on both sides, so it reads a rename onto a name the parent
-  # already holds as safe when it is the case that destroys the most.
   @impl true
   def handle_in("request_promote_check", params, socket) do
     sandbox = socket.assigns.project
     user = socket.assigns.current_user
 
-    # The merge matches workflows across projects by name, and promote saves
-    # before merging, so the answer has to be about the working name. The client
-    # sends it. The fallback is the name this socket joined on, which a rename
-    # since then has already made wrong, so it is a floor rather than an answer.
+    # Promote saves before merging, so the answer must be about the working name.
+    # The fallback is the name this socket joined on, already stale after a
+    # rename.
     workflow_name =
       case params do
         %{"workflow_name" => name} when is_binary(name) and name != "" -> name

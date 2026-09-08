@@ -298,12 +298,8 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
-  # A merge leaves the target holding a state this source produced, so the source
-  # has now seen that state. Recording it on the source is what stops
-  # `MergeProjects.diverged_workflows/2` reading the source's own merge as the
-  # target having moved on, which would warn on every promote after the first.
-  # The mirror of `copy_workflow_version_history/2`, which seeds a new sandbox
-  # with the parent's head.
+  # Without this the source's own merge reads as the target having moved on, and
+  # every merge after the first warns. Mirrors `copy_workflow_version_history/2`.
   defp record_merge_sync_points(source, merge_doc, opts) do
     merged = merged_workflow_pairs(source, merge_doc, opts)
     source_hashes = existing_hashes(Map.values(merged))
@@ -317,12 +313,9 @@ defmodule Lightning.Projects.Sandboxes do
       if hash in Map.get(source_hashes, source_id, []) do
         {:cont, :ok}
       else
-        # "cli" because the provisioner wrote the row this mirrors, and stating
-        # it beats inheriting whatever the target happens to hold.
-        # `WorkflowVersions.record_version/3` squashes a write repeating the
-        # latest row's source, so a later CLI deploy into this sandbox can
-        # delete the sync point and bring the false warning back. "app" would be
-        # worse: the next editor save would take it, and those are constant.
+        # `record_version/3` squashes a write repeating the latest row's source,
+        # so a later CLI deploy here drops this and the false warning returns.
+        # "app" is worse: the next editor save would take it.
         %WorkflowVersion{}
         |> WorkflowVersion.changeset(%{
           workflow_id: source_id,
@@ -338,20 +331,14 @@ defmodule Lightning.Projects.Sandboxes do
     end)
   end
 
-  # Target workflow id => source workflow id, for the workflows this merge wrote.
-  # A promote scopes to its selection; a whole-project merge carries everything
-  # the document did not mark deleted.
   defp merged_workflow_pairs(source, merge_doc, opts) do
     entries =
       merge_doc
       |> Map.get("workflows", [])
       |> Enum.reject(&(&1["delete"] == true))
 
-    # An empty selection is a selection, not the absence of one: a merge that
-    # carries only deletions writes no workflow content, so nothing has been
-    # brought into step. Reading it as "everything" would stamp the parent's
-    # head onto workflows the merge never touched and silence their divergence
-    # for good.
+    # An empty selection is a selection. A merge carrying only deletions writes
+    # no workflow content, so nothing has been brought into step.
     entries =
       case Map.get(opts, :selected_workflow_ids) do
         nil ->
@@ -406,9 +393,6 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   defp promoted_target_ids(source, selected_source_ids, merge_doc) do
-    # Scoped to the source project: these ids decide both what a release records
-    # and which workflows are brought into step, so an id from elsewhere must
-    # not resolve to a name here.
     selected_names =
       from(w in Workflow,
         where:

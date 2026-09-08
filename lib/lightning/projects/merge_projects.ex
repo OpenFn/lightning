@@ -1102,18 +1102,12 @@ defmodule Lightning.Projects.MergeProjects do
   end
 
   @doc """
-  Whether merging one named workflow from `source_project` into `target_project`
+  Whether merging `workflow_name` from `source_project` into `target_project`
   would overwrite work the target has done since the source forked.
 
-  Narrower than `diverged_workflows/2`, and deliberately not the same question.
-  That function only reports names it finds on both sides, which reads a rename
-  as safe: a source workflow renamed onto a name the target already holds has
-  never seen that target workflow at all, and merging it overwrites the lot.
-  Here an unknown name on the source side is divergence, not silence.
-
-  A name with no recorded version on the target is not divergence: either the
-  target does not hold the workflow, in which case the merge creates it, or it
-  holds nothing this could overwrite.
+  Unlike `diverged_workflows/2`, a name the source has no history for counts as
+  divergence rather than being skipped, because a source workflow renamed onto a
+  name the target already holds has never seen that target workflow.
   """
   @spec workflow_diverged?(Project.t(), Project.t(), String.t()) :: boolean()
   def workflow_diverged?(
