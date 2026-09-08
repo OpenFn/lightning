@@ -110,17 +110,15 @@ defmodule Lightning.DataclipScrubber do
 
   defp scrub_body(body_str, [], []), do: body_str
 
-  defp scrub_body(body_str, credentials_with_env, webhook_auth_methods) do
-    project_env =
-      case credentials_with_env do
-        [{_cred, env} | _] -> env || "main"
-        [] -> "main"
-      end
-
+  defp scrub_body(body_str, credentials, webhook_auth_methods) do
+    # Every body of every credential, not the one a project may read. Nothing
+    # records which values a given step actually spent, so narrowing this would
+    # be guessing, and a wrong guess puts a secret on screen. Masking a value
+    # that was never at risk costs nothing.
     credential_samples =
-      Enum.map(credentials_with_env, fn {credential, _env} ->
-        {Credentials.sensitive_values_for(credential, project_env),
-         Credentials.basic_auth_for(credential, project_env)}
+      Enum.map(credentials, fn credential ->
+        {Credentials.sensitive_values_for(credential),
+         Credentials.basic_auth_for(credential)}
       end)
 
     auth_method_samples =
@@ -161,9 +159,8 @@ defmodule Lightning.DataclipScrubber do
       join: run in assoc(run_step, :run),
       join: work_order in assoc(run, :work_order),
       join: workflow in assoc(work_order, :workflow),
-      join: project in assoc(workflow, :project),
       where: step.started_at <= target_step.started_at,
-      select: {target_run_step.step_id, {credential, project.env}},
+      select: {target_run_step.step_id, credential},
       distinct: [target_run_step.step_id, credential.id]
     )
     |> Repo.all()
@@ -207,8 +204,8 @@ defmodule Lightning.DataclipScrubber do
   end
 
   @doc """
-  Returns an Ecto query for credentials (with project env) used in the same
-  run or earlier steps.
+  Returns an Ecto query for the credentials used in the same run or earlier
+  steps.
 
   Uses a self-join on RunStep to leverage existing indexes.
   """
@@ -223,9 +220,8 @@ defmodule Lightning.DataclipScrubber do
       join: r in assoc(r1, :run),
       join: wo in assoc(r, :work_order),
       join: w in assoc(wo, :workflow),
-      join: p in assoc(w, :project),
       where: s.started_at <= ^started_at,
-      select: {c, p.env},
+      select: c,
       distinct: c.id
     )
   end

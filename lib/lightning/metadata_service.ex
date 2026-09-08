@@ -44,13 +44,13 @@ defmodule Lightning.MetadataService do
   """
   @spec fetch(adaptor :: String.t(), Credential.t(), environment :: String.t()) ::
           {:ok, %{optional(binary) => binary}} | {:error, Error.t()}
-  def fetch(adaptor, credential, environment) do
+  def fetch(adaptor, credential, credential_body_id) do
     Lightning.TaskWorker.start_task(@cli_task_worker, fn ->
       LightningWeb.Telemetry.with_span(
         [:lightning, :fetch_metadata],
-        %{adaptor: adaptor, environment: environment},
+        %{adaptor: adaptor},
         fn ->
-          do_fetch(adaptor, credential, environment)
+          do_fetch(adaptor, credential, credential_body_id)
         end
       )
     end)
@@ -62,9 +62,9 @@ defmodule Lightning.MetadataService do
 
   # false positive, adaptor is resolved by a regex and given by a install function
   # sobelow_skip ["Traversal.FileModule"]
-  defp do_fetch(adaptor, credential, environment) do
+  defp do_fetch(adaptor, credential, credential_body_id) do
     with {:ok, {adaptor, state}} <-
-           assemble_args(adaptor, credential, environment),
+           assemble_args(adaptor, credential, credential_body_id),
          {:ok, adaptor_path} <- get_adaptor_path(adaptor),
          res <- CLI.metadata(state, adaptor_path),
          {:ok, path} <- get_output_path(res) do
@@ -77,7 +77,7 @@ defmodule Lightning.MetadataService do
     end
   end
 
-  defp assemble_args(adaptor, credential, environment) do
+  defp assemble_args(adaptor, credential, credential_body_id) do
     case {adaptor, credential} do
       {nil, _} ->
         {:error, Error.new("no_adaptor")}
@@ -89,15 +89,15 @@ defmodule Lightning.MetadataService do
         {:error, Error.new("no_credential")}
 
       {adaptor_path, %Credential{} = cred} ->
-        resolve_and_assemble(adaptor_path, cred, environment)
+        resolve_and_assemble(adaptor_path, cred, credential_body_id)
 
       {_adaptor_path, %{}} ->
         {:error, Error.new("unsupported_credential")}
     end
   end
 
-  defp resolve_and_assemble(adaptor_path, credential, environment) do
-    case Credentials.resolve_credential_body(credential, environment) do
+  defp resolve_and_assemble(adaptor_path, credential, credential_body_id) do
+    case Credentials.resolve_granted_body(credential, credential_body_id) do
       {:ok, credential_body} ->
         {:ok,
          {adaptor_path,

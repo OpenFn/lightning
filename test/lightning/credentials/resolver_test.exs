@@ -403,9 +403,16 @@ defmodule ResolverTest do
           }
         })
 
-      # Associate credentials with project
+      # Share each credential with the project AND grant it the values, because
+      # the grant is what decides which values the project may read.
       for credential <- [credential_a, credential_b, default_credential] do
-        insert(:project_credential, project: project, credential: credential)
+        [body] = Repo.preload(credential, :credential_bodies).credential_bodies
+
+        insert(:project_credential,
+          project: project,
+          credential: credential,
+          credential_body_id: body.id
+        )
       end
 
       # Create keychain credential using the factory
@@ -684,6 +691,7 @@ defmodule ResolverTest do
             "expires_at" => expires_at
           }
         })
+        |> then(&grant_body!(project, &1, "main"))
 
       %{jobs: [job]} =
         workflow =
@@ -767,6 +775,8 @@ defmodule ResolverTest do
         })
         |> insert()
 
+      grant_body!(project, credential, "main")
+
       dataclip = insert(:dataclip)
 
       %{runs: [run]} =
@@ -823,13 +833,13 @@ defmodule ResolverTest do
                Resolver.resolve_credential(run, other_credential.id)
     end
 
-    test "logs environment_mismatch at warning level when credential lacks the project environment body",
-         %{user: user} do
-      project =
-        insert(:project, env: "staging", project_users: [%{user: user}])
+    test "refuses, and says so, when the project was granted no values", %{
+      user: user
+    } do
+      project = insert(:project, project_users: [%{user: user}])
 
       credential =
-        insert(:credential, user: user, name: "Mismatch Credential")
+        insert(:credential, user: user, name: "Ungranted Credential")
         |> with_body(%{name: "main", body: %{"key" => "value"}})
 
       %{jobs: [job]} =
@@ -849,26 +859,27 @@ defmodule ResolverTest do
       {result, log} =
         with_log(fn -> Resolver.resolve_credential(run, credential.id) end)
 
-      assert {:error, {:environment_mismatch, _credential}} = result
+      # The share exists, so the project can see the credential. It was never
+      # given a set of values, so it reads none. There is deliberately no
+      # fallback: matching a name is what let a sandbox read its parent's
+      # production values.
+      assert {:error, {:no_credential_grant, _credential}} = result
 
       assert log =~ "[warning]"
-      assert log =~ "Credential environment does not match project environment"
+
+      assert log =~
+               "Project has not been granted any values for this credential"
     end
 
-    test "logs environment_not_configured at warning level for a non-root project with no env",
+    test "reads the granted values, whatever the project's environment is named",
          %{user: user} do
-      parent = insert(:project, env: "main")
-
+      # The project's env deliberately matches nothing. It is not consulted.
       project =
-        insert(:project,
-          parent_id: parent.id,
-          env: nil,
-          project_users: [%{user: user}]
-        )
+        insert(:project, env: "whatever", project_users: [%{user: user}])
 
       credential =
-        insert(:credential, user: user, name: "Unconfigured Env Credential")
-        |> with_body(%{name: "main", body: %{"key" => "value"}})
+        insert(:credential, user: user, name: "Granted Credential")
+        |> with_body(%{name: "main", body: %{"key" => "the granted values"}})
 
       %{jobs: [job]} =
         workflow =
@@ -878,24 +889,19 @@ defmodule ResolverTest do
         })
         |> insert()
 
+      grant_body!(project, credential, "main")
+
       dataclip = insert(:dataclip)
 
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
         |> with_run(%{dataclip: dataclip, starting_job: job})
 
-      {result, log} =
-        with_log(fn -> Resolver.resolve_credential(run, credential.id) end)
-
-      assert {:error, {:environment_not_configured, nil}} = result
-
-      assert log =~ "[warning]"
-      assert log =~ "Project has no environment configured"
+      assert {:ok, resolved} = Resolver.resolve_credential(run, credential.id)
+      assert resolved.body == %{"key" => "the granted values"}
     end
 
-    test "logs project_not_found at error level when the run's project is missing" do
-      # No project_users / project_credentials so the project can be removed
-      # without tripping restrict FKs; project lookup is what we exercise.
+    test "a deleted project resolves nothing, because there is no grant" do
       project = insert(:project)
 
       %{jobs: [job]} =
@@ -910,22 +916,15 @@ defmodule ResolverTest do
         insert(:workorder, workflow: workflow)
         |> with_run(%{dataclip: dataclip, starting_job: job})
 
-      # Remove the project so the run's in-memory struct resolves to a
-      # missing project (workflow/workorder/run cascade-delete, but the
-      # struct still drives get_project_for_run/1 -> nil).
       Repo.delete_all(
         from(p in Lightning.Projects.Project, where: p.id == ^project.id)
       )
 
-      fake_credential_id = Ecto.UUID.generate()
-
-      {result, log} =
-        with_log(fn -> Resolver.resolve_credential(run, fake_credential_id) end)
-
-      assert {:error, {:project_not_found, nil}} = result
-
-      assert log =~ "[error]"
-      assert log =~ "Project not found for run"
+      # The resolver no longer looks the project up: it asks for the grant on
+      # the share, and a deleted project has none. So this is not_found rather
+      # than a project error, and nothing raises.
+      assert {:error, :not_found} =
+               Resolver.resolve_credential(run, Ecto.UUID.generate())
     end
   end
 end

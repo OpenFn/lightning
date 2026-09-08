@@ -1210,75 +1210,44 @@ defmodule Lightning.Credentials do
 
   def basic_auth_from_body(_), do: []
 
-  # Existing functions refactored to use the body-based functions
   @doc """
-  Retrieves sensitive values for a credential in a specific environment.
+  Every sensitive value across all of a credential's bodies.
 
-  Used primarily for scrubbing historical dataclips where we need to look up
-  the credential body by environment.
-
-  ## Parameters
-    - `id_or_credential`: Credential ID, Credential struct, or nil
-    - `environment`: Environment name (defaults to "main")
-
-  ## Examples
-
-      iex> sensitive_values_for(credential, "production")
-      ["secret123", "api_key_xyz"]
+  Used to scrub secrets out of stored dataclips before anyone reads them. It
+  deliberately covers every environment rather than the one a project may read:
+  masking a value that was never at risk costs nothing, and missing one puts a
+  secret on screen. Which project read what was never recorded, so narrowing
+  this would be guessing.
   """
-  @spec sensitive_values_for(Ecto.UUID.t() | Credential.t() | nil, String.t()) ::
-          [any()]
-  def sensitive_values_for(id_or_credential, environment \\ "main")
-
-  def sensitive_values_for(id, environment) when is_binary(id) do
-    sensitive_values_for(get_credential!(id), environment)
+  @spec sensitive_values_for(Ecto.UUID.t() | Credential.t() | nil) :: [any()]
+  def sensitive_values_for(id) when is_binary(id) do
+    sensitive_values_for(get_credential!(id))
   end
 
-  def sensitive_values_for(nil, _environment), do: []
+  def sensitive_values_for(nil), do: []
 
-  def sensitive_values_for(%Credential{} = credential, environment) do
-    credential = Repo.preload(credential, :credential_bodies)
-
-    credential.credential_bodies
-    |> Enum.find(fn cb -> cb.name == environment end)
-    |> case do
-      nil ->
-        []
-
-      credential_body ->
-        sensitive_values_from_body(credential_body.body)
-    end
+  def sensitive_values_for(%Credential{} = credential) do
+    credential
+    |> Repo.preload(:credential_bodies)
+    |> Map.fetch!(:credential_bodies)
+    |> Enum.flat_map(&sensitive_values_from_body(&1.body))
+    |> Enum.uniq()
   end
 
   @doc """
-  Retrieves basic auth strings for a credential in a specific environment.
+  Every basic-auth string across all of a credential's bodies.
 
-  Used primarily for scrubbing historical dataclips where we need to look up
-  the credential body by environment.
-
-  ## Parameters
-    - `credential`: Credential struct or nil
-    - `environment`: Environment name (defaults to "main")
-
-  ## Examples
-
-      iex> basic_auth_for(credential, "staging")
-      ["dXNlcjpwYXNz"]
+  Covers every environment, for the same reason as `sensitive_values_for/1`.
   """
-  @spec basic_auth_for(Credential.t() | nil, String.t()) :: [String.t()]
-  def basic_auth_for(credential, environment \\ "main")
+  @spec basic_auth_for(Credential.t() | nil) :: [String.t()]
+  def basic_auth_for(nil), do: []
 
-  def basic_auth_for(nil, _environment), do: []
-
-  def basic_auth_for(%Credential{} = credential, environment) do
-    credential = Repo.preload(credential, :credential_bodies)
-
-    credential.credential_bodies
-    |> Enum.find(fn cb -> cb.name == environment end)
-    |> case do
-      nil -> []
-      credential_body -> basic_auth_from_body(credential_body.body)
-    end
+  def basic_auth_for(%Credential{} = credential) do
+    credential
+    |> Repo.preload(:credential_bodies)
+    |> Map.fetch!(:credential_bodies)
+    |> Enum.flat_map(&basic_auth_from_body(&1.body))
+    |> Enum.uniq()
   end
 
   @doc """
@@ -1303,21 +1272,47 @@ defmodule Lightning.Credentials do
       nil ->
         {:error, :environment_not_found}
 
-      %CredentialBody{body: body} = credential_body ->
-        if credential.schema == "oauth" && oauth_token_expired?(body) do
-          credential
-          |> Repo.preload(:oauth_client)
-          |> refresh_credential_body_token(credential_body)
-          |> case do
-            {:ok, %CredentialBody{body: fresh_body}} ->
-              {:ok, fresh_body}
+      %CredentialBody{} = credential_body ->
+        read_body(credential, credential_body)
+    end
+  end
 
-            {:error, reason} ->
-              {:error, reason}
-          end
-        else
-          {:ok, body}
-        end
+  @doc """
+  Reads a credential's values by the id of the body granted to a project.
+
+  The grant is what decides which values a project may read, so this is the
+  form the run path uses. No grant means no values, which is a refusal rather
+  than a fallback: a project that was never given a set of values does not get
+  one by matching a name.
+  """
+  @spec resolve_granted_body(Credential.t(), Ecto.UUID.t() | nil) ::
+          {:ok, map()} | {:error, atom()}
+  def resolve_granted_body(_credential, nil), do: {:error, :no_credential_grant}
+
+  def resolve_granted_body(%Credential{} = credential, body_id) do
+    case Repo.get_by(CredentialBody,
+           id: body_id,
+           credential_id: credential.id
+         ) do
+      nil ->
+        {:error, :no_credential_grant}
+
+      %CredentialBody{} = credential_body ->
+        read_body(credential, credential_body)
+    end
+  end
+
+  defp read_body(credential, %CredentialBody{body: body} = credential_body) do
+    if credential.schema == "oauth" && oauth_token_expired?(body) do
+      credential
+      |> Repo.preload(:oauth_client)
+      |> refresh_credential_body_token(credential_body)
+      |> case do
+        {:ok, %CredentialBody{body: fresh_body}} -> {:ok, fresh_body}
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      {:ok, body}
     end
   end
 

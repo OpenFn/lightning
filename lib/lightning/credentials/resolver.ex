@@ -43,7 +43,6 @@ defmodule Lightning.Credentials.Resolver do
   alias Lightning.Credentials.Credential
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.ResolvedCredential
-  alias Lightning.Projects.Environment
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
   alias Lightning.Run
@@ -52,9 +51,7 @@ defmodule Lightning.Credentials.Resolver do
 
   @type error_reason ::
           :not_found
-          | :environment_not_configured
-          | :project_not_found
-          | :environment_mismatch
+          | :no_credential_grant
           | Credentials.oauth_refresh_error()
           | term()
 
@@ -74,18 +71,9 @@ defmodule Lightning.Credentials.Resolver do
   def resolve_credential(%Run{} = run, id) do
     Logger.metadata(run_id: run.id, credential_id: id)
 
-    with {:ok, project_env} <- get_project_env(run),
-         credential when not is_nil(credential) <- get_run_credential(run, id) do
-      resolve_credential_with_env(credential, run, project_env)
-    else
-      nil ->
-        {:error, :not_found}
-
-      {:error, :environment_not_configured} ->
-        {:error, {:environment_not_configured, nil}}
-
-      {:error, :project_not_found} ->
-        {:error, {:project_not_found, nil}}
+    case get_run_credential(run, id) do
+      nil -> {:error, :not_found}
+      credential -> resolve_granted(credential, run)
     end
   end
 
@@ -100,14 +88,21 @@ defmodule Lightning.Credentials.Resolver do
     end
   end
 
-  defp resolve_credential_with_env(%Credential{} = credential, _run, project_env) do
-    case Credentials.resolve_credential_body(credential, project_env) do
+  # The run's project decides which values it may read, and it decides that by
+  # the grant recorded on its share of this credential. Not by its environment
+  # name: a name is typed on the project settings screen, by someone who may
+  # have no standing on the credential, and matching it at run time is what let
+  # a sandbox read its parent's production values.
+  defp resolve_granted(%Credential{} = credential, run) do
+    body_id = granted_body_id(run, credential)
+
+    case Credentials.resolve_granted_body(credential, body_id) do
       {:ok, body} ->
         {:ok, ResolvedCredential.from(credential, body)}
 
-      {:error, :environment_not_found} ->
-        log_resolution_error(:environment_mismatch, project_env: project_env)
-        {:error, {:environment_mismatch, credential}}
+      {:error, :no_credential_grant} ->
+        log_resolution_error(:no_credential_grant)
+        {:error, {:no_credential_grant, credential}}
 
       {:error, reason} ->
         log_resolution_error(reason)
@@ -115,32 +110,36 @@ defmodule Lightning.Credentials.Resolver do
     end
   end
 
-  defp resolve_credential_with_env(
-         %KeychainCredential{} = keychain,
-         run,
-         project_env
-       ) do
+  defp resolve_granted(%KeychainCredential{} = keychain, run) do
     credential =
       find_credential_by_jsonpath(run, keychain.path) ||
         keychain.default_credential
 
+    # A keychain picks which credential to spend from the run's own data, so the
+    # grant that applies is the run's project's grant on whichever one it picked.
+    # Falling back to the default when that credential has no grant would swap
+    # one secret for another silently, so it does not.
     if credential do
-      resolve_credential_with_env(credential, run, project_env)
+      resolve_granted(credential, run)
     else
       {:ok, nil}
     end
   end
 
-  @spec get_project_env(Run.t()) :: {:ok, String.t()} | {:error, term()}
-  defp get_project_env(%Run{} = run) do
-    case Environment.fetch(run) do
-      {:ok, env} ->
-        {:ok, env}
-
-      {:error, reason} ->
-        log_resolution_error(reason)
-        {:error, reason}
-    end
+  # nil for a share that exists with no grant and for no share at all. Both mean
+  # the same thing: this project was never given these values.
+  defp granted_body_id(%Run{} = run, %Credential{id: credential_id}) do
+    from(pc in ProjectCredential,
+      join: w in Lightning.Workflows.Workflow,
+      on: w.project_id == pc.project_id,
+      join: wo in Lightning.WorkOrder,
+      on: wo.workflow_id == w.id,
+      join: r in Run,
+      on: r.work_order_id == wo.id,
+      where: r.id == ^run.id and pc.credential_id == ^credential_id,
+      select: pc.credential_body_id
+    )
+    |> Repo.one()
   end
 
   @spec find_credential_by_jsonpath(Run.t(), String.t()) ::
@@ -226,16 +225,10 @@ defmodule Lightning.Credentials.Resolver do
 
   defp log_resolution_error(reason, metadata \\ [])
 
-  defp log_resolution_error(:project_not_found, meta),
-    do: Logger.error("Project not found for run", meta)
-
-  defp log_resolution_error(:environment_not_configured, meta),
-    do: Logger.warning("Project has no environment configured", meta)
-
-  defp log_resolution_error(:environment_mismatch, meta),
+  defp log_resolution_error(:no_credential_grant, meta),
     do:
       Logger.warning(
-        "Credential environment does not match project environment",
+        "Project has not been granted any values for this credential",
         meta
       )
 

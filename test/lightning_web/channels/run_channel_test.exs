@@ -2796,6 +2796,10 @@ defmodule LightningWeb.RunChannelTest do
       })
       |> insert()
 
+    # A project reads a credential's values only through the grant on its share,
+    # so a run that is expected to receive them has to be granted them.
+    grant_body!(project, credential, "main")
+
     {:ok, snapshot} = Workflows.Snapshot.create(workflow)
 
     %{workflow: workflow, job: job, trigger: trigger, snapshot: snapshot}

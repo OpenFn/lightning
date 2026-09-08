@@ -3,6 +3,17 @@ defmodule Lightning.MetadataServiceTest do
 
   alias Lightning.MetadataService
 
+  # Metadata reads the values a project was granted, so the caller passes a body
+  # id rather than an environment name. Every credential here has exactly one.
+  defp body_id(credential) do
+    [body] =
+      credential
+      |> Lightning.Repo.preload(:credential_bodies, force: true)
+      |> Map.fetch!(:credential_bodies)
+
+    body.id
+  end
+
   describe "fetch/2" do
     test "returns the metadata when it exists" do
       path =
@@ -32,7 +43,11 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-common", credential, "main") ==
+      assert MetadataService.fetch(
+               "@openfn/language-common",
+               credential,
+               body_id(credential)
+             ) ==
                {:ok, %{"foo" => "bar"}}
     end
 
@@ -54,7 +69,11 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-common", credential, "main") ==
+      assert MetadataService.fetch(
+               "@openfn/language-common",
+               credential,
+               body_id(credential)
+             ) ==
                {
                  :error,
                  %Lightning.MetadataService.Error{
@@ -76,7 +95,11 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-foo", credential, "main") ==
+      assert MetadataService.fetch(
+               "@openfn/language-foo",
+               credential,
+               body_id(credential)
+             ) ==
                {
                  :error,
                  %Lightning.MetadataService.Error{
@@ -106,7 +129,11 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-common", credential, "main") ==
+      assert MetadataService.fetch(
+               "@openfn/language-common",
+               credential,
+               body_id(credential)
+             ) ==
                {
                  :error,
                  %Lightning.MetadataService.Error{
@@ -135,7 +162,11 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-common", credential, "main") ==
+      assert MetadataService.fetch(
+               "@openfn/language-common",
+               credential,
+               body_id(credential)
+             ) ==
                {
                  :error,
                  %Lightning.MetadataService.Error{
@@ -164,7 +195,11 @@ defmodule Lightning.MetadataServiceTest do
           }
         })
 
-      assert MetadataService.fetch("@openfn/language-common", credential, "main") ==
+      assert MetadataService.fetch(
+               "@openfn/language-common",
+               credential,
+               body_id(credential)
+             ) ==
                {
                  :error,
                  %Lightning.MetadataService.Error{
@@ -192,7 +227,7 @@ defmodule Lightning.MetadataServiceTest do
           assert MetadataService.fetch(
                    "@openfn/language-notreal",
                    credential,
-                   "main"
+                   body_id(credential)
                  ) ==
                    {
                      :error,

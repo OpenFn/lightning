@@ -217,7 +217,7 @@ defmodule Lightning.ScrubberTest do
         ]
       }
 
-      basic_auth = Credentials.basic_auth_for(credential, "main")
+      basic_auth = Credentials.basic_auth_for(credential)
 
       assert samples = Scrubber.encode_samples(secrets, basic_auth)
 

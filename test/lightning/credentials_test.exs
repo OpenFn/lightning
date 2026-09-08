@@ -892,19 +892,20 @@ defmodule Lightning.CredentialsTest do
       assert Credentials.sensitive_values_for(credential.id) == secrets
     end
 
-    test "collects sensitive values from specific environment" do
+    test "collects sensitive values from every environment" do
       credential =
         insert(:credential, schema: "raw", user: insert(:user))
         |> with_body(%{name: "main", body: %{"password" => "main_secret"}})
         |> with_body(%{name: "staging", body: %{"password" => "staging_secret"}})
 
-      assert Credentials.sensitive_values_for(credential, "main") == [
-               "main_secret"
-             ]
+      # Used to mask secrets out of stored dataclips. Nothing records which
+      # values a given step actually spent, so it covers every environment:
+      # masking one that was never at risk costs nothing, missing one puts a
+      # secret on screen.
+      values = Credentials.sensitive_values_for(credential)
 
-      assert Credentials.sensitive_values_for(credential, "staging") == [
-               "staging_secret"
-             ]
+      assert "main_secret" in values
+      assert "staging_secret" in values
     end
 
     test "returns only unique values when duplicates exist" do

@@ -31,7 +31,6 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   alias Lightning.Channels
   alias Lightning.Channels.PersistencePolicy
-  alias Lightning.Projects.Environment
   alias LightningWeb.Auth
 
   require Logger
@@ -339,13 +338,14 @@ defmodule LightningWeb.ChannelProxyPlug do
       nil ->
         {:ok, nil}
 
-      %{project_credential: %{credential: credential}} ->
-        # Hard-coding this handed a sandbox the parent's production secret.
-        with {:ok, environment} <- Environment.fetch(channel),
-             {:ok, body} <-
-               Lightning.Credentials.resolve_credential_body(
+      %{project_credential: %{credential: credential} = share} ->
+        # The grant on the share decides which values this project may read.
+        # Matching the project's environment name here once handed a sandbox
+        # its parent's production secret.
+        with {:ok, body} <-
+               Lightning.Credentials.resolve_granted_body(
                  credential,
-                 environment
+                 share.credential_body_id
                ),
              {:ok, header} <-
                Channels.DestinationAuth.build_auth_header(
@@ -425,10 +425,10 @@ defmodule LightningWeb.ChannelProxyPlug do
   defp classify_credential_error(:reauthorization_required),
     do: "oauth_reauthorization_required"
 
-  # Deriving the environment rather than assuming one gave this path more ways
-  # to fail, and each still has to arrive as a recorded 502.
-  defp classify_credential_error(:environment_not_configured),
-    do: "credential_environment_not_configured"
+  # Reading the grant rather than assuming a set of values gives this path one
+  # more way to fail, and it still has to arrive as a recorded 502.
+  defp classify_credential_error(:no_credential_grant),
+    do: "credential_not_granted"
 
   defp classify_credential_error(:project_not_found),
     do: "credential_project_not_found"
