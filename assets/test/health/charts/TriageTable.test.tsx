@@ -157,10 +157,6 @@ describe('TriageTable', () => {
         '/projects/proj-1/history' +
           '?filters%5Bworkflow_id%5D=wf-1' +
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
-          '&filters%5Bid%5D=true' +
-          '&filters%5Bbody%5D=true' +
-          '&filters%5Blog%5D=true' +
-          '&filters%5Bdataclip_name%5D=true' +
           '&filters%5Bexit_reason%5D=fail' +
           '&filters%5Berror_type%5D=RuntimeError' +
           '&filters%5Bjob_id%5D=a1b2c3d4-0000-0000-0000-000000000000'
@@ -187,10 +183,6 @@ describe('TriageTable', () => {
         '/projects/proj-1/history' +
           '?filters%5Bworkflow_id%5D=wf-1' +
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
-          '&filters%5Bid%5D=true' +
-          '&filters%5Bbody%5D=true' +
-          '&filters%5Blog%5D=true' +
-          '&filters%5Bdataclip_name%5D=true' +
           '&filters%5Bexit_reason%5D=crash'
       );
     });
@@ -215,10 +207,6 @@ describe('TriageTable', () => {
         '/projects/proj-1/history' +
           '?filters%5Bworkflow_id%5D=wf-1' +
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
-          '&filters%5Bid%5D=true' +
-          '&filters%5Bbody%5D=true' +
-          '&filters%5Blog%5D=true' +
-          '&filters%5Bdataclip_name%5D=true' +
           '&filters%5Brejected%5D=true'
       );
       expect(link.getAttribute('href')).not.toContain('error_type');

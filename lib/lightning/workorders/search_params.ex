@@ -113,25 +113,26 @@ defmodule Lightning.WorkOrders.SearchParams do
   end
 
   defp from_uri(params) do
-    statuses =
-      Enum.map(params, fn {key, value} ->
-        if key in @statuses and value in [true, "true"] do
-          key
-        end
-      end)
-      |> Enum.reject(&is_nil/1)
-
-    search_fields =
-      Enum.map(params, fn {key, value} ->
-        if key in @search_fields and value in [true, "true"] do
-          key
-        end
-      end)
-      |> Enum.reject(&is_nil/1)
-
     params
-    |> Map.put_new("status", statuses)
-    |> Map.put_new("search_fields", search_fields)
+    |> Map.put_new("status", selected(params, @statuses))
+    |> put_search_fields(params)
+  end
+
+  # A URL with none of the four search-field flags in it hasn't turned them
+  # off — it just didn't mention them. Leaving the key out lets the schema
+  # default (all four) stand; setting it to `[]` makes every search term match
+  # nothing. The form ships a hidden `false` beside every checkbox, so an
+  # actual "all off" still arrives as four keys rather than as none.
+  defp put_search_fields(uri_params, params) do
+    if Enum.any?(@search_fields, &Map.has_key?(params, &1)) do
+      Map.put_new(uri_params, "search_fields", selected(params, @search_fields))
+    else
+      uri_params
+    end
+  end
+
+  defp selected(params, keys) do
+    for {key, value} <- params, key in keys, value in [true, "true"], do: key
   end
 
   def to_uri_params(search_params) do
