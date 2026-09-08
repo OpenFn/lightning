@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 import { isUnloadWarningSuppressed } from '../lib/unloadGuard';
 
-import { useSession } from './useSession';
+import { useHasSynced } from './useHasSynced';
 import { useUnsavedChanges } from './useUnsavedChanges';
 
 /**
@@ -14,12 +14,14 @@ import { useUnsavedChanges } from './useUnsavedChanges';
  */
 export function useUnloadWarning() {
   const { hasChanges } = useUnsavedChanges();
-  const { isSynced } = useSession();
+  const hasSynced = useHasSynced();
 
   useEffect(() => {
     // Before the document syncs the store is empty and so differs from the
-    // saved workflow, which is not a change anyone made.
-    if (!hasChanges || !isSynced) return;
+    // saved workflow, which is not a change anyone made. A later disconnect
+    // must not disarm the warning, hence the first sync rather than the
+    // current one.
+    if (!hasChanges || !hasSynced) return;
 
     const warn = (event: BeforeUnloadEvent) => {
       if (isUnloadWarningSuppressed()) return;
@@ -31,5 +33,5 @@ export function useUnloadWarning() {
     return () => {
       window.removeEventListener('beforeunload', warn);
     };
-  }, [hasChanges, isSynced]);
+  }, [hasChanges, hasSynced]);
 }

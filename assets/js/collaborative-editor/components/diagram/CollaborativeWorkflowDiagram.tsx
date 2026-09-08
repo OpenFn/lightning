@@ -26,10 +26,10 @@ import {
   useLatestSnapshotLockVersion,
 } from '../../hooks/useSessionContext';
 import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
-import { DiscardChangesDialog } from '../DiscardChangesDialog';
 import { useNodeSelection, useWorkflowState } from '../../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../../keyboard';
 import type { RunSummary } from '../../types/history';
+import { DiscardChangesDialog } from '../DiscardChangesDialog';
 
 import MiniHistory from './MiniHistory';
 import CollaborativeWorkflowDiagramImpl from './WorkflowDiagram';
@@ -129,8 +129,6 @@ export function CollaborativeWorkflowDiagram({
   // no release can address.
   const handleRunSelect = useCallback(
     (run: RunSummary) => {
-      runSelectInProgressRef.current = true;
-
       const currentLockVersion =
         workflow?.lock_version ?? latestSnapshotLockVersion ?? null;
       const isDifferentVersion =
@@ -139,9 +137,15 @@ export function CollaborativeWorkflowDiagram({
         currentLockVersion !== null &&
         run.version !== currentLockVersion;
 
+      // Set only where the URL is actually about to change. Pinning a run can
+      // be blocked by the unsaved-changes prompt, and a flag left standing
+      // would make the next version change skip clearing the run.
       if (isDifferentVersion) {
-        viewAsExecuted(run.id);
+        viewAsExecuted(run.id, () => {
+          runSelectInProgressRef.current = true;
+        });
       } else {
+        runSelectInProgressRef.current = true;
         updateSearchParams({ v: null, as_run: null, run: run.id });
       }
     },
@@ -254,6 +258,7 @@ export function CollaborativeWorkflowDiagram({
         onSaveAndContinue={runPinPrompt.saveAndRunPending}
         onDiscardAndContinue={runPinPrompt.runPending}
         onCancel={runPinPrompt.cancel}
+        description="Opening this run loads the version it executed against, and your unsaved changes cannot come with it. Switch without saving and they are gone."
       />
     </div>
   );

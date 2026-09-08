@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import { useSession } from './useSession';
+import { useHasSynced } from './useHasSynced';
 import { useUnsavedChanges } from './useUnsavedChanges';
 import { useWorkflowActions } from './useWorkflow';
 
@@ -14,14 +14,14 @@ import { useWorkflowActions } from './useWorkflow';
  */
 export function useDiscardGuard() {
   const { hasChanges } = useUnsavedChanges();
-  const { isSynced } = useSession();
+  const hasSynced = useHasSynced();
   const { saveWorkflow } = useWorkflowActions();
   const [pending, setPending] = useState<(() => void) | null>(null);
 
   // Before the document has synced the store is still empty, so it differs from
-  // the saved workflow and reads as changed. `isSynced` is what tells the two
-  // apart, and the save button is gated the same way.
-  const atRisk = hasChanges && isSynced;
+  // the saved workflow and reads as changed. Only the first sync tells the two
+  // apart; a later disconnect must not disarm the guard.
+  const atRisk = hasChanges && hasSynced;
 
   const guard = useCallback(
     (proceed: () => void) => {

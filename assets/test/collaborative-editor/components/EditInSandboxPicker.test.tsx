@@ -586,7 +586,7 @@ describe('EditInSandboxPicker', () => {
       try {
         renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
         await user.click(
-          (await screen.findAllByTestId('join-sandbox-button'))[0]!
+          (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
         );
 
         expect(
@@ -607,7 +607,7 @@ describe('EditInSandboxPicker', () => {
       try {
         renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
         await user.click(
-          (await screen.findAllByTestId('join-sandbox-button'))[0]!
+          (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
         );
         await user.click(await screen.findByRole('button', { name: 'Switch' }));
 
@@ -631,7 +631,7 @@ describe('EditInSandboxPicker', () => {
       try {
         renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
         await user.click(
-          (await screen.findAllByTestId('join-sandbox-button'))[0]!
+          (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
         );
         await user.click(
           await screen.findByRole('button', { name: 'Save and switch' })
@@ -660,7 +660,7 @@ describe('EditInSandboxPicker', () => {
       try {
         renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
         await user.click(
-          (await screen.findAllByTestId('join-sandbox-button'))[0]!
+          (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
         );
         await user.click(
           await screen.findByRole('button', { name: 'Save and switch' })
@@ -678,6 +678,33 @@ describe('EditInSandboxPicker', () => {
       }
     });
 
+    test('cancelling a create releases the create button', async () => {
+      hasChanges = true;
+      editInSandbox.mockResolvedValue({
+        project_id: 'new-project',
+        workflow_id: 'new-workflow',
+      });
+      const nav = stubNavigation();
+      const user = userEvent.setup();
+
+      try {
+        renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+        await user.type(
+          screen.getByPlaceholderText('e.g. Test new changes'),
+          'Trying something'
+        );
+        await user.click(screen.getByTestId('create-sandbox-button'));
+        await user.click(await screen.findByRole('button', { name: 'Cancel' }));
+
+        // The sandbox already exists by now, so backing out must not leave the
+        // button spinning with no way back but a reload.
+        expect(screen.getByTestId('create-sandbox-button')).toBeEnabled();
+        expect(nav.hrefSetter).not.toHaveBeenCalled();
+      } finally {
+        nav.restore();
+      }
+    });
+
     test('joins straight away when there is nothing to lose', async () => {
       listSandboxes.mockResolvedValue(sandboxes);
       const nav = stubNavigation();
@@ -686,7 +713,7 @@ describe('EditInSandboxPicker', () => {
       try {
         renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
         await user.click(
-          (await screen.findAllByTestId('join-sandbox-button'))[0]!
+          (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
         );
 
         expect(nav.hrefSetter).toHaveBeenCalledWith(

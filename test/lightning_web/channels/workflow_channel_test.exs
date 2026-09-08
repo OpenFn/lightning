@@ -2000,10 +2000,10 @@ defmodule LightningWeb.WorkflowChannelTest do
           published_by_id: user.id
         })
 
-      # The workflow moves on after the release.
+      # The workflow moves on after the release, and goes live.
       {:ok, _} =
         workflow
-        |> Ecto.Changeset.change(name: "As it is now")
+        |> Ecto.Changeset.change(name: "As it is now", state: :live)
         |> Lightning.Repo.update()
 
       {:ok, _, pinned_socket} =
@@ -2025,6 +2025,11 @@ defmodule LightningWeb.WorkflowChannelTest do
       # look unsaved the moment it opens.
       assert response.workflow.name == "As it was"
       assert response.latest_snapshot_lock_version == workflow.lock_version
+
+      # A snapshot carries no lifecycle state, so the baseline built from one
+      # would report :draft. The client reads state off this to decide which
+      # lifecycle actions to offer, so it has to be the workflow's real one.
+      assert response.workflow.state == :live
     end
   end
 

@@ -27,10 +27,15 @@ export function useViewAsExecuted() {
   const { guard, ...prompt } = useDiscardGuard();
 
   const viewAsExecuted = useCallback(
-    (runId: string) => {
+    /**
+     * @param onProceed runs just before the URL changes, for state that must
+     *   only be set if the prompt does not block the switch.
+     */
+    (runId: string, onProceed?: () => void) => {
       // Pinning a run loads its snapshot, which destroys the document. Ask
       // before that takes uncommitted edits with it.
       guard(() => {
+        onProceed?.();
         updateSearchParams({ v: null, as_run: runId, run: runId });
       });
     },

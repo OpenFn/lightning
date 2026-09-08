@@ -10,6 +10,7 @@ import { parseWorkflowYAML, convertWorkflowSpecToState } from '../yaml/util';
 import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink } from './components/Breadcrumbs';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
+import { DiscardChangesDialog } from './components/DiscardChangesDialog';
 import { Header } from './components/Header';
 import { LandingScreen } from './components/LandingScreen';
 import { LoadingBoundary } from './components/LoadingBoundary';
@@ -41,7 +42,6 @@ import {
 } from './hooks/useUI';
 import { useUnloadWarning } from './hooks/useUnloadWarning';
 import { useVersionSelect } from './hooks/useVersionSelect';
-import { DiscardChangesDialog } from './components/DiscardChangesDialog';
 import { useCreateWorkflowFlow, useWorkflowState } from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
 
@@ -169,12 +169,6 @@ export function BreadcrumbContent({
             latestVersion={latestSnapshotLockVersion}
             onVersionSelect={handleVersionSelect}
           />
-          <DiscardChangesDialog
-            isOpen={versionPrompt.isAsking}
-            onSaveAndContinue={versionPrompt.saveAndRunPending}
-            onDiscardAndContinue={versionPrompt.runPending}
-            onCancel={versionPrompt.cancel}
-          />
           {projectEnv && (
             <div
               id="canvas-project-env-container"
@@ -219,6 +213,13 @@ export function BreadcrumbContent({
       aiAssistantEnabled={aiAssistantEnabled}
     >
       {breadcrumbElements}
+      {/* Outside the memo above, which does not depend on the prompt. */}
+      <DiscardChangesDialog
+        isOpen={versionPrompt.isAsking}
+        onSaveAndContinue={versionPrompt.saveAndRunPending}
+        onDiscardAndContinue={versionPrompt.runPending}
+        onCancel={versionPrompt.cancel}
+      />
     </Header>
   );
 }

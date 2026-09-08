@@ -4,7 +4,7 @@ import {
   DialogPanel,
   DialogTitle,
 } from '@headlessui/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useKeyboardShortcut } from '../keyboard';
 
@@ -37,6 +37,13 @@ export function DiscardChangesDialog({
 }: DiscardChangesDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
 
+  // Two of the three callers proceed by rewriting the URL rather than
+  // navigating, and the dialog stays mounted through that, so it has to clear
+  // its own in-flight state or the next open is all disabled buttons.
+  useEffect(() => {
+    if (!isOpen) setIsSaving(false);
+  }, [isOpen]);
+
   const dismiss = () => {
     if (isSaving) return;
     onCancel();
@@ -49,8 +56,6 @@ export function DiscardChangesDialog({
 
     const saved = await onSaveAndContinue();
 
-    // On success the caller navigates and tears this down; only recover the
-    // button when the save failed.
     if (!saved) setIsSaving(false);
   };
 

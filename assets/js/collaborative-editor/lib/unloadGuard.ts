@@ -15,7 +15,13 @@ export function isUnloadWarningSuppressed() {
   return suppressed;
 }
 
-/** Test-only: forget a suppression so it cannot leak between cases. */
+/** Clears a suppression so a page that survived the navigation is warned again. */
 export function resetUnloadWarning() {
   suppressed = false;
+}
+
+// A navigation can be abandoned, and Back can restore this page from the
+// browser's cache. Either way the page lives on, so the suppression must not.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', resetUnloadWarning);
 }

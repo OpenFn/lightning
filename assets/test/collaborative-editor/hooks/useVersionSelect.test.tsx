@@ -94,7 +94,7 @@ describe('useVersionSelect', () => {
       result.current.handleVersionSelect(3);
     });
 
-    await act(async () => {
+    act(() => {
       result.current.prompt.runPending();
     });
 

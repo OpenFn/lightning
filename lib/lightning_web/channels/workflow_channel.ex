@@ -1215,10 +1215,17 @@ defmodule LightningWeb.WorkflowChannel do
     #
     # The latest lock_version is a separate question and always comes from the
     # row, because the client uses it to tell whether it is behind.
+    # A version view needs only the row's lock_version and lifecycle state; an
+    # :existing view uses the row itself as the client's baseline, so it needs
+    # the associations too.
     latest_row =
       workflow_kind != :new &&
-        Lightning.Workflows.get_workflow(workflow.id,
-          include: [:edges, :jobs, :triggers]
+        Lightning.Workflows.get_workflow(
+          workflow.id,
+          if(workflow_kind == :existing,
+            do: [include: [:edges, :jobs, :triggers]],
+            else: []
+          )
         )
 
     latest_lock_version =
@@ -1231,9 +1238,18 @@ defmodule LightningWeb.WorkflowChannel do
       end
 
     fresh_workflow =
-      case workflow_kind do
-        :existing -> latest_row || workflow
-        _ -> workflow
+      case {workflow_kind, latest_row} do
+        {:existing, %Lightning.Workflows.Workflow{} = row} ->
+          row
+
+        # A snapshot carries no lifecycle state, so the struct built from one
+        # falls back to the schema default of :draft. The client reads state off
+        # this baseline, so give it the row's real one.
+        {:version, %Lightning.Workflows.Workflow{state: state}} ->
+          %{workflow | state: state}
+
+        _ ->
+          workflow
       end
 
     project_repo_connection =
@@ -1261,7 +1277,7 @@ defmodule LightningWeb.WorkflowChannel do
       experimental_features_enabled:
         Lightning.Accounts.experimental_features_enabled?(user),
       limits: render_limits(project.id),
-      workflow: fresh_workflow || %{}
+      workflow: fresh_workflow
     }
   end
 

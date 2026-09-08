@@ -281,6 +281,13 @@ export function EditInSandboxPicker({
   // as-is.
   const canCreate = name.trim().length > 0;
 
+  // The sandbox already exists by the time we ask, so backing out has to
+  // release the create button rather than leave it spinning forever.
+  const handleDiscardCancel = useCallback(() => {
+    discardPrompt.cancel();
+    setIsCreating(false);
+  }, [discardPrompt]);
+
   return (
     <>
       <Dialog
@@ -473,7 +480,7 @@ export function EditInSandboxPicker({
         isOpen={discardPrompt.isAsking}
         onSaveAndContinue={discardPrompt.saveAndRunPending}
         onDiscardAndContinue={discardPrompt.runPending}
-        onCancel={discardPrompt.cancel}
+        onCancel={handleDiscardCancel}
         description="Opening the sandbox leaves this page, and your unsaved changes cannot come with it. Switch without saving and they are gone."
       />
     </>

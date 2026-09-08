@@ -18,13 +18,16 @@ import {
 
 let hasChanges = false;
 let isSynced = true;
+// The latch forgets it ever synced only when the document is replaced, which it
+// reads off the provider's identity.
+let provider: object | null = { id: 'provider-1' };
 
 vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
   useUnsavedChanges: () => ({ hasChanges }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
-  useSession: () => ({ isSynced }),
+  useSession: () => ({ provider, isSynced }),
 }));
 
 /** Fires a real beforeunload and reports whether anything asked to stay. */
@@ -38,6 +41,7 @@ describe('useUnloadWarning', () => {
   beforeEach(() => {
     hasChanges = false;
     isSynced = true;
+    provider = { id: 'provider-1' };
     resetUnloadWarning();
   });
 
@@ -71,6 +75,29 @@ describe('useUnloadWarning', () => {
     suppressUnloadWarning();
 
     expect(leavePage()).toBe(false);
+  });
+
+  test('keeps warning through a dropped connection', () => {
+    hasChanges = true;
+    const { rerender } = renderHook(() => useUnloadWarning());
+
+    // The websocket drops without the document being replaced, which is exactly
+    // when unsaved work is most at risk.
+    isSynced = false;
+    rerender();
+
+    expect(leavePage()).toBe(true);
+  });
+
+  test('a suppression does not outlive the page it was for', () => {
+    hasChanges = true;
+    renderHook(() => useUnloadWarning());
+
+    suppressUnloadWarning();
+    // Back from the browser's cache, or an abandoned navigation.
+    window.dispatchEvent(new Event('pageshow'));
+
+    expect(leavePage()).toBe(true);
   });
 
   test('stops warning once unmounted', () => {
