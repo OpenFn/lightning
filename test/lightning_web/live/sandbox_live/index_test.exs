@@ -1044,16 +1044,9 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         end
       )
 
-      Mimic.expect(Lightning.Projects, :descendant_of?, fn current,
-                                                           deleted,
-                                                           root ->
-        assert current.id == grandchild_sandbox.id
-        assert deleted.id == child_sandbox.id
-        assert root.id == parent.id
-        true
-      end)
-
-      Mimic.allow(Lightning.Projects, self(), view.pid)
+      # Whether the project you are standing in sits under the one being deleted
+      # is read from the tree rather than stubbed, so this covers the walk as
+      # well as the redirect.
       Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view
@@ -1067,6 +1060,49 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       |> render_submit()
 
       assert_redirect(view, ~p"/projects/#{parent.id}/sandboxes")
+    end
+
+    test "deleting a sandbox from three levels down does not crash", %{
+      conn: conn,
+      parent: parent,
+      grandchild_sandbox: grandchild_sandbox,
+      user: user
+    } do
+      # Standing this deep means the redirect check has more parents to climb
+      # than the project assign preloads, which used to raise after the delete
+      # had already committed.
+      great_grandchild =
+        insert(:project,
+          name: "great-grandchild",
+          parent: grandchild_sandbox,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      sibling =
+        insert(:project,
+          name: "sibling",
+          parent: parent,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _} =
+        live(conn, ~p"/projects/#{great_grandchild.id}/sandboxes")
+
+      Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
+
+      view
+      |> element("#delete-sandbox-#{sibling.id} button")
+      |> render_click()
+
+      html =
+        view
+        |> form("#confirm-delete-sandbox form",
+          confirm: %{"name" => sibling.name}
+        )
+        |> render_submit()
+
+      # Deleting something we are not under leaves us where we are.
+      assert html =~ "scheduled for deletion"
     end
 
     test "deleting sandbox does not redirect when current project is not descendant",
@@ -3728,6 +3764,32 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         |> render_click()
 
       assert html =~ "Merge"
+    end
+
+    test "drops a rejected target from the form rather than leaving it selected",
+         %{conn: conn, parent: parent, sandbox: sandbox, user: user} do
+      _sandbox_alpha = insert(:workflow, project: sandbox, name: "Alpha")
+
+      child =
+        insert(:project,
+          name: "child-of-sandbox",
+          parent: sandbox,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      {:ok, view, _} = live(conn, ~p"/projects/#{parent.id}/sandboxes")
+
+      view
+      |> element("#branch-rewire-sandbox-#{sandbox.id} button")
+      |> render_click()
+
+      render_click(view, "select-merge-target", %{
+        "merge" => %{"target_id" => child.id}
+      })
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      refute assigns.merge_changeset.changes[:target_id] == child.id
     end
 
     test "does not preview a merge into a target the confirm path would refuse",

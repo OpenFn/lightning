@@ -215,7 +215,10 @@ defmodule LightningWeb.SandboxLive.Index do
 
       sandbox ->
         if sandbox.can_merge do
-          target_options = get_merge_target_options(socket, sandbox)
+          descendant_ids = sandbox_descendant_ids(sandbox)
+
+          target_options =
+            get_merge_target_options(socket, sandbox, descendant_ids)
 
           default_target =
             Enum.find(target_options, &(&1.value == sandbox.parent_id))
@@ -230,9 +233,11 @@ defmodule LightningWeb.SandboxLive.Index do
           target_id = default_target && default_target.value
 
           target_project =
-            Enum.find(
+            find_target_project(
               socket.assigns.workspace_projects,
-              fn project -> project.id == target_id end
+              target_id,
+              sandbox,
+              descendant_ids
             )
 
           {sandbox, target_project} =
@@ -263,6 +268,7 @@ defmodule LightningWeb.SandboxLive.Index do
            |> assign(:merge_modal_open?, true)
            |> assign(:merge_source_sandbox, sandbox)
            |> assign(:merge_target_options, target_options)
+           |> assign(:merge_descendant_ids, descendant_ids)
            |> assign(:merge_changeset, merge_changeset)
            |> assign(:merge_descendants, descendants)
            |> assign(:merge_diverged_workflows, diverged_workflows)
@@ -356,16 +362,20 @@ defmodule LightningWeb.SandboxLive.Index do
         %{"merge" => %{"target_id" => target_id}},
         socket
       ) do
-    merge_changeset = merge_changeset(%{target_id: target_id})
-
     # Same gate as the confirm path, so the preview cannot show a merge that
     # confirming would then refuse.
     target_project =
       find_target_project(
         socket.assigns.workspace_projects,
         target_id,
-        socket.assigns.merge_source_sandbox
+        socket.assigns.merge_source_sandbox,
+        socket.assigns.merge_descendant_ids
       )
+
+    # A rejected target is not left showing as the selection, or the form would
+    # describe a merge the confirm step refuses.
+    merge_changeset =
+      merge_changeset(%{target_id: target_project && target_project.id})
 
     {sandbox, target_project} =
       preload_merge_projects(socket.assigns.merge_source_sandbox, target_project)
@@ -455,7 +465,11 @@ defmodule LightningWeb.SandboxLive.Index do
 
       true ->
         socket.assigns.workspace_projects
-        |> find_target_project(target_id, source)
+        |> find_target_project(
+          target_id,
+          source,
+          socket.assigns.merge_descendant_ids
+        )
         |> case do
           nil ->
             socket
@@ -703,6 +717,7 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:merge_source_sandbox, nil)
     |> assign(:merge_changeset, merge_changeset())
     |> assign(:merge_target_options, [])
+    |> assign(:merge_descendant_ids, nil)
     |> assign(:merge_descendants, [])
     |> assign(:merge_diverged_workflows, [])
     |> assign(:merge_source_workflows, [])
@@ -739,15 +754,13 @@ defmodule LightningWeb.SandboxLive.Index do
   defp handle_sandbox_delete_result(
          {:ok, _project},
          deleted_sandbox,
-         %{assigns: %{project: current_project, root_project: root_project}} =
-           socket
+         %{assigns: %{project: current_project}} = socket
        ) do
     should_redirect =
       current_project.id == deleted_sandbox.id or
-        Projects.descendant_of?(
-          current_project,
-          deleted_sandbox,
-          root_project
+        MapSet.member?(
+          sandbox_descendant_ids(deleted_sandbox),
+          current_project.id
         )
 
     socket_to_return =
@@ -817,9 +830,8 @@ defmodule LightningWeb.SandboxLive.Index do
     put_flash(socket, :error, text)
   end
 
-  defp get_merge_target_options(socket, source_sandbox) do
+  defp get_merge_target_options(socket, source_sandbox, descendant_ids) do
     current_user = socket.assigns.current_user
-    descendant_ids = sandbox_descendant_ids(source_sandbox)
 
     socket.assigns.workspace_projects
     |> Enum.filter(fn project ->
@@ -846,10 +858,13 @@ defmodule LightningWeb.SandboxLive.Index do
   # searching the whole workspace would let a hand-made event name one of those
   # anyway.
   # No source means no merge, so no target either.
-  defp find_target_project(_workspace_projects, _target_id, nil), do: nil
+  defp find_target_project(_workspace_projects, _target_id, nil, _descendants),
+    do: nil
 
-  defp find_target_project(workspace_projects, target_id, source) do
-    descendant_ids = sandbox_descendant_ids(source)
+  defp find_target_project(workspace_projects, target_id, source, descendants) do
+    # Read once when the dialog opens and carried on the socket, because the
+    # form re-runs this on every change inside it, including credential ticks.
+    descendant_ids = descendants || sandbox_descendant_ids(source)
 
     Enum.find(workspace_projects, fn project ->
       project.id == target_id and
