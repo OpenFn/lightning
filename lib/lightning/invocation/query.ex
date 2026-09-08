@@ -40,15 +40,9 @@ defmodule Lightning.Invocation.Query do
     )
   end
 
-  @doc """
-  Work order states the workflow health page's triage table treats as a
-  failure.
-
-  Narrower than `WorkOrder.failure_states/0`: `:cancelled` is final but not a
-  failure — someone stopped it on purpose, their own outcome rather than the
-  red wedge — so it is excluded here rather than in the schema's own list.
-  Shared so the history filter narrows on the same set `Stats` does.
-  """
+  # Narrower than `WorkOrder.failure_states/0`: `:cancelled` is final but not a
+  # failure — someone stopped it on purpose. Shared so the history filter
+  # narrows on the same set `Stats` does.
   @spec failure_states() :: [atom()]
   def failure_states, do: WorkOrder.failure_states() -- [:cancelled]
 
@@ -65,49 +59,14 @@ defmodule Lightning.Invocation.Query do
     from(s in query, where: s.exit_reason != "success")
   end
 
-  @doc """
-  Appends the tiebreak for "the run that speaks for a work order" to a query
-  with a `:run` binding: most recently finished first, ties broken by id.
-
-  A one-liner, but shared so the health page's bulk `DISTINCT ON` and the
-  history filter's correlated per-work-order lookup can't drift apart on
-  what "latest" means.
-  """
+  # Shared so the health page's bulk `DISTINCT ON` and the history filter's
+  # correlated per-work-order lookup can't drift apart on what "latest" means.
   @spec order_by_run_recency(Ecto.Queryable.t()) :: Ecto.Queryable.t()
   def order_by_run_recency(query) do
     from([run: r] in query,
       order_by: [desc_nulls_last: r.finished_at, desc: r.id]
     )
   end
-
-  @doc """
-  The reason a failure is reported under, coalescing a step's own
-  `exit_reason` with what the run's terminal state implies for one that
-  never reported.
-
-  `mark_steps_lost/1` stamps a step's `exit_reason` and nothing else, so a
-  crashed run with no step at all has to fall back to `Run.state_reasons/0`
-  — the worker's own words for each terminal state, kept in one place so the
-  map is not typed out twice.
-  """
-  @spec exit_reason(String.t() | nil, atom() | nil) :: String.t() | nil
-  def exit_reason(step_exit_reason, run_state) do
-    step_exit_reason || Map.get(Run.state_reasons(), run_state)
-  end
-
-  @doc """
-  The error type a failure is reported under, coalescing a step's own
-  `error_type` with the run's — treating an empty string as missing on both,
-  since `"" || x` returns `""` (empty string is truthy in Elixir) and would
-  otherwise split one failure into two identical-looking rows.
-  """
-  @spec error_type(String.t() | nil, String.t() | nil) :: String.t() | nil
-  def error_type(step_error_type, run_error_type) do
-    blank_to_nil(step_error_type) || blank_to_nil(run_error_type)
-  end
-
-  defp blank_to_nil(""), do: nil
-  defp blank_to_nil(other), do: other
 
   @doc """
   Runs for a specific project, or all runs available to the requesting user

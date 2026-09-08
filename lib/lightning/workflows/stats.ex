@@ -286,14 +286,31 @@ defmodule Lightning.Workflows.Stats do
 
     %{
       count: row.count,
-      exit_reason: Query.exit_reason(row.exit_reason, row.run_state),
-      error_type: Query.error_type(row.error_type, row.run_error_type),
+      exit_reason: exit_reason(row.exit_reason, row.run_state),
+      error_type: error_type(row.error_type, row.run_error_type),
       job_id: row.job_id,
       step_name: step_name,
       adaptor: adaptor,
       lock_version: lock_version
     }
   end
+
+  # `mark_steps_lost/1` stamps a step's `exit_reason` and nothing else, so a
+  # crashed run with no step at all falls back to `Run.state_reasons/0` — the
+  # worker's own words for each terminal state.
+  defp exit_reason(step_exit_reason, run_state) do
+    step_exit_reason || Map.get(Run.state_reasons(), run_state)
+  end
+
+  # An empty string is missing on both sides: `"" || x` returns `""` (empty
+  # string is truthy in Elixir), which would split one failure into two
+  # identical-looking rows.
+  defp error_type(step_error_type, run_error_type) do
+    blank_to_nil(step_error_type) || blank_to_nil(run_error_type)
+  end
+
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(other), do: other
 
   # Two groups can collapse into one signature — a crashed run and a failed run
   # whose steps both reported `fail`, say, or the same job renamed mid-window —
