@@ -12,6 +12,7 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Collaborate
   alias Lightning.Collaboration.Session
   alias Lightning.Collaboration.Utils
+  alias Lightning.Collaboration.WorkflowReconciler
   alias Lightning.Collaboration.WorkflowResolver
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -532,6 +533,60 @@ defmodule LightningWeb.WorkflowChannel do
         _ -> %{diverged: false, parent_name: nil}
       end
     end)
+  end
+
+  # Advisory, so the confirmation can name what a restore is about to destroy
+  # before anyone agrees to it. Answers about the workflow as it stands, not the
+  # row this socket joined on.
+  @impl true
+  def handle_in("request_restore_check", %{"version_number" => number}, socket)
+      when is_integer(number) do
+    workflow = socket.assigns.workflow
+
+    async_task(socket, "request_restore_check", fn ->
+      with :ok <- authorize_edit_workflow(socket),
+           %WorkflowRelease{snapshot: %_{} = snapshot} <-
+             WorkflowReleases.get_by_version_number(workflow.id, number) do
+        %{
+          losing_triggers: render_losing_triggers(workflow, snapshot),
+          version_number: number
+        }
+      else
+        _ -> %{losing_triggers: [], version_number: number}
+      end
+    end)
+  end
+
+  # A restore is a publish, not an edit: it writes an earlier version's content
+  # into the live workflow and leaves it live. Gated on :edit_workflow rather
+  # than authorize_content_edit/1, which refuses a live workflow outside a
+  # sandbox and would refuse the only case that matters. go_live and promote
+  # answer the same question the same way.
+  @impl true
+  def handle_in("restore_version", %{"version_number" => number}, socket)
+      when is_integer(number) do
+    workflow = socket.assigns.workflow
+    user = socket.assigns.current_user
+
+    with :ok <- authorize_edit_workflow(socket),
+         %WorkflowRelease{snapshot: %_{}} = release <-
+           WorkflowReleases.get_by_version_number(workflow.id, number),
+         {:ok, restored} <- Workflows.restore_version(workflow, release, user) do
+      # The content was replaced wholesale, which the incremental reconciler
+      # cannot express, so ask every open editor to reload from the database.
+      WorkflowReconciler.request_reconciliation(workflow.id)
+
+      broadcast_from!(socket, "workflow_saved", %{
+        latest_snapshot_lock_version: restored.lock_version,
+        workflow: restored
+      })
+
+      {:reply, {:ok, %{lock_version: restored.lock_version}},
+       assign(socket, :workflow, restored)}
+    else
+      nil -> workflow_error_reply(socket, {:error, :version_not_found})
+      error -> workflow_error_reply(socket, error)
+    end
   end
 
   @impl true
@@ -1164,6 +1219,7 @@ defmodule LightningWeb.WorkflowChannel do
               "request_history",
               "request_versions",
               "request_promote_check",
+              "request_restore_check",
               "request_trigger_auth_methods",
               "get_limits"
             ] do
@@ -1289,6 +1345,27 @@ defmodule LightningWeb.WorkflowChannel do
     }
   end
 
+  # A trigger the snapshot does not hold is deleted by the restore, and the URL
+  # built from it stops answering. Nobody should discover that afterwards.
+  defp render_losing_triggers(workflow, snapshot) do
+    kept = MapSet.new(snapshot.triggers, & &1.id)
+
+    # `force` because the assign is the workflow as it was at join, and this
+    # answers about the workflow as it stands.
+    workflow
+    |> Lightning.Repo.preload(:triggers, force: true)
+    |> Map.fetch!(:triggers)
+    |> Enum.reject(&MapSet.member?(kept, &1.id))
+    |> Enum.map(
+      &%{
+        id: &1.id,
+        type: &1.type,
+        custom_path: &1.custom_path,
+        enabled: &1.enabled
+      }
+    )
+  end
+
   defp render_release(release, is_latest) do
     %{
       version_number: release.version_number,
@@ -1299,6 +1376,7 @@ defmodule LightningWeb.WorkflowChannel do
       # The client pins a version via `?v=<version_number>`; lock_version is kept
       # here only as informational snapshot metadata.
       lock_version: release.snapshot && release.snapshot.lock_version,
+      restored_from_version_number: release.restored_from_version_number,
       is_latest: is_latest
     }
   end
@@ -1484,6 +1562,15 @@ defmodule LightningWeb.WorkflowChannel do
       %{
         errors: format_changeset_errors(changeset),
         type: determine_error_type(changeset)
+      }}, socket}
+  end
+
+  defp workflow_error_reply(socket, {:error, :version_not_found}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{base: ["That version no longer exists"]},
+        type: "version_not_found"
       }}, socket}
   end
 

@@ -1421,8 +1421,12 @@ defmodule Lightning.Workflows do
         %WorkflowRelease{snapshot: %Snapshot{} = snapshot} = release,
         actor
       ) do
-    workflow
-    |> Repo.preload([:triggers, :jobs, :edges])
+    # Read the row again rather than trusting the caller's struct, which is
+    # usually the one a channel joined on. The replacement is computed against
+    # these children, so stale ones leave rows behind that the snapshot does not
+    # hold, and a stale lock_version turns the write into a StaleEntryError.
+    workflow.id
+    |> get_workflow(include: [:triggers, :jobs, :edges])
     |> change_workflow(Snapshot.to_workflow_attrs(snapshot))
     |> save_workflow(actor,
       skip_reconcile: true,
