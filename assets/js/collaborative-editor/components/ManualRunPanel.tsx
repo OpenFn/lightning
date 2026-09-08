@@ -331,6 +331,7 @@ export function ManualRunPanel({
           if (requested) {
             setSelectedDataclip(requested);
             setSelectedTab('existing');
+            updateSearchParams({ dataclip: null });
             // Returned before the cron block below, which reads a ref that is
             // only refreshed on render and would still see nothing selected.
             return;
@@ -365,13 +366,7 @@ export function ManualRunPanel({
 
     void fetchDataclips();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    projectId,
-    dataclipJobId,
-    followedRunId,
-    params['dataclip'],
-    disableAutoSelection,
-  ]);
+  }, [projectId, dataclipJobId, followedRunId, params['dataclip']]);
 
   const buildFilters = useCallback(() => {
     const filters: Record<string, string> = {};

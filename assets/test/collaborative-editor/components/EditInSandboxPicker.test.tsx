@@ -308,6 +308,41 @@ describe('EditInSandboxPicker', () => {
       expect(await screen.findByTestId('review-body')).toHaveValue('');
     });
 
+    test('loads the body again after the dialog is closed and reopened', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+      getDataclipBodyMock.mockResolvedValue('{"a":1}');
+
+      const { rerender } = renderPicker(
+        <EditInSandboxPicker isOpen onClose={() => {}} />
+      );
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+      expect(await screen.findByTestId('review-body')).toHaveValue('{"a":1}');
+
+      rerender(<EditInSandboxPicker isOpen={false} onClose={() => {}} />);
+      rerender(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      // A flag left set across a reopen skips the fetch and shows an empty
+      // review step that can never recover.
+      expect(await screen.findByTestId('review-body')).toHaveValue('{"a":1}');
+    });
+
     test('says nothing was kept when the run has no input to copy', async () => {
       const user = userEvent.setup();
       activeRun = {

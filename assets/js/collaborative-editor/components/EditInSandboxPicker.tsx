@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from '@headlessui/react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
@@ -400,6 +400,7 @@ export function EditInSandboxPicker({
   const [isLoadingBody, setIsLoadingBody] = useState(false);
   const [runInputMissing, setRunInputMissing] = useState(false);
   const [hasLoadedBody, setHasLoadedBody] = useState(false);
+  const runFetchTokenRef = useRef<string | null>(null);
   const [savedDataclipId, setSavedDataclipId] = useState<string | null>(null);
 
   const activeRun = useActiveRun();
@@ -442,7 +443,9 @@ export function EditInSandboxPicker({
     setReviewBody('');
     setReviewError(null);
     setRunInputMissing(false);
+    setHasLoadedBody(false);
     setSavedDataclipId(null);
+    runFetchTokenRef.current = null;
 
     const load = async () => {
       try {
@@ -538,6 +541,7 @@ export function EditInSandboxPicker({
     setReviewBody('');
     setHasLoadedBody(false);
     setRunInputMissing(false);
+    runFetchTokenRef.current = null;
   }, [canStartFromRun, startWith]);
 
   const handleCreate = useCallback(
@@ -595,36 +599,52 @@ export function EditInSandboxPicker({
     // Already reviewed: keep what the person has, or Back then Continue would
     // quietly restore the production body they had just redacted. Checked
     // before the loading flag is set, since this path never clears it.
+    setReviewError(null);
+
     if (hasLoadedBody) {
       setStep('review');
       return;
     }
 
     setIsLoadingBody(true);
-    setReviewError(null);
 
     // Whether the input was kept is the dataclip's own answer. Inferring it from
     // the body does not work: a wiped http_request still serves a JSON object,
     // `{"data": null, "request": null}`, which reads as perfectly good data.
+    // Guarded like the other fetches here: closing the dialog, or losing the
+    // run, must not be undone by a reply that was already in flight.
+    const requestedRunId = activeRun.id;
+    runFetchTokenRef.current = requestedRunId;
+
     void getRunDataclip(project.id, activeRun.id, runStepJobId)
       .then(async ({ dataclip }) => {
+        if (runFetchTokenRef.current !== requestedRunId) return;
+
         if (!dataclip || dataclip.wiped_at) {
           setRunInputMissing(true);
           return;
         }
 
-        setReviewBody(await getDataclipBody(dataclip.id));
+        const body = await getDataclipBody(dataclip.id);
+
+        if (runFetchTokenRef.current !== requestedRunId) return;
+
+        setReviewBody(body);
         setHasLoadedBody(true);
         setStep('review');
       })
       .catch(() => {
+        if (runFetchTokenRef.current !== requestedRunId) return;
+
         notifications.alert({
           title: "Could not load this run's input",
           description: 'Please try again.',
         });
       })
       .finally(() => {
-        setIsLoadingBody(false);
+        if (runFetchTokenRef.current === requestedRunId) {
+          setIsLoadingBody(false);
+        }
       });
   }, [
     startWith,

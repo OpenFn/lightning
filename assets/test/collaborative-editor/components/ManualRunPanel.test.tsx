@@ -432,10 +432,13 @@ describe('ManualRunPanel', () => {
       await screen.findByText('Input from run abcdef')
     ).toBeInTheDocument();
 
-    // The URL is left alone: rewriting it would drop the other params or add a
-    // history entry, and neither is worth it to record something a ref holds.
-    expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith({
-      dataclip: null,
+    // Cleared once honoured, with the merging helper so the other params
+    // survive. Left in place, reopening the panel on another job would select
+    // this dataclip again.
+    await waitFor(() => {
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+        dataclip: null,
+      });
     });
     expect(urlState.mockFns.replaceSearchParams).not.toHaveBeenCalled();
   });
