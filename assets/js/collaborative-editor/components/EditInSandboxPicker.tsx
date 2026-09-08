@@ -7,19 +7,27 @@ import {
   DialogTitle,
 } from '@headlessui/react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
-import { useWorkflowActions } from '../hooks/useWorkflow';
+import type { Dataclip } from '../api/dataclips';
+import { getDataclipBody, searchDataclips } from '../api/dataclips';
+import { useActiveRun } from '../hooks/useHistory';
+import { useProject } from '../hooks/useSessionContext';
+import { useWorkflowActions, useWorkflowState } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import {
   formatChannelErrorMessage,
   isChannelRequestError,
 } from '../lib/errors';
 import { notifications } from '../lib/notifications';
+import type { EditInSandboxStart } from '../stores/createWorkflowStore';
 import type { Sandbox } from '../types/workflow';
+
+type StartChoice = 'nothing' | 'run' | 'saved';
+type Step = 'choose' | 'review';
 
 interface EditInSandboxPickerProps {
   isOpen: boolean;
@@ -147,6 +155,104 @@ function SandboxRow({
 
 // Three placeholder rows shown while the sandbox list loads. Mirrors the shape
 // of a real row (colour tile + two text lines) so the layout doesn't jump.
+function StartOption({
+  value,
+  checked,
+  onChange,
+  label,
+  hint,
+}: {
+  value: StartChoice;
+  checked: boolean;
+  onChange: (value: StartChoice) => void;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2.5">
+      <input
+        type="radio"
+        name="start-with"
+        value={value}
+        checked={checked}
+        onChange={() => {
+          onChange(value);
+        }}
+        className="mt-0.5 h-4 w-4 shrink-0 border-gray-300 text-primary-600
+          focus:ring-primary-600"
+      />
+      <span className="min-w-0">
+        <span className="block text-sm text-gray-900">{label}</span>
+        <span className="block text-xs text-gray-500">{hint}</span>
+      </span>
+    </label>
+  );
+}
+
+function SavedInputList({
+  dataclips,
+  isLoading,
+  selectedId,
+  onSelect,
+}: {
+  dataclips: Dataclip[];
+  isLoading: boolean;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  if (isLoading) {
+    return (
+      <p
+        className="mt-3 text-xs text-gray-500"
+        data-testid="saved-inputs-loading"
+      >
+        Loading saved inputs...
+      </p>
+    );
+  }
+
+  if (dataclips.length === 0) {
+    return (
+      <p
+        className="mt-3 text-xs text-gray-500"
+        data-testid="saved-inputs-empty"
+      >
+        This project has no named inputs yet. Name a dataclip to reuse it here.
+      </p>
+    );
+  }
+
+  return (
+    <ul
+      className="mt-3 max-h-48 space-y-1 overflow-y-auto"
+      data-testid="saved-inputs"
+    >
+      {dataclips.map(dataclip => (
+        <li key={dataclip.id}>
+          <label
+            className="flex cursor-pointer items-center gap-2.5 rounded-md
+            px-2 py-1.5 hover:bg-gray-50"
+          >
+            <input
+              type="radio"
+              name="saved-input"
+              checked={selectedId === dataclip.id}
+              onChange={() => {
+                onSelect(dataclip.id);
+              }}
+              className="h-4 w-4 shrink-0 border-gray-300 text-primary-600
+                focus:ring-primary-600"
+            />
+            <span className="min-w-0 truncate text-sm text-gray-900">
+              {dataclip.name}
+            </span>
+          </label>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function SandboxListSkeleton() {
   return (
     <ul className="mt-3 space-y-1" data-testid="sandbox-list-loading">
@@ -165,6 +271,40 @@ function SandboxListSkeleton() {
       ))}
     </ul>
   );
+}
+
+function createButtonLabel({
+  isCreating,
+  isLoadingBody,
+  needsReview,
+}: {
+  isCreating: boolean;
+  isLoadingBody: boolean;
+  needsReview: boolean;
+}) {
+  if (isCreating) return 'Creating...';
+  if (isLoadingBody) return 'Loading...';
+  return needsReview ? 'Continue' : 'Create sandbox';
+}
+
+// Checked here as well as on the server so the person is told before the
+// sandbox is attempted, not after it is refused.
+function describeBodyProblem(body: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(body);
+
+    if (
+      parsed === null ||
+      typeof parsed !== 'object' ||
+      Array.isArray(parsed)
+    ) {
+      return 'This needs to be a JSON object.';
+    }
+
+    return null;
+  } catch {
+    return "This isn't valid JSON.";
+  }
 }
 
 const navigateToSandbox = (projectId: string, workflowId: string) => {
@@ -194,6 +334,27 @@ export function EditInSandboxPicker({
   const [isCreating, setIsCreating] = useState(false);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [sandboxes, setSandboxes] = useState<Sandbox[]>([]);
+  const [startWith, setStartWith] = useState<StartChoice>('nothing');
+  const [step, setStep] = useState<Step>('choose');
+  const [reviewBody, setReviewBody] = useState('');
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [isLoadingBody, setIsLoadingBody] = useState(false);
+  const [savedDataclipId, setSavedDataclipId] = useState<string | null>(null);
+
+  const activeRun = useActiveRun();
+  const project = useProject();
+  const jobs = useWorkflowState(state => state.jobs);
+
+  // Any job in the project resolves the same set of named dataclips, so the
+  // first one is enough to ask for them.
+  const anyJobId = jobs[0]?.id ?? null;
+  const [savedDataclips, setSavedDataclips] = useState<Dataclip[]>([]);
+  const [isLoadingSaved, setIsLoadingSaved] = useState(false);
+
+  // A run's own input is its first step's input. Anything deeper is a step
+  // result, which is a different thing to offer.
+  const runInputDataclipId = activeRun?.steps?.[0]?.input_dataclip_id ?? null;
+  const runLabel = activeRun ? activeRun.id.slice(0, 6) : null;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -201,6 +362,11 @@ export function EditInSandboxPicker({
     let cancelled = false;
     setIsLoadingList(true);
     setSandboxes([]);
+    setStartWith('nothing');
+    setStep('choose');
+    setReviewBody('');
+    setReviewError(null);
+    setSavedDataclipId(null);
 
     const load = async () => {
       try {
@@ -225,33 +391,114 @@ export function EditInSandboxPicker({
     };
   }, [isOpen, listSandboxes]);
 
-  const handleCreate = useCallback(() => {
-    setIsCreating(true);
-    setNameError(null);
-    const trimmed = name.trim();
+  useEffect(() => {
+    if (!isOpen || startWith !== 'saved' || !project?.id || !anyJobId) return;
 
-    const create = async () => {
-      try {
-        const { project_id, workflow_id } = await editInSandbox(trimmed);
-        navigateToSandbox(project_id, workflow_id);
-      } catch (error) {
-        // A rejected name (duplicate, invalid) belongs under the input as an
-        // inline field error; only genuinely unexpected/system errors toast.
-        const fieldError = extractNameFieldError(error);
-        if (fieldError) {
-          setNameError(fieldError);
-        } else {
+    let cancelled = false;
+    setIsLoadingSaved(true);
+
+    void searchDataclips(project.id, anyJobId, { named_only: true })
+      .then(({ data }) => {
+        if (!cancelled) setSavedDataclips(data);
+      })
+      .catch(() => {
+        if (!cancelled) {
           notifications.alert({
-            title: 'Could not create a sandbox',
-            description: describeSandboxError(error),
+            title: 'Could not load saved inputs',
+            description: 'Please try again.',
           });
         }
-        setIsCreating(false);
-      }
-    };
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingSaved(false);
+      });
 
-    void create();
-  }, [name, editInSandbox]);
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, startWith, project?.id, anyJobId]);
+
+  const handleCreate = useCallback(
+    (start: EditInSandboxStart) => {
+      setIsCreating(true);
+      setNameError(null);
+      const trimmed = name.trim();
+
+      const create = async () => {
+        try {
+          const { project_id, workflow_id } = await editInSandbox(
+            trimmed,
+            start
+          );
+          navigateToSandbox(project_id, workflow_id);
+        } catch (error) {
+          // A rejected name (duplicate, invalid) belongs under the input as an
+          // inline field error; only genuinely unexpected/system errors toast.
+          const fieldError = extractNameFieldError(error);
+          if (fieldError) {
+            setNameError(fieldError);
+          } else {
+            notifications.alert({
+              title: 'Could not create a sandbox',
+              description: describeSandboxError(error),
+            });
+          }
+          setIsCreating(false);
+        }
+      };
+
+      void create();
+    },
+    [name, editInSandbox]
+  );
+
+  // The run's input is checked before it travels, so that choice takes a review
+  // step first. The other two create straight away.
+  const handleContinue = useCallback(() => {
+    if (startWith === 'saved') {
+      if (!savedDataclipId) return;
+      handleCreate({ dataclipId: savedDataclipId });
+      return;
+    }
+
+    if (startWith !== 'run' || !runInputDataclipId) {
+      handleCreate({});
+      return;
+    }
+
+    setIsLoadingBody(true);
+    setReviewError(null);
+
+    void getDataclipBody(runInputDataclipId)
+      .then(body => {
+        setReviewBody(body);
+        setStep('review');
+      })
+      .catch(() => {
+        notifications.alert({
+          title: "Could not load this run's input",
+          description: 'Please try again.',
+        });
+      })
+      .finally(() => {
+        setIsLoadingBody(false);
+      });
+  }, [startWith, savedDataclipId, runInputDataclipId, handleCreate]);
+
+  const handleCreateFromReview = useCallback(() => {
+    const problem = describeBodyProblem(reviewBody);
+
+    if (problem) {
+      setReviewError(problem);
+      return;
+    }
+
+    setReviewError(null);
+    handleCreate({
+      body: reviewBody,
+      bodyName: runLabel ? `Input from run ${runLabel}` : 'Reviewed input',
+    });
+  }, [reviewBody, runLabel, handleCreate]);
 
   const handleJoin = useCallback((sandbox: Sandbox) => {
     if (!sandbox.workflow_id) return;
@@ -261,7 +508,9 @@ export function EditInSandboxPicker({
   // A name is required to create. The server already returns only joinable
   // sandboxes (each holding a clone of this workflow), so the list is rendered
   // as-is.
-  const canCreate = name.trim().length > 0;
+  const canCreate =
+    name.trim().length > 0 &&
+    (startWith !== 'saved' || savedDataclipId !== null);
 
   return (
     <Dialog
@@ -306,144 +555,270 @@ export function EditInSandboxPicker({
               />
             </button>
 
-            <DialogTitle
-              as="h3"
-              className="text-base font-semibold text-gray-900"
-            >
-              Edit in sandbox
-            </DialogTitle>
-            <p className="mt-1 text-sm text-gray-600">
-              Make changes safely in a sandbox without affecting this live
-              workflow.
-            </p>
+            {step === 'review' ? (
+              <>
+                <DialogTitle
+                  as="h3"
+                  className="text-base font-semibold text-gray-900"
+                >
+                  Check the data before it leaves production
+                </DialogTitle>
+                <p className="mt-1 text-sm text-gray-600">
+                  This is a copy of what the run received. Remove anything that
+                  shouldn't leave this project. The original is untouched.
+                </p>
 
-            {/* Create a new sandbox. Eyebrow title + subtitle mirror the
+                <label htmlFor="review-body" className="sr-only">
+                  Run input
+                </label>
+                <textarea
+                  id="review-body"
+                  data-testid="review-body"
+                  value={reviewBody}
+                  onChange={event => {
+                    setReviewBody(event.target.value);
+                    setReviewError(null);
+                  }}
+                  spellCheck={false}
+                  rows={14}
+                  className="mt-4 block w-full rounded-md border-0 px-3 py-2
+                    font-mono text-xs text-gray-900 shadow-sm ring-1 ring-inset
+                    ring-gray-300 focus:ring-2 focus:ring-inset
+                    focus:ring-primary-600"
+                />
+
+                <div className="mt-1 min-h-[1rem]">
+                  {reviewError && (
+                    <p
+                      data-testid="review-body-error"
+                      className="text-xs text-red-600"
+                    >
+                      {reviewError}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-4 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    disabled={isCreating}
+                    onClick={() => {
+                      setStep('choose');
+                    }}
+                    className="inline-flex items-center rounded-md bg-white
+                      px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm
+                      ring-1 ring-inset ring-gray-300 hover:bg-gray-50
+                      disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="create-from-review-button"
+                    disabled={isCreating}
+                    onClick={handleCreateFromReview}
+                    className="inline-flex items-center rounded-md
+                      bg-primary-600 px-3 py-2 text-sm font-semibold text-white
+                      shadow-sm hover:bg-primary-500
+                      disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isCreating ? 'Creating...' : 'Create sandbox'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <DialogTitle
+                  as="h3"
+                  className="text-base font-semibold text-gray-900"
+                >
+                  Edit in sandbox
+                </DialogTitle>
+                <p className="mt-1 text-sm text-gray-600">
+                  Make changes safely in a sandbox without affecting this live
+                  workflow.
+                </p>
+
+                {/* Create a new sandbox. Eyebrow title + subtitle mirror the
                 "Join an active sandbox" section below so the two read as
                 visual siblings; the title/subtitle/placeholder identify the
                 field, so no separate visible label is needed. */}
-            <div className="mt-6">
-              <p
-                className="text-xs font-semibold uppercase tracking-wide
+                <div className="mt-6">
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wide
                   text-gray-500"
-              >
-                Create a new sandbox
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                Branch from the current live version to make changes safely.
-              </p>
-              <form
-                className="mt-3"
-                onSubmit={event => {
-                  event.preventDefault();
-                  // Enter can submit even while the button is disabled; honour
-                  // the same guards (non-empty name, no create in flight).
-                  if (isCreating || !canCreate) return;
-                  handleCreate();
-                }}
-              >
-                <div className="flex gap-2">
-                  <div className="min-w-0 flex-1">
-                    <label htmlFor="sandbox-name" className="sr-only">
-                      Sandbox name
-                    </label>
-                    <input
-                      id="sandbox-name"
-                      type="text"
-                      value={name}
-                      onChange={event => {
-                        setName(event.target.value);
-                        // Editing the name dismisses a stale field error.
-                        setNameError(null);
-                      }}
-                      placeholder="e.g. Test new changes"
-                      disabled={isCreating}
-                      aria-invalid={nameError ? true : undefined}
-                      aria-describedby={
-                        nameError ? 'sandbox-name-error' : undefined
-                      }
-                      className={cn(
-                        `block w-full rounded-md border-0 px-3 py-2 text-sm
+                  >
+                    Create a new sandbox
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Branch from the current live version to make changes safely.
+                  </p>
+                  <form
+                    className="mt-3"
+                    onSubmit={event => {
+                      event.preventDefault();
+                      // Enter can submit even while the button is disabled; honour
+                      // the same guards (non-empty name, no create in flight).
+                      if (isCreating || isLoadingBody || !canCreate) return;
+                      handleContinue();
+                    }}
+                  >
+                    <div className="flex gap-2">
+                      <div className="min-w-0 flex-1">
+                        <label htmlFor="sandbox-name" className="sr-only">
+                          Sandbox name
+                        </label>
+                        <input
+                          id="sandbox-name"
+                          type="text"
+                          value={name}
+                          onChange={event => {
+                            setName(event.target.value);
+                            // Editing the name dismisses a stale field error.
+                            setNameError(null);
+                          }}
+                          placeholder="e.g. Test new changes"
+                          disabled={isCreating}
+                          aria-invalid={nameError ? true : undefined}
+                          aria-describedby={
+                            nameError ? 'sandbox-name-error' : undefined
+                          }
+                          className={cn(
+                            `block w-full rounded-md border-0 px-3 py-2 text-sm
                           shadow-sm ring-1 ring-inset placeholder:text-gray-400
                           focus:ring-2 focus:ring-inset
                           disabled:cursor-not-allowed disabled:opacity-50`,
-                        nameError
-                          ? 'text-red-900 ring-red-300 focus:ring-red-500'
-                          : 'text-gray-900 ring-gray-300 focus:ring-primary-600'
-                      )}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    data-testid="create-sandbox-button"
-                    disabled={isCreating || !canCreate}
-                    className="inline-flex shrink-0 items-center self-start
+                            nameError
+                              ? 'text-red-900 ring-red-300 focus:ring-red-500'
+                              : 'text-gray-900 ring-gray-300 focus:ring-primary-600'
+                          )}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        data-testid="create-sandbox-button"
+                        disabled={isCreating || isLoadingBody || !canCreate}
+                        className="inline-flex shrink-0 items-center self-start
                       rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold
                       text-white shadow-sm shadow-primary-600/20
                       hover:bg-primary-500 focus-visible:outline-2
                       focus-visible:outline-offset-2
                       focus-visible:outline-primary-600
                       disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isCreating ? 'Creating...' : 'Create sandbox'}
-                  </button>
-                </div>
-                {/* Always-rendered slot sized for one line of error text, so
+                      >
+                        {createButtonLabel({
+                          isCreating,
+                          isLoadingBody,
+                          needsReview: startWith === 'run',
+                        })}
+                      </button>
+                    </div>
+                    {/* Always-rendered slot sized for one line of error text, so
                     showing/hiding the message never shifts the OR divider or
                     Join section below it. The message itself stays conditional
                     so the field only exposes an error when there is one. */}
-                <div className="mt-1 min-h-[1rem]">
-                  {nameError && (
-                    <p
-                      id="sandbox-name-error"
-                      data-testid="sandbox-name-error"
-                      className="text-xs text-red-600"
-                    >
-                      {nameError}
-                    </p>
-                  )}
-                </div>
-              </form>
-            </div>
+                    <div className="mt-1 min-h-[1rem]">
+                      {nameError && (
+                        <p
+                          id="sandbox-name-error"
+                          data-testid="sandbox-name-error"
+                          className="text-xs text-red-600"
+                        >
+                          {nameError}
+                        </p>
+                      )}
+                    </div>
 
-            {/* Join an existing sandbox. The server returns only sandboxes that
+                    <fieldset className="mt-4" data-testid="start-with">
+                      <legend
+                        className="text-xs font-semibold uppercase tracking-wide
+                      text-gray-500"
+                      >
+                        Start with
+                      </legend>
+
+                      <div className="mt-2 space-y-2">
+                        <StartOption
+                          value="nothing"
+                          checked={startWith === 'nothing'}
+                          onChange={setStartWith}
+                          label="Nothing"
+                          hint="An empty sandbox. Pick input when you run."
+                        />
+
+                        {runInputDataclipId && (
+                          <StartOption
+                            value="run"
+                            checked={startWith === 'run'}
+                            onChange={setStartWith}
+                            label="This run's input"
+                            hint="A copy of the data this run received. You check it first."
+                          />
+                        )}
+
+                        <StartOption
+                          value="saved"
+                          checked={startWith === 'saved'}
+                          onChange={setStartWith}
+                          label="A saved input"
+                          hint="One of this project's named inputs."
+                        />
+                      </div>
+
+                      {startWith === 'saved' && (
+                        <SavedInputList
+                          dataclips={savedDataclips}
+                          isLoading={isLoadingSaved}
+                          selectedId={savedDataclipId}
+                          onSelect={setSavedDataclipId}
+                        />
+                      )}
+                    </fieldset>
+                  </form>
+                </div>
+
+                {/* Join an existing sandbox. The server returns only sandboxes that
                 hold a clone of this workflow; hidden entirely when there are
                 none. */}
-            {(isLoadingList || sandboxes.length > 0) && (
-              <div className="mt-6">
-                <p
-                  className="text-xs font-semibold uppercase tracking-wide
+                {(isLoadingList || sandboxes.length > 0) && (
+                  <div className="mt-6">
+                    <p
+                      className="text-xs font-semibold uppercase tracking-wide
                     text-gray-500"
-                >
-                  Join an active sandbox
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Continue in a sandbox that's already active for this workflow.
-                </p>
+                    >
+                      Join an active sandbox
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Continue in a sandbox that's already active for this
+                      workflow.
+                    </p>
 
-                {isLoadingList ? (
-                  <SandboxListSkeleton />
-                ) : (
-                  // Cap the list at roughly 5-6 rows so a user with many
-                  // sandboxes scrolls the list rather than the whole modal. The
-                  // scroll container carries the row's -mx-3 bleed itself
-                  // (-mx-3 px-3), so the rows fit exactly inside it: no
-                  // horizontal scrollbar, the hover bleed is kept, and the px-3
-                  // keeps the vertical scrollbar clear of the "Join" text.
-                  <ul
-                    className="mt-3 -mx-3 max-h-80 space-y-1 overflow-y-auto
+                    {isLoadingList ? (
+                      <SandboxListSkeleton />
+                    ) : (
+                      // Cap the list at roughly 5-6 rows so a user with many
+                      // sandboxes scrolls the list rather than the whole modal. The
+                      // scroll container carries the row's -mx-3 bleed itself
+                      // (-mx-3 px-3), so the rows fit exactly inside it: no
+                      // horizontal scrollbar, the hover bleed is kept, and the px-3
+                      // keeps the vertical scrollbar clear of the "Join" text.
+                      <ul
+                        className="mt-3 -mx-3 max-h-80 space-y-1 overflow-y-auto
                       overflow-x-hidden px-3"
-                    data-testid="sandbox-list"
-                  >
-                    {sandboxes.map(sandbox => (
-                      <SandboxRow
-                        key={sandbox.id}
-                        sandbox={sandbox}
-                        onJoin={handleJoin}
-                      />
-                    ))}
-                  </ul>
+                        data-testid="sandbox-list"
+                      >
+                        {sandboxes.map(sandbox => (
+                          <SandboxRow
+                            key={sandbox.id}
+                            sandbox={sandbox}
+                            onJoin={handleJoin}
+                          />
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
             )}
           </DialogPanel>
         </div>

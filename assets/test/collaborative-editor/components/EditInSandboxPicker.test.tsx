@@ -17,13 +17,44 @@ const renderPicker = (ui: ReactElement) =>
   render(ui, { wrapper: KeyboardProvider });
 
 const listSandboxes = vi.fn<() => Promise<Sandbox[]>>();
-const editInSandbox =
-  vi.fn<
-    (name?: string) => Promise<{ project_id: string; workflow_id: string }>
-  >();
+const editInSandbox = vi.fn<
+  (
+    name?: string,
+    start?: unknown
+  ) => Promise<{
+    project_id: string;
+    workflow_id: string;
+    dataclip_id: string | null;
+  }>
+>();
+
+let jobs: { id: string }[] = [];
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({ listSandboxes, editInSandbox }),
+  useWorkflowState: (selector: (state: unknown) => unknown) =>
+    selector({ jobs }),
+}));
+
+let activeRun: {
+  id: string;
+  steps: { input_dataclip_id: string | null }[];
+} | null = null;
+
+vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
+  useActiveRun: () => activeRun,
+}));
+
+vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useProject: () => ({ id: 'project-1' }),
+}));
+
+const searchDataclipsMock = vi.fn();
+const getDataclipBodyMock = vi.fn();
+
+vi.mock('../../../js/collaborative-editor/api/dataclips', () => ({
+  searchDataclips: (...args: unknown[]) => searchDataclipsMock(...args),
+  getDataclipBody: (...args: unknown[]) => getDataclipBodyMock(...args),
 }));
 
 const notifyAlert =
@@ -95,7 +126,140 @@ describe('EditInSandboxPicker', () => {
     listSandboxes.mockReset();
     editInSandbox.mockReset();
     notifyAlert.mockReset();
+    searchDataclipsMock.mockReset();
+    getDataclipBodyMock.mockReset();
     listSandboxes.mockResolvedValue([]);
+    searchDataclipsMock.mockResolvedValue({ data: [] });
+    getDataclipBodyMock.mockResolvedValue('{}');
+    activeRun = null;
+    jobs = [{ id: 'job-1' }];
+  });
+
+  describe('choosing what to start with', () => {
+    const typeName = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+    };
+
+    test("offers this run's input only while a run is open", async () => {
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      expect(screen.queryByLabelText(/this run's input/i)).toBeNull();
+    });
+
+    test("carries the reviewed body through when the run's input is chosen", async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1' }],
+      };
+      getDataclipBodyMock.mockResolvedValue('{"email":"real@example.com"}');
+      editInSandbox.mockResolvedValue({
+        project_id: 'p2',
+        workflow_id: 'w2',
+        dataclip_id: 'dc-new',
+      });
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await typeName(user);
+
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      // The body is shown before it travels, and can be edited.
+      const body = await screen.findByTestId('review-body');
+      expect(body).toHaveValue('{"email":"real@example.com"}');
+
+      await user.clear(body);
+      await user.type(body, '{{"email":"redacted"}');
+      await user.click(screen.getByTestId('create-from-review-button'));
+
+      await waitFor(() => {
+        expect(editInSandbox).toHaveBeenCalledWith('My SB', {
+          body: '{"email":"redacted"}',
+          bodyName: 'Input from run abcdef',
+        });
+      });
+    });
+
+    test('refuses to create when the reviewed body is not an object', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1' }],
+      };
+      getDataclipBodyMock.mockResolvedValue('[1,2,3]');
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await typeName(user);
+
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      await screen.findByTestId('review-body');
+      await user.click(screen.getByTestId('create-from-review-button'));
+
+      expect(screen.getByTestId('review-body-error')).toHaveTextContent(
+        'This needs to be a JSON object.'
+      );
+      expect(editInSandbox).not.toHaveBeenCalled();
+    });
+
+    test('sends the chosen saved input by id', async () => {
+      const user = userEvent.setup();
+      searchDataclipsMock.mockResolvedValue({
+        data: [{ id: 'dc-saved', name: 'known good' }],
+      });
+      editInSandbox.mockResolvedValue({
+        project_id: 'p2',
+        workflow_id: 'w2',
+        dataclip_id: null,
+      });
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await typeName(user);
+
+      await user.click(screen.getByLabelText(/a saved input/i));
+
+      const saved = await screen.findByTestId('saved-inputs');
+      await user.click(within(saved).getByRole('radio'));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      await waitFor(() => {
+        expect(editInSandbox).toHaveBeenCalledWith('My SB', {
+          dataclipId: 'dc-saved',
+        });
+      });
+    });
+
+    test('will not create until a saved input is picked', async () => {
+      const user = userEvent.setup();
+      searchDataclipsMock.mockResolvedValue({
+        data: [{ id: 'dc-saved', name: 'known good' }],
+      });
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await typeName(user);
+
+      await user.click(screen.getByLabelText(/a saved input/i));
+      await screen.findByTestId('saved-inputs');
+
+      expect(screen.getByTestId('create-sandbox-button')).toBeDisabled();
+    });
+
+    test('says so when the project has no named inputs', async () => {
+      const user = userEvent.setup();
+      searchDataclipsMock.mockResolvedValue({ data: [] });
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.click(screen.getByLabelText(/a saved input/i));
+
+      expect(
+        await screen.findByTestId('saved-inputs-empty')
+      ).toBeInTheDocument();
+    });
   });
 
   test('renders the create option and fetches sandboxes on open', async () => {
@@ -442,7 +606,7 @@ describe('EditInSandboxPicker', () => {
       );
 
       await waitFor(() => {
-        expect(editInSandbox).toHaveBeenCalledWith('My SB');
+        expect(editInSandbox).toHaveBeenCalledWith('My SB', {});
       });
       await waitFor(() => {
         expect(nav.hrefSetter).toHaveBeenCalledWith(
@@ -508,7 +672,7 @@ describe('EditInSandboxPicker', () => {
       );
       await user.click(screen.getByTestId('create-sandbox-button'));
       await waitFor(() => {
-        expect(editInSandbox).toHaveBeenCalledWith('My SB');
+        expect(editInSandbox).toHaveBeenCalledWith('My SB', {});
       });
     } finally {
       nav.restore();
