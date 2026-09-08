@@ -572,16 +572,28 @@ export function EditInSandboxPicker({
   // A reply may only land if it is still the reply this dialog is waiting for:
   // the same request, the same run, and the same choice. Read from refs because
   // all three can have changed since the request went out.
-  const stillWanted = useCallback((runId: string) => {
+  const stillLoading = useCallback((runId: string) => {
     const current = reviewRef.current;
 
-    return (
-      current.status === 'loading' &&
-      current.runId === runId &&
-      startWithRef.current === 'run' &&
-      activeRunIdRef.current === runId
-    );
+    return current.status === 'loading' && current.runId === runId;
   }, []);
+
+  // Landing the result is safe whatever the person has since chosen, because a
+  // review is only ever read back through `activeReview`. Moving them to the
+  // review screen is not: they may have picked something else while it loaded.
+  const shouldShowReview = useCallback(
+    (runId: string) =>
+      startWithRef.current === 'run' && activeRunIdRef.current === runId,
+    []
+  );
+
+  useEffect(() => {
+    if (step === 'review' && !activeReview) {
+      // Whatever the review belonged to has moved on, so the screen showing it
+      // cannot be typed into or sent. Go back rather than sit there dead.
+      setStep('choose');
+    }
+  }, [step, activeReview]);
 
   const handleCreate = useCallback(
     (start: EditInSandboxStart) => {
@@ -653,19 +665,20 @@ export function EditInSandboxPicker({
     void getRunDataclip(project.id, runId, runStepJobId)
       .then(async ({ dataclip }) => {
         if (!dataclip || dataclip.wiped_at) {
-          if (stillWanted(runId)) setReview({ status: 'missing', runId });
+          if (stillLoading(runId)) setReview({ status: 'missing', runId });
           return;
         }
 
         const body = await getDataclipBody(dataclip.id);
 
-        if (!stillWanted(runId)) return;
+        if (!stillLoading(runId)) return;
 
         setReview({ status: 'ready', runId, body });
-        setStep('review');
+
+        if (shouldShowReview(runId)) setStep('review');
       })
       .catch(() => {
-        if (!stillWanted(runId)) return;
+        if (!stillLoading(runId)) return;
 
         setReview({ status: 'idle' });
         notifications.alert({
@@ -679,7 +692,8 @@ export function EditInSandboxPicker({
     canStartFromRun,
     handleCreate,
     hasLoadedBody,
-    stillWanted,
+    stillLoading,
+    shouldShowReview,
     project?.id,
     activeRun,
     runStepJobId,

@@ -599,6 +599,21 @@ defmodule Lightning.Projects.SandboxesTest do
       refute Repo.get_by(Project, name: "sb-bad")
     end
 
+    test "refuses a dataclip name carrying a NUL byte" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      assert {:error, :invalid_starting_dataclip} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-nul-name",
+                 starting_dataclip: %{
+                   body: ~s({"a":1}),
+                   name: <<"x", 0, "y">>
+                 }
+               })
+
+      refute Repo.get_by(Project, name: "sb-nul-name")
+    end
+
     test "refuses a reviewed body carrying a NUL byte" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
 

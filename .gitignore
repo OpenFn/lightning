@@ -49,6 +49,8 @@ adaptor_registry_cache.json
 
 # Ignore credential schemas.
 /priv/schemas/
+# Without the trailing slash too: the pattern above matches a directory, not a
+# symlink of the same name, and a symlink is what a worktree gets.
 /priv/schemas
 
 # In case you use Node.js/npm, you want to ignore these.

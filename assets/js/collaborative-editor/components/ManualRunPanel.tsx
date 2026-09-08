@@ -329,12 +329,16 @@ export function ManualRunPanel({
           // to a custom body, mid-run.
           honouredDataclipRef.current = true;
 
+          // Dropped on the attempt, not the hit: left in place after a miss,
+          // a later mount on another job would try again and, now that every
+          // named dataclip is selectable everywhere, succeed.
+          updateSearchParams({ dataclip: null });
+
           const requested = response.data.find(d => d.id === requestedId);
 
           if (requested) {
             setSelectedDataclip(requested);
             setSelectedTab('existing');
-            updateSearchParams({ dataclip: null });
             // Returned before the cron block below, which reads a ref that is
             // only refreshed on render and would still see nothing selected.
             return;

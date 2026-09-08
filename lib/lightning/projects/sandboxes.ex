@@ -228,7 +228,11 @@ defmodule Lightning.Projects.Sandboxes do
         {:error, :invalid_starting_dataclip}
 
       trimmed ->
-        {:ok, trimmed}
+        # Postgres refuses a NUL in varchar as it does in jsonb, and this name
+        # comes from the same untrusted payload as the body.
+        if contains_null_byte?(trimmed),
+          do: {:error, :invalid_starting_dataclip},
+          else: {:ok, trimmed}
     end
   end
 

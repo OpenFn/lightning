@@ -466,6 +466,79 @@ describe('EditInSandboxPicker', () => {
       expect(screen.queryByTestId('review-body')).toBeNull();
     });
 
+    test('recovers when the choice is switched back after a dropped reply', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+
+      let release: (v: {
+        dataclip: { id: string; wiped_at: null };
+      }) => void = () => {};
+      getRunDataclipMock.mockReturnValue(
+        new Promise(resolve => {
+          release = resolve;
+        })
+      );
+      getDataclipBodyMock.mockResolvedValue('{"a":1}');
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+      await user.click(screen.getByLabelText(/an empty sandbox/i));
+
+      release({ dataclip: { id: 'dc-1', wiped_at: null } });
+      await waitFor(() => {
+        expect(screen.getByTestId('create-sandbox-button')).toBeEnabled();
+      });
+
+      // Switching back must not find a load still marked in flight with no
+      // request behind it, which would latch the button off for good.
+      await user.click(screen.getByLabelText(/this run's input/i));
+
+      const submit = screen.getByTestId('create-sandbox-button');
+      expect(submit).toBeEnabled();
+      expect(submit).not.toHaveTextContent('Loading');
+    });
+
+    test('leaves a review screen whose run has been swapped out', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'aaaaaa000000',
+        steps: [{ input_dataclip_id: 'dc-a', job_id: 'job-1' }],
+      };
+      getDataclipBodyMock.mockResolvedValue('{"from":"run-a"}');
+
+      const { rerender } = renderPicker(
+        <EditInSandboxPicker isOpen onClose={() => {}} />
+      );
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+      await screen.findByTestId('review-body');
+
+      activeRun = {
+        id: 'bbbbbb000000',
+        steps: [{ input_dataclip_id: 'dc-b', job_id: 'job-1' }],
+      };
+      rerender(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      // Staying would leave a textarea that cannot be typed into and a button
+      // that only ever answers "This isn't valid JSON."
+      await waitFor(() => {
+        expect(screen.queryByTestId('review-body')).toBeNull();
+      });
+    });
+
     test('says nothing was kept when the run has no input to copy', async () => {
       const user = userEvent.setup();
       activeRun = {
