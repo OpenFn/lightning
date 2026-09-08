@@ -165,4 +165,24 @@ defmodule LightningWeb.Utils do
 
     if halt?, do: Plug.Conn.halt(conn), else: conn
   end
+
+  @doc """
+  CSP value that blocks script execution and active/plugin content for
+  untrusted bytes served same-origin.
+  """
+  @spec sandbox_csp() :: String.t()
+  def sandbox_csp, do: "default-src 'none'; sandbox"
+
+  @doc """
+  Response headers for serving untrusted static assets (e.g. adaptor icons)
+  same-origin without risking script execution if loaded as a top-level
+  document.
+  """
+  @spec sandboxed_asset_headers() :: [{String.t(), String.t()}]
+  def sandboxed_asset_headers do
+    [
+      {"content-security-policy", sandbox_csp()},
+      {"x-content-type-options", "nosniff"}
+    ]
+  end
 end

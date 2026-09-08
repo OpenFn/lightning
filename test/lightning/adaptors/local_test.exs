@@ -60,6 +60,17 @@ defmodule Lightning.Adaptors.LocalTest do
       refute log =~ "shadowed"
     end
 
+    test "two same-root directories sharing name and version both surface as candidate rows",
+         %{root: root} do
+      write_package!(root, "http-a", "@openfn/language-http", "1.0.0")
+      write_package!(root, "http-b", "@openfn/language-http", "1.0.0")
+
+      assert {:ok, %{name: "@openfn/language-http", versions: versions}} =
+               Local.fetch_adaptor("@openfn/language-http")
+
+      assert [%{version: "1.0.0"}, %{version: "1.0.0"}] = versions
+    end
+
     test "skips a directory with a missing package.json and logs a warning",
          %{root: root} do
       write_package!(root, "good", "@openfn/language-good", "1.0.0")

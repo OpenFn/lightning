@@ -114,6 +114,7 @@ defmodule LightningWeb.AdaptorIconController do
         conn
         |> put_resp_content_type(content_type_for(ext))
         |> put_resp_header("cache-control", @immutable_cache)
+        |> merge_resp_headers(LightningWeb.Utils.sandboxed_asset_headers())
         |> send_file(200, path)
 
       {:error, _} ->

@@ -521,6 +521,23 @@ defmodule Lightning.Adaptors.CatalogueTest do
     end
   end
 
+  describe "upsert_adaptor/1 — duplicate version rows" do
+    test "dedupes records sharing the same version, keeping the first" do
+      record =
+        adaptor_record(
+          versions: [
+            version_record("1.0.0", size_bytes: 111),
+            version_record("1.0.0", size_bytes: 222)
+          ]
+        )
+
+      assert {:ok, adaptor} = Catalogue.upsert_adaptor(record)
+
+      assert [%AdaptorVersion{version: "1.0.0", size_bytes: 111}] =
+               Catalogue.list_versions(adaptor.name, :npm)
+    end
+  end
+
   defp adaptor_record(overrides \\ []) do
     overrides = Map.new(overrides)
 

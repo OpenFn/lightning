@@ -12,20 +12,34 @@ defmodule LightningWeb.AdaptorController do
 
   alias Lightning.Adaptors
 
+  require Logger
+
   def index(conn, _params) do
-    {stamp, entries} = Adaptors.catalogue_with_stamp()
-    etag = etag_for(stamp)
+    case Adaptors.catalogue() do
+      {:ok, {stamp, entries}} ->
+        etag = etag_for(stamp)
 
-    conn =
-      conn
-      |> put_resp_header("etag", etag)
-      |> put_resp_header("cache-control", "private, no-cache")
-      |> put_resp_header("vary", "Cookie")
+        conn =
+          conn
+          |> put_resp_header("etag", etag)
+          |> put_resp_header("cache-control", "private, no-cache")
+          |> put_resp_header("vary", "Cookie")
 
-    if get_req_header(conn, "if-none-match") == [etag] do
-      send_resp(conn, 304, "")
-    else
-      json(conn, %{data: entries})
+        if get_req_header(conn, "if-none-match") == [etag] do
+          send_resp(conn, 304, "")
+        else
+          json(conn, %{data: entries})
+        end
+
+      {:error, reason} ->
+        Logger.warning(
+          "LightningWeb.AdaptorController: adaptor catalogue unavailable: " <>
+            inspect(reason)
+        )
+
+        conn
+        |> put_status(:service_unavailable)
+        |> json(%{"error" => "adaptor catalogue unavailable"})
     end
   end
 

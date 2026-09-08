@@ -135,6 +135,39 @@ defmodule LightningWeb.AdaptorIconControllerTest do
       assert ct =~ "image/svg+xml"
     end
 
+    test "sets sandboxed CSP and nosniff headers on svg response", %{
+      conn: conn
+    } do
+      name = unique_adaptor_name()
+      bytes = "<svg/>"
+      sha256 = :crypto.hash(:sha256, bytes)
+      sha8 = sha256 |> binary_part(0, 4) |> Base.encode16(case: :lower)
+
+      insert_adaptor(name, %{
+        icon_square_ext: "svg",
+        icon_square_sha256: sha256
+      })
+
+      write_icon(name, :square, "svg", bytes)
+
+      params = %{
+        "name" => name,
+        "shape" => "square",
+        "sha8" => sha8,
+        "ext" => "svg"
+      }
+
+      result = AdaptorIconController.show(conn, params)
+
+      assert result.status == 200
+
+      assert get_resp_header(result, "content-security-policy") == [
+               "default-src 'none'; sandbox"
+             ]
+
+      assert get_resp_header(result, "x-content-type-options") == ["nosniff"]
+    end
+
     test "sha8 is case-insensitive on input", %{conn: conn} do
       name = unique_adaptor_name()
       bytes = "case test bytes"

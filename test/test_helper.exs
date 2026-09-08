@@ -16,6 +16,7 @@ Mox.defmock(Lightning.AdaptorService.RepoMock,
 Mimic.copy(:hackney)
 Mimic.copy(File)
 Mimic.copy(IO)
+Mimic.copy(Lightning.Adaptors)
 Mimic.copy(Lightning.Adaptors.Config)
 Mimic.copy(Lightning.FailureEmail)
 Mimic.copy(Lightning.Projects.Provisioner)
