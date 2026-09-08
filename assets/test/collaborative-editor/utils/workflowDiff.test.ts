@@ -79,7 +79,11 @@ const buildYaml = ({
       `    enabled: ${trigger.enabled ?? true}`
     );
     if (trigger.custom_path !== undefined) {
-      lines.push(`    custom_path: ${trigger.custom_path ?? 'null'}`);
+      // Quoted, so an empty path stays an empty string. Bare `custom_path:`
+      // is read back as null, which is a different case entirely.
+      const path =
+        trigger.custom_path === null ? 'null' : `'${trigger.custom_path}'`;
+      lines.push(`    custom_path: ${path}`);
     }
     if (trigger.webhook_reply) {
       lines.push(`    webhook_reply: ${trigger.webhook_reply}`);
