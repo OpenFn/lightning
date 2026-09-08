@@ -76,7 +76,7 @@ defmodule Lightning.Invocation do
     limit = Keyword.fetch!(opts, :limit)
     offset = Keyword.get(opts, :offset)
 
-    Query.last_n_for_job(job_id, limit)
+    Query.selectable_for_job(job_id, limit)
     |> where([d], is_nil(d.wiped_at))
     |> where([d], ^dataclip_where_filter(user_filters))
     |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)

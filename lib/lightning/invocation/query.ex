@@ -10,6 +10,7 @@ defmodule Lightning.Invocation.Query do
   alias Lightning.Projects.Project
   alias Lightning.Run
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
 
   @doc """
@@ -251,6 +252,42 @@ defmodule Lightning.Invocation.Query do
   def last_successful_step_for_job(%Job{id: id}) do
     last_step_for_job(%Job{id: id})
     |> steps_with_reason("success")
+  end
+
+  @doc """
+  Dataclips a job can be run against: the ones it has already consumed, plus
+  every named dataclip in its project.
+
+  A named dataclip is a curated input rather than a trace of a past run, so it
+  belongs to the project and is selectable on any job in it. Without that, a
+  dataclip created for a job it has never run against is invisible to the
+  picker.
+  """
+  def selectable_for_job(job_id, limit) do
+    from(d in Dataclip,
+      where:
+        d.id in subquery(job_input_dataclip_ids(job_id)) or
+          (not is_nil(d.name) and
+             d.project_id in subquery(project_id_for_job(job_id))),
+      order_by: [desc: d.inserted_at],
+      limit: ^limit
+    )
+  end
+
+  defp job_input_dataclip_ids(job_id) do
+    from(s in Step,
+      where: s.job_id == ^job_id and not is_nil(s.input_dataclip_id),
+      select: s.input_dataclip_id
+    )
+  end
+
+  defp project_id_for_job(job_id) do
+    from(j in Job,
+      join: w in Workflow,
+      on: w.id == j.workflow_id,
+      where: j.id == ^job_id,
+      select: w.project_id
+    )
   end
 
   @doc """
