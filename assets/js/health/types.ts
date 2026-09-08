@@ -44,12 +44,17 @@ export interface Outcomes {
  * One row of the triage table: the parts of an error signature and
  * the number of work orders that carry it. `step_name` and `adaptor` are null
  * for a work order whose run failed before reaching a step, or never ran at
- * all; `error_type` is null when nothing reported one.
+ * all; `error_type` is null when nothing reported one. `job_id` is the same
+ * story as `step_name`/`adaptor` — null for a run-level row and for a
+ * rejected one — but it is the key the history filter matches on, since
+ * matching on the resolved name would need a snapshot lookup the filter
+ * doesn't do.
  */
 export interface FailureSignature {
   count: number;
   exit_reason: string;
   error_type: string | null;
+  job_id: string | null;
   step_name: string | null;
   adaptor: string | null;
 }

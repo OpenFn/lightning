@@ -49,7 +49,9 @@ and this project adheres to
 - A workflow health page at `/projects/:project_id/w/:workflow_id/health`,
   summarising one workflow over a selectable window (last 24 hours, 7 days, or
   30 days): a donut of work order outcomes, a breakdown of the failing ones, and
-  a triage table grouping failures by error signature, heaviest first. The page
+  a triage table grouping failures by error signature, heaviest first. Each row
+  has a View button linking to the history page filtered to just the work orders
+  behind it, where the existing "retry all" can retry the group. The page
   refreshes itself as that workflow's work orders settle, at most once every 30
   seconds. Reachable from the workflows list via a "Health" link in each row's
   Actions column.

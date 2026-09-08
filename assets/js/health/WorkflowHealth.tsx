@@ -125,6 +125,9 @@ export const HealthContent = ({
             <TriageTable
               signatures={signatures}
               emptyMessage={emptyMessage(window, 'failures')}
+              projectId={projectId}
+              workflowId={workflowId}
+              from={window.from}
             />
           )}
         </Panel>

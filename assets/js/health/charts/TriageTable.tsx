@@ -1,11 +1,12 @@
 import type { FailureSignature } from '../types';
 
 /**
- * Failed work orders grouped by error signature, heaviest first.
- *
- * Purely informational — there is nothing to act on here, so no row is a link
- * or a control. The signature grammar is:
- * `exitReason:errorType [@ stepName [adaptor@version]]`.
+ * Failed work orders grouped by error signature, heaviest first. Each row
+ * links to the history page filtered to the work orders it counts, where the
+ * existing "retry all" can act on the group. The signature grammar is:
+ * `exitReason:errorType [@ stepName [adaptor]]` — the adaptor renders without
+ * its version, since a merged row can span more than one (see `job_id` on
+ * `FailureSignature`).
  */
 
 // One sentence per error type the worker can report, written to hold
@@ -61,19 +62,27 @@ const TIPS: Record<string, string> = {
 interface TriageTableProps {
   signatures: FailureSignature[];
   emptyMessage: string;
+  projectId: string;
+  workflowId: string;
+  /** `window.from` off the same response — the picked range's start. */
+  from: string;
 }
 
-export const TriageTable = ({ signatures, emptyMessage }: TriageTableProps) => {
+export const TriageTable = ({
+  signatures,
+  emptyMessage,
+  projectId,
+  workflowId,
+  from,
+}: TriageTableProps) => {
   if (signatures.length === 0) {
     return <p className="text-sm text-gray-500">{emptyMessage}</p>;
   }
 
   return (
-    // A rename forks a job's history into a signature per name, so a long-lived
-    // workflow can list far more rows than it has ways of breaking. Capped in
-    // height rather than in rows: the tail is still worth reading, just not
-    // worth pushing the rest of the page down for. `max-h` over a row count so
-    // a short list keeps the card short.
+    // Capped in height rather than in rows: the tail is still worth reading,
+    // just not worth pushing the rest of the page down for. `max-h` over a
+    // row count so a short list keeps the card short.
     <div className="max-h-96 overflow-y-auto">
       <table className="w-full text-left text-sm">
         <thead className="sticky top-0 bg-white">
@@ -84,16 +93,22 @@ export const TriageTable = ({ signatures, emptyMessage }: TriageTableProps) => {
             <th scope="col" className="py-2 font-medium">
               Signature
             </th>
+            <th scope="col" className="w-16 py-2 pl-4 font-medium">
+              <span className="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           {signatures.map(signature => (
+            // job_id joins the key: a job deleted and recreated with the same
+            // name reads as two identical-looking signatures otherwise.
             <tr
               key={[
                 signature.exit_reason,
                 signature.error_type,
                 signature.step_name,
                 signature.adaptor,
+                signature.job_id,
               ].join('|')}
               className="border-b border-gray-100 align-top last:border-0"
             >
@@ -107,12 +122,81 @@ export const TriageTable = ({ signatures, emptyMessage }: TriageTableProps) => {
                   <span className="text-gray-600">{tipFor(signature)}</span>
                 </p>
               </td>
+              <td className="py-3 pl-4 text-right">
+                <ViewButton
+                  signature={signature}
+                  projectId={projectId}
+                  workflowId={workflowId}
+                  from={from}
+                />
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
+};
+
+/**
+ * Lands on history filtered to exactly the work orders this row counts, where
+ * the existing "retry all" can act on the group. Not labelled with the row's
+ * count — the filter re-derives the count on every load, so the number moves.
+ *
+ * Nothing to link on a row whose `exit_reason` never resolved — that leaves
+ * neither a step nor a mappable run state to filter history on.
+ */
+const ViewButton = ({
+  signature,
+  projectId,
+  workflowId,
+  from,
+}: {
+  signature: FailureSignature;
+  projectId: string;
+  workflowId: string;
+  from: string;
+}) => {
+  if (!signature.exit_reason) return null;
+
+  return (
+    <a
+      href={historyUrl(projectId, workflowId, from, signature)}
+      className="whitespace-nowrap text-sm font-medium text-primary-600 hover:text-primary-700"
+    >
+      View
+    </a>
+  );
+};
+
+// A rejected work order never got a run, so the signature filter would fail
+// closed on it server-side — history's existing `rejected` status filter is
+// what actually matches these. `to_signature/2` gives every rejected row the
+// same literal `exit_reason: "rejected"`, so that is the signal to switch.
+const historyUrl = (
+  projectId: string,
+  workflowId: string,
+  from: string,
+  signature: FailureSignature
+) => {
+  const params = new URLSearchParams({
+    'filters[workflow_id]': workflowId,
+    'filters[date_after]': from,
+  });
+
+  if (signature.exit_reason === 'rejected') {
+    params.set('filters[rejected]', 'true');
+  } else {
+    params.set('filters[exit_reason]', signature.exit_reason);
+    if (signature.error_type) {
+      params.set('filters[error_type]', signature.error_type);
+    }
+    if (signature.job_id) {
+      params.set('filters[job_id]', signature.job_id);
+    }
+  }
+
+  return `/projects/${projectId}/history?${params.toString()}`;
 };
 
 // The parts are styled apart rather than concatenated server-side: the error
@@ -123,10 +207,24 @@ const Signature = ({ signature }: { signature: FailureSignature }) => (
     <span className="font-semibold">{errorTypeOf(signature)}</span>
     {signature.step_name && <span> @ {signature.step_name}</span>}
     {signature.adaptor && (
-      <span className="text-gray-500"> [{signature.adaptor}]</span>
+      <span className="text-gray-500">
+        {' '}
+        [{packageNameOf(signature.adaptor)}]
+      </span>
     )}
   </p>
 );
+
+// A row is keyed and labelled by `job_id`, not by (job_id, adaptor) — see
+// "Why `job_id`" in the plan — so a row spanning an adaptor bump mid-window is
+// labelled from its newest failing snapshot. Rendering that snapshot's version
+// would head older failures with a version that isn't theirs, so only the
+// package name renders. Strips everything from the last '@' that isn't the
+// scope's leading one, so a scoped package's own '@' survives.
+const packageNameOf = (adaptor: string) => {
+  const lastAt = adaptor.lastIndexOf('@');
+  return lastAt > 0 ? adaptor.slice(0, lastAt) : adaptor;
+};
 
 // A step can finish without reporting a type, and a worker can report one as an
 // empty string. The signature still has to say something, and `default` is the

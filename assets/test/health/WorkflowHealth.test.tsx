@@ -25,6 +25,7 @@ const failureSignatures = {
       count: 98,
       exit_reason: 'fail',
       error_type: 'RuntimeError',
+      job_id: 'a1b2c3d4-0000-0000-0000-000000000000',
       step_name: 'Map-beneficiary',
       adaptor: '@openfn/language-common@2.0.0',
     },
