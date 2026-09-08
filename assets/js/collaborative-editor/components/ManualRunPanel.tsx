@@ -293,6 +293,8 @@ export function ManualRunPanel({
   useEffect(() => {
     if (!dataclipJobId) return;
 
+    let cancelled = false;
+
     const fetchDataclips = async () => {
       try {
         const response = await dataclipApi.searchDataclips(
@@ -301,6 +303,8 @@ export function ManualRunPanel({
           '',
           {}
         );
+        if (cancelled) return;
+
         setDataclips(response.data);
         setNextCronRunDataclipId(response.next_cron_run_dataclip_id);
         setCanEditDataclip(response.can_edit_dataclip);
@@ -308,10 +312,9 @@ export function ManualRunPanel({
         // A sandbox started from a run's data arrives with that dataclip named
         // in the URL, so it opens ready to run rather than merely holding it.
         //
-        // Honoured once per mount, tracked here rather than by clearing the
-        // param: rewriting the URL to record it would either drop the other
-        // params or add a history entry, and re-honouring it on every refetch
-        // would undo a deliberate deselection.
+        // Honoured once per mount, then dropped from the URL so reopening the
+        // panel on another job cannot silently select it again. Clearing costs
+        // one history entry, which is the lesser of the two.
         const requestedId = params['dataclip'];
 
         if (
@@ -365,6 +368,10 @@ export function ManualRunPanel({
     };
 
     void fetchDataclips();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, dataclipJobId, followedRunId, params['dataclip']]);
 

@@ -343,6 +343,90 @@ describe('EditInSandboxPicker', () => {
       expect(await screen.findByTestId('review-body')).toHaveValue('{"a":1}');
     });
 
+    test('does not strand the button when the dialog closes mid-fetch', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+
+      let release: (v: {
+        dataclip: { id: string; wiped_at: null };
+      }) => void = () => {};
+      getRunDataclipMock.mockReturnValue(
+        new Promise(resolve => {
+          release = resolve;
+        })
+      );
+
+      const { rerender } = renderPicker(
+        <EditInSandboxPicker isOpen onClose={() => {}} />
+      );
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      rerender(<EditInSandboxPicker isOpen={false} onClose={() => {}} />);
+      rerender(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      release({ dataclip: { id: 'dc-1', wiped_at: null } });
+
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+
+      // A reply that lost its race must not leave the button latched on
+      // "Loading..." for the rest of the page's life.
+      await waitFor(() => {
+        expect(screen.getByTestId('create-sandbox-button')).toBeEnabled();
+      });
+      expect(screen.getByTestId('create-sandbox-button')).not.toHaveTextContent(
+        'Loading'
+      );
+    });
+
+    test("never shows one run's body for another run", async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'aaaaaa000000',
+        steps: [{ input_dataclip_id: 'dc-a', job_id: 'job-1' }],
+      };
+      getDataclipBodyMock.mockResolvedValue('{"from":"run-a"}');
+
+      const { rerender } = renderPicker(
+        <EditInSandboxPicker isOpen onClose={() => {}} />
+      );
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+      expect(await screen.findByTestId('review-body')).toHaveValue(
+        '{"from":"run-a"}'
+      );
+
+      // The run changes under the open dialog, which Back/Forward does.
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      activeRun = {
+        id: 'bbbbbb000000',
+        steps: [{ input_dataclip_id: 'dc-b', job_id: 'job-1' }],
+      };
+      getDataclipBodyMock.mockResolvedValue('{"from":"run-b"}');
+      rerender(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      // Run A's body belongs to run A. Showing it here would ship it as B's.
+      expect(await screen.findByTestId('review-body')).toHaveValue(
+        '{"from":"run-b"}'
+      );
+    });
+
     test('says nothing was kept when the run has no input to copy', async () => {
       const user = userEvent.setup();
       activeRun = {

@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from '@headlessui/react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
@@ -36,6 +36,14 @@ import type { Sandbox } from '../types/workflow';
 
 type StartChoice = 'nothing' | 'run' | 'saved';
 type Step = 'choose' | 'review';
+
+// The run's input, and which run it came from. A body that belongs to another
+// run is not this run's body, so it can never be shown or sent as one.
+type RunReview =
+  | { status: 'idle' }
+  | { status: 'loading'; runId: string }
+  | { status: 'ready'; runId: string; body: string }
+  | { status: 'missing'; runId: string };
 
 interface EditInSandboxPickerProps {
   isOpen: boolean;
@@ -161,8 +169,7 @@ function SandboxRow({
   );
 }
 
-// Three placeholder rows shown while the sandbox list loads. Mirrors the shape
-// of a real row (colour tile + two text lines) so the layout doesn't jump.
+// A single "start with" choice: radio, label, and a line saying what it means.
 function StartOption({
   value,
   checked,
@@ -291,6 +298,7 @@ function SavedInputList({
   );
 }
 
+// Three placeholder rows shown while the sandbox list loads.
 function SandboxListSkeleton() {
   return (
     <ul className="mt-3 space-y-1" data-testid="sandbox-list-loading">
@@ -309,6 +317,11 @@ function SandboxListSkeleton() {
       ))}
     </ul>
   );
+}
+
+// A reply is only allowed to land on the request that asked for it.
+function stillLoading(current: RunReview, runId: string): boolean {
+  return current.status === 'loading' && current.runId === runId;
 }
 
 function createButtonLabel({
@@ -395,12 +408,12 @@ export function EditInSandboxPicker({
   const [sandboxes, setSandboxes] = useState<Sandbox[]>([]);
   const [startWith, setStartWith] = useState<StartChoice>('nothing');
   const [step, setStep] = useState<Step>('choose');
-  const [reviewBody, setReviewBody] = useState('');
   const [reviewError, setReviewError] = useState<string | null>(null);
-  const [isLoadingBody, setIsLoadingBody] = useState(false);
-  const [runInputMissing, setRunInputMissing] = useState(false);
-  const [hasLoadedBody, setHasLoadedBody] = useState(false);
-  const runFetchTokenRef = useRef<string | null>(null);
+  // One value rather than four booleans and a token. Each state carries the run
+  // it belongs to, so a run swap invalidates it by construction and there is
+  // nothing to remember to reset. Four rounds of review found bugs in the
+  // previous shape, every one of them a flag left out of a reset.
+  const [review, setReview] = useState<RunReview>({ status: 'idle' });
   const [savedDataclipId, setSavedDataclipId] = useState<string | null>(null);
 
   const activeRun = useActiveRun();
@@ -423,6 +436,12 @@ export function EditInSandboxPicker({
   const runInputDataclipId = activeRun?.steps?.[0]?.input_dataclip_id ?? null;
   const runStepJobId = activeRun?.steps?.[0]?.job_id ?? null;
 
+  const reviewBody = review.status === 'ready' ? review.body : '';
+  const isLoadingBody = review.status === 'loading';
+  const forThisRun = review.status !== 'idle' && review.runId === activeRun?.id;
+  const hasLoadedBody = review.status === 'ready' && forThisRun;
+  const runInputMissing = review.status === 'missing' && forThisRun;
+
   // Everything the fetch needs. Without all of it the choice could only create
   // an empty sandbox while reporting success.
   const canStartFromRun =
@@ -440,12 +459,9 @@ export function EditInSandboxPicker({
     setSandboxes([]);
     setStartWith('nothing');
     setStep('choose');
-    setReviewBody('');
     setReviewError(null);
-    setRunInputMissing(false);
-    setHasLoadedBody(false);
+    setReview({ status: 'idle' });
     setSavedDataclipId(null);
-    runFetchTokenRef.current = null;
 
     const load = async () => {
       try {
@@ -538,10 +554,6 @@ export function EditInSandboxPicker({
     // body somewhere the person cannot reach or send.
     setStartWith('nothing');
     setStep('choose');
-    setReviewBody('');
-    setHasLoadedBody(false);
-    setRunInputMissing(false);
-    runFetchTokenRef.current = null;
   }, [canStartFromRun, startWith]);
 
   const handleCreate = useCallback(
@@ -601,50 +613,49 @@ export function EditInSandboxPicker({
     // before the loading flag is set, since this path never clears it.
     setReviewError(null);
 
+    // Already reviewed this run: keep it, or Back then Continue would restore
+    // the production body the person had just redacted.
     if (hasLoadedBody) {
       setStep('review');
       return;
     }
 
-    setIsLoadingBody(true);
+    const runId = activeRun.id;
+    setReview({ status: 'loading', runId });
 
     // Whether the input was kept is the dataclip's own answer. Inferring it from
     // the body does not work: a wiped http_request still serves a JSON object,
     // `{"data": null, "request": null}`, which reads as perfectly good data.
-    // Guarded like the other fetches here: closing the dialog, or losing the
-    // run, must not be undone by a reply that was already in flight.
-    const requestedRunId = activeRun.id;
-    runFetchTokenRef.current = requestedRunId;
-
-    void getRunDataclip(project.id, activeRun.id, runStepJobId)
+    void getRunDataclip(project.id, runId, runStepJobId)
       .then(async ({ dataclip }) => {
-        if (runFetchTokenRef.current !== requestedRunId) return;
-
         if (!dataclip || dataclip.wiped_at) {
-          setRunInputMissing(true);
+          setReview(current =>
+            stillLoading(current, runId)
+              ? { status: 'missing', runId }
+              : current
+          );
           return;
         }
 
         const body = await getDataclipBody(dataclip.id);
 
-        if (runFetchTokenRef.current !== requestedRunId) return;
-
-        setReviewBody(body);
-        setHasLoadedBody(true);
-        setStep('review');
-      })
-      .catch(() => {
-        if (runFetchTokenRef.current !== requestedRunId) return;
-
-        notifications.alert({
-          title: "Could not load this run's input",
-          description: 'Please try again.',
+        setReview(current => {
+          if (!stillLoading(current, runId)) return current;
+          setStep('review');
+          return { status: 'ready', runId, body };
         });
       })
-      .finally(() => {
-        if (runFetchTokenRef.current === requestedRunId) {
-          setIsLoadingBody(false);
-        }
+      .catch(() => {
+        setReview(current => {
+          if (!stillLoading(current, runId)) return current;
+
+          notifications.alert({
+            title: "Could not load this run's input",
+            description: 'Please try again.',
+          });
+
+          return { status: 'idle' };
+        });
       });
   }, [
     startWith,
@@ -749,7 +760,13 @@ export function EditInSandboxPicker({
                   data-testid="review-body"
                   value={reviewBody}
                   onChange={event => {
-                    setReviewBody(event.target.value);
+                    const { value } = event.target;
+
+                    setReview(current =>
+                      current.status === 'ready'
+                        ? { ...current, body: value }
+                        : current
+                    );
                     setReviewError(null);
                   }}
                   spellCheck={false}
