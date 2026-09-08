@@ -321,12 +321,14 @@ export function ManualRunPanel({
           !selectedDataclipRef.current &&
           !manuallyUnselected
         ) {
+          // Spent on the attempt, not on the hit. Retrying on a later fetch
+          // would yank the panel onto this dataclip after the person had moved
+          // to a custom body, mid-run.
+          honouredDataclipRef.current = true;
+
           const requested = response.data.find(d => d.id === requestedId);
 
           if (requested) {
-            // Flagged only on a hit, so a dataclip that has dropped off this
-            // page can still be picked up by a later fetch.
-            honouredDataclipRef.current = true;
             setSelectedDataclip(requested);
             setSelectedTab('existing');
             // Returned before the cron block below, which reads a ref that is
@@ -363,7 +365,13 @@ export function ManualRunPanel({
 
     void fetchDataclips();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, dataclipJobId, followedRunId, params['dataclip']]);
+  }, [
+    projectId,
+    dataclipJobId,
+    followedRunId,
+    params['dataclip'],
+    disableAutoSelection,
+  ]);
 
   const buildFilters = useCallback(() => {
     const filters: Record<string, string> = {};

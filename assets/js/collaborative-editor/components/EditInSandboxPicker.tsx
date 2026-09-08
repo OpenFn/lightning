@@ -399,6 +399,7 @@ export function EditInSandboxPicker({
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [isLoadingBody, setIsLoadingBody] = useState(false);
   const [runInputMissing, setRunInputMissing] = useState(false);
+  const [hasLoadedBody, setHasLoadedBody] = useState(false);
   const [savedDataclipId, setSavedDataclipId] = useState<string | null>(null);
 
   const activeRun = useActiveRun();
@@ -528,9 +529,15 @@ export function EditInSandboxPicker({
     runVersionNumber !== latestVersionNumber;
 
   useEffect(() => {
-    if (!canStartFromRun && startWith === 'run') {
-      setStartWith('nothing');
-    }
+    if (canStartFromRun || startWith !== 'run') return;
+
+    // The run went away. Leaving the review step behind would strand a redacted
+    // body somewhere the person cannot reach or send.
+    setStartWith('nothing');
+    setStep('choose');
+    setReviewBody('');
+    setHasLoadedBody(false);
+    setRunInputMissing(false);
   }, [canStartFromRun, startWith]);
 
   const handleCreate = useCallback(
@@ -585,15 +592,16 @@ export function EditInSandboxPicker({
       return;
     }
 
-    setIsLoadingBody(true);
-    setReviewError(null);
-
     // Already reviewed: keep what the person has, or Back then Continue would
-    // quietly restore the production body they had just redacted.
-    if (reviewBody !== '') {
+    // quietly restore the production body they had just redacted. Checked
+    // before the loading flag is set, since this path never clears it.
+    if (hasLoadedBody) {
       setStep('review');
       return;
     }
+
+    setIsLoadingBody(true);
+    setReviewError(null);
 
     // Whether the input was kept is the dataclip's own answer. Inferring it from
     // the body does not work: a wiped http_request still serves a JSON object,
@@ -606,6 +614,7 @@ export function EditInSandboxPicker({
         }
 
         setReviewBody(await getDataclipBody(dataclip.id));
+        setHasLoadedBody(true);
         setStep('review');
       })
       .catch(() => {
@@ -622,7 +631,7 @@ export function EditInSandboxPicker({
     savedDataclipId,
     canStartFromRun,
     handleCreate,
-    reviewBody,
+    hasLoadedBody,
     project?.id,
     activeRun,
     runStepJobId,

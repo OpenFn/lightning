@@ -49,6 +49,7 @@ adaptor_registry_cache.json
 
 # Ignore credential schemas.
 /priv/schemas/
+/priv/schemas
 
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log

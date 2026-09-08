@@ -252,6 +252,62 @@ describe('EditInSandboxPicker', () => {
       );
     });
 
+    test('stays usable after Back and Continue', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+      getDataclipBodyMock.mockResolvedValue('{"a":1}');
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+      await screen.findByTestId('review-body');
+
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+      await screen.findByTestId('review-body');
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+
+      // Back is what a rejected name tells the person to do, so the button has
+      // to survive the round trip rather than stick on "Loading...".
+      const submit = screen.getByTestId('create-sandbox-button');
+      expect(submit).toBeEnabled();
+      expect(submit).not.toHaveTextContent('Loading');
+    });
+
+    test('keeps an emptied body across Back and Continue', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+      getDataclipBodyMock.mockResolvedValue('{"email":"real@example.com"}');
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      // Clearing it is a redaction. Treating an empty box as "not loaded yet"
+      // hands the production body straight back.
+      await user.clear(await screen.findByTestId('review-body'));
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      expect(await screen.findByTestId('review-body')).toHaveValue('');
+    });
+
     test('says nothing was kept when the run has no input to copy', async () => {
       const user = userEvent.setup();
       activeRun = {
