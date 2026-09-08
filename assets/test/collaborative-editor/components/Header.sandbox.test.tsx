@@ -209,9 +209,10 @@ describe('Header - Edit in sandbox button gating', () => {
     renderHeader({ isSandbox: false });
     const button = screen.getByTestId('edit-in-sandbox-button');
     expect(button).toBeEnabled();
-    // No tooltip wrapper: the Tooltip renders bare children when content is null,
-    // so the Radix trigger attribute is absent when provisioning is allowed.
+    // The Tooltip renders bare children when content is null, so nothing here
+    // is a Radix trigger when provisioning is allowed.
     expect(button).not.toHaveAttribute('data-state');
+    expect(button.parentElement).not.toHaveAttribute('data-state');
   });
 
   test('renders the button disabled and tooltip-wrapped when provisioning is not allowed', () => {
@@ -220,9 +221,9 @@ describe('Header - Edit in sandbox button gating', () => {
 
     const button = screen.getByTestId('edit-in-sandbox-button');
     expect(button).toBeDisabled();
-    // The disabled button is wrapped in the shared Tooltip, so Radix marks it as
-    // a trigger with a data-state attribute.
-    expect(button).toHaveAttribute('data-state');
+    // A disabled button dispatches no pointer events, so the Radix trigger has
+    // to be the wrapper around it rather than the button itself.
+    expect(button.parentElement).toHaveAttribute('data-state');
   });
 
   test('hides the button when the workflow is in draft', () => {

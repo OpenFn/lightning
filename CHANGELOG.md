@@ -18,15 +18,15 @@ and this project adheres to
 ### Changed
 
 - The sandbox and lifecycle buttons in the editor use the shared button
-  component rather than six hand-rolled copies of the same classes, and the
+  component rather than seven hand-rolled copies of the same classes, and the
   Edit-in-sandbox dialog says what a sandbox is once instead of three times.
   [#4991](https://github.com/OpenFn/lightning/issues/4991),
   [#4992](https://github.com/OpenFn/lightning/issues/4992)
 
-- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising
-  the first character of a string, which breaks names in many languages.
-  Lightning does not normalise anything today, but #4577 adds it on every name,
-  so the runtime moves first.
+- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
+  first character of a string, which breaks names in many languages. Lightning
+  does not normalise anything today, but #4577 adds it on every name, so the
+  runtime moves first.
 
 ### Added
 
@@ -76,8 +76,7 @@ and this project adheres to
   place, with add, edit, delete and copy on the row itself. A path already used
   by another workflow in the project is reported while you type, not after you
   save. A path the server would reject shows what is wrong and is left as you
-  typed it.
-  [#4952](https://github.com/OpenFn/lightning/issues/4952)
+  typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
 
 ### Fixed
 
@@ -106,17 +105,17 @@ and this project adheres to
 - AI assistant code blocks share the surface the workflow diffs use, so a reply
   and the diff below it no longer read as two different products.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
-- A global assistant reply whose changes could not be applied now says so on
-  the reply itself, beside the diffs that did not land, and offers to try
-  again. It used to fall back to a raw YAML panel.
+- A global assistant reply whose changes could not be applied now says so on the
+  reply itself, beside the diffs that did not land, and offers to try again. It
+  used to fall back to a raw YAML panel.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
-- A failed apply is now remembered, so reloading no longer turns it back into
-  a success. The reply kept its diff blocks and offered to undo changes that
-  had never landed. A retry that works clears the record.
+- A failed apply is now remembered, so reloading no longer turns it back into a
+  success. The reply kept its diff blocks and offered to undo changes that had
+  never landed. A retry that works clears the record.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
 - Editing an open step with the global assistant no longer puts a diff in the
-  code editor. The change is already applied, so the diff read as a proposal
-  to accept or reject when the only control was a close button, and reloading
+  code editor. The change is already applied, so the diff read as a proposal to
+  accept or reject when the only control was a close button, and reloading
   revealed the change had been written all along.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
 
@@ -714,8 +713,7 @@ Migrations in this release, all in `priv/repo/migrations/`:
   archive the sandbox or keep it to promote more related workflows first. A
   non-live workflow can have a trigger turned on for testing behind a warning,
   and live (read-only) workflows no longer show run or edit actions that cannot
-  be used there.
-  [#5005](https://github.com/OpenFn/lightning/pull/5005)
+  be used there. [#5005](https://github.com/OpenFn/lightning/pull/5005)
 - Record a version each time a workflow goes live or is promoted. Every publish
   now writes a release row carrying a sequential version number, the snapshot it
   published, who published it and, for a promote, the sandbox it came from.

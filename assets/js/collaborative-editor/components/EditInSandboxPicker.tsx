@@ -12,7 +12,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
-import { Button } from './Button';
 import { useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import {
@@ -21,6 +20,8 @@ import {
 } from '../lib/errors';
 import { notifications } from '../lib/notifications';
 import type { Sandbox } from '../types/workflow';
+
+import { Button } from './Button';
 
 interface EditInSandboxPickerProps {
   isOpen: boolean;

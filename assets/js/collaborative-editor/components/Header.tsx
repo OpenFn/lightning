@@ -36,9 +36,9 @@ import { isFinalState } from '../types/history';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
-import { Button } from './Button';
 import { AlertDialog } from './AlertDialog';
 import { Breadcrumbs } from './Breadcrumbs';
+import { Button } from './Button';
 import { EditInSandboxPicker } from './EditInSandboxPicker';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
@@ -85,15 +85,17 @@ export function SaveButton({
             }
             side="bottom"
           >
-            <Button
-              data-testid="save-workflow-button"
-              className="phx-submit-loading:opacity-75 cursor-pointer
-                focus:ring-transparent"
-              onClick={onClick}
-              disabled={!canSave}
-            >
-              {label}
-            </Button>
+            <span className="inline-block">
+              <Button
+                data-testid="save-workflow-button"
+                className="phx-submit-loading:opacity-75 cursor-pointer
+                  focus:ring-transparent"
+                onClick={onClick}
+                disabled={!canSave}
+              >
+                {label}
+              </Button>
+            </span>
           </Tooltip>
         </div>
         {hasChanges ? (
@@ -115,15 +117,17 @@ export function SaveButton({
           }
           side="bottom"
         >
-          <Button
-            data-testid="save-workflow-button"
-            className="rounded-r-none phx-submit-loading:opacity-75
-              cursor-pointer focus:ring-transparent"
-            onClick={onClick}
-            disabled={!canSave}
-          >
-            {label}
-          </Button>
+          <span className="inline-block">
+            <Button
+              data-testid="save-workflow-button"
+              className="rounded-r-none phx-submit-loading:opacity-75
+                cursor-pointer focus:ring-transparent"
+              onClick={onClick}
+              disabled={!canSave}
+            >
+              {label}
+            </Button>
+          </span>
         </Tooltip>
         <Menu as="div" className="relative -ml-px block">
           <MenuButton
@@ -623,26 +627,28 @@ export function Header({
                     }
                     side="bottom"
                   >
-                    <Button
-                      data-testid="go-live-button"
-                      className="inline-flex items-center"
-                      disabled={isReadOnly || isTransitioning}
-                      onClick={() => {
-                        setIsTransitioning(true);
-                        void goLive()
-                          .catch(() =>
-                            notifications.alert({
-                              title: 'Could not go live',
-                              description: 'Please try again.',
-                            })
-                          )
-                          .finally(() => {
-                            setIsTransitioning(false);
-                          });
-                      }}
-                    >
-                      Go live
-                    </Button>
+                    <span className="inline-block">
+                      <Button
+                        data-testid="go-live-button"
+                        className="inline-flex items-center"
+                        disabled={isReadOnly || isTransitioning}
+                        onClick={() => {
+                          setIsTransitioning(true);
+                          void goLive()
+                            .catch(() =>
+                              notifications.alert({
+                                title: 'Could not go live',
+                                description: 'Please try again.',
+                              })
+                            )
+                            .finally(() => {
+                              setIsTransitioning(false);
+                            });
+                        }}
+                      >
+                        Go live
+                      </Button>
+                    </span>
                   </Tooltip>
                 )}
               {!isNewWorkflow &&
@@ -652,7 +658,8 @@ export function Header({
                   <Button
                     variant="secondary"
                     data-testid="switch-to-draft-button"
-                    className="inline-flex items-center"
+                    className="inline-flex items-center hover:bg-gray-50
+                      disabled:hover:bg-white disabled:hover:inset-ring-gray-300"
                     disabled={isTransitioning}
                     onClick={() => {
                       setShowSwitchToDraftDialog(true);
@@ -684,17 +691,19 @@ export function Header({
                     }
                     side="bottom"
                   >
-                    <Button
-                      data-testid="edit-in-sandbox-button"
-                      className="inline-flex items-center"
-                      disabled={!canProvisionSandbox}
-                      onClick={() => {
-                        if (!canProvisionSandbox) return;
-                        setShowEditInSandboxPicker(true);
-                      }}
-                    >
-                      Edit in sandbox
-                    </Button>
+                    <span className="inline-block">
+                      <Button
+                        data-testid="edit-in-sandbox-button"
+                        className="inline-flex items-center"
+                        disabled={!canProvisionSandbox}
+                        onClick={() => {
+                          if (!canProvisionSandbox) return;
+                          setShowEditInSandboxPicker(true);
+                        }}
+                      >
+                        Edit in sandbox
+                      </Button>
+                    </span>
                   </Tooltip>
                 )}
               {projectId && workflowId && firstTriggerId && !isReadOnly && (

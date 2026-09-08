@@ -17,7 +17,8 @@ interface ButtonProps
  *
  * Forwards its ref and any remaining props to the element, so it can be used
  * as a Radix trigger. Without that, a wrapper's `data-state` and handlers are
- * silently dropped and the tooltip never wires up.
+ * silently dropped. A tooltip on a button that can be disabled still needs a
+ * wrapping element to listen on, because a disabled button dispatches nothing.
  *
  * @example
  * <Button variant="danger" onClick={handleDelete}>
