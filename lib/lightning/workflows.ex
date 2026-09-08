@@ -371,13 +371,9 @@ defmodule Lightning.Workflows do
       changes |> Map.get(:triggers, []) |> Enum.all?(&enabled_only_change?/1)
   end
 
-  defp unmergeable_change_only?(_not_a_changeset), do: false
-
   defp enabled_only_change?(%Ecto.Changeset{changes: changes}) do
     changes |> Map.keys() |> Enum.all?(&(&1 == :enabled))
   end
-
-  defp enabled_only_change?(_not_a_changeset), do: false
 
   # Records a go-live release in the same transaction as the snapshot, when the
   # caller (go_live/2 or the collaborative go-live path) asks for it. The release
