@@ -306,15 +306,23 @@ export function ManualRunPanel({
 
         // A sandbox started from a run's data arrives with that dataclip named
         // in the URL, so it opens ready to run rather than merely holding it.
+        // Honoured once: the param is dropped afterwards, or every refetch
+        // would undo a deliberate deselection.
         const requestedId = params['dataclip'];
 
-        if (requestedId && !selectedDataclipRef.current) {
+        if (
+          requestedId &&
+          !selectedDataclipRef.current &&
+          !manuallyUnselected
+        ) {
           const requested = response.data.find(d => d.id === requestedId);
 
           if (requested) {
             setSelectedDataclip(requested);
             setSelectedTab('existing');
           }
+
+          updateSearchParams({ dataclip: null });
         }
 
         // Auto-select next cron run dataclip only if:

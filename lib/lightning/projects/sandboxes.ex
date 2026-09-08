@@ -160,24 +160,79 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
+  @doc """
+  Whether every id names a dataclip this parent can copy into a sandbox.
+
+  `provision/3` drops ineligible ids silently, which suits a bulk selection but
+  not a caller offering one deliberate choice: that caller wants to say why
+  nothing arrived.
+  """
+  @spec copyable_dataclips?(Project.t(), [Ecto.UUID.t()]) :: boolean()
+  def copyable_dataclips?(%Project{} = parent, ids) when is_list(ids) do
+    Enum.all?(ids, &valid_uuid?/1) and
+      eligible_dataclip_count(parent.id, ids) == length(Enum.uniq(ids))
+  end
+
+  defp valid_uuid?(value) when is_binary(value) do
+    match?({:ok, _}, Ecto.UUID.cast(value))
+  end
+
+  defp valid_uuid?(_value), do: false
+
+  defp eligible_dataclip_count(parent_id, ids) do
+    from(dataclip in Dataclip,
+      where:
+        dataclip.project_id == ^parent_id and dataclip.id in ^ids and
+          dataclip.type in ^@allowed_dataclip_types and
+          not is_nil(dataclip.name) and is_nil(dataclip.wiped_at)
+    )
+    |> Repo.aggregate(:count)
+  end
+
   defp cast_starting_dataclip(attrs) do
     case Map.get(attrs, :starting_dataclip) do
       nil ->
         {:ok, attrs}
 
       %{} = starting ->
-        with {:ok, body} <- decode_dataclip_body(Map.get(starting, :body)) do
-          {:ok,
-           Map.put(attrs, :starting_dataclip, %{
-             body: body,
-             name: Map.get(starting, :name)
-           })}
+        with {:ok, body} <-
+               decode_dataclip_body(get_either(starting, :body)),
+             {:ok, name} <- cast_dataclip_name(get_either(starting, :name)) do
+          {:ok, Map.put(attrs, :starting_dataclip, %{body: body, name: name})}
         end
 
       _other ->
         {:error, :invalid_starting_dataclip}
     end
   end
+
+  # Accepts either key style, because this arrives from a channel as strings and
+  # from Elixir callers as atoms.
+  defp get_either(map, key) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  # Never nameless. Retention only wipes unnamed dataclips, and the input picker
+  # only offers named ones project-wide, so an unnamed one would be invisible
+  # and short-lived: the feature would appear to do nothing.
+  @starting_dataclip_fallback_name "Reviewed input"
+
+  defp cast_dataclip_name(nil), do: {:ok, @starting_dataclip_fallback_name}
+
+  defp cast_dataclip_name(name) when is_binary(name) do
+    case String.trim(name) do
+      "" ->
+        {:ok, @starting_dataclip_fallback_name}
+
+      trimmed when byte_size(trimmed) > 255 ->
+        {:error, :invalid_starting_dataclip}
+
+      trimmed ->
+        {:ok, trimmed}
+    end
+  end
+
+  defp cast_dataclip_name(_name), do: {:error, :invalid_starting_dataclip}
 
   defp decode_dataclip_body(body) when is_binary(body) do
     if byte_size(body) > Lightning.Config.max_dataclip_size_bytes() do
@@ -1513,7 +1568,7 @@ defmodule Lightning.Projects.Sandboxes do
           dataclip.project_id == ^parent_id and
             dataclip.id in ^dataclip_ids and
             dataclip.type in ^@allowed_dataclip_types and
-            not is_nil(dataclip.name),
+            not is_nil(dataclip.name) and is_nil(dataclip.wiped_at),
         select: %{
           name: dataclip.name,
           body: type(dataclip.body, :map),

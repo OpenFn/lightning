@@ -2351,7 +2351,12 @@ defmodule Lightning.Projects do
   to test connections against dev systems.
   """
   @spec provision_editing_sandbox(Project.t(), User.t(), String.t(), map()) ::
-          {:ok, %{sandbox: Project.t(), workflow: Workflow.t()}}
+          {:ok,
+           %{
+             sandbox: Project.t(),
+             workflow: Workflow.t(),
+             starting_dataclip_id: Ecto.UUID.t() | nil
+           }}
           | {:error, term()}
   def provision_editing_sandbox(parent, actor, workflow_name, attrs) do
     with {:ok, sandbox} <- provision_sandbox(parent, actor, attrs) do

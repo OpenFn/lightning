@@ -601,6 +601,80 @@ defmodule LightningWeb.WorkflowChannelTest do
                |> Enum.map(& &1.name)
     end
 
+    test "refuses a saved dataclip this project cannot copy", %{
+      socket: socket
+    } do
+      elsewhere = insert(:project)
+
+      foreign =
+        insert(:dataclip,
+          project: elsewhere,
+          name: "not yours",
+          type: :saved_input,
+          body: %{"a" => 1}
+        )
+
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => foreign.id})
+      assert_reply ref, :error, %{type: "validation_error"}
+
+      refute Lightning.Repo.get_by(Lightning.Projects.Project, name: "not yours")
+    end
+
+    test "refuses an unnamed dataclip, which retention would wipe", %{
+      socket: socket,
+      project: project
+    } do
+      unnamed =
+        insert(:dataclip, project: project, name: nil, type: :saved_input)
+
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => unnamed.id})
+      assert_reply ref, :error, %{type: "validation_error"}
+    end
+
+    test "refuses a dataclip id that is not a uuid", %{socket: socket} do
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => "not-a-uuid"})
+      assert_reply ref, :error, %{type: "validation_error"}
+    end
+
+    test "names a reviewed body that arrives without one", %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => ~s({"a":1}), "name" => nil}
+        })
+
+      assert_reply ref, :ok, %{dataclip_id: dataclip_id}
+
+      # Retention wipes unnamed dataclips, and the picker only offers named ones,
+      # so an unnamed one would vanish and never be selectable.
+      dataclip = Lightning.Repo.get!(Lightning.Invocation.Dataclip, dataclip_id)
+      assert dataclip.name == "Reviewed input"
+    end
+
+    test "says what is wrong when the reviewed body is not an object", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => "[1,2]", "name" => nil}
+        })
+
+      assert_reply ref, :error, %{
+        type: "validation_error",
+        errors: %{base: [message]}
+      }
+
+      assert message =~ "JSON object"
+    end
+
+    test "refuses a reviewed body that is not a string", %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => %{"a" => 1}}
+        })
+
+      assert_reply ref, :error, %{type: "validation_error"}
+    end
+
     test "refuses a reviewed body that is not valid JSON", %{socket: socket} do
       ref =
         push(socket, "edit_in_sandbox", %{

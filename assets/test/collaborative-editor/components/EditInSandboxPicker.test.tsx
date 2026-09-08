@@ -29,11 +29,12 @@ const editInSandbox = vi.fn<
 >();
 
 let jobs: { id: string }[] = [];
+let openLockVersion: number | undefined;
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({ listSandboxes, editInSandbox }),
   useWorkflowState: (selector: (state: unknown) => unknown) =>
-    selector({ jobs }),
+    selector({ jobs, workflow: { lock_version: openLockVersion } }),
 }));
 
 let activeRun: {
@@ -45,7 +46,11 @@ vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
   useActiveRun: () => activeRun,
 }));
 
-let versions: { version_number: number }[] = [];
+let versions: {
+  version_number: number;
+  lock_version: number;
+  is_latest: boolean;
+}[] = [];
 const requestVersionsMock = vi.fn();
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
@@ -139,6 +144,7 @@ describe('EditInSandboxPicker', () => {
     activeRun = null;
     jobs = [{ id: 'job-1' }];
     versions = [];
+    openLockVersion = undefined;
     requestVersionsMock.mockReset();
     requestVersionsMock.mockResolvedValue(undefined);
   });
@@ -192,21 +198,53 @@ describe('EditInSandboxPicker', () => {
       });
     });
 
-    test('refuses to create when the reviewed body is not an object', async () => {
+    test('says nothing was kept when the run has no input to copy', async () => {
       const user = userEvent.setup();
       activeRun = {
         id: 'abcdef123456',
         steps: [{ input_dataclip_id: 'dc-1' }],
       };
-      getDataclipBodyMock.mockResolvedValue('[1,2,3]');
+      // What a zero-persistence project, or an expired retention window, leaves
+      // behind.
+      getDataclipBodyMock.mockResolvedValue('null');
 
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
-      await typeName(user);
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
 
       await user.click(screen.getByLabelText(/this run's input/i));
       await user.click(screen.getByTestId('create-sandbox-button'));
 
-      await screen.findByTestId('review-body');
+      expect(
+        await screen.findByTestId('run-input-missing')
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId('review-body')).toBeNull();
+      expect(screen.getByTestId('create-sandbox-button')).toBeDisabled();
+      expect(editInSandbox).not.toHaveBeenCalled();
+    });
+
+    test('refuses to create when the person edits the body into something invalid', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1' }],
+      };
+      getDataclipBodyMock.mockResolvedValue('{"a":1}');
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      const body = await screen.findByTestId('review-body');
+      await user.clear(body);
+      await user.type(body, '[[1,2,3]');
       await user.click(screen.getByTestId('create-from-review-button'));
 
       expect(screen.getByTestId('review-body-error')).toHaveTextContent(
@@ -215,63 +253,21 @@ describe('EditInSandboxPicker', () => {
       expect(editInSandbox).not.toHaveBeenCalled();
     });
 
-    test('says which version the sandbox will start from when the run is older', async () => {
+    test('asks for named inputs only, scoped to the project', async () => {
       const user = userEvent.setup();
-      activeRun = {
-        id: 'abcdef123456',
-        steps: [{ input_dataclip_id: 'dc-1' }],
-        version_number: 3,
-      };
-      versions = [{ version_number: 7 }];
 
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
-      await user.click(screen.getByLabelText(/this run's input/i));
-
-      expect(screen.getByTestId('version-note')).toHaveTextContent(
-        /This run used v3\./
-      );
-      expect(screen.getByTestId('version-note')).toHaveTextContent(/v7/);
-    });
-
-    test('stays quiet when the run already used the version now live', async () => {
-      const user = userEvent.setup();
-      activeRun = {
-        id: 'abcdef123456',
-        steps: [{ input_dataclip_id: 'dc-1' }],
-        version_number: 7,
-      };
-      versions = [{ version_number: 7 }];
-
-      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
-      await user.click(screen.getByLabelText(/this run's input/i));
-
-      expect(screen.queryByTestId('version-note')).toBeNull();
-    });
-
-    test('sends the chosen saved input by id', async () => {
-      const user = userEvent.setup();
-      searchDataclipsMock.mockResolvedValue({
-        data: [{ id: 'dc-saved', name: 'known good' }],
-      });
-      editInSandbox.mockResolvedValue({
-        project_id: 'p2',
-        workflow_id: 'w2',
-        dataclip_id: null,
-      });
-
-      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
-      await typeName(user);
-
       await user.click(screen.getByLabelText(/a saved input/i));
 
-      const saved = await screen.findByTestId('saved-inputs');
-      await user.click(within(saved).getByRole('radio'));
-      await user.click(screen.getByTestId('create-sandbox-button'));
-
       await waitFor(() => {
-        expect(editInSandbox).toHaveBeenCalledWith('My SB', {
-          dataclipId: 'dc-saved',
-        });
+        expect(searchDataclipsMock).toHaveBeenCalledWith(
+          'project-1',
+          'job-1',
+          '',
+          {
+            named_only: true,
+          }
+        );
       });
     });
 
@@ -512,6 +508,7 @@ describe('EditInSandboxPicker', () => {
     editInSandbox.mockResolvedValue({
       project_id: 'new-project',
       workflow_id: 'new-workflow',
+      dataclip_id: null,
     });
 
     const nav = stubNavigation();
@@ -633,6 +630,7 @@ describe('EditInSandboxPicker', () => {
     editInSandbox.mockResolvedValue({
       project_id: 'new-project',
       workflow_id: 'new-workflow',
+      dataclip_id: null,
     });
 
     const nav = stubNavigation();
@@ -700,6 +698,7 @@ describe('EditInSandboxPicker', () => {
     editInSandbox.mockResolvedValue({
       project_id: 'p',
       workflow_id: 'w',
+      dataclip_id: null,
     });
 
     const nav = stubNavigation();

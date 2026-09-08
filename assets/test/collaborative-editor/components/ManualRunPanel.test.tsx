@@ -431,6 +431,14 @@ describe('ManualRunPanel', () => {
     expect(
       await screen.findByText('Input from run abcdef')
     ).toBeInTheDocument();
+
+    // Honoured once: left in place, every refetch would undo a deliberate
+    // deselection.
+    await waitFor(() => {
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+        dataclip: null,
+      });
+    });
   });
 
   test('leaves the selection alone when the URL names a dataclip it does not have', async () => {

@@ -76,12 +76,30 @@ defmodule Lightning.Invocation do
     limit = Keyword.fetch!(opts, :limit)
     offset = Keyword.get(opts, :offset)
 
-    Query.selectable_for_job(job_id, limit)
+    Query.selectable_for_job(job_id, project_id_for_job(job_id, opts), limit)
     |> where([d], is_nil(d.wiped_at))
     |> where([d], ^dataclip_where_filter(user_filters))
     |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
     |> Repo.all()
     |> maybe_filter_uuid_prefix(user_filters)
+  end
+
+  # The project anchors the dataclip query, so callers that already know it pass
+  # it rather than making this look it up on every search keystroke.
+  defp project_id_for_job(job_id, opts) do
+    case Keyword.get(opts, :project_id) do
+      nil ->
+        from(j in Lightning.Workflows.Job,
+          join: w in Lightning.Workflows.Workflow,
+          on: w.id == j.workflow_id,
+          where: j.id == ^job_id,
+          select: w.project_id
+        )
+        |> Repo.one()
+
+      project_id ->
+        project_id
+    end
   end
 
   @spec get_dataclip_with_body!(id :: Ecto.UUID.t()) :: %{

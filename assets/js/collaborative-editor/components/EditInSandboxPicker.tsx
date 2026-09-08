@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from '@headlessui/react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
@@ -291,8 +291,9 @@ function createButtonLabel({
   return needsReview ? 'Continue' : 'Create sandbox';
 }
 
-// Checked here as well as on the server so the person is told before the
-// sandbox is attempted, not after it is refused.
+// Shape only, and checked here as well as on the server so the person is told
+// before the sandbox is attempted. Size is the server's to judge, since the
+// limit is configured there.
 function describeBodyProblem(body: string): string | null {
   try {
     const parsed: unknown = JSON.parse(body);
@@ -353,6 +354,7 @@ export function EditInSandboxPicker({
   const [reviewBody, setReviewBody] = useState('');
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [isLoadingBody, setIsLoadingBody] = useState(false);
+  const [runInputMissing, setRunInputMissing] = useState(false);
   const [savedDataclipId, setSavedDataclipId] = useState<string | null>(null);
 
   const activeRun = useActiveRun();
@@ -360,6 +362,9 @@ export function EditInSandboxPicker({
   const jobs = useWorkflowState(state => state.jobs);
   const versions = useVersions();
   const requestVersions = useRequestVersions();
+  const openLockVersion = useWorkflowState(
+    state => state.workflow?.lock_version
+  );
 
   // Any job in the project resolves the same set of named dataclips, so the
   // first one is enough to ask for them.
@@ -382,6 +387,7 @@ export function EditInSandboxPicker({
     setStep('choose');
     setReviewBody('');
     setReviewError(null);
+    setRunInputMissing(false);
     setSavedDataclipId(null);
 
     const load = async () => {
@@ -413,7 +419,7 @@ export function EditInSandboxPicker({
     let cancelled = false;
     setIsLoadingSaved(true);
 
-    void searchDataclips(project.id, anyJobId, { named_only: true })
+    void searchDataclips(project.id, anyJobId, '', { named_only: true })
       .then(({ data }) => {
         if (!cancelled) setSavedDataclips(data);
       })
@@ -435,21 +441,26 @@ export function EditInSandboxPicker({
   }, [isOpen, startWith, project?.id, anyJobId]);
 
   useEffect(() => {
-    if (!isOpen || !activeRun || versions.length > 0) return;
+    if (!isOpen || versions.length > 0) return;
 
     void requestVersions();
-  }, [isOpen, activeRun, versions.length, requestVersions]);
+  }, [isOpen, versions.length, requestVersions]);
 
-  // A sandbox always forks the current version, because promote rebuilds the
-  // parent from the sandbox and an older fork would delete the newer work. When
-  // the run came from an older version, say so rather than let it surprise.
-  const runVersionNumber = activeRun?.version_number ?? null;
-  const latestVersionNumber = versions[0]?.version_number ?? null;
+  // A sandbox always forks the version live now, because promote rebuilds the
+  // parent from the sandbox and an older fork would delete the newer work.
+  //
+  // What is on screen is the comparison that matters, whether a run pinned it
+  // or the version dropdown did, so the loaded document's snapshot is matched
+  // against the releases rather than anything read off the run.
+  const openVersionNumber =
+    versions.find(version => version.lock_version === openLockVersion)
+      ?.version_number ?? null;
+  const latestVersionNumber =
+    versions.find(version => version.is_latest)?.version_number ?? null;
   const startsFromNewerVersion =
-    startWith === 'run' &&
-    runVersionNumber !== null &&
+    openVersionNumber !== null &&
     latestVersionNumber !== null &&
-    runVersionNumber !== latestVersionNumber;
+    openVersionNumber !== latestVersionNumber;
 
   const handleCreate = useCallback(
     (start: EditInSandboxStart) => {
@@ -504,6 +515,14 @@ export function EditInSandboxPicker({
 
     void getDataclipBody(runInputDataclipId)
       .then(body => {
+        // Zero-persistence projects never keep run data, and retention wipes it
+        // later elsewhere. Either way there is nothing to review, and an empty
+        // editor followed by a validation error explains none of that.
+        if (describeBodyProblem(body)) {
+          setRunInputMissing(true);
+          return;
+        }
+
         setReviewBody(body);
         setStep('review');
       })
@@ -543,7 +562,8 @@ export function EditInSandboxPicker({
   // as-is.
   const canCreate =
     name.trim().length > 0 &&
-    (startWith !== 'saved' || savedDataclipId !== null);
+    (startWith !== 'saved' || savedDataclipId !== null) &&
+    !(startWith === 'run' && runInputMissing);
 
   return (
     <Dialog
@@ -625,8 +645,8 @@ export function EditInSandboxPicker({
                     className="mt-3 text-xs text-gray-500"
                     data-testid="review-version-note"
                   >
-                    This run used v{runVersionNumber}. The sandbox starts from v
-                    {latestVersionNumber}, the version live now.
+                    This run used v{openVersionNumber}. The sandbox starts from
+                    v{latestVersionNumber}, the version live now.
                   </p>
                 )}
 
@@ -808,12 +828,23 @@ export function EditInSandboxPicker({
                         />
                       </div>
 
+                      {runInputMissing && (
+                        <p
+                          className="mt-3 text-xs text-gray-500"
+                          data-testid="run-input-missing"
+                        >
+                          This run's input was not kept, so there is nothing to
+                          copy. Projects that never retain input and output data
+                          have none to start from.
+                        </p>
+                      )}
+
                       {startsFromNewerVersion && (
                         <p
                           className="mt-3 text-xs text-gray-500"
                           data-testid="version-note"
                         >
-                          This run used v{runVersionNumber}. The sandbox starts
+                          This run used v{openVersionNumber}. The sandbox starts
                           from v{latestVersionNumber}, the version live now,
                           because promoting an older one would remove the newer
                           work.

@@ -10,7 +10,6 @@ defmodule Lightning.Invocation.Query do
   alias Lightning.Projects.Project
   alias Lightning.Run
   alias Lightning.Workflows.Job
-  alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
 
   @doc """
@@ -259,16 +258,27 @@ defmodule Lightning.Invocation.Query do
   every named dataclip in its project.
 
   A named dataclip is a curated input rather than a trace of a past run, so it
-  belongs to the project and is selectable on any job in it. Without that, a
-  dataclip created for a job it has never run against is invisible to the
-  picker.
+  belongs to the project and is selectable on any job in it. Note that the
+  result is therefore no longer bounded by the job: callers who want only what
+  this job has run should not use this.
+
+  The two sources are unioned rather than ORed, so each side keeps its own index
+  (`steps.job_id` and `dataclips.project_id`) and the outer query is a primary
+  key probe. An OR across them makes dataclips, the largest table in the schema,
+  the driving relation on every keystroke of the picker's search.
   """
-  def selectable_for_job(job_id, limit) do
+  def selectable_for_job(job_id, project_id, limit) do
+    # No resolvable project means no project to draw named inputs from, which is
+    # what an unknown job looks like.
+    selectable =
+      if project_id do
+        union(job_input_dataclip_ids(job_id), ^named_dataclip_ids(project_id))
+      else
+        job_input_dataclip_ids(job_id)
+      end
+
     from(d in Dataclip,
-      where:
-        d.id in subquery(job_input_dataclip_ids(job_id)) or
-          (not is_nil(d.name) and
-             d.project_id in subquery(project_id_for_job(job_id))),
+      where: d.id in subquery(selectable),
       order_by: [desc: d.inserted_at],
       limit: ^limit
     )
@@ -281,12 +291,10 @@ defmodule Lightning.Invocation.Query do
     )
   end
 
-  defp project_id_for_job(job_id) do
-    from(j in Job,
-      join: w in Workflow,
-      on: w.id == j.workflow_id,
-      where: j.id == ^job_id,
-      select: w.project_id
+  defp named_dataclip_ids(project_id) do
+    from(d in Dataclip,
+      where: d.project_id == ^project_id and not is_nil(d.name),
+      select: d.id
     )
   end
 
