@@ -46,7 +46,10 @@ defmodule LightningWeb.RunLive.Index do
     lost: :boolean,
     rejected: :boolean,
     sort_by: :string,
-    sort_direction: :string
+    sort_direction: :string,
+    exit_reason: :string,
+    error_type: :string,
+    job_id: :string
   }
 
   @empty_page %{
