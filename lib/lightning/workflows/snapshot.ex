@@ -277,4 +277,65 @@ defmodule Lightning.Workflows.Snapshot do
       {:ok, get_current_query(workflow) |> repo.one()}
     end)
   end
+
+  # Everything a restore writes back. Timestamps are left to the live rows, and
+  # trigger `enabled` is deliberately absent: see `to_workflow_attrs/1`.
+  @job_write_fields [
+    :id,
+    :name,
+    :body,
+    :adaptor,
+    :project_credential_id,
+    :keychain_credential_id
+  ]
+
+  @trigger_write_fields [
+    :id,
+    :comment,
+    :custom_path,
+    :cron_expression,
+    :cron_cursor_job_id,
+    :type,
+    :webhook_reply
+  ]
+
+  @edge_write_fields [
+    :id,
+    :source_job_id,
+    :source_trigger_id,
+    :target_job_id,
+    :condition_type,
+    :condition_expression,
+    :condition_label,
+    :enabled
+  ]
+
+  @doc """
+  Turns a snapshot into attributes that can be written back as a workflow's
+  current content.
+
+  The write-side twin of the reader that loads a pinned version. Collections are
+  complete, so `on_replace` deletes anything the snapshot does not hold: that is
+  what makes a restore a revert rather than a merge.
+
+  Trigger `enabled` is deliberately left out. A restore is a publish into a live
+  workflow, and putting an old enabled flag back would take production offline
+  in the middle of a rollback. It is also what a promote does, which is the
+  behaviour this mirrors.
+  """
+  @spec to_workflow_attrs(t()) :: map()
+  def to_workflow_attrs(%__MODULE__{} = snapshot) do
+    %{
+      name: snapshot.name,
+      positions: snapshot.positions,
+      jobs: Enum.map(snapshot.jobs, &child_attrs(&1, @job_write_fields)),
+      triggers:
+        Enum.map(snapshot.triggers, &child_attrs(&1, @trigger_write_fields)),
+      edges: Enum.map(snapshot.edges, &child_attrs(&1, @edge_write_fields))
+    }
+  end
+
+  defp child_attrs(child, fields) do
+    child |> Map.from_struct() |> Map.take(fields)
+  end
 end

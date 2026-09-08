@@ -28,11 +28,14 @@ defmodule Lightning.Workflows.WorkflowRelease do
           inserted_at: DateTime.t() | nil
         }
 
-  @kinds [:go_live, :promote]
+  @kinds [:go_live, :promote, :restore]
 
   schema "workflow_releases" do
     field :version_number, :integer
     field :kind, Ecto.Enum, values: @kinds
+
+    # Set only by a :restore, naming the version it put back.
+    field :restored_from_version_number, :integer
 
     belongs_to :workflow, Workflow
     belongs_to :snapshot, Snapshot
@@ -51,7 +54,8 @@ defmodule Lightning.Workflows.WorkflowRelease do
       :workflow_id,
       :snapshot_id,
       :published_by_id,
-      :source_project_id
+      :source_project_id,
+      :restored_from_version_number
     ])
     |> validate_required([:version_number, :kind, :workflow_id, :snapshot_id])
     |> validate_number(:version_number, greater_than: 0)
