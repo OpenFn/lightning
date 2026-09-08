@@ -48,6 +48,12 @@ and this project adheres to
 
 ### Added
 
+- The assistant's change summary now reports a webhook trigger's settings. A
+  custom path being set, changed or cleared shows as its own row, as do the
+  reply timing and the response codes, all of which used to land with nothing
+  said about them.
+  [#5149](https://github.com/OpenFn/lightning/issues/5149)
+
 - The AI assistant now shows what changed as a global reply edits your workflow.
   Each change renders under the status that made it, while the reply is still
   streaming, as a per-step code diff with syntax highlighting, old and new line
