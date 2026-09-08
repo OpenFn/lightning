@@ -239,14 +239,37 @@ defmodule Lightning.Projects.Sandboxes do
       {:error, :starting_dataclip_too_large}
     else
       case Jason.decode(body) do
-        {:ok, %{} = decoded} -> {:ok, decoded}
-        {:ok, _not_an_object} -> {:error, :starting_dataclip_not_an_object}
-        {:error, _} -> {:error, :starting_dataclip_invalid_json}
+        {:ok, %{} = decoded} ->
+          # Postgres refuses a NUL byte in jsonb, and the insert raising here
+          # would take the channel with it rather than saying what was wrong.
+          if contains_null_byte?(decoded),
+            do: {:error, :starting_dataclip_invalid_json},
+            else: {:ok, decoded}
+
+        {:ok, _not_an_object} ->
+          {:error, :starting_dataclip_not_an_object}
+
+        {:error, _} ->
+          {:error, :starting_dataclip_invalid_json}
       end
     end
   end
 
   defp decode_dataclip_body(_body), do: {:error, :invalid_starting_dataclip}
+
+  defp contains_null_byte?(value) when is_binary(value),
+    do: String.contains?(value, <<0>>)
+
+  defp contains_null_byte?(value) when is_map(value) do
+    Enum.any?(value, fn {key, nested} ->
+      contains_null_byte?(key) or contains_null_byte?(nested)
+    end)
+  end
+
+  defp contains_null_byte?(value) when is_list(value),
+    do: Enum.any?(value, &contains_null_byte?/1)
+
+  defp contains_null_byte?(_value), do: false
 
   defp nesting_depth_exceeded?(%Project{id: parent_id}) do
     Lightning.Projects.depth_of(parent_id) >=

@@ -599,6 +599,20 @@ defmodule Lightning.Projects.SandboxesTest do
       refute Repo.get_by(Project, name: "sb-bad")
     end
 
+    test "refuses a reviewed body carrying a NUL byte" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      # Valid JSON, an object, under the limit, and Postgres will not take it.
+      # Left to the insert this raises and kills the channel.
+      assert {:error, :starting_dataclip_invalid_json} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-nul",
+                 starting_dataclip: %{body: ~S({"a":"\u0000"}), name: nil}
+               })
+
+      refute Repo.get_by(Project, name: "sb-nul")
+    end
+
     test "refuses a reviewed body that is not an object" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
 

@@ -427,6 +427,45 @@ describe('EditInSandboxPicker', () => {
       );
     });
 
+    test('does not force the review screen on someone who changed their mind', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+
+      let release: (v: {
+        dataclip: { id: string; wiped_at: null };
+      }) => void = () => {};
+      getRunDataclipMock.mockReturnValue(
+        new Promise(resolve => {
+          release = resolve;
+        })
+      );
+      getDataclipBodyMock.mockResolvedValue('{"email":"real@example.com"}');
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      // Mind changed while the load was in flight.
+      await user.click(screen.getByLabelText(/an empty sandbox/i));
+
+      release({ dataclip: { id: 'dc-1', wiped_at: null } });
+
+      // Landing them on a screen holding production data would be the worst
+      // possible answer to "actually, nothing".
+      await waitFor(() => {
+        expect(screen.getByTestId('create-sandbox-button')).toBeEnabled();
+      });
+      expect(screen.queryByTestId('review-body')).toBeNull();
+    });
+
     test('says nothing was kept when the run has no input to copy', async () => {
       const user = userEvent.setup();
       activeRun = {

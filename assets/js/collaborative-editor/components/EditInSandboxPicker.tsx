@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from '@headlessui/react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { cn } from '#/utils/cn';
 
@@ -319,11 +319,6 @@ function SandboxListSkeleton() {
   );
 }
 
-// A reply is only allowed to land on the request that asked for it.
-function stillLoading(current: RunReview, runId: string): boolean {
-  return current.status === 'loading' && current.runId === runId;
-}
-
 function createButtonLabel({
   isCreating,
   isLoadingBody,
@@ -414,6 +409,11 @@ export function EditInSandboxPicker({
   // nothing to remember to reset. Four rounds of review found bugs in the
   // previous shape, every one of them a flag left out of a reset.
   const [review, setReview] = useState<RunReview>({ status: 'idle' });
+  // A reply lands after a render, so what the person now wants has to be read
+  // live rather than out of the closure that started the request.
+  const startWithRef = useRef<StartChoice>('nothing');
+  const activeRunIdRef = useRef<string | null>(null);
+  const reviewRef = useRef<RunReview>({ status: 'idle' });
   const [savedDataclipId, setSavedDataclipId] = useState<string | null>(null);
 
   const activeRun = useActiveRun();
@@ -436,11 +436,23 @@ export function EditInSandboxPicker({
   const runInputDataclipId = activeRun?.steps?.[0]?.input_dataclip_id ?? null;
   const runStepJobId = activeRun?.steps?.[0]?.job_id ?? null;
 
-  const reviewBody = review.status === 'ready' ? review.body : '';
-  const isLoadingBody = review.status === 'loading';
-  const forThisRun = review.status !== 'idle' && review.runId === activeRun?.id;
-  const hasLoadedBody = review.status === 'ready' && forThisRun;
-  const runInputMissing = review.status === 'missing' && forThisRun;
+  // Gated once, here, so no read can forget to ask. A review belongs to one run
+  // and to the run choice: it is not this dialog's state if either has moved on.
+  const activeReview =
+    review.status !== 'idle' &&
+    review.runId === activeRun?.id &&
+    startWith === 'run'
+      ? review
+      : null;
+
+  startWithRef.current = startWith;
+  activeRunIdRef.current = activeRun?.id ?? null;
+  reviewRef.current = review;
+
+  const reviewBody = activeReview?.status === 'ready' ? activeReview.body : '';
+  const isLoadingBody = activeReview?.status === 'loading';
+  const hasLoadedBody = activeReview?.status === 'ready';
+  const runInputMissing = activeReview?.status === 'missing';
 
   // Everything the fetch needs. Without all of it the choice could only create
   // an empty sandbox while reporting success.
@@ -554,7 +566,22 @@ export function EditInSandboxPicker({
     // body somewhere the person cannot reach or send.
     setStartWith('nothing');
     setStep('choose');
+    setReview({ status: 'idle' });
   }, [canStartFromRun, startWith]);
+
+  // A reply may only land if it is still the reply this dialog is waiting for:
+  // the same request, the same run, and the same choice. Read from refs because
+  // all three can have changed since the request went out.
+  const stillWanted = useCallback((runId: string) => {
+    const current = reviewRef.current;
+
+    return (
+      current.status === 'loading' &&
+      current.runId === runId &&
+      startWithRef.current === 'run' &&
+      activeRunIdRef.current === runId
+    );
+  }, []);
 
   const handleCreate = useCallback(
     (start: EditInSandboxStart) => {
@@ -608,9 +635,6 @@ export function EditInSandboxPicker({
       return;
     }
 
-    // Already reviewed: keep what the person has, or Back then Continue would
-    // quietly restore the production body they had just redacted. Checked
-    // before the loading flag is set, since this path never clears it.
     setReviewError(null);
 
     // Already reviewed this run: keep it, or Back then Continue would restore
@@ -629,32 +653,24 @@ export function EditInSandboxPicker({
     void getRunDataclip(project.id, runId, runStepJobId)
       .then(async ({ dataclip }) => {
         if (!dataclip || dataclip.wiped_at) {
-          setReview(current =>
-            stillLoading(current, runId)
-              ? { status: 'missing', runId }
-              : current
-          );
+          if (stillWanted(runId)) setReview({ status: 'missing', runId });
           return;
         }
 
         const body = await getDataclipBody(dataclip.id);
 
-        setReview(current => {
-          if (!stillLoading(current, runId)) return current;
-          setStep('review');
-          return { status: 'ready', runId, body };
-        });
+        if (!stillWanted(runId)) return;
+
+        setReview({ status: 'ready', runId, body });
+        setStep('review');
       })
       .catch(() => {
-        setReview(current => {
-          if (!stillLoading(current, runId)) return current;
+        if (!stillWanted(runId)) return;
 
-          notifications.alert({
-            title: "Could not load this run's input",
-            description: 'Please try again.',
-          });
-
-          return { status: 'idle' };
+        setReview({ status: 'idle' });
+        notifications.alert({
+          title: "Could not load this run's input",
+          description: 'Please try again.',
         });
       });
   }, [
@@ -663,6 +679,7 @@ export function EditInSandboxPicker({
     canStartFromRun,
     handleCreate,
     hasLoadedBody,
+    stillWanted,
     project?.id,
     activeRun,
     runStepJobId,
