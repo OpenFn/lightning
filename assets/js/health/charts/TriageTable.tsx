@@ -126,13 +126,15 @@ export const TriageTable = ({
                   <span className="text-gray-600">{tipFor(signature)}</span>
                 </p>
               </td>
+              {/* Nothing to link on a row whose `exit_reason` never resolved:
+                  that leaves neither a step nor a mappable run state to filter
+                  history on. */}
               <td className="py-3 pl-4 text-right">
-                <ViewButton
-                  signature={signature}
-                  projectId={projectId}
-                  workflowId={workflowId}
-                  from={from}
-                />
+                {signature.exit_reason && (
+                  <ViewButton
+                    href={historyUrl(projectId, workflowId, from, signature)}
+                  />
+                )}
               </td>
             </tr>
           ))}
@@ -146,33 +148,16 @@ export const TriageTable = ({
  * Lands on history filtered to exactly the work orders this row counts, where
  * the existing "retry all" can act on the group. Not labelled with the row's
  * count — the filter re-derives the count on every load, so the number moves.
- *
- * Nothing to link on a row whose `exit_reason` never resolved — that leaves
- * neither a step nor a mappable run state to filter history on.
  */
-const ViewButton = ({
-  signature,
-  projectId,
-  workflowId,
-  from,
-}: {
-  signature: FailureSignature;
-  projectId: string;
-  workflowId: string;
-  from: string;
-}) => {
-  if (!signature.exit_reason) return null;
-
-  return (
-    <a
-      href={historyUrl(projectId, workflowId, from, signature)}
-      className="inline-flex items-center gap-x-1 whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100"
-    >
-      View
-      <span className="hero-arrow-right-micro h-3 w-3" />
-    </a>
-  );
-};
+const ViewButton = ({ href }: { href: string }) => (
+  <a
+    href={href}
+    className="inline-flex items-center gap-x-1 whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100"
+  >
+    View
+    <span className="hero-arrow-right-micro h-3 w-3" />
+  </a>
+);
 
 // A rejected work order never got a run, so the signature filter would fail
 // closed on it server-side — history's existing `rejected` status filter is
@@ -228,12 +213,12 @@ const Signature = ({ signature }: { signature: FailureSignature }) => (
   </p>
 );
 
-// A row is keyed and labelled by `job_id`, not by (job_id, adaptor) — see
-// "Why `job_id`" in the plan — so a row spanning an adaptor bump mid-window is
-// labelled from its newest failing snapshot. Rendering that snapshot's version
-// would head older failures with a version that isn't theirs, so only the
-// package name renders. Strips everything from the last '@' that isn't the
-// scope's leading one, so a scoped package's own '@' survives.
+// A row is keyed and labelled by `job_id`, not by (job_id, adaptor), so a row
+// spanning an adaptor bump mid-window is labelled from its newest failing
+// snapshot. Rendering that snapshot's version would head older failures with a
+// version that isn't theirs, so only the package name renders. Strips
+// everything from the last '@' that isn't the scope's leading one, so a scoped
+// package's own '@' survives.
 const packageNameOf = (adaptor: string) => {
   const lastAt = adaptor.lastIndexOf('@');
   return lastAt > 0 ? adaptor.slice(0, lastAt) : adaptor;
