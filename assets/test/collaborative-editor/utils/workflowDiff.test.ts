@@ -28,6 +28,9 @@ interface YamlTrigger {
   type?: 'webhook' | 'cron';
   enabled?: boolean;
   cron_expression?: string;
+  custom_path?: string | null;
+  webhook_reply?: 'before_start' | 'after_completion';
+  webhook_response_config?: { success_code?: number; error_code?: number };
 }
 
 interface YamlEdge {
@@ -75,6 +78,20 @@ const buildYaml = ({
       `    type: ${type}`,
       `    enabled: ${trigger.enabled ?? true}`
     );
+    if (trigger.custom_path !== undefined) {
+      lines.push(`    custom_path: ${trigger.custom_path ?? 'null'}`);
+    }
+    if (trigger.webhook_reply) {
+      lines.push(`    webhook_reply: ${trigger.webhook_reply}`);
+    }
+    if (trigger.webhook_response_config) {
+      lines.push('    webhook_response_config:');
+      for (const [key, value] of Object.entries(
+        trigger.webhook_response_config
+      )) {
+        lines.push(`      ${key}: ${value}`);
+      }
+    }
     if (trigger.cron_expression) {
       lines.push(`    cron_expression: '${trigger.cron_expression}'`);
     }
@@ -404,6 +421,88 @@ describe('deriveWorkflowChanges', () => {
       );
       expect(triggerRow?.change).toBe('modify');
       expect(triggerRow?.detail).toContain('type: webhook → cron');
+    });
+
+    const webhookWorkflow = (trigger: YamlTrigger) =>
+      buildYaml({
+        jobs: [transformJob('fn(state => state);')],
+        triggers: [trigger],
+        edges: [webhookToTransformEdge],
+      });
+
+    const triggerDetail = (before: string, after: string) =>
+      deriveWorkflowChanges(before, after)!.structure.find(
+        row => row.kind === 'trigger'
+      )?.detail;
+
+    it('reports a custom path that was set, changed and cleared', () => {
+      const none = webhookWorkflow(webhookTrigger);
+      const intake = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const staff = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'staff-intake',
+      });
+      const cleared = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: null,
+      });
+
+      expect(triggerDetail(none, intake)).toBe('path: intake-form');
+      expect(triggerDetail(intake, staff)).toBe(
+        'path: intake-form → staff-intake'
+      );
+      expect(triggerDetail(intake, cleared)).toBe('path removed');
+    });
+
+    it('says nothing about a path that did not move', () => {
+      const intake = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const disabled = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+        enabled: false,
+      });
+
+      expect(triggerDetail(intake, disabled)).toBe('disabled');
+    });
+
+    it('reports a reply change in the words the trigger panel uses', () => {
+      const immediately = webhookWorkflow(webhookTrigger);
+      const onComplete = webhookWorkflow({
+        ...webhookTrigger,
+        webhook_reply: 'after_completion',
+      });
+
+      expect(triggerDetail(immediately, onComplete)).toBe(
+        'reply: Immediately → On Complete'
+      );
+    });
+
+    it('treats an absent reply as the default rather than a change', () => {
+      const absent = webhookWorkflow(webhookTrigger);
+      const explicit = webhookWorkflow({
+        ...webhookTrigger,
+        webhook_reply: 'before_start',
+      });
+
+      expect(deriveWorkflowChanges(absent, explicit)).toBeNull();
+    });
+
+    it('reports response codes, naming an absent one as the default', () => {
+      const none = webhookWorkflow(webhookTrigger);
+      const configured = webhookWorkflow({
+        ...webhookTrigger,
+        webhook_response_config: { success_code: 202, error_code: 500 },
+      });
+
+      expect(triggerDetail(none, configured)).toBe(
+        'success code: default → 202; error code: default → 500'
+      );
     });
   });
 

@@ -11,7 +11,12 @@
 
 import { structuredPatch } from 'diff';
 
-import type { StateEdge, StateJob, WorkflowState } from '../../yaml/types';
+import type {
+  StateEdge,
+  StateJob,
+  StateWebhookTrigger,
+  WorkflowState,
+} from '../../yaml/types';
 import { convertWorkflowSpecToState, parseWorkflowYAML } from '../../yaml/util';
 import type { WorkflowSnapshot } from '../types/ai-assistant';
 
@@ -338,6 +343,61 @@ const deriveEdgeChanges = (
   return changes;
 };
 
+/** Wording taken from the response type picker, so a row reads like the panel. */
+const REPLY_LABEL: Record<string, string> = {
+  before_start: 'Immediately',
+  after_completion: 'On Complete',
+};
+
+// An absent reply means before_start, so normalise before comparing or a
+// trigger that only ever had the default reports a change it never made.
+const replyOf = (trigger: StateWebhookTrigger): string =>
+  trigger.webhook_reply ?? 'before_start';
+
+const codeOf = (code: number | null | undefined): string =>
+  code == null ? 'default' : String(code);
+
+const webhookDetails = (
+  before: StateWebhookTrigger,
+  after: StateWebhookTrigger
+): string[] => {
+  const details: string[] = [];
+
+  const beforePath = before.custom_path ?? null;
+  const afterPath = after.custom_path ?? null;
+  if (beforePath !== afterPath) {
+    details.push(
+      afterPath === null
+        ? 'path removed'
+        : beforePath === null
+          ? `path: ${afterPath}`
+          : `path: ${beforePath} → ${afterPath}`
+    );
+  }
+
+  if (replyOf(before) !== replyOf(after)) {
+    details.push(
+      `reply: ${REPLY_LABEL[replyOf(before)]} → ${REPLY_LABEL[replyOf(after)]}`
+    );
+  }
+
+  const codes = [
+    ['success', 'success_code'],
+    ['error', 'error_code'],
+  ] as const;
+  for (const [name, field] of codes) {
+    const beforeCode = before.webhook_response_config?.[field] ?? null;
+    const afterCode = after.webhook_response_config?.[field] ?? null;
+    if (beforeCode !== afterCode) {
+      details.push(
+        `${name} code: ${codeOf(beforeCode)} → ${codeOf(afterCode)}`
+      );
+    }
+  }
+
+  return details;
+};
+
 const deriveTriggerChanges = (
   before: DiffState,
   after: DiffState
@@ -389,6 +449,9 @@ const deriveTriggerChanges = (
       details.push(
         `schedule: ${beforeTrigger.cron_expression} → ${afterTrigger.cron_expression}`
       );
+    }
+    if (beforeTrigger.type === 'webhook' && afterTrigger.type === 'webhook') {
+      details.push(...webhookDetails(beforeTrigger, afterTrigger));
     }
 
     if (details.length > 0) {
