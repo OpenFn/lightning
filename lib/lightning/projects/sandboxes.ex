@@ -1535,11 +1535,12 @@ defmodule Lightning.Projects.Sandboxes do
   defp create_starting_dataclip(sandbox, nil), do: sandbox
 
   defp create_starting_dataclip(sandbox, %{body: body, name: name}) do
-    %{project_id: sandbox.id, body: body, name: name, type: :saved_input}
-    |> Dataclip.new()
-    |> Repo.insert!()
+    dataclip =
+      %{project_id: sandbox.id, body: body, name: name, type: :saved_input}
+      |> Dataclip.new()
+      |> Repo.insert!()
 
-    sandbox
+    Map.put(sandbox, :starting_dataclip_id, dataclip.id)
   end
 
   defp get_sandbox_keychain_id(

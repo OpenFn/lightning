@@ -556,6 +556,60 @@ defmodule LightningWeb.WorkflowChannelTest do
       %{trigger: trigger, other_workflow: other_workflow}
     end
 
+    test "starts the sandbox holding the reviewed body and says where it landed",
+         %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{
+            "body" => ~s({"email":"redacted"}),
+            "name" => "from run 42"
+          }
+        })
+
+      assert_reply ref, :ok, %{
+        project_id: sandbox_id,
+        dataclip_id: dataclip_id
+      }
+
+      assert is_binary(dataclip_id)
+
+      dataclip = Lightning.Repo.get!(Lightning.Invocation.Dataclip, dataclip_id)
+      assert dataclip.project_id == sandbox_id
+      assert dataclip.name == "from run 42"
+      assert dataclip.type == :saved_input
+    end
+
+    test "copies a chosen saved dataclip instead when one is named", %{
+      socket: socket,
+      project: project
+    } do
+      saved =
+        insert(:dataclip,
+          project: project,
+          name: "known good",
+          type: :saved_input,
+          body: %{"ok" => true}
+        )
+
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => saved.id})
+      assert_reply ref, :ok, %{project_id: sandbox_id, dataclip_id: nil}
+
+      assert ["known good"] =
+               Lightning.Invocation.Dataclip
+               |> Lightning.Repo.all()
+               |> Enum.filter(&(&1.project_id == sandbox_id))
+               |> Enum.map(& &1.name)
+    end
+
+    test "refuses a reviewed body that is not valid JSON", %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => "{nope", "name" => nil}
+        })
+
+      assert_reply ref, :error, _reason
+    end
+
     test "provisions a sandbox with the edited clone as a disabled draft, like the others",
          %{
            socket: socket,

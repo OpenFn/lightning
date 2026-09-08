@@ -484,23 +484,35 @@ defmodule LightningWeb.WorkflowChannel do
     workflow = socket.assigns.workflow
     user = socket.assigns.current_user
 
-    attrs = %{
-      name: sandbox_name(params, workflow, parent),
-      env: "dev",
-      color: LightningWeb.SandboxLive.Components.random_color()
-    }
+    attrs =
+      %{
+        name: sandbox_name(params, workflow, parent),
+        env: "dev",
+        color: LightningWeb.SandboxLive.Components.random_color()
+      }
+      |> put_starting_data(params)
 
     with :ok <- authorize_provision_sandbox(user, parent),
          :ok <- limit_new_sandbox(parent),
-         {:ok, %{sandbox: sandbox, workflow: cloned_workflow}} <-
+         {:ok,
+          %{
+            sandbox: sandbox,
+            workflow: cloned_workflow,
+            starting_dataclip_id: starting_dataclip_id
+          }} <-
            Projects.provision_editing_sandbox(
              parent,
              user,
              workflow.name,
              attrs
            ) do
-      {:reply, {:ok, %{project_id: sandbox.id, workflow_id: cloned_workflow.id}},
-       socket}
+      {:reply,
+       {:ok,
+        %{
+          project_id: sandbox.id,
+          workflow_id: cloned_workflow.id,
+          dataclip_id: starting_dataclip_id
+        }}, socket}
     else
       error -> workflow_error_reply(socket, error)
     end
@@ -1738,6 +1750,26 @@ defmodule LightningWeb.WorkflowChannel do
     case ProjectLimiter.limit_new_sandbox(parent.id) do
       :ok -> :ok
       {:error, _reason, message} -> {:error, message}
+    end
+  end
+
+  # The reviewed body travels by value, so what the person saw is what lands.
+  # A saved dataclip travels by id, and the copy is restricted to the parent's
+  # own named dataclips.
+  defp put_starting_data(attrs, params) do
+    case params do
+      %{"starting_dataclip" => %{"body" => body} = starting}
+      when is_binary(body) ->
+        Map.put(attrs, :starting_dataclip, %{
+          body: body,
+          name: Map.get(starting, "name")
+        })
+
+      %{"dataclip_id" => dataclip_id} when is_binary(dataclip_id) ->
+        Map.put(attrs, :dataclip_ids, [dataclip_id])
+
+      _ ->
+        attrs
     end
   end
 

@@ -2357,7 +2357,12 @@ defmodule Lightning.Projects do
     with {:ok, sandbox} <- provision_sandbox(parent, actor, attrs) do
       case Lightning.Workflows.get_workflow_by_name(sandbox.id, workflow_name) do
         %Workflow{} = workflow ->
-          {:ok, %{sandbox: sandbox, workflow: workflow}}
+          {:ok,
+           %{
+             sandbox: sandbox,
+             workflow: workflow,
+             starting_dataclip_id: Map.get(sandbox, :starting_dataclip_id)
+           }}
 
         nil ->
           # The clone of `workflow_name` is expected to exist after a
