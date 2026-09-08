@@ -1047,7 +1047,9 @@ defmodule Lightning.Config.Bootstrap do
              # doesn't bake in a build-time tmp path. An explicit override has
              # no such concern.
              icon_path:
-               env!("ADAPTORS_ICONS_PATH", :string, nil) |> expand_or_nil()
+               env!("ADAPTORS_ICONS_PATH", :string, nil) |> expand_or_nil(),
+             refresh_interval:
+               env!("ADAPTORS_REFRESH_INTERVAL_MS", :integer?, nil)
            ]
            |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 

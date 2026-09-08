@@ -9,7 +9,10 @@ defmodule Lightning.Adaptors.InvalidatorTest do
     # The supervisor starts the Invalidator automatically, registered under
     # `invalidator_name(sup)`.
     start_supervised!(
-      {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
+      {AdaptorsSupervisor,
+       name: sup,
+       strategy: Lightning.Adaptors.StrategyMock,
+       checked_at: fn _source -> nil end}
     )
 
     cache = AdaptorsSupervisor.cache_name(sup)

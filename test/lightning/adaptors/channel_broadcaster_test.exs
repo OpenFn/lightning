@@ -15,7 +15,10 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
     # The supervisor starts the ChannelBroadcaster automatically, registered
     # under `channel_broadcaster_name(sup)`.
     start_supervised!(
-      {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
+      {AdaptorsSupervisor,
+       name: sup,
+       strategy: Lightning.Adaptors.StrategyMock,
+       checked_at: fn _source -> nil end}
     )
 
     source_topic = AdaptorsSupervisor.source_topic(sup)

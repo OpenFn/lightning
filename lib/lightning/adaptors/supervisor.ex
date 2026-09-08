@@ -24,6 +24,8 @@ defmodule Lightning.Adaptors.Supervisor do
       defaulting to `Lightning.Adaptors.Config.strategy/0`
     * `:lock_key` - `HighlanderPG` advisory-lock key, defaulting to
       `lock_key(name)`
+    * `:checked_at` - forwarded to the scheduler; see
+      `Lightning.Adaptors.Scheduler.start_link/1`
   """
   @spec start_link(keyword()) :: Supervisor.on_start()
   def start_link(opts) do
@@ -62,7 +64,7 @@ defmodule Lightning.Adaptors.Supervisor do
                cache: cache,
                tasks: tasks,
                source_topic: source_topic
-             ]
+             ] ++ Keyword.take(opts, [:checked_at])
            ]}
       }
 

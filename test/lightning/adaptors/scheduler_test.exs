@@ -7,6 +7,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
   import Lightning.AdaptorTestHelpers
 
   import Eventually
+  import ExUnit.CaptureLog
   import Mox
 
   alias Lightning.Adaptors.Catalogue
@@ -27,9 +28,15 @@ defmodule Lightning.Adaptors.SchedulerTest do
   setup do
     sup = :"sched_test_#{System.unique_integer([:positive])}"
 
-    start_supervised!(
-      {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
-    )
+    start_supervised!({
+      AdaptorsSupervisor,
+      # Keeps the auto-started scheduler a true inert no-op ahead of
+      # start_scheduler/2 below — otherwise its boot-time max_checked_at
+      # read logs an empty-catalogue warning on every test in this file.
+      name: sup,
+      strategy: Lightning.Adaptors.StrategyMock,
+      checked_at: fn _source -> nil end
+    })
 
     # Default no-op icons stub for tests that don't care about the icons
     # pipeline. Individual tests override via `expect` when they need to
@@ -212,6 +219,42 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       assert_receive {:DOWN, ^ref, :process, ^pid, reason}, 2000
       assert {%Postgrex.Error{}, _stacktrace} = reason
+    end
+
+    test "an empty catalogue logs a boot warning and still ticks when interval > 0",
+         %{sup: sup} do
+      test_pid = self()
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        send(test_pid, :tick_ran)
+        {:ok, []}
+      end)
+
+      log =
+        capture_log(fn ->
+          start_scheduler(sup, checked_at: fn _source -> nil end, interval: 30)
+          assert_receive :tick_ran, 2000
+        end)
+
+      assert log =~ "catalogue is empty at boot"
+    end
+
+    test "an empty catalogue logs a boot warning and schedules no tick when interval is 0",
+         %{sup: sup} do
+      test_pid = self()
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        send(test_pid, :tick_ran)
+        {:ok, []}
+      end)
+
+      log =
+        capture_log(fn ->
+          start_scheduler(sup, checked_at: fn _source -> nil end, interval: 0)
+          refute_receive :tick_ran, 200
+        end)
+
+      assert log =~ "catalogue is empty at boot"
     end
   end
 

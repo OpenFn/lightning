@@ -26,7 +26,10 @@ defmodule Lightning.Adaptors.ReadinessTest do
     sup = :"readiness_test_#{System.unique_integer([:positive])}"
 
     start_supervised!(
-      {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
+      {AdaptorsSupervisor,
+       name: sup,
+       strategy: Lightning.Adaptors.StrategyMock,
+       checked_at: fn _source -> nil end}
     )
 
     :ok =
@@ -41,12 +44,16 @@ defmodule Lightning.Adaptors.ReadinessTest do
     pid =
       start_supervised!({
         Scheduler,
+        # Its boot-time max_checked_at read runs in a process with no
+        # $callers chain back to this test — the Sandbox.allow/3 below
+        # races it, so skip the read rather than risk an OwnershipError.
         name: AdaptorsSupervisor.global_scheduler_name(sup),
         sup: sup,
         lock_key: AdaptorsSupervisor.lock_key(sup),
         cache: AdaptorsSupervisor.cache_name(sup),
         tasks: AdaptorsSupervisor.tasks_name(sup),
-        source_topic: AdaptorsSupervisor.source_topic(sup)
+        source_topic: AdaptorsSupervisor.source_topic(sup),
+        checked_at: fn _source -> nil end
       })
 
     Ecto.Adapters.SQL.Sandbox.allow(Lightning.Repo, self(), pid)
@@ -119,7 +126,9 @@ defmodule Lightning.Adaptors.ReadinessTest do
       start_supervised!(
         Supervisor.child_spec(
           {AdaptorsSupervisor,
-           name: local_sup, strategy: Lightning.Adaptors.Local},
+           name: local_sup,
+           strategy: Lightning.Adaptors.Local,
+           checked_at: fn _source -> nil end},
           id: local_sup
         )
       )

@@ -20,7 +20,10 @@ defmodule Lightning.Adaptors.StoreTest do
     sup = :"store_test_#{System.unique_integer([:positive])}"
 
     start_supervised!(
-      {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
+      {AdaptorsSupervisor,
+       name: sup,
+       strategy: Lightning.Adaptors.StrategyMock,
+       checked_at: fn _source -> nil end}
     )
 
     cache = AdaptorsSupervisor.cache_name(sup)
@@ -229,7 +232,9 @@ defmodule Lightning.Adaptors.StoreTest do
       start_supervised!(
         Supervisor.child_spec(
           {AdaptorsSupervisor,
-           name: local_sup, strategy: Lightning.Adaptors.Local},
+           name: local_sup,
+           strategy: Lightning.Adaptors.Local,
+           checked_at: fn _source -> nil end},
           id: local_sup
         )
       )
