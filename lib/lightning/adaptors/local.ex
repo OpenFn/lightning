@@ -56,7 +56,7 @@ defmodule Lightning.Adaptors.Local do
     with {:ok, records} <- discover() do
       case Enum.find(records, &(&1.name == name)) do
         nil -> {:error, :not_found}
-        record -> {:ok, build_adaptor_record(record)}
+        record -> build_adaptor_record(record)
       end
     end
   end
@@ -222,12 +222,12 @@ defmodule Lightning.Adaptors.Local do
       versions: Enum.map(record.versions, &build_version_record/1)
     }
 
-    case read_schema(record.latest_path) do
-      {:ok, schema_data, schema_sha256} ->
-        Map.merge(base, %{schema_data: schema_data, schema_sha256: schema_sha256})
-
-      :unreadable ->
-        base
+    with {:ok, schema_data, schema_sha256} <- read_schema(record.latest_path) do
+      {:ok,
+       Map.merge(base, %{
+         schema_data: schema_data,
+         schema_sha256: schema_sha256
+       })}
     end
   end
 
@@ -244,8 +244,6 @@ defmodule Lightning.Adaptors.Local do
     }
   end
 
-  # A missing file is "no schema"; anything else (a permissions error, a
-  # half-written file) is left off the record per `Strategy.adaptor_record/0`.
   defp read_schema(dir) do
     with {:ok, body} <- File.read(Path.join(dir, @schema_filename)),
          {:ok, _} <- Jason.decode(body) do
@@ -253,7 +251,7 @@ defmodule Lightning.Adaptors.Local do
       {:ok, body, sha}
     else
       {:error, :enoent} -> {:ok, nil, nil}
-      _ -> :unreadable
+      {:error, reason} -> {:error, {:schema_fetch_failed, reason}}
     end
   end
 

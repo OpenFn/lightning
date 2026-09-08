@@ -342,8 +342,7 @@ defmodule Lightning.Adaptors.Scheduler do
     existing_rows = Catalogue.list_adaptors(state.source)
     prior_etags = prior_etags_from_rows(existing_rows)
 
-    existing_by_name =
-      Map.new(existing_rows, fn a -> {a.name, a.latest_version} end)
+    existing_by_name = Map.new(existing_rows, fn a -> {a.name, a} end)
 
     icons_task =
       Task.Supervisor.async_nolink(state.tasks, fn ->
@@ -425,7 +424,9 @@ defmodule Lightning.Adaptors.Scheduler do
          existing_by_name,
          state
        ) do
-    if Map.get(existing_by_name, name) == version do
+    existing = Map.get(existing_by_name, name)
+
+    if existing && existing.latest_version == version do
       Catalogue.touch_checked_at(name, state.source)
       :touched
     else
@@ -433,7 +434,7 @@ defmodule Lightning.Adaptors.Scheduler do
         {:ok, %{latest_version: version} = record} ->
           Logger.debug("Adaptors[#{state.source}]: fetched #{name}@#{version}")
 
-          {:fetched, record}
+          {:fetched, keep_stored_schema(record, existing)}
 
         {:error, reason} ->
           Logger.warning(
@@ -444,6 +445,20 @@ defmodule Lightning.Adaptors.Scheduler do
       end
     end
   end
+
+  # jsDelivr 404s for a version it has not mirrored yet, which is
+  # indistinguishable from a schema the source really dropped. On the
+  # periodic path we keep what we have; an operator refresh takes upstream
+  # as-is and is where a real removal lands.
+  defp keep_stored_schema(
+         %{schema_data: nil} = record,
+         %{schema_data: stored} = row
+       )
+       when not is_nil(stored) do
+    %{record | schema_data: stored, schema_sha256: row.schema_sha256}
+  end
+
+  defp keep_stored_schema(record, _existing), do: record
 
   defp await_icons(task) do
     case Task.yield(task, @icons_task_timeout) || Task.shutdown(task) do

@@ -40,10 +40,10 @@ defmodule Lightning.Adaptors.NPM do
   transient failures (5xx, timeout, nxdomain) of the *primary* request
   (`packument` for `fetch_adaptor/1`, the org package listing for
   `list_adaptors/0` and `fetch_icons/1`) surface as `{:error, term()}`
-  unchanged. The schema fetch inside `fetch_adaptor/1` and each icon
-  fetch inside `fetch_icons/1` are best-effort instead: a miss there
-  degrades to a nil schema or an absent icon shape, rather than failing
-  the whole record or batch.
+  unchanged, as does a failed schema fetch inside `fetch_adaptor/1`
+  (`{:error, {:schema_fetch_failed, reason}}`). Each icon fetch inside
+  `fetch_icons/1` is best-effort instead: a miss there degrades to an
+  absent icon shape rather than failing the batch.
 
   ## Configuration
 
@@ -67,30 +67,30 @@ defmodule Lightning.Adaptors.NPM do
   @impl Lightning.Adaptors.Strategy
   def fetch_adaptor(name) when is_binary(name) do
     with {:ok, packument} <- Registry.get_packument(name),
-         {:ok, latest_version} <- Registry.latest_version(packument) do
-      base = %{
-        name: Map.get(packument, "name", name),
-        description: Map.get(packument, "description"),
-        homepage: Map.get(packument, "homepage"),
-        repository: Registry.repository_url(Map.get(packument, "repository")),
-        license: Map.get(packument, "license"),
-        latest_version: latest_version,
-        deprecated: Registry.deprecated?(packument, latest_version),
-        versions: Registry.build_versions(packument)
-      }
-
-      {:ok, put_schema(base, Schema.schema(name, latest_version))}
+         {:ok, latest_version} <- Registry.latest_version(packument),
+         {:ok, {schema_data, schema_sha256}} <-
+           schema(name, latest_version) do
+      {:ok,
+       %{
+         name: Map.get(packument, "name", name),
+         description: Map.get(packument, "description"),
+         homepage: Map.get(packument, "homepage"),
+         repository: Registry.repository_url(Map.get(packument, "repository")),
+         license: Map.get(packument, "license"),
+         latest_version: latest_version,
+         deprecated: Registry.deprecated?(packument, latest_version),
+         versions: Registry.build_versions(packument),
+         schema_data: schema_data,
+         schema_sha256: schema_sha256
+       }}
     end
   end
 
-  # Absent, not nil: `Ecto.Changeset.cast/3` overwrites a column for any
-  # present key, and `Strategy.adaptor_record/0` reserves nil for "no schema".
-  defp put_schema(record, {nil, :fetch_failed}), do: record
-
-  defp put_schema(record, {schema_data, schema_sha}) do
-    record
-    |> Map.put(:schema_data, schema_data)
-    |> Map.put(:schema_sha256, schema_sha)
+  defp schema(name, version) do
+    case Schema.schema(name, version) do
+      {:ok, pair} -> {:ok, pair}
+      {:error, reason} -> {:error, {:schema_fetch_failed, reason}}
+    end
   end
 
   @impl Lightning.Adaptors.Strategy

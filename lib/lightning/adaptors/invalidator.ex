@@ -4,10 +4,13 @@ defmodule Lightning.Adaptors.Invalidator do
   local Cachex entries, keeping each node coherent with Postgres.
 
   Subscribes to `opts[:source_topic]` on `Lightning.PubSub` at init.
-  On `{:changed, name, source}`, deletes the five cache keys written by
-  `Lightning.Adaptors.Store`: the three keyed by name (`:schema`,
-  `:versions`, `:icon_meta`) plus the two source-wide ones (`:packages`,
-  `:catalogue`), which any change invalidates. No source filtering on the
+  On `{:changed, name, source}`, deletes the six cache keys written by
+  `Lightning.Adaptors.Store`: the four keyed by name (`:schema`,
+  `:icon_meta` and the two `:icon_bytes` shapes) plus the two
+  source-wide ones (`:packages`, `:catalogue`), which any change
+  invalidates. Dropping `:icon_bytes` is what lets a committed icon error
+  clear: the row moving is the only thing that can resolve it, and the row
+  moving always broadcasts. No source filtering on the
   hot path — a broadcast for a source that isn't active on this node is a
   no-op because those keys simply don't exist in Cachex.
   """
@@ -39,8 +42,9 @@ defmodule Lightning.Adaptors.Invalidator do
   @impl true
   def handle_info({:changed, name, source}, state) do
     Cachex.del(state.cache, {:schema, name, source})
-    Cachex.del(state.cache, {:versions, name, source})
     Cachex.del(state.cache, {:icon_meta, name, source})
+    Cachex.del(state.cache, {:icon_bytes, source, name, :square})
+    Cachex.del(state.cache, {:icon_bytes, source, name, :rectangle})
     Cachex.del(state.cache, {:packages, source})
     Cachex.del(state.cache, {:catalogue, source})
     {:noreply, state}
