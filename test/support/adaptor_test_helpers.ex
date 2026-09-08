@@ -191,7 +191,8 @@ defmodule Lightning.AdaptorTestHelpers do
           icon_rectangle_ext: "png",
           icon_square_sha256: :crypto.hash(:sha256, short_name <> "-square"),
           icon_rectangle_sha256:
-            :crypto.hash(:sha256, short_name <> "-rectangle")
+            :crypto.hash(:sha256, short_name <> "-rectangle"),
+          has_schema: true
         }
       end)
 

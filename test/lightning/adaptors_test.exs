@@ -100,6 +100,17 @@ defmodule Lightning.AdaptorsTest do
     test "returns {:ok, []} when DB is empty", %{sup: sup} do
       assert {:ok, []} = Adaptors.packages(sup)
     end
+
+    test "has_schema is false for a package with no schema_data", %{sup: sup} do
+      stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
+        {:error, :unreachable}
+      end)
+
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(schema_data: nil))
+
+      assert {:ok, [%Adaptors.Package{has_schema: false}]} =
+               Adaptors.packages(sup)
+    end
   end
 
   describe "default instance resolution" do
@@ -116,7 +127,8 @@ defmodule Lightning.AdaptorsTest do
         icon_square_ext: nil,
         icon_rectangle_ext: nil,
         icon_square_sha256: nil,
-        icon_rectangle_sha256: nil
+        icon_rectangle_sha256: nil,
+        has_schema: false
       }
 
       Cachex.put(
@@ -203,6 +215,32 @@ defmodule Lightning.AdaptorsTest do
       {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(source: :local))
 
       assert Adaptors.get_adaptor("@openfn/language-http") == nil
+    end
+
+    test "computes has_schema on the DB-fallback path (excluded from the lean listing)" do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            name: "@openfn/language-collections",
+            schema_data: ~s({"type":"object"})
+          )
+        )
+
+      assert %Adaptors.Package{has_schema: true} =
+               Adaptors.get_adaptor("@openfn/language-collections")
+    end
+
+    test "has_schema is false on the DB-fallback path when schema_data is nil" do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            name: "@openfn/language-collections",
+            schema_data: nil
+          )
+        )
+
+      assert %Adaptors.Package{has_schema: false} =
+               Adaptors.get_adaptor("@openfn/language-collections")
     end
   end
 

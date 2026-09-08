@@ -2781,7 +2781,11 @@ defmodule LightningWeb.CredentialLiveTest do
     end
 
     test "omits a deprecated adaptor from the type options", %{conn: conn} do
-      insert(:adaptor, name: "deprecated-adaptor", deprecated: true)
+      insert(:adaptor,
+        name: "deprecated-adaptor",
+        deprecated: true,
+        schema_data: ~s({"type":"object"})
+      )
 
       # `seed_all_credential_schemas/0` primes the packages cache by hand
       # (bypassing `Catalogue.list_package_metas/1`), so drop it here to
@@ -2797,7 +2801,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert Floki.find(
                html_tree,
-               "label[for='credential-schema-picker_selected_http']"
+               "label[for='credential-schema-picker_selected_@openfn/language-http']"
              ) != []
 
       assert Floki.find(

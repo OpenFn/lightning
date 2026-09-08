@@ -1176,8 +1176,13 @@ defmodule LightningWeb.CredentialLive.CredentialFormComponent do
   defp get_type_options do
     adaptor_options =
       case Adaptors.packages() do
-        {:ok, packages} -> Enum.map(packages, &adaptor_type_option/1)
-        {:error, _} -> []
+        {:ok, packages} ->
+          packages
+          |> Enum.filter(& &1.has_schema)
+          |> Enum.map(&adaptor_type_option/1)
+
+        {:error, _} ->
+          []
       end
 
     adaptor_options

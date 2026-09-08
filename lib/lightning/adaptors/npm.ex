@@ -83,11 +83,8 @@ defmodule Lightning.Adaptors.NPM do
     end
   end
 
-  # A transient schema-fetch failure must leave `schema_data`/`schema_sha256`
-  # absent from the record entirely, not merely `nil` — `Ecto.Changeset.cast/3`
-  # overwrites a column whenever its key is present in `attrs`, even with a
-  # nil value, so an absent key is the only way to signal "leave the
-  # previously-persisted schema untouched."
+  # Absent, not nil: `Ecto.Changeset.cast/3` overwrites a column for any
+  # present key, and `Strategy.adaptor_record/0` reserves nil for "no schema".
   defp put_schema(record, {nil, :fetch_failed}), do: record
 
   defp put_schema(record, {schema_data, schema_sha}) do
@@ -96,13 +93,7 @@ defmodule Lightning.Adaptors.NPM do
     |> Map.put(:schema_sha256, schema_sha)
   end
 
-  # Strategy boundary: re-encode the decoded schema map to a JSON binary
-  # so the row is persisted as text and `Jason.decode!(_,
-  # objects: :ordered_objects)` re-engages downstream. `Schema.schema/2`
-  # always decodes via `Jason.decode/1`, so `data` is a map (or nil) here,
-  # never a raw binary — the Local strategy's own raw-binary schema text
-  # takes a separate path (`Local.read_schema/1`) and never reaches this
-  # function.
+  # Re-encoded so the reader can decode it with ordered objects.
   defp encode_schema(nil), do: nil
   defp encode_schema(data) when is_map(data), do: Jason.encode!(data)
 

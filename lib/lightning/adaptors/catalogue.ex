@@ -24,11 +24,11 @@ defmodule Lightning.Adaptors.Catalogue do
           latest_version: String.t(),
           description: String.t() | nil,
           deprecated: boolean(),
-          updated_at: DateTime.t(),
           icon_square_ext: String.t() | nil,
           icon_rectangle_ext: String.t() | nil,
           icon_square_sha256: binary() | nil,
-          icon_rectangle_sha256: binary() | nil
+          icon_rectangle_sha256: binary() | nil,
+          has_schema: boolean()
         }
 
   @type catalogue_entry :: %{
@@ -63,20 +63,34 @@ defmodule Lightning.Adaptors.Catalogue do
   """
   @spec list_package_metas(source()) :: [package_meta()]
   def list_package_metas(source) do
-    Repo.all(
-      from a in active_adaptors(source),
-        select: %{
-          name: a.name,
-          latest_version: a.latest_version,
-          description: a.description,
-          deprecated: a.deprecated,
-          updated_at: a.updated_at,
-          icon_square_ext: a.icon_square_ext,
-          icon_rectangle_ext: a.icon_rectangle_ext,
-          icon_square_sha256: a.icon_square_sha256,
-          icon_rectangle_sha256: a.icon_rectangle_sha256
-        }
-    )
+    source |> active_adaptors() |> select_package_meta() |> Repo.all()
+  end
+
+  @doc """
+  The `t:package_meta/0` projection of one `(name, source)` row, or `nil`.
+  Unlike `list_package_metas/1` this resolves excluded and deprecated
+  adaptors too, so jobs already using one keep validating.
+  """
+  @spec get_package_meta(String.t(), source()) :: package_meta() | nil
+  def get_package_meta(name, source) do
+    from(a in Adaptor, where: a.name == ^name and a.source == ^source)
+    |> select_package_meta()
+    |> Repo.one()
+  end
+
+  defp select_package_meta(query) do
+    from a in query,
+      select: %{
+        name: a.name,
+        latest_version: a.latest_version,
+        description: a.description,
+        deprecated: a.deprecated,
+        icon_square_ext: a.icon_square_ext,
+        icon_rectangle_ext: a.icon_rectangle_ext,
+        icon_square_sha256: a.icon_square_sha256,
+        icon_rectangle_sha256: a.icon_rectangle_sha256,
+        has_schema: not is_nil(a.schema_data)
+      }
   end
 
   @doc """

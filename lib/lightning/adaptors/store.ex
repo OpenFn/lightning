@@ -37,7 +37,11 @@ defmodule Lightning.Adaptors.Store do
 
   @type package_meta :: Catalogue.package_meta()
 
-  @type catalogue_entry :: %{
+  @typedoc """
+  One `t:Lightning.Adaptors.Catalogue.catalogue_entry/0` with its icon
+  fields rendered to URLs, as the catalogue endpoint serves it.
+  """
+  @type rendered_entry :: %{
           name: String.t(),
           latest_version: String.t(),
           versions: [String.t()],
@@ -49,13 +53,13 @@ defmodule Lightning.Adaptors.Store do
         }
 
   @type catalogue ::
-          {{DateTime.t() | nil, non_neg_integer()}, [catalogue_entry()]}
+          {{DateTime.t() | nil, non_neg_integer()}, [rendered_entry()]}
 
   @doc """
   Returns the adaptor's credential schema as a JSON binary, not decoded.
+  An adaptor with no schema yields `"{}"`.
   """
-  @spec schema(sup(), String.t()) ::
-          {:ok, String.t() | nil} | {:error, term()}
+  @spec schema(sup(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def schema(sup, name) do
     cache = AdaptorsSupervisor.cache_name(sup)
     source = AdaptorsSupervisor.source(sup)
@@ -144,14 +148,14 @@ defmodule Lightning.Adaptors.Store do
   defp fetch_icon_bytes(strategy, source, name, shape, ext, expected_sha) do
     case strategy.fetch_icon(name, shape) do
       {:ok, %{data: bytes, ext: ^ext}} ->
-        if :crypto.hash(:sha256, bytes) == expected_sha do
-          {:ok, _sha} = IconCache.write!(source, name, shape, ext, bytes)
-          {:ignore, {:ok, IconCache.path(source, name, shape, ext)}}
-        else
-          {:ignore,
-           {:error,
-            {:icon_sha_mismatch,
-             expected: expected_sha, got: :crypto.hash(:sha256, bytes)}}}
+        case :crypto.hash(:sha256, bytes) do
+          ^expected_sha ->
+            {:ok, _sha} = IconCache.write!(source, name, shape, ext, bytes)
+            {:ignore, {:ok, IconCache.path(source, name, shape, ext)}}
+
+          got ->
+            {:ignore,
+             {:error, {:icon_sha_mismatch, expected: expected_sha, got: got}}}
         end
 
       {:ok, %{ext: other_ext}} ->
@@ -278,7 +282,7 @@ defmodule Lightning.Adaptors.Store do
   end
 
   @spec render_entry(Catalogue.catalogue_entry(), Catalogue.source()) ::
-          catalogue_entry()
+          rendered_entry()
   defp render_entry(entry, source) do
     %{
       name: entry.name,
@@ -308,13 +312,15 @@ defmodule Lightning.Adaptors.Store do
   defp fetch_and_persist_known(sup, name, source, field) do
     case AdaptorsSupervisor.strategy(sup).fetch_adaptor(name) do
       {:ok, %{name: ^name} = record} ->
-        record =
-          record
-          |> Map.put(:source, source)
-          |> normalize_schema_data()
-
+        record = Map.put(record, :source, source)
         {:ok, _} = Catalogue.upsert_adaptor(record)
-        {:commit, {:ok, record |> Map.get(field) |> project_field(field)}}
+
+        # The strategy leaves a field off the record when its fetch failed
+        # transiently. Don't cache that as "no value"; let the next call retry.
+        case Map.fetch(record, field) do
+          {:ok, value} -> {:commit, {:ok, project_field(value, field)}}
+          :error -> {:ignore, {:ok, project_field(nil, field)}}
+        end
 
       {:ok, %{name: other}} ->
         {:ignore, {:error, {:name_mismatch, other}}}
@@ -328,17 +334,8 @@ defmodule Lightning.Adaptors.Store do
   defp project_field(rows, :versions) when is_list(rows),
     do: project_versions(rows)
 
+  defp project_field(nil, :schema_data), do: "{}"
   defp project_field(value, _field), do: value
-
-  # The real strategies already encode schema_data to a JSON binary, but
-  # a strategy is still free to hand back a map, so normalize here to
-  # keep the cached value consistent with what a DB-backed read returns.
-  defp normalize_schema_data(%{schema_data: data} = record)
-       when is_map(data) and not is_struct(data) do
-    %{record | schema_data: Jason.encode!(data)}
-  end
-
-  defp normalize_schema_data(record), do: record
 
   @spec project_icon_meta(map()) :: icon_meta()
   defp project_icon_meta(adaptor) do
