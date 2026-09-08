@@ -353,7 +353,7 @@ defmodule Lightning.Accounts.UserNotifier do
     """
     #{workflow.name}:
     • #{successful_workorders} workorders were successful #{digest_lookup[digest]}
-    • #{failed_workorders} workorders were not (failed, crashed, cancelled, killed, exception, lost, etc.)
+    • #{failed_workorders} workorders were not (#{Lightning.WorkOrder.failure_states() |> Enum.join(", ")})
 
     Click this link to review: #{build_digest_url(workflow, start_date, end_date)}
 

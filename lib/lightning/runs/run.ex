@@ -72,13 +72,6 @@ defmodule Lightning.Run do
   """
   def active_states, do: @active_states
 
-  @doc """
-  Returns the list of failure states for a run.
-
-  These are all final states except :success.
-  """
-  def failure_states, do: final_states() -- [:success]
-
   # The worker's own vocabulary for a finished run. `Handlers.CompleteRun` reads
   # this inbound to turn a reason into a state; `Workflows.Stats` reads it back
   # out to name a run-level failure in an error signature. One table, so the two

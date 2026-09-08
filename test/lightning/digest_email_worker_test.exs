@@ -105,7 +105,7 @@ defmodule Lightning.DigestEmailWorkerTest do
       assert length(result.skipped_users) == 1
     end
 
-    test "includes all final failure states in failed workorders count" do
+    test "includes all failure states in failed workorders count" do
       user = insert(:user)
 
       project =
@@ -113,12 +113,12 @@ defmodule Lightning.DigestEmailWorkerTest do
 
       workflow = insert(:simple_workflow, project: project)
 
-      # Test all final states that should be counted as failed
-      # According to Run.final_states: [:success, :failed, :crashed, :cancelled, :killed, :exception, :lost]
+      # Test all states that should be counted as failed. :cancelled is
+      # deliberately excluded - stopped on purpose, not a failure.
       failure_states = [
+        :rejected,
         :failed,
         :crashed,
-        :cancelled,
         :killed,
         :exception,
         :lost
@@ -169,7 +169,7 @@ defmodule Lightning.DigestEmailWorkerTest do
       assert digest_data.successful_workorders == 0
     end
 
-    test "dynamically includes all failure states from Run.final_states" do
+    test "dynamically includes all failure states from WorkOrder.failure_states" do
       user = insert(:user)
 
       project =
@@ -177,8 +177,9 @@ defmodule Lightning.DigestEmailWorkerTest do
 
       workflow = insert(:simple_workflow, project: project)
 
-      # Get all failure states dynamically (should be all final states except :success)
-      expected_failure_states = Lightning.Run.failure_states()
+      # Get all failure states dynamically (should be all final states except
+      # :success and :cancelled)
+      expected_failure_states = Lightning.WorkOrder.failure_states()
 
       # Create workorders for each failure state
       Enum.each(expected_failure_states, fn state ->
@@ -197,9 +198,9 @@ defmodule Lightning.DigestEmailWorkerTest do
 
       # Verify we're testing the expected states (this will help catch if final_states changes)
       assert expected_failure_states == [
+               :rejected,
                :failed,
                :crashed,
-               :cancelled,
                :killed,
                :exception,
                :lost
@@ -404,33 +405,39 @@ defmodule Lightning.DigestEmailWorkerTest do
     dataclip = insert(:dataclip, project: project)
 
     Enum.each(status_list, fn status ->
-      state =
-        case status do
-          :pending -> :available
-          :running -> :claimed
-          other -> other
-        end
+      workorder =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          state: status
+        )
 
-      insert(:workorder,
-        workflow: workflow,
-        trigger: trigger,
-        dataclip: dataclip,
-        state: status
-      )
-      |> with_run(
-        state: state,
-        dataclip: dataclip,
-        starting_trigger: trigger,
-        finished_at: build(:timestamp),
-        steps: [
-          build(:step,
-            job: job,
-            input_dataclip: dataclip,
-            started_at: build(:timestamp),
-            finished_at: build(:timestamp)
-          )
-        ]
-      )
+      # A rejected work order never got a run - its webhook was dropped
+      # before one was created.
+      unless status == :rejected do
+        state =
+          case status do
+            :pending -> :available
+            :running -> :claimed
+            other -> other
+          end
+
+        with_run(workorder,
+          state: state,
+          dataclip: dataclip,
+          starting_trigger: trigger,
+          finished_at: build(:timestamp),
+          steps: [
+            build(:step,
+              job: job,
+              input_dataclip: dataclip,
+              started_at: build(:timestamp),
+              finished_at: build(:timestamp)
+            )
+          ]
+        )
+      end
     end)
   end
 end

@@ -17,10 +17,17 @@ and this project adheres to
 
 ### Changed
 
-- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising
-  the first character of a string, which breaks names in many languages.
-  Lightning does not normalise anything today, but #4577 adds it on every name,
-  so the runtime moves first.
+- Unified what counts as "a failed work order" across the workflow list, its
+  history link, the health page and the digest email, and the date each measures
+  its 30-day window from. A cancelled work order is no longer counted as a
+  failure anywhere; a rejected one (a webhook dropped for being over the
+  project's run limit) now is. Every window is now measured from when a work
+  order last did something, not when it was created, so a stale work order
+  retried today counts as recent everywhere.
+- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
+  first character of a string, which breaks names in many languages. Lightning
+  does not normalise anything today, but #4577 adds it on every name, so the
+  runtime moves first.
 
 ### Added
 
@@ -73,17 +80,17 @@ and this project adheres to
 - AI assistant code blocks share the surface the workflow diffs use, so a reply
   and the diff below it no longer read as two different products.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
-- A global assistant reply whose changes could not be applied now says so on
-  the reply itself, beside the diffs that did not land, and offers to try
-  again. It used to fall back to a raw YAML panel.
+- A global assistant reply whose changes could not be applied now says so on the
+  reply itself, beside the diffs that did not land, and offers to try again. It
+  used to fall back to a raw YAML panel.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
-- A failed apply is now remembered, so reloading no longer turns it back into
-  a success. The reply kept its diff blocks and offered to undo changes that
-  had never landed. A retry that works clears the record.
+- A failed apply is now remembered, so reloading no longer turns it back into a
+  success. The reply kept its diff blocks and offered to undo changes that had
+  never landed. A retry that works clears the record.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
 - Editing an open step with the global assistant no longer puts a diff in the
-  code editor. The change is already applied, so the diff read as a proposal
-  to accept or reject when the only control was a close button, and reloading
+  code editor. The change is already applied, so the diff read as a proposal to
+  accept or reject when the only control was a close button, and reloading
   revealed the change had been written all along.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
 
