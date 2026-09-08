@@ -2427,9 +2427,9 @@ defmodule Lightning.Projects do
                  selected_workflow_ids: [sandbox_workflow.id],
                  record_release: :promote
                }) do
-          # Reloaded because the caller's struct predates the save that promote
-          # performs, so a rename in the same session would look up the wrong
-          # name here.
+          # Reloaded because the caller's struct is captured at channel join and
+          # the client saves before promoting, so a rename in the same session
+          # would look this up under the old name.
           parent_workflow_id =
             with %Workflow{name: name} <- Repo.reload(sandbox_workflow),
                  %Workflow{id: id} <-

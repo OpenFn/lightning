@@ -262,12 +262,7 @@ defmodule Lightning.Projects.Sandboxes do
                allow_deletions: allow_collection_deletions?
              ),
            :ok <-
-             record_merge_sync_points(
-               source,
-               merge_doc,
-               opts,
-               selected_target_ids
-             ) do
+             record_merge_sync_points(source, merge_doc, selected_target_ids) do
         {:ok, {updated_target, merge_doc}}
       end
     end)
@@ -286,10 +281,7 @@ defmodule Lightning.Projects.Sandboxes do
 
   # Builds the `:release` import option for a promote. A promote asks for it via
   # `opts.record_release` and always scopes to `selected_workflow_ids`; any other
-  # merge (e.g. the full sandbox-management merge) records nothing. The promoted
-  # workflows land on the target under the target's ids, so we map the selected
-  # source workflows to their merged-document ids by name (workflow names are
-  # unique within a project) and hand the provisioner exactly those ids.
+  # merge (e.g. the full sandbox-management merge) records nothing.
   defp release_import_opts(source, opts, selected_target_ids) do
     with :promote <- Map.get(opts, :record_release),
          [_ | _] <- Map.get(opts, :selected_workflow_ids) do
@@ -315,8 +307,8 @@ defmodule Lightning.Projects.Sandboxes do
 
   # Without this the source's own merge reads as the target having moved on, and
   # every merge after the first warns. Mirrors `copy_workflow_version_history/2`.
-  defp record_merge_sync_points(source, merge_doc, opts, selected_target_ids) do
-    merged = merged_workflow_pairs(source, merge_doc, opts, selected_target_ids)
+  defp record_merge_sync_points(source, merge_doc, selected_target_ids) do
+    merged = merged_workflow_pairs(source, merge_doc, selected_target_ids)
     source_hashes = existing_hashes(Map.values(merged))
 
     merged
@@ -346,7 +338,7 @@ defmodule Lightning.Projects.Sandboxes do
     end)
   end
 
-  defp merged_workflow_pairs(source, merge_doc, _opts, selected_target_ids) do
+  defp merged_workflow_pairs(source, merge_doc, selected_target_ids) do
     entries =
       merge_doc
       |> Map.get("workflows", [])

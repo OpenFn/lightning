@@ -73,13 +73,16 @@ export function PromoteDialog({
     null
   );
   const [checkFailed, setCheckFailed] = useState(false);
-  const [checking, setChecking] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [wasOpen, setWasOpen] = useState(isOpen);
 
   const isBusy = isPromoting || isArchiving;
 
-  // Reset to the confirm step each time the dialog is (re)opened so a second
-  // promote never starts on the previous run's success step.
-  useEffect(() => {
+  // Reset during render rather than in an effect: an effect lands a frame late,
+  // and that frame shows the previous run's warning over an enabled button.
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+
     if (isOpen) {
       setPhase('confirm');
       setIsPromoting(false);
@@ -88,7 +91,7 @@ export function PromoteDialog({
       setCheckFailed(false);
       setChecking(true);
     }
-  }, [isOpen]);
+  }
 
   useEffect(() => {
     if (!isOpen) return;
