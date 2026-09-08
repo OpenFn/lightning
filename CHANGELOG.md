@@ -75,6 +75,12 @@ and this project adheres to
 
 ### Fixed
 
+- Opening the merge dialog, and deleting a sandbox, no longer crash in a
+  workspace with a branch more than two levels below the project you are in.
+  Working out whether one project sits under another climbed a chain of parents
+  that was only loaded one level deep.
+  [#5141](https://github.com/OpenFn/lightning/issues/5141)
+
 - Merging a sandbox no longer reports its own merge as the parent having moved
   on. A merge records a new version on the target computed from the merged
   content, and nothing wrote that back to the sandbox, so every merge after the
