@@ -403,6 +403,60 @@ describe('ManualRunPanel', () => {
     });
   });
 
+  test('preselects the dataclip named in the URL', async () => {
+    urlState.setParam('dataclip', 'dc-from-run');
+
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [
+        {
+          id: 'dc-from-run',
+          name: 'Input from run abcdef',
+          type: 'saved_input',
+        },
+        { id: 'dc-other', name: 'something else', type: 'saved_input' },
+      ],
+      next_cron_run_dataclip_id: null,
+      can_edit_dataclip: true,
+    } as never);
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: 'project-1',
+      workflowId: 'workflow-1',
+      jobId: 'job-1',
+      onClose: () => {},
+    });
+
+    // A sandbox started from a run's data opens ready to run.
+    expect(
+      await screen.findByText('Input from run abcdef')
+    ).toBeInTheDocument();
+  });
+
+  test('leaves the selection alone when the URL names a dataclip it does not have', async () => {
+    urlState.setParam('dataclip', 'dc-missing');
+
+    vi.mocked(dataclipApi.searchDataclips).mockResolvedValue({
+      data: [{ id: 'dc-other', name: 'something else', type: 'saved_input' }],
+      next_cron_run_dataclip_id: null,
+      can_edit_dataclip: true,
+    } as never);
+
+    renderManualRunPanel({
+      workflow: mockWorkflow,
+      projectId: 'project-1',
+      workflowId: 'workflow-1',
+      jobId: 'job-1',
+      onClose: () => {},
+    });
+
+    await waitFor(() => {
+      expect(dataclipApi.searchDataclips).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByText('dc-missing')).toBeNull();
+  });
+
   test('fetches dataclips on mount with trigger context', async () => {
     renderManualRunPanel({
       workflow: mockWorkflow,

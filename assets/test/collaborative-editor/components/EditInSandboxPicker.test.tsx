@@ -45,8 +45,13 @@ vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
   useActiveRun: () => activeRun,
 }));
 
+let versions: { version_number: number }[] = [];
+const requestVersionsMock = vi.fn();
+
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useProject: () => ({ id: 'project-1' }),
+  useVersions: () => versions,
+  useRequestVersions: () => requestVersionsMock,
 }));
 
 const searchDataclipsMock = vi.fn();
@@ -133,6 +138,9 @@ describe('EditInSandboxPicker', () => {
     getDataclipBodyMock.mockResolvedValue('{}');
     activeRun = null;
     jobs = [{ id: 'job-1' }];
+    versions = [];
+    requestVersionsMock.mockReset();
+    requestVersionsMock.mockResolvedValue(undefined);
   });
 
   describe('choosing what to start with', () => {
@@ -205,6 +213,39 @@ describe('EditInSandboxPicker', () => {
         'This needs to be a JSON object.'
       );
       expect(editInSandbox).not.toHaveBeenCalled();
+    });
+
+    test('says which version the sandbox will start from when the run is older', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1' }],
+        version_number: 3,
+      };
+      versions = [{ version_number: 7 }];
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.click(screen.getByLabelText(/this run's input/i));
+
+      expect(screen.getByTestId('version-note')).toHaveTextContent(
+        /This run used v3\./
+      );
+      expect(screen.getByTestId('version-note')).toHaveTextContent(/v7/);
+    });
+
+    test('stays quiet when the run already used the version now live', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1' }],
+        version_number: 7,
+      };
+      versions = [{ version_number: 7 }];
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.click(screen.getByLabelText(/this run's input/i));
+
+      expect(screen.queryByTestId('version-note')).toBeNull();
     });
 
     test('sends the chosen saved input by id', async () => {

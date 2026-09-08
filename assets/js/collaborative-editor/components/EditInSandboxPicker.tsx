@@ -15,7 +15,11 @@ import { Tooltip } from '../../components/Tooltip';
 import type { Dataclip } from '../api/dataclips';
 import { getDataclipBody, searchDataclips } from '../api/dataclips';
 import { useActiveRun } from '../hooks/useHistory';
-import { useProject } from '../hooks/useSessionContext';
+import {
+  useProject,
+  useRequestVersions,
+  useVersions,
+} from '../hooks/useSessionContext';
 import { useWorkflowActions, useWorkflowState } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import {
@@ -307,8 +311,18 @@ function describeBodyProblem(body: string): string | null {
   }
 }
 
-const navigateToSandbox = (projectId: string, workflowId: string) => {
-  window.location.href = `/projects/${projectId}/w/${workflowId}`;
+// The dataclip id rides along so the sandbox opens with it already selected
+// rather than merely holding it somewhere.
+const navigateToSandbox = (
+  projectId: string,
+  workflowId: string,
+  dataclipId?: string | null
+) => {
+  const base = `/projects/${projectId}/w/${workflowId}`;
+
+  window.location.href = dataclipId
+    ? `${base}?dataclip=${encodeURIComponent(dataclipId)}`
+    : base;
 };
 
 export function EditInSandboxPicker({
@@ -344,6 +358,8 @@ export function EditInSandboxPicker({
   const activeRun = useActiveRun();
   const project = useProject();
   const jobs = useWorkflowState(state => state.jobs);
+  const versions = useVersions();
+  const requestVersions = useRequestVersions();
 
   // Any job in the project resolves the same set of named dataclips, so the
   // first one is enough to ask for them.
@@ -418,6 +434,23 @@ export function EditInSandboxPicker({
     };
   }, [isOpen, startWith, project?.id, anyJobId]);
 
+  useEffect(() => {
+    if (!isOpen || !activeRun || versions.length > 0) return;
+
+    void requestVersions();
+  }, [isOpen, activeRun, versions.length, requestVersions]);
+
+  // A sandbox always forks the current version, because promote rebuilds the
+  // parent from the sandbox and an older fork would delete the newer work. When
+  // the run came from an older version, say so rather than let it surprise.
+  const runVersionNumber = activeRun?.version_number ?? null;
+  const latestVersionNumber = versions[0]?.version_number ?? null;
+  const startsFromNewerVersion =
+    startWith === 'run' &&
+    runVersionNumber !== null &&
+    latestVersionNumber !== null &&
+    runVersionNumber !== latestVersionNumber;
+
   const handleCreate = useCallback(
     (start: EditInSandboxStart) => {
       setIsCreating(true);
@@ -426,11 +459,11 @@ export function EditInSandboxPicker({
 
       const create = async () => {
         try {
-          const { project_id, workflow_id } = await editInSandbox(
+          const { project_id, workflow_id, dataclip_id } = await editInSandbox(
             trimmed,
             start
           );
-          navigateToSandbox(project_id, workflow_id);
+          navigateToSandbox(project_id, workflow_id, dataclip_id);
         } catch (error) {
           // A rejected name (duplicate, invalid) belongs under the input as an
           // inline field error; only genuinely unexpected/system errors toast.
@@ -586,6 +619,16 @@ export function EditInSandboxPicker({
                     ring-gray-300 focus:ring-2 focus:ring-inset
                     focus:ring-primary-600"
                 />
+
+                {startsFromNewerVersion && (
+                  <p
+                    className="mt-3 text-xs text-gray-500"
+                    data-testid="review-version-note"
+                  >
+                    This run used v{runVersionNumber}. The sandbox starts from v
+                    {latestVersionNumber}, the version live now.
+                  </p>
+                )}
 
                 <div className="mt-1 min-h-[1rem]">
                   {reviewError && (
@@ -764,6 +807,18 @@ export function EditInSandboxPicker({
                           hint="One of this project's named inputs."
                         />
                       </div>
+
+                      {startsFromNewerVersion && (
+                        <p
+                          className="mt-3 text-xs text-gray-500"
+                          data-testid="version-note"
+                        >
+                          This run used v{runVersionNumber}. The sandbox starts
+                          from v{latestVersionNumber}, the version live now,
+                          because promoting an older one would remove the newer
+                          work.
+                        </p>
+                      )}
 
                       {startWith === 'saved' && (
                         <SavedInputList

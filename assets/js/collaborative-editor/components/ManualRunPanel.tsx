@@ -304,6 +304,19 @@ export function ManualRunPanel({
         setNextCronRunDataclipId(response.next_cron_run_dataclip_id);
         setCanEditDataclip(response.can_edit_dataclip);
 
+        // A sandbox started from a run's data arrives with that dataclip named
+        // in the URL, so it opens ready to run rather than merely holding it.
+        const requestedId = params['dataclip'];
+
+        if (requestedId && !selectedDataclipRef.current) {
+          const requested = response.data.find(d => d.id === requestedId);
+
+          if (requested) {
+            setSelectedDataclip(requested);
+            setSelectedTab('existing');
+          }
+        }
+
         // Auto-select next cron run dataclip only if:
         // - Auto-selection is not disabled by parent
         // - Not following a run
@@ -331,7 +344,8 @@ export function ManualRunPanel({
     };
 
     void fetchDataclips();
-  }, [projectId, dataclipJobId, followedRunId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, dataclipJobId, followedRunId, params['dataclip']]);
 
   const buildFilters = useCallback(() => {
     const filters: Record<string, string> = {};
