@@ -311,28 +311,23 @@ defmodule Lightning.Projects.Sandboxes do
     merged
     |> Map.keys()
     |> latest_versions_by_workflow()
-    |> Enum.reduce_while(:ok, fn %{
-                                   workflow_id: target_id,
-                                   hash: hash,
-                                   source: version_source
-                                 },
-                                 :ok ->
+    |> Enum.reduce_while(:ok, fn %{workflow_id: target_id, hash: hash}, :ok ->
       source_id = Map.fetch!(merged, target_id)
 
       if hash in Map.get(source_hashes, source_id, []) do
         {:cont, :ok}
       else
-        # The target's own source is carried over rather than chosen. It is
-        # normally "cli", and `WorkflowVersions.record_version/3` squashes a
-        # write that repeats the latest row's source, so a later CLI deploy into
-        # this sandbox can delete the sync point and bring the false warning
-        # back. Writing "app" instead would lose it to the next editor save,
-        # which happens far more often.
+        # "cli" because the provisioner wrote the row this mirrors, and stating
+        # it beats inheriting whatever the target happens to hold.
+        # `WorkflowVersions.record_version/3` squashes a write repeating the
+        # latest row's source, so a later CLI deploy into this sandbox can
+        # delete the sync point and bring the false warning back. "app" would be
+        # worse: the next editor save would take it, and those are constant.
         %WorkflowVersion{}
         |> WorkflowVersion.changeset(%{
           workflow_id: source_id,
           hash: hash,
-          source: version_source
+          source: "cli"
         })
         |> Repo.insert()
         |> case do

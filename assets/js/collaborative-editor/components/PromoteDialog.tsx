@@ -80,6 +80,7 @@ export function PromoteDialog({
     null
   );
   const [checkFailed, setCheckFailed] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const isBusy = isPromoting || isArchiving;
 
@@ -92,6 +93,7 @@ export function PromoteDialog({
       setIsArchiving(false);
       setDivergedParentName(null);
       setCheckFailed(false);
+      setChecking(true);
     }
   }, [isOpen]);
 
@@ -110,6 +112,11 @@ export function PromoteDialog({
         // Say so rather than reading a failed check as "nothing has changed".
         if (!cancelled) {
           setCheckFailed(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setChecking(false);
         }
       });
 
@@ -195,6 +202,13 @@ export function PromoteDialog({
                   and starts processing data with these changes.
                 </p>
 
+                {checking && (
+                  <p className="mt-4 text-sm text-gray-500">
+                    Checking whether the parent has changed since this sandbox
+                    was created...
+                  </p>
+                )}
+
                 {checkFailed && (
                   <p className="mt-4 text-sm text-gray-500">
                     We could not check whether the parent has changed since this
@@ -234,6 +248,7 @@ export function PromoteDialog({
                   <Button
                     variant="primary"
                     loading={isPromoting}
+                    disabled={checking}
                     onClick={() => void handleConfirm()}
                   >
                     {isPromoting ? (

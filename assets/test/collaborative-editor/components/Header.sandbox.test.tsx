@@ -467,6 +467,39 @@ describe('Header - lifecycle actions', () => {
     expect(promote).not.toHaveBeenCalled();
   });
 
+  test('holds the promote until the divergence check has answered', async () => {
+    const user = userEvent.setup();
+    let resolveCheck: (value: {
+      diverged: boolean;
+      parent_name: string | null;
+    }) => void = () => {};
+    checkPromote.mockReturnValue(
+      new Promise(resolve => {
+        resolveCheck = resolve;
+      })
+    );
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+
+    const dialog = screen.getByRole('dialog');
+    // Silence while the answer is in flight would read as "nothing changed".
+    expect(
+      within(dialog).getByRole('button', { name: 'Save and promote' })
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByText(/checking whether the parent has changed/i)
+    ).toBeInTheDocument();
+
+    resolveCheck({ diverged: false, parent_name: null });
+
+    await waitFor(() => {
+      expect(
+        within(dialog).getByRole('button', { name: 'Save and promote' })
+      ).toBeEnabled();
+    });
+  });
+
   test('warns on the confirm step when the parent has changed since the fork', async () => {
     const user = userEvent.setup();
     checkPromote.mockResolvedValue({
