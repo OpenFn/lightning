@@ -105,7 +105,7 @@ describe('EditInSandboxPicker', () => {
 
     expect(screen.getByText('Create a new sandbox')).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText('e.g. Test new changes')
+      screen.getByPlaceholderText('What are you trying out?')
     ).toBeInTheDocument();
     expect(screen.getByTestId('create-sandbox-button')).toBeInTheDocument();
 
@@ -283,7 +283,7 @@ describe('EditInSandboxPicker', () => {
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     const button = screen.getByTestId('create-sandbox-button');
-    const input = screen.getByPlaceholderText('e.g. Test new changes');
+    const input = screen.getByPlaceholderText('What are you trying out?');
 
     // Blank -> disabled.
     expect(button).toBeDisabled();
@@ -315,7 +315,7 @@ describe('EditInSandboxPicker', () => {
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
       await user.type(
-        screen.getByPlaceholderText('e.g. Test new changes'),
+        screen.getByPlaceholderText('What are you trying out?'),
         'My SB'
       );
       await user.click(screen.getByTestId('create-sandbox-button'));
@@ -358,7 +358,7 @@ describe('EditInSandboxPicker', () => {
 
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-    const input = screen.getByPlaceholderText('e.g. Test new changes');
+    const input = screen.getByPlaceholderText('What are you trying out?');
     await user.type(input, 'My SB');
     await user.click(screen.getByTestId('create-sandbox-button'));
 
@@ -408,7 +408,7 @@ describe('EditInSandboxPicker', () => {
 
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-    const input = screen.getByPlaceholderText('e.g. Test new changes');
+    const input = screen.getByPlaceholderText('What are you trying out?');
     await user.type(input, 'My SB');
     await user.click(screen.getByTestId('create-sandbox-button'));
 
@@ -437,7 +437,7 @@ describe('EditInSandboxPicker', () => {
 
       // Focus the input and press Enter; no click on "Create sandbox".
       await user.type(
-        screen.getByPlaceholderText('e.g. Test new changes'),
+        screen.getByPlaceholderText('What are you trying out?'),
         'My SB{Enter}'
       );
 
@@ -460,7 +460,7 @@ describe('EditInSandboxPicker', () => {
 
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-    const input = screen.getByPlaceholderText('e.g. Test new changes');
+    const input = screen.getByPlaceholderText('What are you trying out?');
     input.focus();
     await user.keyboard('{Enter}');
 
@@ -476,7 +476,7 @@ describe('EditInSandboxPicker', () => {
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     await user.type(
-      screen.getByPlaceholderText('e.g. Test new changes'),
+      screen.getByPlaceholderText('What are you trying out?'),
       'My SB'
     );
     await user.click(screen.getByTestId('create-sandbox-button'));
@@ -486,7 +486,9 @@ describe('EditInSandboxPicker', () => {
       expect(button).toHaveTextContent('Creating...');
     });
     expect(button).toBeDisabled();
-    expect(screen.getByPlaceholderText('e.g. Test new changes')).toBeDisabled();
+    expect(
+      screen.getByPlaceholderText('What are you trying out?')
+    ).toBeDisabled();
   });
 
   test('forwards the trimmed name to the create action', async () => {
@@ -503,7 +505,7 @@ describe('EditInSandboxPicker', () => {
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
       await user.type(
-        screen.getByPlaceholderText('e.g. Test new changes'),
+        screen.getByPlaceholderText('What are you trying out?'),
         '  My SB  '
       );
       await user.click(screen.getByTestId('create-sandbox-button'));

@@ -162,7 +162,7 @@ export function VersionDropdown({
               </div>
             ) : (
               <>
-                <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                <p className="px-4 pt-1 pb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
                   Version history
                 </p>
 
@@ -196,7 +196,7 @@ export function VersionDropdown({
                     >
                       <span
                         className={cn(
-                          'mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset',
+                          'mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset',
                           version.is_latest
                             ? 'bg-green-100 text-green-800 ring-green-600/20'
                             : 'bg-gray-100 text-gray-600 ring-gray-500/10'

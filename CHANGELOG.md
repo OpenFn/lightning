@@ -17,6 +17,12 @@ and this project adheres to
 
 ### Changed
 
+- The sandbox and lifecycle buttons in the editor use the shared button
+  component rather than six hand-rolled copies of the same classes, and the
+  Edit-in-sandbox dialog says what a sandbox is once instead of three times.
+  [#4991](https://github.com/OpenFn/lightning/issues/4991),
+  [#4992](https://github.com/OpenFn/lightning/issues/4992)
+
 - Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising
   the first character of a string, which breaks names in many languages.
   Lightning does not normalise anything today, but #4577 adds it on every name,

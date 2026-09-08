@@ -36,6 +36,7 @@ import { isFinalState } from '../types/history';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
+import { Button } from './Button';
 import { AlertDialog } from './AlertDialog';
 import { Breadcrumbs } from './Breadcrumbs';
 import { EditInSandboxPicker } from './EditInSandboxPicker';
@@ -84,21 +85,15 @@ export function SaveButton({
             }
             side="bottom"
           >
-            <button
-              type="button"
+            <Button
               data-testid="save-workflow-button"
-              className="rounded-md text-sm font-semibold shadow-xs
-            phx-submit-loading:opacity-75 cursor-pointer
-            disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
-            bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-300 text-white
-            focus-visible:outline-2 focus-visible:outline-offset-2
-            focus-visible:outline-primary-600 focus:ring-transparent"
+              className="phx-submit-loading:opacity-75 cursor-pointer
+                focus:ring-transparent"
               onClick={onClick}
               disabled={!canSave}
             >
               {label}
-            </button>
+            </Button>
           </Tooltip>
         </div>
         {hasChanges ? (
@@ -120,21 +115,15 @@ export function SaveButton({
           }
           side="bottom"
         >
-          <button
-            type="button"
+          <Button
             data-testid="save-workflow-button"
-            className="rounded-l-md text-sm font-semibold shadow-xs
-            phx-submit-loading:opacity-75 cursor-pointer
-            disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
-            bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-300 text-white
-            focus-visible:outline-2 focus-visible:outline-offset-2
-            focus-visible:outline-primary-600 focus:ring-transparent"
+            className="rounded-r-none phx-submit-loading:opacity-75
+              cursor-pointer focus:ring-transparent"
             onClick={onClick}
             disabled={!canSave}
           >
             {label}
-          </button>
+          </Button>
         </Tooltip>
         <Menu as="div" className="relative -ml-px block">
           <MenuButton
@@ -634,9 +623,9 @@ export function Header({
                     }
                     side="bottom"
                   >
-                    <button
-                      type="button"
+                    <Button
                       data-testid="go-live-button"
+                      className="inline-flex items-center"
                       disabled={isReadOnly || isTransitioning}
                       onClick={() => {
                         setIsTransitioning(true);
@@ -651,39 +640,37 @@ export function Header({
                             setIsTransitioning(false);
                           });
                       }}
-                      className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
                     >
                       Go live
-                    </button>
+                    </Button>
                   </Tooltip>
                 )}
               {!isNewWorkflow &&
                 !isSandbox &&
                 !isViewingNonCurrentVersion &&
                 lifecycleState === 'live' && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     data-testid="switch-to-draft-button"
+                    className="inline-flex items-center"
                     disabled={isTransitioning}
                     onClick={() => {
                       setShowSwitchToDraftDialog(true);
                     }}
-                    className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-gray-50"
                   >
                     Switch to draft
-                  </button>
+                  </Button>
                 )}
               {!isNewWorkflow && isSandbox && !isViewingNonCurrentVersion && (
-                <button
-                  type="button"
+                <Button
                   data-testid="promote-sandbox-button"
+                  className="inline-flex items-center gap-1"
                   onClick={() => {
                     setShowPromoteDialog(true);
                   }}
-                  className="inline-flex items-center gap-1 rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
                 >
                   Promote
-                </button>
+                </Button>
               )}
               {lifecycleState === 'live' &&
                 !isSandbox &&
@@ -697,18 +684,17 @@ export function Header({
                     }
                     side="bottom"
                   >
-                    <button
-                      type="button"
+                    <Button
                       data-testid="edit-in-sandbox-button"
+                      className="inline-flex items-center"
                       disabled={!canProvisionSandbox}
                       onClick={() => {
                         if (!canProvisionSandbox) return;
                         setShowEditInSandboxPicker(true);
                       }}
-                      className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
                     >
                       Edit in sandbox
-                    </button>
+                    </Button>
                   </Tooltip>
                 )}
               {projectId && workflowId && firstTriggerId && !isReadOnly && (

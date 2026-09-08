@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
+import { Button } from './Button';
 import { useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import {
@@ -313,14 +314,12 @@ export function EditInSandboxPicker({
               Edit in sandbox
             </DialogTitle>
             <p className="mt-1 text-sm text-gray-600">
-              Make changes safely in a sandbox without affecting this live
-              workflow.
+              A sandbox is a copy of this project. Nothing you do in it touches
+              the live workflow until you promote it back.
             </p>
 
-            {/* Create a new sandbox. Eyebrow title + subtitle mirror the
-                "Join an active sandbox" section below so the two read as
-                visual siblings; the title/subtitle/placeholder identify the
-                field, so no separate visible label is needed. */}
+            {/* The title, subtitle and placeholder identify the field, so it
+                needs no separate visible label. */}
             <div className="mt-6">
               <p
                 className="text-xs font-semibold uppercase tracking-wide
@@ -329,7 +328,7 @@ export function EditInSandboxPicker({
                 Create a new sandbox
               </p>
               <p className="mt-1 text-xs text-gray-500">
-                Branch from the current live version to make changes safely.
+                Starts from the version live now.
               </p>
               <form
                 className="mt-3"
@@ -355,7 +354,7 @@ export function EditInSandboxPicker({
                         // Editing the name dismisses a stale field error.
                         setNameError(null);
                       }}
-                      placeholder="e.g. Test new changes"
+                      placeholder="What are you trying out?"
                       disabled={isCreating}
                       aria-invalid={nameError ? true : undefined}
                       aria-describedby={
@@ -372,20 +371,14 @@ export function EditInSandboxPicker({
                       )}
                     />
                   </div>
-                  <button
+                  <Button
                     type="submit"
                     data-testid="create-sandbox-button"
                     disabled={isCreating || !canCreate}
-                    className="inline-flex shrink-0 items-center self-start
-                      rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold
-                      text-white shadow-sm shadow-primary-600/20
-                      hover:bg-primary-500 focus-visible:outline-2
-                      focus-visible:outline-offset-2
-                      focus-visible:outline-primary-600
-                      disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex shrink-0 items-center self-start"
                   >
                     {isCreating ? 'Creating...' : 'Create sandbox'}
-                  </button>
+                  </Button>
                 </div>
                 {/* Always-rendered slot sized for one line of error text, so
                     showing/hiding the message never shifts the OR divider or
@@ -417,7 +410,8 @@ export function EditInSandboxPicker({
                   Join an active sandbox
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  Continue in a sandbox that's already active for this workflow.
+                  Pick up where someone left off, in a sandbox already open for
+                  this workflow.
                 </p>
 
                 {isLoadingList ? (
