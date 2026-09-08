@@ -174,6 +174,18 @@ describe('EditInSandboxPicker', () => {
       expect(screen.queryByLabelText(/this run's input/i)).toBeNull();
     });
 
+    test("does not offer the run's input when its step has no job", async () => {
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: null }],
+      };
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      // Offering it could only create an empty sandbox while reporting success.
+      expect(screen.queryByLabelText(/this run's input/i)).toBeNull();
+    });
+
     test("carries the reviewed body through when the run's input is chosen", async () => {
       const user = userEvent.setup();
       activeRun = {
@@ -369,6 +381,20 @@ describe('EditInSandboxPicker', () => {
       // data we are trying not to move, so create would refuse it anyway.
       expect(within(saved).getByText('known good')).toBeInTheDocument();
       expect(within(saved).queryByText('from a step')).toBeNull();
+    });
+
+    test('distinguishes nothing named from nothing copyable', async () => {
+      const user = userEvent.setup();
+      searchDataclipsMock.mockResolvedValue({
+        data: [{ id: 'dc-step', name: 'from a step', type: 'step_result' }],
+      });
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.click(screen.getByLabelText(/a saved input/i));
+
+      expect(await screen.findByTestId('saved-inputs-empty')).toHaveTextContent(
+        /can be copied into a sandbox/i
+      );
     });
 
     test('says a step is needed before a saved input can be picked', async () => {

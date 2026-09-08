@@ -432,13 +432,12 @@ describe('ManualRunPanel', () => {
       await screen.findByText('Input from run abcdef')
     ).toBeInTheDocument();
 
-    // Honoured once: left in place, every refetch would undo a deliberate
-    // deselection.
-    await waitFor(() => {
-      expect(urlState.mockFns.replaceSearchParams).toHaveBeenCalledWith({
-        dataclip: null,
-      });
+    // The URL is left alone: rewriting it would drop the other params or add a
+    // history entry, and neither is worth it to record something a ref holds.
+    expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith({
+      dataclip: null,
     });
+    expect(urlState.mockFns.replaceSearchParams).not.toHaveBeenCalled();
   });
 
   test('leaves the selection alone when the URL names a dataclip it does not have', async () => {

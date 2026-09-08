@@ -108,6 +108,7 @@ export function ManualRunPanel({
   const [manuallyUnselected, setManuallyUnselected] = useState(false);
 
   // Ref to avoid stale closure in async fetch callback
+  const honouredDataclipRef = useRef(false);
   const selectedDataclipRef = useRef(selectedDataclip);
   selectedDataclipRef.current = selectedDataclip;
 
@@ -152,7 +153,7 @@ export function ManualRunPanel({
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
 
-  const { params, updateSearchParams, replaceSearchParams } = useURLState();
+  const { params, updateSearchParams } = useURLState();
   const followedRunId = params.run ?? null;
 
   // Connect to run channel when following a run in standalone mode
@@ -306,25 +307,30 @@ export function ManualRunPanel({
 
         // A sandbox started from a run's data arrives with that dataclip named
         // in the URL, so it opens ready to run rather than merely holding it.
-        // Honoured once: the param is dropped afterwards, or every refetch
+        //
+        // Honoured once per mount, tracked here rather than by clearing the
+        // param: rewriting the URL to record it would either drop the other
+        // params or add a history entry, and re-honouring it on every refetch
         // would undo a deliberate deselection.
         const requestedId = params['dataclip'];
 
         if (
           requestedId &&
+          !honouredDataclipRef.current &&
           !selectedDataclipRef.current &&
           !manuallyUnselected
         ) {
+          honouredDataclipRef.current = true;
+
           const requested = response.data.find(d => d.id === requestedId);
 
           if (requested) {
             setSelectedDataclip(requested);
             setSelectedTab('existing');
+            // Returned before the cron block below, which reads a ref that is
+            // only refreshed on render and would still see nothing selected.
+            return;
           }
-
-          // Replaced, not pushed: a new entry would make Back re-select the
-          // dataclip instead of leaving the sandbox.
-          replaceSearchParams({ dataclip: null });
         }
 
         // Auto-select next cron run dataclip only if:

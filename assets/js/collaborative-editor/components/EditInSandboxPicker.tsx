@@ -201,12 +201,14 @@ function SavedInputList({
   dataclips,
   isLoading,
   canAsk,
+  anyFound,
   selectedId,
   onSelect,
 }: {
   dataclips: Dataclip[];
   isLoading: boolean;
   canAsk: boolean;
+  anyFound: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
@@ -238,7 +240,9 @@ function SavedInputList({
         className="mt-3 text-xs text-gray-500"
         data-testid="saved-inputs-empty"
       >
-        This project has no named inputs yet. Name a dataclip to reuse it here.
+        {anyFound
+          ? "None of this project's named inputs can be copied into a sandbox. A step result cannot travel."
+          : 'This project has no named inputs yet. Name a dataclip to reuse it here.'}
       </p>
     );
   }
@@ -394,11 +398,20 @@ export function EditInSandboxPicker({
   const anyJobId = jobs[0]?.id ?? null;
   const [savedDataclips, setSavedDataclips] = useState<Dataclip[]>([]);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
+  const [savedInputsFiltered, setSavedInputsFiltered] = useState(false);
 
   // A run's own input is its first step's input. Anything deeper is a step
   // result, which is a different thing to offer.
   const runInputDataclipId = activeRun?.steps?.[0]?.input_dataclip_id ?? null;
   const runStepJobId = activeRun?.steps?.[0]?.job_id ?? null;
+
+  // Everything the fetch needs. Without all of it the choice could only create
+  // an empty sandbox while reporting success.
+  const canStartFromRun =
+    runInputDataclipId !== null &&
+    runStepJobId !== null &&
+    activeRun !== null &&
+    Boolean(project?.id);
   const runLabel = activeRun ? activeRun.id.slice(0, 6) : null;
 
   useEffect(() => {
@@ -450,7 +463,11 @@ export function EditInSandboxPicker({
       .then(({ data }) => {
         // Only what a sandbox can actually copy. Naming is not type-restricted,
         // so a named step result can appear here and would be refused on create.
-        if (!cancelled) setSavedDataclips(data.filter(isCopyableDataclip));
+        if (cancelled) return;
+
+        setSavedDataclips(data.filter(isCopyableDataclip));
+        setSavedInputsFiltered(data.length > 0);
+        setSavedInputsFiltered(data.length > 0);
       })
       .catch(() => {
         if (!cancelled) {
@@ -536,14 +553,12 @@ export function EditInSandboxPicker({
       return;
     }
 
-    if (
-      startWith !== 'run' ||
-      !runInputDataclipId ||
-      !project?.id ||
-      !activeRun ||
-      !runStepJobId
-    ) {
+    if (startWith !== 'run') {
       handleCreate({});
+      return;
+    }
+
+    if (!canStartFromRun || !project?.id || !activeRun || !runStepJobId) {
       return;
     }
 
@@ -575,7 +590,7 @@ export function EditInSandboxPicker({
   }, [
     startWith,
     savedDataclipId,
-    runInputDataclipId,
+    canStartFromRun,
     handleCreate,
     project?.id,
     activeRun,
@@ -865,7 +880,7 @@ export function EditInSandboxPicker({
                           hint="An empty sandbox. Pick input when you run."
                         />
 
-                        {runInputDataclipId && (
+                        {canStartFromRun && (
                           <StartOption
                             value="run"
                             checked={startWith === 'run'}
@@ -912,6 +927,7 @@ export function EditInSandboxPicker({
                           dataclips={savedDataclips}
                           isLoading={isLoadingSaved}
                           canAsk={anyJobId !== null}
+                          anyFound={savedInputsFiltered}
                           selectedId={savedDataclipId}
                           onSelect={setSavedDataclipId}
                         />

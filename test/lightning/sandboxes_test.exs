@@ -497,6 +497,34 @@ defmodule Lightning.Projects.SandboxesTest do
                ])
     end
 
+    test "carries an http request's metadata onto the copy" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      original =
+        insert(:dataclip,
+          project: parent,
+          name: "a webhook call",
+          type: :http_request,
+          body: %{"a" => 1},
+          request: %{"headers" => %{"x-thing" => "1"}}
+        )
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{
+          name: "sb-req",
+          dataclip_ids: [original.id]
+        })
+
+      # Without the request, a job reading state.request sees a different input
+      # in the sandbox than the one that ran in production.
+      assert [%{"headers" => %{"x-thing" => "1"}}] =
+               from(d in Dataclip,
+                 where: d.project_id == ^sandbox.id,
+                 select: d.request
+               )
+               |> Repo.all()
+    end
+
     test "creates the reviewed body in the sandbox rather than copying a row" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
 

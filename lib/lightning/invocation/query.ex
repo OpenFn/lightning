@@ -263,9 +263,10 @@ defmodule Lightning.Invocation.Query do
   this job has run should not use this.
 
   The two sources are unioned rather than ORed, so each side keeps its own index
-  (`steps.job_id` and `dataclips.project_id`) and the outer query is a primary
-  key probe. An OR across them makes dataclips, the largest table in the schema,
-  the driving relation on every keystroke of the picker's search.
+  (`steps.job_id` and `dataclips.project_id`) instead of making dataclips, the
+  largest table in the schema, the driving relation on every keystroke of the
+  picker's search. The outer query still sorts the matched set, as the query it
+  replaced did.
   """
   def selectable_for_job(job_id, project_id, limit) do
     consumed = job_input_dataclip_ids(job_id)

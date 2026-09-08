@@ -622,7 +622,12 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => foreign.id})
       assert_reply ref, :error, %{type: "validation_error"}
 
-      refute Lightning.Repo.get_by(Lightning.Projects.Project, name: "not yours")
+      # Refused outright, so no sandbox exists to have copied it into.
+      assert [] =
+               Lightning.Invocation.Dataclip
+               |> Lightning.Repo.all()
+               |> Enum.filter(&(&1.name == "not yours"))
+               |> Enum.reject(&(&1.id == foreign.id))
     end
 
     test "refuses an unnamed dataclip, which retention would wipe", %{

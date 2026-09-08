@@ -1572,6 +1572,7 @@ defmodule Lightning.Projects.Sandboxes do
         select: %{
           name: dataclip.name,
           body: type(dataclip.body, :map),
+          request: type(dataclip.request, :map),
           type: dataclip.type
         }
       )
