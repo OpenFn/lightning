@@ -221,6 +221,37 @@ describe('EditInSandboxPicker', () => {
       });
     });
 
+    test('keeps a redaction across Back and Continue', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+      getDataclipBodyMock.mockResolvedValue('{"email":"real@example.com"}');
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      const body = await screen.findByTestId('review-body');
+      await user.clear(body);
+      await user.type(body, '{{"email":"redacted"}');
+
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      // Refetching here would put the production email back in front of them,
+      // which is the one thing this screen exists to prevent.
+      expect(await screen.findByTestId('review-body')).toHaveValue(
+        '{"email":"redacted"}'
+      );
+    });
+
     test('says nothing was kept when the run has no input to copy', async () => {
       const user = userEvent.setup();
       activeRun = {
@@ -407,6 +438,69 @@ describe('EditInSandboxPicker', () => {
       expect(
         screen.getByTestId('saved-inputs-unavailable')
       ).toBeInTheDocument();
+    });
+
+    test('sends the chosen saved input by id', async () => {
+      const user = userEvent.setup();
+      searchDataclipsMock.mockResolvedValue({
+        data: [{ id: 'dc-saved', name: 'known good', type: 'saved_input' }],
+      });
+      editInSandbox.mockResolvedValue({
+        project_id: 'p2',
+        workflow_id: 'w2',
+        dataclip_id: 'dc-copy',
+      });
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+
+      await user.click(screen.getByLabelText(/a saved input/i));
+      const saved = await screen.findByTestId('saved-inputs');
+      await user.click(within(saved).getByRole('radio'));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      await waitFor(() => {
+        expect(editInSandbox).toHaveBeenCalledWith('My SB', {
+          dataclipId: 'dc-saved',
+        });
+      });
+    });
+
+    test('lands on the run panel so the carried input is visible', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+      getDataclipBodyMock.mockResolvedValue('{"a":1}');
+      editInSandbox.mockResolvedValue({
+        project_id: 'p2',
+        workflow_id: 'w2',
+        dataclip_id: 'dc-new',
+      });
+      const nav = stubNavigation();
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.type(
+        screen.getByPlaceholderText('e.g. Test new changes'),
+        'My SB'
+      );
+
+      await user.click(screen.getByLabelText(/this run's input/i));
+      await user.click(screen.getByTestId('create-sandbox-button'));
+      await screen.findByTestId('review-body');
+      await user.click(screen.getByTestId('create-from-review-button'));
+
+      // Without panel=run the sandbox opens on a bare canvas and the input we
+      // carried is selected where nobody can see it.
+      await waitFor(() => {
+        expect(nav.hrefSetter).toHaveBeenCalledWith(
+          '/projects/p2/w/w2?panel=run&dataclip=dc-new'
+        );
+      });
     });
 
     test('will not create until a saved input is picked', async () => {

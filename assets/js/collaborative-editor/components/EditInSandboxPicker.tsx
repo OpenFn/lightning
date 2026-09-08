@@ -202,6 +202,7 @@ function SavedInputList({
   isLoading,
   canAsk,
   anyFound,
+  failed,
   selectedId,
   onSelect,
 }: {
@@ -209,6 +210,7 @@ function SavedInputList({
   isLoading: boolean;
   canAsk: boolean;
   anyFound: boolean;
+  failed: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
@@ -219,6 +221,17 @@ function SavedInputList({
         data-testid="saved-inputs-unavailable"
       >
         Add a step to this workflow to pick a saved input.
+      </p>
+    );
+  }
+
+  if (failed) {
+    return (
+      <p
+        className="mt-3 text-xs text-gray-500"
+        data-testid="saved-inputs-failed"
+      >
+        Could not load this project's saved inputs.
       </p>
     );
   }
@@ -350,8 +363,10 @@ const navigateToSandbox = (
 ) => {
   const base = `/projects/${projectId}/w/${workflowId}`;
 
+  // The run panel has to be asked for, or the sandbox opens on a bare canvas
+  // and the input we carried is selected somewhere nobody can see.
   window.location.href = dataclipId
-    ? `${base}?dataclip=${encodeURIComponent(dataclipId)}`
+    ? `${base}?panel=run&dataclip=${encodeURIComponent(dataclipId)}`
     : base;
 };
 
@@ -399,6 +414,7 @@ export function EditInSandboxPicker({
   const [savedDataclips, setSavedDataclips] = useState<Dataclip[]>([]);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
   const [savedInputsFiltered, setSavedInputsFiltered] = useState(false);
+  const [savedInputsFailed, setSavedInputsFailed] = useState(false);
 
   // A run's own input is its first step's input. Anything deeper is a step
   // result, which is a different thing to offer.
@@ -455,6 +471,7 @@ export function EditInSandboxPicker({
 
     let cancelled = false;
     setIsLoadingSaved(true);
+    setSavedInputsFailed(false);
 
     void searchDataclips(project.id, anyJobId, '', {
       named_only: true,
@@ -467,10 +484,10 @@ export function EditInSandboxPicker({
 
         setSavedDataclips(data.filter(isCopyableDataclip));
         setSavedInputsFiltered(data.length > 0);
-        setSavedInputsFiltered(data.length > 0);
       })
       .catch(() => {
         if (!cancelled) {
+          setSavedInputsFailed(true);
           notifications.alert({
             title: 'Could not load saved inputs',
             description: 'Please try again.',
@@ -509,6 +526,12 @@ export function EditInSandboxPicker({
     runVersionNumber !== null &&
     latestVersionNumber !== null &&
     runVersionNumber !== latestVersionNumber;
+
+  useEffect(() => {
+    if (!canStartFromRun && startWith === 'run') {
+      setStartWith('nothing');
+    }
+  }, [canStartFromRun, startWith]);
 
   const handleCreate = useCallback(
     (start: EditInSandboxStart) => {
@@ -565,6 +588,13 @@ export function EditInSandboxPicker({
     setIsLoadingBody(true);
     setReviewError(null);
 
+    // Already reviewed: keep what the person has, or Back then Continue would
+    // quietly restore the production body they had just redacted.
+    if (reviewBody !== '') {
+      setStep('review');
+      return;
+    }
+
     // Whether the input was kept is the dataclip's own answer. Inferring it from
     // the body does not work: a wiped http_request still serves a JSON object,
     // `{"data": null, "request": null}`, which reads as perfectly good data.
@@ -592,6 +622,7 @@ export function EditInSandboxPicker({
     savedDataclipId,
     canStartFromRun,
     handleCreate,
+    reviewBody,
     project?.id,
     activeRun,
     runStepJobId,
@@ -928,6 +959,7 @@ export function EditInSandboxPicker({
                           isLoading={isLoadingSaved}
                           canAsk={anyJobId !== null}
                           anyFound={savedInputsFiltered}
+                          failed={savedInputsFailed}
                           selectedId={savedDataclipId}
                           onSelect={setSavedDataclipId}
                         />

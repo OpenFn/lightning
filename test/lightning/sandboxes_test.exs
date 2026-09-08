@@ -525,6 +525,41 @@ defmodule Lightning.Projects.SandboxesTest do
                |> Repo.all()
     end
 
+    test "leaves a request off a type that must not carry one" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      # A row like this cannot be written through the app today, but legacy data
+      # can look like it, and the changeset refuses a request on this type.
+      {1, _} =
+        Repo.insert_all(Dataclip, [
+          %{
+            id: Ecto.UUID.generate(),
+            project_id: parent.id,
+            name: "legacy",
+            type: :saved_input,
+            body: %{"a" => 1},
+            request: %{"headers" => %{}},
+            inserted_at: DateTime.utc_now(),
+            updated_at: DateTime.utc_now()
+          }
+        ])
+
+      legacy = Repo.get_by!(Dataclip, name: "legacy")
+
+      assert {:ok, sandbox} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-legacy",
+                 dataclip_ids: [legacy.id]
+               })
+
+      assert [nil] =
+               from(d in Dataclip,
+                 where: d.project_id == ^sandbox.id,
+                 select: d.request
+               )
+               |> Repo.all()
+    end
+
     test "creates the reviewed body in the sandbox rather than copying a row" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
 

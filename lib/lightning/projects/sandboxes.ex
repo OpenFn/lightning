@@ -1572,7 +1572,12 @@ defmodule Lightning.Projects.Sandboxes do
         select: %{
           name: dataclip.name,
           body: type(dataclip.body, :map),
-          request: type(dataclip.request, :map),
+          request:
+            fragment(
+              "case when ? = 'http_request' then ? else null end",
+              dataclip.type,
+              dataclip.request
+            ),
           type: dataclip.type
         }
       )

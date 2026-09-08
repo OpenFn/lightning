@@ -317,14 +317,16 @@ export function ManualRunPanel({
         if (
           requestedId &&
           !honouredDataclipRef.current &&
+          !disableAutoSelection &&
           !selectedDataclipRef.current &&
           !manuallyUnselected
         ) {
-          honouredDataclipRef.current = true;
-
           const requested = response.data.find(d => d.id === requestedId);
 
           if (requested) {
+            // Flagged only on a hit, so a dataclip that has dropped off this
+            // page can still be picked up by a later fetch.
+            honouredDataclipRef.current = true;
             setSelectedDataclip(requested);
             setSelectedTab('existing');
             // Returned before the cron block below, which reads a ref that is
