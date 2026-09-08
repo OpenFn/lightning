@@ -2366,7 +2366,7 @@ defmodule Lightning.Projects do
            %{
              sandbox: sandbox,
              workflow: workflow,
-             starting_dataclip_id: Map.get(sandbox, :starting_dataclip_id)
+             starting_dataclip_id: sandbox.starting_dataclip_id
            }}
 
         nil ->

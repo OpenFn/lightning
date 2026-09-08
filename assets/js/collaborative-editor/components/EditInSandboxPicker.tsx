@@ -13,8 +13,12 @@ import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
 import type { Dataclip } from '../api/dataclips';
-import { getDataclipBody, searchDataclips } from '../api/dataclips';
-import { useActiveRun } from '../hooks/useHistory';
+import {
+  getDataclipBody,
+  getRunDataclip,
+  searchDataclips,
+} from '../api/dataclips';
+import { useActiveRun, useHistory } from '../hooks/useHistory';
 import {
   useProject,
   useRequestVersions,
@@ -196,14 +200,27 @@ function StartOption({
 function SavedInputList({
   dataclips,
   isLoading,
+  canAsk,
   selectedId,
   onSelect,
 }: {
   dataclips: Dataclip[];
   isLoading: boolean;
+  canAsk: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
+  if (!canAsk) {
+    return (
+      <p
+        className="mt-3 text-xs text-gray-500"
+        data-testid="saved-inputs-unavailable"
+      >
+        Add a step to this workflow to pick a saved input.
+      </p>
+    );
+  }
+
   if (isLoading) {
     return (
       <p
@@ -291,6 +308,14 @@ function createButtonLabel({
   return needsReview ? 'Continue' : 'Create sandbox';
 }
 
+// A sandbox copy is restricted to these: a step result carries whatever the
+// previous step emitted, which is the data we are trying not to move.
+const COPYABLE_DATACLIP_TYPES = ['global', 'saved_input', 'http_request'];
+
+function isCopyableDataclip(dataclip: Dataclip): boolean {
+  return COPYABLE_DATACLIP_TYPES.includes(dataclip.type);
+}
+
 // Shape only, and checked here as well as on the server so the person is told
 // before the sandbox is attempted. Size is the server's to judge, since the
 // limit is configured there.
@@ -358,13 +383,11 @@ export function EditInSandboxPicker({
   const [savedDataclipId, setSavedDataclipId] = useState<string | null>(null);
 
   const activeRun = useActiveRun();
+  const history = useHistory();
   const project = useProject();
   const jobs = useWorkflowState(state => state.jobs);
   const versions = useVersions();
   const requestVersions = useRequestVersions();
-  const openLockVersion = useWorkflowState(
-    state => state.workflow?.lock_version
-  );
 
   // Any job in the project resolves the same set of named dataclips, so the
   // first one is enough to ask for them.
@@ -375,6 +398,7 @@ export function EditInSandboxPicker({
   // A run's own input is its first step's input. Anything deeper is a step
   // result, which is a different thing to offer.
   const runInputDataclipId = activeRun?.steps?.[0]?.input_dataclip_id ?? null;
+  const runStepJobId = activeRun?.steps?.[0]?.job_id ?? null;
   const runLabel = activeRun ? activeRun.id.slice(0, 6) : null;
 
   useEffect(() => {
@@ -419,9 +443,14 @@ export function EditInSandboxPicker({
     let cancelled = false;
     setIsLoadingSaved(true);
 
-    void searchDataclips(project.id, anyJobId, '', { named_only: true })
+    void searchDataclips(project.id, anyJobId, '', {
+      named_only: true,
+      limit: 100,
+    })
       .then(({ data }) => {
-        if (!cancelled) setSavedDataclips(data);
+        // Only what a sandbox can actually copy. Naming is not type-restricted,
+        // so a named step result can appear here and would be refused on create.
+        if (!cancelled) setSavedDataclips(data.filter(isCopyableDataclip));
       })
       .catch(() => {
         if (!cancelled) {
@@ -449,18 +478,20 @@ export function EditInSandboxPicker({
   // A sandbox always forks the version live now, because promote rebuilds the
   // parent from the sandbox and an older fork would delete the newer work.
   //
-  // What is on screen is the comparison that matters, whether a run pinned it
-  // or the version dropdown did, so the loaded document's snapshot is matched
-  // against the releases rather than anything read off the run.
-  const openVersionNumber =
-    versions.find(version => version.lock_version === openLockVersion)
-      ?.version_number ?? null;
+  // The run's version comes from the history summaries, the same place the
+  // history panel reads it. Opening a run does not load its snapshot, so the
+  // document on screen says nothing about which version the run used.
+  const runVersionNumber =
+    history
+      .flatMap(workOrder => workOrder.runs)
+      .find(run => run.id === activeRun?.id)?.version_number ?? null;
   const latestVersionNumber =
     versions.find(version => version.is_latest)?.version_number ?? null;
   const startsFromNewerVersion =
-    openVersionNumber !== null &&
+    startWith === 'run' &&
+    runVersionNumber !== null &&
     latestVersionNumber !== null &&
-    openVersionNumber !== latestVersionNumber;
+    runVersionNumber !== latestVersionNumber;
 
   const handleCreate = useCallback(
     (start: EditInSandboxStart) => {
@@ -505,7 +536,13 @@ export function EditInSandboxPicker({
       return;
     }
 
-    if (startWith !== 'run' || !runInputDataclipId) {
+    if (
+      startWith !== 'run' ||
+      !runInputDataclipId ||
+      !project?.id ||
+      !activeRun ||
+      !runStepJobId
+    ) {
       handleCreate({});
       return;
     }
@@ -513,17 +550,17 @@ export function EditInSandboxPicker({
     setIsLoadingBody(true);
     setReviewError(null);
 
-    void getDataclipBody(runInputDataclipId)
-      .then(body => {
-        // Zero-persistence projects never keep run data, and retention wipes it
-        // later elsewhere. Either way there is nothing to review, and an empty
-        // editor followed by a validation error explains none of that.
-        if (describeBodyProblem(body)) {
+    // Whether the input was kept is the dataclip's own answer. Inferring it from
+    // the body does not work: a wiped http_request still serves a JSON object,
+    // `{"data": null, "request": null}`, which reads as perfectly good data.
+    void getRunDataclip(project.id, activeRun.id, runStepJobId)
+      .then(async ({ dataclip }) => {
+        if (!dataclip || dataclip.wiped_at) {
           setRunInputMissing(true);
           return;
         }
 
-        setReviewBody(body);
+        setReviewBody(await getDataclipBody(dataclip.id));
         setStep('review');
       })
       .catch(() => {
@@ -535,7 +572,15 @@ export function EditInSandboxPicker({
       .finally(() => {
         setIsLoadingBody(false);
       });
-  }, [startWith, savedDataclipId, runInputDataclipId, handleCreate]);
+  }, [
+    startWith,
+    savedDataclipId,
+    runInputDataclipId,
+    handleCreate,
+    project?.id,
+    activeRun,
+    runStepJobId,
+  ]);
 
   const handleCreateFromReview = useCallback(() => {
     const problem = describeBodyProblem(reviewBody);
@@ -645,8 +690,8 @@ export function EditInSandboxPicker({
                     className="mt-3 text-xs text-gray-500"
                     data-testid="review-version-note"
                   >
-                    This run used v{openVersionNumber}. The sandbox starts from
-                    v{latestVersionNumber}, the version live now.
+                    This run used v{runVersionNumber}. The sandbox starts from v
+                    {latestVersionNumber}, the version live now.
                   </p>
                 )}
 
@@ -657,6 +702,17 @@ export function EditInSandboxPicker({
                       className="text-xs text-red-600"
                     >
                       {reviewError}
+                    </p>
+                  )}
+                  {/* A rejected name is decided a step back, so say it here
+                      rather than leave the button flicking with nothing on
+                      screen changing. */}
+                  {nameError && (
+                    <p
+                      data-testid="review-name-error"
+                      className="text-xs text-red-600"
+                    >
+                      {nameError} Go back to change it.
                     </p>
                   )}
                 </div>
@@ -828,7 +884,7 @@ export function EditInSandboxPicker({
                         />
                       </div>
 
-                      {runInputMissing && (
+                      {startWith === 'run' && runInputMissing && (
                         <p
                           className="mt-3 text-xs text-gray-500"
                           data-testid="run-input-missing"
@@ -844,7 +900,7 @@ export function EditInSandboxPicker({
                           className="mt-3 text-xs text-gray-500"
                           data-testid="version-note"
                         >
-                          This run used v{openVersionNumber}. The sandbox starts
+                          This run used v{runVersionNumber}. The sandbox starts
                           from v{latestVersionNumber}, the version live now,
                           because promoting an older one would remove the newer
                           work.
@@ -855,6 +911,7 @@ export function EditInSandboxPicker({
                         <SavedInputList
                           dataclips={savedDataclips}
                           isLoading={isLoadingSaved}
+                          canAsk={anyJobId !== null}
                           selectedId={savedDataclipId}
                           onSelect={setSavedDataclipId}
                         />

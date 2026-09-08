@@ -592,7 +592,12 @@ defmodule LightningWeb.WorkflowChannelTest do
         )
 
       ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => saved.id})
-      assert_reply ref, :ok, %{project_id: sandbox_id, dataclip_id: nil}
+      assert_reply ref, :ok, %{project_id: sandbox_id, dataclip_id: copied_id}
+
+      # The copy is a new row, and the sandbox opens with it selected just as
+      # the reviewed path does.
+      assert is_binary(copied_id)
+      refute copied_id == saved.id
 
       assert ["known good"] =
                Lightning.Invocation.Dataclip

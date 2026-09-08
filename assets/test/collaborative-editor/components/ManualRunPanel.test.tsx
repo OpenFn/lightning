@@ -435,7 +435,7 @@ describe('ManualRunPanel', () => {
     // Honoured once: left in place, every refetch would undo a deliberate
     // deselection.
     await waitFor(() => {
-      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      expect(urlState.mockFns.replaceSearchParams).toHaveBeenCalledWith({
         dataclip: null,
       });
     });

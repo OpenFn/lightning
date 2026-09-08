@@ -268,18 +268,26 @@ defmodule Lightning.Invocation.Query do
   the driving relation on every keystroke of the picker's search.
   """
   def selectable_for_job(job_id, project_id, limit) do
+    consumed = job_input_dataclip_ids(job_id)
+
     # No resolvable project means no project to draw named inputs from, which is
     # what an unknown job looks like.
     selectable =
       if project_id do
-        union(job_input_dataclip_ids(job_id), ^named_dataclip_ids(project_id))
+        union(consumed, ^named_dataclip_ids(project_id))
       else
-        job_input_dataclip_ids(job_id)
+        consumed
       end
 
+    # The job's own inputs sort first, so a project with many named dataclips
+    # cannot crowd them off a fixed page. The run panel resolves a followed
+    # run's input out of this list, and losing it there shows no input at all.
     from(d in Dataclip,
       where: d.id in subquery(selectable),
-      order_by: [desc: d.inserted_at],
+      order_by: [
+        desc: d.id in subquery(consumed),
+        desc: d.inserted_at
+      ],
       limit: ^limit
     )
   end

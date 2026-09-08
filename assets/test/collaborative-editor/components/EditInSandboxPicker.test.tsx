@@ -29,21 +29,26 @@ const editInSandbox = vi.fn<
 >();
 
 let jobs: { id: string }[] = [];
-let openLockVersion: number | undefined;
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({ listSandboxes, editInSandbox }),
   useWorkflowState: (selector: (state: unknown) => unknown) =>
-    selector({ jobs, workflow: { lock_version: openLockVersion } }),
+    selector({ jobs }),
 }));
 
 let activeRun: {
   id: string;
-  steps: { input_dataclip_id: string | null }[];
+  steps: { input_dataclip_id: string | null; job_id: string | null }[];
 } | null = null;
+
+let runHistory: {
+  id: string;
+  runs: { id: string; version_number: number | null }[];
+}[] = [];
 
 vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
   useActiveRun: () => activeRun,
+  useHistory: () => runHistory,
 }));
 
 let versions: {
@@ -61,10 +66,12 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
 
 const searchDataclipsMock = vi.fn();
 const getDataclipBodyMock = vi.fn();
+const getRunDataclipMock = vi.fn();
 
 vi.mock('../../../js/collaborative-editor/api/dataclips', () => ({
   searchDataclips: (...args: unknown[]) => searchDataclipsMock(...args),
   getDataclipBody: (...args: unknown[]) => getDataclipBodyMock(...args),
+  getRunDataclip: (...args: unknown[]) => getRunDataclipMock(...args),
 }));
 
 const notifyAlert =
@@ -138,13 +145,17 @@ describe('EditInSandboxPicker', () => {
     notifyAlert.mockReset();
     searchDataclipsMock.mockReset();
     getDataclipBodyMock.mockReset();
+    getRunDataclipMock.mockReset();
+    getRunDataclipMock.mockResolvedValue({
+      dataclip: { id: 'dc-1', wiped_at: null },
+    });
+    runHistory = [];
     listSandboxes.mockResolvedValue([]);
     searchDataclipsMock.mockResolvedValue({ data: [] });
     getDataclipBodyMock.mockResolvedValue('{}');
     activeRun = null;
     jobs = [{ id: 'job-1' }];
     versions = [];
-    openLockVersion = undefined;
     requestVersionsMock.mockReset();
     requestVersionsMock.mockResolvedValue(undefined);
   });
@@ -167,7 +178,7 @@ describe('EditInSandboxPicker', () => {
       const user = userEvent.setup();
       activeRun = {
         id: 'abcdef123456',
-        steps: [{ input_dataclip_id: 'dc-1' }],
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
       };
       getDataclipBodyMock.mockResolvedValue('{"email":"real@example.com"}');
       editInSandbox.mockResolvedValue({
@@ -202,11 +213,17 @@ describe('EditInSandboxPicker', () => {
       const user = userEvent.setup();
       activeRun = {
         id: 'abcdef123456',
-        steps: [{ input_dataclip_id: 'dc-1' }],
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
       };
-      // What a zero-persistence project, or an expired retention window, leaves
-      // behind.
-      getDataclipBodyMock.mockResolvedValue('null');
+      // A wiped http_request still serves a JSON object, so the guard has to
+      // read wiped_at rather than judge the body.
+      getRunDataclipMock.mockResolvedValue({
+        dataclip: {
+          id: 'dc-1',
+          wiped_at: '2026-09-01T00:00:00Z',
+        },
+      });
+      getDataclipBodyMock.mockResolvedValue('{"data": null, "request": null}');
 
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
       await user.type(
@@ -229,7 +246,7 @@ describe('EditInSandboxPicker', () => {
       const user = userEvent.setup();
       activeRun = {
         id: 'abcdef123456',
-        steps: [{ input_dataclip_id: 'dc-1' }],
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
       };
       getDataclipBodyMock.mockResolvedValue('{"a":1}');
 
@@ -253,6 +270,71 @@ describe('EditInSandboxPicker', () => {
       expect(editInSandbox).not.toHaveBeenCalled();
     });
 
+    test('says which version the sandbox will fork when the run used an older one', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+      // The run's version comes from the history summaries, not from whatever
+      // the editor happens to have open.
+      runHistory = [
+        { id: 'wo-1', runs: [{ id: 'abcdef123456', version_number: 3 }] },
+      ];
+      // Deliberately not newest-first, so the note has to read is_latest rather
+      // than trust the order.
+      versions = [
+        { version_number: 3, lock_version: 4, is_latest: false },
+        { version_number: 7, lock_version: 9, is_latest: true },
+      ];
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.click(screen.getByLabelText(/this run's input/i));
+
+      const note = screen.getByTestId('version-note');
+      expect(note).toHaveTextContent(/This run used v3\./);
+      expect(note).toHaveTextContent(/v7/);
+    });
+
+    test('stays quiet when the run already used the version live now', async () => {
+      const user = userEvent.setup();
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+      runHistory = [
+        { id: 'wo-1', runs: [{ id: 'abcdef123456', version_number: 7 }] },
+      ];
+      versions = [{ version_number: 7, lock_version: 9, is_latest: true }];
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.click(screen.getByLabelText(/this run's input/i));
+
+      expect(screen.queryByTestId('version-note')).toBeNull();
+    });
+
+    test('does not mention the run when starting from something else', async () => {
+      const user = userEvent.setup();
+      // A run is open and it did use an older version, but the sandbox is being
+      // started from a saved input, so the run has nothing to do with it.
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+      runHistory = [
+        { id: 'wo-1', runs: [{ id: 'abcdef123456', version_number: 3 }] },
+      ];
+      versions = [
+        { version_number: 3, lock_version: 4, is_latest: false },
+        { version_number: 7, lock_version: 9, is_latest: true },
+      ];
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.click(screen.getByLabelText(/a saved input/i));
+
+      expect(screen.queryByTestId('version-note')).toBeNull();
+    });
+
     test('asks for named inputs only, scoped to the project', async () => {
       const user = userEvent.setup();
 
@@ -264,17 +346,47 @@ describe('EditInSandboxPicker', () => {
           'project-1',
           'job-1',
           '',
-          {
-            named_only: true,
-          }
+          { named_only: true, limit: 100 }
         );
       });
+    });
+
+    test('does not offer a named dataclip a sandbox cannot copy', async () => {
+      const user = userEvent.setup();
+      searchDataclipsMock.mockResolvedValue({
+        data: [
+          { id: 'dc-step', name: 'from a step', type: 'step_result' },
+          { id: 'dc-ok', name: 'known good', type: 'saved_input' },
+        ],
+      });
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.click(screen.getByLabelText(/a saved input/i));
+
+      const saved = await screen.findByTestId('saved-inputs');
+
+      // A step result carries whatever the previous step emitted, which is the
+      // data we are trying not to move, so create would refuse it anyway.
+      expect(within(saved).getByText('known good')).toBeInTheDocument();
+      expect(within(saved).queryByText('from a step')).toBeNull();
+    });
+
+    test('says a step is needed before a saved input can be picked', async () => {
+      const user = userEvent.setup();
+      jobs = [];
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+      await user.click(screen.getByLabelText(/a saved input/i));
+
+      expect(
+        screen.getByTestId('saved-inputs-unavailable')
+      ).toBeInTheDocument();
     });
 
     test('will not create until a saved input is picked', async () => {
       const user = userEvent.setup();
       searchDataclipsMock.mockResolvedValue({
-        data: [{ id: 'dc-saved', name: 'known good' }],
+        data: [{ id: 'dc-saved', name: 'known good', type: 'saved_input' }],
       });
 
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);

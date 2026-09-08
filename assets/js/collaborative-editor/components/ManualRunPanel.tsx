@@ -152,7 +152,7 @@ export function ManualRunPanel({
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
 
-  const { params, updateSearchParams } = useURLState();
+  const { params, updateSearchParams, replaceSearchParams } = useURLState();
   const followedRunId = params.run ?? null;
 
   // Connect to run channel when following a run in standalone mode
@@ -322,7 +322,9 @@ export function ManualRunPanel({
             setSelectedTab('existing');
           }
 
-          updateSearchParams({ dataclip: null });
+          // Replaced, not pushed: a new entry would make Back re-select the
+          // dataclip instead of leaving the sandbox.
+          replaceSearchParams({ dataclip: null });
         }
 
         // Auto-select next cron run dataclip only if:

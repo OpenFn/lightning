@@ -79,7 +79,7 @@ defmodule Lightning.Invocation do
     Query.selectable_for_job(job_id, project_id_for_job(job_id, opts), limit)
     |> where([d], is_nil(d.wiped_at))
     |> where([d], ^dataclip_where_filter(user_filters))
-    |> then(fn query -> if offset, do: query, else: offset(query, ^offset) end)
+    |> then(fn query -> if offset, do: offset(query, ^offset), else: query end)
     |> Repo.all()
     |> maybe_filter_uuid_prefix(user_filters)
   end

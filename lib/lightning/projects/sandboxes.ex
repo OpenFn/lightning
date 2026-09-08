@@ -1577,14 +1577,21 @@ defmodule Lightning.Projects.Sandboxes do
       )
       |> Repo.all()
 
-    Enum.each(selected_dataclips, fn dataclip_attrs ->
-      dataclip_attrs
-      |> Map.put(:project_id, sandbox.id)
-      |> Dataclip.new()
-      |> Repo.insert!()
-    end)
+    copied =
+      Enum.map(selected_dataclips, fn dataclip_attrs ->
+        dataclip_attrs
+        |> Map.put(:project_id, sandbox.id)
+        |> Dataclip.new()
+        |> Repo.insert!()
+      end)
 
-    sandbox
+    # Reported only when the caller asked for exactly one, which is the editor
+    # offering a single deliberate choice. A bulk selection has no "the" input
+    # to open with.
+    case copied do
+      [%Dataclip{id: id}] -> %{sandbox | starting_dataclip_id: id}
+      _ -> sandbox
+    end
   end
 
   defp create_starting_dataclip(sandbox, nil), do: sandbox
@@ -1595,7 +1602,7 @@ defmodule Lightning.Projects.Sandboxes do
       |> Dataclip.new()
       |> Repo.insert!()
 
-    Map.put(sandbox, :starting_dataclip_id, dataclip.id)
+    %{sandbox | starting_dataclip_id: dataclip.id}
   end
 
   defp get_sandbox_keychain_id(

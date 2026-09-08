@@ -321,6 +321,53 @@ defmodule Lightning.InvocationTest do
       assert id == named.id
     end
 
+    test "honours an offset" do
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      for n <- 1..3 do
+        insert(:dataclip,
+          project: project,
+          name: "named #{n}",
+          type: :saved_input,
+          inserted_at: DateTime.utc_now() |> DateTime.add(n, :second)
+        )
+      end
+
+      first = Invocation.list_dataclips_for_job(job, %{}, limit: 1)
+
+      second =
+        Invocation.list_dataclips_for_job(job, %{}, limit: 1, offset: 1)
+
+      assert [%{id: first_id}] = first
+      assert [%{id: second_id}] = second
+      refute first_id == second_id
+    end
+
+    test "keeps the job's own inputs ahead of the project's named ones" do
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      consumed =
+        insert(:dataclip, project: project, name: nil, type: :http_request)
+
+      insert(:step, input_dataclip: consumed, job: job)
+
+      # Plenty of named inputs, all newer, so a plain date sort would bury the
+      # one the job actually ran against.
+      for n <- 1..3 do
+        insert(:dataclip,
+          project: project,
+          name: "named #{n}",
+          type: :saved_input,
+          inserted_at: DateTime.utc_now() |> DateTime.add(n, :second)
+        )
+      end
+
+      assert [%{id: first_id} | _] =
+               Invocation.list_dataclips_for_job(job, %{}, limit: 2)
+
+      assert first_id == consumed.id
+    end
+
     test "leaves an unnamed dataclip out unless the job has consumed it" do
       %{project: project, jobs: [job | _]} = insert(:complex_workflow)
 
