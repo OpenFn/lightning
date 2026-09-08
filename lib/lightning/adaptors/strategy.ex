@@ -47,6 +47,10 @@ defmodule Lightning.Adaptors.Strategy do
   The structured adaptor record returned by `c:fetch_adaptor/1`. Icon
   fields are persisted separately by the Scheduler after joining
   `c:fetch_icons/1` — they are not stamped onto this record.
+
+  `schema_data` is the credential schema as a JSON binary. `nil` means
+  the adaptor has no schema; leaving the key off means the schema fetch
+  failed transiently and the caller should keep what it already has.
   """
   @type adaptor_record :: %{
           required(:name) => String.t(),
@@ -56,7 +60,7 @@ defmodule Lightning.Adaptors.Strategy do
           required(:license) => String.t() | nil,
           required(:latest_version) => String.t(),
           required(:deprecated) => boolean(),
-          optional(:schema_data) => map() | nil,
+          optional(:schema_data) => String.t() | nil,
           optional(:schema_sha256) => String.t() | nil,
           required(:versions) => [version_record()]
         }

@@ -53,28 +53,6 @@ defmodule Lightning.Adaptors do
     One catalogue adaptor.
     """
 
-    defmodule Version do
-      @moduledoc """
-      One published version of a catalogue adaptor.
-      """
-
-      @type t :: %__MODULE__{
-              version: String.t(),
-              integrity: String.t() | nil,
-              size_bytes: integer() | nil,
-              published_at: DateTime.t() | nil,
-              deprecated: boolean()
-            }
-
-      defstruct [
-        :version,
-        :integrity,
-        :size_bytes,
-        :published_at,
-        deprecated: false
-      ]
-    end
-
     @type t :: %__MODULE__{
             name: String.t(),
             source: :npm | :local,
@@ -84,7 +62,8 @@ defmodule Lightning.Adaptors do
             icon_square_ext: String.t() | nil,
             icon_rectangle_ext: String.t() | nil,
             icon_square_sha256: binary() | nil,
-            icon_rectangle_sha256: binary() | nil
+            icon_rectangle_sha256: binary() | nil,
+            has_schema: boolean()
           }
 
     defstruct [
@@ -96,6 +75,7 @@ defmodule Lightning.Adaptors do
       :icon_rectangle_ext,
       :icon_square_sha256,
       :icon_rectangle_sha256,
+      :has_schema,
       deprecated: false
     ]
   end
@@ -113,7 +93,7 @@ defmodule Lightning.Adaptors do
 
   @doc """
   Returns the credential schema of the adaptor named `pkg`, as a JSON
-  binary.
+  binary. An adaptor with no schema yields `"{}"`.
   """
   @spec schema(atom(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def schema(sup \\ Config.default_instance(), pkg), do: Store.schema(sup, pkg)
@@ -163,7 +143,7 @@ defmodule Lightning.Adaptors do
   """
   @spec catalogue(atom()) ::
           {:ok,
-           {{DateTime.t() | nil, non_neg_integer()}, [Store.catalogue_entry()]}}
+           {{DateTime.t() | nil, non_neg_integer()}, [Store.rendered_entry()]}}
           | {:error, term()}
   def catalogue(sup \\ Config.default_instance()) do
     Store.catalogue(sup)
@@ -227,15 +207,14 @@ defmodule Lightning.Adaptors do
         {:error, _} -> nil
       end
 
-    case cached || Catalogue.get_adaptor(name, source) do
+    case cached || Catalogue.get_package_meta(name, source) do
       nil -> nil
       meta -> to_package(meta, source)
     end
   end
 
-  defp to_package(meta, source) do
-    struct(Package, meta |> Map.delete(:__struct__) |> Map.put(:source, source))
-  end
+  defp to_package(meta, source),
+    do: struct!(Package, Map.put(meta, :source, source))
 
   @doc """
   Waits until the catalogue has loaded at least once, triggering the

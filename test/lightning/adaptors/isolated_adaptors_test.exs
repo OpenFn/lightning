@@ -30,6 +30,7 @@ defmodule Lightning.Adaptors.IsolatedAdaptorsTest do
         latest_version: "1.2.3",
         description: nil,
         deprecated: false,
+        has_schema: false,
         icon_square_ext: nil,
         icon_rectangle_ext: nil,
         icon_square_sha256: nil,
