@@ -1009,6 +1009,27 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, %{diverged: false}
     end
 
+    test "answers for a workflow that has not been saved yet", %{
+      sandbox: sandbox,
+      user: user
+    } do
+      new_workflow_id = Ecto.UUID.generate()
+
+      {:ok, _, new_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{new_workflow_id}",
+          %{"project_id" => sandbox.id, "action" => "new"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(new_workflow_id) end)
+
+      ref = push(new_socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: "parent-project"}
+    end
+
     test "stays quiet for a user who cannot merge into the parent", %{
       sandbox: sandbox,
       parent_alpha: parent_alpha,

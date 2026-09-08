@@ -243,6 +243,7 @@ defmodule Lightning.Projects.Sandboxes do
                force: true
              ),
            merge_doc = MergeProjects.merge_project(source, target, opts),
+           selected_target_ids = selected_target_ids(source, opts, merge_doc),
            # Defer the collaboration reconcile: the import runs inside this outer
            # transaction, so we broadcast below only once it has committed —
            # otherwise the subscriber would reload pre-commit state on its own
@@ -253,14 +254,20 @@ defmodule Lightning.Projects.Sandboxes do
                actor,
                merge_doc,
                [allow_stale: true, reconcile_collaboration: false] ++
-                 release_import_opts(source, opts, merge_doc)
+                 release_import_opts(source, opts, selected_target_ids)
              ),
            :ok <- reject_out_of_project_credentials(target),
            {:ok, _} <-
              sync_collections(source, target,
                allow_deletions: allow_collection_deletions?
              ),
-           :ok <- record_merge_sync_points(source, merge_doc, opts) do
+           :ok <-
+             record_merge_sync_points(
+               source,
+               merge_doc,
+               opts,
+               selected_target_ids
+             ) do
         {:ok, {updated_target, merge_doc}}
       end
     end)
@@ -283,14 +290,14 @@ defmodule Lightning.Projects.Sandboxes do
   # workflows land on the target under the target's ids, so we map the selected
   # source workflows to their merged-document ids by name (workflow names are
   # unique within a project) and hand the provisioner exactly those ids.
-  defp release_import_opts(source, opts, merge_doc) do
+  defp release_import_opts(source, opts, selected_target_ids) do
     with :promote <- Map.get(opts, :record_release),
-         [_ | _] = selected_ids <- Map.get(opts, :selected_workflow_ids) do
+         [_ | _] <- Map.get(opts, :selected_workflow_ids) do
       [
         release: %{
           kind: :promote,
           source_project_id: source.id,
-          workflow_ids: promoted_target_ids(source, selected_ids, merge_doc)
+          workflow_ids: selected_target_ids
         }
       ]
     else
@@ -298,10 +305,18 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
+  # nil means the merge carries everything; a list, even an empty one, scopes it.
+  defp selected_target_ids(source, opts, merge_doc) do
+    case Map.get(opts, :selected_workflow_ids) do
+      nil -> nil
+      selected_ids -> promoted_target_ids(source, selected_ids, merge_doc)
+    end
+  end
+
   # Without this the source's own merge reads as the target having moved on, and
   # every merge after the first warns. Mirrors `copy_workflow_version_history/2`.
-  defp record_merge_sync_points(source, merge_doc, opts) do
-    merged = merged_workflow_pairs(source, merge_doc, opts)
+  defp record_merge_sync_points(source, merge_doc, opts, selected_target_ids) do
+    merged = merged_workflow_pairs(source, merge_doc, opts, selected_target_ids)
     source_hashes = existing_hashes(Map.values(merged))
 
     merged
@@ -331,7 +346,7 @@ defmodule Lightning.Projects.Sandboxes do
     end)
   end
 
-  defp merged_workflow_pairs(source, merge_doc, opts) do
+  defp merged_workflow_pairs(source, merge_doc, _opts, selected_target_ids) do
     entries =
       merge_doc
       |> Map.get("workflows", [])
@@ -340,13 +355,10 @@ defmodule Lightning.Projects.Sandboxes do
     # An empty selection is a selection. A merge carrying only deletions writes
     # no workflow content, so nothing has been brought into step.
     entries =
-      case Map.get(opts, :selected_workflow_ids) do
-        nil ->
-          entries
-
-        selected_ids ->
-          target_ids = promoted_target_ids(source, selected_ids, merge_doc)
-          Enum.filter(entries, &MapSet.member?(target_ids, &1["id"]))
+      if selected_target_ids do
+        Enum.filter(entries, &MapSet.member?(selected_target_ids, &1["id"]))
+      else
+        entries
       end
 
     source_ids_by_name = Map.new(source.workflows, &{&1.name, &1.id})
@@ -372,11 +384,7 @@ defmodule Lightning.Projects.Sandboxes do
         desc: version.inserted_at,
         desc: version.id
       ],
-      select: %{
-        workflow_id: version.workflow_id,
-        hash: version.hash,
-        source: version.source
-      }
+      select: %{workflow_id: version.workflow_id, hash: version.hash}
     )
     |> Repo.all()
   end

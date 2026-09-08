@@ -22,14 +22,6 @@ and this project adheres to
   Lightning does not normalise anything today, but #4577 adds it on every name,
   so the runtime moves first.
 
-### Fixed
-
-- Merging a sandbox no longer reports its own merge as the parent having moved
-  on. A merge records a new version on the target computed from the merged
-  content, and nothing wrote that back to the sandbox, so every merge after the
-  first showed the sandbox as diverged from work it had just done itself.
-  [#4863](https://github.com/OpenFn/lightning/issues/4863)
-
 ### Added
 
 - Promoting from a sandbox now warns first when the parent project has changed
@@ -82,6 +74,12 @@ and this project adheres to
   [#4952](https://github.com/OpenFn/lightning/issues/4952)
 
 ### Fixed
+
+- Merging a sandbox no longer reports its own merge as the parent having moved
+  on. A merge records a new version on the target computed from the merged
+  content, and nothing wrote that back to the sandbox, so every merge after the
+  first showed the sandbox as diverged from work it had just done itself.
+  [#4863](https://github.com/OpenFn/lightning/issues/4863)
 
 - Reading an older version of a workflow no longer offers actions that change
   the current one. Switch to draft, Go live, Promote and Edit in sandbox are
