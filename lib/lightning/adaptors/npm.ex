@@ -89,13 +89,9 @@ defmodule Lightning.Adaptors.NPM do
 
   defp put_schema(record, {schema_data, schema_sha}) do
     record
-    |> Map.put(:schema_data, encode_schema(schema_data))
+    |> Map.put(:schema_data, schema_data)
     |> Map.put(:schema_sha256, schema_sha)
   end
-
-  # Re-encoded so the reader can decode it with ordered objects.
-  defp encode_schema(nil), do: nil
-  defp encode_schema(data) when is_map(data), do: Jason.encode!(data)
 
   @impl Lightning.Adaptors.Strategy
   def fetch_icon(name, shape)

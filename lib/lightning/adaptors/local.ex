@@ -210,9 +210,8 @@ defmodule Lightning.Adaptors.Local do
 
   defp build_adaptor_record(record) do
     pkg = record.latest_package_json
-    {schema_data, schema_sha256} = read_schema(record.latest_path)
 
-    %{
+    base = %{
       name: record.name,
       description: pkg["description"],
       homepage: pkg["homepage"],
@@ -220,10 +219,16 @@ defmodule Lightning.Adaptors.Local do
       license: pkg["license"],
       latest_version: record.latest_version,
       deprecated: false,
-      schema_data: schema_data,
-      schema_sha256: schema_sha256,
       versions: Enum.map(record.versions, &build_version_record/1)
     }
+
+    case read_schema(record.latest_path) do
+      {:ok, schema_data, schema_sha256} ->
+        Map.merge(base, %{schema_data: schema_data, schema_sha256: schema_sha256})
+
+      :unreadable ->
+        base
+    end
   end
 
   defp build_version_record(%{version: v, package_json: pkg}) do
@@ -239,22 +244,16 @@ defmodule Lightning.Adaptors.Local do
     }
   end
 
+  # A missing file is "no schema"; anything else (a permissions error, a
+  # half-written file) is left off the record per `Strategy.adaptor_record/0`.
   defp read_schema(dir) do
-    case File.read(Path.join(dir, @schema_filename)) do
-      {:ok, body} ->
-        # Validate JSON, but keep the raw binary so credential-form
-        # rendering can re-engage ordered_objects decoding downstream.
-        case Jason.decode(body) do
-          {:ok, _data} ->
-            sha = :sha256 |> :crypto.hash(body) |> Base.encode16(case: :lower)
-            {body, sha}
-
-          {:error, _} ->
-            {nil, nil}
-        end
-
-      {:error, _} ->
-        {nil, nil}
+    with {:ok, body} <- File.read(Path.join(dir, @schema_filename)),
+         {:ok, _} <- Jason.decode(body) do
+      sha = :sha256 |> :crypto.hash(body) |> Base.encode16(case: :lower)
+      {:ok, body, sha}
+    else
+      {:error, :enoent} -> {:ok, nil, nil}
+      _ -> :unreadable
     end
   end
 

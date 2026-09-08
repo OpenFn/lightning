@@ -80,7 +80,7 @@ Application.put_env(:lightning, Lightning.Extensions,
 # Pin the `Lightning.Adaptors.IconCache` on-disk path to a per-OS-PID
 # directory and wipe it at startup. Without the wipe, leftover files
 # from a prior run can mask a Mox expectation by short-circuiting
-# `IconCache.cached?/4`, since `System.unique_integer/1` resets per-VM
+# `IconCache.cached?/5`, since `System.unique_integer/1` resets per-VM
 # and recycles. Keying by OS PID also keeps concurrent `mix test` runs
 # (parallel CI shards, separate tmux panes) from colliding.
 icon_dir =

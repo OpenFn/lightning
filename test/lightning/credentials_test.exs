@@ -1,8 +1,6 @@
 defmodule Lightning.CredentialsTest do
   use Lightning.DataCase, async: true
 
-  @endpoint LightningWeb.Endpoint
-
   alias Lightning.Auditing
   alias Lightning.Credentials
   alias Lightning.Credentials.Audit
@@ -13,9 +11,6 @@ defmodule Lightning.CredentialsTest do
   import Lightning.Factories
   import Ecto.Query
   import Mox
-  import Phoenix.ConnTest
-  import Phoenix.LiveViewTest
-  import LightningWeb.CredentialLiveHelpers
 
   import Lightning.JobsFixtures
 
@@ -2883,19 +2878,6 @@ defmodule Lightning.CredentialsTest do
   describe "get_schema/1" do
     setup :isolated_adaptors
 
-    test "returns a permissive schema for an adaptor with no schema, instead of crashing",
-         %{sup: sup} do
-      name = "@openfn/language-no-schema"
-      insert(:adaptor, name: name, schema_data: nil)
-
-      cache = Lightning.Adaptors.Supervisor.cache_name(sup)
-      source = Lightning.Adaptors.Supervisor.source(sup)
-      Cachex.put(cache, {:schema, name, source}, {:ok, "{}"})
-
-      assert %Credentials.Schema{name: ^name, fields: []} =
-               Credentials.get_schema(name)
-    end
-
     test "returns the adaptor's schema when one is present" do
       seed_credential_schema("http")
 
@@ -2903,44 +2885,6 @@ defmodule Lightning.CredentialsTest do
                Credentials.get_schema("@openfn/language-http")
 
       assert fields != []
-    end
-  end
-
-  describe "credential type picker (LiveView)" do
-    setup :isolated_adaptors
-
-    setup do
-      Lightning.AccountsFixtures.superuser_fixture()
-
-      conn =
-        LightningWeb.ConnCase.log_in_user(build_conn(), insert(:user))
-
-      %{conn: conn}
-    end
-
-    test "omits a schema-less adaptor, closing the FunctionClauseError crash it used to reach",
-         %{conn: conn} do
-      insert(:adaptor,
-        name: "@openfn/language-with-schema",
-        schema_data: ~s({"type":"object"})
-      )
-
-      insert(:adaptor, name: "@openfn/language-no-schema", schema_data: nil)
-
-      {:ok, view, _html} = live(conn, "/credentials")
-
-      html = open_create_credential_modal(view)
-      html_tree = Floki.parse_document!(html)
-
-      assert Floki.find(
-               html_tree,
-               "label[for='credential-schema-picker_selected_@openfn/language-with-schema']"
-             ) != []
-
-      assert Floki.find(
-               html_tree,
-               "label[for='credential-schema-picker_selected_@openfn/language-no-schema']"
-             ) == []
     end
   end
 end

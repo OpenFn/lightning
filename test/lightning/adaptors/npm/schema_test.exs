@@ -37,7 +37,7 @@ defmodule Lightning.Adaptors.NPM.SchemaTest do
   end
 
   describe "schema/2" do
-    test "returns the decoded schema and a hex sha256 on 200", %{bypass: bypass} do
+    test "returns the raw body and a hex sha256 on 200", %{bypass: bypass} do
       schema = %{"type" => "object", "properties" => %{"baseUrl" => %{}}}
       body = Jason.encode!(schema)
 
@@ -51,7 +51,7 @@ defmodule Lightning.Adaptors.NPM.SchemaTest do
         Plug.Conn.resp(conn, 200, body)
       end)
 
-      assert {^schema, ^expected_sha} = Schema.schema(@package, @version)
+      assert {^body, ^expected_sha} = Schema.schema(@package, @version)
     end
 
     test "returns {nil, nil} on 404", %{bypass: bypass} do
