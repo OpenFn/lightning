@@ -868,8 +868,8 @@ export function MessageList({
   const lastMessage = messages.at(-1);
   const viewerJustSent = Boolean(
     lastMessage?.role === 'user' &&
-    currentUserId &&
-    lastMessage.user?.id === currentUserId
+      currentUserId &&
+      lastMessage.user?.id === currentUserId
   );
 
   useEffect(() => {
@@ -1013,12 +1013,12 @@ export function MessageList({
       ? isGlobalAssistantActive
       : Boolean(
           message.from_global &&
-          // Only a successful reply was auto-applied. An errored or
-          // cancelled one can still carry code, and rendering its blocks
-          // would present changes that never reached the canvas as a
-          // record of what happened.
-          message.status === 'success' &&
-          (message.code || snapshotsByMessageId[message.id]?.length)
+            // Only a successful reply was auto-applied. An errored or
+            // cancelled one can still carry code, and rendering its blocks
+            // would present changes that never reached the canvas as a
+            // record of what happened.
+            message.status === 'success' &&
+            (message.code || snapshotsByMessageId[message.id]?.length)
         );
 
   /**
@@ -1029,18 +1029,18 @@ export function MessageList({
   const canUndoChanges = (message: Message): boolean =>
     Boolean(
       onUndoChanges &&
-      !isApplyInFlight &&
-      !isWriteDisabled &&
-      !isStreaming(message) &&
-      displayMessages.at(-1)?.id === message.id &&
-      message.from_global &&
-      // Only a successful reply was auto-applied; an error or cancelled one
-      // can still carry code, and undoing it would offer to "redo" changes
-      // that never landed.
-      message.status === 'success' &&
-      message.code &&
-      !failedApplyMessageIds?.has(message.id) &&
-      beforeYamlByMessageId.get(message.id)
+        !isApplyInFlight &&
+        !isWriteDisabled &&
+        !isStreaming(message) &&
+        displayMessages.at(-1)?.id === message.id &&
+        message.from_global &&
+        // Only a successful reply was auto-applied; an error or cancelled one
+        // can still carry code, and undoing it would offer to "redo" changes
+        // that never landed.
+        message.status === 'success' &&
+        message.code &&
+        !failedApplyMessageIds?.has(message.id) &&
+        beforeYamlByMessageId.get(message.id)
     );
 
   const snapshotsFor = (message: Message): WorkflowSnapshot[] =>
@@ -1165,8 +1165,12 @@ export function MessageList({
         // pairing to lean on. Offered only on the newest exchange: a retry
         // appends a new reply and leaves this one saying the same thing for
         // good, so an older one would keep a button that starts a fresh job.
+        // Only on the last message. A retry appends a reply and leaves this
+        // one flagged for good, so anything looser hands an old notice a live
+        // button that starts a fresh job on every click.
         const editedPrompt =
-          message.code_change_failed && index >= displayMessages.length - 2
+          message.code_change_failed &&
+          displayMessages.at(-1)?.id === message.id
             ? displayMessages.slice(0, index).findLast(m => m.role === 'user')
             : undefined;
 

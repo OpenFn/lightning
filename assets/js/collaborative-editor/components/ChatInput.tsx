@@ -8,7 +8,8 @@ import { AIDisclaimerFooter } from './AIDisclaimerFooter';
 
 interface ChatInputProps {
   onSendMessage?:
-    ((content: string, options?: MessageOptions) => void) | undefined;
+    | ((content: string, options?: MessageOptions) => void)
+    | undefined;
   isLoading?: boolean | undefined;
   /** Disabled state (separate from loading, e.g., due to limits) */
   isDisabled?: boolean | undefined;
@@ -312,21 +313,22 @@ export function ChatInput({
 
                 <div className="flex items-center justify-between gap-3 px-3 pb-2">
                   <div className="min-w-0">
-                    {showCount ? (
-                      <span
-                        data-testid="chat-input-length"
-                        className={cn(
-                          'text-xs',
-                          tooLong ? 'text-red-600' : 'text-gray-400'
-                        )}
-                      >
-                        {input.length.toLocaleString()} /{' '}
-                        {MAX_MESSAGE_LENGTH.toLocaleString()}
-                        {tooLong ? ' — too long to send' : null}
-                      </span>
-                    ) : (
+                    <div className="flex items-center gap-3 min-w-0">
                       <AIDisclaimerFooter />
-                    )}
+                      {showCount && (
+                        <span
+                          data-testid="chat-input-length"
+                          className={cn(
+                            'text-xs whitespace-nowrap',
+                            tooLong ? 'text-red-600' : 'text-gray-400'
+                          )}
+                        >
+                          {input.length.toLocaleString()} /{' '}
+                          {MAX_MESSAGE_LENGTH.toLocaleString()}
+                          {tooLong ? ' — too long to send' : null}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <button

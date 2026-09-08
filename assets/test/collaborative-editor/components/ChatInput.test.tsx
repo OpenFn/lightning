@@ -299,6 +299,25 @@ describe('ChatInput', () => {
 
     // The server rejects this on the channel join, a path that cannot report
     // back, so the assistant would appear to do nothing at all.
+    it('still sends at exactly the limit', async () => {
+      const onSendMessage = vi.fn();
+      render(<ChatInput onSendMessage={onSendMessage} />);
+      await type('x'.repeat(10000));
+
+      const sendButton = screen.getByRole('button', { name: /send message/i });
+      expect(sendButton).toBeEnabled();
+      await userEvent.click(sendButton);
+      expect(onSendMessage).toHaveBeenCalled();
+    });
+
+    it('keeps the AI disclaimer alongside the counter', async () => {
+      render(<ChatInput />);
+      await type('x'.repeat(9600));
+
+      expect(screen.getByTestId('chat-input-length')).toBeInTheDocument();
+      expect(screen.getByText(/use AI responsibly/i)).toBeInTheDocument();
+    });
+
     it('refuses to send once over it', async () => {
       const onSendMessage = vi.fn();
       render(<ChatInput onSendMessage={onSendMessage} />);

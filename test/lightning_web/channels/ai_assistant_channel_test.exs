@@ -349,9 +349,12 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       assert {:ok, _json} = Jason.encode(reply)
 
-      assert %{reason: "validation_error", errors: errors} = reply
+      assert %{reason: reason, errors: errors} = reply
       assert %{"content" => [message]} = errors
       assert message =~ "should be at most 10000 character(s)"
+
+      # Shown to the reader as it stands, so it cannot be a code.
+      assert reason =~ "should be at most 10000 character(s)"
     end
   end
 
@@ -399,6 +402,37 @@ defmodule LightningWeb.AiAssistantChannelTest do
                },
                %{from_global: false}
              ] = messages
+    end
+
+    test "serializes the flag for a reply whose code edit did not apply", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :assistant,
+              content: "Here is what I changed.",
+              status: :success,
+              meta: %{"from_global" => true, "code_change_failed" => true}
+            }
+          ]
+        )
+
+      assert {:ok, %{messages: [message]}, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      assert message.code_change_failed == true
     end
 
     # Everyone in the session sees a failure, not just whoever sent the message.

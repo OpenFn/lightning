@@ -76,13 +76,10 @@ defmodule LightningWeb.AiAssistantChannel do
 
       # A changeset here has no Jason encoder, so putting it in the reply kills
       # the socket before any reply goes out and the assistant just does
-      # nothing. Same shape new_message already replies with.
+      # nothing.
       {:session, {:error, %Ecto.Changeset{} = changeset}} ->
-        {:error,
-         %{
-           reason: "validation_error",
-           errors: format_changeset_errors(changeset)
-         }}
+        errors = format_changeset_errors(changeset)
+        {:error, %{reason: validation_sentence(errors), errors: errors}}
 
       {:session, {:error, reason}} ->
         {:error, %{reason: reason}}
@@ -1146,6 +1143,20 @@ defmodule LightningWeb.AiAssistantChannel do
       failure_category: to_string(message.failure_category),
       failure_message: message.failure_message
     })
+  end
+
+  # A join reply's `reason` is shown to the reader as it stands, unlike the
+  # `type`/`errors` pair the message handlers reply with, so the field errors
+  # become a sentence rather than a code.
+  defp validation_sentence(errors) do
+    errors
+    |> Enum.flat_map(fn {field, messages} ->
+      Enum.map(messages, &"#{field} #{&1}")
+    end)
+    |> case do
+      [] -> "the session could not be started"
+      sentences -> Enum.join(sentences, ", ")
+    end
   end
 
   defp format_user(nil), do: nil

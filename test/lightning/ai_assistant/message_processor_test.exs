@@ -500,6 +500,61 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       refute assistant.content =~ "job_chat.py"
     end
 
+    # The planner can call the job agent more than once, so one failed edit
+    # beside one that landed must not put "couldn't apply" on a reply that
+    # carries the change.
+    test "does not mark a reply that still produced a workflow", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil,
+          meta: %{"message_options" => %{"use_global_assistant" => true}}
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "fix both steps",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Changed one of them.",
+          "usage" => %{},
+          "attachments" => [
+            %{"type" => "workflow_yaml", "content" => "workflow:\n  name: new"}
+          ],
+          "meta" => %{
+            "subagent_calls" => [
+              %{"diff" => %{"patches_applied" => 0}},
+              %{"diff" => %{"patches_applied" => 1}}
+            ]
+          }
+        })
+      )
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      reloaded = AiAssistant.get_session!(session.id)
+      assistant = Enum.find(reloaded.messages, &(&1.role == :assistant))
+
+      refute assistant.meta["code_change_failed"]
+    end
+
     test "persists the segments timeline alongside the flat response",
          %{user: user, project: project} do
       workflow = insert(:workflow, project: project)

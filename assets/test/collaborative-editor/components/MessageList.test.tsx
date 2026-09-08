@@ -603,6 +603,25 @@ describe('MessageList', () => {
       expect(onRetryMessage).toHaveBeenCalledWith('prompt-1');
     });
 
+    it('drops the button once a retry has appended a reply', () => {
+      const messages = [
+        ...exchange(),
+        createMockAIMessage({
+          id: 'reply-2',
+          role: 'assistant',
+          content: 'this time it worked',
+          status: 'success',
+        }),
+      ];
+
+      render(<MessageList messages={messages} onRetryMessage={vi.fn()} />);
+
+      expect(screen.getByTestId('ai-failure-notice')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /try again/i })
+      ).not.toBeInTheDocument();
+    });
+
     // A retry appends a new reply and leaves the old one saying the same thing
     // for good, so an older exchange must not keep a live button.
     it('does not offer it on an older exchange', () => {

@@ -97,6 +97,8 @@ and this project adheres to
   reports how many of its edits landed, and none landing used to arrive as a
   reply with nothing to apply and no explanation, which read as the assistant
   declining to help. There is now a line saying so, with a way to try again.
+  Needs Apollo v3.1.2 or later, which reports that on the direct single-step
+  route as well as through the planner.
   [#5133](https://github.com/OpenFn/lightning/issues/5133)
 - Starting an AI chat with a message over the 10,000 character limit no longer
   kills the connection. The reply carried a raw changeset, which cannot be
