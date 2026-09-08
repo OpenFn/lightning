@@ -18,9 +18,9 @@ and this project adheres to
 ### Added
 
 - The Edit-in-sandbox dialog says when creating a sandbox is not available, in
-  the words of whichever gate refused: the plan, the project's sandbox cap, or
-  the nesting depth. Joining an existing sandbox is unaffected, because none of
-  those gates apply to it.
+  the plan's own words, whether that is the plan not including sandboxes or the
+  project being at its cap. Joining an existing sandbox is unaffected, because
+  neither gate applies to it.
   [#4920](https://github.com/OpenFn/lightning/issues/4920)
 
 ### Changed

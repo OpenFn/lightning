@@ -628,15 +628,36 @@ describe('EditInSandboxPicker', () => {
       }
     });
 
-    test('Create is unlocked when the limit allows it', () => {
+    test('Create is unlocked when the limit allows it', async () => {
       limits = { new_sandbox: { allowed: true, message: null } };
+      const user = userEvent.setup();
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
+      await user.type(
+        screen.getByPlaceholderText('What are you trying out?'),
+        'Trying something'
+      );
+
       const button = screen.getByTestId('create-sandbox-button');
+      expect(button).toBeEnabled();
       expect(
         screen.queryByTestId('create-sandbox-lock')
       ).not.toBeInTheDocument();
       expect(button.parentElement).not.toHaveAttribute('data-state');
+    });
+
+    test('Enter in the name field does not get past the lock', async () => {
+      limits = {
+        new_sandbox: { allowed: false, message: 'Upgrade to unlock sandboxes' },
+      };
+      const user = userEvent.setup();
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      const input = screen.getByPlaceholderText('What are you trying out?');
+      await user.type(input, 'Trying something');
+      await user.type(input, '{Enter}');
+
+      expect(editInSandbox).not.toHaveBeenCalled();
     });
   });
 });

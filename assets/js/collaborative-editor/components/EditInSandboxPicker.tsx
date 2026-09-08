@@ -347,7 +347,7 @@ export function EditInSandboxPicker({
                   event.preventDefault();
                   // Enter can submit even while the button is disabled; honour
                   // the same guards (non-empty name, no create in flight).
-                  if (isCreating || !canCreate) return;
+                  if (createLocked || isCreating || !canCreate) return;
                   handleCreate();
                 }}
               >
