@@ -59,6 +59,45 @@ defmodule Lightning.AdaptorTestHelpers do
   end
 
   @doc """
+  A `Lightning.Adaptors.Catalogue.upsert_adaptor/1` record for
+  `@openfn/language-http`, with `overrides` merged in.
+  """
+  @spec adaptor_record(keyword() | map()) :: map()
+  def adaptor_record(overrides \\ []) do
+    %{
+      name: "@openfn/language-http",
+      source: :npm,
+      latest_version: "1.0.0",
+      description: "HTTP adaptor",
+      homepage: nil,
+      repository: nil,
+      license: "LGPL-3.0",
+      deprecated: false,
+      schema_data: nil,
+      schema_sha256: nil,
+      icon_square_ext: nil,
+      icon_rectangle_ext: nil,
+      icon_square_sha256: nil,
+      icon_rectangle_sha256: nil,
+      icon_square_etag: nil,
+      icon_rectangle_etag: nil,
+      versions: [
+        %{
+          version: "1.0.0",
+          integrity: "sha512-1.0.0",
+          tarball_url: "https://example.com/x/-/x-1.0.0.tgz",
+          size_bytes: 1024,
+          dependencies: %{},
+          peer_dependencies: %{},
+          published_at: nil,
+          deprecated: false
+        }
+      ]
+    }
+    |> Map.merge(Map.new(overrides))
+  end
+
+  @doc """
   Seeds a throwaway adaptor row so the catalogue counts as loaded and
   saves do not wait on the production Scheduler.
   """
@@ -156,7 +195,11 @@ defmodule Lightning.AdaptorTestHelpers do
       insert(:adaptor,
         name: "@openfn/language-#{short_name}",
         source: :npm,
-        schema_data: schema_body
+        schema_data: schema_body,
+        icon_square_ext: "png",
+        icon_rectangle_ext: "png",
+        icon_square_sha256: :crypto.hash(:sha256, short_name <> "-square"),
+        icon_rectangle_sha256: :crypto.hash(:sha256, short_name <> "-rectangle")
       )
 
     # Cachex fills run in its Courier process, which cannot see the sandbox
@@ -175,29 +218,31 @@ defmodule Lightning.AdaptorTestHelpers do
   def seed_all_credential_schemas do
     ensure_isolated!()
 
-    metas =
-      Path.wildcard("test/fixtures/schemas/*.json")
-      |> Enum.reject(fn path -> File.stat!(path).size == 0 end)
-      |> Enum.map(fn path ->
-        short_name = path |> Path.basename(".json")
-        row = seed_credential_schema(short_name)
+    Path.wildcard("test/fixtures/schemas/*.json")
+    |> Enum.reject(fn path -> File.stat!(path).size == 0 end)
+    |> Enum.each(fn path ->
+      path |> Path.basename(".json") |> seed_credential_schema()
+    end)
 
-        %{
-          name: row.name,
-          latest_version: row.latest_version,
-          description: nil,
-          deprecated: false,
-          icon_square_ext: "png",
-          icon_rectangle_ext: "png",
-          icon_square_sha256: :crypto.hash(:sha256, short_name <> "-square"),
-          icon_rectangle_sha256:
-            :crypto.hash(:sha256, short_name <> "-rectangle"),
-          has_schema: true
-        }
-      end)
+    prime_packages_cache()
+
+    :ok
+  end
+
+  @doc """
+  Fills the `{:packages, source}` cache entry from whatever adaptor rows
+  currently exist. Call this after inserting an adaptor row so the picker
+  sees it, since `Config.default_instance/0`'s cache fills otherwise run in
+  a Courier process that can't see the SQL sandbox connection.
+  """
+  @spec prime_packages_cache() :: :ok
+  def prime_packages_cache do
+    ensure_isolated!()
+
+    source = AdaptorsSupervisor.source(Config.default_instance())
+    metas = Lightning.Adaptors.Catalogue.list_package_metas(source)
 
     cache = AdaptorsSupervisor.cache_name(Config.default_instance())
-    source = AdaptorsSupervisor.source(Config.default_instance())
     Cachex.put(cache, {:packages, source}, {:ok, metas})
 
     :ok

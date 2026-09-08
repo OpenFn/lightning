@@ -6,27 +6,29 @@ defmodule Lightning.Adaptors.IconCache do
   `Lightning.Adaptors.Config.icon_path/0`, which returns `ADAPTORS_ICONS_PATH`
   when set and otherwise resolves the `{:tmp, suffix}` default at call time.
 
-  Disk layout is **source-partitioned** and **latest-only**:
+  Disk layout is **source-partitioned** and **content-addressed**:
 
-      <Config.icon_path/0>/<source>/<name>/<shape>.<ext>
+      <Config.icon_path/0>/<source>/<name>/<shape>.<sha8>.<ext>
 
-  Source partitioning means flipping `ADAPTORS_STRATEGY` between restarts
-  cannot accidentally serve `:npm` bytes from a row that's now resolved
-  via `:local` (or vice versa). Latest-only means a subsequent
-  `write!/5` for the same key overwrites, and `cached?/5` only trusts a
-  file whose bytes still hash to the sha on the adaptor row, so a node
-  that cached an earlier icon refetches instead of serving it forever.
+  where `sha8` is the first 8 lowercase hex characters of the icon
+  sha256 on the adaptor row. Source partitioning means flipping
+  `ADAPTORS_STRATEGY` between restarts cannot accidentally serve `:npm`
+  bytes from a row that's now resolved via `:local` (or vice versa).
+  Putting the sha in the filename means `cached?/5` is a plain
+  existence check, and a node holding an earlier icon simply misses and
+  refetches instead of serving it forever; `write!/6` removes the
+  superseded siblings for that shape.
 
   Concurrent first-request fetchers are coalesced upstream by Cachex's
   courier on `{:icon_bytes, source, name, shape}` inside
   `Lightning.Adaptors.Store.icon/3`, and all in-flight peers receive the
-  courier's result for free. Bytes that verify are left uncommitted —
-  this directory is their cache — but bytes that disagree with the row's
-  sha or extension are committed as an error, so the disagreement is not
-  re-fetched from the source on every request until the row moves.
-  The temp-then-rename in `write!/5` is the belt-and-
-  braces guarantee for the file-write step itself: readers never observe
-  a half-written file.
+  courier's result for free. Bytes that verify are left uncommitted,
+  since this directory is their cache, but bytes that disagree with the
+  row's sha or extension are committed as an error, so the disagreement
+  is not re-fetched from the source on every request until the row moves.
+  The temp-then-rename in `write!/6` is the belt-and-braces guarantee
+  for the file-write step itself: readers never observe a half-written
+  file.
   """
 
   alias Lightning.Adaptors.Config
@@ -43,44 +45,47 @@ defmodule Lightning.Adaptors.IconCache do
   `@openfn/language-foo`); `Path.join/1` preserves the slash so the
   scope becomes a real subdirectory.
   """
-  @spec path(source(), name(), shape(), ext()) :: Path.t()
-  def path(source, name, shape, ext) do
-    Path.join([Config.icon_path(), to_string(source), name, "#{shape}.#{ext}"])
+  @spec path(source(), name(), shape(), ext(), binary()) :: Path.t()
+  def path(source, name, shape, ext, sha256) do
+    Path.join([
+      Config.icon_path(),
+      to_string(source),
+      name,
+      "#{shape}.#{sha8(sha256)}.#{ext}"
+    ])
   end
 
   @doc """
-  Whether the icon at `path(source, name, shape, ext)` is on disk with
-  bytes hashing to `sha256`.
+  Whether the icon for `sha256` is on disk. The sha is part of the
+  filename, so existence is the whole check.
   """
   @spec cached?(source(), name(), shape(), ext(), binary()) :: boolean()
   def cached?(source, name, shape, ext, sha256) do
-    case File.read(path(source, name, shape, ext)) do
-      {:ok, bytes} -> :crypto.hash(:sha256, bytes) == sha256
-      {:error, _} -> false
-    end
+    File.exists?(path(source, name, shape, ext, sha256))
   end
 
   @doc """
-  Atomically write `bytes` to `path(source, name, shape, ext)` and
-  return the sha256 of the supplied bytes as a 32-byte binary.
+  Atomically write `bytes` for `sha256` and return the path written.
 
   The write is staged in a sibling temp file and then renamed into
-  place, so concurrent readers never observe a half-written file.
+  place, so concurrent readers never observe a half-written file. Any
+  superseded file for the same shape, whatever its extension or
+  pre-sha naming, is removed first, so a rename never lands on a
+  directory left empty by its own sweep.
   """
-  @spec write!(source(), name(), shape(), ext(), binary()) ::
-          {:ok, binary()}
-  def write!(source, name, shape, ext, bytes) when is_binary(bytes) do
-    final_path = path(source, name, shape, ext)
+  @spec write!(source(), name(), shape(), ext(), binary(), binary()) ::
+          Path.t()
+  def write!(source, name, shape, ext, bytes, sha256) when is_binary(bytes) do
+    final_path = path(source, name, shape, ext, sha256)
     dir = Path.dirname(final_path)
     File.mkdir_p!(dir)
-
-    sha = :crypto.hash(:sha256, bytes)
 
     temp_path =
       Path.join(dir, ".#{Path.basename(final_path)}.#{random_suffix()}.tmp")
 
     try do
       File.write!(temp_path, bytes)
+      remove_superseded(dir, shape, final_path)
       File.rename!(temp_path, final_path)
     rescue
       e ->
@@ -88,7 +93,19 @@ defmodule Lightning.Adaptors.IconCache do
         reraise e, __STACKTRACE__
     end
 
-    {:ok, sha}
+    final_path
+  end
+
+  defp remove_superseded(dir, shape, final_path) do
+    dir
+    |> Path.join("#{shape}.*")
+    |> Path.wildcard()
+    |> Enum.reject(&(&1 == final_path))
+    |> Enum.each(&File.rm/1)
+  end
+
+  defp sha8(sha256) when is_binary(sha256) do
+    sha256 |> Base.encode16(case: :lower) |> binary_part(0, 8)
   end
 
   @spec random_suffix() :: String.t()

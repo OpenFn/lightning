@@ -9,6 +9,8 @@ defmodule Lightning.Collaboration.SessionReadinessTest do
   # Scheduler.
   use Lightning.DataCase, async: false
 
+  import Lightning.AdaptorTestHelpers
+
   import Lightning.Factories
   import Lightning.CollaborationHelpers
   import Mox
@@ -60,36 +62,6 @@ defmodule Lightning.Collaboration.SessionReadinessTest do
       workflow: workflow,
       document_name: document_name
     }
-  end
-
-  defp adaptor_record(overrides \\ []) do
-    overrides = Map.new(overrides)
-
-    %{
-      name: "@openfn/language-http",
-      source: :npm,
-      latest_version: "1.0.0",
-      description: nil,
-      homepage: nil,
-      repository: nil,
-      license: nil,
-      deprecated: false,
-      schema_data: nil,
-      schema_sha256: nil,
-      versions: [
-        %{
-          version: "1.0.0",
-          integrity: "sha512-abc",
-          tarball_url: "https://example.com/x-1.0.0.tgz",
-          size_bytes: 1024,
-          dependencies: %{},
-          peer_dependencies: %{},
-          published_at: nil,
-          deprecated: false
-        }
-      ]
-    }
-    |> Map.merge(overrides)
   end
 
   test "does not stall a concurrent call into the same session while waiting, and resolves via GenServer.reply on success",

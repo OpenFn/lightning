@@ -211,23 +211,20 @@ defmodule Lightning.Adaptors.Local do
   defp build_adaptor_record(record) do
     pkg = record.latest_package_json
 
-    base = %{
-      name: record.name,
-      description: pkg["description"],
-      homepage: pkg["homepage"],
-      repository: extract_repository(pkg["repository"]),
-      license: pkg["license"],
-      latest_version: record.latest_version,
-      deprecated: false,
-      versions: Enum.map(record.versions, &build_version_record/1)
-    }
-
-    with {:ok, schema_data, schema_sha256} <- read_schema(record.latest_path) do
+    with {:ok, {schema_data, schema_sha256}} <- read_schema(record.latest_path) do
       {:ok,
-       Map.merge(base, %{
+       %{
+         name: record.name,
+         description: pkg["description"],
+         homepage: pkg["homepage"],
+         repository: extract_repository(pkg["repository"]),
+         license: pkg["license"],
+         latest_version: record.latest_version,
+         deprecated: false,
+         versions: Enum.map(record.versions, &build_version_record/1),
          schema_data: schema_data,
          schema_sha256: schema_sha256
-       })}
+       }}
     end
   end
 
@@ -245,12 +242,9 @@ defmodule Lightning.Adaptors.Local do
   end
 
   defp read_schema(dir) do
-    with {:ok, body} <- File.read(Path.join(dir, @schema_filename)),
-         {:ok, _} <- Jason.decode(body) do
-      sha = :sha256 |> :crypto.hash(body) |> Base.encode16(case: :lower)
-      {:ok, body, sha}
-    else
-      {:error, :enoent} -> {:ok, nil, nil}
+    case File.read(Path.join(dir, @schema_filename)) do
+      {:ok, body} -> Lightning.Adaptors.Strategy.digest_schema(body)
+      {:error, :enoent} -> {:ok, {nil, nil}}
       {:error, reason} -> {:error, {:schema_fetch_failed, reason}}
     end
   end

@@ -45,7 +45,15 @@ defmodule LightningWeb.AdaptorIconControllerTest do
   end
 
   defp write_icon(name, shape, ext, bytes) do
-    {:ok, _sha} = IconCache.write!(source(), name, shape, ext, bytes)
+    IconCache.write!(
+      source(),
+      name,
+      shape,
+      ext,
+      bytes,
+      :crypto.hash(:sha256, bytes)
+    )
+
     :ok
   end
 

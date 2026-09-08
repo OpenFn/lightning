@@ -30,107 +30,141 @@ defmodule Lightning.Adaptors.IconCacheTest do
     {:ok, root: root}
   end
 
-  describe "path/4" do
-    test "joins Config.icon_path with source/name/shape.ext", %{root: root} do
-      assert IconCache.path(:npm, "salesforce", :square, "png") ==
-               Path.join([root, "npm", "salesforce", "square.png"])
+  @sha :crypto.hash(:sha256, "x")
+  @sha8 @sha |> Base.encode16(case: :lower) |> binary_part(0, 8)
+
+  describe "path/5" do
+    test "joins Config.icon_path with source/name/shape.sha8.ext", %{root: root} do
+      assert IconCache.path(:npm, "salesforce", :square, "png", @sha) ==
+               Path.join([root, "npm", "salesforce", "square.#{@sha8}.png"])
     end
 
     test "handles names containing a slash like @openfn/language-foo", %{
       root: root
     } do
-      assert IconCache.path(:npm, "@openfn/language-foo", :square, "png") ==
+      assert IconCache.path(:npm, "@openfn/language-foo", :square, "png", @sha) ==
                Path.join([
                  root,
                  "npm",
                  "@openfn",
                  "language-foo",
-                 "square.png"
+                 "square.#{@sha8}.png"
                ])
     end
 
     test "source-partitions paths for the same name", %{root: root} do
-      npm_path = IconCache.path(:npm, "salesforce", :square, "png")
-      local_path = IconCache.path(:local, "salesforce", :square, "png")
+      npm_path = IconCache.path(:npm, "salesforce", :square, "png", @sha)
+      local_path = IconCache.path(:local, "salesforce", :square, "png", @sha)
 
-      assert npm_path == Path.join([root, "npm", "salesforce", "square.png"])
+      assert npm_path ==
+               Path.join([root, "npm", "salesforce", "square.#{@sha8}.png"])
 
       assert local_path ==
-               Path.join([root, "local", "salesforce", "square.png"])
+               Path.join([root, "local", "salesforce", "square.#{@sha8}.png"])
 
       refute npm_path == local_path
     end
 
     test "is pure — nothing is created on disk", %{root: root} do
-      _ = IconCache.path(:npm, "never-written", :rectangle, "svg")
+      _ = IconCache.path(:npm, "never-written", :rectangle, "svg", @sha)
 
       assert File.ls!(root) == []
     end
   end
 
   describe "cached?/5" do
-    @sha :crypto.hash(:sha256, "x")
-
     test "returns false when the file does not exist" do
       refute IconCache.cached?(:npm, "definitely-missing", :square, "png", @sha)
     end
 
-    test "returns true after write!/5 places bytes with that sha" do
-      {:ok, sha} = IconCache.write!(:npm, "cached-pkg", :square, "png", "x")
-      assert sha == @sha
+    test "returns true after write!/6 places bytes for that sha" do
+      write("cached-pkg", "x")
 
       assert IconCache.cached?(:npm, "cached-pkg", :square, "png", @sha)
     end
 
-    test "returns false when the file on disk has other bytes" do
-      {:ok, _} = IconCache.write!(:npm, "stale-pkg", :square, "png", "old")
+    test "returns false when only another sha is on disk" do
+      write("stale-pkg", "old")
 
       refute IconCache.cached?(:npm, "stale-pkg", :square, "png", @sha)
     end
 
     test "stays source-partitioned: a write to :npm doesn't satisfy :local" do
-      {:ok, _} = IconCache.write!(:npm, "split-pkg", :square, "png", "x")
+      write("split-pkg", "x")
 
       assert IconCache.cached?(:npm, "split-pkg", :square, "png", @sha)
       refute IconCache.cached?(:local, "split-pkg", :square, "png", @sha)
     end
   end
 
-  describe "write!/5" do
-    test "writes bytes and a round-trip read returns them" do
+  describe "write!/6" do
+    test "writes bytes and returns the path they can be read back from" do
       bytes = :crypto.strong_rand_bytes(2_048)
 
-      {:ok, _sha} =
-        IconCache.write!(:npm, "round-trip", :square, "png", bytes)
+      path = write("round-trip", bytes)
 
-      assert File.read!(IconCache.path(:npm, "round-trip", :square, "png")) ==
-               bytes
+      assert path ==
+               IconCache.path(
+                 :npm,
+                 "round-trip",
+                 :square,
+                 "png",
+                 :crypto.hash(:sha256, bytes)
+               )
+
+      assert File.read!(path) == bytes
     end
 
-    test "returns the sha256 of the supplied bytes as a 32-byte binary" do
-      bytes = "hello, icon"
+    test "removes the superseded file for the same shape and extension" do
+      old_path = write("rotated", "first")
+      new_path = write("rotated", "second")
 
-      {:ok, sha} = IconCache.write!(:npm, "sha-test", :square, "png", bytes)
-
-      assert sha == :crypto.hash(:sha256, bytes)
-      assert byte_size(sha) == 32
+      refute old_path == new_path
+      assert File.read!(new_path) == "second"
+      refute File.exists?(old_path)
     end
 
-    test "is latest-only: a subsequent write for the same key overwrites" do
-      {:ok, _} = IconCache.write!(:npm, "overwrite", :square, "png", "first")
-      {:ok, _} = IconCache.write!(:npm, "overwrite", :square, "png", "second")
+    test "removes the superseded file even when the extension changed" do
+      old_path = write("re-ext", "first")
 
-      assert File.read!(IconCache.path(:npm, "overwrite", :square, "png")) ==
-               "second"
+      new_path =
+        IconCache.write!(
+          :npm,
+          "re-ext",
+          :square,
+          "svg",
+          "second",
+          :crypto.hash(:sha256, "second")
+        )
+
+      assert String.ends_with?(new_path, ".svg")
+      assert File.exists?(new_path)
+      refute File.exists?(old_path)
+    end
+
+    test "removes a pre-sha legacy file for the same shape" do
+      new_path = write("legacy", "bytes")
+      legacy = Path.join(Path.dirname(new_path), "square.png")
+      File.write!(legacy, "old")
+
+      write("legacy", "bytes")
+
+      refute File.exists?(legacy)
+      assert File.exists?(new_path)
+    end
+
+    test "leaves the other shape alone when sweeping" do
+      square = write("two-shapes", "sq")
+      rectangle = write("two-shapes", "rect", :rectangle)
+
+      assert File.exists?(square)
+      assert File.exists?(rectangle)
     end
 
     test "creates intermediate directories for scoped names" do
-      {:ok, _} =
-        IconCache.write!(:npm, "@openfn/language-http", :square, "png", "abc")
+      path = write("@openfn/language-http", "abc")
 
-      assert File.read!(
-               IconCache.path(:npm, "@openfn/language-http", :square, "png")
-             ) == "abc"
+      assert File.read!(path) == "abc"
     end
 
     test "is atomic: concurrent writers produce no half-written file and no leftover temps",
@@ -140,26 +174,38 @@ defmodule Lightning.Adaptors.IconCacheTest do
           :crypto.strong_rand_bytes(16_384) <> <<i::32>>
         end
 
-      payloads
-      |> Enum.map(fn bytes ->
-        Task.async(fn ->
-          IconCache.write!(:npm, "concurrent", :square, "png", bytes)
+      paths =
+        payloads
+        |> Enum.map(fn bytes ->
+          Task.async(fn -> write("concurrent", bytes) end)
         end)
-      end)
-      |> Task.await_many(10_000)
+        |> Task.await_many(10_000)
 
-      final_path = IconCache.path(:npm, "concurrent", :square, "png")
-      final = File.read!(final_path)
+      dir = Path.dirname(hd(paths))
+      on_disk = File.ls!(dir)
 
-      assert final in payloads,
-             "final file does not match any written payload — write was not atomic"
+      refute on_disk == [], "the sweep left nothing behind"
 
-      dir = Path.dirname(final_path)
+      for file <- on_disk do
+        refute String.ends_with?(file, ".tmp"),
+               "leftover temp files in #{dir}: #{inspect(on_disk)}"
 
-      assert dir |> File.ls!() |> Enum.reject(&(&1 == "square.png")) == [],
-             "leftover temp files in #{dir}: #{inspect(File.ls!(dir))}"
+        assert File.read!(Path.join(dir, file)) in payloads,
+               "#{file} matches no written payload — write was not atomic"
+      end
 
       _ = root
     end
+  end
+
+  defp write(name, bytes, shape \\ :square) do
+    IconCache.write!(
+      :npm,
+      name,
+      shape,
+      "png",
+      bytes,
+      :crypto.hash(:sha256, bytes)
+    )
   end
 end
