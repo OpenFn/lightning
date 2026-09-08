@@ -1053,6 +1053,35 @@ defmodule Lightning.InvocationTest do
       |> MapSet.new()
     end
 
+    defp workorder(workflow, trigger, state) do
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: state
+      )
+    end
+
+    # The run carries the work order's own state: every case here is a work
+    # order that ran once and stopped there.
+    defp ran_wo(workflow, trigger, state, steps \\ []) do
+      wo = workorder(workflow, trigger, state)
+
+      insert(:run,
+        work_order: wo,
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: state,
+        steps: steps
+      )
+
+      wo
+    end
+
+    defp failing_step(job, error_type) do
+      build(:step, job: job, exit_reason: "fail", error_type: error_type)
+    end
+
     test "matches exactly the work orders behind a step-level signature, and none of a rejected or lost row" do
       project = insert(:project)
 
@@ -1062,86 +1091,19 @@ defmodule Lightning.InvocationTest do
       other_job = insert(:job, workflow: workflow)
 
       crashed_wo =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :crashed
-        )
-
-      insert(:run,
-        work_order: crashed_wo,
-        starting_trigger: trigger,
-        dataclip: insert(:dataclip),
-        state: :crashed,
-        steps: [
-          build(:step, job: job, exit_reason: "fail", error_type: "RuntimeError")
-        ]
-      )
+        ran_wo(workflow, trigger, :crashed, [failing_step(job, "RuntimeError")])
 
       failed_wo =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :failed
-        )
-
-      insert(:run,
-        work_order: failed_wo,
-        starting_trigger: trigger,
-        dataclip: insert(:dataclip),
-        state: :failed,
-        steps: [
-          build(:step, job: job, exit_reason: "fail", error_type: "RuntimeError")
-        ]
-      )
+        ran_wo(workflow, trigger, :failed, [failing_step(job, "RuntimeError")])
 
       # Same reason and error type, different job — must not match.
-      other_job_wo =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :failed
-        )
+      ran_wo(workflow, trigger, :failed, [
+        failing_step(other_job, "RuntimeError")
+      ])
 
-      insert(:run,
-        work_order: other_job_wo,
-        starting_trigger: trigger,
-        dataclip: insert(:dataclip),
-        state: :failed,
-        steps: [
-          build(:step,
-            job: other_job,
-            exit_reason: "fail",
-            error_type: "RuntimeError"
-          )
-        ]
-      )
+      workorder(workflow, trigger, :rejected)
 
-      _rejected_wo =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :rejected
-        )
-
-      lost_wo =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :lost
-        )
-
-      insert(:run,
-        work_order: lost_wo,
-        starting_trigger: trigger,
-        dataclip: insert(:dataclip),
-        state: :lost
-      )
+      lost_wo = ran_wo(workflow, trigger, :lost)
 
       assert signature_matches(project, "fail", "RuntimeError", job.id) ==
                MapSet.new([crashed_wo.id, failed_wo.id])
@@ -1157,53 +1119,27 @@ defmodule Lightning.InvocationTest do
       assert signature_matches(project, "lost", nil) == MapSet.new([lost_wo.id])
     end
 
+    # Guards every unfiltered history search, not just the View button: the
+    # signature filter sits in the query behind search, bulk retry, bulk cancel
+    # and export, and its run-level branch fails closed. A nil signature that
+    # stopped being a no-op would empty the history page for everyone.
     test "with all three fields nil is a no-op" do
       project = insert(:project)
 
       %{workflow: workflow, trigger: trigger} = build_workflow(project: project)
 
-      wo =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :failed
-        )
-
-      insert(:run,
-        work_order: wo,
-        starting_trigger: trigger,
-        dataclip: insert(:dataclip),
-        state: :failed
-      )
+      wo = workorder(workflow, trigger, :failed)
 
       params = SearchParams.new(%{"status" => SearchParams.status_list()})
-      assert params.exit_reason == nil
-      assert params.error_type == nil
-      assert params.job_id == nil
+      assert %{exit_reason: nil, error_type: nil, job_id: nil} = params
 
-      without_signature =
+      found =
         project
         |> Invocation.search_workorders_for_export_query(params)
         |> Repo.all()
         |> Enum.map(& &1.id)
 
-      with_explicit_nils =
-        SearchParams.new(%{
-          "status" => SearchParams.status_list(),
-          "exit_reason" => nil,
-          "error_type" => nil,
-          "job_id" => nil
-        })
-
-      with_signature =
-        project
-        |> Invocation.search_workorders_for_export_query(with_explicit_nils)
-        |> Repo.all()
-        |> Enum.map(& &1.id)
-
-      assert without_signature == [wo.id]
-      assert with_signature == without_signature
+      assert found == [wo.id]
     end
 
     test "search_workorders_for_retry/2 scopes a bulk retry to the signature" do
@@ -1213,40 +1149,9 @@ defmodule Lightning.InvocationTest do
         build_workflow(project: project)
 
       matching_wo =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :failed
-        )
+        ran_wo(workflow, trigger, :failed, [failing_step(job, "RuntimeError")])
 
-      insert(:run,
-        work_order: matching_wo,
-        starting_trigger: trigger,
-        dataclip: insert(:dataclip),
-        state: :failed,
-        steps: [
-          build(:step, job: job, exit_reason: "fail", error_type: "RuntimeError")
-        ]
-      )
-
-      other_wo =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :failed
-        )
-
-      insert(:run,
-        work_order: other_wo,
-        starting_trigger: trigger,
-        dataclip: insert(:dataclip),
-        state: :failed,
-        steps: [
-          build(:step, job: job, exit_reason: "fail", error_type: "CompileError")
-        ]
-      )
+      ran_wo(workflow, trigger, :failed, [failing_step(job, "CompileError")])
 
       found =
         Invocation.search_workorders_for_retry(
@@ -1263,21 +1168,7 @@ defmodule Lightning.InvocationTest do
       %{workflow: workflow, trigger: trigger, job: job} =
         build_workflow(project: project)
 
-      wo =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :failed
-        )
-
-      insert(:run,
-        work_order: wo,
-        starting_trigger: trigger,
-        dataclip: insert(:dataclip),
-        state: :failed,
-        steps: [build(:step, job: job, exit_reason: "fail", error_type: "")]
-      )
+      wo = ran_wo(workflow, trigger, :failed, [failing_step(job, "")])
 
       assert signature_matches(project, "fail", nil, job.id) ==
                MapSet.new([wo.id])
@@ -1289,23 +1180,7 @@ defmodule Lightning.InvocationTest do
       %{workflow: workflow, trigger: trigger, job: job} =
         build_workflow(project: project)
 
-      success_wo =
-        insert(:workorder,
-          workflow: workflow,
-          trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :success
-        )
-
-      insert(:run,
-        work_order: success_wo,
-        starting_trigger: trigger,
-        dataclip: insert(:dataclip),
-        state: :success,
-        steps: [
-          build(:step, job: job, exit_reason: "fail", error_type: "RuntimeError")
-        ]
-      )
+      ran_wo(workflow, trigger, :success, [failing_step(job, "RuntimeError")])
 
       assert signature_matches(project, "fail", "RuntimeError", job.id) ==
                MapSet.new()
