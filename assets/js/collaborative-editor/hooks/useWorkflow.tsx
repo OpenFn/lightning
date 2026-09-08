@@ -728,6 +728,7 @@ export const useWorkflowActions = () => {
     // Promote merges only; archiving the sandbox is the separate archiveSandbox
     // command below, offered as an optional second step after a successful merge.
     promote: store.promote,
+    checkPromote: store.checkPromote,
     archiveSandbox: store.archiveSandbox,
 
     resetWorkflow: store.resetWorkflow,

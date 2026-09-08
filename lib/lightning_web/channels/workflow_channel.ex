@@ -23,6 +23,7 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Projects.Events.ProjectUserRoleChanged
   alias Lightning.Projects.Events.SupportAccessUpdated
   alias Lightning.Projects.Events.WorkflowDeleted
+  alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.ProjectLimiter
   alias Lightning.Projects.Sandboxes
   alias Lightning.Projects.Scope
@@ -503,6 +504,34 @@ defmodule LightningWeb.WorkflowChannel do
     else
       error -> workflow_error_reply(socket, error)
     end
+  end
+
+  @impl true
+  def handle_in("request_promote_check", params, socket) do
+    sandbox = socket.assigns.project
+    user = socket.assigns.current_user
+
+    # Promote saves before merging, so the answer must be about the working name.
+    # The fallback is the name this socket joined on, already stale after a
+    # rename.
+    workflow_name =
+      case params do
+        %{"workflow_name" => name} when is_binary(name) and name != "" -> name
+        _ -> socket.assigns.workflow.name
+      end
+
+    async_task(socket, "request_promote_check", fn ->
+      with %_{} = parent <- fetch_parent_project(sandbox),
+           :ok <- authorize_merge_sandbox(user, parent) do
+        %{
+          diverged:
+            MergeProjects.workflow_diverged?(sandbox, parent, workflow_name),
+          parent_name: parent.name
+        }
+      else
+        _ -> %{diverged: false, parent_name: nil}
+      end
+    end)
   end
 
   @impl true
@@ -1134,6 +1163,7 @@ defmodule LightningWeb.WorkflowChannel do
               "get_context",
               "request_history",
               "request_versions",
+              "request_promote_check",
               "request_trigger_auth_methods",
               "get_limits"
             ] do

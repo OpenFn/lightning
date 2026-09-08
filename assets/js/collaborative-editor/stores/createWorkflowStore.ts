@@ -1658,6 +1658,21 @@ export const createWorkflowStore = (
     }
   };
 
+  const checkPromote = async (): Promise<{
+    diverged: boolean;
+    parent_name: string | null;
+  }> => {
+    const { ydoc, provider } = ensureConnected();
+
+    // Promote saves before merging, so the name it acts on is the working one.
+    const { name } = ydoc.getMap('workflow').toJSON() as { name?: string };
+
+    return await channelRequest<{
+      diverged: boolean;
+      parent_name: string | null;
+    }>(provider.channel, 'request_promote_check', { workflow_name: name });
+  };
+
   // Archive this sandbox after promoting. Archiving turns off the sandbox's
   // triggers and schedules it for deletion (reversible during a grace window);
   // it is not an instant hard delete. Kept separate from promote so a user can
@@ -2188,6 +2203,7 @@ export const createWorkflowStore = (
     editInSandbox,
     promote,
     archiveSandbox,
+    checkPromote,
     saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,
