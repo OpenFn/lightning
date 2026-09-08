@@ -971,6 +971,59 @@ defmodule LightningWeb.RunLive.IndexTest do
       chip = element(view, "#workorder-id-filter-chip")
       assert render(chip) =~ "Work order:"
     end
+
+    test "signature filter chip appears when exit_reason filter is set", %{
+      conn: conn,
+      project: project,
+      jobs: [job | _]
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              exit_reason: "fail",
+              error_type: "AdaptorError",
+              job_id: job.id
+            }
+          )
+        )
+
+      assert has_element?(view, "#signature-filter-chip")
+      chip = element(view, "#signature-filter-chip")
+
+      assert render(chip) =~
+               "fail:AdaptorError @ #{LightningWeb.LiveHelpers.display_short_uuid(job.id)}"
+    end
+
+    test "signature filter chip omits error type and job id when absent", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{exit_reason: "lost"}
+          )
+        )
+
+      chip = element(view, "#signature-filter-chip")
+      html = render(chip)
+      assert html =~ "lost"
+      refute html =~ "@"
+    end
+
+    test "signature filter chip is absent when exit_reason filter is not set",
+         %{conn: conn, project: project} do
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      refute has_element?(view, "#signature-filter-chip")
+    end
   end
 
   describe "cancel work orders" do
