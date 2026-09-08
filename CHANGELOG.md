@@ -17,6 +17,11 @@ and this project adheres to
 
 ### Added
 
+- A sandbox can be turned on and off from the editor. A clone arrives as a draft
+  with its triggers off, and until now nothing could turn them back on, so a
+  sandbox could not receive a real webhook call or fire a schedule.
+  [#5130](https://github.com/OpenFn/lightning/issues/5130)
+
 - The Edit-in-sandbox dialog says when creating a sandbox is not available, in
   the plan's own words, whether that is the plan not including sandboxes or the
   project being at its cap. Joining an existing sandbox is unaffected, because

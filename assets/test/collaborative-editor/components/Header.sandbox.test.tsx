@@ -424,6 +424,94 @@ describe('Header - lifecycle actions', () => {
     expect(screen.getByTestId('edit-in-sandbox-picker')).toBeInTheDocument();
   });
 
+  describe('turning a sandbox on and off', () => {
+    test('offers Turn on while the sandbox is a draft', () => {
+      lifecycleState = 'draft';
+      renderHeader({ isSandbox: true });
+
+      const button = screen.getByTestId('toggle-sandbox-button');
+      expect(button).toBeEnabled();
+      expect(button).toHaveTextContent('Turn on');
+    });
+
+    test('turning it on goes through the same lifecycle transition as going live', async () => {
+      lifecycleState = 'draft';
+      const user = userEvent.setup();
+      renderHeader({ isSandbox: true });
+
+      await user.click(screen.getByTestId('toggle-sandbox-button'));
+
+      // Same transition, so it respects the activation limit and records a
+      // release exactly as the parent's Go live does.
+      await waitFor(() => {
+        expect(goLive).toHaveBeenCalledTimes(1);
+      });
+      expect(switchToDraft).not.toHaveBeenCalled();
+    });
+
+    test('offers Turn off once the sandbox is on', () => {
+      lifecycleState = 'live';
+      renderHeader({ isSandbox: true });
+
+      expect(screen.getByTestId('toggle-sandbox-button')).toHaveTextContent(
+        'Turn off'
+      );
+    });
+
+    test('turning it off switches it back to draft, with no confirmation', async () => {
+      lifecycleState = 'live';
+      const user = userEvent.setup();
+      renderHeader({ isSandbox: true });
+
+      await user.click(screen.getByTestId('toggle-sandbox-button'));
+
+      // Nothing in production is affected, so there is nothing to confirm.
+      await waitFor(() => {
+        expect(switchToDraft).toHaveBeenCalledTimes(1);
+      });
+      expect(goLive).not.toHaveBeenCalled();
+    });
+
+    test('a failed transition says so and leaves the button usable', async () => {
+      lifecycleState = 'draft';
+      goLive.mockRejectedValue(new Error('nope'));
+      const user = userEvent.setup();
+      renderHeader({ isSandbox: true });
+
+      await user.click(screen.getByTestId('toggle-sandbox-button'));
+
+      await waitFor(() => {
+        expect(notifyAlert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Could not turn the sandbox on',
+          })
+        );
+      });
+      await waitFor(() => {
+        expect(screen.getByTestId('toggle-sandbox-button')).toBeEnabled();
+      });
+    });
+
+    test('is not offered outside a sandbox', () => {
+      lifecycleState = 'draft';
+      renderHeader({ isSandbox: false });
+
+      expect(
+        screen.queryByTestId('toggle-sandbox-button')
+      ).not.toBeInTheDocument();
+    });
+
+    test('is not offered on a pinned version of a sandbox', () => {
+      lifecycleState = 'draft';
+      urlParams = { v: '2' };
+      renderHeader({ isSandbox: true });
+
+      expect(
+        screen.queryByTestId('toggle-sandbox-button')
+      ).not.toBeInTheDocument();
+    });
+  });
+
   test('inside a sandbox, shows an enabled Promote button and no lifecycle transitions', () => {
     renderHeader({ isSandbox: true });
 

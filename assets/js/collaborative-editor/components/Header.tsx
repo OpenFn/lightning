@@ -669,6 +669,44 @@ export function Header({
                   </Button>
                 )}
               {!isNewWorkflow && isSandbox && !isViewingNonCurrentVersion && (
+                <Tooltip
+                  content={
+                    lifecycleState === 'live'
+                      ? 'Turn the sandbox off and its triggers stop answering.'
+                      : "Turn the sandbox on and its own webhook URL answers, and its cron triggers fire. The parent's live workflow is untouched."
+                  }
+                  side="bottom"
+                >
+                  <span className="inline-block">
+                    <Button
+                      variant="secondary"
+                      data-testid="toggle-sandbox-button"
+                      className="inline-flex items-center hover:bg-gray-50
+                        disabled:hover:inset-ring-gray-300"
+                      disabled={isTransitioning}
+                      onClick={() => {
+                        const turningOn = lifecycleState !== 'live';
+                        setIsTransitioning(true);
+                        void (turningOn ? goLive() : switchToDraft())
+                          .catch(() =>
+                            notifications.alert({
+                              title: turningOn
+                                ? 'Could not turn the sandbox on'
+                                : 'Could not turn the sandbox off',
+                              description: 'Please try again.',
+                            })
+                          )
+                          .finally(() => {
+                            setIsTransitioning(false);
+                          });
+                      }}
+                    >
+                      {lifecycleState === 'live' ? 'Turn off' : 'Turn on'}
+                    </Button>
+                  </span>
+                </Tooltip>
+              )}
+              {!isNewWorkflow && isSandbox && !isViewingNonCurrentVersion && (
                 <Button
                   data-testid="promote-sandbox-button"
                   className="inline-flex items-center gap-1"
