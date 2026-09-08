@@ -497,6 +497,74 @@ defmodule Lightning.Projects.SandboxesTest do
                ])
     end
 
+    test "creates the reviewed body in the sandbox rather than copying a row" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{
+          name: "sb-start",
+          starting_dataclip: %{
+            body: ~s({"name":"redacted","id":7}),
+            name: "from run 1234"
+          }
+        })
+
+      assert [
+               {"from run 1234", :saved_input,
+                %{"name" => "redacted", "id" => 7}}
+             ] =
+               from(d in Dataclip,
+                 where: d.project_id == ^sandbox.id,
+                 select: {d.name, d.type, d.body}
+               )
+               |> Repo.all()
+
+      # The parent keeps whatever it had; nothing moved.
+      assert from(d in Dataclip, where: d.project_id == ^parent.id)
+             |> Repo.aggregate(:count) > 0
+    end
+
+    test "leaves no sandbox behind when the reviewed body is not valid JSON" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      assert {:error, :starting_dataclip_invalid_json} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-bad",
+                 starting_dataclip: %{body: "{not json", name: nil}
+               })
+
+      refute Repo.get_by(Project, name: "sb-bad")
+    end
+
+    test "refuses a reviewed body that is not an object" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      assert {:error, :starting_dataclip_not_an_object} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-array",
+                 starting_dataclip: %{body: "[1,2,3]", name: nil}
+               })
+
+      refute Repo.get_by(Project, name: "sb-array")
+    end
+
+    test "refuses a reviewed body over the dataclip size limit" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      Mox.stub(Lightning.MockConfig, :max_dataclip_size_bytes, fn -> 10 end)
+
+      assert {:error, :starting_dataclip_too_large} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-big",
+                 starting_dataclip: %{
+                   body: ~s({"padding":"aaaaaaaaaaaaaaaaaaaa"}),
+                   name: nil
+                 }
+               })
+
+      refute Repo.get_by(Project, name: "sb-big")
+    end
+
     test "copies trigger webhook auth methods when present" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
 

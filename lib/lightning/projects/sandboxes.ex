@@ -47,6 +47,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Collections.Collection
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.Scoping
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Events
   alias Lightning.Projects.MergeProjects
@@ -78,6 +79,9 @@ defmodule Lightning.Projects.Sandboxes do
   * `:env` - Environment identifier (e.g. `"staging"`, `"dev"`)
   * `:dataclip_ids` - UUIDs of dataclips to copy (only copies named dataclips
     of types `:global`, `:saved_input`, or `:http_request`)
+  * `:starting_dataclip` - a `%{body: json_string, name: string | nil}` map. The
+    body is created in the sandbox as a `:saved_input` dataclip rather than
+    copied from the parent, so what the caller reviewed is what lands.
 
   The sandbox's `project_users` are derived from the parent project: every
   parent user is copied across with their role preserved, except the parent
@@ -91,7 +95,11 @@ defmodule Lightning.Projects.Sandboxes do
           required(:name) => String.t(),
           optional(:color) => String.t() | nil,
           optional(:env) => String.t() | nil,
-          optional(:dataclip_ids) => [Ecto.UUID.t()]
+          optional(:dataclip_ids) => [Ecto.UUID.t()],
+          optional(:starting_dataclip) => %{
+            required(:body) => String.t(),
+            optional(:name) => String.t() | nil
+          }
         }
 
   @cloned_project_fields ~w(
@@ -143,12 +151,47 @@ defmodule Lightning.Projects.Sandboxes do
              | Ecto.Changeset.t()
              | term()}
   def provision(%Project{} = parent, %User{} = actor, attrs) do
-    if Permissions.can?(:sandboxes, :provision_sandbox, actor, parent) do
+    with true <- Permissions.can?(:sandboxes, :provision_sandbox, actor, parent),
+         {:ok, attrs} <- cast_starting_dataclip(attrs) do
       create_sandbox_from_parent(parent, actor, attrs)
     else
-      {:error, :unauthorized}
+      false -> {:error, :unauthorized}
+      {:error, _reason} = error -> error
     end
   end
+
+  defp cast_starting_dataclip(attrs) do
+    case Map.get(attrs, :starting_dataclip) do
+      nil ->
+        {:ok, attrs}
+
+      %{} = starting ->
+        with {:ok, body} <- decode_dataclip_body(Map.get(starting, :body)) do
+          {:ok,
+           Map.put(attrs, :starting_dataclip, %{
+             body: body,
+             name: Map.get(starting, :name)
+           })}
+        end
+
+      _other ->
+        {:error, :invalid_starting_dataclip}
+    end
+  end
+
+  defp decode_dataclip_body(body) when is_binary(body) do
+    if byte_size(body) > Lightning.Config.max_dataclip_size_bytes() do
+      {:error, :starting_dataclip_too_large}
+    else
+      case Jason.decode(body) do
+        {:ok, %{} = decoded} -> {:ok, decoded}
+        {:ok, _not_an_object} -> {:error, :starting_dataclip_not_an_object}
+        {:error, _} -> {:error, :starting_dataclip_invalid_json}
+      end
+    end
+  end
+
+  defp decode_dataclip_body(_body), do: {:error, :invalid_starting_dataclip}
 
   defp nesting_depth_exceeded?(%Project{id: parent_id}) do
     Lightning.Projects.depth_of(parent_id) >=
@@ -1318,6 +1361,7 @@ defmodule Lightning.Projects.Sandboxes do
     |> copy_workflow_version_history(sandbox.workflow_id_mapping)
     |> create_initial_workflow_snapshots()
     |> copy_selected_dataclips(parent.id, Map.get(original_attrs, :dataclip_ids))
+    |> create_starting_dataclip(Map.get(original_attrs, :starting_dataclip))
     |> clone_collections_from_parent(parent)
   end
 
@@ -1464,7 +1508,7 @@ defmodule Lightning.Projects.Sandboxes do
   defp copy_selected_dataclips(sandbox, parent_id, dataclip_ids)
        when is_list(dataclip_ids) do
     selected_dataclips =
-      from(dataclip in Lightning.Invocation.Dataclip,
+      from(dataclip in Dataclip,
         where:
           dataclip.project_id == ^parent_id and
             dataclip.id in ^dataclip_ids and
@@ -1481,9 +1525,19 @@ defmodule Lightning.Projects.Sandboxes do
     Enum.each(selected_dataclips, fn dataclip_attrs ->
       dataclip_attrs
       |> Map.put(:project_id, sandbox.id)
-      |> Lightning.Invocation.Dataclip.new()
+      |> Dataclip.new()
       |> Repo.insert!()
     end)
+
+    sandbox
+  end
+
+  defp create_starting_dataclip(sandbox, nil), do: sandbox
+
+  defp create_starting_dataclip(sandbox, %{body: body, name: name}) do
+    %{project_id: sandbox.id, body: body, name: name, type: :saved_input}
+    |> Dataclip.new()
+    |> Repo.insert!()
 
     sandbox
   end
