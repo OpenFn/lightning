@@ -105,18 +105,13 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       |> assign(
         wo_filters:
           SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1)
+            "date_after" => Timex.now() |> Timex.shift(months: -1)
           }),
         failed_wo_filters:
-          SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
-            "failed" => "true",
-            "crashed" => "true",
-            "killed" => "true",
-            "cancelled" => "true",
-            "lost" => "true",
-            "exception" => "true"
-          }),
+          SearchParams.to_uri_params(
+            Map.new(WorkOrder.failure_states(), &{Atom.to_string(&1), "true"})
+            |> Map.put("date_after", Timex.now() |> Timex.shift(months: -1))
+          ),
         workflows: Enum.map(workflows_stats, &Map.merge(&1, &1.workflow)),
         empty?: Enum.empty?(workflows_stats)
       )
@@ -500,18 +495,13 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       assigns
       |> assign(
         failed_filters:
-          SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
-            "failed" => "true",
-            "crashed" => "true",
-            "killed" => "true",
-            "cancelled" => "true",
-            "lost" => "true",
-            "exception" => "true"
-          }),
+          SearchParams.to_uri_params(
+            Map.new(WorkOrder.failure_states(), &{Atom.to_string(&1), "true"})
+            |> Map.put("date_after", Timex.now() |> Timex.shift(months: -1))
+          ),
         pending_filters:
           SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
+            "date_after" => Timex.now() |> Timex.shift(months: -1),
             "pending" => "true",
             "running" => "true"
           })

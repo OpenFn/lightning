@@ -144,7 +144,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         |> Timex.shift(months: -1)
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]=#{date}"
+          "filters[date_after]=#{date}.*&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]="
         end)
 
       assert html
@@ -170,7 +170,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              )
 
       failed_filter_pattern =
-        "filters[cancelled]=true.*filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true"
+        "filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true.*filters[rejected]=true"
 
       assert html
              |> has_history_link_pattern?(
@@ -220,7 +220,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         |> Timex.shift(months: -1)
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[wo_date_after]=#{date}"
+          "filters[date_after]=#{date}.*&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[wo_date_after]="
         end)
 
       assert html
