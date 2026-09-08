@@ -13,9 +13,9 @@ defmodule Lightning.Adaptors.IconCache do
   Source partitioning means flipping `ADAPTORS_STRATEGY` between restarts
   cannot accidentally serve `:npm` bytes from a row that's now resolved
   via `:local` (or vice versa). Latest-only means a subsequent
-  `write!/5` for the same key overwrites — content-addressable URLs
-  carry the sha8 prefix, so cache invalidation is intrinsic and we
-  don't need to keep old versions on disk.
+  `write!/5` for the same key overwrites, and `cached?/5` only trusts a
+  file whose bytes still hash to the sha on the adaptor row, so a node
+  that cached an earlier icon refetches instead of serving it forever.
 
   Concurrent first-request fetchers are coalesced upstream by Cachex's
   courier on `{:icon_bytes, source, name, shape}` inside
@@ -46,11 +46,15 @@ defmodule Lightning.Adaptors.IconCache do
   end
 
   @doc """
-  Whether the icon at `path(source, name, shape, ext)` exists on disk.
+  Whether the icon at `path(source, name, shape, ext)` is on disk with
+  bytes hashing to `sha256`.
   """
-  @spec cached?(source(), name(), shape(), ext()) :: boolean()
-  def cached?(source, name, shape, ext) do
-    File.exists?(path(source, name, shape, ext))
+  @spec cached?(source(), name(), shape(), ext(), binary()) :: boolean()
+  def cached?(source, name, shape, ext, sha256) do
+    case File.read(path(source, name, shape, ext)) do
+      {:ok, bytes} -> :crypto.hash(:sha256, bytes) == sha256
+      {:error, _} -> false
+    end
   end
 
   @doc """
@@ -59,11 +63,6 @@ defmodule Lightning.Adaptors.IconCache do
 
   The write is staged in a sibling temp file and then renamed into
   place, so concurrent readers never observe a half-written file.
-
-  The caller (Strategy / Scheduler) persists the returned sha on the
-  adaptor row and is responsible for verifying it matches the expected
-  sha from the upstream `adaptor_record` — defence against tarball or
-  filesystem corruption.
   """
   @spec write!(source(), name(), shape(), ext(), binary()) ::
           {:ok, binary()}

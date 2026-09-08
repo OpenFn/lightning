@@ -3,8 +3,8 @@ defmodule Lightning.Adaptors.NPM.Schema do
   jsDelivr CDN client for adaptor configuration schemas.
 
   Fetches `/npm/<name>@<version>/configuration-schema.json` from
-  `cdn.jsdelivr.net`, decodes it, and returns `{schema_data,
-  schema_sha256}`. A genuine 404 (schema removed upstream) returns
+  `cdn.jsdelivr.net`, checks it decodes, and returns `{schema_data,
+  schema_sha256}` with the body kept as the bytes served. A genuine 404 (schema removed upstream) returns
   `{nil, nil}`; any other failure (timeout, other HTTP status, network
   error) returns `{nil, :fetch_failed}` so callers can tell "schema
   really doesn't exist" apart from "couldn't check right now."
@@ -27,12 +27,12 @@ defmodule Lightning.Adaptors.NPM.Schema do
   genuine absence by callers that persist the result.
   """
   @spec schema(String.t(), String.t()) ::
-          {map(), String.t()} | {nil, nil} | {nil, :fetch_failed}
+          {String.t(), String.t()} | {nil, nil} | {nil, :fetch_failed}
   def schema(name, version) do
     with {:ok, body} <- fetch_schema_bytes(name, version),
-         {:ok, data} <- Jason.decode(body) do
+         {:ok, _} <- Jason.decode(body) do
       sha = :sha256 |> :crypto.hash(body) |> Base.encode16(case: :lower)
-      {data, sha}
+      {body, sha}
     else
       {:error, {:http_status, 404}} -> {nil, nil}
       _ -> {nil, :fetch_failed}

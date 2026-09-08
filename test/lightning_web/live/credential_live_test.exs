@@ -2809,6 +2809,29 @@ defmodule LightningWeb.CredentialLiveTest do
                "label[for='credential-schema-picker_selected_deprecated-adaptor']"
              ) == []
     end
+
+    test "omits an adaptor with no configuration schema", %{conn: conn} do
+      insert(:adaptor, name: "@openfn/language-no-schema", schema_data: nil)
+
+      cache = AdaptorsSupervisor.cache_name(Config.default_instance())
+      source = AdaptorsSupervisor.source(Config.default_instance())
+      Cachex.del(cache, {:packages, source})
+
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      html = open_create_credential_modal(view)
+      html_tree = Floki.parse_document!(html)
+
+      assert Floki.find(
+               html_tree,
+               "label[for='credential-schema-picker_selected_@openfn/language-http']"
+             ) != []
+
+      assert Floki.find(
+               html_tree,
+               "label[for='credential-schema-picker_selected_@openfn/language-no-schema']"
+             ) == []
+    end
   end
 
   describe "generic oauth credential" do

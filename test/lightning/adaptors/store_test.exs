@@ -65,12 +65,17 @@ defmodule Lightning.Adaptors.StoreTest do
                Store.schema(sup, "@openfn/language-http")
     end
 
-    test "known adaptor with missing schema calls Strategy once, upserts to DB, caches result",
+    test "known adaptor with missing schema calls Strategy once, upserts to DB, broadcasts the change",
          %{
            sup: sup,
            cache: cache
          } do
       source = AdaptorsSupervisor.source(sup)
+
+      Phoenix.PubSub.subscribe(
+        Lightning.PubSub,
+        AdaptorsSupervisor.source_topic(sup)
+      )
 
       {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(schema_data: nil))
 
@@ -86,14 +91,16 @@ defmodule Lightning.Adaptors.StoreTest do
       assert {:ok, ~s({"type":"object"})} =
                Store.schema(sup, "@openfn/language-http")
 
+      assert_receive {:changed, "@openfn/language-http", ^source}
+
       assert %{schema_data: ~s({"type":"object"})} =
                Catalogue.get_adaptor("@openfn/language-http", source)
 
-      assert {:ok, {:ok, ~s({"type":"object"})}} =
+      assert {:ok, nil} =
                Cachex.get(cache, {:schema, "@openfn/language-http", source})
     end
 
-    test "a failed schema fetch returns an empty schema without caching it",
+    test "a failed schema fetch returns an error without caching it",
          %{sup: sup, cache: cache} do
       source = AdaptorsSupervisor.source(sup)
       name = "@openfn/language-http"
@@ -104,8 +111,24 @@ defmodule Lightning.Adaptors.StoreTest do
         {:ok, adaptor_record() |> Map.drop([:schema_data, :schema_sha256])}
       end)
 
-      assert {:ok, "{}"} = Store.schema(sup, name)
+      assert {:error, :unavailable} = Store.schema(sup, name)
       assert {:ok, nil} = Cachex.get(cache, {:schema, name, source})
+    end
+
+    test "an adaptor the source confirms has no schema caches an empty one",
+         %{sup: sup, cache: cache} do
+      source = AdaptorsSupervisor.source(sup)
+      name = "@openfn/language-http"
+
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(schema_data: nil))
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 1, fn ^name ->
+        {:ok, adaptor_record(schema_data: nil)}
+      end)
+
+      assert {:ok, "{}"} = Store.schema(sup, name)
+      assert {:ok, "{}"} = Store.schema(sup, name)
+      assert {:ok, {:ok, "{}"}} = Cachex.get(cache, {:schema, name, source})
     end
 
     test "unknown adaptor returns {:error, :not_found} without calling Strategy or minting a row",
@@ -223,7 +246,7 @@ defmodule Lightning.Adaptors.StoreTest do
       assert Enum.all?(versions, &Map.has_key?(&1, :deprecated))
     end
 
-    test "known adaptor with no version rows calls Strategy and caches projected versions",
+    test "known adaptor with no version rows calls Strategy and returns projected versions",
          %{
            sup: sup,
            cache: cache
@@ -247,15 +270,13 @@ defmodule Lightning.Adaptors.StoreTest do
       assert {:ok, versions} = Store.versions(sup, "@openfn/language-http")
       assert length(versions) == 2
 
-      assert {:ok, {:ok, cached_versions}} =
-               Cachex.get(cache, {:versions, "@openfn/language-http", source})
-
-      assert length(cached_versions) == 2
-
-      for cached <- cached_versions do
-        assert Map.keys(cached) |> Enum.sort() ==
+      for v <- versions do
+        assert Map.keys(v) |> Enum.sort() ==
                  [:deprecated, :integrity, :published_at, :size_bytes, :version]
       end
+
+      assert {:ok, nil} =
+               Cachex.get(cache, {:versions, "@openfn/language-http", source})
     end
 
     test "a fetched record whose name differs from the requested name is refused",

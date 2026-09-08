@@ -68,22 +68,31 @@ defmodule Lightning.Adaptors.IconCacheTest do
     end
   end
 
-  describe "cached?/4" do
+  describe "cached?/5" do
+    @sha :crypto.hash(:sha256, "x")
+
     test "returns false when the file does not exist" do
-      refute IconCache.cached?(:npm, "definitely-missing", :square, "png")
+      refute IconCache.cached?(:npm, "definitely-missing", :square, "png", @sha)
     end
 
-    test "returns true after write!/5 places the file" do
-      {:ok, _sha} = IconCache.write!(:npm, "cached-pkg", :square, "png", "x")
+    test "returns true after write!/5 places bytes with that sha" do
+      {:ok, sha} = IconCache.write!(:npm, "cached-pkg", :square, "png", "x")
+      assert sha == @sha
 
-      assert IconCache.cached?(:npm, "cached-pkg", :square, "png")
+      assert IconCache.cached?(:npm, "cached-pkg", :square, "png", @sha)
+    end
+
+    test "returns false when the file on disk has other bytes" do
+      {:ok, _} = IconCache.write!(:npm, "stale-pkg", :square, "png", "old")
+
+      refute IconCache.cached?(:npm, "stale-pkg", :square, "png", @sha)
     end
 
     test "stays source-partitioned: a write to :npm doesn't satisfy :local" do
       {:ok, _} = IconCache.write!(:npm, "split-pkg", :square, "png", "x")
 
-      assert IconCache.cached?(:npm, "split-pkg", :square, "png")
-      refute IconCache.cached?(:local, "split-pkg", :square, "png")
+      assert IconCache.cached?(:npm, "split-pkg", :square, "png", @sha)
+      refute IconCache.cached?(:local, "split-pkg", :square, "png", @sha)
     end
   end
 

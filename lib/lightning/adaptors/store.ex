@@ -6,7 +6,9 @@ defmodule Lightning.Adaptors.Store do
   catalogue table. `schema/2` and `versions/2` also fetch from the
   strategy when the row has no data yet and persist what they get; this
   only fills gaps on adaptors already in the catalogue, and an unknown
-  name returns `{:error, :not_found}`. `icon/3` returns a path on disk,
+  name returns `{:error, :not_found}`. A lazy fill that lands a value
+  broadcasts the change like a scheduler write; one whose fetch failed
+  returns `{:error, :unavailable}`. `icon/3` returns a path on disk,
   fetching the bytes from the strategy on the first miss. `catalogue/1`
   caches the picker payload already rendered, together with the ETag
   stamp that describes it.
@@ -118,7 +120,7 @@ defmodule Lightning.Adaptors.Store do
     with {:ok, meta} <- icon_meta(sup, name),
          {:ok, ext} <- ext_for_shape(meta, shape),
          {:ok, expected_sha} <- sha256_for_shape(meta, shape) do
-      if disk_cache_matches?(source, name, shape, ext, expected_sha) do
+      if IconCache.cached?(source, name, shape, ext, expected_sha) do
         {:ok, IconCache.path(source, name, shape, ext)}
       else
         cache
@@ -131,17 +133,6 @@ defmodule Lightning.Adaptors.Store do
         )
         |> unwrap()
       end
-    end
-  end
-
-  # A cached file existing proves nothing about its content — a node that
-  # cached an earlier version of this icon keeps that file forever
-  # otherwise. A sha mismatch, or the file being absent, are both treated
-  # as a miss so the fetch branch below re-pulls and overwrites it.
-  defp disk_cache_matches?(source, name, shape, ext, expected_sha) do
-    case source |> IconCache.path(name, shape, ext) |> File.read() do
-      {:ok, bytes} -> :crypto.hash(:sha256, bytes) == expected_sha
-      {:error, _} -> false
     end
   end
 
@@ -300,7 +291,7 @@ defmodule Lightning.Adaptors.Store do
   # Lazy fetches only fill gaps on adaptors already in the catalogue;
   # they never add one.
   @spec fetch_and_persist(atom(), String.t(), :npm | :local, atom()) ::
-          {:commit, {:ok, term()}} | {:ignore, {:error, term()}}
+          {:commit, {:ok, term()}} | {:ignore, {:ok, term()} | {:error, term()}}
   defp fetch_and_persist(sup, name, source, field) do
     if Catalogue.get_adaptor(name, source) do
       fetch_and_persist_known(sup, name, source, field)
@@ -315,11 +306,27 @@ defmodule Lightning.Adaptors.Store do
         record = Map.put(record, :source, source)
         {:ok, _} = Catalogue.upsert_adaptor(record)
 
-        # The strategy leaves a field off the record when its fetch failed
-        # transiently. Don't cache that as "no value"; let the next call retry.
         case Map.fetch(record, field) do
-          {:ok, value} -> {:commit, {:ok, project_field(value, field)}}
-          :error -> {:ignore, {:ok, project_field(nil, field)}}
+          # The source has nothing; cache that so the next read stays local.
+          {:ok, nil} ->
+            {:commit, {:ok, project_field(nil, field)}}
+
+          # Landed a value: announce it like a scheduler write. The
+          # Invalidator drops the stale keys and the next read refills them
+          # from the row, so there is nothing to commit here.
+          {:ok, value} ->
+            Phoenix.PubSub.broadcast(
+              Lightning.PubSub,
+              AdaptorsSupervisor.source_topic(sup),
+              {:changed, name, source}
+            )
+
+            {:ignore, {:ok, project_field(value, field)}}
+
+          # Left off the record: the fetch failed transiently. Say so rather
+          # than hand back an empty schema that would validate anything.
+          :error ->
+            {:ignore, {:error, :unavailable}}
         end
 
       {:ok, %{name: other}} ->
@@ -330,7 +337,7 @@ defmodule Lightning.Adaptors.Store do
     end
   end
 
-  # Both cache paths must store the same projected shape.
+  # The value handed back here must match what a DB-backed read caches.
   defp project_field(rows, :versions) when is_list(rows),
     do: project_versions(rows)
 
