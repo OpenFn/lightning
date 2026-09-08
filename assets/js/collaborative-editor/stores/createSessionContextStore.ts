@@ -612,7 +612,7 @@ export const createSessionContextStore = (
    * Sends request to server and updates limits state via channel handler
    */
   const getLimits = async (
-    actionType: 'new_run' | 'activate_workflow' | 'github_sync' | 'new_sandbox'
+    actionType: 'new_run' | 'activate_workflow' | 'github_sync'
   ): Promise<void> => {
     if (!_channelProvider?.channel) {
       logger.warn('Cannot get limits - no channel connected');

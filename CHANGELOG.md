@@ -17,9 +17,10 @@ and this project adheres to
 
 ### Added
 
-- Edit in sandbox stays visible but locked on plans without sandboxes, with the
-  plan's own upsell on hover, so people discover the safe editing path instead
-  of only ever seeing Switch to draft.
+- The Edit-in-sandbox dialog says when creating a sandbox is not available, in
+  the words of whichever gate refused: the plan, the project's sandbox cap, or
+  the nesting depth. Joining an existing sandbox is unaffected, because none of
+  those gates apply to it.
   [#4920](https://github.com/OpenFn/lightning/issues/4920)
 
 ### Changed

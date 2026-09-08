@@ -228,67 +228,6 @@ describe('Header - Edit in sandbox button gating', () => {
     expect(button.parentElement).toHaveAttribute('data-state');
   });
 
-  test('locks the button and shows the plan upsell when sandboxes are not available', () => {
-    limits = {
-      new_sandbox: {
-        allowed: false,
-        message: 'Upgrade to unlock sandboxes',
-      },
-    };
-    renderHeader({ isSandbox: false });
-
-    const button = screen.getByTestId('edit-in-sandbox-button');
-    // Present but locked, so people on smaller plans discover the capability.
-    expect(button).toBeInTheDocument();
-    expect(button).toBeDisabled();
-    expect(screen.getByTestId('edit-in-sandbox-lock')).toBeInTheDocument();
-    // A disabled button dispatches no pointer events, so the trigger has to be
-    // the wrapper.
-    expect(button.parentElement).toHaveAttribute('data-state');
-  });
-
-  test("shows the limiter's own upsell copy, not the editor's", async () => {
-    const user = userEvent.setup();
-    limits = {
-      new_sandbox: {
-        allowed: false,
-        message: 'Sandboxes are on the Pro plan. Upgrade to unlock them.',
-      },
-    };
-    renderHeader({ isSandbox: false });
-
-    const button = screen.getByTestId('edit-in-sandbox-button');
-    await user.hover(button.parentElement as Element);
-
-    // Radix renders the content and an aria-live copy of it, hence findAllByText.
-    expect(
-      await screen.findAllByText(
-        'Sandboxes are on the Pro plan. Upgrade to unlock them.'
-      )
-    ).not.toHaveLength(0);
-  });
-
-  test('leaves switch to draft alone as the fallback', () => {
-    limits = {
-      new_sandbox: { allowed: false, message: 'Upgrade to unlock sandboxes' },
-    };
-    renderHeader({ isSandbox: false });
-
-    expect(screen.getByTestId('switch-to-draft-button')).toBeEnabled();
-  });
-
-  test('shows no lock and no tooltip when the plan allows sandboxes', () => {
-    limits = { new_sandbox: { allowed: true, message: null } };
-    renderHeader({ isSandbox: false });
-
-    const button = screen.getByTestId('edit-in-sandbox-button');
-    expect(button).toBeEnabled();
-    expect(
-      screen.queryByTestId('edit-in-sandbox-lock')
-    ).not.toBeInTheDocument();
-    expect(button.parentElement).not.toHaveAttribute('data-state');
-  });
-
   test('hides the button when the workflow is in draft', () => {
     lifecycleState = 'draft';
     renderHeader({ isSandbox: false });
@@ -319,6 +258,7 @@ describe('Header - lifecycle actions', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     canArchiveSandbox = true;
+    limits = {};
     urlParams = {};
     readOnly = { isReadOnly: false, reason: null };
     goLive.mockReset();

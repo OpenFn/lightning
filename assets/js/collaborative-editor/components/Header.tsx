@@ -254,21 +254,6 @@ export function Header({
     message: null,
   };
 
-  // Sandboxes are a paid capability on some plans. The action stays visible and
-  // locked so people discover it, and the upsell copy comes from the limiter
-  // rather than from here.
-  const newSandboxLimit = limits.new_sandbox ?? {
-    allowed: true,
-    message: null,
-  };
-  const sandboxLockedByPlan = !newSandboxLimit.allowed;
-  const canEditInSandbox = canProvisionSandbox && !sandboxLockedByPlan;
-  const editInSandboxTooltip = canEditInSandbox
-    ? null
-    : sandboxLockedByPlan
-      ? newSandboxLimit.message
-      : 'You do not have permission to create a sandbox in this project.';
-
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
 
@@ -698,24 +683,24 @@ export function Header({
                 !isSandbox &&
                 !isNewWorkflow &&
                 !isViewingNonCurrentVersion && (
-                  <Tooltip content={editInSandboxTooltip} side="bottom">
+                  <Tooltip
+                    content={
+                      canProvisionSandbox
+                        ? null
+                        : 'You do not have permission to create a sandbox in this project.'
+                    }
+                    side="bottom"
+                  >
                     <span className="inline-block">
                       <Button
                         data-testid="edit-in-sandbox-button"
-                        className="inline-flex items-center gap-1.5"
-                        disabled={!canEditInSandbox}
+                        className="inline-flex items-center"
+                        disabled={!canProvisionSandbox}
                         onClick={() => {
-                          if (!canEditInSandbox) return;
+                          if (!canProvisionSandbox) return;
                           setShowEditInSandboxPicker(true);
                         }}
                       >
-                        {sandboxLockedByPlan && (
-                          <span
-                            className="hero-lock-closed size-4"
-                            data-testid="edit-in-sandbox-lock"
-                            aria-hidden="true"
-                          />
-                        )}
                         Edit in sandbox
                       </Button>
                     </span>

@@ -26,6 +26,13 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({ listSandboxes, editInSandbox }),
 }));
 
+// Creating a sandbox is gated by the plan and by nesting depth; joining is not.
+let limits: Record<string, { allowed: boolean; message: string | null }> = {};
+
+vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useLimits: () => limits,
+}));
+
 const notifyAlert =
   vi.fn<(opts: { title: string; description?: unknown }) => void>();
 vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
@@ -95,6 +102,7 @@ describe('EditInSandboxPicker', () => {
     listSandboxes.mockReset();
     editInSandbox.mockReset();
     notifyAlert.mockReset();
+    limits = {};
     listSandboxes.mockResolvedValue([]);
   });
 
@@ -555,5 +563,80 @@ describe('EditInSandboxPicker', () => {
     await user.keyboard('{Escape}');
 
     expect(onClose).toHaveBeenCalled();
+  });
+  describe('when creating a sandbox is not allowed', () => {
+    test('locks Create and says why, in the limiter’s own words', async () => {
+      limits = {
+        new_sandbox: {
+          allowed: false,
+          message: 'Sandboxes are on the Pro plan. Upgrade to unlock them.',
+        },
+      };
+      const user = userEvent.setup();
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      const button = screen.getByTestId('create-sandbox-button');
+      expect(button).toBeDisabled();
+      expect(screen.getByTestId('create-sandbox-lock')).toBeInTheDocument();
+
+      await user.hover(button.parentElement as Element);
+      // Radix renders the content and an aria-live copy of it.
+      expect(
+        await screen.findAllByText(
+          'Sandboxes are on the Pro plan. Upgrade to unlock them.'
+        )
+      ).not.toHaveLength(0);
+    });
+
+    test('typing a name does not unlock it', async () => {
+      limits = {
+        new_sandbox: { allowed: false, message: 'Upgrade to unlock sandboxes' },
+      };
+      const user = userEvent.setup();
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      await user.type(
+        screen.getByPlaceholderText('What are you trying out?'),
+        'Trying something'
+      );
+
+      expect(screen.getByTestId('create-sandbox-button')).toBeDisabled();
+      expect(editInSandbox).not.toHaveBeenCalled();
+    });
+
+    test('joining an existing sandbox still works', async () => {
+      // The limit gates creation only. At a sandbox cap the project has
+      // sandboxes by definition, and they have to stay reachable.
+      limits = {
+        new_sandbox: { allowed: false, message: 'Sandbox limit reached' },
+      };
+      listSandboxes.mockResolvedValue(sandboxes);
+      const nav = stubNavigation();
+      const user = userEvent.setup();
+
+      try {
+        renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+        await user.click(
+          (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
+        );
+
+        expect(nav.hrefSetter).toHaveBeenCalledWith(
+          '/projects/sandbox-a/w/wf-clone-a'
+        );
+      } finally {
+        nav.restore();
+      }
+    });
+
+    test('Create is unlocked when the limit allows it', () => {
+      limits = { new_sandbox: { allowed: true, message: null } };
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      const button = screen.getByTestId('create-sandbox-button');
+      expect(
+        screen.queryByTestId('create-sandbox-lock')
+      ).not.toBeInTheDocument();
+      expect(button.parentElement).not.toHaveAttribute('data-state');
+    });
   });
 });

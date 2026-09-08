@@ -166,7 +166,7 @@ interface SessionContextCommands {
   setSuppressEnableTriggerWarning: (suppress: boolean) => void;
   markEnableTriggerWarningSuppressed: () => Promise<void>;
   getLimits: (
-    actionType: 'new_run' | 'activate_workflow' | 'github_sync' | 'new_sandbox'
+    actionType: 'new_run' | 'activate_workflow' | 'github_sync'
   ) => Promise<void>;
 }
 

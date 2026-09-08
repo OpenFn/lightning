@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
+import { useLimits } from '../hooks/useSessionContext';
 import { useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import {
@@ -178,6 +179,15 @@ export function EditInSandboxPicker({
   onClose,
 }: EditInSandboxPickerProps) {
   const { listSandboxes, editInSandbox } = useWorkflowActions();
+
+  // Creating a sandbox can be gated by the plan or by nesting depth; joining an
+  // existing one never is. So the lock belongs on this button, not on the one
+  // that opens this dialog. The wording comes from whichever gate refused.
+  const newSandboxLimit = useLimits().new_sandbox ?? {
+    allowed: true,
+    message: null,
+  };
+  const createLocked = !newSandboxLimit.allowed;
 
   // High-priority Escape handler to prevent closing the parent IDE/inspector.
   // Priority 100 (MODAL) ensures this runs before the IDE handler (priority 50);
@@ -372,14 +382,28 @@ export function EditInSandboxPicker({
                       )}
                     />
                   </div>
-                  <Button
-                    type="submit"
-                    data-testid="create-sandbox-button"
-                    disabled={isCreating || !canCreate}
-                    className="inline-flex shrink-0 items-center self-start"
+                  <Tooltip
+                    content={createLocked ? newSandboxLimit.message : null}
+                    side="bottom"
                   >
-                    {isCreating ? 'Creating...' : 'Create sandbox'}
-                  </Button>
+                    <span className="inline-block shrink-0 self-start">
+                      <Button
+                        type="submit"
+                        data-testid="create-sandbox-button"
+                        disabled={createLocked || isCreating || !canCreate}
+                        className="inline-flex items-center gap-1.5"
+                      >
+                        {createLocked && (
+                          <span
+                            className="hero-lock-closed size-4"
+                            data-testid="create-sandbox-lock"
+                            aria-hidden="true"
+                          />
+                        )}
+                        {isCreating ? 'Creating...' : 'Create sandbox'}
+                      </Button>
+                    </span>
+                  </Tooltip>
                 </div>
                 {/* Always-rendered slot sized for one line of error text, so
                     showing/hiding the message never shifts the OR divider or

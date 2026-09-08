@@ -2127,15 +2127,31 @@ defmodule LightningWeb.WorkflowChannel do
     workflow_activation = check_action_limit("activate_workflow", project_id)
     github_sync = check_action_limit("github_sync", project_id)
     ai_assistant = check_action_limit("ai_assistant", project_id)
-    new_sandbox = check_action_limit("new_sandbox", project_id)
 
     %{
       runs: render_limit_result(run_limit_result),
       workflow_activation: render_limit_result(workflow_activation),
       github_sync: render_limit_result(github_sync),
       ai_assistant: render_limit_result(ai_assistant),
-      new_sandbox: render_limit_result(new_sandbox)
+      new_sandbox: render_new_sandbox_limit(project_id)
     }
+  end
+
+  # Two separate gates stop a sandbox being created, and the button that offers
+  # it should say which one it hit. The nesting depth is a hard structural limit
+  # rather than a plan one, so it takes precedence and its own wording.
+  defp render_new_sandbox_limit(project_id) do
+    if Lightning.Projects.depth_of(project_id) >=
+         Lightning.Config.max_sandbox_nesting_depth() do
+      %{
+        allowed: false,
+        message:
+          "Maximum sandbox nesting depth reached " <>
+            "(#{Lightning.Config.max_sandbox_nesting_depth()} levels deep)"
+      }
+    else
+      render_limit_result(check_action_limit("new_sandbox", project_id))
+    end
   end
 
   defp render_limit_result(:ok) do

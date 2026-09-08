@@ -5531,6 +5531,23 @@ defmodule LightningWeb.WorkflowChannelTest do
                response
     end
 
+    test "reports the nesting limit ahead of the plan's message", %{
+      socket: socket
+    } do
+      # A hard structural limit rather than a plan one, so it wins and gets its
+      # own wording. Depth 0 puts every project at the limit.
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 0 end)
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      assert %{limits: %{new_sandbox: %{allowed: false, message: message}}} =
+               response
+
+      assert message =~ "Maximum sandbox nesting depth reached"
+    end
+
     test "includes limit error when run limit exceeded", %{
       socket: socket,
       project: %{id: project_id}
@@ -5675,45 +5692,6 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert %{
                action_type: "github_sync",
                limit: %{allowed: false, message: ^error_msg}
-             } = response
-    end
-
-    test "returns current limit status for new_sandbox", %{socket: socket} do
-      ref = push(socket, "get_limits", %{"action_type" => "new_sandbox"})
-
-      assert_reply ref, :ok, response
-
-      assert %{
-               action_type: "new_sandbox",
-               limit: %{allowed: true, message: nil}
-             } = response
-    end
-
-    test "returns the upsell when the plan has no sandboxes", %{
-      socket: socket,
-      project: %{id: project_id}
-    } do
-      upsell = "Upgrade to unlock sandboxes"
-
-      Mox.stub(
-        Lightning.Extensions.MockUsageLimiter,
-        :limit_action,
-        fn
-          %{type: :new_sandbox}, %{project_id: ^project_id} ->
-            {:error, :exceeds_limit, %Lightning.Extensions.Message{text: upsell}}
-
-          _action, _context ->
-            :ok
-        end
-      )
-
-      ref = push(socket, "get_limits", %{"action_type" => "new_sandbox"})
-
-      assert_reply ref, :ok, response
-
-      assert %{
-               action_type: "new_sandbox",
-               limit: %{allowed: false, message: ^upsell}
              } = response
     end
   end
