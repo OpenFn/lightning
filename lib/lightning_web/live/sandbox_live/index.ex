@@ -215,7 +215,8 @@ defmodule LightningWeb.SandboxLive.Index do
 
       sandbox ->
         if sandbox.can_merge do
-          descendant_ids = sandbox_descendant_ids(sandbox)
+          subtree = Projects.list_descendants(sandbox.id)
+          descendant_ids = MapSet.new(subtree, & &1.id)
 
           target_options =
             get_merge_target_options(socket, sandbox, descendant_ids)
@@ -223,7 +224,7 @@ defmodule LightningWeb.SandboxLive.Index do
           default_target =
             Enum.find(target_options, &(&1.value == sandbox.parent_id))
 
-          descendants = active_descendants(sandbox.id)
+          descendants = Enum.filter(subtree, &is_nil(&1.scheduled_deletion))
 
           merge_changeset =
             merge_changeset(%{
@@ -852,10 +853,9 @@ defmodule LightningWeb.SandboxLive.Index do
   defp find_target_project(_workspace_projects, _target_id, nil, _descendants),
     do: nil
 
-  defp find_target_project(workspace_projects, target_id, source, descendants) do
-    # The form re-runs this on every change inside it, credential ticks included.
-    descendant_ids = descendants || sandbox_descendant_ids(source)
-
+  # `descendant_ids` is read once when the dialog opens and carried on the
+  # socket, because the form re-runs this on every change inside it.
+  defp find_target_project(workspace_projects, target_id, source, descendant_ids) do
     Enum.find(workspace_projects, fn project ->
       project.id == target_id and
         mergeable_target?(project, source, descendant_ids)
