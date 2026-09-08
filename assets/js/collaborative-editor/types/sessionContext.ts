@@ -106,6 +106,7 @@ export const LimitsSchema = z.object({
   workflow_activation: LimitInfoSchema.optional(),
   github_sync: LimitInfoSchema.optional(),
   ai_assistant: LimitInfoSchema.optional(),
+  new_sandbox: LimitInfoSchema.optional(),
 });
 
 export type Limits = z.infer<typeof LimitsSchema>;
@@ -165,7 +166,7 @@ interface SessionContextCommands {
   setSuppressEnableTriggerWarning: (suppress: boolean) => void;
   markEnableTriggerWarningSuppressed: () => Promise<void>;
   getLimits: (
-    actionType: 'new_run' | 'activate_workflow' | 'github_sync'
+    actionType: 'new_run' | 'activate_workflow' | 'github_sync' | 'new_sandbox'
   ) => Promise<void>;
 }
 

@@ -15,6 +15,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- Edit in sandbox stays visible but locked on plans without sandboxes, with the
+  plan's own upsell on hover, so people discover the safe editing path instead
+  of only ever seeing Switch to draft.
+  [#4920](https://github.com/OpenFn/lightning/issues/4920)
+
 ### Changed
 
 - The sandbox and lifecycle buttons in the editor use the shared button

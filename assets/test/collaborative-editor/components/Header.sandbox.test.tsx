@@ -15,6 +15,7 @@ import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors
 let lifecycleState: 'draft' | 'live' | undefined = 'live';
 let isNewWorkflow = false;
 let canProvisionSandbox = true;
+let limits: Record<string, { allowed: boolean; message: string | null }> = {};
 let canArchiveSandbox = true;
 let readOnly: {
   isReadOnly: boolean;
@@ -57,7 +58,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useIsNewWorkflow: () => isNewWorkflow,
-  useLimits: () => ({}),
+  useLimits: () => limits,
   usePermissions: () => ({
     can_provision_sandbox: canProvisionSandbox,
     can_archive_sandbox: canArchiveSandbox,
@@ -198,6 +199,7 @@ describe('Header - Edit in sandbox button gating', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     canArchiveSandbox = true;
+    limits = {};
     readOnly = { isReadOnly: false, reason: null };
   });
 
@@ -224,6 +226,67 @@ describe('Header - Edit in sandbox button gating', () => {
     // A disabled button dispatches no pointer events, so the Radix trigger has
     // to be the wrapper around it rather than the button itself.
     expect(button.parentElement).toHaveAttribute('data-state');
+  });
+
+  test('locks the button and shows the plan upsell when sandboxes are not available', () => {
+    limits = {
+      new_sandbox: {
+        allowed: false,
+        message: 'Upgrade to unlock sandboxes',
+      },
+    };
+    renderHeader({ isSandbox: false });
+
+    const button = screen.getByTestId('edit-in-sandbox-button');
+    // Present but locked, so people on smaller plans discover the capability.
+    expect(button).toBeInTheDocument();
+    expect(button).toBeDisabled();
+    expect(screen.getByTestId('edit-in-sandbox-lock')).toBeInTheDocument();
+    // A disabled button dispatches no pointer events, so the trigger has to be
+    // the wrapper.
+    expect(button.parentElement).toHaveAttribute('data-state');
+  });
+
+  test("shows the limiter's own upsell copy, not the editor's", async () => {
+    const user = userEvent.setup();
+    limits = {
+      new_sandbox: {
+        allowed: false,
+        message: 'Sandboxes are on the Pro plan. Upgrade to unlock them.',
+      },
+    };
+    renderHeader({ isSandbox: false });
+
+    const button = screen.getByTestId('edit-in-sandbox-button');
+    await user.hover(button.parentElement as Element);
+
+    // Radix renders the content and an aria-live copy of it, hence findAllByText.
+    expect(
+      await screen.findAllByText(
+        'Sandboxes are on the Pro plan. Upgrade to unlock them.'
+      )
+    ).not.toHaveLength(0);
+  });
+
+  test('leaves switch to draft alone as the fallback', () => {
+    limits = {
+      new_sandbox: { allowed: false, message: 'Upgrade to unlock sandboxes' },
+    };
+    renderHeader({ isSandbox: false });
+
+    expect(screen.getByTestId('switch-to-draft-button')).toBeEnabled();
+  });
+
+  test('shows no lock and no tooltip when the plan allows sandboxes', () => {
+    limits = { new_sandbox: { allowed: true, message: null } };
+    renderHeader({ isSandbox: false });
+
+    const button = screen.getByTestId('edit-in-sandbox-button');
+    expect(button).toBeEnabled();
+    expect(
+      screen.queryByTestId('edit-in-sandbox-lock')
+    ).not.toBeInTheDocument();
+    expect(button.parentElement).not.toHaveAttribute('data-state');
   });
 
   test('hides the button when the workflow is in draft', () => {
@@ -864,6 +927,7 @@ describe('Header - read-only reason variations', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     canArchiveSandbox = true;
+    limits = {};
     readOnly = { isReadOnly: false, reason: null };
   });
 
@@ -925,6 +989,7 @@ describe('Header - long workflow name', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     canArchiveSandbox = true;
+    limits = {};
     readOnly = { isReadOnly: false, reason: null };
   });
 
