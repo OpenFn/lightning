@@ -4,9 +4,6 @@
  * Provides a consolidated handler for workflow version selection.
  * Switches between workflow versions by updating URL parameters.
  *
- * This hook replaces duplicated handleVersionSelect functions across:
- * - CollaborativeEditor.tsx
- * - components/ide/IDEHeader.tsx
  *
  * Version switching works by:
  * 1. Updating the URL parameter (?v=1, a release version_number, or no param
@@ -19,25 +16,37 @@
  *
  */
 
+import { useCallback } from 'react';
+
 import { useURLState } from '#/react/lib/use-url-state';
+
+import { useDiscardGuard } from './useDiscardGuard';
 
 /**
  * Hook that provides a version selection handler.
  *
- * @returns Handler function for version selection
+ * @returns The handler, plus the state a `DiscardChangesDialog` needs when the
+ * switch would discard unsaved edits.
  */
 export function useVersionSelect() {
   const { updateSearchParams } = useURLState();
+  const { guard, ...prompt } = useDiscardGuard();
 
-  const handleVersionSelect = (version: number | 'latest') => {
-    // Update URL parameter to trigger version switch
-    // A run belongs to one version, so it must not leak across a switch.
-    if (version === 'latest') {
-      updateSearchParams({ v: null, run: null, as_run: null }); // Remove version param
-    } else {
-      updateSearchParams({ v: String(version), run: null, as_run: null }); // Set version param
-    }
-  };
+  const handleVersionSelect = useCallback(
+    (version: number | 'latest') => {
+      // Switching destroys the document, so ask first when that would take
+      // uncommitted edits with it. A run belongs to one version, so it must not
+      // leak across a switch either.
+      guard(() => {
+        updateSearchParams({
+          v: version === 'latest' ? null : String(version),
+          run: null,
+          as_run: null,
+        });
+      });
+    },
+    [guard, updateSearchParams]
+  );
 
-  return handleVersionSelect;
+  return { handleVersionSelect, prompt };
 }

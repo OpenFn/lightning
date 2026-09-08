@@ -29,6 +29,16 @@ import {
 } from '../__helpers__/urlStateMocks';
 
 // Mock Socket
+// The discard guard asks these before anything destroys the document; neither
+// has a provider in this test.
+vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
+  useSession: () => ({ isSynced: true }),
+}));
+
+vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => ({ hasChanges: false }),
+}));
+
 vi.mock('phoenix', () => ({
   Socket: vi.fn(() => ({
     connect: vi.fn(),
@@ -311,6 +321,7 @@ const mockWorkflow: Workflow = {
 };
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowActions: () => ({ saveWorkflow: vi.fn() }),
   // Not exercised by this suite (landing-screen build-from-scratch flow is
   // covered by CollaborativeEditor.build-from-scratch.test.tsx) — stubbed
   // only because LandingScreenWrapper calls it unconditionally.
@@ -416,7 +427,15 @@ vi.mock('../../../js/collaborative-editor/hooks/useAIAssistantChannel', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
-  useVersionSelect: () => vi.fn(),
+  useVersionSelect: () => ({
+    handleVersionSelect: vi.fn(),
+    prompt: {
+      isAsking: false,
+      cancel: vi.fn(),
+      runPending: vi.fn(),
+      saveAndRunPending: vi.fn().mockResolvedValue(true),
+    },
+  }),
 }));
 
 describe('CollaborativeEditor IDE keyboard shortcuts', () => {

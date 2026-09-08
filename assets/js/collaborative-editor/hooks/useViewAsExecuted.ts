@@ -20,13 +20,22 @@ import { useCallback } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
+import { useDiscardGuard } from './useDiscardGuard';
+
 export function useViewAsExecuted() {
   const { updateSearchParams } = useURLState();
+  const { guard, ...prompt } = useDiscardGuard();
 
-  return useCallback(
+  const viewAsExecuted = useCallback(
     (runId: string) => {
-      updateSearchParams({ v: null, as_run: runId, run: runId });
+      // Pinning a run loads its snapshot, which destroys the document. Ask
+      // before that takes uncommitted edits with it.
+      guard(() => {
+        updateSearchParams({ v: null, as_run: runId, run: runId });
+      });
     },
-    [updateSearchParams]
+    [guard, updateSearchParams]
   );
+
+  return { viewAsExecuted, prompt };
 }

@@ -45,6 +45,24 @@ function createWithSelectorMock(getSnapshot: () => any) {
 // Mock useURLState using centralized helper
 const urlState = createMockURLState();
 
+// The discard guard asks these before anything destroys the document; neither
+// has a provider in this test.
+vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => ({
+  ...(await vi.importActual<
+    typeof import('../../../../js/collaborative-editor/hooks/useWorkflow')
+  >('../../../../js/collaborative-editor/hooks/useWorkflow')),
+  // Only the discard guard reaches for this, and it has no LiveView here.
+  useWorkflowActions: () => ({ saveWorkflow: vi.fn() }),
+}));
+
+vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
+  useSession: () => ({ isSynced: true }),
+}));
+
+vi.mock('../../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => ({ hasChanges: false }),
+}));
+
 vi.mock('../../../../js/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
 }));
@@ -348,7 +366,9 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       // Start on latest with the run selected.
       urlState.setParams({ run: 'stale-run' });
 
-      const { rerender } = render(<CollaborativeWorkflowDiagram />, { wrapper });
+      const { rerender } = render(<CollaborativeWorkflowDiagram />, {
+        wrapper,
+      });
 
       // Dropdown switch to version 2: the ?v param changes with NO run-select in
       // progress. Even if ?run lingers, the diagram must drop it and close the
@@ -422,7 +442,9 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       // ?v change — the exact case that must NOT be treated as a version switch.
       urlState.setParams({ v: '2' });
 
-      const { rerender } = render(<CollaborativeWorkflowDiagram />, { wrapper });
+      const { rerender } = render(<CollaborativeWorkflowDiagram />, {
+        wrapper,
+      });
 
       // Expand the single-run work order → auto-selects the run.
       fireEvent.click(

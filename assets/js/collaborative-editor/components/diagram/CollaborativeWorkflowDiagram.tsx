@@ -26,6 +26,7 @@ import {
   useLatestSnapshotLockVersion,
 } from '../../hooks/useSessionContext';
 import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
+import { DiscardChangesDialog } from '../DiscardChangesDialog';
 import { useNodeSelection, useWorkflowState } from '../../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../../keyboard';
 import type { RunSummary } from '../../types/history';
@@ -54,7 +55,7 @@ export function CollaborativeWorkflowDiagram({
   const historyError = useHistoryError();
   const historyCommands = useHistoryCommands();
 
-  const viewAsExecuted = useViewAsExecuted();
+  const { viewAsExecuted, prompt: runPinPrompt } = useViewAsExecuted();
 
   const historyCollapsed = useHistoryPanelCollapsed();
   const { setHistoryPanelCollapsed } = useEditorPreferencesCommands();
@@ -248,6 +249,12 @@ export function CollaborativeWorkflowDiagram({
           />
         )}
       </ReactFlowProvider>
+      <DiscardChangesDialog
+        isOpen={runPinPrompt.isAsking}
+        onSaveAndContinue={runPinPrompt.saveAndRunPending}
+        onDiscardAndContinue={runPinPrompt.runPending}
+        onCancel={runPinPrompt.cancel}
+      />
     </div>
   );
 }

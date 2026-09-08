@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
+import { useDiscardGuard } from '../hooks/useDiscardGuard';
 import { useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import {
@@ -19,7 +20,10 @@ import {
   isChannelRequestError,
 } from '../lib/errors';
 import { notifications } from '../lib/notifications';
+import { suppressUnloadWarning } from '../lib/unloadGuard';
 import type { Sandbox } from '../types/workflow';
+
+import { DiscardChangesDialog } from './DiscardChangesDialog';
 
 interface EditInSandboxPickerProps {
   isOpen: boolean;
@@ -168,6 +172,9 @@ function SandboxListSkeleton() {
 }
 
 const navigateToSandbox = (projectId: string, workflowId: string) => {
+  // A deliberate departure, already agreed to, so the browser's own warning
+  // would only ask the same question a second time.
+  suppressUnloadWarning();
   window.location.href = `/projects/${projectId}/w/${workflowId}`;
 };
 
@@ -176,6 +183,7 @@ export function EditInSandboxPicker({
   onClose,
 }: EditInSandboxPickerProps) {
   const { listSandboxes, editInSandbox } = useWorkflowActions();
+  const { guard, ...discardPrompt } = useDiscardGuard();
 
   // High-priority Escape handler to prevent closing the parent IDE/inspector.
   // Priority 100 (MODAL) ensures this runs before the IDE handler (priority 50);
@@ -233,7 +241,11 @@ export function EditInSandboxPicker({
     const create = async () => {
       try {
         const { project_id, workflow_id } = await editInSandbox(trimmed);
-        navigateToSandbox(project_id, workflow_id);
+        // Leaving is a hard navigation, so uncommitted edits on this workflow
+        // would go with it.
+        guard(() => {
+          navigateToSandbox(project_id, workflow_id);
+        });
       } catch (error) {
         // A rejected name (duplicate, invalid) belongs under the input as an
         // inline field error; only genuinely unexpected/system errors toast.
@@ -251,12 +263,18 @@ export function EditInSandboxPicker({
     };
 
     void create();
-  }, [name, editInSandbox]);
+  }, [name, editInSandbox, guard]);
 
-  const handleJoin = useCallback((sandbox: Sandbox) => {
-    if (!sandbox.workflow_id) return;
-    navigateToSandbox(sandbox.id, sandbox.workflow_id);
-  }, []);
+  const handleJoin = useCallback(
+    (sandbox: Sandbox) => {
+      if (!sandbox.workflow_id) return;
+      const { id, workflow_id } = sandbox;
+      guard(() => {
+        navigateToSandbox(id, workflow_id);
+      });
+    },
+    [guard]
+  );
 
   // A name is required to create. The server already returns only joinable
   // sandboxes (each holding a clone of this workflow), so the list is rendered
@@ -264,190 +282,200 @@ export function EditInSandboxPicker({
   const canCreate = name.trim().length > 0;
 
   return (
-    <Dialog
-      open={isOpen}
-      onClose={onClose}
-      className="relative z-[60]"
-      data-testid="edit-in-sandbox-picker"
-    >
-      <DialogBackdrop
-        transition
-        className="modal-backdrop data-closed:opacity-0 data-enter:duration-300
+    <>
+      <Dialog
+        open={isOpen}
+        onClose={onClose}
+        className="relative z-[60]"
+        data-testid="edit-in-sandbox-picker"
+      >
+        <DialogBackdrop
+          transition
+          className="modal-backdrop data-closed:opacity-0 data-enter:duration-300
           data-enter:ease-out data-leave:duration-200 data-leave:ease-in"
-      />
+        />
 
-      <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
-        <div
-          className="flex min-h-full items-end justify-center p-4 text-center
+        <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+          <div
+            className="flex min-h-full items-end justify-center p-4 text-center
             sm:items-center sm:p-0"
-        >
-          <DialogPanel
-            transition
-            className="relative transform overflow-hidden rounded-lg bg-white
+          >
+            <DialogPanel
+              transition
+              className="relative transform overflow-hidden rounded-lg bg-white
               px-4 pb-4 pt-5 text-left shadow-xl transition-all
               data-closed:translate-y-4 data-closed:opacity-0
               data-enter:duration-300 data-enter:ease-out
               data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full
               sm:max-w-lg sm:p-6"
-          >
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close"
-              className="absolute right-4 top-4 sm:right-6 sm:top-6 rounded-md
+            >
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                className="absolute right-4 top-4 sm:right-6 sm:top-6 rounded-md
                 p-1 text-gray-400
                 transition-colors hover:text-gray-600 focus-visible:outline-2
                 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-            >
-              <span
-                className="hero-x-mark h-5 w-5"
-                aria-hidden="true"
-                role="img"
-              />
-            </button>
+              >
+                <span
+                  className="hero-x-mark h-5 w-5"
+                  aria-hidden="true"
+                  role="img"
+                />
+              </button>
 
-            <DialogTitle
-              as="h3"
-              className="text-base font-semibold text-gray-900"
-            >
-              Edit in sandbox
-            </DialogTitle>
-            <p className="mt-1 text-sm text-gray-600">
-              Make changes safely in a sandbox without affecting this live
-              workflow.
-            </p>
+              <DialogTitle
+                as="h3"
+                className="text-base font-semibold text-gray-900"
+              >
+                Edit in sandbox
+              </DialogTitle>
+              <p className="mt-1 text-sm text-gray-600">
+                Make changes safely in a sandbox without affecting this live
+                workflow.
+              </p>
 
-            {/* Create a new sandbox. Eyebrow title + subtitle mirror the
+              {/* Create a new sandbox. Eyebrow title + subtitle mirror the
                 "Join an active sandbox" section below so the two read as
                 visual siblings; the title/subtitle/placeholder identify the
                 field, so no separate visible label is needed. */}
-            <div className="mt-6">
-              <p
-                className="text-xs font-semibold uppercase tracking-wide
+              <div className="mt-6">
+                <p
+                  className="text-xs font-semibold uppercase tracking-wide
                   text-gray-500"
-              >
-                Create a new sandbox
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                Branch from the current live version to make changes safely.
-              </p>
-              <form
-                className="mt-3"
-                onSubmit={event => {
-                  event.preventDefault();
-                  // Enter can submit even while the button is disabled; honour
-                  // the same guards (non-empty name, no create in flight).
-                  if (isCreating || !canCreate) return;
-                  handleCreate();
-                }}
-              >
-                <div className="flex gap-2">
-                  <div className="min-w-0 flex-1">
-                    <label htmlFor="sandbox-name" className="sr-only">
-                      Sandbox name
-                    </label>
-                    <input
-                      id="sandbox-name"
-                      type="text"
-                      value={name}
-                      onChange={event => {
-                        setName(event.target.value);
-                        // Editing the name dismisses a stale field error.
-                        setNameError(null);
-                      }}
-                      placeholder="e.g. Test new changes"
-                      disabled={isCreating}
-                      aria-invalid={nameError ? true : undefined}
-                      aria-describedby={
-                        nameError ? 'sandbox-name-error' : undefined
-                      }
-                      className={cn(
-                        `block w-full rounded-md border-0 px-3 py-2 text-sm
+                >
+                  Create a new sandbox
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Branch from the current live version to make changes safely.
+                </p>
+                <form
+                  className="mt-3"
+                  onSubmit={event => {
+                    event.preventDefault();
+                    // Enter can submit even while the button is disabled; honour
+                    // the same guards (non-empty name, no create in flight).
+                    if (isCreating || !canCreate) return;
+                    handleCreate();
+                  }}
+                >
+                  <div className="flex gap-2">
+                    <div className="min-w-0 flex-1">
+                      <label htmlFor="sandbox-name" className="sr-only">
+                        Sandbox name
+                      </label>
+                      <input
+                        id="sandbox-name"
+                        type="text"
+                        value={name}
+                        onChange={event => {
+                          setName(event.target.value);
+                          // Editing the name dismisses a stale field error.
+                          setNameError(null);
+                        }}
+                        placeholder="e.g. Test new changes"
+                        disabled={isCreating}
+                        aria-invalid={nameError ? true : undefined}
+                        aria-describedby={
+                          nameError ? 'sandbox-name-error' : undefined
+                        }
+                        className={cn(
+                          `block w-full rounded-md border-0 px-3 py-2 text-sm
                           shadow-sm ring-1 ring-inset placeholder:text-gray-400
                           focus:ring-2 focus:ring-inset
                           disabled:cursor-not-allowed disabled:opacity-50`,
-                        nameError
-                          ? 'text-red-900 ring-red-300 focus:ring-red-500'
-                          : 'text-gray-900 ring-gray-300 focus:ring-primary-600'
-                      )}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    data-testid="create-sandbox-button"
-                    disabled={isCreating || !canCreate}
-                    className="inline-flex shrink-0 items-center self-start
+                          nameError
+                            ? 'text-red-900 ring-red-300 focus:ring-red-500'
+                            : 'text-gray-900 ring-gray-300 focus:ring-primary-600'
+                        )}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      data-testid="create-sandbox-button"
+                      disabled={isCreating || !canCreate}
+                      className="inline-flex shrink-0 items-center self-start
                       rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold
                       text-white shadow-sm shadow-primary-600/20
                       hover:bg-primary-500 focus-visible:outline-2
                       focus-visible:outline-offset-2
                       focus-visible:outline-primary-600
                       disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isCreating ? 'Creating...' : 'Create sandbox'}
-                  </button>
-                </div>
-                {/* Always-rendered slot sized for one line of error text, so
+                    >
+                      {isCreating ? 'Creating...' : 'Create sandbox'}
+                    </button>
+                  </div>
+                  {/* Always-rendered slot sized for one line of error text, so
                     showing/hiding the message never shifts the OR divider or
                     Join section below it. The message itself stays conditional
                     so the field only exposes an error when there is one. */}
-                <div className="mt-1 min-h-[1rem]">
-                  {nameError && (
-                    <p
-                      id="sandbox-name-error"
-                      data-testid="sandbox-name-error"
-                      className="text-xs text-red-600"
-                    >
-                      {nameError}
-                    </p>
-                  )}
-                </div>
-              </form>
-            </div>
+                  <div className="mt-1 min-h-[1rem]">
+                    {nameError && (
+                      <p
+                        id="sandbox-name-error"
+                        data-testid="sandbox-name-error"
+                        className="text-xs text-red-600"
+                      >
+                        {nameError}
+                      </p>
+                    )}
+                  </div>
+                </form>
+              </div>
 
-            {/* Join an existing sandbox. The server returns only sandboxes that
+              {/* Join an existing sandbox. The server returns only sandboxes that
                 hold a clone of this workflow; hidden entirely when there are
                 none. */}
-            {(isLoadingList || sandboxes.length > 0) && (
-              <div className="mt-6">
-                <p
-                  className="text-xs font-semibold uppercase tracking-wide
+              {(isLoadingList || sandboxes.length > 0) && (
+                <div className="mt-6">
+                  <p
+                    className="text-xs font-semibold uppercase tracking-wide
                     text-gray-500"
-                >
-                  Join an active sandbox
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Continue in a sandbox that's already active for this workflow.
-                </p>
-
-                {isLoadingList ? (
-                  <SandboxListSkeleton />
-                ) : (
-                  // Cap the list at roughly 5-6 rows so a user with many
-                  // sandboxes scrolls the list rather than the whole modal. The
-                  // scroll container carries the row's -mx-3 bleed itself
-                  // (-mx-3 px-3), so the rows fit exactly inside it: no
-                  // horizontal scrollbar, the hover bleed is kept, and the px-3
-                  // keeps the vertical scrollbar clear of the "Join" text.
-                  <ul
-                    className="mt-3 -mx-3 max-h-80 space-y-1 overflow-y-auto
-                      overflow-x-hidden px-3"
-                    data-testid="sandbox-list"
                   >
-                    {sandboxes.map(sandbox => (
-                      <SandboxRow
-                        key={sandbox.id}
-                        sandbox={sandbox}
-                        onJoin={handleJoin}
-                      />
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-          </DialogPanel>
+                    Join an active sandbox
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Continue in a sandbox that's already active for this
+                    workflow.
+                  </p>
+
+                  {isLoadingList ? (
+                    <SandboxListSkeleton />
+                  ) : (
+                    // Cap the list at roughly 5-6 rows so a user with many
+                    // sandboxes scrolls the list rather than the whole modal. The
+                    // scroll container carries the row's -mx-3 bleed itself
+                    // (-mx-3 px-3), so the rows fit exactly inside it: no
+                    // horizontal scrollbar, the hover bleed is kept, and the px-3
+                    // keeps the vertical scrollbar clear of the "Join" text.
+                    <ul
+                      className="mt-3 -mx-3 max-h-80 space-y-1 overflow-y-auto
+                      overflow-x-hidden px-3"
+                      data-testid="sandbox-list"
+                    >
+                      {sandboxes.map(sandbox => (
+                        <SandboxRow
+                          key={sandbox.id}
+                          sandbox={sandbox}
+                          onJoin={handleJoin}
+                        />
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </DialogPanel>
+          </div>
         </div>
-      </div>
-    </Dialog>
+      </Dialog>
+      <DiscardChangesDialog
+        isOpen={discardPrompt.isAsking}
+        onSaveAndContinue={discardPrompt.saveAndRunPending}
+        onDiscardAndContinue={discardPrompt.runPending}
+        onCancel={discardPrompt.cancel}
+        description="Opening the sandbox leaves this page, and your unsaved changes cannot come with it. Switch without saving and they are gone."
+      />
+    </>
   );
 }

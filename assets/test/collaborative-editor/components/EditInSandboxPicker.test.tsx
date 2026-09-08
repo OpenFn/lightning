@@ -9,6 +9,10 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { EditInSandboxPicker } from '../../../js/collaborative-editor/components/EditInSandboxPicker';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors';
+import {
+  isUnloadWarningSuppressed,
+  resetUnloadWarning,
+} from '../../../js/collaborative-editor/lib/unloadGuard';
 import type { Sandbox } from '../../../js/collaborative-editor/types/workflow';
 
 // The picker registers a MODAL-priority Escape handler, so it must render inside
@@ -22,8 +26,22 @@ const editInSandbox =
     (name?: string) => Promise<{ project_id: string; workflow_id: string }>
   >();
 
+const saveWorkflow = vi.fn<() => Promise<unknown>>();
+
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
-  useWorkflowActions: () => ({ listSandboxes, editInSandbox }),
+  useWorkflowActions: () => ({ listSandboxes, editInSandbox, saveWorkflow }),
+}));
+
+// Leaving for a sandbox is guarded, so the picker needs to know whether there
+// is anything to lose.
+let hasChanges = false;
+
+vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => ({ hasChanges }),
+}));
+
+vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
+  useSession: () => ({ isSynced: true }),
 }));
 
 const notifyAlert =
@@ -95,6 +113,10 @@ describe('EditInSandboxPicker', () => {
     listSandboxes.mockReset();
     editInSandbox.mockReset();
     notifyAlert.mockReset();
+    saveWorkflow.mockReset();
+    saveWorkflow.mockResolvedValue(undefined);
+    hasChanges = false;
+    resetUnloadWarning();
     listSandboxes.mockResolvedValue([]);
   });
 
@@ -553,5 +575,129 @@ describe('EditInSandboxPicker', () => {
     await user.keyboard('{Escape}');
 
     expect(onClose).toHaveBeenCalled();
+  });
+  describe('leaving with unsaved changes', () => {
+    test('asks before joining a sandbox, and navigates nowhere yet', async () => {
+      hasChanges = true;
+      listSandboxes.mockResolvedValue(sandboxes);
+      const nav = stubNavigation();
+      const user = userEvent.setup();
+
+      try {
+        renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+        await user.click(
+          (await screen.findAllByTestId('join-sandbox-button'))[0]!
+        );
+
+        expect(
+          await screen.findByTestId('discard-changes-dialog')
+        ).toBeInTheDocument();
+        expect(nav.hrefSetter).not.toHaveBeenCalled();
+      } finally {
+        nav.restore();
+      }
+    });
+
+    test('joins the sandbox once the changes are discarded', async () => {
+      hasChanges = true;
+      listSandboxes.mockResolvedValue(sandboxes);
+      const nav = stubNavigation();
+      const user = userEvent.setup();
+
+      try {
+        renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+        await user.click(
+          (await screen.findAllByTestId('join-sandbox-button'))[0]!
+        );
+        await user.click(await screen.findByRole('button', { name: 'Switch' }));
+
+        expect(nav.hrefSetter).toHaveBeenCalledWith(
+          '/projects/sandbox-a/w/wf-clone-a'
+        );
+        // The person has already answered, so the browser must not ask again on
+        // the way out.
+        expect(isUnloadWarningSuppressed()).toBe(true);
+      } finally {
+        nav.restore();
+      }
+    });
+
+    test('saves first when asked, then joins', async () => {
+      hasChanges = true;
+      listSandboxes.mockResolvedValue(sandboxes);
+      const nav = stubNavigation();
+      const user = userEvent.setup();
+
+      try {
+        renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+        await user.click(
+          (await screen.findAllByTestId('join-sandbox-button'))[0]!
+        );
+        await user.click(
+          await screen.findByRole('button', { name: 'Save and switch' })
+        );
+
+        await waitFor(() => {
+          expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'error-only' });
+        });
+        await waitFor(() => {
+          expect(nav.hrefSetter).toHaveBeenCalledWith(
+            '/projects/sandbox-a/w/wf-clone-a'
+          );
+        });
+      } finally {
+        nav.restore();
+      }
+    });
+
+    test('a failed save keeps them on the workflow they were editing', async () => {
+      hasChanges = true;
+      saveWorkflow.mockRejectedValue(new Error('nope'));
+      listSandboxes.mockResolvedValue(sandboxes);
+      const nav = stubNavigation();
+      const user = userEvent.setup();
+
+      try {
+        renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+        await user.click(
+          (await screen.findAllByTestId('join-sandbox-button'))[0]!
+        );
+        await user.click(
+          await screen.findByRole('button', { name: 'Save and switch' })
+        );
+
+        await waitFor(() => {
+          expect(saveWorkflow).toHaveBeenCalled();
+        });
+        expect(nav.hrefSetter).not.toHaveBeenCalled();
+        expect(
+          screen.getByTestId('discard-changes-dialog')
+        ).toBeInTheDocument();
+      } finally {
+        nav.restore();
+      }
+    });
+
+    test('joins straight away when there is nothing to lose', async () => {
+      listSandboxes.mockResolvedValue(sandboxes);
+      const nav = stubNavigation();
+      const user = userEvent.setup();
+
+      try {
+        renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+        await user.click(
+          (await screen.findAllByTestId('join-sandbox-button'))[0]!
+        );
+
+        expect(nav.hrefSetter).toHaveBeenCalledWith(
+          '/projects/sandbox-a/w/wf-clone-a'
+        );
+        expect(
+          screen.queryByTestId('discard-changes-dialog')
+        ).not.toBeInTheDocument();
+      } finally {
+        nav.restore();
+      }
+    });
   });
 });

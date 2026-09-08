@@ -39,7 +39,9 @@ import {
   useShowLandingScreen,
   useUICommands,
 } from './hooks/useUI';
+import { useUnloadWarning } from './hooks/useUnloadWarning';
 import { useVersionSelect } from './hooks/useVersionSelect';
+import { DiscardChangesDialog } from './components/DiscardChangesDialog';
 import { useCreateWorkflowFlow, useWorkflowState } from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
 
@@ -105,7 +107,9 @@ export function BreadcrumbContent({
   const { closeRunViewer } = useHistoryCommands();
   const { params, updateSearchParams } = useURLState();
   const isIDEOpen = params['panel'] === 'editor';
-  const handleVersionSelect = useVersionSelect();
+  const { handleVersionSelect, prompt: versionPrompt } = useVersionSelect();
+
+  useUnloadWarning();
 
   // Clicking the workflow title returns to the root workflow editor view: it
   // closes the full IDE (and any other panel), deselects the current node, and
@@ -164,6 +168,12 @@ export function BreadcrumbContent({
             currentVersion={workflowFromStore?.lock_version ?? null}
             latestVersion={latestSnapshotLockVersion}
             onVersionSelect={handleVersionSelect}
+          />
+          <DiscardChangesDialog
+            isOpen={versionPrompt.isAsking}
+            onSaveAndContinue={versionPrompt.saveAndRunPending}
+            onDiscardAndContinue={versionPrompt.runPending}
+            onCancel={versionPrompt.cancel}
           />
           {projectEnv && (
             <div
