@@ -13,6 +13,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { BreadcrumbContent } from '../../../js/collaborative-editor/CollaborativeEditor';
+import { Breadcrumbs as ActualBreadcrumbs } from '../../../js/collaborative-editor/components/Breadcrumbs';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 import {
   createMockURLState,
@@ -65,9 +66,15 @@ vi.mock('../../../js/collaborative-editor/components/WorkflowEditor', () => ({
   WorkflowEditor: () => <div data-testid="workflow-editor" />,
 }));
 
+// Header is heavy, but its Breadcrumbs are the thing BreadcrumbContent has a
+// contract with: they treat their last child as the workflow title. So the stub
+// keeps the real Breadcrumbs, and a stray extra child shows up as a mangled
+// crumb list rather than passing silently.
 vi.mock('../../../js/collaborative-editor/components/Header', () => ({
-  Header: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="header">{children}</div>
+  Header: ({ children }: { children: React.ReactNode[] }) => (
+    <div data-testid="header">
+      <ActualBreadcrumbs>{children}</ActualBreadcrumbs>
+    </div>
   ),
 }));
 
@@ -124,6 +131,19 @@ describe('unsaved-changes guard, wired up', () => {
     provider = { id: 'provider-1' };
     saveWorkflow.mockReset();
     saveWorkflow.mockResolvedValue(undefined);
+  });
+
+  test('the dialog does not take the workflow title slot in the breadcrumbs', () => {
+    renderBreadcrumbs();
+
+    // Breadcrumbs render their last child as the title and the rest as crumbs.
+    // Put the dialog in that array and the project, Workflows and the workflow
+    // name collapse into one crumb with no chevron between them.
+    expect(screen.getByText('Test Workflow')).toBeInTheDocument();
+    expect(screen.getByText('Workflows')).toBeInTheDocument();
+    expect(screen.getByText('Workflows').closest('li')).not.toContainElement(
+      screen.getByText('Test Workflow')
+    );
   });
 
   test('picking a version with unsaved edits opens the dialog and switches nothing', async () => {

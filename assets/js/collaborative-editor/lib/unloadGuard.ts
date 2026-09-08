@@ -20,8 +20,11 @@ export function resetUnloadWarning() {
   suppressed = false;
 }
 
-// A navigation can be abandoned, and Back can restore this page from the
-// browser's cache. Either way the page lives on, so the suppression must not.
+// Back can restore this page from the browser's cache, and then the page lives
+// on, so the suppression must not. A navigation that never commits at all
+// fires nothing, and the flag stands until the page goes; that window is the
+// gap between clicking through our own dialog and the browser giving up on the
+// request, which is short and already answered.
 if (typeof window !== 'undefined') {
   window.addEventListener('pageshow', resetUnloadWarning);
 }

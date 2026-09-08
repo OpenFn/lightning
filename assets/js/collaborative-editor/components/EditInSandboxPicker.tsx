@@ -283,10 +283,11 @@ export function EditInSandboxPicker({
 
   // The sandbox already exists by the time we ask, so backing out has to
   // release the create button rather than leave it spinning forever.
+  const cancelDiscard = discardPrompt.cancel;
   const handleDiscardCancel = useCallback(() => {
-    discardPrompt.cancel();
+    cancelDiscard();
     setIsCreating(false);
-  }, [discardPrompt]);
+  }, [cancelDiscard]);
 
   return (
     <>

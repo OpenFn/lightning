@@ -82,6 +82,7 @@ export function CollaborativeWorkflowDiagram({
 
   const runParam = params['run'] ?? null;
   const versionParam = params['v'] ?? null;
+  const asRunParam = params['as_run'] ?? null;
   const restoredRunRef = useRef<string | null>(null);
   const previousVersionRef = useRef<string | null>(versionParam);
   // A `?v` change means two different things: a dropdown switch, which must
@@ -137,19 +138,39 @@ export function CollaborativeWorkflowDiagram({
         currentLockVersion !== null &&
         run.version !== currentLockVersion;
 
-      // Set only where the URL is actually about to change. Pinning a run can
-      // be blocked by the unsaved-changes prompt, and a flag left standing
-      // would make the next version change skip clearing the run.
+      // Set the flag only where the URL is really about to change. The
+      // reconcile effect is what consumes it, and it only runs when a param
+      // moves, so a flag set over an unchanged URL stands until the next
+      // version change and makes that one skip clearing the run. Two ways to
+      // get there: the unsaved-changes prompt blocks the switch, or the run
+      // picked is the one already pinned.
+      const alreadyThere =
+        runParam === run.id && versionParam === null && asRunParam === run.id;
+
       if (isDifferentVersion) {
         viewAsExecuted(run.id, () => {
-          runSelectInProgressRef.current = true;
+          if (!alreadyThere) runSelectInProgressRef.current = true;
         });
       } else {
-        runSelectInProgressRef.current = true;
+        if (
+          runParam !== run.id ||
+          versionParam !== null ||
+          asRunParam !== null
+        ) {
+          runSelectInProgressRef.current = true;
+        }
         updateSearchParams({ v: null, as_run: null, run: run.id });
       }
     },
-    [workflow, latestSnapshotLockVersion, updateSearchParams, viewAsExecuted]
+    [
+      workflow,
+      latestSnapshotLockVersion,
+      updateSearchParams,
+      viewAsExecuted,
+      runParam,
+      versionParam,
+      asRunParam,
+    ]
   );
 
   // Closes the run viewer in the store too, or the restore effect re-adds the

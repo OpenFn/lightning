@@ -203,24 +203,28 @@ export function BreadcrumbContent({
   if (isNewWorkflow) return null;
 
   return (
-    <Header
-      key="canvas-header"
-      {...(projectId !== undefined && { projectId })}
-      workflowId={workflowId}
-      isSandbox={isSandbox}
-      isRunPanelOpen={isRunPanelOpen}
-      isIDEOpen={isIDEOpen}
-      aiAssistantEnabled={aiAssistantEnabled}
-    >
-      {breadcrumbElements}
-      {/* Outside the memo above, which does not depend on the prompt. */}
+    <>
+      <Header
+        key="canvas-header"
+        {...(projectId !== undefined && { projectId })}
+        workflowId={workflowId}
+        isSandbox={isSandbox}
+        isRunPanelOpen={isRunPanelOpen}
+        isIDEOpen={isIDEOpen}
+        aiAssistantEnabled={aiAssistantEnabled}
+      >
+        {breadcrumbElements}
+      </Header>
+      {/* Outside the memo above, which does not depend on the prompt, and
+          outside Header, whose Breadcrumbs treat their last child as the
+          title. */}
       <DiscardChangesDialog
         isOpen={versionPrompt.isAsking}
         onSaveAndContinue={versionPrompt.saveAndRunPending}
         onDiscardAndContinue={versionPrompt.runPending}
         onCancel={versionPrompt.cancel}
       />
-    </Header>
+    </>
   );
 }
 
