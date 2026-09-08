@@ -14,6 +14,17 @@ defmodule LightningWeb.Components.DataTables do
   attr :display_table_title, :boolean, default: true
   attr :show_owner, :boolean, default: false
 
+  attr :body_grants, :map,
+    default: nil,
+    doc: """
+    Which body each credential's share of the current project reads, keyed by
+    credential id. Set only in a project's own listing; nil elsewhere, which
+    hides the column.
+    """
+
+  attr :can_grant_bodies, :boolean, default: false
+  attr :grant_target, :any, default: nil
+
   slot :actions,
     doc: "the slot for showing user actions in the last table column"
 
@@ -42,6 +53,7 @@ defmodule LightningWeb.Components.DataTables do
               </.th>
               <.th>External ID</.th>
               <.th>Environments</.th>
+              <.th :if={@body_grants}>Values used here</.th>
               <.th>
                 <span class="sr-only">Actions</span>
               </.th>
@@ -105,6 +117,14 @@ defmodule LightningWeb.Components.DataTables do
                     {length(credential.environment_names || [1])}
                   </span>
                 </.td>
+                <.td :if={@body_grants} class="max-w-[14rem]">
+                  <.body_grant_cell
+                    credential={credential}
+                    granted_body_id={Map.get(@body_grants, credential.id)}
+                    can_grant={@can_grant_bodies}
+                    target={@grant_target}
+                  />
+                </.td>
                 <.td>
                   <div class="flex justify-end items-center">
                     {render_slot(@actions, credential)}
@@ -117,6 +137,68 @@ defmodule LightningWeb.Components.DataTables do
       <% end %>
     </div>
     """
+  end
+
+  attr :credential, :map, required: true
+  attr :granted_body_id, :string, default: nil
+  attr :can_grant, :boolean, required: true
+  attr :target, :any, default: nil
+
+  @doc """
+  Which of a credential's value sets this project may read, and a way to change
+  it.
+
+  A project's environment name used to decide this at run time, which meant
+  anyone who could rename a project could reach any set of values. The choice is
+  recorded here instead, so it is made once, deliberately, by someone who
+  administers the project.
+
+  No selection means the credential resolves nothing here, which is where every
+  sandbox starts.
+  """
+  def body_grant_cell(assigns) do
+    ~H"""
+    <%= if @can_grant do %>
+      <form
+        id={"grant-#{@credential.id}"}
+        phx-change="grant_body"
+        phx-target={@target}
+      >
+        <input type="hidden" name="credential_id" value={@credential.id} />
+        <select
+          name="credential_body_id"
+          id={"grant-select-#{@credential.id}"}
+          class="block w-full rounded-md border-0 py-1 pl-2 pr-8 text-sm
+                 text-gray-900 ring-1 ring-inset ring-gray-300
+                 focus:ring-2 focus:ring-primary-600"
+        >
+          <option value="" selected={is_nil(@granted_body_id)}>
+            None
+          </option>
+          <option
+            :for={body <- @credential.credential_bodies}
+            value={body.id}
+            selected={body.id == @granted_body_id}
+          >
+            {body.name}
+          </option>
+        </select>
+      </form>
+    <% else %>
+      <span class="text-sm text-gray-700">
+        {granted_body_name(@credential, @granted_body_id)}
+      </span>
+    <% end %>
+    """
+  end
+
+  defp granted_body_name(_credential, nil), do: "None"
+
+  defp granted_body_name(credential, body_id) do
+    case Enum.find(credential.credential_bodies, &(&1.id == body_id)) do
+      nil -> "None"
+      body -> body.name
+    end
   end
 
   attr :id, :string, required: true

@@ -215,6 +215,127 @@ defmodule Lightning.Projects.ProjectCredentialTest do
     end
   end
 
+  describe "grant_body_to_project/4" do
+    setup do
+      owner = insert(:user)
+      project = insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      credential =
+        insert(:credential, user: owner)
+        |> with_body(%{name: "main", body: %{"key" => "live"}})
+        |> with_body(%{name: "dev", body: %{"key" => "test"}})
+
+      bodies = Map.new(credential.credential_bodies, &{&1.name, &1.id})
+
+      share =
+        insert(:project_credential, project: project, credential: credential)
+
+      %{
+        owner: owner,
+        project: project,
+        credential: credential,
+        bodies: bodies,
+        share: share
+      }
+    end
+
+    test "points the share at a body of that credential", ctx do
+      {:ok, _} =
+        Lightning.Credentials.grant_body_to_project(
+          ctx.project,
+          ctx.credential.id,
+          ctx.bodies["dev"],
+          ctx.owner
+        )
+
+      assert Repo.reload!(ctx.share).credential_body_id == ctx.bodies["dev"]
+    end
+
+    test "takes the access away again", ctx do
+      {:ok, _} =
+        Lightning.Credentials.grant_body_to_project(
+          ctx.project,
+          ctx.credential.id,
+          ctx.bodies["dev"],
+          ctx.owner
+        )
+
+      {:ok, _} =
+        Lightning.Credentials.grant_body_to_project(
+          ctx.project,
+          ctx.credential.id,
+          nil,
+          ctx.owner
+        )
+
+      assert is_nil(Repo.reload!(ctx.share).credential_body_id)
+    end
+
+    test "refuses a body belonging to another credential", ctx do
+      other =
+        insert(:credential, user: ctx.owner)
+        |> with_body(%{name: "main", body: %{"key" => "someone else's"}})
+
+      [their_body] = other.credential_bodies
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Lightning.Credentials.grant_body_to_project(
+                 ctx.project,
+                 ctx.credential.id,
+                 their_body.id,
+                 ctx.owner
+               )
+
+      assert "does not belong to this credential" in errors_on(changeset).credential_body_id
+
+      assert is_nil(Repo.reload!(ctx.share).credential_body_id)
+    end
+
+    test "refuses someone who does not administer the project", ctx do
+      editor = insert(:user)
+      insert(:project_user, project: ctx.project, user: editor, role: :editor)
+
+      # Granting access to a set of secrets is an administrative act. An editor
+      # can write the job that spends the credential; they cannot decide which
+      # values it spends.
+      assert {:error, :unauthorized} =
+               Lightning.Credentials.grant_body_to_project(
+                 ctx.project,
+                 ctx.credential.id,
+                 ctx.bodies["dev"],
+                 editor
+               )
+
+      assert is_nil(Repo.reload!(ctx.share).credential_body_id)
+    end
+
+    test "refuses a credential the project has no share of", ctx do
+      unrelated = insert(:credential, user: ctx.owner)
+
+      assert {:error, :not_found} =
+               Lightning.Credentials.grant_body_to_project(
+                 ctx.project,
+                 unrelated.id,
+                 ctx.bodies["dev"],
+                 ctx.owner
+               )
+    end
+
+    test "body_grants_for_project reports what each share reads", ctx do
+      {:ok, _} =
+        Lightning.Credentials.grant_body_to_project(
+          ctx.project,
+          ctx.credential.id,
+          ctx.bodies["main"],
+          ctx.owner
+        )
+
+      grants = Lightning.Credentials.body_grants_for_project(ctx.project)
+
+      assert grants[ctx.credential.id] == ctx.bodies["main"]
+    end
+  end
+
   test "project_id is NOT NULL at the database layer" do
     credential = insert(:credential)
     now = DateTime.utc_now() |> DateTime.truncate(:second)

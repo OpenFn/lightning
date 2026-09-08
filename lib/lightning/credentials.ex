@@ -277,6 +277,80 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
+  Which body each of a project's credential shares may read.
+
+  Keyed by credential id, so a listing can show a project what it actually
+  resolves rather than what its environment name happens to say.
+  """
+  @spec body_grants_for_project(Project.t() | Ecto.UUID.t()) :: %{
+          Ecto.UUID.t() => Ecto.UUID.t() | nil
+        }
+  def body_grants_for_project(%Project{id: project_id}),
+    do: body_grants_for_project(project_id)
+
+  def body_grants_for_project(project_id) when is_binary(project_id) do
+    from(pc in ProjectCredential,
+      where: pc.project_id == ^project_id,
+      select: {pc.credential_id, pc.credential_body_id}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  Points a project's share of a credential at one of that credential's bodies.
+
+  This is the only way a project gains access to a set of values, and it is a
+  deliberate act by someone who administers the project. Pass `nil` to take the
+  access away again.
+
+  The body must belong to the credential the project already has a share of.
+  The database enforces that too, so a mismatched pair is refused rather than
+  recorded.
+  """
+  @spec grant_body_to_project(
+          Project.t(),
+          Ecto.UUID.t(),
+          Ecto.UUID.t() | nil,
+          User.t()
+        ) ::
+          {:ok, ProjectCredential.t()}
+          | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
+  def grant_body_to_project(
+        %Project{} = project,
+        credential_id,
+        body_id,
+        %User{} = actor
+      ) do
+    with :ok <- authorize_project_admin(actor, project),
+         %ProjectCredential{} = share <-
+           Repo.get_by(ProjectCredential,
+             project_id: project.id,
+             credential_id: credential_id
+           ) do
+      share
+      |> ProjectCredential.changeset(%{credential_body_id: body_id})
+      |> Repo.update()
+    else
+      nil -> {:error, :not_found}
+      error -> error
+    end
+  end
+
+  defp authorize_project_admin(actor, project) do
+    if Lightning.Policies.Permissions.can?(
+         :project_users,
+         :edit_project,
+         actor,
+         project
+       ) do
+      :ok
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  @doc """
   Updates an existing credential and its credential bodies.
 
   ## Parameters

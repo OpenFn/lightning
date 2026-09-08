@@ -974,6 +974,115 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ credential.user.email
     end
 
+    describe_grant = fn -> :ok end
+    _ = describe_grant
+
+    test "an admin can choose which values a credential uses in this project",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          name: "grant-project",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      credential =
+        insert(:credential, user: user, name: "shared-system")
+        |> with_body(%{name: "main", body: %{"key" => "live"}})
+        |> with_body(%{name: "dev", body: %{"key" => "test"}})
+
+      share =
+        insert(:project_credential, project: project, credential: credential)
+
+      dev = Enum.find(credential.credential_bodies, &(&1.name == "dev"))
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      assert html =~ "Values used here"
+
+      view
+      |> element("#grant-#{credential.id}")
+      |> render_change(%{
+        "credential_id" => credential.id,
+        "credential_body_id" => dev.id
+      })
+
+      assert Lightning.Repo.reload!(share).credential_body_id == dev.id
+    end
+
+    test "an admin can take the values away again",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      credential =
+        insert(:credential, user: user)
+        |> with_body(%{name: "main", body: %{"key" => "live"}})
+
+      [body] = credential.credential_bodies
+
+      share =
+        insert(:project_credential,
+          project: project,
+          credential: credential,
+          credential_body_id: body.id
+        )
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      view
+      |> element("#grant-#{credential.id}")
+      |> render_change(%{
+        "credential_id" => credential.id,
+        "credential_body_id" => ""
+      })
+
+      assert is_nil(Lightning.Repo.reload!(share).credential_body_id)
+    end
+
+    test "an editor sees which values are used but cannot change them",
+         %{conn: conn, user: user} do
+      owner = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: owner.id, role: :owner},
+            %{user_id: user.id, role: :editor}
+          ]
+        )
+
+      credential =
+        insert(:credential, user: owner)
+        |> with_body(%{name: "main", body: %{"key" => "live"}})
+
+      [body] = credential.credential_bodies
+
+      insert(:project_credential,
+        project: project,
+        credential: credential,
+        credential_body_id: body.id
+      )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # An editor writes the job that spends the credential; they do not decide
+      # which values it spends.
+      assert html =~ "Values used here"
+      assert html =~ "main"
+      refute has_element?(view, "#grant-#{credential.id}")
+    end
+
     test "authorized project users can create new credentials in the project credentials page",
          %{
            conn: conn,
