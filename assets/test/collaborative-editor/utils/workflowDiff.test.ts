@@ -457,6 +457,57 @@ describe('deriveWorkflowChanges', () => {
       expect(triggerDetail(intake, cleared)).toBe('path removed');
     });
 
+    it('says nothing when the answer never mentions the path', () => {
+      // Applying a workflow that omits the key keeps the path the trigger
+      // holds, so claiming a removal here would be a lie about a live URL.
+      const intake = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const silent = webhookWorkflow({ ...webhookTrigger, enabled: false });
+
+      expect(triggerDetail(intake, silent)).toBe('disabled');
+    });
+
+    it('treats a blank path the way the server does, as no path', () => {
+      const intake = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const blank = webhookWorkflow({ ...webhookTrigger, custom_path: '' });
+      const blankToNamed = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'staff-intake',
+      });
+
+      expect(triggerDetail(intake, blank)).toBe('path removed');
+      expect(triggerDetail(blank, blankToNamed)).toBe('path: staff-intake');
+    });
+
+    it('reports the settings when a cron trigger becomes a webhook', () => {
+      const cron = buildYaml({
+        jobs: [transformJob('fn(state => state);')],
+        triggers: [
+          { id: 'trigger-1', type: 'cron', cron_expression: '0 * * * *' },
+        ],
+        edges: [
+          {
+            ...webhookToTransformEdge,
+            key: 'cron->transform-data',
+            source_trigger: 'cron',
+          },
+        ],
+      });
+      const named = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+
+      const detail = triggerDetail(cron, named);
+      expect(detail).toContain('type: cron → webhook');
+      expect(detail).toContain('path: intake-form');
+    });
+
     it('says nothing about a path that did not move', () => {
       const intake = webhookWorkflow({
         ...webhookTrigger,

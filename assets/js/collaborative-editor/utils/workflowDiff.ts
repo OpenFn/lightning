@@ -343,16 +343,29 @@ const deriveEdgeChanges = (
   return changes;
 };
 
+type WebhookReply = NonNullable<StateWebhookTrigger['webhook_reply']>;
+
 /** Wording taken from the response type picker, so a row reads like the panel. */
-const REPLY_LABEL: Record<string, string> = {
+const REPLY_LABEL: Record<WebhookReply, string> = {
   before_start: 'Immediately',
   after_completion: 'On Complete',
 };
 
 // An absent reply means before_start, so normalise before comparing or a
 // trigger that only ever had the default reports a change it never made.
-const replyOf = (trigger: StateWebhookTrigger): string =>
+const replyOf = (trigger: StateWebhookTrigger): WebhookReply =>
   trigger.webhook_reply ?? 'before_start';
+
+// `undefined` (the answer never mentioned a path) and `null` (the answer
+// cleared it) mean opposite things here: applying a workflow that omits the key
+// keeps whatever the trigger holds, so only an explicit value is a change.
+// Blank counts as cleared, which is how the server and the panel read it.
+const pathOf = (trigger: StateWebhookTrigger): string | null | undefined => {
+  if (trigger.custom_path === undefined) return undefined;
+  return trigger.custom_path === null || trigger.custom_path.trim() === ''
+    ? null
+    : trigger.custom_path;
+};
 
 const codeOf = (code: number | null | undefined): string =>
   code == null ? 'default' : String(code);
@@ -363,9 +376,11 @@ const webhookDetails = (
 ): string[] => {
   const details: string[] = [];
 
-  const beforePath = before.custom_path ?? null;
-  const afterPath = after.custom_path ?? null;
-  if (beforePath !== afterPath) {
+  // A path the before never stated is a trigger with no path, since the
+  // baseline we diff against writes the key whenever there is one.
+  const beforePath = pathOf(before) ?? null;
+  const afterPath = pathOf(after);
+  if (afterPath !== undefined && afterPath !== beforePath) {
     details.push(
       afterPath === null
         ? 'path removed'
@@ -450,8 +465,20 @@ const deriveTriggerChanges = (
         `schedule: ${beforeTrigger.cron_expression} → ${afterTrigger.cron_expression}`
       );
     }
-    if (beforeTrigger.type === 'webhook' && afterTrigger.type === 'webhook') {
-      details.push(...webhookDetails(beforeTrigger, afterTrigger));
+    if (afterTrigger.type === 'webhook') {
+      // A cron trigger becoming a webhook mints a public URL, so report the
+      // settings rather than only the type change. Diffing against a bare
+      // webhook reads them all as newly set, which is what they are.
+      const baseline: StateWebhookTrigger =
+        beforeTrigger.type === 'webhook'
+          ? beforeTrigger
+          : {
+              id: beforeTrigger.id,
+              type: 'webhook',
+              enabled: beforeTrigger.enabled,
+              webhook_reply: null,
+            };
+      details.push(...webhookDetails(baseline, afterTrigger));
     }
 
     if (details.length > 0) {
