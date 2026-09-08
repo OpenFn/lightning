@@ -15,6 +15,19 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Security
+
+- A project now records which set of a credential's values it may read, on the
+  share itself. It used to be decided by matching the project's environment
+  _name_ against the credential's value sets at run time, and that name is an
+  ordinary project setting. Creating a sandbox makes you its owner, a sandbox
+  owner can edit its environment, and a sandbox already holds a reference to
+  every one of its parent's credentials, so any editor on a production project
+  could reach that project's production secrets.
+
+  Existing projects keep the values they resolve today. Sandboxes start with
+  none, and a project admin chooses them on the project's credentials tab.
+
 ### Changed
 
 - The AI assistant is the global assistant for everyone. It was behind the

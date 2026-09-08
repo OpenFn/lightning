@@ -321,6 +321,28 @@ defmodule Lightning.Projects.ProjectCredentialTest do
                )
     end
 
+    test "resolving refuses a body that is not this credential's", ctx do
+      other =
+        insert(:credential, user: ctx.owner)
+        |> with_body(%{name: "main", body: %{"key" => "someone else's"}})
+
+      [their_body] = other.credential_bodies
+
+      # The composite foreign key already stops a share holding this pair, so
+      # this is the read refusing it as well. Both matter: the constraint can be
+      # dropped, and a caller can pass an id from anywhere.
+      assert {:error, :no_credential_grant} =
+               Lightning.Credentials.resolve_granted_body(
+                 ctx.credential,
+                 their_body.id
+               )
+    end
+
+    test "resolving with no grant reads nothing", ctx do
+      assert {:error, :no_credential_grant} =
+               Lightning.Credentials.resolve_granted_body(ctx.credential, nil)
+    end
+
     test "body_grants_for_project reports what each share reads", ctx do
       {:ok, _} =
         Lightning.Credentials.grant_body_to_project(
