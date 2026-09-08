@@ -1044,9 +1044,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         end
       )
 
-      # Whether the project you are standing in sits under the one being deleted
-      # is read from the tree rather than stubbed, so this covers the walk as
-      # well as the redirect.
       Mimic.allow(Lightning.Projects.Sandboxes, self(), view.pid)
 
       view
@@ -1068,9 +1065,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       grandchild_sandbox: grandchild_sandbox,
       user: user
     } do
-      # Standing this deep means the redirect check has more parents to climb
-      # than the project assign preloads, which used to raise after the delete
-      # had already committed.
       great_grandchild =
         insert(:project,
           name: "great-grandchild",
@@ -1101,7 +1095,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
         )
         |> render_submit()
 
-      # Deleting something we are not under leaves us where we are.
       assert html =~ "scheduled for deletion"
     end
 
@@ -3730,9 +3723,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       sandbox: sandbox,
       user: user
     } do
-      # The workspace list preloads one level of parent, so working out whether
-      # a candidate sits under the sandbox by climbing that chain ran out of
-      # struct on the second hop and raised.
       a =
         insert(:project,
           name: "a",
@@ -3822,8 +3812,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assigns = :sys.get_state(view.pid).socket.assigns
 
-      # Previewing a merge the confirm step will refuse only teaches the user
-      # something untrue, and it is the target's side of the diff that says so.
       refute Enum.any?(
                assigns.merge_source_workflows,
                &(&1.name == "Only In Child")
@@ -3854,8 +3842,6 @@ defmodule LightningWeb.SandboxLive.IndexTest do
 
       assigns = :sys.get_state(view.pid).socket.assigns
 
-      # The dropdown leaves out a project on its way to deletion, so naming it
-      # by hand must not get past that.
       refute Enum.any?(assigns.merge_target_options, &(&1.value == retiring.id))
 
       html =
