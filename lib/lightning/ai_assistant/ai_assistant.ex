@@ -1698,10 +1698,8 @@ defmodule Lightning.AiAssistant do
   defp build_global_message(body) do
     code = extract_global_workflow_yaml(body["attachments"])
 
-    # Only when nothing came back to apply. The planner can call the job agent
-    # more than once in a turn, so one failed edit alongside one that landed
-    # would otherwise put "couldn't apply the change" on a reply carrying the
-    # change.
+    # The planner can call the job agent more than once, so one failed edit
+    # beside one that landed must not mark a reply that carries the change.
     meta =
       if is_nil(code) and code_change_failed?(body),
         do: %{"from_global" => true, "code_change_failed" => true},
@@ -1721,10 +1719,8 @@ defmodule Lightning.AiAssistant do
     {message_attrs, opts}
   end
 
-  # Apollo's job-code subagent reports how many of its edits landed. Zero means
-  # it tried and could not, which reaches the user as a reply with nothing to
-  # apply and no reason given. Its `warning` is built partly from `str(e)`, so
-  # that goes to the log and the panel gets a sentence of ours.
+  # Zero means the subagent tried to edit and could not. Its `warning` is built
+  # partly from `str(e)`, so that stays in the log.
   defp code_change_failed?(body) do
     failed =
       body

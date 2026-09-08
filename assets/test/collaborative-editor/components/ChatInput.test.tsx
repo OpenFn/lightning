@@ -297,8 +297,6 @@ describe('ChatInput', () => {
       );
     });
 
-    // The server rejects this on the channel join, a path that cannot report
-    // back, so the assistant would appear to do nothing at all.
     it('still sends at exactly the limit', async () => {
       const onSendMessage = vi.fn();
       render(<ChatInput onSendMessage={onSendMessage} />);

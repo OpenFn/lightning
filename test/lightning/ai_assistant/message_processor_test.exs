@@ -433,9 +433,6 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       refute retried.failure_message
     end
 
-    # Apollo's job-code subagent says how many edits landed. Zero is a reply
-    # with nothing to apply, which otherwise reads as the assistant declining
-    # to help. Its warning is built partly from str(e), so it stays in the log.
     test "marks a reply whose code edits all failed to apply", %{
       user: user,
       project: project
@@ -500,9 +497,6 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       refute assistant.content =~ "job_chat.py"
     end
 
-    # The planner can call the job agent more than once, so one failed edit
-    # beside one that landed must not put "couldn't apply" on a reply that
-    # carries the change.
     test "does not mark a reply that still produced a workflow", %{
       user: user,
       project: project

@@ -319,9 +319,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
   end
 
   describe "join with an invalid first message" do
-    # The reply is JSON-encoded before it reaches the client, and a changeset
-    # has no encoder, so a raw one kills the socket before any reply goes out
-    # and the assistant simply does nothing.
     test "returns a clean error rather than crashing the socket", %{
       socket: socket,
       project: project,

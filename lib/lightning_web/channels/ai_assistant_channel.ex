@@ -74,9 +74,8 @@ defmodule LightningWeb.AiAssistantChannel do
       {:parse_topic, {:error, :invalid_topic}} ->
         {:error, %{reason: "invalid topic format"}}
 
-      # A changeset here has no Jason encoder, so putting it in the reply kills
-      # the socket before any reply goes out and the assistant just does
-      # nothing.
+      # A changeset has no Jason encoder, so putting one in the reply kills the
+      # socket before anything is sent.
       {:session, {:error, %Ecto.Changeset{} = changeset}} ->
         errors = format_changeset_errors(changeset)
         {:error, %{reason: validation_sentence(errors), errors: errors}}
@@ -1145,9 +1144,8 @@ defmodule LightningWeb.AiAssistantChannel do
     })
   end
 
-  # A join reply's `reason` is shown to the reader as it stands, unlike the
-  # `type`/`errors` pair the message handlers reply with, so the field errors
-  # become a sentence rather than a code.
+  # A join reply's `reason` is shown as it stands, unlike the `type`/`errors`
+  # pair the message handlers use, so it has to read as a sentence.
   defp validation_sentence(errors) do
     errors
     |> Enum.flat_map(fn {field, messages} ->

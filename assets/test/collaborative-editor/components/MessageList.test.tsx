@@ -581,7 +581,6 @@ describe('MessageList', () => {
       }),
     ];
 
-    // The reply succeeded, so nothing else on screen says the edit did not.
     it('says so when the edit did not apply', () => {
       render(<MessageList messages={exchange()} onRetryMessage={vi.fn()} />);
 
@@ -590,8 +589,6 @@ describe('MessageList', () => {
       );
     });
 
-    // Every way a patch fails comes from what the model produced that turn, and
-    // Apollo has already tried once to correct itself, so another go can work.
     it('offers to try again, re-running the prompt', async () => {
       const onRetryMessage = vi.fn();
       render(

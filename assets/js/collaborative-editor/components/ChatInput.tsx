@@ -8,8 +8,7 @@ import { AIDisclaimerFooter } from './AIDisclaimerFooter';
 
 interface ChatInputProps {
   onSendMessage?:
-    | ((content: string, options?: MessageOptions) => void)
-    | undefined;
+    ((content: string, options?: MessageOptions) => void) | undefined;
   isLoading?: boolean | undefined;
   /** Disabled state (separate from loading, e.g., due to limits) */
   isDisabled?: boolean | undefined;
@@ -56,13 +55,10 @@ type AttachmentKey = (typeof ATTACHMENTS)[number]['key'];
 const MIN_TEXTAREA_HEIGHT = 52;
 const MAX_TEXTAREA_HEIGHT = 200;
 
-// Mirrors ChatMessage.max_content_length/0. Without this the server rejects the
-// message on a path that cannot report it, so the assistant appears to do
-// nothing.
+// Mirrors ChatMessage.max_content_length/0.
 const MAX_MESSAGE_LENGTH = 10_000;
 
-// Nothing is said until you are close: a counter that is always there reads as
-// a warning about a limit almost nobody meets.
+// An always-on counter reads as a warning about a limit almost nobody meets.
 const COUNT_FROM = MAX_MESSAGE_LENGTH - 500;
 
 export function ChatInput({
