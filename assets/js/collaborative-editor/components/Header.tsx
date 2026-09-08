@@ -659,7 +659,7 @@ export function Header({
                     variant="secondary"
                     data-testid="switch-to-draft-button"
                     className="inline-flex items-center hover:bg-gray-50
-                      disabled:hover:bg-white disabled:hover:inset-ring-gray-300"
+                      disabled:hover:inset-ring-gray-300"
                     disabled={isTransitioning}
                     onClick={() => {
                       setShowSwitchToDraftDialog(true);

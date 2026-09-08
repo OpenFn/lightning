@@ -18,8 +18,11 @@ and this project adheres to
 ### Changed
 
 - The sandbox and lifecycle buttons in the editor use the shared button
-  component rather than seven hand-rolled copies of the same classes, and the
-  Edit-in-sandbox dialog says what a sandbox is once instead of three times.
+  component rather than seven hand-rolled copies of the same classes, the
+  version dropdown uses the shared text size rather than an arbitrary one, and
+  the Edit-in-sandbox dialog says what a sandbox is once instead of three times.
+  Tooltips explaining why Save, Go live and Edit in sandbox are greyed out now
+  open, which they never did before.
   [#4991](https://github.com/OpenFn/lightning/issues/4991),
   [#4992](https://github.com/OpenFn/lightning/issues/4992)
 
