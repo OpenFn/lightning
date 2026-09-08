@@ -1204,19 +1204,36 @@ defmodule LightningWeb.WorkflowChannel do
         :can_archive_sandbox
       ])
 
-    # A genuinely-new workflow has no DB row, so use the in-memory struct and
-    # report a nil latest version. Otherwise reload to get the current
-    # lock_version, since socket.assigns.workflow may be stale.
-    {fresh_workflow, latest_lock_version} =
-      if workflow_kind == :new do
-        {workflow, nil}
-      else
-        fresh =
-          Lightning.Workflows.get_workflow(workflow.id,
-            include: [:edges, :jobs, :triggers]
-          )
+    # `workflow` is what the client is comparing its document against, so it has
+    # to be what the document holds.
+    #
+    # A genuinely-new workflow has no DB row. A version view holds a snapshot,
+    # and reloading there would hand the client the current workflow as the
+    # baseline for a document that is a past one, making every pinned view look
+    # unsaved from the moment it opened. Only an :existing view is the current
+    # workflow, and only it can be stale.
+    #
+    # The latest lock_version is a separate question and always comes from the
+    # row, because the client uses it to tell whether it is behind.
+    latest_row =
+      workflow_kind != :new &&
+        Lightning.Workflows.get_workflow(workflow.id,
+          include: [:edges, :jobs, :triggers]
+        )
 
-        {fresh, (fresh && fresh.lock_version) || workflow.lock_version}
+    latest_lock_version =
+      case latest_row do
+        %Lightning.Workflows.Workflow{lock_version: lock_version} ->
+          lock_version
+
+        _ ->
+          if workflow_kind == :new, do: nil, else: workflow.lock_version
+      end
+
+    fresh_workflow =
+      case workflow_kind do
+        :existing -> latest_row || workflow
+        _ -> workflow
       end
 
     project_repo_connection =

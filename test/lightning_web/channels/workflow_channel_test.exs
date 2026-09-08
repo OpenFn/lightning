@@ -1979,6 +1979,55 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "session context on a pinned version" do
+    test "sends the snapshot as the baseline, not the current workflow", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      snapshot =
+        insert(:snapshot,
+          workflow: workflow,
+          lock_version: 7,
+          name: "As it was"
+        )
+
+      {:ok, release} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :go_live,
+          snapshot_id: snapshot.id,
+          published_by_id: user.id
+        })
+
+      # The workflow moves on after the release.
+      {:ok, _} =
+        workflow
+        |> Ecto.Changeset.change(name: "As it is now")
+        |> Lightning.Repo.update()
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{release.version_number}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref = push(pinned_socket, "get_context", %{})
+      assert_reply ref, :ok, response
+
+      # The client compares its document against this. The document is the
+      # snapshot, so handing it the current workflow makes every pinned view
+      # look unsaved the moment it opens.
+      assert response.workflow.name == "As it was"
+      assert response.latest_snapshot_lock_version == workflow.lock_version
+    end
+  end
+
   describe "version-pinned join (?v=version_number)" do
     test "loads the snapshot belonging to the release with that version_number",
          %{project: project, workflow: workflow, user: user} do
