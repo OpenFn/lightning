@@ -189,6 +189,20 @@ export function SaveButton({
 }
 SaveButton.displayName = 'SaveButton';
 
+// Turn a refused lifecycle transition into something actionable. The activation
+// limit, a permission change and a deleted workflow all reply with real text;
+// only a genuinely unexpected failure earns "try again".
+function describeLifecycleError(error: unknown): string {
+  if (isChannelRequestError(error)) {
+    return formatChannelErrorMessage({
+      errors: error.errors as { base?: string[] } & Record<string, string[]>,
+      type: error.type,
+    });
+  }
+
+  return error instanceof Error ? error.message : 'Please try again.';
+}
+
 export function Header({
   children,
   projectId,
@@ -683,19 +697,23 @@ export function Header({
                       data-testid="toggle-sandbox-button"
                       className="inline-flex items-center hover:bg-gray-50
                         disabled:hover:inset-ring-gray-300"
-                      disabled={isTransitioning}
+                      disabled={isReadOnly || isTransitioning}
                       onClick={() => {
                         const turningOn = lifecycleState !== 'live';
                         setIsTransitioning(true);
                         void (turningOn ? goLive() : switchToDraft())
-                          .catch(() =>
+                          .catch((error: unknown) => {
+                            // The refusals this button can hit all carry
+                            // actionable text: the activation limit, a
+                            // permission change, a deleted workflow. "Try
+                            // again" would be wrong for every one of them.
                             notifications.alert({
                               title: turningOn
                                 ? 'Could not turn the sandbox on'
                                 : 'Could not turn the sandbox off',
-                              description: 'Please try again.',
-                            })
-                          )
+                              description: describeLifecycleError(error),
+                            });
+                          })
                           .finally(() => {
                             setIsTransitioning(false);
                           });

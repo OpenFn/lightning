@@ -28,6 +28,14 @@ and this project adheres to
   neither gate applies to it.
   [#4920](https://github.com/OpenFn/lightning/issues/4920)
 
+### Fixed
+
+- A lifecycle transition no longer writes a workflow version. The version trail
+  answers whether one project holds content another does not, and a merge
+  carries neither the lifecycle state nor a trigger's enabled flag, so recording
+  a hash for those made a sandbox report changes it could not promote.
+  [#5130](https://github.com/OpenFn/lightning/issues/5130)
+
 ### Changed
 
 - The sandbox and lifecycle buttons in the editor use the shared button
@@ -95,6 +103,11 @@ and this project adheres to
   typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
 
 ### Fixed
+
+- A lifecycle transition no longer writes a workflow version. The version trail
+  answers whether one project holds content another does not, and a merge
+  carries neither the lifecycle state nor a trigger's enabled flag, so recording
+  a hash for those made a sandbox report changes it could not promote.
 
 - Opening the merge dialog, and deleting a sandbox, no longer crash in a
   workspace with a branch more than two levels below the project you are in.
