@@ -1119,6 +1119,27 @@ defmodule Lightning.InvocationTest do
       assert signature_matches(project, "lost", nil) == MapSet.new([lost_wo.id])
     end
 
+    # Mirrors `stats_test.exs`, "treats an empty error type on the run the
+    # same as a missing one": the row reports `nil`, so the filter has to
+    # read `""` as `nil` too or the View button lands on an empty page.
+    test "reads an empty error type on the run as a missing one" do
+      project = insert(:project)
+
+      %{workflow: workflow, trigger: trigger} = build_workflow(project: project)
+
+      wo = workorder(workflow, trigger, :crashed)
+
+      insert(:run,
+        work_order: wo,
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: :crashed,
+        error_type: ""
+      )
+
+      assert signature_matches(project, "crash", nil) == MapSet.new([wo.id])
+    end
+
     # Guards every unfiltered history search, not just the View button: the
     # signature filter sits in the query behind search, bulk retry, bulk cancel
     # and export, and its run-level branch fails closed. A nil signature that

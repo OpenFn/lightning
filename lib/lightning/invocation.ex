@@ -786,7 +786,7 @@ defmodule Lightning.Invocation do
                 where: r.state == ^state,
                 where:
                   fragment(
-                    "? IS NOT DISTINCT FROM ?",
+                    "nullif(?, '') IS NOT DISTINCT FROM ?",
                     r.error_type,
                     type(^error_type, :string)
                   ),
