@@ -34,10 +34,7 @@ defmodule Lightning.Workflows.Stats do
   @final_states WorkOrder.final_states()
   @zero_counts Map.new(@final_states, &{&1, 0})
 
-  # `:cancelled` is final but not a failure — someone stopped it on purpose. Own
-  # outcome, not the red wedge, which is why this narrows the schema's list
-  # rather than changing it.
-  @failure_states WorkOrder.failure_states() -- [:cancelled]
+  @failure_states WorkOrder.failure_states()
 
   # The signature grammar is written in the worker's words, so a
   # run-level failure has to be mapped back out of its state.
