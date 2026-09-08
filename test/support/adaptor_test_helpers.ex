@@ -37,8 +37,16 @@ defmodule Lightning.AdaptorTestHelpers do
 
     ExUnit.Callbacks.start_supervised!(
       Supervisor.child_spec(
-        {AdaptorsSupervisor,
-         name: sup, strategy: Lightning.Adaptors.StrategyMock},
+        {
+          AdaptorsSupervisor,
+          # The Scheduler's boot-time max_checked_at read runs in a process
+          # with no $callers chain back to this test, so it can't see an
+          # `async: true` module's own sandbox connection. Skip the read
+          # entirely rather than let it crash on an OwnershipError.
+          name: sup,
+          strategy: Lightning.Adaptors.StrategyMock,
+          checked_at: fn _source -> nil end
+        },
         id: sup
       )
     )

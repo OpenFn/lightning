@@ -313,6 +313,7 @@ defmodule LightningWeb.RunChannelTest do
              }
     end
 
+    @tag run_state: :claimed
     test "fetch:plan replies with an error when a job adaptor cannot be resolved",
          %{project: project} = context do
       seed_ready_catalogue()
@@ -330,7 +331,7 @@ defmodule LightningWeb.RunChannelTest do
 
       {:ok, snapshot} = Workflows.Snapshot.create(workflow)
 
-      %{socket: socket} =
+      %{socket: socket, run: run} =
         context
         |> Map.merge(%{workflow: workflow, trigger: trigger, snapshot: snapshot})
         |> merge_setups([:create_run, :create_socket, :join_run_channel])
@@ -338,6 +339,7 @@ defmodule LightningWeb.RunChannelTest do
       ref = push(socket, "fetch:plan", %{})
 
       assert_reply ref, :error, %{reason: "adaptor_not_found"}
+      assert %{state: :claimed} = Lightning.Repo.reload!(run)
     end
 
     @tag project_retention_policy: :erase_all
@@ -2865,6 +2867,7 @@ defmodule LightningWeb.RunChannelTest do
         starting_trigger: trigger,
         dataclip: dataclip,
         snapshot: snapshot,
+        state: Map.get(context, :run_state, :available),
         options:
           Lightning.Extensions.MockUsageLimiter.get_run_options(%Context{
             project_id: project.id

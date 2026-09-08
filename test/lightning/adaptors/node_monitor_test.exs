@@ -16,7 +16,10 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
     # The supervisor starts the NodeMonitor automatically, registered under
     # `node_monitor_name(sup)`.
     start_supervised!(
-      {AdaptorsSupervisor, name: sup, strategy: Lightning.Adaptors.StrategyMock}
+      {AdaptorsSupervisor,
+       name: sup,
+       strategy: Lightning.Adaptors.StrategyMock,
+       checked_at: fn _source -> nil end}
     )
 
     cache = AdaptorsSupervisor.cache_name(sup)

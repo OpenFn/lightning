@@ -89,7 +89,9 @@ download not covered here.
 
 ## Keeping the catalogue fresh
 
-Lightning refreshes the catalogue hourly; force one, on a source checkout:
+Lightning refreshes the catalogue hourly. Set `ADAPTORS_REFRESH_INTERVAL_MS` to
+change that interval, or to `0` to disable scheduled refreshes. Force one
+manually, on a source checkout:
 
 ```sh
 mix lightning.adaptors.refresh
@@ -119,3 +121,5 @@ bin/lightning rpc 'Lightning.Adaptors.refresh_package("@openfn/language-http")'
   the same name; the log names each shadowed package.
 - Deprecated-variable boot warning: rename `LOCAL_ADAPTORS=true` to
   `ADAPTORS_STRATEGY=local` and `OPENFN_ADAPTORS_REPO` to `ADAPTORS_LOCAL_REPO`.
+- Workflow save rejected with "adaptor catalogue is not ready yet": see
+  [Running without internet access](#running-without-internet-access).

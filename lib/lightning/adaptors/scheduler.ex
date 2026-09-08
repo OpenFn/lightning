@@ -135,37 +135,59 @@ defmodule Lightning.Adaptors.Scheduler do
       icon_refreshes: %{}
     }
 
-    if interval_ms > 0 do
-      {:ok, state, {:continue, :schedule_first_tick}}
-    else
-      Logger.info("Adaptors[#{source}]: scheduler started interval=0 (disabled)")
-      {:ok, state}
-    end
+    {:ok, state, {:continue, :check_catalogue}}
   end
 
   @impl true
-  def handle_continue(:schedule_first_tick, state) do
-    delay = first_tick_delay(state)
-    Process.send_after(self(), :tick, delay)
+  def handle_continue(:check_catalogue, state) do
+    # Read runs, and delay is computed, even when interval_ms == 0 — that's
+    # the only way an interval=0 (disabled) deployment still gets the
+    # empty-catalogue warning below. Don't skip it for that branch.
+    checked_at =
+      case read_checked_at(state) do
+        nil ->
+          Logger.warning(
+            "Adaptors[#{state.source}]: catalogue is empty at boot — see " <>
+              "ADAPTORS.md's \"Running without internet access\" section"
+          )
 
-    Logger.info(
-      "Adaptors[#{state.source}]: scheduler started interval=#{state.interval_ms}ms " <>
-        "next_tick_in=#{delay}ms"
-    )
+          nil
+
+        :error ->
+          nil
+
+        checked_at ->
+          checked_at
+      end
+
+    delay = time_until_next_ms(checked_at, state.interval_ms)
+
+    if state.interval_ms > 0 do
+      Process.send_after(self(), :tick, delay)
+
+      Logger.info(
+        "Adaptors[#{state.source}]: scheduler started interval=#{state.interval_ms}ms " <>
+          "next_tick_in=#{delay}ms"
+      )
+    else
+      Logger.info(
+        "Adaptors[#{state.source}]: scheduler started interval=0 (disabled)"
+      )
+    end
 
     {:noreply, state}
   end
 
-  defp first_tick_delay(state) do
-    time_until_next_ms(state.checked_at.(state.source), state.interval_ms)
+  defp read_checked_at(state) do
+    state.checked_at.(state.source)
   rescue
     e in DBConnection.ConnectionError ->
       Logger.warning(
-        "Adaptors[#{state.source}]: scheduler could not read max_checked_at, " <>
-          "ticking immediately: #{Exception.message(e)}"
+        "Adaptors[#{state.source}]: scheduler could not read max_checked_at: " <>
+          Exception.message(e)
       )
 
-      0
+      :error
   end
 
   @impl true

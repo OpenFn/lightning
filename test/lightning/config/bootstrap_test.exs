@@ -663,6 +663,47 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
+  describe "adaptors refresh interval" do
+    test "ADAPTORS_REFRESH_INTERVAL_MS sets refresh_interval when present" do
+      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_MS" => "60000"}])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:refresh_interval] ==
+               60_000
+    end
+
+    test "ADAPTORS_REFRESH_INTERVAL_MS accepts 0 to disable the scheduler" do
+      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_MS" => "0"}])
+
+      Bootstrap.configure()
+
+      assert get_env(:lightning, Lightning.Adaptors)[:refresh_interval] == 0
+    end
+
+    test "is not forced when unset, so config/test.exs's 0 is left alone" do
+      Dotenvy.source([%{}])
+
+      Bootstrap.configure()
+
+      refute Keyword.has_key?(
+               get_env(:lightning, Lightning.Adaptors),
+               :refresh_interval
+             )
+    end
+
+    test "does not set refresh_interval when set but empty" do
+      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_MS" => ""}])
+
+      Bootstrap.configure()
+
+      refute Keyword.has_key?(
+               get_env(:lightning, Lightning.Adaptors),
+               :refresh_interval
+             )
+    end
+  end
+
   describe "adaptors strategy" do
     test "defaults to the npm strategy when nothing is set" do
       Dotenvy.source([%{}])
