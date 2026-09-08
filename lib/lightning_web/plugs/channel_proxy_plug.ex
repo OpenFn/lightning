@@ -38,7 +38,7 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   @proxy_security_headers [
     {"content-security-policy",
-     "default-src 'none'; sandbox; frame-ancestors 'none'"},
+     LightningWeb.Utils.sandbox_csp() <> "; frame-ancestors 'none'"},
     {"x-content-type-options", "nosniff"},
     {"x-frame-options", "DENY"},
     {"referrer-policy", "no-referrer"}

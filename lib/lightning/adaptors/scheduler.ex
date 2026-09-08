@@ -30,7 +30,10 @@ defmodule Lightning.Adaptors.Scheduler do
 
   @doc """
   Starts the Scheduler. Required opts: `:name`, `:sup`, `:lock_key`,
-  `:cache`, `:tasks`, `:source_topic`.
+  `:cache`, `:tasks`, `:source_topic`. Optional: `:checked_at` (1-arity fn,
+  default `&Catalogue.max_checked_at/1`) reads the source's last-checked
+  timestamp; called once at boot to schedule the delay before the scheduler's
+  initial tick.
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
@@ -109,36 +112,56 @@ defmodule Lightning.Adaptors.Scheduler do
     source_topic = Keyword.fetch!(opts, :source_topic)
     cache = Keyword.fetch!(opts, :cache)
     tasks = Keyword.fetch!(opts, :tasks)
+    checked_at = Keyword.get(opts, :checked_at, &Catalogue.max_checked_at/1)
 
     source = AdaptorsSupervisor.source(sup)
     interval_ms = Config.refresh_interval()
 
+    state = %{
+      sup: sup,
+      source: source,
+      interval_ms: interval_ms,
+      source_topic: source_topic,
+      cache: cache,
+      tasks: tasks,
+      checked_at: checked_at,
+      refresh: nil,
+      waiters: [],
+      package_refreshes: %{},
+      icon_refreshes: %{}
+    }
+
     if interval_ms > 0 do
-      delay =
-        time_until_next_ms(Catalogue.max_checked_at(source), interval_ms)
-
-      Process.send_after(self(), :tick, delay)
-
-      Logger.info(
-        "Adaptors[#{source}]: scheduler started interval=#{interval_ms}ms next_tick_in=#{delay}ms"
-      )
+      {:ok, state, {:continue, :schedule_first_tick}}
     else
       Logger.info("Adaptors[#{source}]: scheduler started interval=0 (disabled)")
+      {:ok, state}
     end
+  end
 
-    {:ok,
-     %{
-       sup: sup,
-       source: source,
-       interval_ms: interval_ms,
-       source_topic: source_topic,
-       cache: cache,
-       tasks: tasks,
-       refresh: nil,
-       waiters: [],
-       package_refreshes: %{},
-       icon_refreshes: %{}
-     }}
+  @impl true
+  def handle_continue(:schedule_first_tick, state) do
+    delay = first_tick_delay(state)
+    Process.send_after(self(), :tick, delay)
+
+    Logger.info(
+      "Adaptors[#{state.source}]: scheduler started interval=#{state.interval_ms}ms " <>
+        "next_tick_in=#{delay}ms"
+    )
+
+    {:noreply, state}
+  end
+
+  defp first_tick_delay(state) do
+    time_until_next_ms(state.checked_at.(state.source), state.interval_ms)
+  rescue
+    e in DBConnection.ConnectionError ->
+      Logger.warning(
+        "Adaptors[#{state.source}]: scheduler could not read max_checked_at, " <>
+          "ticking immediately: #{Exception.message(e)}"
+      )
+
+      0
   end
 
   @impl true

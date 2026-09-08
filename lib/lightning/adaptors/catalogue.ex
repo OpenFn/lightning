@@ -15,6 +15,8 @@ defmodule Lightning.Adaptors.Catalogue do
   alias Lightning.Adaptors.Catalogue.AdaptorVersion
   alias Lightning.Repo
 
+  require Logger
+
   @type source :: :npm | :local
 
   @type package_meta :: %{
@@ -391,11 +393,11 @@ defmodule Lightning.Adaptors.Catalogue do
 
   defp build_version_rows(adaptor_id, records, now) do
     records
+    |> Enum.map(&stringify_keys/1)
+    |> warn_duplicate_versions(adaptor_id)
+    |> Enum.uniq_by(&Map.get(&1, "version"))
     |> Enum.reduce_while({:ok, []}, fn record, {:ok, acc} ->
-      attrs =
-        record
-        |> stringify_keys()
-        |> Map.put("adaptor_id", adaptor_id)
+      attrs = Map.put(record, "adaptor_id", adaptor_id)
 
       changeset = AdaptorVersion.changeset(%AdaptorVersion{}, attrs)
 
@@ -409,6 +411,24 @@ defmodule Lightning.Adaptors.Catalogue do
       {:ok, rows} -> {:ok, Enum.reverse(rows)}
       err -> err
     end
+  end
+
+  defp warn_duplicate_versions(records, adaptor_id) do
+    duplicated =
+      records
+      |> Enum.frequencies_by(&Map.get(&1, "version"))
+      |> Enum.filter(fn {_version, count} -> count > 1 end)
+      |> Enum.map(fn {version, _count} -> version end)
+
+    if duplicated != [] do
+      Logger.warning(
+        "Lightning.Adaptors.Catalogue: duplicate version row(s) for adaptor " <>
+          "#{inspect(adaptor_id)}, first occurrence wins: " <>
+          Enum.join(duplicated, ", ")
+      )
+    end
+
+    records
   end
 
   # `Ecto.Changeset.cast/3` raises on a map mixing atom and string keys, so

@@ -68,16 +68,17 @@ defmodule Lightning.Adaptors.SchedulerTest do
     :ok =
       Supervisor.terminate_child(sup, AdaptorsSupervisor.highlander_name(sup))
 
-    pid =
-      start_supervised!({
-        Scheduler,
+    scheduler_opts =
+      [
         name: global_name,
         sup: sup,
         lock_key: AdaptorsSupervisor.lock_key(sup),
         cache: AdaptorsSupervisor.cache_name(sup),
         tasks: AdaptorsSupervisor.tasks_name(sup),
         source_topic: source_topic
-      })
+      ] ++ Keyword.take(opts, [:checked_at])
+
+    pid = start_supervised!({Scheduler, scheduler_opts})
 
     Application.put_env(:lightning, Lightning.Adaptors, original_env)
 
@@ -192,6 +193,45 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       assert_receive :tick_ran, 2000
       assert_receive :tick_ran, 2000
+    end
+  end
+
+  describe "boot resilience" do
+    test "a DB error reading max_checked_at does not crash the scheduler, and it ticks immediately",
+         %{sup: sup} do
+      test_pid = self()
+
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        send(test_pid, :list_adaptors_called)
+        {:ok, []}
+      end)
+
+      start_scheduler(sup,
+        checked_at: fn _source ->
+          raise DBConnection.ConnectionError, "down"
+        end
+      )
+
+      assert_receive :list_adaptors_called, 2000
+
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+      {:global, gname} = sched_name
+      assert is_pid(:global.whereis_name(gname))
+    end
+
+    test "a Postgrex.Error reading max_checked_at is not rescued and crashes the scheduler",
+         %{sup: sup} do
+      pid =
+        start_scheduler(sup,
+          checked_at: fn _source ->
+            raise Postgrex.Error, message: "undefined_column"
+          end
+        )
+
+      ref = Process.monitor(pid)
+
+      assert_receive {:DOWN, ^ref, :process, ^pid, reason}, 2000
+      assert {%Postgrex.Error{}, _stacktrace} = reason
     end
   end
 

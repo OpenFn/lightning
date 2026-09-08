@@ -2,10 +2,14 @@ defmodule LightningWeb.AdaptorControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.Factories
+  import Mimic
 
-  alias Lightning.AdaptorTestHelpers
+  alias Lightning.Adaptors
   alias Lightning.Adaptors.Catalogue
+  alias Lightning.AdaptorTestHelpers
   alias LightningWeb.AdaptorIconURL
+
+  setup :verify_on_exit!
 
   describe "GET /adaptors/catalogue" do
     # The production cache outlives the SQL sandbox, so an entry another
@@ -128,6 +132,18 @@ defmodule LightningWeb.AdaptorControllerTest do
     conn = get(conn, ~p"/adaptors/catalogue")
 
     assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+  end
+
+  test "returns a 503 with a JSON body when the store fails", %{conn: conn} do
+    conn = log_in_user(conn, insert(:user))
+
+    stub(Adaptors, :catalogue, fn -> {:error, :unavailable} end)
+
+    conn = get(conn, ~p"/adaptors/catalogue")
+
+    assert json_response(conn, 503) == %{
+             "error" => "adaptor catalogue unavailable"
+           }
   end
 
   defp version_record(version) do
