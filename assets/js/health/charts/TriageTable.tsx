@@ -83,9 +83,13 @@ export const TriageTable = ({
     // Capped in height rather than in rows: the tail is still worth reading,
     // just not worth pushing the rest of the page down for. `max-h` over a
     // row count so a short list keeps the card short.
-    <div className="max-h-96 overflow-y-auto">
+    //
+    // `-mr-6 pr-4` bleeds the scroll region out to the card's own edge (the
+    // card is `p-6`), so the scrollbar sits flush against it instead of
+    // floating in the middle of the card's padding.
+    <div className="-mr-6 max-h-96 overflow-y-auto pr-4">
       <table className="w-full text-left text-sm">
-        <thead className="sticky top-0 bg-white">
+        <thead className="sticky top-0 z-10 bg-white">
           <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
             <th scope="col" className="w-28 py-2 pr-4 font-medium">
               Work orders
@@ -93,7 +97,7 @@ export const TriageTable = ({
             <th scope="col" className="py-2 font-medium">
               Signature
             </th>
-            <th scope="col" className="w-16 py-2 pl-4 font-medium">
+            <th scope="col" className="w-24 py-2 pl-4 font-medium">
               <span className="sr-only">Actions</span>
             </th>
           </tr>
@@ -110,12 +114,12 @@ export const TriageTable = ({
                 signature.adaptor,
                 signature.job_id,
               ].join('|')}
-              className="border-b border-gray-100 align-top last:border-0"
+              className="border-b border-gray-100 last:border-0"
             >
               <td className="py-3 pr-4 tabular-nums text-gray-900">
                 {signature.count.toLocaleString()}
               </td>
-              <td className="py-3">
+              <td className="py-3 align-top">
                 <Signature signature={signature} />
                 <p className="mt-1">
                   <span className="font-medium text-gray-500">Tip: </span>
@@ -162,9 +166,10 @@ const ViewButton = ({
   return (
     <a
       href={historyUrl(projectId, workflowId, from, signature)}
-      className="whitespace-nowrap text-sm font-medium text-primary-600 hover:text-primary-700"
+      className="inline-flex items-center gap-x-1 whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100"
     >
       View
+      <span className="hero-arrow-right-micro h-3 w-3" />
     </a>
   );
 };
