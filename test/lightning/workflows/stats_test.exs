@@ -245,6 +245,7 @@ defmodule Lightning.Workflows.StatsTest do
                count: 1,
                exit_reason: "fail",
                error_type: "RuntimeError",
+               job_id: job.id,
                step_name: job.name,
                adaptor: job.adaptor
              }
@@ -274,6 +275,41 @@ defmodule Lightning.Workflows.StatsTest do
 
       assert signature.step_name == job.name
       assert signature.adaptor == job.adaptor
+    end
+
+    # The row is keyed by `job_id`, not by the resolved name — that is what
+    # keeps a job renamed mid-window as one row instead of splitting into a
+    # before-rename row and an after-rename row. The label comes off the
+    # newer of the two snapshots, since that is the name the job actually has
+    # by the time anyone triages it.
+    test "merges a job renamed mid-window into one row, labelled with the newer name",
+         %{workflow: workflow, trigger: trigger} do
+      job = hd(workflow.jobs)
+      job_id = job.id
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: "RuntimeError")
+      ])
+
+      job
+      |> Ecto.Changeset.change(name: "Renamed")
+      |> Repo.update!()
+
+      # `current_snapshot/1` only creates a new snapshot when none exists for
+      # the workflow's current `lock_version`, so the rename alone would still
+      # resolve against the snapshot already made above. Bumping it forces a
+      # second snapshot — the newer one the label tiebreak has to pick.
+      workflow
+      |> Ecto.Changeset.change(lock_version: workflow.lock_version + 1)
+      |> Repo.update!()
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: "RuntimeError")
+      ])
+
+      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+
+      assert %{count: 2, job_id: ^job_id, step_name: "Renamed"} = signature
     end
 
     # `mark_steps_lost/1` stamps the step's exit_reason and nothing else, so
@@ -307,6 +343,7 @@ defmodule Lightning.Workflows.StatsTest do
                count: 1,
                exit_reason: "crash",
                error_type: "CompileError",
+               job_id: nil,
                step_name: nil,
                adaptor: nil
              }
@@ -327,6 +364,7 @@ defmodule Lightning.Workflows.StatsTest do
                count: 1,
                exit_reason: "rejected",
                error_type: "RunLimitExceeded",
+               job_id: nil,
                step_name: nil,
                adaptor: nil
              }
