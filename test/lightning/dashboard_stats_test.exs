@@ -19,7 +19,8 @@ defmodule Lightning.DashboardStatsTest do
         trigger: trigger,
         dataclip: dataclip,
         state: :failed,
-        inserted_at: Timex.shift(Timex.now(), days: -30)
+        inserted_at: Timex.shift(Timex.now(), days: -30),
+        last_activity: Timex.shift(Timex.now(), days: -30)
       )
 
       assert %WorkflowStats{
@@ -96,6 +97,48 @@ defmodule Lightning.DashboardStatsTest do
                pending: 3,
                success: 1
              } = grouped_workorders_count
+    end
+
+    test "windows on last_activity, not inserted_at, and does not count cancelled as failed" do
+      dataclip = insert(:dataclip)
+
+      %{id: workflow_id, triggers: [trigger]} =
+        workflow = insert(:simple_workflow)
+
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        state: :cancelled,
+        inserted_at: Timex.now(),
+        last_activity: Timex.now()
+      )
+
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        state: :failed,
+        inserted_at: Timex.shift(Timex.now(), hours: -2),
+        last_activity: Timex.shift(Timex.now(), hours: -2)
+      )
+
+      # Created outside the 30-day window, but active inside it: still counted.
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        state: :success,
+        inserted_at: Timex.shift(Timex.now(), days: -40),
+        last_activity: Timex.shift(Timex.now(), days: -1)
+      )
+
+      assert %WorkflowStats{
+               workflow: %{id: ^workflow_id},
+               last_failed_workorder: %{state: :failed},
+               failed_workorders_count: 1,
+               workorders_count: 3
+             } = DashboardStats.get_workflow_stats(workflow)
     end
   end
 

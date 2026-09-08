@@ -228,20 +228,19 @@ defmodule Lightning.DashboardStats do
       order_by: [desc: wo.inserted_at],
       select: %{state: wo.state, updated_at: wo.updated_at}
     )
-    |> filter_days_ago(@days_back)
+    |> filter_days_ago(@days_back, :last_activity)
     |> limit(1)
     |> Repo.one() ||
       %{state: nil, updated_at: nil}
   end
 
   defp count_workorders(%Workflow{id: workflow_id}) do
-    days_ago = DateTime.utc_now() |> DateTime.add(-30, :day)
-
     from(wo in WorkOrder,
-      where: wo.workflow_id == ^workflow_id and wo.inserted_at > ^days_ago,
+      where: wo.workflow_id == ^workflow_id,
       group_by: wo.state,
       select: {wo.state, count(wo.id)}
     )
+    |> filter_days_ago(@days_back, :last_activity)
     |> Repo.all()
     |> Enum.reduce(%{success: 0, failed: 0, pending: 0, cancelled: 0}, fn
       {state, cnt}, acc ->
@@ -250,14 +249,13 @@ defmodule Lightning.DashboardStats do
   end
 
   defp count_runs(%Workflow{id: workflow_id}) do
-    days_ago = DateTime.utc_now() |> DateTime.add(-30, :day)
-
     from(r in Run,
       join: wo in assoc(r, :work_order),
-      where: wo.workflow_id == ^workflow_id and r.inserted_at > ^days_ago,
+      where: wo.workflow_id == ^workflow_id,
       group_by: r.state,
       select: {r.state, count(r.id)}
     )
+    |> filter_days_ago(@days_back)
     |> Repo.all()
     |> Enum.reduce(%{success: 0, failed: 0, pending: 0}, fn
       {:success, cnt}, acc ->
@@ -272,14 +270,13 @@ defmodule Lightning.DashboardStats do
   end
 
   defp count_steps(%Workflow{id: workflow_id}) do
-    days_ago = DateTime.utc_now() |> DateTime.add(-30, :day)
-
     from(s in Step,
       join: j in assoc(s, :job),
-      where: j.workflow_id == ^workflow_id and s.inserted_at > ^days_ago,
+      where: j.workflow_id == ^workflow_id,
       group_by: s.exit_reason,
       select: {s.exit_reason, count(s.id)}
     )
+    |> filter_days_ago(@days_back)
     |> Repo.all()
     |> Enum.reduce(%{success: 0, failed: 0, pending: 0}, fn
       {"success", cnt}, acc -> %{acc | success: cnt}
@@ -326,16 +323,16 @@ defmodule Lightning.DashboardStats do
     end)
   end
 
-  def filter_days_ago(query, days) do
+  def filter_days_ago(query, days, column \\ :inserted_at) do
     days_ago = DateTime.utc_now() |> DateTime.add(-days, :day)
 
     query
-    |> where([r], r.inserted_at > ^days_ago)
+    |> where([r], field(r, ^column) > ^days_ago)
   end
 
   defp batch_count_workorders(workflow_ids) do
     from(wo in WorkOrder, where: wo.workflow_id in ^workflow_ids)
-    |> filter_days_ago(@days_back)
+    |> filter_days_ago(@days_back, :last_activity)
     |> group_by([wo], [wo.workflow_id, wo.state])
     |> select([wo], {wo.workflow_id, wo.state, count(wo.id)})
     |> Repo.all()
@@ -405,7 +402,7 @@ defmodule Lightning.DashboardStats do
       where: wo.workflow_id in ^workflow_ids,
       where: wo.state not in ^excluded_states
     )
-    |> filter_days_ago(@days_back)
+    |> filter_days_ago(@days_back, :last_activity)
     |> order_by([wo], asc: wo.workflow_id, desc: wo.inserted_at)
     |> distinct([wo], [wo.workflow_id])
     |> select([wo], %{
