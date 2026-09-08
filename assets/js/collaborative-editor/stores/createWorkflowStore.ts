@@ -1673,6 +1673,46 @@ export const createWorkflowStore = (
     }>(provider.channel, 'request_promote_check', { workflow_name: name });
   };
 
+  // A restore is a publish, not an edit: the server writes the chosen version's
+  // content into the live workflow and leaves it live. It reconciles every open
+  // editor itself, so there is nothing to reload here.
+  const restoreVersion = async (
+    versionNumber: number
+  ): Promise<{ lock_version: number }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{ lock_version: number }>(
+        provider.channel,
+        'restore_version',
+        { version_number: versionNumber }
+      );
+    } catch (error) {
+      logger.error('Failed to restore version', error);
+      throw error;
+    }
+  };
+
+  // Advisory, so the confirmation can name what the restore will destroy before
+  // anyone agrees to it.
+  const checkRestore = async (
+    versionNumber: number
+  ): Promise<{
+    losing_triggers: {
+      id: string;
+      type: string;
+      custom_path: string | null;
+      enabled: boolean;
+    }[];
+    version_number: number;
+  }> => {
+    const { provider } = ensureConnected();
+
+    return await channelRequest(provider.channel, 'request_restore_check', {
+      version_number: versionNumber,
+    });
+  };
+
   // Archive this sandbox after promoting. Archiving turns off the sandbox's
   // triggers and schedules it for deletion (reversible during a grace window);
   // it is not an instant hard delete. Kept separate from promote so a user can
@@ -2204,6 +2244,8 @@ export const createWorkflowStore = (
     promote,
     archiveSandbox,
     checkPromote,
+    restoreVersion,
+    checkRestore,
     saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,

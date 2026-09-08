@@ -58,6 +58,7 @@ const createMockVersion = (overrides?: Partial<Version>): Version => ({
   published_by: 'Test User',
   source_project: null,
   lock_version: 1,
+  restored_from_version_number: null,
   is_latest: false,
   ...overrides,
 });
@@ -299,11 +300,13 @@ describe('VersionDropdown', () => {
       const mockVersions: Version[] = [
         createMockVersion({
           lock_version: 5,
+          restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
         }),
         createMockVersion({
           lock_version: 4,
+          restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: false,
         }),
@@ -384,18 +387,21 @@ describe('VersionDropdown', () => {
         createMockVersion({
           version_number: 3,
           lock_version: 30,
+          restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
         }),
         createMockVersion({
           version_number: 2,
           lock_version: 20,
+          restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: false,
         }),
         createMockVersion({
           version_number: 1,
           lock_version: 10,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: false,
         }),
@@ -436,6 +442,7 @@ describe('VersionDropdown', () => {
           published_by: 'Ada Lovelace',
           source_project: 'sandy-sandbox',
           lock_version: 20,
+          restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
         }),
@@ -445,6 +452,7 @@ describe('VersionDropdown', () => {
           published_by: 'Grace Hopper',
           source_project: null,
           lock_version: 10,
+          restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: false,
         }),
@@ -496,6 +504,7 @@ describe('VersionDropdown', () => {
           kind: 'go_live',
           published_by: 'Alan Turing',
           lock_version: 30,
+          restored_from_version_number: null,
           inserted_at: '2024-01-16T10:30:00Z',
           is_latest: true,
         }),
@@ -526,6 +535,7 @@ describe('VersionDropdown', () => {
           kind: 'go_live',
           published_by: null,
           lock_version: 10,
+          restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: true,
         }),
@@ -579,6 +589,7 @@ describe('VersionDropdown', () => {
         createMockVersion({
           version_number: 1,
           lock_version: 20,
+          restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
         }),
@@ -613,12 +624,14 @@ describe('VersionDropdown', () => {
         createMockVersion({
           version_number: 3,
           lock_version: 30,
+          restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
         }),
         createMockVersion({
           version_number: 1,
           lock_version: 22,
+          restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: false,
         }),
@@ -649,14 +662,19 @@ describe('VersionDropdown', () => {
       const selectedButton = screen
         .getAllByRole('menuitem')
         .find(btn => btn.textContent?.includes('v1'));
-      expect(selectedButton).toHaveClass('bg-primary-50', 'text-primary-900');
+      // The row highlight sits on the wrapper, which also holds the per-row
+      // Restore action; the text colour stays on the pinning button.
+      expect(selectedButton).toHaveClass('text-primary-900');
+      expect(selectedButton?.parentElement).toHaveClass('bg-primary-50');
       expect(selectedButton?.querySelector('.hero-check')).toBeInTheDocument();
 
       // The newest row is NOT active while pinned to an older version
       const newestButton = screen
         .getAllByRole('menuitem')
         .find(btn => btn.textContent?.includes('v3'));
-      expect(newestButton?.querySelector('.hero-check')).not.toBeInTheDocument();
+      expect(
+        newestButton?.querySelector('.hero-check')
+      ).not.toBeInTheDocument();
     });
 
     test('marks the newest row when unpinned (following live)', async () => {
@@ -666,12 +684,14 @@ describe('VersionDropdown', () => {
         createMockVersion({
           version_number: 3,
           lock_version: 30,
+          restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
         }),
         createMockVersion({
           version_number: 2,
           lock_version: 20,
+          restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: false,
         }),
@@ -693,7 +713,8 @@ describe('VersionDropdown', () => {
       const newestButton = screen
         .getAllByRole('menuitem')
         .find(btn => btn.textContent?.includes('v3'));
-      expect(newestButton).toHaveClass('bg-primary-50', 'text-primary-900');
+      expect(newestButton).toHaveClass('text-primary-900');
+      expect(newestButton?.parentElement).toHaveClass('bg-primary-50');
       expect(newestButton?.querySelector('.hero-check')).toBeInTheDocument();
 
       const olderButton = screen
@@ -709,12 +730,14 @@ describe('VersionDropdown', () => {
         createMockVersion({
           version_number: 5,
           lock_version: 50,
+          restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
         }),
         createMockVersion({
           version_number: 4,
           lock_version: 40,
+          restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: false,
         }),
@@ -756,6 +779,7 @@ describe('VersionDropdown', () => {
       const mockVersions: Version[] = [
         createMockVersion({
           lock_version: 5,
+          restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
         }),
@@ -792,12 +816,14 @@ describe('VersionDropdown', () => {
         createMockVersion({
           version_number: 2,
           lock_version: 50,
+          restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
         }),
         createMockVersion({
           version_number: 1,
           lock_version: 30,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: false,
         }),
@@ -834,6 +860,7 @@ describe('VersionDropdown', () => {
       const mockVersions: Version[] = [
         createMockVersion({
           lock_version: 5,
+          restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
         }),
@@ -936,6 +963,80 @@ describe('VersionDropdown', () => {
     });
   });
 
+  describe('restoring a version', () => {
+    // Three releases, newest first, matching what the channel sends.
+    const threeVersions = () => {
+      mockUseVersions.mockReturnValue([
+        createMockVersion({
+          version_number: 3,
+          is_latest: true,
+          lock_version: 3,
+        }),
+        createMockVersion({ version_number: 2, lock_version: 2 }),
+        createMockVersion({ version_number: 1, lock_version: 1 }),
+      ]);
+    };
+
+    const renderWithRestore = (onVersionRestore?: (v: number) => void) =>
+      render(
+        <VersionDropdown
+          currentVersion={3}
+          latestVersion={3}
+          onVersionSelect={mockOnVersionSelect}
+          {...(onVersionRestore && { onVersionRestore })}
+        />
+      );
+
+    test('offers Restore on every version but the newest', async () => {
+      const onVersionRestore = vi.fn();
+      const user = userEvent.setup();
+      threeVersions();
+
+      renderWithRestore(onVersionRestore);
+      await user.click(screen.getByRole('button'));
+
+      // The newest release is what is live, so there is nothing to put back.
+      expect(screen.queryByTestId('restore-version-3')).not.toBeInTheDocument();
+      expect(screen.getByTestId('restore-version-2')).toBeInTheDocument();
+      expect(screen.getByTestId('restore-version-1')).toBeInTheDocument();
+    });
+
+    test('asks to restore the version whose row was clicked', async () => {
+      const onVersionRestore = vi.fn();
+      const user = userEvent.setup();
+      threeVersions();
+
+      renderWithRestore(onVersionRestore);
+      await user.click(screen.getByRole('button'));
+      await user.click(screen.getByTestId('restore-version-2'));
+
+      expect(onVersionRestore).toHaveBeenCalledWith(2);
+    });
+
+    test('restoring does not also pin the version', async () => {
+      const onVersionRestore = vi.fn();
+      const user = userEvent.setup();
+      threeVersions();
+
+      renderWithRestore(onVersionRestore);
+      await user.click(screen.getByRole('button'));
+      await user.click(screen.getByTestId('restore-version-2'));
+
+      // Two separate actions on one row: reading it and putting it back.
+      expect(mockOnVersionSelect).not.toHaveBeenCalled();
+    });
+
+    test('offers no Restore when the viewer cannot edit', async () => {
+      const user = userEvent.setup();
+      threeVersions();
+
+      renderWithRestore();
+      await user.click(screen.getByRole('button'));
+
+      expect(screen.queryByTestId('restore-version-2')).not.toBeInTheDocument();
+    });
+  });
+
   describe('accessibility', () => {
     test('button has correct ARIA attributes', () => {
       render(
@@ -982,6 +1083,7 @@ describe('VersionDropdown', () => {
       mockUseVersions.mockReturnValue([
         createMockVersion({
           lock_version: 1,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
         }),
@@ -1011,11 +1113,13 @@ describe('VersionDropdown', () => {
       mockUseVersions.mockReturnValue([
         createMockVersion({
           lock_version: 2,
+          restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: true,
         }),
         createMockVersion({
           lock_version: 1,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: false,
         }),

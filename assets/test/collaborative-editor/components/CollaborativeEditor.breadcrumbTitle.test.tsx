@@ -19,6 +19,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { BreadcrumbContent } from '../../../js/collaborative-editor/CollaborativeEditor';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 import {
   createMockURLState,
   getURLStateMockValue,
@@ -63,9 +64,15 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),
   useLatestSnapshotLockVersion: () => 1,
   useIsNewWorkflow: () => false,
+  // The breadcrumbs offer Restore per version, which only editors get.
+  usePermissions: () => ({ can_edit_workflow: true }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowActions: () => ({
+    restoreVersion: vi.fn(),
+    checkRestore: vi.fn().mockResolvedValue({ losing_triggers: [] }),
+  }),
   useWorkflowState: (selector: (state: unknown) => unknown) => {
     const state = { workflow: { id: 'workflow-1', lock_version: 1 } };
     return typeof selector === 'function' ? selector(state) : state;
@@ -86,12 +93,17 @@ vi.mock('../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
 }));
 
 function renderBreadcrumbs() {
+  // The breadcrumbs carry the restore confirmation, which registers a
+  // MODAL-priority Escape handler, and in the app they render inside the
+  // editor's KeyboardProvider.
   return render(
-    <BreadcrumbContent
-      workflowId="workflow-1"
-      workflowName="Test Workflow"
-      aiAssistantEnabled={false}
-    />
+    <KeyboardProvider>
+      <BreadcrumbContent
+        workflowId="workflow-1"
+        workflowName="Test Workflow"
+        aiAssistantEnabled={false}
+      />
+    </KeyboardProvider>
   );
 }
 

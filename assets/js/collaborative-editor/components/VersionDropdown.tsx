@@ -19,12 +19,18 @@ interface VersionDropdownProps {
   currentVersion: number | null;
   latestVersion: number | null;
   onVersionSelect: (version: number | 'latest') => void;
+  /**
+   * Offered per row, because restore is about the version being read rather
+   * than the workflow on screen. Omitted when the viewer cannot edit.
+   */
+  onVersionRestore?: (version: number) => void;
 }
 
 export function VersionDropdown({
   currentVersion,
   latestVersion,
   onVersionSelect,
+  onVersionRestore,
 }: VersionDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -182,54 +188,78 @@ export function VersionDropdown({
                     : '';
 
                   return (
-                    <button
+                    <div
                       key={version.lock_version}
-                      type="button"
-                      onClick={() => handleVersionClick(version)}
                       className={cn(
-                        'w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 flex items-start gap-3',
-                        isActive
-                          ? 'bg-primary-50 text-primary-900'
-                          : 'text-gray-700'
+                        'group flex items-start hover:bg-gray-100',
+                        isActive ? 'bg-primary-50' : ''
                       )}
-                      role="menuitem"
                     >
-                      <span
+                      <button
+                        type="button"
+                        onClick={() => handleVersionClick(version)}
                         className={cn(
-                          'mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset',
-                          version.is_latest
-                            ? 'bg-green-100 text-green-800 ring-green-600/20'
-                            : 'bg-gray-100 text-gray-600 ring-gray-500/10'
+                          'min-w-0 flex-1 text-left px-4 py-2.5 text-sm flex items-start gap-3',
+                          isActive ? 'text-primary-900' : 'text-gray-700'
                         )}
+                        role="menuitem"
                       >
-                        v{version.version_number}
-                      </span>
-
-                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate">
-                          {releaseActionLabel(version)}
-                        </span>
-                        <span className="flex min-w-0 items-center gap-1 text-xs text-gray-500">
-                          {version.published_by && (
-                            <>
-                              <span className="min-w-0 truncate">
-                                {version.published_by}
-                              </span>
-                              <span aria-hidden="true">·</span>
-                            </>
+                        <span
+                          className={cn(
+                            'mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset',
+                            version.is_latest
+                              ? 'bg-green-100 text-green-800 ring-green-600/20'
+                              : 'bg-gray-100 text-gray-600 ring-gray-500/10'
                           )}
-                          <Tooltip content={exact} side="top">
-                            <span className="whitespace-nowrap">
-                              {absolute}
-                            </span>
-                          </Tooltip>
+                        >
+                          v{version.version_number}
                         </span>
-                      </span>
 
-                      {isActive && (
-                        <span className="hero-check mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="truncate">
+                            {releaseActionLabel(version)}
+                          </span>
+                          <span className="flex min-w-0 items-center gap-1 text-xs text-gray-500">
+                            {version.published_by && (
+                              <>
+                                <span className="min-w-0 truncate">
+                                  {version.published_by}
+                                </span>
+                                <span aria-hidden="true">·</span>
+                              </>
+                            )}
+                            <Tooltip content={exact} side="top">
+                              <span className="whitespace-nowrap">
+                                {absolute}
+                              </span>
+                            </Tooltip>
+                          </span>
+                        </span>
+
+                        {isActive && (
+                          <span className="hero-check mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+                        )}
+                      </button>
+
+                      {/* The newest release is what is live, so there is nothing
+                        to put back. */}
+                      {onVersionRestore && !version.is_latest && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onVersionRestore(version.version_number);
+                            setIsOpen(false);
+                          }}
+                          className="shrink-0 self-center px-3 py-2.5 text-xs
+                          font-medium text-primary-700 opacity-0
+                          hover:underline focus:opacity-100
+                          group-hover:opacity-100"
+                          data-testid={`restore-version-${version.version_number}`}
+                        >
+                          Restore
+                        </button>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </>

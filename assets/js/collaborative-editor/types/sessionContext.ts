@@ -69,6 +69,7 @@ export const VersionSchema = z.object({
   published_by: z.string().nullable(),
   source_project: z.string().nullable(),
   lock_version: z.number().int(),
+  restored_from_version_number: z.number().int().nullable(),
   is_latest: z.boolean(),
 });
 

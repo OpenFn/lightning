@@ -33,6 +33,7 @@ const makeVersion = (overrides: Partial<Version> = {}): Version => ({
   published_by: 'Test User',
   source_project: null,
   lock_version: 1,
+  restored_from_version_number: null,
   is_latest: false,
   ...overrides,
 });
@@ -48,18 +49,21 @@ describe('createSessionContextStore - Version Management', () => {
           kind: 'promote',
           source_project: 'staging',
           lock_version: 5,
+          restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
         }),
         makeVersion({
           version_number: 2,
           lock_version: 4,
+          restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: false,
         }),
         makeVersion({
           version_number: 1,
           lock_version: 3,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: false,
         }),
@@ -93,6 +97,7 @@ describe('createSessionContextStore - Version Management', () => {
         makeVersion({
           version_number: 1,
           lock_version: 3,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
         }),
@@ -177,6 +182,7 @@ describe('createSessionContextStore - Version Management', () => {
         makeVersion({
           version_number: 1,
           lock_version: 2,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
         }),
@@ -233,6 +239,7 @@ describe('createSessionContextStore - Version Management', () => {
         makeVersion({
           version_number: 1,
           lock_version: 2,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
         }),
@@ -242,12 +249,14 @@ describe('createSessionContextStore - Version Management', () => {
         makeVersion({
           version_number: 2,
           lock_version: 3,
+          restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: true,
         }),
         makeVersion({
           version_number: 1,
           lock_version: 2,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: false,
         }),
@@ -303,6 +312,7 @@ describe('createSessionContextStore - Version Management', () => {
         makeVersion({
           version_number: 1,
           lock_version: 1,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
         }),
@@ -363,6 +373,7 @@ describe('createSessionContextStore - Version Management', () => {
         makeVersion({
           version_number: 1,
           lock_version: 1,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
         }),
@@ -401,6 +412,7 @@ describe('createSessionContextStore - Version Management', () => {
         makeVersion({
           version_number: 1,
           lock_version: 1,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
         }),
@@ -449,12 +461,14 @@ describe('createSessionContextStore - Version Management', () => {
         makeVersion({
           version_number: 2,
           lock_version: 3,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
         }),
         makeVersion({
           version_number: 1,
           lock_version: 2,
+          restored_from_version_number: null,
           inserted_at: '2024-01-12T10:30:00Z',
           is_latest: false,
         }),
@@ -498,6 +512,7 @@ describe('createSessionContextStore - Version Management', () => {
         makeVersion({
           version_number: 1,
           lock_version: 2,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
         }),
@@ -544,6 +559,7 @@ describe('createSessionContextStore - Version Management', () => {
         makeVersion({
           version_number: 1,
           lock_version: 2,
+          restored_from_version_number: null,
           inserted_at: '2024-01-13T10:30:00Z',
           is_latest: true,
         }),
