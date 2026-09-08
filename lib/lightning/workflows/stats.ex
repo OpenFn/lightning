@@ -315,9 +315,9 @@ defmodule Lightning.Workflows.Stats do
   # Two groups can collapse into one signature — a crashed run and a failed run
   # whose steps both reported `fail`, say, or the same job renamed mid-window —
   # so the fold happens after the coalesce, not in the `group_by`. Grouping key
-  # is the triple that actually identifies a failure, not the whole map: the
-  # label (`step_name`, `adaptor`) is expected to differ between rows a rename
-  # merges, and `lock_version` never repeats.
+  # is the triple that identifies a failure: the label (`step_name`, `adaptor`)
+  # is expected to differ between rows a rename merges, and `lock_version`
+  # never repeats.
   defp merge_counts(signatures) do
     signatures
     |> Enum.group_by(&{&1.exit_reason, &1.error_type, &1.job_id})
