@@ -187,6 +187,14 @@ const historyUrl = (
   const params = new URLSearchParams({
     'filters[workflow_id]': workflowId,
     'filters[date_after]': from,
+    // SearchParams.from_uri/1 reads the search-field flags out of the query
+    // string and put_new's the result, so an absent set means `search_fields:
+    // []` rather than the schema default, and every later search term matches
+    // nothing. to_uri_params/1 fills these in for every server-built link.
+    'filters[id]': 'true',
+    'filters[body]': 'true',
+    'filters[log]': 'true',
+    'filters[dataclip_name]': 'true',
   });
 
   if (signature.exit_reason === 'rejected') {
