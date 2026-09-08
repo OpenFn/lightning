@@ -69,10 +69,10 @@ and this project adheres to
 
 ### Fixed
 
-- Opening the merge dialog no longer crashes in a workspace with a branch more
-  than two levels below the project you are in. Working out whether a candidate
-  target sits under the sandbox climbed a chain of parents that was only loaded
-  one level deep.
+- Opening the merge dialog, and deleting a sandbox, no longer crash in a
+  workspace with a branch more than two levels below the project you are in.
+  Working out whether one project sits under another climbed a chain of parents
+  that was only loaded one level deep.
   [#5141](https://github.com/OpenFn/lightning/issues/5141)
 
 - Reading an older version of a workflow no longer offers actions that change
