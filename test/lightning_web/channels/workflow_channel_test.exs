@@ -2040,6 +2040,24 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert %{kind: :restore, restored_from_version_number: 1} = hd(releases)
     end
 
+    test "tells the restoring client the workflow moved on", %{
+      restore_socket: socket
+    } do
+      ref = push(socket, "restore_version", %{"version_number" => 1})
+      assert_reply ref, :ok, _reply
+
+      # The broadcast excludes the sender, so without this push the restoring
+      # client's idea of the latest version stays behind: the version chip
+      # would read as an old version straight after a rollback, and the
+      # dropdown would still offer Restore on the version now live.
+      assert_push "session_context_updated", %{
+        latest_snapshot_lock_version: lock_version
+      }
+
+      assert lock_version ==
+               Lightning.Repo.reload!(socket.assigns.workflow).lock_version
+    end
+
     test "refuses a version that does not exist", %{restore_socket: socket} do
       ref = push(socket, "restore_version", %{"version_number" => 99})
 
@@ -2133,12 +2151,58 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Enum.any?(losing, &(&1.id == added.id))
     end
 
+    test "the check names the triggers a restore will bring back off", %{
+      restore_socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      [original] = Lightning.Repo.preload(workflow, :triggers).triggers
+
+      {:ok, _replaced} =
+        workflow
+        |> Lightning.Repo.preload([:triggers, :jobs, :edges])
+        |> Lightning.Workflows.change_workflow(%{
+          triggers: [%{type: :cron, cron_expression: "0 * * * *"}]
+        })
+        |> Lightning.Workflows.save_workflow(user)
+
+      ref = push(socket, "request_restore_check", %{"version_number" => 1})
+
+      assert_reply ref, :ok, %{returning_triggers: returning}
+
+      # It comes back off and without its auth methods, which a snapshot never
+      # recorded, so the confirmation has to say so.
+      assert Enum.any?(returning, &(&1.id == original.id))
+    end
+
+    test "a concurrent save is refused, not a dropped channel", %{
+      restore_socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # Someone else saves between the join and the restore, so the socket's
+      # lock_version is behind. Unrescued this killed the channel and the client
+      # waited out its timeout for a reply that never came.
+      Mimic.copy(Lightning.Workflows)
+
+      Mimic.stub(Lightning.Workflows, :restore_version, fn _wf, _rel, _actor ->
+        raise Ecto.StaleEntryError, action: :update, changeset: %Ecto.Changeset{}
+      end)
+
+      ref = push(socket, "restore_version", %{"version_number" => 1})
+
+      assert_reply ref, :error, %{type: "workflow_moved_on"}
+      assert Process.alive?(socket.channel_pid)
+
+      _ = {workflow, user}
+    end
+
     test "the check reports nothing to lose when the triggers are unchanged", %{
       restore_socket: socket
     } do
       ref = push(socket, "request_restore_check", %{"version_number" => 1})
 
-      assert_reply ref, :ok, %{losing_triggers: []}
+      assert_reply ref, :ok, %{losing_triggers: [], returning_triggers: []}
     end
   end
 

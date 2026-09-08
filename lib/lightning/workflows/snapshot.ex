@@ -321,19 +321,44 @@ defmodule Lightning.Workflows.Snapshot do
   Trigger `enabled` is deliberately left out. A restore is a publish into a live
   workflow, and putting an old enabled flag back would take production offline
   in the middle of a rollback. It is also what a promote does, which is the
-  behaviour this mirrors.
+  behaviour this mirrors. A trigger the restore has to re-create has no current
+  state to keep, and it arrives off, because a snapshot does not record which
+  webhook auth methods were attached to it: bringing the URL back on without
+  its authentication would be worse than bringing it back off.
+
+  `positions` is only written when the snapshot holds them. An older snapshot
+  predating the column, or one published while the canvas was on auto-layout,
+  holds none, and writing that nil would wipe a hand-arranged canvas.
   """
   @spec to_workflow_attrs(t()) :: map()
   def to_workflow_attrs(%__MODULE__{} = snapshot) do
     %{
       name: snapshot.name,
-      positions: snapshot.positions,
       jobs: Enum.map(snapshot.jobs, &child_attrs(&1, @job_write_fields)),
-      triggers:
-        Enum.map(snapshot.triggers, &child_attrs(&1, @trigger_write_fields)),
+      triggers: Enum.map(snapshot.triggers, &trigger_attrs/1),
       edges: Enum.map(snapshot.edges, &child_attrs(&1, @edge_write_fields))
     }
+    |> maybe_put_positions(snapshot.positions)
   end
+
+  defp maybe_put_positions(attrs, nil), do: attrs
+
+  defp maybe_put_positions(attrs, positions),
+    do: Map.put(attrs, :positions, positions)
+
+  # The response config is an embed, so it has to be written as one or the
+  # trigger keeps the codes from the version being rolled away from.
+  defp trigger_attrs(trigger) do
+    trigger
+    |> child_attrs(@trigger_write_fields)
+    |> Map.put(
+      :webhook_response_config,
+      embed_attrs(trigger.webhook_response_config)
+    )
+  end
+
+  defp embed_attrs(nil), do: nil
+  defp embed_attrs(embed), do: Map.from_struct(embed)
 
   defp child_attrs(child, fields) do
     child |> Map.from_struct() |> Map.take(fields)

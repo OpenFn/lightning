@@ -549,10 +549,12 @@ defmodule LightningWeb.WorkflowChannel do
              WorkflowReleases.get_by_version_number(workflow.id, number) do
         %{
           losing_triggers: render_losing_triggers(workflow, snapshot),
+          returning_triggers: render_returning_triggers(workflow, snapshot),
           version_number: number
         }
       else
-        _ -> %{losing_triggers: [], version_number: number}
+        _ ->
+          %{losing_triggers: [], returning_triggers: [], version_number: number}
       end
     end)
   end
@@ -571,7 +573,7 @@ defmodule LightningWeb.WorkflowChannel do
     with :ok <- authorize_edit_workflow(socket),
          %WorkflowRelease{snapshot: %_{}} = release <-
            WorkflowReleases.get_by_version_number(workflow.id, number),
-         {:ok, restored} <- Workflows.restore_version(workflow, release, user) do
+         {:ok, restored} <- restore_or_conflict(workflow, release, user) do
       # The content was replaced wholesale, which the incremental reconciler
       # cannot express, so ask every open editor to reload from the database.
       WorkflowReconciler.request_reconciliation(workflow.id)
@@ -581,8 +583,15 @@ defmodule LightningWeb.WorkflowChannel do
         workflow: restored
       })
 
-      {:reply, {:ok, %{lock_version: restored.lock_version}},
-       assign(socket, :workflow, restored)}
+      socket = assign(socket, :workflow, restored)
+
+      # The restoring client is excluded from the broadcast, and without this
+      # its idea of the latest version stays behind: the version chip would
+      # read as "you are on an old version" straight after a rollback, and the
+      # dropdown would still offer Restore on the version now live.
+      push(socket, "session_context_updated", build_session_context(socket))
+
+      {:reply, {:ok, %{lock_version: restored.lock_version}}, socket}
     else
       nil -> workflow_error_reply(socket, {:error, :version_not_found})
       error -> workflow_error_reply(socket, error)
@@ -1345,6 +1354,16 @@ defmodule LightningWeb.WorkflowChannel do
     }
   end
 
+  # save_workflow deliberately lets Ecto.StaleEntryError through, and the
+  # collaborative editor saves on a debounce, so a second person typing is
+  # enough to collide with a restore. Unrescued it kills the channel and the
+  # client waits out its timeout for a reply that never comes.
+  defp restore_or_conflict(workflow, release, user) do
+    Workflows.restore_version(workflow, release, user)
+  rescue
+    Ecto.StaleEntryError -> {:error, :workflow_moved_on}
+  end
+
   # A trigger the snapshot does not hold is deleted by the restore, and the URL
   # built from it stops answering. Nobody should discover that afterwards.
   defp render_losing_triggers(workflow, snapshot) do
@@ -1364,6 +1383,23 @@ defmodule LightningWeb.WorkflowChannel do
         enabled: &1.enabled
       }
     )
+  end
+
+  # A trigger the snapshot holds and the workflow no longer does is re-created
+  # by the restore, and it arrives off, without whatever webhook auth methods
+  # were once attached to it: a snapshot never recorded those. So the URL comes
+  # back inert and has to be switched on deliberately once its authentication
+  # is back.
+  defp render_returning_triggers(workflow, snapshot) do
+    live =
+      workflow
+      |> Lightning.Repo.preload(:triggers, force: true)
+      |> Map.fetch!(:triggers)
+      |> MapSet.new(& &1.id)
+
+    snapshot.triggers
+    |> Enum.reject(&MapSet.member?(live, &1.id))
+    |> Enum.map(&%{id: &1.id, type: &1.type, custom_path: &1.custom_path})
   end
 
   defp render_release(release, is_latest) do
@@ -1562,6 +1598,17 @@ defmodule LightningWeb.WorkflowChannel do
       %{
         errors: format_changeset_errors(changeset),
         type: determine_error_type(changeset)
+      }}, socket}
+  end
+
+  defp workflow_error_reply(socket, {:error, :workflow_moved_on}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{
+          base: ["Someone else saved this workflow. Try the restore again."]
+        },
+        type: "workflow_moved_on"
       }}, socket}
   end
 

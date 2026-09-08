@@ -15,7 +15,7 @@ import { LandingScreen } from './components/LandingScreen';
 import { LoadingBoundary } from './components/LoadingBoundary';
 import { PromotedNotice } from './components/PromotedNotice';
 import { RestoreVersionDialog } from './components/RestoreVersionDialog';
-import type { LosingTrigger } from './components/RestoreVersionDialog';
+import type { RestoreCost } from './components/RestoreVersionDialog';
 import { TemplateBrowserModalWrapper } from './components/TemplateBrowserModalWrapper';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
@@ -121,24 +121,33 @@ export function BreadcrumbContent({
   // Held here rather than in the dropdown, which closes as soon as Restore is
   // clicked and would take the dialog with it.
   const [restoring, setRestoring] = useState<number | null>(null);
-  const [losingTriggers, setLosingTriggers] = useState<LosingTrigger[] | null>(
-    null
-  );
+  const [cost, setCost] = useState<RestoreCost | null>(null);
+
+  // Which version the open dialog is about, readable synchronously when a
+  // check replies. A check for a version the user has since cancelled can land
+  // after a later one, and would otherwise replace a real warning with silence.
+  const askingAboutRef = useRef<number | null>(null);
 
   const handleVersionRestore = useCallback(
     (versionNumber: number) => {
+      askingAboutRef.current = versionNumber;
       setRestoring(versionNumber);
-      setLosingTriggers(null);
+      setCost(null);
 
       // Advisory. A failure here must not block the restore, so an unanswered
       // check reads as nothing to lose.
       void checkRestore(versionNumber)
-        .then(({ losing_triggers }) => {
-          setLosingTriggers(losing_triggers);
-          return losing_triggers;
+        .then(({ losing_triggers, returning_triggers, version_number }) => {
+          if (askingAboutRef.current === version_number) {
+            setCost({ losing: losing_triggers, returning: returning_triggers });
+          }
+
+          return version_number;
         })
         .catch(() => {
-          setLosingTriggers([]);
+          if (askingAboutRef.current === versionNumber) {
+            setCost({ losing: [], returning: [] });
+          }
         });
     },
     [checkRestore]
@@ -171,6 +180,7 @@ export function BreadcrumbContent({
       description: 'The workflow is live on that version\u2019s content.',
     });
 
+    askingAboutRef.current = null;
     setRestoring(null);
 
     return true;
@@ -287,9 +297,10 @@ export function BreadcrumbContent({
       <RestoreVersionDialog
         isOpen={restoring !== null}
         versionNumber={restoring}
-        losingTriggers={losingTriggers}
+        cost={cost}
         onConfirm={handleConfirmRestore}
         onCancel={() => {
+          askingAboutRef.current = null;
           setRestoring(null);
         }}
       />

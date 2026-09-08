@@ -12,25 +12,31 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { RestoreVersionDialog } from '../../../js/collaborative-editor/components/RestoreVersionDialog';
-import type { LosingTrigger } from '../../../js/collaborative-editor/components/RestoreVersionDialog';
+import type {
+  LosingTrigger,
+  RestoreCost,
+  ReturningTrigger,
+} from '../../../js/collaborative-editor/components/RestoreVersionDialog';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 
 const onConfirm = vi.fn<() => Promise<boolean>>();
 const onCancel = vi.fn();
 
-function renderDialog(losingTriggers: LosingTrigger[] | null, isOpen = true) {
+function renderDialog(cost: RestoreCost | null, isOpen = true) {
   return render(
     <KeyboardProvider>
       <RestoreVersionDialog
         isOpen={isOpen}
         versionNumber={3}
-        losingTriggers={losingTriggers}
+        cost={cost}
         onConfirm={onConfirm}
         onCancel={onCancel}
       />
     </KeyboardProvider>
   );
 }
+
+const nothingLost: RestoreCost = { losing: [], returning: [] };
 
 // This branch's Button does not forward data-* attributes yet (that is #4991),
 // so the confirm button is found by its accessible name.
@@ -51,6 +57,12 @@ const cron: LosingTrigger = {
   enabled: false,
 };
 
+const returning: ReturningTrigger = {
+  id: 'trigger-3',
+  type: 'webhook',
+  custom_path: 'payments',
+};
+
 describe('RestoreVersionDialog', () => {
   beforeEach(() => {
     onConfirm.mockReset();
@@ -59,7 +71,7 @@ describe('RestoreVersionDialog', () => {
   });
 
   test('names the version being restored', () => {
-    renderDialog([]);
+    renderDialog(nothingLost);
 
     expect(screen.getByTestId('restore-version-dialog')).toHaveTextContent(
       'Restore v3?'
@@ -74,7 +86,7 @@ describe('RestoreVersionDialog', () => {
   });
 
   test('names each trigger it will delete, and its URL', async () => {
-    renderDialog([webhook, cron]);
+    renderDialog({ losing: [webhook, cron], returning: [] });
 
     const warning = await screen.findByTestId('restore-losing-triggers');
 
@@ -84,18 +96,33 @@ describe('RestoreVersionDialog', () => {
     expect(warning).toHaveTextContent('a scheduled trigger');
   });
 
+  test('names each trigger that comes back switched off, and why', async () => {
+    renderDialog({ losing: [], returning: [returning] });
+
+    const warning = await screen.findByTestId('restore-returning-triggers');
+
+    expect(warning).toHaveTextContent('comes back switched off');
+    expect(warning).toHaveTextContent('the webhook at /payments');
+    // A version never recorded which auth methods were attached, so bringing
+    // the URL back on would put it back without its authentication.
+    expect(warning).toHaveTextContent('authentication');
+  });
+
   test('says nothing about triggers when none are lost', () => {
-    renderDialog([]);
+    renderDialog(nothingLost);
 
     expect(
       screen.queryByTestId('restore-losing-triggers')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('restore-returning-triggers')
     ).not.toBeInTheDocument();
     expect(confirmButton()).toBeEnabled();
   });
 
   test('confirming restores', async () => {
     const user = userEvent.setup();
-    renderDialog([]);
+    renderDialog(nothingLost);
 
     await user.click(confirmButton());
 
@@ -107,7 +134,7 @@ describe('RestoreVersionDialog', () => {
   test('a failed restore leaves the dialog usable', async () => {
     onConfirm.mockResolvedValue(false);
     const user = userEvent.setup();
-    renderDialog([]);
+    renderDialog(nothingLost);
 
     await user.click(confirmButton());
 
@@ -118,7 +145,7 @@ describe('RestoreVersionDialog', () => {
 
   test('cancelling restores nothing', async () => {
     const user = userEvent.setup();
-    renderDialog([]);
+    renderDialog(nothingLost);
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 

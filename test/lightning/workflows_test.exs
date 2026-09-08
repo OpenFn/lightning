@@ -128,6 +128,101 @@ defmodule Lightning.WorkflowsTest do
              |> Enum.any?(&(&1.type == :cron))
     end
 
+    test "a re-created trigger comes back off, because its auth is not restored",
+         %{user: user} do
+      workflow = insert(:simple_workflow)
+      [original] = Repo.preload(workflow, :triggers).triggers
+      {live, v1} = publish(workflow, user)
+
+      # Delete the trigger v1 held, and add another in its place.
+      {:ok, replaced} =
+        live
+        |> Repo.preload([:triggers, :jobs, :edges])
+        |> Workflows.change_workflow(%{
+          triggers: [%{type: :cron, cron_expression: "0 * * * *"}]
+        })
+        |> Workflows.save_workflow(user)
+
+      refute Repo.reload(original)
+
+      {:ok, restored} = Workflows.restore_version(replaced, v1, user)
+
+      back = Repo.preload(restored, :triggers, force: true).triggers
+      assert [%{id: id, enabled: false}] = back
+      assert id == original.id
+
+      # A snapshot never recorded which webhook auth methods were attached, so
+      # switching this on for the user would put the URL back without its
+      # authentication. It comes back inert and the dialog says so.
+      assert restored.state == :live
+    end
+
+    test "does not wipe the canvas when the restored version has no positions",
+         %{user: user} do
+      workflow = insert(:simple_workflow)
+      {live, v1} = publish(workflow, user)
+
+      snapshot = Repo.preload(v1, :snapshot).snapshot
+      assert is_nil(snapshot.positions)
+
+      {:ok, arranged} =
+        live
+        |> Repo.preload([:triggers, :jobs, :edges])
+        |> Workflows.change_workflow(%{
+          positions: %{"node-a" => %{"x" => 10, "y" => 20}}
+        })
+        |> Workflows.save_workflow(user)
+
+      {:ok, restored} = Workflows.restore_version(arranged, v1, user)
+
+      # Writing the snapshot's nil would drop the layout back to auto, with no
+      # way back.
+      assert restored.positions == %{"node-a" => %{"x" => 10, "y" => 20}}
+    end
+
+    test "puts the webhook response config back", %{user: user} do
+      workflow = insert(:simple_workflow)
+      [trigger] = Repo.preload(workflow, :triggers).triggers
+
+      {:ok, configured} =
+        workflow
+        |> Repo.preload([:triggers, :jobs, :edges])
+        |> Workflows.change_workflow(%{
+          triggers: [
+            %{
+              id: trigger.id,
+              webhook_reply: :after_completion,
+              webhook_response_config: %{success_code: 202, error_code: 422}
+            }
+          ]
+        })
+        |> Workflows.save_workflow(user)
+
+      {live, v1} = publish(configured, user)
+
+      {:ok, changed} =
+        live
+        |> Repo.preload([:triggers, :jobs, :edges])
+        |> Workflows.change_workflow(%{
+          triggers: [
+            %{
+              id: trigger.id,
+              webhook_reply: :after_completion,
+              webhook_response_config: %{success_code: 500, error_code: 599}
+            }
+          ]
+        })
+        |> Workflows.save_workflow(user)
+
+      {:ok, restored} = Workflows.restore_version(changed, v1, user)
+
+      # An embed is left alone when its key is absent, so omitting it left the
+      # trigger replying with the codes from the version being rolled away from.
+      [back] = Repo.preload(restored, :triggers, force: true).triggers
+      assert back.webhook_response_config.success_code == 202
+      assert back.webhook_response_config.error_code == 422
+    end
+
     test "records the restore as the next version, naming the one it came from",
          %{user: user} do
       {live, v1} = publish(insert(:simple_workflow), user)

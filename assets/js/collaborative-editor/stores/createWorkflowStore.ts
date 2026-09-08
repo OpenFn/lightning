@@ -1704,6 +1704,11 @@ export const createWorkflowStore = (
       custom_path: string | null;
       enabled: boolean;
     }[];
+    returning_triggers: {
+      id: string;
+      type: string;
+      custom_path: string | null;
+    }[];
     version_number: number;
   }> => {
     const { provider } = ensureConnected();

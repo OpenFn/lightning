@@ -17,16 +17,27 @@ export interface LosingTrigger {
   enabled: boolean;
 }
 
+export interface ReturningTrigger {
+  id: string;
+  type: string;
+  custom_path: string | null;
+}
+
+export interface RestoreCost {
+  losing: LosingTrigger[];
+  returning: ReturningTrigger[];
+}
+
 interface RestoreVersionDialogProps {
   isOpen: boolean;
   versionNumber: number | null;
   /** Null while the answer is still coming back. */
-  losingTriggers: LosingTrigger[] | null;
+  cost: RestoreCost | null;
   onConfirm: () => Promise<boolean>;
   onCancel: () => void;
 }
 
-function describeTrigger(trigger: LosingTrigger) {
+function describeTrigger(trigger: LosingTrigger | ReturningTrigger) {
   if (trigger.type === 'cron') return 'a scheduled trigger';
 
   return trigger.custom_path
@@ -46,7 +57,7 @@ function describeTrigger(trigger: LosingTrigger) {
 export function RestoreVersionDialog({
   isOpen,
   versionNumber,
-  losingTriggers,
+  cost,
   onConfirm,
   onCancel,
 }: RestoreVersionDialogProps) {
@@ -73,7 +84,7 @@ export function RestoreVersionDialog({
     if (!restored) setIsRestoring(false);
   };
 
-  const isChecking = losingTriggers === null;
+  const isChecking = cost === null;
 
   return (
     <Dialog open={isOpen} onClose={dismiss} className="relative z-[60]">
@@ -119,29 +130,56 @@ export function RestoreVersionDialog({
               >
                 Checking what this will change...
               </p>
-            ) : losingTriggers.length > 0 ? (
-              <div
-                className="mt-3 rounded-md bg-danger-50 p-3"
-                data-testid="restore-losing-triggers"
-              >
-                <p className="text-sm font-medium text-danger-800">
-                  {losingTriggers.length === 1
-                    ? 'One trigger will be deleted'
-                    : `${losingTriggers.length} triggers will be deleted`}
-                </p>
-                <ul className="mt-1 list-disc pl-5 text-sm text-danger-700">
-                  {losingTriggers.map(trigger => (
-                    <li key={trigger.id}>
-                      {describeTrigger(trigger)}
-                      {trigger.enabled ? ', which is on now' : ''}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-1 text-sm text-danger-700">
-                  Anything calling those URLs stops working.
-                </p>
-              </div>
-            ) : null}
+            ) : (
+              <>
+                {cost.losing.length > 0 && (
+                  <div
+                    className="mt-3 rounded-md bg-danger-50 p-3"
+                    data-testid="restore-losing-triggers"
+                  >
+                    <p className="text-sm font-medium text-danger-800">
+                      {cost.losing.length === 1
+                        ? 'One trigger will be deleted'
+                        : `${cost.losing.length} triggers will be deleted`}
+                    </p>
+                    <ul className="mt-1 list-disc pl-5 text-sm text-danger-700">
+                      {cost.losing.map(trigger => (
+                        <li key={trigger.id}>
+                          {describeTrigger(trigger)}
+                          {trigger.enabled ? ', which is on now' : ''}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1 text-sm text-danger-700">
+                      Anything calling those URLs stops working.
+                    </p>
+                  </div>
+                )}
+
+                {cost.returning.length > 0 && (
+                  <div
+                    className="mt-3 rounded-md bg-warning-50 p-3"
+                    data-testid="restore-returning-triggers"
+                  >
+                    <p className="text-sm font-medium text-warning-800">
+                      {cost.returning.length === 1
+                        ? 'One trigger comes back switched off'
+                        : `${cost.returning.length} triggers come back switched off`}
+                    </p>
+                    <ul className="mt-1 list-disc pl-5 text-sm text-warning-700">
+                      {cost.returning.map(trigger => (
+                        <li key={trigger.id}>{describeTrigger(trigger)}</li>
+                      ))}
+                    </ul>
+                    <p className="mt-1 text-sm text-warning-700">
+                      A version does not record which authentication was
+                      attached, so switch these on again once you have set that
+                      up.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
 
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <Button
