@@ -62,8 +62,12 @@ defmodule Mix.Tasks.Lightning.Adaptors.Snapshot do
 
   defp fetch_full_record(%{name: name}) do
     case NPM.fetch_adaptor(name) do
-      {:ok, record} -> Map.put(record, :source, :npm)
-      {:error, _reason} -> nil
+      {:ok, record} ->
+        Map.put(record, :source, :npm)
+
+      {:error, reason} ->
+        Mix.shell().error("Skipping #{name}: #{inspect(reason)}")
+        nil
     end
   end
 

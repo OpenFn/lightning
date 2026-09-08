@@ -1,6 +1,8 @@
 defmodule Lightning.Adaptors.NodeMonitorTest do
   use Lightning.DataCase, async: true
 
+  import Lightning.AdaptorTestHelpers
+
   import Mox
 
   alias Lightning.Adaptors.Catalogue
@@ -122,39 +124,5 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
       assert {:ok, {:ok, [%{name: "sentinel"}]}} =
                Cachex.get(cache, {:packages, source})
     end
-  end
-
-  defp adaptor_record(overrides \\ []) do
-    overrides = Map.new(overrides)
-
-    %{
-      name: "@openfn/language-http",
-      source: :npm,
-      latest_version: "1.0.0",
-      description: "HTTP adaptor",
-      homepage: nil,
-      repository: nil,
-      license: "LGPL-3.0",
-      deprecated: false,
-      schema_data: nil,
-      schema_sha256: nil,
-      icon_square_ext: nil,
-      icon_rectangle_ext: nil,
-      icon_square_sha256: nil,
-      icon_rectangle_sha256: nil,
-      versions: [
-        %{
-          version: "1.0.0",
-          integrity: "sha512-1.0.0",
-          tarball_url: "https://example.com/x/-/x-1.0.0.tgz",
-          size_bytes: 1024,
-          dependencies: %{},
-          peer_dependencies: %{},
-          published_at: nil,
-          deprecated: false
-        }
-      ]
-    }
-    |> Map.merge(overrides)
   end
 end

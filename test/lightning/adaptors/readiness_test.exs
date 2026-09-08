@@ -8,6 +8,8 @@ defmodule Lightning.Adaptors.ReadinessTest do
 
   use Lightning.DataCase, async: true
 
+  import Lightning.AdaptorTestHelpers
+
   import Eventually
   import Mox
 
@@ -31,36 +33,6 @@ defmodule Lightning.Adaptors.ReadinessTest do
       Supervisor.terminate_child(sup, AdaptorsSupervisor.highlander_name(sup))
 
     {:ok, sup: sup}
-  end
-
-  defp adaptor_record(overrides \\ []) do
-    overrides = Map.new(overrides)
-
-    %{
-      name: "@openfn/language-http",
-      source: :npm,
-      latest_version: "1.0.0",
-      description: nil,
-      homepage: nil,
-      repository: nil,
-      license: nil,
-      deprecated: false,
-      schema_data: nil,
-      schema_sha256: nil,
-      versions: [
-        %{
-          version: "1.0.0",
-          integrity: "sha512-abc",
-          tarball_url: "https://example.com/x-1.0.0.tgz",
-          size_bytes: 1024,
-          dependencies: %{},
-          peer_dependencies: %{},
-          published_at: nil,
-          deprecated: false
-        }
-      ]
-    }
-    |> Map.merge(overrides)
   end
 
   # Tasks the Scheduler spawns inherit its `$callers`, so allowing the

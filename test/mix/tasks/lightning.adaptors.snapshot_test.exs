@@ -111,6 +111,38 @@ defmodule Mix.Tasks.Lightning.Adaptors.SnapshotTest do
                versions: [%{version: @latest_version}]
              } = record
     end
+
+    test "warns and omits an adaptor whose fetch fails", %{
+      tmp_dir: tmp_dir,
+      registry: registry
+    } do
+      Bypass.expect(registry, "GET", "/-/user/openfn/package", fn conn ->
+        json_resp(conn, 200, %{@package => "write"})
+      end)
+
+      Bypass.expect(registry, "GET", "/-/v1/search", fn conn ->
+        json_resp(conn, 200, %{
+          "objects" => [
+            %{"package" => %{"name" => @package, "version" => @latest_version}}
+          ]
+        })
+      end)
+
+      Bypass.expect(registry, "GET", "/" <> @package, fn conn ->
+        Plug.Conn.resp(conn, 500, "boom")
+      end)
+
+      file_path = Path.join([tmp_dir, "cache.json"])
+
+      output =
+        capture_io(:stderr, fn ->
+          Snapshot.run(["--path", file_path])
+        end)
+
+      assert output =~ @package
+
+      assert [] = file_path |> File.read!() |> Jason.decode!()
+    end
   end
 
   defp build_packument do

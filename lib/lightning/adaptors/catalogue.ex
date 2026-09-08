@@ -298,6 +298,8 @@ defmodule Lightning.Adaptors.Catalogue do
       )
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
+    # TODO: 👆would it not be easier to do the group by in the query? That elem,elem group by isn't that easy to understand
+
     Enum.map(adaptors, fn adaptor ->
       Map.put(adaptor, :versions, Map.get(versions_by_name, adaptor.name, []))
     end)

@@ -11,8 +11,6 @@ defmodule LightningWeb.CredentialLiveTest do
   import Swoosh.TestAssertions
 
   alias Lightning.Accounts.User
-  alias Lightning.Adaptors.Config
-  alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
 
@@ -2787,12 +2785,7 @@ defmodule LightningWeb.CredentialLiveTest do
         schema_data: ~s({"type":"object"})
       )
 
-      # `seed_all_credential_schemas/0` primes the packages cache by hand
-      # (bypassing `Catalogue.list_package_metas/1`), so drop it here to
-      # force a fresh DB-backed read that can see the row above.
-      cache = AdaptorsSupervisor.cache_name(Config.default_instance())
-      source = AdaptorsSupervisor.source(Config.default_instance())
-      Cachex.del(cache, {:packages, source})
+      Lightning.AdaptorTestHelpers.prime_packages_cache()
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 
@@ -2813,9 +2806,7 @@ defmodule LightningWeb.CredentialLiveTest do
     test "omits an adaptor with no configuration schema", %{conn: conn} do
       insert(:adaptor, name: "@openfn/language-no-schema", schema_data: nil)
 
-      cache = AdaptorsSupervisor.cache_name(Config.default_instance())
-      source = AdaptorsSupervisor.source(Config.default_instance())
-      Cachex.del(cache, {:packages, source})
+      Lightning.AdaptorTestHelpers.prime_packages_cache()
 
       {:ok, view, _html} = live(conn, ~p"/credentials")
 

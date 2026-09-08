@@ -149,4 +149,20 @@ defmodule Lightning.Adaptors.Strategy do
   @callback list_adaptors() ::
               {:ok, [%{name: String.t(), latest_version: String.t()}]}
               | {:error, term()}
+
+  @doc """
+  Validate a schema body and pair it with its persisted digest.
+
+  Returns `{:ok, {body, sha256_hex}}` when `body` decodes as JSON, with
+  `sha256_hex` lowercase hex, matching the `adaptors.schema_sha256`
+  column format. `{:error, reason}` when it doesn't decode.
+  """
+  @spec digest_schema(binary()) ::
+          {:ok, {binary(), String.t()}} | {:error, term()}
+  def digest_schema(body) do
+    with {:ok, _} <- Jason.decode(body) do
+      sha = :sha256 |> :crypto.hash(body) |> Base.encode16(case: :lower)
+      {:ok, {body, sha}}
+    end
+  end
 end

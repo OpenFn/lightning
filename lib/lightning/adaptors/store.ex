@@ -3,12 +3,10 @@ defmodule Lightning.Adaptors.Store do
   Cached reads over `Lightning.Adaptors.Catalogue`.
 
   Every read checks the instance's Cachex first and falls back to the
-  catalogue table. `schema/2` also fetches from the strategy when the
-  row has no data yet and persists what it gets; this only fills gaps on
-  adaptors already in the catalogue, and an unknown name returns
-  `{:error, :not_found}`. A lazy fill that lands a value
-  broadcasts the change like a scheduler write; one whose fetch failed
-  passes the strategy's error through. `icon/3` returns a path on disk,
+  catalogue table. Reads never write to the catalogue: the
+  `Lightning.Adaptors.Scheduler` is the only writer, so a row with no
+  schema means the source has none and `schema/2` answers `"{}"`, while
+  an unknown name returns `{:error, :not_found}`. `icon/3` returns a path on disk,
   fetching the bytes from the strategy on the first miss. `catalogue/1`
   caches the picker payload already rendered, together with the ETag
   stamp that describes it.
@@ -51,7 +49,8 @@ defmodule Lightning.Adaptors.Store do
 
   @doc """
   Returns the adaptor's credential schema as a JSON binary, not decoded.
-  An adaptor with no schema yields `"{}"`.
+  An adaptor with no schema yields `"{}"`; an unknown name
+  `{:error, :not_found}`.
   """
   @spec schema(sup(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def schema(sup, name) do
@@ -70,7 +69,7 @@ defmodule Lightning.Adaptors.Store do
             {:commit, {:ok, data}}
 
           _ ->
-            fetch_and_persist(sup, name, source)
+            {:commit, {:ok, "{}"}}
         end
       end,
       timeout: Config.cache_timeout_ms()
@@ -93,7 +92,7 @@ defmodule Lightning.Adaptors.Store do
          {:ok, ext} <- ext_for_shape(meta, shape),
          {:ok, expected_sha} <- sha256_for_shape(meta, shape) do
       if IconCache.cached?(source, name, shape, ext, expected_sha) do
-        {:ok, IconCache.path(source, name, shape, ext)}
+        {:ok, IconCache.path(source, name, shape, ext, expected_sha)}
       else
         cache
         |> Cachex.fetch(
@@ -113,8 +112,9 @@ defmodule Lightning.Adaptors.Store do
       {:ok, %{data: bytes, ext: ^ext}} ->
         case :crypto.hash(:sha256, bytes) do
           ^expected_sha ->
-            {:ok, _sha} = IconCache.write!(source, name, shape, ext, bytes)
-            {:ignore, {:ok, IconCache.path(source, name, shape, ext)}}
+            {:ignore,
+             {:ok,
+              IconCache.write!(source, name, shape, ext, bytes, expected_sha)}}
 
           got ->
             {:commit,
@@ -262,40 +262,6 @@ defmodule Lightning.Adaptors.Store do
     }
   end
 
-  @spec fetch_and_persist(atom(), String.t(), :npm | :local) ::
-          {:commit, {:ok, term()}} | {:ignore, {:ok, term()} | {:error, term()}}
-  defp fetch_and_persist(sup, name, source) do
-    case AdaptorsSupervisor.strategy(sup).fetch_adaptor(name) do
-      {:ok, %{name: ^name} = record} ->
-        record = Map.put(record, :source, source)
-        {:ok, _} = Catalogue.upsert_adaptor(record)
-
-        case record.schema_data do
-          # The source has nothing; cache that so the next read stays local.
-          nil ->
-            {:commit, {:ok, "{}"}}
-
-          # Landed a value: announce it like a scheduler write. The
-          # Invalidator drops the stale keys and the next read refills them
-          # from the row, so there is nothing to commit here.
-          value ->
-            Phoenix.PubSub.broadcast(
-              Lightning.PubSub,
-              AdaptorsSupervisor.source_topic(sup),
-              {:changed, name, source}
-            )
-
-            {:ignore, {:ok, value}}
-        end
-
-      {:ok, %{name: other}} ->
-        {:ignore, {:error, {:name_mismatch, other}}}
-
-      {:error, reason} ->
-        {:ignore, {:error, reason}}
-    end
-  end
-
   @spec project_icon_meta(map()) :: icon_meta()
   defp project_icon_meta(adaptor) do
     Map.take(adaptor, [
@@ -332,7 +298,7 @@ defmodule Lightning.Adaptors.Store do
   #
   # Every fallback returns an inner `{:ok, _} | {:error, _}`, whichever
   # wrapper it chooses, so the wrapper tuple's second element is itself
-  # the public value we want to return — including a committed
+  # the public value we want to return, including a committed
   # `{:error, _}`, which comes back as `{:ok, {:error, _}}` on a later
   # hit. Cachex-side `{:error, _}` passes through unchanged.
   @spec unwrap(tuple()) :: {:ok, term()} | {:error, term()}
