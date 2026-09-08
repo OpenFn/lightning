@@ -21,12 +21,6 @@ and this project adheres to
   first character of a string, which breaks names in many languages. Lightning
   does not normalise anything today, but #4577 adds it on every name, so the
   runtime moves first.
-- The workflow health page's triage table now merges two rows that describe the
-  same failure into one, correcting a split count on a shipped page: a step
-  reporting an empty error type instead of none, and a job renamed or
-  adaptor-bumped mid-window, both used to draw two identical-looking rows with
-  the count divided between them. Merged rows are labelled from the most recent
-  snapshot to fail.
 
 ### Added
 
