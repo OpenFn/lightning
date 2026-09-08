@@ -26,6 +26,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Credentials.SensitiveValues
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Project
+  alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
   alias Lightning.Tokens.CredentialTransferToken
 
@@ -237,6 +238,42 @@ defmodule Lightning.Credentials do
         |> cast_credential_body_change(schema_name)
       end)
     end)
+    |> grant_sole_body_to_shares()
+  end
+
+  # A share names the body it may read. When a credential has exactly one body
+  # there is nothing to choose, so grant it and the credential works where it
+  # was created. With more than one the choice is the project admin's, and the
+  # share stays ungranted until they make it.
+  #
+  # Only shares with no grant are touched. That cannot change an outcome today,
+  # since the sole body is the only one a grant could hold, but a grant is a
+  # decision and this is the one place that would otherwise overwrite one.
+  defp grant_sole_body_to_shares(multi) do
+    Multi.run(multi, :grant_sole_body, fn repo, %{credential: credential} ->
+      case repo.all(
+             from(b in CredentialBody,
+               where: b.credential_id == ^credential.id,
+               select: b.id
+             )
+           ) do
+        [body_id] ->
+          {count, _} =
+            repo.update_all(
+              from(pc in ProjectCredential,
+                where:
+                  pc.credential_id == ^credential.id and
+                    is_nil(pc.credential_body_id)
+              ),
+              set: [credential_body_id: body_id]
+            )
+
+          {:ok, count}
+
+        _none_or_several ->
+          {:ok, 0}
+      end
+    end)
   end
 
   @doc """
@@ -297,6 +334,7 @@ defmodule Lightning.Credentials do
     |> Multi.update(:credential, changeset)
     |> add_environment_deletions(credential.id, delete_environments)
     |> add_credential_body_upserts(credential.id, credential_bodies, schema_name)
+    |> grant_sole_body_to_shares()
   end
 
   defp add_environment_deletions(multi, _credential_id, []), do: multi
@@ -748,6 +786,9 @@ defmodule Lightning.Credentials do
   defp propagate_credential_to_descendants(credential_id, project_id) do
     current_time = DateTime.utc_now() |> DateTime.truncate(:second)
 
+    # No credential_body_id, deliberately. Adding a credential to a parent
+    # reaches every sandbox beneath it, and none of them should get the parent's
+    # values just because the credential appeared above them.
     credential_rows =
       Lightning.Projects.descendant_ids([project_id])
       |> Enum.map(fn descendant_id ->

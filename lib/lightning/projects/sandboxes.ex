@@ -313,6 +313,10 @@ defmodule Lightning.Projects.Sandboxes do
     :ok
   end
 
+  # No credential_body_id, deliberately. A merge carries a sandbox-only
+  # credential up to the target, but which of its values the target may read is
+  # the target's decision, not the sandbox's. So the share arrives ungranted and
+  # the merge does not silently hand production a set of values.
   defp build_target_credential_rows(source_credentials, target_id) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
@@ -852,6 +856,10 @@ defmodule Lightning.Projects.Sandboxes do
   defp clone_credentials_from_parent(sandbox, parent) do
     current_time = DateTime.utc_now() |> DateTime.truncate(:second)
 
+    # No credential_body_id, deliberately. The sandbox gets a reference to the
+    # parent's credential and no grant to any of its values, so it resolves
+    # nothing until someone gives it a body of its own. Granting the parent's
+    # here is precisely the hole this exists to close.
     credential_rows =
       Enum.map(parent.project_credentials, fn parent_credential ->
         %{

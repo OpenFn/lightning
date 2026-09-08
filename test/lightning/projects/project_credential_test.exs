@@ -93,6 +93,128 @@ defmodule Lightning.Projects.ProjectCredentialTest do
     end
   end
 
+  describe "who gets a grant, and who does not" do
+    test "creating a credential with one body grants it to the project" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      {:ok, credential} =
+        Lightning.Credentials.create_credential(
+          %{
+            "name" => "one-body",
+            "schema" => "raw",
+            "user_id" => user.id,
+            "credential_bodies" => [
+              %{"name" => "main", "body" => %{"key" => "value"}}
+            ],
+            "project_credentials" => [%{"project_id" => project.id}]
+          },
+          user
+        )
+
+      [share] =
+        Repo.preload(credential, :project_credentials).project_credentials
+
+      [body] = Repo.preload(credential, :credential_bodies).credential_bodies
+
+      # Nothing to choose, so the credential works where it was created.
+      assert share.credential_body_id == body.id
+    end
+
+    test "creating one with several bodies grants nothing, because it is a choice" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      {:ok, credential} =
+        Lightning.Credentials.create_credential(
+          %{
+            "name" => "two-bodies",
+            "schema" => "raw",
+            "user_id" => user.id,
+            "credential_bodies" => [
+              %{"name" => "main", "body" => %{"key" => "live"}},
+              %{"name" => "staging", "body" => %{"key" => "test"}}
+            ],
+            "project_credentials" => [%{"project_id" => project.id}]
+          },
+          user
+        )
+
+      [share] =
+        Repo.preload(credential, :project_credentials).project_credentials
+
+      assert is_nil(share.credential_body_id)
+    end
+
+    test "a sandbox clone gets a reference and no grant" do
+      user = insert(:user)
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      credential =
+        insert(:credential, user: user)
+        |> with_body(%{name: "main", body: %{"key" => "production"}})
+
+      insert(:project_credential, project: parent, credential: credential)
+
+      {:ok, sandbox} =
+        Lightning.Projects.Sandboxes.provision(
+          parent,
+          user,
+          %{name: "a-sandbox"}
+        )
+
+      [share] =
+        Repo.all(
+          from(pc in Lightning.Projects.ProjectCredential,
+            where: pc.project_id == ^sandbox.id
+          )
+        )
+
+      # The sandbox can see the credential and read none of its values. This is
+      # the whole point: granting the parent's body here is the hole.
+      assert share.credential_id == credential.id
+      assert is_nil(share.credential_body_id)
+    end
+
+    test "editing a credential with several bodies leaves grants alone" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      credential =
+        insert(:credential, user: user)
+        |> with_body(%{name: "main", body: %{"key" => "live"}})
+        |> with_body(%{name: "staging", body: %{"key" => "test"}})
+
+      # Grant the one that is NOT first, so an overwrite is visible rather than
+      # landing on the same row by luck.
+      staging = Enum.find(credential.credential_bodies, &(&1.name == "staging"))
+
+      share =
+        insert(:project_credential, project: project, credential: credential)
+
+      {:ok, _} =
+        Repo.query(
+          "UPDATE project_credentials SET credential_body_id = $1 WHERE id = $2",
+          [Ecto.UUID.dump!(staging.id), Ecto.UUID.dump!(share.id)]
+        )
+
+      {:ok, _} =
+        Lightning.Credentials.update_credential(
+          credential,
+          %{
+            "name" => "renamed",
+            "credential_bodies" => [
+              %{"name" => "main", "body" => %{"key" => "changed"}},
+              %{"name" => "staging", "body" => %{"key" => "test"}}
+            ]
+          },
+          user
+        )
+
+      assert Repo.reload!(share).credential_body_id == staging.id
+    end
+  end
+
   test "project_id is NOT NULL at the database layer" do
     credential = insert(:credential)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
