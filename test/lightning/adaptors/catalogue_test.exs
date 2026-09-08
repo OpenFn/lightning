@@ -85,27 +85,7 @@ defmodule Lightning.Adaptors.CatalogueTest do
     end
   end
 
-  describe "upsert_adaptor/1 — schema preservation on transient fetch failure" do
-    test "transient failure keeps the old schema" do
-      {:ok, first} =
-        Catalogue.upsert_adaptor(
-          adaptor_record(
-            schema_data: %{"type" => "object"},
-            schema_sha256: "abc"
-          )
-        )
-
-      {:ok, second} =
-        Catalogue.upsert_adaptor(
-          adaptor_record()
-          |> Map.drop([:schema_data, :schema_sha256])
-        )
-
-      assert second.id == first.id
-      assert second.schema_data == first.schema_data
-      assert second.schema_sha256 == first.schema_sha256
-    end
-
+  describe "upsert_adaptor/1 — schema clearing" do
     test "genuinely removed schema does clear" do
       {:ok, first} =
         Catalogue.upsert_adaptor(
@@ -464,49 +444,6 @@ defmodule Lightning.Adaptors.CatalogueTest do
 
       assert [%Adaptor{source: :npm}] = Catalogue.list_adaptors(:npm)
       assert [%Adaptor{source: :local}] = Catalogue.list_adaptors(:local)
-    end
-  end
-
-  describe "list_missing_icons/1" do
-    test "returns rows where either icon shape sha256 is nil" do
-      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(name: "@openfn/a"))
-
-      {:ok, _} =
-        Catalogue.upsert_adaptor(
-          adaptor_record(
-            name: "@openfn/b",
-            icon_square_ext: "png",
-            icon_square_sha256: :crypto.hash(:sha256, "x")
-          )
-        )
-
-      {:ok, _} =
-        Catalogue.upsert_adaptor(
-          adaptor_record(
-            name: "@openfn/c",
-            icon_square_ext: "png",
-            icon_square_sha256: :crypto.hash(:sha256, "y"),
-            icon_rectangle_ext: "png",
-            icon_rectangle_sha256: :crypto.hash(:sha256, "z")
-          )
-        )
-
-      names =
-        Catalogue.list_missing_icons(:npm)
-        |> Enum.map(& &1.name)
-        |> Enum.sort()
-
-      assert names == ["@openfn/a", "@openfn/b"]
-    end
-
-    test "is source-scoped" do
-      {:ok, _} =
-        Catalogue.upsert_adaptor(
-          adaptor_record(name: "@openfn/x", source: :local)
-        )
-
-      assert Catalogue.list_missing_icons(:npm) == []
-      assert [%{name: "@openfn/x"}] = Catalogue.list_missing_icons(:local)
     end
   end
 

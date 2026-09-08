@@ -316,6 +316,52 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert row.latest_version == "2.0.0"
     end
 
+    test "bumped version reporting no schema keeps the stored schema", %{
+      sup: sup
+    } do
+      source = AdaptorsSupervisor.source(sup)
+      source_topic = AdaptorsSupervisor.source_topic(sup)
+
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            schema_data: ~s({"type":"object"}),
+            schema_sha256: "sha-1"
+          )
+        )
+
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:ok, [%{name: "@openfn/language-http", latest_version: "2.0.0"}]}
+      end)
+
+      expect(
+        Lightning.Adaptors.StrategyMock,
+        :fetch_adaptor,
+        1,
+        fn "@openfn/language-http" ->
+          {:ok,
+           adaptor_record(
+             latest_version: "2.0.0",
+             schema_data: nil,
+             schema_sha256: nil
+           )}
+        end
+      )
+
+      :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
+      start_scheduler(sup)
+
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+      Scheduler.refresh_now(sched_name)
+
+      assert_receive {:changed, "@openfn/language-http", ^source}, 2000
+
+      row = Catalogue.get_adaptor("@openfn/language-http", source)
+      assert row.latest_version == "2.0.0"
+      assert row.schema_data == ~s({"type":"object"})
+      assert row.schema_sha256 == "sha-1"
+    end
+
     test "new adaptor (not in DB): upsert and broadcast", %{sup: sup} do
       source = AdaptorsSupervisor.source(sup)
       source_topic = AdaptorsSupervisor.source_topic(sup)
@@ -338,6 +384,40 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       assert_receive {:changed, "@openfn/language-new", ^source}, 2000
       assert Catalogue.get_adaptor("@openfn/language-new", source) != nil
+    end
+
+    test "a failed fetch persists nothing, and the next tick retries", %{
+      sup: sup
+    } do
+      test_pid = self()
+      source = AdaptorsSupervisor.source(sup)
+      source_topic = AdaptorsSupervisor.source_topic(sup)
+      name = "@openfn/language-new"
+
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, 2, fn ->
+        {:ok, [%{name: name, latest_version: "1.0.0"}]}
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 1, fn ^name ->
+        send(test_pid, :first_fetch)
+        {:error, {:schema_fetch_failed, :timeout}}
+      end)
+
+      :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
+      start_scheduler(sup)
+
+      assert_receive :first_fetch, 2000
+      refute_receive {:changed, _, _}, 200
+      assert Catalogue.get_adaptor(name, source) == nil
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 1, fn ^name ->
+        {:ok, adaptor_record(name: name)}
+      end)
+
+      Scheduler.refresh_now(AdaptorsSupervisor.global_scheduler_name(sup))
+
+      assert_receive {:changed, ^name, ^source}, 2000
+      assert Catalogue.get_adaptor(name, source) != nil
     end
 
     test "list_adaptors error: no DB writes, no broadcasts", %{sup: sup} do
@@ -785,6 +865,42 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert_receive {:changed, "@openfn/language-http", ^source}, 2000
 
       assert Catalogue.get_adaptor("@openfn/language-http", source) != nil
+    end
+
+    test "clears a stored schema when the fetched record has none", %{sup: sup} do
+      test_pid = self()
+      source = AdaptorsSupervisor.source(sup)
+
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(
+            schema_data: ~s({"type":"object"}),
+            schema_sha256: "sha-1"
+          )
+        )
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        send(test_pid, :init_list_adaptors_called)
+        {:ok, []}
+      end)
+
+      expect(
+        Lightning.Adaptors.StrategyMock,
+        :fetch_adaptor,
+        1,
+        fn "@openfn/language-http" ->
+          {:ok, adaptor_record(schema_data: nil, schema_sha256: nil)}
+        end
+      )
+
+      start_scheduler(sup)
+
+      sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
+      assert :ok = Scheduler.refresh_package(sched_name, "@openfn/language-http")
+
+      row = Catalogue.get_adaptor("@openfn/language-http", source)
+      assert row.schema_data == nil
+      assert row.schema_sha256 == nil
     end
 
     test "returns error tuple when fetch_adaptor fails", %{sup: sup} do
