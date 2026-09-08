@@ -11,7 +11,6 @@ defmodule Lightning.DashboardStats do
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
 
-  @wo_active WorkOrder.active_states()
   @run_active Run.active_states()
   @days_back 30
 
@@ -52,7 +51,7 @@ defmodule Lightning.DashboardStats do
 
   def get_workflows_stats(workflows) do
     workflow_ids = Enum.map(workflows, & &1.id)
-    empty = %{success: 0, failed: 0, pending: 0}
+    empty = %{success: 0, failed: 0, pending: 0, cancelled: 0}
 
     batched_workorders = batch_count_workorders(workflow_ids)
     batched_runs = batch_count_runs(workflow_ids)
@@ -60,7 +59,10 @@ defmodule Lightning.DashboardStats do
     last_workorders = batch_get_last_workorders(workflow_ids)
 
     last_failed_workorders =
-      batch_get_last_workorders(workflow_ids, @wo_active ++ [:success])
+      batch_get_last_workorders(
+        workflow_ids,
+        WorkOrder.states() -- WorkOrder.failure_states()
+      )
 
     Enum.map(workflows, fn workflow ->
       wf_id = workflow.id
@@ -78,7 +80,8 @@ defmodule Lightning.DashboardStats do
         Map.get(last_workorders, wf_id, %{state: nil, updated_at: nil})
 
       last_failed_workorder =
-        if last_workorder.state == :success do
+        if last_workorder.state &&
+             WorkOrder.outcome(last_workorder.state) != :failed do
           Map.get(last_failed_workorders, wf_id, %{
             state: nil,
             updated_at: nil
@@ -202,13 +205,17 @@ defmodule Lightning.DashboardStats do
     end
   end
 
-  defp get_last_failed_workorder(workflow, %{state: :success}) do
-    excluded_states = @wo_active ++ [:success]
-    get_last_workorder(workflow, excluded_states)
+  defp get_last_failed_workorder(_workflow, %{state: nil} = failed_wo) do
+    failed_wo
   end
 
-  defp get_last_failed_workorder(_workflow, %{state: _other} = failed_wo) do
-    failed_wo
+  defp get_last_failed_workorder(workflow, %{state: state} = failed_wo) do
+    if WorkOrder.outcome(state) == :failed do
+      failed_wo
+    else
+      excluded_states = WorkOrder.states() -- WorkOrder.failure_states()
+      get_last_workorder(workflow, excluded_states)
+    end
   end
 
   defp get_last_workorder(
@@ -236,15 +243,9 @@ defmodule Lightning.DashboardStats do
       select: {wo.state, count(wo.id)}
     )
     |> Repo.all()
-    |> Enum.reduce(%{success: 0, failed: 0, pending: 0}, fn
-      {:success, cnt}, acc ->
-        %{acc | success: cnt}
-
-      {state, cnt}, acc when state in @wo_active ->
-        Map.update!(acc, :pending, &(&1 + cnt))
-
-      {_other, cnt}, acc ->
-        Map.update!(acc, :failed, &(&1 + cnt))
+    |> Enum.reduce(%{success: 0, failed: 0, pending: 0, cancelled: 0}, fn
+      {state, cnt}, acc ->
+        Map.update!(acc, WorkOrder.outcome(state), &(&1 + cnt))
     end)
   end
 
@@ -299,9 +300,11 @@ defmodule Lightning.DashboardStats do
            total: acc_total
          } ->
         %{success: success, failed: failed, pending: pending} =
-          Map.get(stats, grouped_entity_count)
+          counts = Map.get(stats, grouped_entity_count)
 
-        total = success + failed + pending
+        # Run counts have no :cancelled key; work order counts do.
+        cancelled = Map.get(counts, :cancelled, 0)
+        total = success + failed + pending + cancelled
 
         %{
           success: acc_success + success,
@@ -337,19 +340,10 @@ defmodule Lightning.DashboardStats do
     |> select([wo], {wo.workflow_id, wo.state, count(wo.id)})
     |> Repo.all()
     |> Enum.reduce(%{}, fn {wf_id, state, cnt}, acc ->
-      current = Map.get(acc, wf_id, %{success: 0, failed: 0, pending: 0})
+      current =
+        Map.get(acc, wf_id, %{success: 0, failed: 0, pending: 0, cancelled: 0})
 
-      updated =
-        case state do
-          :success ->
-            %{current | success: cnt}
-
-          s when s in @wo_active ->
-            Map.update!(current, :pending, &(&1 + cnt))
-
-          _ ->
-            Map.update!(current, :failed, &(&1 + cnt))
-        end
+      updated = Map.update!(current, WorkOrder.outcome(state), &(&1 + cnt))
 
       Map.put(acc, wf_id, updated)
     end)
