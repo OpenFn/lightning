@@ -10,6 +10,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 
 import {
   assignStepDiffsToStatuses,
+  clearWorkflowDiffCaches,
   deriveSnapshotChanges,
   deriveWorkflowChanges,
 } from '../../../js/collaborative-editor/utils/workflowDiff';
@@ -143,6 +144,9 @@ const baseWorkflow = (body: string) =>
 
 afterEach(() => {
   vi.restoreAllMocks();
+  // The parse and pair caches are module state, so a test that reuses a
+  // document another test already diffed would otherwise read its answer.
+  clearWorkflowDiffCaches();
 });
 
 describe('deriveWorkflowChanges', () => {
@@ -486,6 +490,24 @@ describe('deriveWorkflowChanges', () => {
 
       expect(triggerDetail(intake, blank)).toBe('path removed');
       expect(triggerDetail(blank, blankToNamed)).toBe('path: staff-intake');
+    });
+
+    it('reports the path on a webhook trigger that has just appeared', () => {
+      const none = buildYaml({
+        jobs: [transformJob('fn(state => state);')],
+        triggers: [],
+        edges: [],
+      });
+      const named = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+
+      const row = deriveWorkflowChanges(none, named)!.structure.find(
+        entry => entry.kind === 'trigger'
+      );
+      expect(row?.change).toBe('add');
+      expect(row?.detail).toBe('path: intake-form');
     });
 
     it('reports the settings when a cron trigger becomes a webhook', () => {
@@ -894,6 +916,64 @@ describe('deriveSnapshotChanges', () => {
     // whole point: a cumulative diff would report 1 then 2.
     expect(result[0]!.changes.steps[0]!.addedLines).toBe(1);
     expect(result[1]!.changes.steps[0]!.addedLines).toBe(1);
+  });
+
+  it('carries a webhook path a snapshot left unstated, so a later clear is reported', () => {
+    // Applying a snapshot that omits the path keeps it, so the document still
+    // holds one when the next snapshot clears it.
+    const withPath = (path: string | null | undefined, body: string) =>
+      buildYaml({
+        jobs: [transformJob(body)],
+        triggers: [
+          {
+            ...webhookTrigger,
+            ...(path !== undefined && { custom_path: path }),
+          },
+        ],
+        edges: [webhookToTransformEdge],
+      });
+
+    const result = deriveSnapshotChanges(
+      withPath('intake-form', 'fn(s => s);'),
+      [
+        snapshot(withPath(undefined, 'fn(s => ({ ...s }));'), 0),
+        snapshot(withPath(null, 'fn(s => ({ ...s }));'), 1),
+      ]
+    );
+
+    const rows = result.flatMap(entry =>
+      entry.changes.structure.filter(row => row.kind === 'trigger')
+    );
+    expect(rows.map(row => row.detail)).toEqual(['path removed']);
+  });
+
+  it('reports a replacement against the carried path, not as a first set', () => {
+    const withPath = (path: string | undefined, body: string) =>
+      buildYaml({
+        jobs: [transformJob(body)],
+        triggers: [
+          {
+            ...webhookTrigger,
+            ...(path !== undefined && { custom_path: path }),
+          },
+        ],
+        edges: [webhookToTransformEdge],
+      });
+
+    const result = deriveSnapshotChanges(
+      withPath('intake-form', 'fn(s => s);'),
+      [
+        snapshot(withPath(undefined, 'fn(s => ({ ...s }));'), 0),
+        snapshot(withPath('staff-intake', 'fn(s => ({ ...s }));'), 1),
+      ]
+    );
+
+    const rows = result.flatMap(entry =>
+      entry.changes.structure.filter(row => row.kind === 'trigger')
+    );
+    expect(rows.map(row => row.detail)).toEqual([
+      'path: intake-form → staff-intake',
+    ]);
   });
 
   it('pins each change set to the segment index its snapshot carried', () => {
