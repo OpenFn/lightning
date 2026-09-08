@@ -1101,6 +1101,43 @@ defmodule Lightning.Projects.MergeProjects do
     )
   end
 
+  @doc """
+  Whether merging `workflow_name` from `source_project` into `target_project`
+  would overwrite work the target has done since the source forked.
+
+  Unlike `diverged_workflows/2`, a name the source has no history for counts as
+  divergence rather than being skipped, because a source workflow renamed onto a
+  name the target already holds has never seen that target workflow.
+  """
+  @spec workflow_diverged?(Project.t(), Project.t(), String.t()) :: boolean()
+  def workflow_diverged?(
+        %Project{} = source_project,
+        %Project{} = target_project,
+        workflow_name
+      )
+      when is_binary(workflow_name) do
+    case version_hashes(target_project.id, workflow_name) do
+      [] ->
+        false
+
+      [target_head | _] ->
+        target_head not in version_hashes(source_project.id, workflow_name)
+    end
+  end
+
+  defp version_hashes(project_id, workflow_name) do
+    from(version in WorkflowVersion,
+      join: workflow in Workflow,
+      on: workflow.id == version.workflow_id,
+      where:
+        workflow.project_id == ^project_id and workflow.name == ^workflow_name and
+          is_nil(workflow.deleted_at),
+      order_by: [desc: version.inserted_at, desc: version.id],
+      select: version.hash
+    )
+    |> Repo.all()
+  end
+
   defp get_workflow_version_hashes_by_name(workflows) do
     workflow_ids = Enum.map(workflows, & &1.id)
     workflow_name_map = Map.new(workflows, fn w -> {w.id, w.name} end)

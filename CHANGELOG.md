@@ -24,6 +24,12 @@ and this project adheres to
 
 ### Added
 
+- Promoting from a sandbox now warns first when the parent project has changed
+  that workflow since the sandbox was created. Promote rebuilds the parent
+  workflow from the sandbox, so anything the parent gained in the meantime is
+  removed rather than merged, and the confirm step names the parent and says so
+  before you commit to it.
+  [#4863](https://github.com/OpenFn/lightning/issues/4863)
 - The editor's version list now shows published versions rather than every
   intermediate save, each with who published it, when, and whether it came from
   going live or a promote. Picking one opens it read-only, and Recent History
@@ -74,6 +80,12 @@ and this project adheres to
   Working out whether one project sits under another climbed a chain of parents
   that was only loaded one level deep.
   [#5141](https://github.com/OpenFn/lightning/issues/5141)
+
+- Merging a sandbox no longer reports its own merge as the parent having moved
+  on. A merge records a new version on the target computed from the merged
+  content, and nothing wrote that back to the sandbox, so every merge after the
+  first showed the sandbox as diverged from work it had just done itself.
+  [#4863](https://github.com/OpenFn/lightning/issues/4863)
 
 - Reading an older version of a workflow no longer offers actions that change
   the current one. Switch to draft, Go live, Promote and Edit in sandbox are

@@ -2427,13 +2427,16 @@ defmodule Lightning.Projects do
                  selected_workflow_ids: [sandbox_workflow.id],
                  record_release: :promote
                }) do
+          # Reloaded because the caller's struct is captured at channel join and
+          # the client saves before promoting, so a rename in the same session
+          # would look this up under the old name.
           parent_workflow_id =
-            case Lightning.Workflows.get_workflow_by_name(
-                   parent.id,
-                   sandbox_workflow.name
-                 ) do
-              %Workflow{id: id} -> id
-              nil -> nil
+            with %Workflow{name: name} <- Repo.reload(sandbox_workflow),
+                 %Workflow{id: id} <-
+                   Lightning.Workflows.get_workflow_by_name(parent.id, name) do
+              id
+            else
+              _ -> nil
             end
 
           {:ok,

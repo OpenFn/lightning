@@ -950,6 +950,175 @@ defmodule Lightning.Projects.SandboxesTest do
   # project-level Local or Inherited fields from sandbox to parent. They
   # guard against future changes to MergeProjects or Provisioner that
   # could accidentally start syncing these fields.
+  describe "merge/4 divergence sync points" do
+    setup do
+      actor = insert(:user)
+      parent = insert(:project, project_users: [%{user: actor, role: :owner}])
+
+      alpha = insert(:simple_workflow, project: parent, name: "alpha")
+      beta = insert(:simple_workflow, project: parent, name: "beta")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(alpha, "aaa111aaa111", "app")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(beta, "bbb111bbb111", "app")
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, actor, %{name: "sb"})
+
+      %{
+        actor: actor,
+        parent: parent,
+        parent_alpha: alpha,
+        parent_beta: beta,
+        sandbox: sandbox
+      }
+    end
+
+    test "leaves the source in step with the target it just wrote", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      [job | _] =
+        Lightning.Workflows.get_workflow(sandbox_alpha.id, include: [:jobs]).jobs
+
+      Repo.update!(Ecto.Changeset.change(job, body: "console.log('merged');"))
+
+      assert {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+
+      assert [] =
+               Lightning.Projects.MergeProjects.diverged_workflows(
+                 sandbox,
+                 parent
+               )
+    end
+
+    test "does not silence a real divergence when only a deletion is merged", %{
+      actor: actor,
+      parent: parent,
+      parent_alpha: parent_alpha,
+      sandbox: sandbox
+    } do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_alpha,
+          "ccc111ccc111",
+          "app"
+        )
+
+      assert "alpha" in Lightning.Projects.MergeProjects.diverged_workflows(
+               sandbox,
+               parent
+             )
+
+      sandbox_beta = Lightning.Workflows.get_workflow_by_name(sandbox.id, "beta")
+
+      parent_beta_id =
+        Lightning.Workflows.get_workflow_by_name(parent.id, "beta").id
+
+      Repo.update!(
+        Ecto.Changeset.change(sandbox_beta,
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      assert {:ok, _} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [],
+                 deleted_target_workflow_ids: [parent_beta_id]
+               })
+
+      assert "alpha" in Lightning.Projects.MergeProjects.diverged_workflows(
+               sandbox,
+               parent
+             )
+    end
+
+    test "brings a workflow the merge created on the target into step", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      Repo.update!(Ecto.Changeset.change(sandbox_alpha, name: "gamma"))
+
+      assert {:ok, _} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [sandbox_alpha.id],
+                 record_release: :promote
+               })
+
+      refute Lightning.Projects.MergeProjects.workflow_diverged?(
+               sandbox,
+               parent,
+               "gamma"
+             )
+    end
+
+    test "ignores a selected id that belongs to another project", %{
+      actor: actor,
+      parent: parent,
+      parent_alpha: parent_alpha,
+      sandbox: sandbox
+    } do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_alpha,
+          "ccc111ccc111",
+          "app"
+        )
+
+      elsewhere = insert(:project)
+      foreign_alpha = insert(:simple_workflow, project: elsewhere, name: "alpha")
+
+      assert {:ok, _} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [foreign_alpha.id]
+               })
+
+      assert "alpha" in Lightning.Projects.MergeProjects.diverged_workflows(
+               sandbox,
+               parent
+             )
+    end
+
+    test "does not silence a divergence outside the workflows a promote selected",
+         %{
+           actor: actor,
+           parent: parent,
+           parent_beta: parent_beta,
+           sandbox: sandbox
+         } do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_beta,
+          "ccc111ccc111",
+          "app"
+        )
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      assert {:ok, _} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [sandbox_alpha.id],
+                 record_release: :promote
+               })
+
+      assert "beta" in Lightning.Projects.MergeProjects.diverged_workflows(
+               sandbox,
+               parent
+             )
+    end
+  end
+
   describe "merge/4 does not propagate Local/Inherited fields" do
     setup do
       actor = insert(:user)

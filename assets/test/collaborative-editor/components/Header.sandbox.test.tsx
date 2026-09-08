@@ -38,6 +38,8 @@ const promote = vi.fn<
   }>
 >();
 const archiveSandbox = vi.fn<() => Promise<{ parent_project_id: string }>>();
+const checkPromote =
+  vi.fn<() => Promise<{ diverged: boolean; parent_name: string | null }>>();
 
 let urlParams: Record<string, string> = {};
 
@@ -89,6 +91,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
     listSandboxes: vi.fn(),
     editInSandbox: vi.fn(),
     promote,
+    checkPromote,
     archiveSandbox,
   }),
   useWorkflowReadOnly: () => readOnly,
@@ -259,6 +262,8 @@ describe('Header - lifecycle actions', () => {
     saveWorkflow.mockReset();
     promote.mockReset();
     archiveSandbox.mockReset();
+    checkPromote.mockReset();
+    checkPromote.mockResolvedValue({ diverged: false, parent_name: null });
     notifySuccess.mockReset();
     notifyInfo.mockReset();
     notifyAlert.mockReset();
@@ -460,6 +465,121 @@ describe('Header - lifecycle actions', () => {
     // Neither the save nor the promote fires until the user confirms.
     expect(saveWorkflow).not.toHaveBeenCalled();
     expect(promote).not.toHaveBeenCalled();
+  });
+
+  test('holds the promote until the divergence check has answered', async () => {
+    const user = userEvent.setup();
+    let resolveCheck: (value: {
+      diverged: boolean;
+      parent_name: string | null;
+    }) => void = () => {};
+    checkPromote.mockReturnValue(
+      new Promise(resolve => {
+        resolveCheck = resolve;
+      })
+    );
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByRole('button', { name: 'Save and promote' })
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByText(/checking whether the parent has changed/i)
+    ).toBeInTheDocument();
+
+    resolveCheck({ diverged: false, parent_name: null });
+
+    await waitFor(() => {
+      expect(
+        within(dialog).getByRole('button', { name: 'Save and promote' })
+      ).toBeEnabled();
+    });
+  });
+
+  test('warns on the confirm step when the parent has changed since the fork', async () => {
+    const user = userEvent.setup();
+    checkPromote.mockResolvedValue({
+      diverged: true,
+      parent_name: 'Production',
+    });
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+
+    const dialog = screen.getByRole('dialog');
+    expect(
+      await within(dialog).findByText(/has changed in/i)
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText('Production')).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: 'Save and promote' })
+    ).toBeEnabled();
+  });
+
+  test('shows no divergence warning when the parent has not moved on', async () => {
+    const user = userEvent.setup();
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+
+    await waitFor(() => {
+      expect(checkPromote).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByText(/has changed in/i)).not.toBeInTheDocument();
+  });
+
+  test('a failed divergence check leaves the dialog usable', async () => {
+    const user = userEvent.setup();
+    checkPromote.mockRejectedValue(new Error('channel down'));
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+
+    await waitFor(() => {
+      expect(checkPromote).toHaveBeenCalledTimes(1);
+    });
+
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByRole('button', { name: 'Save and promote' })
+    ).toBeEnabled();
+    expect(
+      within(dialog).queryByText(/has changed in/i)
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        /could not check whether the parent has changed/i
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('reopening the dialog re-runs the check and clears a stale warning', async () => {
+    const user = userEvent.setup();
+    checkPromote.mockResolvedValue({
+      diverged: true,
+      parent_name: 'Production',
+    });
+    renderHeader({ isSandbox: true });
+
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+    expect(
+      await within(screen.getByRole('dialog')).findByText(/has changed in/i)
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' })
+    );
+
+    checkPromote.mockResolvedValue({ diverged: false, parent_name: null });
+    await user.click(screen.getByTestId('promote-sandbox-button'));
+
+    await waitFor(() => {
+      expect(checkPromote).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.queryByText(/has changed in/i)).not.toBeInTheDocument();
   });
 
   test('confirming saves before merging, then shows the success step without navigating', async () => {

@@ -162,6 +162,10 @@ defmodule Lightning.Projects.Sandboxes do
   provisioner and synchronises collection names. Runs inside a single
   transaction. Collection data is never copied.
 
+  Also writes to the source: each workflow this merge carried gains the target's
+  resulting head in its version history, so a later merge can tell the target
+  moving on from this merge's own work.
+
   Callers must authorise the merge before calling (e.g. `:merge_sandbox`).
 
   ## Parameters
@@ -239,6 +243,7 @@ defmodule Lightning.Projects.Sandboxes do
                force: true
              ),
            merge_doc = MergeProjects.merge_project(source, target, opts),
+           selected_target_ids = selected_target_ids(source, opts, merge_doc),
            # Defer the collaboration reconcile: the import runs inside this outer
            # transaction, so we broadcast below only once it has committed —
            # otherwise the subscriber would reload pre-commit state on its own
@@ -249,13 +254,15 @@ defmodule Lightning.Projects.Sandboxes do
                actor,
                merge_doc,
                [allow_stale: true, reconcile_collaboration: false] ++
-                 release_import_opts(source, opts, merge_doc)
+                 release_import_opts(source, opts, selected_target_ids)
              ),
            :ok <- reject_out_of_project_credentials(target),
            {:ok, _} <-
              sync_collections(source, target,
                allow_deletions: allow_collection_deletions?
-             ) do
+             ),
+           :ok <-
+             record_merge_sync_points(source, merge_doc, selected_target_ids) do
         {:ok, {updated_target, merge_doc}}
       end
     end)
@@ -274,18 +281,15 @@ defmodule Lightning.Projects.Sandboxes do
 
   # Builds the `:release` import option for a promote. A promote asks for it via
   # `opts.record_release` and always scopes to `selected_workflow_ids`; any other
-  # merge (e.g. the full sandbox-management merge) records nothing. The promoted
-  # workflows land on the target under the target's ids, so we map the selected
-  # source workflows to their merged-document ids by name (workflow names are
-  # unique within a project) and hand the provisioner exactly those ids.
-  defp release_import_opts(source, opts, merge_doc) do
+  # merge (e.g. the full sandbox-management merge) records nothing.
+  defp release_import_opts(source, opts, selected_target_ids) do
     with :promote <- Map.get(opts, :record_release),
-         [_ | _] = selected_ids <- Map.get(opts, :selected_workflow_ids) do
+         [_ | _] <- Map.get(opts, :selected_workflow_ids) do
       [
         release: %{
           kind: :promote,
           source_project_id: source.id,
-          workflow_ids: promoted_target_ids(selected_ids, merge_doc)
+          workflow_ids: selected_target_ids
         }
       ]
     else
@@ -293,10 +297,107 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
-  defp promoted_target_ids(selected_source_ids, merge_doc) do
+  # nil means the merge carries everything; a list, even an empty one, scopes it.
+  defp selected_target_ids(source, opts, merge_doc) do
+    case Map.get(opts, :selected_workflow_ids) do
+      nil -> nil
+      selected_ids -> promoted_target_ids(source, selected_ids, merge_doc)
+    end
+  end
+
+  # Without this the source's own merge reads as the target having moved on, and
+  # every merge after the first warns. Mirrors `copy_workflow_version_history/2`.
+  defp record_merge_sync_points(source, merge_doc, selected_target_ids) do
+    merged = merged_workflow_pairs(source, merge_doc, selected_target_ids)
+    source_hashes = existing_hashes(Map.values(merged))
+
+    merged
+    |> Map.keys()
+    |> latest_versions_by_workflow()
+    |> Enum.reduce_while(:ok, fn %{workflow_id: target_id, hash: hash}, :ok ->
+      source_id = Map.fetch!(merged, target_id)
+
+      if hash in Map.get(source_hashes, source_id, []) do
+        {:cont, :ok}
+      else
+        # `record_version/3` squashes a write repeating the latest row's source,
+        # so a later CLI deploy here drops this and the false warning returns.
+        # "app" is worse: the next editor save would take it.
+        %WorkflowVersion{}
+        |> WorkflowVersion.changeset(%{
+          workflow_id: source_id,
+          hash: hash,
+          source: "cli"
+        })
+        |> Repo.insert()
+        |> case do
+          {:ok, _} -> {:cont, :ok}
+          {:error, changeset} -> {:halt, {:error, changeset}}
+        end
+      end
+    end)
+  end
+
+  defp merged_workflow_pairs(source, merge_doc, selected_target_ids) do
+    entries =
+      merge_doc
+      |> Map.get("workflows", [])
+      |> Enum.reject(&(&1["delete"] == true))
+
+    # An empty selection is a selection. A merge carrying only deletions writes
+    # no workflow content, so nothing has been brought into step.
+    entries =
+      if selected_target_ids do
+        Enum.filter(entries, &MapSet.member?(selected_target_ids, &1["id"]))
+      else
+        entries
+      end
+
+    source_ids_by_name = Map.new(source.workflows, &{&1.name, &1.id})
+
+    entries
+    |> Enum.flat_map(fn entry ->
+      case Map.fetch(source_ids_by_name, entry["name"]) do
+        {:ok, source_id} -> [{entry["id"], source_id}]
+        :error -> []
+      end
+    end)
+    |> Map.new()
+  end
+
+  defp latest_versions_by_workflow([]), do: []
+
+  defp latest_versions_by_workflow(workflow_ids) do
+    from(version in WorkflowVersion,
+      where: version.workflow_id in ^workflow_ids,
+      distinct: version.workflow_id,
+      order_by: [
+        asc: version.workflow_id,
+        desc: version.inserted_at,
+        desc: version.id
+      ],
+      select: %{workflow_id: version.workflow_id, hash: version.hash}
+    )
+    |> Repo.all()
+  end
+
+  defp existing_hashes([]), do: %{}
+
+  defp existing_hashes(workflow_ids) do
+    from(version in WorkflowVersion,
+      where: version.workflow_id in ^workflow_ids,
+      select: {version.workflow_id, version.hash}
+    )
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  end
+
+  defp promoted_target_ids(source, selected_source_ids, merge_doc) do
     selected_names =
       from(w in Workflow,
-        where: w.id in ^selected_source_ids,
+        where:
+          w.id in ^selected_source_ids and w.project_id == ^source.id and
+            is_nil(w.deleted_at),
         select: w.name
       )
       |> Repo.all()

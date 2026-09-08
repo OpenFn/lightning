@@ -37,6 +37,10 @@ interface PromoteDialogProps {
   onKeep: () => void;
   /** Phase one dismissal. Close without saving or promoting. */
   onCancel: () => void;
+  onCheckDivergence: () => Promise<{
+    diverged: boolean;
+    parent_name: string | null;
+  }>;
 }
 
 type Phase = 'confirm' | 'success';
@@ -60,22 +64,61 @@ export function PromoteDialog({
   onArchive,
   onKeep,
   onCancel,
+  onCheckDivergence,
 }: PromoteDialogProps) {
   const [phase, setPhase] = useState<Phase>('confirm');
   const [isPromoting, setIsPromoting] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [divergedParentName, setDivergedParentName] = useState<string | null>(
+    null
+  );
+  const [checkFailed, setCheckFailed] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [wasOpen, setWasOpen] = useState(isOpen);
 
   const isBusy = isPromoting || isArchiving;
 
-  // Reset to the confirm step each time the dialog is (re)opened so a second
-  // promote never starts on the previous run's success step.
-  useEffect(() => {
+  // Reset during render rather than in an effect: an effect lands a frame late,
+  // and that frame shows the previous run's warning over an enabled button.
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+
     if (isOpen) {
       setPhase('confirm');
       setIsPromoting(false);
       setIsArchiving(false);
+      setDivergedParentName(null);
+      setCheckFailed(false);
+      setChecking(true);
     }
-  }, [isOpen]);
+  }
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
+
+    void onCheckDivergence()
+      .then(({ diverged, parent_name }) => {
+        if (!cancelled && diverged && parent_name) {
+          setDivergedParentName(parent_name);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCheckFailed(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setChecking(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, onCheckDivergence]);
 
   // Dismissing means different things per phase: cancel on confirm, keep on
   // success. Never dismiss mid-flight so a save/merge/archive can't be orphaned.
@@ -154,6 +197,41 @@ export function PromoteDialog({
                   and starts processing data with these changes.
                 </p>
 
+                {checking && (
+                  <p className="mt-4 text-sm text-gray-500">
+                    Checking whether the parent has changed since this sandbox
+                    was created...
+                  </p>
+                )}
+
+                {checkFailed && (
+                  <p className="mt-4 text-sm text-gray-500">
+                    We could not check whether the parent has changed since this
+                    sandbox was created.
+                  </p>
+                )}
+
+                {divergedParentName !== null && (
+                  <div
+                    className="mt-4 flex gap-2.5 rounded-md bg-amber-50 p-3
+                      text-sm text-amber-800"
+                  >
+                    <span
+                      className="hero-exclamation-triangle mt-0.5 h-4 w-4
+                        shrink-0 text-amber-500"
+                      aria-hidden="true"
+                    />
+                    <p>
+                      This workflow has changed in{' '}
+                      <span className="font-semibold">
+                        {divergedParentName}
+                      </span>{' '}
+                      since this sandbox was created. Promoting replaces that
+                      version with yours, and anything added there is removed.
+                    </p>
+                  </div>
+                )}
+
                 <div className="mt-6 flex justify-end gap-3">
                   <Button
                     variant="secondary"
@@ -165,6 +243,7 @@ export function PromoteDialog({
                   <Button
                     variant="primary"
                     loading={isPromoting}
+                    disabled={checking}
                     onClick={() => void handleConfirm()}
                   >
                     {isPromoting ? (

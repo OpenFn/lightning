@@ -870,6 +870,216 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "request_promote_check" do
+    setup %{user: user} do
+      Mox.stub_with(
+        Lightning.Extensions.MockProjectHook,
+        Lightning.Extensions.ProjectHook
+      )
+
+      parent =
+        insert(:project,
+          name: "parent-project",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      alpha = insert(:workflow, project: parent, name: "alpha")
+      trigger = insert(:trigger, workflow: alpha, type: :webhook)
+      job = insert(:job, workflow: alpha, name: "A1")
+
+      insert(:edge,
+        workflow: alpha,
+        source_trigger: trigger,
+        target_job: job,
+        condition_type: :always
+      )
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(alpha, "aaa111aaa111", "app")
+
+      # Beta is a sibling carried into the sandbox by the fork, so it can be
+      # made to diverge independently of alpha.
+      beta = insert(:workflow, project: parent, name: "beta")
+      beta_trigger = insert(:trigger, workflow: beta, type: :webhook)
+      beta_job = insert(:job, workflow: beta, name: "B1")
+
+      insert(:edge,
+        workflow: beta,
+        source_trigger: beta_trigger,
+        target_job: beta_job,
+        condition_type: :always
+      )
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(beta, "bbb000bbb000", "app")
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, user, %{name: "sb"})
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      {:ok, _, sandbox_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
+
+      %{
+        parent: parent,
+        parent_alpha: alpha,
+        parent_beta: beta,
+        sandbox: sandbox,
+        sandbox_alpha_id: sandbox_alpha.id,
+        sandbox_socket: sandbox_socket
+      }
+    end
+
+    test "reports no divergence while the parent has not moved on", %{
+      sandbox_socket: socket
+    } do
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: "parent-project"}
+    end
+
+    test "reports divergence once the parent gains a version the sandbox never saw",
+         %{sandbox_socket: socket, parent_alpha: parent_alpha} do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_alpha,
+          "bbb222bbb222",
+          "app"
+        )
+
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: true, parent_name: "parent-project"}
+    end
+
+    test "reports no divergence when a sibling workflow is the one that moved on",
+         %{sandbox_socket: socket, parent_beta: parent_beta} do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_beta,
+          "ccc333ccc333",
+          "app"
+        )
+
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false}
+    end
+
+    test "warns when the working name lands on a workflow the parent gained", %{
+      sandbox_socket: socket,
+      sandbox: sandbox,
+      parent: parent,
+      user: user
+    } do
+      gamma = insert(:workflow, project: parent, name: "gamma")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(gamma, "ddd111ddd111", "app")
+
+      ref = push(socket, "request_promote_check", %{"workflow_name" => "gamma"})
+      assert_reply ref, :ok, %{diverged: true}
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      Lightning.Repo.update!(Ecto.Changeset.change(sandbox_alpha, name: "gamma"))
+
+      {:ok, _} =
+        Lightning.Projects.promote_workflow(
+          Lightning.Repo.reload!(sandbox_alpha),
+          user
+        )
+
+      ref = push(socket, "request_promote_check", %{"workflow_name" => "gamma"})
+      assert_reply ref, :ok, %{diverged: false}
+    end
+
+    test "stays quiet when the working name is one the parent does not hold", %{
+      sandbox_socket: socket
+    } do
+      ref = push(socket, "request_promote_check", %{"workflow_name" => "delta"})
+      assert_reply ref, :ok, %{diverged: false}
+    end
+
+    test "answers for a workflow that has not been saved yet", %{
+      sandbox: sandbox,
+      user: user
+    } do
+      new_workflow_id = Ecto.UUID.generate()
+
+      {:ok, _, new_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{new_workflow_id}",
+          %{"project_id" => sandbox.id, "action" => "new"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(new_workflow_id) end)
+
+      ref = push(new_socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: "parent-project"}
+    end
+
+    test "stays quiet for a user who cannot merge into the parent", %{
+      sandbox: sandbox,
+      parent_alpha: parent_alpha,
+      sandbox_alpha_id: sandbox_alpha_id
+    } do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_alpha,
+          "bbb222bbb222",
+          "app"
+        )
+
+      viewer = insert(:user)
+      insert(:project_user, project: sandbox, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha_id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      ref = push(viewer_socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: nil}
+    end
+
+    test "does not warn about this sandbox's own promote", %{
+      sandbox_socket: socket,
+      sandbox: sandbox,
+      user: user
+    } do
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      edit_single_job_body!(sandbox_alpha.id, "console.log('promoted');")
+
+      {:ok, _} = Lightning.Projects.promote_workflow(sandbox_alpha, user)
+
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: "parent-project"}
+    end
+
+    test "reports no divergence outside a sandbox", %{socket: socket} do
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: nil}
+    end
+  end
+
   describe "archive_sandbox" do
     setup %{user: user} do
       Mox.stub_with(

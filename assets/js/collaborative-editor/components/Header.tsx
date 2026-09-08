@@ -216,8 +216,14 @@ export function Header({
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { params, updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
-  const { saveWorkflow, goLive, switchToDraft, promote, archiveSandbox } =
-    useWorkflowActions();
+  const {
+    saveWorkflow,
+    goLive,
+    switchToDraft,
+    promote,
+    checkPromote,
+    archiveSandbox,
+  } = useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
   const triggers = useWorkflowState(state => state.triggers);
   const { canRun } = useCanRun();
@@ -772,6 +778,7 @@ export function Header({
             onArchive={handleArchiveSandbox}
             onKeep={handleKeepSandbox}
             onCancel={handleCancelPromote}
+            onCheckDivergence={checkPromote}
           />
 
           <EditInSandboxPicker
