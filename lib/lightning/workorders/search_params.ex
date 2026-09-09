@@ -18,9 +18,9 @@ defmodule Lightning.WorkOrders.SearchParams do
     :wo_date_before,
     :sort_by,
     :sort_direction,
-    :exit_reason,
-    :error_type,
-    :job_id
+    :signature_exit_reason,
+    :signature_error_type,
+    :signature_job_id
   ]
 
   @derive {Jason.Encoder, only: @fields}
@@ -55,9 +55,9 @@ defmodule Lightning.WorkOrders.SearchParams do
           wo_date_before: DateTime.t(),
           sort_by: String.t(),
           sort_direction: String.t(),
-          exit_reason: String.t(),
-          error_type: String.t(),
-          job_id: Ecto.UUID.t()
+          signature_exit_reason: String.t(),
+          signature_error_type: String.t(),
+          signature_job_id: Ecto.UUID.t()
         }
 
   @primary_key false
@@ -80,12 +80,12 @@ defmodule Lightning.WorkOrders.SearchParams do
     field(:sort_direction, :string)
 
     # The failure signature the workflow health page's triage row draws its
-    # "View" button from. `exit_reason` switches the filter on; a present
-    # `job_id` is a step-level row, an absent one a run-level row. See
-    # `Lightning.Invocation.filter_by_signature/2`.
-    field(:exit_reason, :string)
-    field(:error_type, :string)
-    field(:job_id, :binary_id)
+    # "View" button from. `signature_exit_reason` switches the filter on; a
+    # present `signature_job_id` is a step-level row, an absent one a
+    # run-level row. See `Lightning.Invocation.filter_by_signature/2`.
+    field(:signature_exit_reason, :string)
+    field(:signature_error_type, :string)
+    field(:signature_job_id, :binary_id)
   end
 
   # Raises on invalid input. A malformed filter is only reachable by hand-editing

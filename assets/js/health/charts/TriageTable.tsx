@@ -177,12 +177,12 @@ const historyUrl = (
   if (signature.exit_reason === 'rejected') {
     params.set('filters[rejected]', 'true');
   } else {
-    params.set('filters[exit_reason]', signature.exit_reason);
+    params.set('filters[signature_exit_reason]', signature.exit_reason);
     if (signature.error_type) {
-      params.set('filters[error_type]', signature.error_type);
+      params.set('filters[signature_error_type]', signature.error_type);
     }
     if (signature.job_id) {
-      params.set('filters[job_id]', signature.job_id);
+      params.set('filters[signature_job_id]', signature.job_id);
     }
   }
 

@@ -730,20 +730,22 @@ defmodule Lightning.Invocation do
                  end)
 
   # A triage row's "View" button, scoped to exactly the work orders it
-  # counted. `exit_reason` switches the filter on; a present `job_id` reads
-  # as the step-level row, an absent one as the run-level row (no failing
-  # step) — safe because `steps.job_id` is `NOT NULL`.
+  # counted. `signature_exit_reason` switches the filter on; a present
+  # `signature_job_id` reads as the step-level row, an absent one as the
+  # run-level row (no failing step) — safe because `steps.job_id` is
+  # `NOT NULL`.
   #
   # Carries `wo.state in failure_states()` itself: a *successful* work order
   # can still hold a `fail` step in its latest run (an `on_job_failure`
   # handler that ran fine), so without this a signature filter would match
   # work orders the triage row never counted, and bulk retry would follow.
-  defp filter_by_signature(query, %SearchParams{exit_reason: nil}), do: query
+  defp filter_by_signature(query, %SearchParams{signature_exit_reason: nil}),
+    do: query
 
   defp filter_by_signature(query, %SearchParams{
-         exit_reason: exit_reason,
-         error_type: error_type,
-         job_id: job_id
+         signature_exit_reason: exit_reason,
+         signature_error_type: error_type,
+         signature_job_id: job_id
        })
        when is_binary(job_id) do
     step_match =
@@ -771,9 +773,9 @@ defmodule Lightning.Invocation do
   end
 
   defp filter_by_signature(query, %SearchParams{
-         exit_reason: exit_reason,
-         error_type: error_type,
-         job_id: nil
+         signature_exit_reason: exit_reason,
+         signature_error_type: error_type,
+         signature_job_id: nil
        }) do
     case Map.fetch(@reason_states, exit_reason) do
       {:ok, state} ->

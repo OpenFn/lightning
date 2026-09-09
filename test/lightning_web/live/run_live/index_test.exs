@@ -972,7 +972,7 @@ defmodule LightningWeb.RunLive.IndexTest do
       assert render(chip) =~ "Work order:"
     end
 
-    test "signature filter chip appears when exit_reason filter is set", %{
+    test "signature filter chip appears when the signature filter is set", %{
       conn: conn,
       project: project,
       jobs: [job | _]
@@ -982,9 +982,9 @@ defmodule LightningWeb.RunLive.IndexTest do
           conn,
           Routes.project_run_index_path(conn, :index, project.id,
             filters: %{
-              exit_reason: "fail",
-              error_type: "AdaptorError",
-              job_id: job.id
+              signature_exit_reason: "fail",
+              signature_error_type: "AdaptorError",
+              signature_job_id: job.id
             }
           )
         )
@@ -1004,7 +1004,7 @@ defmodule LightningWeb.RunLive.IndexTest do
         live_async(
           conn,
           Routes.project_run_index_path(conn, :index, project.id,
-            filters: %{exit_reason: "lost"}
+            filters: %{signature_exit_reason: "lost"}
           )
         )
 
@@ -1014,7 +1014,7 @@ defmodule LightningWeb.RunLive.IndexTest do
       refute html =~ "@"
     end
 
-    test "signature filter chip is absent when exit_reason filter is not set",
+    test "signature filter chip is absent when the signature filter is not set",
          %{conn: conn, project: project} do
       {:ok, view, _html} =
         live_async(

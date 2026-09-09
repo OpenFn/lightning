@@ -257,18 +257,21 @@
               </.filter_chip>
             <% end %>
 
-            <%!-- Failure signature chip (only when exit_reason filter is active) --%>
-            <% exit_reason = get_change(@filters_changeset, :exit_reason) %>
+            <%!-- Failure signature chip (only when the signature filter is active) --%>
+            <% exit_reason =
+              get_change(@filters_changeset, :signature_exit_reason) %>
             <%= if exit_reason do %>
-              <% error_type = get_change(@filters_changeset, :error_type)
-              job_id = get_change(@filters_changeset, :job_id) %>
+              <% error_type =
+                get_change(@filters_changeset, :signature_error_type)
+
+              job_id = get_change(@filters_changeset, :signature_job_id) %>
               <.filter_chip
                 id="signature-filter-chip"
                 active={true}
                 clear_fields={[
-                  {:exit_reason, nil},
-                  {:error_type, nil},
-                  {:job_id, nil}
+                  {:signature_exit_reason, nil},
+                  {:signature_error_type, nil},
+                  {:signature_job_id, nil}
                 ]}
               >
                 {exit_reason}{if error_type,

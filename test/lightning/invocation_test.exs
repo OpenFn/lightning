@@ -1037,9 +1037,9 @@ defmodule Lightning.InvocationTest do
     defp signature_params(exit_reason, error_type, job_id) do
       SearchParams.new(%{
         "status" => SearchParams.status_list(),
-        "exit_reason" => exit_reason,
-        "error_type" => error_type,
-        "job_id" => job_id
+        "signature_exit_reason" => exit_reason,
+        "signature_error_type" => error_type,
+        "signature_job_id" => job_id
       })
     end
 
@@ -1152,7 +1152,12 @@ defmodule Lightning.InvocationTest do
       wo = workorder(workflow, trigger, :failed)
 
       params = SearchParams.new(%{"status" => SearchParams.status_list()})
-      assert %{exit_reason: nil, error_type: nil, job_id: nil} = params
+
+      assert %{
+               signature_exit_reason: nil,
+               signature_error_type: nil,
+               signature_job_id: nil
+             } = params
 
       found =
         project
