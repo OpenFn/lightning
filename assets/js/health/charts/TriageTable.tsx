@@ -165,6 +165,12 @@ const ViewButton = ({ href }: { href: string }) => (
 // closed on it server-side — history's existing `rejected` status filter is
 // what actually matches these. `to_signature/2` gives every rejected row the
 // same literal `exit_reason: "rejected"`, so that is the signal to switch.
+//
+// No status is ticked for the other rows: the signature filter carries
+// `wo.state in failure_states()` itself, so the group is already exactly the
+// row's, and a status the reason names would only subtract from it — a `fail:`
+// row counts every work order whose latest run holds a step that failed,
+// whatever state the run itself ended in.
 const historyUrl = (
   projectId: string,
   workflowId: string,
