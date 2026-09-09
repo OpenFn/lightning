@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-ED886297.js"></script>
+    <script defer src="dist/sidebar_items-0EB162AD.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -201,6 +201,17 @@ of <code class="inline">project</code>, walking the parent chain.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#preview_collections/2" data-no-tooltip="" translate="no">preview_collections(source, target)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Computes the collections a merge from <code class="inline">source</code> into <code class="inline">target</code> would create,
+without applying anything.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#provision/3" data-no-tooltip="" translate="no">provision(parent, actor, attrs)</a>
 
       </div>
@@ -225,7 +236,7 @@ of <code class="inline">project</code>, walking the parent chain.</p></div>
 
       </div>
 
-        <div class="summary-synopsis"><p>Synchronises collection names from a sandbox to its merge target.</p></div>
+        <div class="summary-synopsis"><p>Creates the source's collections in its merge target.</p></div>
 
     </div>
 
@@ -263,7 +274,7 @@ of <code class="inline">project</code>, walking the parent chain.</p></div>
       <h1 class="signature" translate="no">merge_error()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L203" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L214" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -291,7 +302,7 @@ of <code class="inline">project</code>, walking the parent chain.</p></div>
       <h1 class="signature" translate="no">provision_attrs()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L89" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L88" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -344,7 +355,7 @@ path goes through the seat-limit check.</p>
       <h1 class="signature" translate="no">cancel_scheduled_sandbox_deletion(sandbox, actor)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L685" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L697" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -391,7 +402,7 @@ scheduled for deletion)</li></ul><h2 id="cancel_scheduled_sandbox_deletion/2-ret
       <h1 class="signature" translate="no">delete_sandbox(sandbox, actor)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L576" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L588" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -411,7 +422,7 @@ scheduled for deletion)</li></ul><h2 id="cancel_scheduled_sandbox_deletion/2-ret
 
       </div>
 
-<p>Deletes a sandbox and all its descendant projects.</p><h2 id="delete_sandbox/2-parameters" class="section-heading"><a href="#delete_sandbox/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">sandbox</code> - Sandbox project to delete (or sandbox ID as string)</li><li><code class="inline">actor</code> - User performing the deletion (needs <code class="inline">:owner</code> or <code class="inline">:admin</code> role on sandbox)</li></ul><h2 id="delete_sandbox/2-returns" class="section-heading"><a href="#delete_sandbox/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, deleted_sandbox}</code> - Successfully deleted sandbox and descendants</li><li><code class="inline">{:error, :unauthorized}</code> - Actor lacks permission on sandbox</li><li><code class="inline">{:error, :not_found}</code> - Sandbox ID not found (when using string ID)</li><li><code class="inline">{:error, reason}</code> - Database or other deletion error</li></ul><h2 id="delete_sandbox/2-example" class="section-heading"><a href="#delete_sandbox/2-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="6393696551-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">deleted</span><span class="p" data-group-id="6393696551-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Sandboxes</span><span class="o">.</span><span class="n">delete_sandbox</span><span class="p" data-group-id="6393696551-2">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="6393696551-2">)</span></code></pre>
+<p>Deletes a sandbox and all its descendant projects.</p><h2 id="delete_sandbox/2-parameters" class="section-heading"><a href="#delete_sandbox/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">sandbox</code> - Sandbox project to delete (or sandbox ID as string)</li><li><code class="inline">actor</code> - User performing the deletion (needs <code class="inline">:owner</code> or <code class="inline">:admin</code> role on sandbox)</li></ul><h2 id="delete_sandbox/2-returns" class="section-heading"><a href="#delete_sandbox/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, deleted_sandbox}</code> - Successfully deleted sandbox and descendants</li><li><code class="inline">{:error, :unauthorized}</code> - Actor lacks permission on sandbox</li><li><code class="inline">{:error, :not_found}</code> - Sandbox ID not found (when using string ID)</li><li><code class="inline">{:error, reason}</code> - Database or other deletion error</li></ul><h2 id="delete_sandbox/2-example" class="section-heading"><a href="#delete_sandbox/2-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="2506652301-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">deleted</span><span class="p" data-group-id="2506652301-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Sandboxes</span><span class="o">.</span><span class="n">delete_sandbox</span><span class="p" data-group-id="2506652301-2">(</span><span class="n">sandbox</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p" data-group-id="2506652301-2">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="merge/4">
@@ -426,7 +437,7 @@ scheduled for deletion)</li></ul><h2 id="cancel_scheduled_sandbox_deletion/2-ret
       <h1 class="signature" translate="no">merge(source, target, actor, opts \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L208" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L219" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -449,7 +460,15 @@ scheduled for deletion)</li></ul><h2 id="cancel_scheduled_sandbox_deletion/2-ret
 <p>Merges a sandbox into its target project.</p><p>Imports the sandbox's workflow configuration into the target via the
 provisioner and synchronises collection names. Runs inside a single
 transaction. Collection data is never copied.</p><p>Callers must authorise the merge before calling (e.g. <code class="inline">:merge_sandbox</code>).</p><h2 id="merge/4-parameters" class="section-heading"><a href="#merge/4-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">source</code> - The sandbox project being merged</li><li><code class="inline">target</code> - The project receiving the merge</li><li><code class="inline">actor</code> - The user performing the merge</li><li><code class="inline">opts</code> - Merge options (<code class="inline">:selected_workflow_ids</code>,
-<code class="inline">:deleted_target_workflow_ids</code>, <code class="inline">:selected_credential_ids</code>)</li></ul><h2 id="merge/4-credential-attachment" class="section-heading"><a href="#merge/4-credential-attachment" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Credential attachment</span></h2><p>A credential that lives only in the sandbox (the target has no
+<code class="inline">:deleted_target_workflow_ids</code>, <code class="inline">:selected_credential_ids</code>,
+<code class="inline">:skip_collections</code>)</li></ul><h2 id="merge/4-collections" class="section-heading"><a href="#merge/4-collections" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Collections</span></h2><p>A merge always creates, empty, the collections the target is missing,
+computed at merge time - so a collection added to the sandbox while a
+merge screen was open is still carried over. Pass <code class="inline">:skip_collections</code>
+(a list of names the user explicitly unchecked in the merge screen) to
+leave those out; anything else raises <a href="https://hexdocs.pm/elixir/ArgumentError.html"><code class="inline">ArgumentError</code></a>. A merge never
+deletes collections: ones that exist only in the target are always kept,
+and any deletion-shaped option a caller passes is ignored. Removing a
+collection is a project-settings action, not part of a merge.</p><h2 id="merge/4-credential-attachment" class="section-heading"><a href="#merge/4-credential-attachment" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Credential attachment</span></h2><p>A credential that lives only in the sandbox (the target has no
 <code class="inline">project_credential</code> for its underlying <code class="inline">credential_id</code>) would otherwise be
 dropped on merge, since the remap only matches on shared credentials. Pass
 <code class="inline">:selected_credential_ids</code> (a list of the sandbox <code class="inline">project_credential</code> ids the
@@ -478,7 +497,7 @@ validation detail is logged for diagnosis.</p>
       <h1 class="signature" translate="no">parent_admin?(project, user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L538" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L550" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -500,6 +519,46 @@ any ancestor project cannot be removed from, or downgraded within, a
 sandbox descended from that project.</p>
   </section>
 </section>
+<section class="detail" id="preview_collections/2">
+
+  <div class="detail-header">
+    <a href="#preview_collections/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">preview_collections(source, target)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L1200" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> preview_collections(
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()
+) :: %{
+  to_create: [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()]
+}</pre>
+
+      </div>
+
+<p>Computes the collections a merge from <code class="inline">source</code> into <code class="inline">target</code> would create,
+without applying anything.</p><p>Returns a map with:</p><ul><li><code class="inline">:to_create</code> - sorted names that exist only in the source and would be
+created empty in the target</li></ul><p>Used by the merge screen to show what a merge would change before the
+user commits to it. Callers pass the names the user explicitly unchecked
+back as <code class="inline">:skip_collections</code>; the merge recomputes the missing names at
+merge time, so a collection added to the source after the preview is
+still created. A merge never deletes collections, so there is nothing
+else to preview.</p>
+  </section>
+</section>
 <section class="detail" id="provision/3">
 
   <div class="detail-header">
@@ -510,7 +569,7 @@ sandbox descended from that project.</p>
       <h1 class="signature" translate="no">provision(parent, actor, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L144" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L143" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -532,10 +591,10 @@ sandbox descended from that project.</p>
       </div>
 
 <p>Creates a new sandbox project by cloning from a parent project.</p><p>The creator becomes the sandbox owner, and all workflow triggers are disabled.
-Credentials are shared (not duplicated) between parent and sandbox.</p><h2 id="provision/3-parameters" class="section-heading"><a href="#provision/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">parent</code> - Project to clone from</li><li><code class="inline">actor</code> - User creating the sandbox (needs <code class="inline">:editor</code>, <code class="inline">:admin</code>, or <code class="inline">:owner</code> role on parent)</li><li><code class="inline">attrs</code> - Creation attributes (see <a href="#t:provision_attrs/0"><code class="inline">provision_attrs/0</code></a>)</li></ul><h2 id="provision/3-returns" class="section-heading"><a href="#provision/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, sandbox_project}</code> - Successfully created sandbox</li><li><code class="inline">{:error, :unauthorized}</code> - Actor lacks permission on parent</li><li><code class="inline">{:error, :nesting_too_deep}</code> - Parent is already at <a href="Lightning.Config.html#max_sandbox_nesting_depth/0"><code class="inline">Lightning.Config.max_sandbox_nesting_depth/0</code></a></li><li><code class="inline">{:error, changeset}</code> - Validation or database error</li></ul><h2 id="provision/3-example" class="section-heading"><a href="#provision/3-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="3989434136-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">sandbox</span><span class="p" data-group-id="3989434136-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Sandboxes</span><span class="o">.</span><span class="n">provision</span><span class="p" data-group-id="3989434136-2">(</span><span class="n">parent_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3989434136-3">%{</span><span class="w">
+Credentials are shared (not duplicated) between parent and sandbox.</p><h2 id="provision/3-parameters" class="section-heading"><a href="#provision/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">parent</code> - Project to clone from</li><li><code class="inline">actor</code> - User creating the sandbox (needs <code class="inline">:editor</code>, <code class="inline">:admin</code>, or <code class="inline">:owner</code> role on parent)</li><li><code class="inline">attrs</code> - Creation attributes (see <a href="#t:provision_attrs/0"><code class="inline">provision_attrs/0</code></a>)</li></ul><h2 id="provision/3-returns" class="section-heading"><a href="#provision/3-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, sandbox_project}</code> - Successfully created sandbox</li><li><code class="inline">{:error, :unauthorized}</code> - Actor lacks permission on parent</li><li><code class="inline">{:error, :nesting_too_deep}</code> - Parent is already at <a href="Lightning.Config.html#max_sandbox_nesting_depth/0"><code class="inline">Lightning.Config.max_sandbox_nesting_depth/0</code></a></li><li><code class="inline">{:error, changeset}</code> - Validation or database error</li></ul><h2 id="provision/3-example" class="section-heading"><a href="#provision/3-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="2712046464-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">sandbox</span><span class="p" data-group-id="2712046464-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Sandboxes</span><span class="o">.</span><span class="n">provision</span><span class="p" data-group-id="2712046464-2">(</span><span class="n">parent_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2712046464-3">%{</span><span class="w">
   </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;test-environment&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#336699&quot;</span><span class="w">
-</span><span class="p" data-group-id="3989434136-3">}</span><span class="p" data-group-id="3989434136-2">)</span></code></pre><h2 id="provision/3-concurrency-note" class="section-heading"><a href="#provision/3-concurrency-note" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Concurrency note</span></h2><p>The nesting-depth check runs inside the same <code class="inline">Repo.transaction</code> as the
+</span><span class="p" data-group-id="2712046464-3">}</span><span class="p" data-group-id="2712046464-2">)</span></code></pre><h2 id="provision/3-concurrency-note" class="section-heading"><a href="#provision/3-concurrency-note" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Concurrency note</span></h2><p>The nesting-depth check runs inside the same <code class="inline">Repo.transaction</code> as the
 sandbox insert, but PostgreSQL's default READ COMMITTED isolation does
 not lock the parent's ancestry. A concurrent committed reparent of
 <code class="inline">parent</code> or any of its ancestors between the depth read and the insert
@@ -555,7 +614,7 @@ on the ancestor chain.</p>
       <h1 class="signature" translate="no">schedule_sandbox_deletion(sandbox, actor)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L626" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L638" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -602,7 +661,7 @@ schedule the parent.</p><h2 id="schedule_sandbox_deletion/2-parameters" class="s
       <h1 class="signature" translate="no">sync_collections(source, target, opts \\ [])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L1189" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L1226" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -618,18 +677,16 @@ schedule the parent.</p><h2 id="schedule_sandbox_deletion/2-parameters" class="s
   <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
   <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()
 ) ::
-  {:ok, %{created: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>(), deleted: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}
-  | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+  {:ok, %{created: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}</pre>
 
       </div>
 
-<p>Synchronises collection names from a sandbox to its merge target.</p><p>Names only in the source are created empty in the target; names only in
-the target are deleted along with their items. Collection data is never
-copied. The combined byte-size of deleted collections is reported via
-<code class="inline">CollectionHook.handle_delete/2</code> for usage accounting.</p><p>Runs inside a single transaction.</p><h2 id="sync_collections/3-options" class="section-heading"><a href="#sync_collections/3-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:allow_deletions</code> - when <code class="inline">true</code>, target-only collections (and their items)
-are deleted so the target matches the source. Defaults to <code class="inline">false</code>: callers
-must opt in. The merge path opts in only when the actor holds
-<code class="inline">:manage_collection</code>, so an editor merge never prunes target collections.</li></ul>
+<p>Creates the source's collections in its merge target.</p><p>Names only in the source are created empty in the target; collection data
+is never copied. Collections that exist only in the target are never
+touched - a merge cannot delete a collection.</p><h2 id="sync_collections/3-options" class="section-heading"><a href="#sync_collections/3-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:skip_names</code> - collection names not to create even though the target
+lacks them; everything else missing is created. Defaults to <code class="inline">[]</code>.
+The merge passes the names the user explicitly unchecked, so any
+collection added to the source since the preview is still created.</li></ul>
   </section>
 </section>
 <section class="detail" id="update_sandbox/3">
@@ -642,7 +699,7 @@ must opt in. The merge path opts in only when the actor holds
       <h1 class="signature" translate="no">update_sandbox(sandbox, actor, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L505" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/sandboxes.ex#L517" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
