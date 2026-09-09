@@ -504,8 +504,9 @@ describe('deriveWorkflowChanges', () => {
 
       // The answer set a path the panel will flag as invalid. Saying it was
       // removed would send the reader looking for a change that never happened.
-      expect(triggerDetail(intake, spaces)).not.toBe('path removed');
-      expect(triggerDetail(intake, spaces)).toContain('intake-form');
+      expect(triggerDetail(intake, spaces)).toBe(
+        "path: intake-form \u2192 '   '"
+      );
     });
 
     it('reports the path on a webhook trigger that has just appeared', () => {
@@ -524,6 +525,24 @@ describe('deriveWorkflowChanges', () => {
       );
       expect(row?.change).toBe('add');
       expect(row?.detail).toBe('path: intake-form');
+    });
+
+    it("states a new trigger's settings rather than implying a previous value", () => {
+      const none = buildYaml({
+        jobs: [transformJob('fn(state => state);')],
+        triggers: [],
+        edges: [],
+      });
+      const configured = webhookWorkflow({
+        ...webhookTrigger,
+        webhook_reply: 'after_completion',
+        webhook_response_config: { success_code: 202 },
+      });
+
+      const row = deriveWorkflowChanges(none, configured)!.structure.find(
+        entry => entry.kind === 'trigger'
+      );
+      expect(row?.detail).toBe('reply: On Complete; success code: 202');
     });
 
     it('reports the settings when a cron trigger becomes a webhook', () => {
@@ -1026,6 +1045,34 @@ describe('deriveSnapshotChanges', () => {
 
     expect(rows(hadPath).map(row => row.detail)).toEqual(['path removed']);
     expect(rows(neverHadPath)).toEqual([]);
+  });
+
+  it('carries the path even when the snapshots omit trigger ids', () => {
+    // Apollo drops trigger ids on some replies, and parsing mints a fresh one
+    // per trigger, so carrying by raw id would carry nothing on those replies.
+    const idless = (path: string | null | undefined, body: string) => {
+      const yaml = buildYaml({
+        jobs: [transformJob(body)],
+        triggers: [
+          {
+            ...webhookTrigger,
+            ...(path !== undefined && { custom_path: path }),
+          },
+        ],
+        edges: [webhookToTransformEdge],
+      });
+      return yaml.replace(/^ {4}id: trigger-1\n/m, '');
+    };
+
+    const result = deriveSnapshotChanges(idless('intake-form', 'fn(s => s);'), [
+      snapshot(idless(undefined, 'fn(s => ({ ...s }));'), 0),
+      snapshot(idless(null, 'fn(s => ({ ...s }));'), 1),
+    ]);
+
+    const rows = result.flatMap(entry =>
+      entry.changes.structure.filter(row => row.kind === 'trigger')
+    );
+    expect(rows.map(row => row.detail)).toEqual(['path removed']);
   });
 
   it('pins each change set to the segment index its snapshot carried', () => {

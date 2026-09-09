@@ -369,6 +369,12 @@ const pathOf = (trigger: StateWebhookTrigger): string | null | undefined => {
     : trigger.custom_path;
 };
 
+// A path with surrounding space is one the server would refuse and the panel
+// shows no URL for, and it renders as an arrow pointing at nothing. Quoted, so
+// the row reads as a value rather than a truncated sentence.
+const showPath = (path: string): string =>
+  path.trim() === path ? path : `'${path}'`;
+
 const codeOf = (code: number | null | undefined): string =>
   code == null ? 'default' : String(code);
 
@@ -384,7 +390,9 @@ const bareWebhook = (trigger: { id: string }): StateWebhookTrigger => ({
 
 const webhookDetails = (
   before: StateWebhookTrigger,
-  after: StateWebhookTrigger
+  after: StateWebhookTrigger,
+  /** The trigger is new, so a setting was chosen rather than changed. */
+  asNew = false
 ): string[] => {
   const details: string[] = [];
 
@@ -397,14 +405,16 @@ const webhookDetails = (
       afterPath === null
         ? 'path removed'
         : beforePath === null
-          ? `path: ${afterPath}`
-          : `path: ${beforePath} → ${afterPath}`
+          ? `path: ${showPath(afterPath)}`
+          : `path: ${showPath(beforePath)} → ${showPath(afterPath)}`
     );
   }
 
   if (replyOf(before) !== replyOf(after)) {
     details.push(
-      `reply: ${REPLY_LABEL[replyOf(before)]} → ${REPLY_LABEL[replyOf(after)]}`
+      asNew
+        ? `reply: ${REPLY_LABEL[replyOf(after)]}`
+        : `reply: ${REPLY_LABEL[replyOf(before)]} → ${REPLY_LABEL[replyOf(after)]}`
     );
   }
 
@@ -417,7 +427,9 @@ const webhookDetails = (
     const afterCode = after.webhook_response_config?.[field] ?? null;
     if (beforeCode !== afterCode) {
       details.push(
-        `${name} code: ${codeOf(beforeCode)} → ${codeOf(afterCode)}`
+        asNew
+          ? `${name} code: ${codeOf(afterCode)}`
+          : `${name} code: ${codeOf(beforeCode)} → ${codeOf(afterCode)}`
       );
     }
   }
@@ -450,7 +462,7 @@ const deriveTriggerChanges = (
     // only that a trigger appeared.
     const details =
       trigger.type === 'webhook'
-        ? webhookDetails(bareWebhook(trigger), trigger)
+        ? webhookDetails(bareWebhook(trigger), trigger, true)
         : [];
     changes.push({
       kind: 'trigger',
@@ -488,11 +500,11 @@ const deriveTriggerChanges = (
       // A cron trigger becoming a webhook mints a public URL, so report the
       // settings rather than only the type change. Diffing against a bare
       // webhook reads them all as newly set, which is what they are.
-      const baseline: StateWebhookTrigger =
-        beforeTrigger.type === 'webhook'
-          ? beforeTrigger
-          : bareWebhook(beforeTrigger);
-      details.push(...webhookDetails(baseline, afterTrigger));
+      const becameWebhook = beforeTrigger.type !== 'webhook';
+      const baseline: StateWebhookTrigger = becameWebhook
+        ? bareWebhook(beforeTrigger)
+        : beforeTrigger;
+      details.push(...webhookDetails(baseline, afterTrigger, becameWebhook));
     }
 
     if (details.length > 0) {
@@ -772,20 +784,37 @@ export const clearWorkflowDiffCaches = (): void => {
  * Copies rather than mutates: these states are cached by the YAML that
  * produced them and are handed out again.
  */
+// Keyed on type rather than id: a snapshot without ids is parsed with a fresh
+// uuid each time, which would change the salt on every re-parse and fill the
+// pair cache with entries nothing can reach again.
 const heldPaths = (state: DiffState): string =>
   state.triggers
     .filter(
       (trigger): trigger is StateWebhookTrigger =>
         trigger.type === 'webhook' && trigger.custom_path !== undefined
     )
-    .map(trigger => `${trigger.id}=${trigger.custom_path ?? ''}`)
+    .map(trigger => `${trigger.type}=${trigger.custom_path ?? ''}`)
+    .sort()
     .join(',');
 
 const carryWebhookPaths = (previous: DiffState, next: DiffState): DiffState => {
+  // Paired the way the diff pairs them. A snapshot that omits trigger ids is
+  // parsed with an invented uuid per trigger, so matching on the raw id would
+  // carry nothing on exactly the replies where Apollo drops them.
+  const { pairs } = matchEntities(
+    previous.triggers,
+    next.triggers,
+    trigger => `type:${trigger.type}`
+  );
+
   const held = new Map<string, string | null>();
-  for (const trigger of previous.triggers) {
-    if (trigger.type === 'webhook' && trigger.custom_path !== undefined) {
-      held.set(trigger.id, trigger.custom_path);
+  for (const [previousTrigger, nextTrigger] of pairs) {
+    if (
+      previousTrigger.type === 'webhook' &&
+      nextTrigger.type === 'webhook' &&
+      previousTrigger.custom_path !== undefined
+    ) {
+      held.set(nextTrigger.id, previousTrigger.custom_path);
     }
   }
   if (held.size === 0) return next;
