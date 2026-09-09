@@ -992,8 +992,32 @@ defmodule LightningWeb.RunLive.IndexTest do
       assert has_element?(view, "#signature-filter-chip")
       chip = element(view, "#signature-filter-chip")
 
-      assert render(chip) =~
-               "fail:AdaptorError @ #{LightningWeb.LiveHelpers.display_short_uuid(job.id)}"
+      assert render(chip) =~ "fail:AdaptorError @ #{job.name}"
+    end
+
+    # The name is read back from the id, so the read is scoped to the project
+    # the page is on — a hand-edited id from elsewhere names nothing here.
+    test "signature filter chip falls back to the id for a job outside the project",
+         %{conn: conn, project: project} do
+      other_job = insert(:job, workflow: build(:workflow))
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              signature_exit_reason: "fail",
+              signature_job_id: other_job.id
+            }
+          )
+        )
+
+      chip = render(element(view, "#signature-filter-chip"))
+
+      refute chip =~ other_job.name
+
+      assert chip =~
+               LightningWeb.LiveHelpers.display_short_uuid(other_job.id)
     end
 
     test "signature filter chip omits error type and job id when absent", %{

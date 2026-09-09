@@ -9,6 +9,7 @@ defmodule LightningWeb.RunLive.Index do
 
   alias Lightning.Invocation
   alias Lightning.Invocation.Step
+  alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Run
@@ -185,6 +186,8 @@ defmodule LightningWeb.RunLive.Index do
        page_title: "History",
        step: %Step{},
        filters_changeset: filters_changeset(filters),
+       signature_job_name:
+         Jobs.get_job_name(project.id, filters["signature_job_id"]),
        pagination_path: &pagination_path(socket, project, &1, filters),
        page: @empty_page,
        async_page: AsyncResult.loading()

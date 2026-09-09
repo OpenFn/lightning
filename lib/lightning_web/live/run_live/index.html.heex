@@ -276,7 +276,7 @@
               >
                 {exit_reason}{if error_type,
                   do: ":#{error_type}"}{if job_id,
-                  do: " @ #{display_short_uuid(job_id)}"}
+                  do: " @ #{@signature_job_name || display_short_uuid(job_id)}"}
               </.filter_chip>
             <% end %>
           </div>
