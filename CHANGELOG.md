@@ -104,18 +104,6 @@ and this project adheres to
 
 ### Changed
 
-- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
-  first character of a string, which breaks names in many languages. Lightning
-  does not normalise anything today, but #4577 adds it on every name, so the
-  runtime moves first.
-
-- The webhook trigger panel now lists every URL a trigger answers on. The
-  default URL is always there and the custom one sits next to it, editable in
-  place, with add, edit, delete and copy on the row itself. A path already used
-  by another workflow in the project is reported while you type, not after you
-  save. A path the server would reject shows what is wrong and is left as you
-  typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
-
 - The AI assistant is the global assistant for everyone. It was behind the
   experimental features setting and an opt-in tickbox on the chat input, and
   both are gone: every message goes to it, and the badge naming which assistant
@@ -132,6 +120,18 @@ and this project adheres to
   values removed. The "Press Enter to send" hint below the box is gone, since
   the notice and the send button now share that row.
   [#5037](https://github.com/OpenFn/lightning/issues/5037)
+
+- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
+  first character of a string, which breaks names in many languages. Lightning
+  does not normalise anything today, but #4577 adds it on every name, so the
+  runtime moves first.
+
+- The webhook trigger panel now lists every URL a trigger answers on. The
+  default URL is always there and the custom one sits next to it, editable in
+  place, with add, edit, delete and copy on the row itself. A path already used
+  by another workflow in the project is reported while you type, not after you
+  save. A path the server would reject shows what is wrong and is left as you
+  typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
 
 - The webhook trigger panel now lists every URL a trigger answers on. The
   default URL is always there and the custom one sits next to it, editable in
@@ -253,23 +253,21 @@ and this project adheres to
 
 ### Security
 
+- A project's environment can no longer be changed once the project exists. It
+  decides which of a credential's value sets the project reads, so anyone who
+  could type it could read any set on any credential shared with that project.
+  A sandbox holds a reference to every credential its parent holds, and creating
+  a sandbox makes you its owner, so a sandbox admin could name their environment
+  after the parent's and read the parent's production values. The field stays on
+  the project settings page, because it tells you which values resolve there, but
+  it is read-only and no longer accepted from a form or from the sandbox update.
+
 - Bumped `mint` to 1.10.0, clearing
   [EEF-CVE-2026-82728](https://osv.dev/vulnerability/EEF-CVE-2026-82728) and
   [EEF-CVE-2026-82729](https://osv.dev/vulnerability/EEF-CVE-2026-82729), both
   denial of service in Mint's HTTP/1 parser. Mint is our HTTP client, so they
   are reachable from a response rather than from a request into Lightning, and
   the exposure is the outbound calls Lightning makes.
-
-- A project now records which set of a credential's values it may read, on the
-  share itself. It used to be decided by matching the project's environment
-  _name_ against the credential's value sets at run time, and that name is an
-  ordinary project setting. Creating a sandbox makes you its owner, a sandbox
-  owner can edit its environment, and a sandbox already holds a reference to
-  every one of its parent's credentials, so any editor on a production project
-  could reach that project's production secrets.
-
-  Existing projects keep the values they resolve today. Sandboxes start with
-  none, and a project admin chooses them on the project's credentials tab.
 
 ## [2.18.2] - 2026-09-02
 

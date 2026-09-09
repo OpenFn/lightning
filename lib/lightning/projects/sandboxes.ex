@@ -793,7 +793,9 @@ defmodule Lightning.Projects.Sandboxes do
       sandbox
     )
     |> if do
-      allowed_attrs = Map.take(attrs, [:name, :color, :env])
+      # Without `:env`. See the note on @project_settings_fields: a sandbox
+      # owner who could set it could read the parent's production values.
+      allowed_attrs = Map.take(attrs, [:name, :color])
       Lightning.Projects.update_project(sandbox, allowed_attrs, actor)
     else
       {:error, :unauthorized}
