@@ -5,6 +5,7 @@ import {
 } from '../types';
 
 import { Donut } from './Donut';
+import { FAILED } from './OutcomesDonut';
 
 /**
  * Failed work orders split by the state they finished in, as a donut.
@@ -26,7 +27,7 @@ import { Donut } from './Donut';
 // A `Record` keyed by `FailureState`, so adding a state without choosing a
 // colour for it is a compile error rather than a silently missing slice.
 const COLORS: Record<FailureState, string> = {
-  failed: '#d03b3b',
+  failed: FAILED,
   crashed: '#e87ba4',
   killed: '#4a3aa7',
   exception: '#2a78d6',

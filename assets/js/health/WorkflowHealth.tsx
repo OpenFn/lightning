@@ -1,10 +1,14 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
+import { cn } from '#/utils/cn';
+
 import { FRAME } from './charts/Donut';
 import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
 import { OutcomesDonut } from './charts/OutcomesDonut';
 import { TriageTable } from './charts/TriageTable';
+import type { RunVolume } from './charts/VolumeBars';
+import { bucketMeta, VolumeBars } from './charts/VolumeBars';
 import { DEFAULT_DAYS, RangePicker } from './RangePicker';
 import type { ErrorSignatures, Outcomes } from './types';
 import { FAILURE_STATES } from './types';
@@ -60,6 +64,9 @@ export const HealthContent = ({
   const signatures = useHealthQuery<ErrorSignatures>(
     `${base}/failures?days=${days}`
   );
+  // Counts runs where the rest of the page counts work orders, so there is
+  // nothing to share with the other two queries.
+  const volume = useHealthQuery<RunVolume>(`${base}/runs?days=${days}`);
 
   return (
     <div className="flex flex-col gap-6">
@@ -78,7 +85,9 @@ export const HealthContent = ({
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* Four columns: a narrow donut beside a wide time axis, then an even
+          split. Stacks in source order below `md`. */}
+      <div className="grid gap-6 md:grid-cols-4">
         <Card
           title="Outcomes"
           meta={outcomes.data && workOrders(outcomes.data.counts)}
@@ -93,10 +102,49 @@ export const HealthContent = ({
           </Panel>
         </Card>
 
-        {/* Same reply as the panel beside it — one aggregate read two ways, so
-            the wedge here and the red wedge there cannot disagree. */}
+        {/* Runs, where the donut beside it counts work orders — so the meta
+            names the bucket size rather than a total that won't reconcile. */}
+        <Card
+          title="Volume over time"
+          className="md:col-span-3"
+          meta={volume.data && bucketMeta(volume.data.buckets)}
+        >
+          <Panel data={volume.data} error={volume.error}>
+            {({ buckets, window }) => (
+              <VolumeBars
+                buckets={buckets}
+                emptyMessage={emptyMessage(window, 'runs')}
+              />
+            )}
+          </Panel>
+        </Card>
+
+        {/* Counts are per failed step, so the rows can sum past the failure
+            total the donuts draw: a second broken branch is its own thing to
+            fix. */}
+        <Card
+          title="Triage"
+          className="md:col-span-2"
+          meta="grouped by failure type · counted once per failed branch"
+        >
+          <Panel data={signatures.data} error={signatures.error}>
+            {({ signatures, window }) => (
+              <TriageTable
+                signatures={signatures}
+                emptyMessage={emptyMessage(window, 'failures')}
+                projectId={projectId}
+                workflowId={workflowId}
+                from={window.from}
+              />
+            )}
+          </Panel>
+        </Card>
+
+        {/* Same reply as the Outcomes panel — one aggregate read two ways, so
+            the slices here and the red wedge there cannot disagree. */}
         <Card
           title="Failure breakdown"
+          className="md:col-span-2"
           meta={
             outcomes.data &&
             `${failures(outcomes.data.counts)} · by work order state`
@@ -112,25 +160,6 @@ export const HealthContent = ({
           </Panel>
         </Card>
       </div>
-
-      {/* Counts are per failed step, so the rows can sum past the failure total
-          the donuts draw: a second broken branch is its own thing to fix. */}
-      <Card
-        title="Triage"
-        meta="grouped by failure type · counted once per failed branch"
-      >
-        <Panel data={signatures.data} error={signatures.error}>
-          {({ signatures, window }) => (
-            <TriageTable
-              signatures={signatures}
-              emptyMessage={emptyMessage(window, 'failures')}
-              projectId={projectId}
-              workflowId={workflowId}
-              from={window.from}
-            />
-          )}
-        </Panel>
-      </Card>
     </div>
   );
 };
@@ -138,13 +167,19 @@ export const HealthContent = ({
 const Card = ({
   title,
   meta,
+  className,
   children,
 }: {
   title: string;
   meta: ReactNode;
+  className?: string;
   children: ReactNode;
 }) => (
-  <div className="rounded-lg bg-white p-6 shadow">
+  // A column, so a panel that wants the room can take the height the grid row
+  // stretches this card to instead of leaving it blank.
+  <div
+    className={cn('flex flex-col rounded-lg bg-white p-6 shadow', className)}
+  >
     <div className="mb-4 flex items-baseline justify-between gap-4">
       <h2 className="text-sm font-medium text-gray-900">{title}</h2>
       {meta && <span className="text-xs text-gray-500">{meta}</span>}
