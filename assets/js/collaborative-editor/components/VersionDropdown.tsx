@@ -5,6 +5,7 @@ import { useURLState } from '#/react/lib/use-url-state';
 
 import { Tooltip } from '../../components/Tooltip';
 import { cn } from '../../utils/cn';
+import { useRunVersionNumber } from '../hooks/useHistory';
 import {
   useRequestVersions,
   useVersions,
@@ -49,10 +50,15 @@ export function VersionDropdown({
   const isPinnedVersion = pinnedParam !== undefined && pinnedParam !== null;
   const pinnedVersionNumber = isPinnedVersion ? Number(pinnedParam) : null;
 
-  // `?as_run=` opens the workflow as one run executed it. That content is a
-  // snapshot, which no release names, so the chip says what the view is rather
-  // than inventing a version for it.
-  const isAsRun = params['as_run'] !== undefined && params['as_run'] !== null;
+  // `?as_run=` opens the workflow as one run executed it, so the chip names the
+  // version that run executed against. A run whose snapshot was never
+  // published has no number to show, which the history panel beside it calls a
+  // draft.
+  const asRunParam = params['as_run'];
+  const isAsRun = asRunParam !== undefined && asRunParam !== null;
+  const asRunVersionNumber = useRunVersionNumber(
+    isAsRun ? String(asRunParam) : null
+  );
 
   // Show placeholder while loading version information
   const isLoadingVersion = currentVersion === null || latestVersion === null;
@@ -68,7 +74,11 @@ export function VersionDropdown({
     : isPinnedVersion
       ? `v${pinnedParam}`
       : isAsRun
-        ? 'as run'
+        ? asRunVersionNumber === undefined
+          ? '•'
+          : asRunVersionNumber === null
+            ? 'Draft'
+            : `v${asRunVersionNumber}`
         : 'latest';
 
   // Style based on version (matching snapshot_version_chip)

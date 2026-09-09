@@ -61,6 +61,28 @@ export const useHistory = (): WorkflowRunHistory => {
 };
 
 /**
+ * The release number the given run executed against.
+ *
+ * `null` means the run's snapshot was never published, which the UI calls a
+ * draft. `undefined` means the history has not arrived yet, so the caller can
+ * hold its tongue rather than call a published run a draft for a moment.
+ */
+export const useRunVersionNumber = (
+  runId: string | null
+): number | null | undefined => {
+  const history = useHistory();
+
+  if (runId === null) return undefined;
+
+  for (const workOrder of history) {
+    const run = workOrder.runs.find(candidate => candidate.id === runId);
+    if (run) return run.version_number ?? null;
+  }
+
+  return undefined;
+};
+
+/**
  * Hook to get loading state
  */
 export const useHistoryLoading = (): boolean => {

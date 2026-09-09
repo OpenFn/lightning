@@ -20,12 +20,17 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { VersionDropdown } from '../../../js/collaborative-editor/components/VersionDropdown';
+import * as useHistoryModule from '../../../js/collaborative-editor/hooks/useHistory';
 import * as useSessionContextModule from '../../../js/collaborative-editor/hooks/useSessionContext';
 import * as notificationsModule from '../../../js/collaborative-editor/lib/notifications';
 import type { Version } from '../../../js/collaborative-editor/types/sessionContext';
 
 // Mock the hooks
 const mockUseVersions = vi.spyOn(useSessionContextModule, 'useVersions');
+const mockUseRunVersionNumber = vi.spyOn(
+  useHistoryModule,
+  'useRunVersionNumber'
+);
 const mockUseVersionsLoaded = vi.spyOn(
   useSessionContextModule,
   'useVersionsLoaded'
@@ -82,6 +87,7 @@ describe('VersionDropdown', () => {
 
     // Default mock implementations
     mockUseVersions.mockReturnValue([]);
+    mockUseRunVersionNumber.mockReturnValue(undefined);
     mockUseVersionsLoaded.mockReturnValue(false);
     mockUseVersionsLoading.mockReturnValue(false);
     mockUseVersionsError.mockReturnValue(null);
@@ -142,16 +148,17 @@ describe('VersionDropdown', () => {
       expect(button).not.toHaveTextContent('v3');
     });
 
-    test('reads "as run" when viewing the workflow as a run executed it', () => {
+    test('names the version a run executed against', () => {
       window.history.pushState(
         {},
         '',
         '/?as_run=abcdef12-3456-7890-abcd-ef1234567890'
       );
+      mockUseRunVersionNumber.mockReturnValue(2);
 
-      // The content is that run's snapshot, which no release names. Calling it
-      // v3 put a version on screen that the version list correctly said did
-      // not exist.
+      // The document is that run's snapshot. What names it is the release the
+      // run executed against, not the document's lock_version, which used to
+      // be rendered as v3 whether or not any such release existed.
       render(
         <VersionDropdown
           currentVersion={3}
@@ -161,9 +168,29 @@ describe('VersionDropdown', () => {
       );
 
       const button = screen.getByRole('button');
-      expect(button).toHaveTextContent('as run');
-      expect(button).not.toHaveTextContent('v3');
+      expect(button).toHaveTextContent('v2');
       expect(button).toHaveClass('bg-yellow-100', 'text-yellow-800');
+    });
+
+    test('calls a run against an unpublished snapshot a draft', () => {
+      window.history.pushState(
+        {},
+        '',
+        '/?as_run=abcdef12-3456-7890-abcd-ef1234567890'
+      );
+      mockUseRunVersionNumber.mockReturnValue(null);
+
+      // Same word the history panel uses for that run, rather than a number
+      // no version list can show.
+      render(
+        <VersionDropdown
+          currentVersion={3}
+          latestVersion={5}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      expect(screen.getByRole('button')).toHaveTextContent('Draft');
     });
 
     test('dropdown is closed by default', () => {
