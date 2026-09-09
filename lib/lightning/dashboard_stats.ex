@@ -205,9 +205,9 @@ defmodule Lightning.DashboardStats do
         }
       end
     )
-    |> then(fn %{success: success, failed: failed} = map ->
+    |> then(fn %{success: success, failed: failed, total: total} = map ->
       completed = success + failed
-      failed_percent = if completed > 0, do: failed * 100 / completed, else: 0.0
+      failed_percent = if completed > 0, do: failed * 100 / total, else: 0.0
       success_rate = if completed > 0, do: success * 100 / completed, else: 0.0
 
       Map.merge(map, %{

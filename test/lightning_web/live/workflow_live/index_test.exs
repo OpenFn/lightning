@@ -135,7 +135,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # 10 total workorders
       # 10 total runs (4 pending)
       # 2 successful runs out of 4 completed
-      # 2 work orders failed out of 4 completed
+      # 2 work orders failed out of 10
       assert Regex.match?(
                ~r|Work Orders\s*</h2>\s*<div[^>]*>\s*10\s*</div>.*?6 pending|s,
                html
@@ -166,7 +166,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              )
 
       assert Regex.match?(
-               ~r|Work Orders in failed state\s*</h2>\s*<div[^>]*>\s*2\s*</div>.*?50\.0%|s,
+               ~r|Work Orders in failed state\s*</h2>\s*<div[^>]*>\s*2\s*</div>.*?20\.0%|s,
                html
              )
 
