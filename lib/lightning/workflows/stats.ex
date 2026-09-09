@@ -17,6 +17,7 @@ defmodule Lightning.Workflows.Stats do
   """
   import Ecto.Query
 
+  alias Lightning.Invocation.Query
   alias Lightning.Invocation.Step
   alias Lightning.Repo
   alias Lightning.Run
@@ -33,15 +34,6 @@ defmodule Lightning.Workflows.Stats do
 
   @final_states WorkOrder.final_states()
   @zero_counts Map.new(@final_states, &{&1, 0})
-
-  # `:cancelled` is final but not a failure — someone stopped it on purpose. Own
-  # outcome, not the red wedge, which is why this narrows the schema's list
-  # rather than changing it.
-  @failure_states WorkOrder.failure_states() -- [:cancelled]
-
-  # The signature grammar is written in the worker's words, so a
-  # run-level failure has to be mapped back out of its state.
-  @state_reasons Run.state_reasons()
 
   @doc """
   Work order counts by final state over the last `days_back` days.
@@ -86,7 +78,7 @@ defmodule Lightning.Workflows.Stats do
   sum past the failure total the outcomes donut draws, which is the trade: a
   second broken branch is its own thing to fix, not fallout from the first.
   """
-  def failure_signatures(
+  def error_signatures(
         %Workflow{id: workflow_id},
         days_back \\ @default_days_back
       )
@@ -118,7 +110,7 @@ defmodule Lightning.Workflows.Stats do
   # flight by key alone and ignores the fallback closure
   # (`deps/cachex/lib/cachex/services/courier.ex:60-62`), so a second caller
   # with a different closure for the same key never runs its own and is handed
-  # the first one's answer. `outcomes/2` and `failure_signatures/2` are safe
+  # the first one's answer. `outcomes/2` and `error_signatures/2` are safe
   # because their key prefixes differ.
   defp cached({_slice, workflow_id, _days} = key, fun) do
     key = Tuple.insert_at(key, 3, change_marker(workflow_id))
@@ -171,9 +163,7 @@ defmodule Lightning.Workflows.Stats do
       from(s in Step,
         join: rs in RunStep,
         on: rs.step_id == s.id,
-        where:
-          rs.run_id == parent_as(:latest_run).run_id and
-            s.exit_reason != "success",
+        where: rs.run_id == parent_as(:latest_run).run_id,
         select: %{
           exit_reason: s.exit_reason,
           # `""` is the same "we were not told" as NULL, but it groups apart
@@ -183,6 +173,7 @@ defmodule Lightning.Workflows.Stats do
           job_id: s.job_id
         }
       )
+      |> Query.where_step_failed()
 
     from(lr in subquery(latest_runs(workflow_id, since)),
       as: :latest_run,
@@ -207,12 +198,13 @@ defmodule Lightning.Workflows.Stats do
     from(wo in WorkOrder,
       # left_join, not join: a rejected work order has no run and still counts.
       left_join: r in Run,
+      as: :run,
       on: r.work_order_id == wo.id,
       where:
         wo.workflow_id == ^workflow_id and wo.last_activity > ^since and
-          wo.state in ^@failure_states,
+          wo.state in ^WorkOrder.failure_states(),
       distinct: wo.id,
-      order_by: [asc: wo.id, desc_nulls_last: r.finished_at, desc: r.id],
+      order_by: [asc: wo.id],
       select: %{
         work_order_id: wo.id,
         work_order_state: wo.state,
@@ -221,6 +213,7 @@ defmodule Lightning.Workflows.Stats do
         run_error_type: fragment("NULLIF(?, '')", r.error_type)
       }
     )
+    |> Query.order_by_run_recency()
   end
 
   # The job's name and adaptor come off the run's own snapshot, not the live
@@ -266,8 +259,12 @@ defmodule Lightning.Workflows.Stats do
   end
 
   # Keyed by snapshot as well as job, because the same job id carries a
-  # different name in every snapshot that renamed it. Only `name` and `adaptor`
-  # are read out, so the job bodies alongside them never cross the wire.
+  # different name in every snapshot that renamed it. `lock_version` rides
+  # along for `merge_counts/1` to pick a label with, since a snapshot's own id
+  # carries no timestamp to compare rows by — it is unique and monotonic per
+  # workflow, so the highest one read is the most recent. Only these three
+  # fields are read out, so the job bodies alongside them never cross the
+  # wire.
   defp snapshot_jobs([]), do: %{}
 
   defp snapshot_jobs(snapshot_ids) do
@@ -276,7 +273,8 @@ defmodule Lightning.Workflows.Stats do
       cross_lateral_join: j in fragment("jsonb_array_elements(?)", s.jobs),
       select:
         {{s.id, fragment("? ->> ?", j, "id")},
-         {fragment("? ->> ?", j, "name"), fragment("? ->> ?", j, "adaptor")}}
+         {fragment("? ->> ?", j, "name"), fragment("? ->> ?", j, "adaptor"),
+          s.lock_version}}
     )
     |> Repo.all()
     |> Map.new()
@@ -284,12 +282,14 @@ defmodule Lightning.Workflows.Stats do
 
   # A rejected work order never got a run, so there is no signature to read.
   # `:rejected` has one origin — the run limit refusing a webhook payload — so
-  # the label names it outright.
+  # the label names it outright. `job_id: nil` gives it the same shape as
+  # every other row, for the JSON and the TS type on the other end of it.
   defp to_signature(%{work_order_state: :rejected} = row, _jobs) do
     %{
       count: row.count,
       exit_reason: "rejected",
       error_type: "RunLimitExceeded",
+      job_id: nil,
       step_name: nil,
       adaptor: nil
     }
@@ -299,28 +299,69 @@ defmodule Lightning.Workflows.Stats do
   # reported — a lost or reaped run — carries only the reason, and the rest
   # comes off the run. `mark_steps_lost/1` is why: it stamps `exit_reason` and
   # leaves `error_type` alone.
+  #
+  # `job_id` is the key `merge_counts/1` folds rows on; `step_name` and
+  # `adaptor` are labels, resolved off the snapshot and carried with
+  # `lock_version` so the fold can pick the newest one and then drop it.
   defp to_signature(row, jobs) do
-    {step_name, adaptor} =
-      Map.get(jobs, {row.snapshot_id, row.job_id}, {nil, nil})
+    {step_name, adaptor, lock_version} =
+      Map.get(jobs, {row.snapshot_id, row.job_id}, {nil, nil, nil})
 
     %{
       count: row.count,
-      exit_reason: row.exit_reason || @state_reasons[row.run_state],
-      error_type: row.error_type || row.run_error_type,
+      exit_reason: exit_reason(row.exit_reason, row.run_state),
+      error_type: error_type(row.error_type, row.run_error_type),
+      job_id: row.job_id,
       step_name: step_name,
-      adaptor: adaptor
+      adaptor: adaptor,
+      lock_version: lock_version
     }
   end
 
+  # `mark_steps_lost/1` stamps a step's `exit_reason` and nothing else, so a
+  # crashed run with no step at all falls back to `Run.state_reasons/0` — the
+  # worker's own words for each terminal state.
+  defp exit_reason(step_exit_reason, run_state) do
+    step_exit_reason || Map.get(Run.state_reasons(), run_state)
+  end
+
+  # An empty string is missing on both sides: `"" || x` returns `""` (empty
+  # string is truthy in Elixir), which would split one failure into two
+  # identical-looking rows.
+  defp error_type(step_error_type, run_error_type) do
+    blank_to_nil(step_error_type) || blank_to_nil(run_error_type)
+  end
+
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(other), do: other
+
   # Two groups can collapse into one signature — a crashed run and a failed run
-  # whose steps both reported `fail`, say — so the fold happens after the
-  # coalesce, not in the `group_by`.
+  # whose steps both reported `fail`, say, or the same job renamed mid-window —
+  # so the fold happens after the coalesce, not in the `group_by`. Grouping key
+  # is the triple that identifies a failure: the label (`step_name`, `adaptor`)
+  # is expected to differ between rows a rename merges, and `lock_version`
+  # never repeats.
   defp merge_counts(signatures) do
     signatures
-    |> Enum.group_by(&Map.delete(&1, :count), & &1.count)
-    |> Enum.map(fn {signature, counts} ->
-      Map.put(signature, :count, Enum.sum(counts))
-    end)
+    |> Enum.group_by(&{&1.exit_reason, &1.error_type, &1.job_id})
+    |> Enum.map(fn {_key, rows} -> merge_group(rows) end)
     |> Enum.sort_by(&{-&1.count, &1.step_name}, :asc)
+  end
+
+  # The label comes from the group's most recent failing snapshot: the row
+  # with the highest `lock_version`. A row with no snapshot at all (a rejected
+  # work order, or a run that never reached a step) carries no `lock_version`,
+  # which sorts lowest and never wins over a labelled one.
+  defp merge_group(rows) do
+    label = Enum.max_by(rows, &(&1[:lock_version] || -1))
+
+    %{
+      count: Enum.sum_by(rows, & &1.count),
+      exit_reason: label.exit_reason,
+      error_type: label.error_type,
+      job_id: label.job_id,
+      step_name: label.step_name,
+      adaptor: label.adaptor
+    }
   end
 end

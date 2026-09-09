@@ -125,7 +125,7 @@ defmodule Lightning.Workflows.StatsTest do
     insert_run(workflow, trigger, :cancelled)
 
     assert %{cancelled: 1, failed: 0} = Stats.outcomes(workflow).counts
-    assert %{signatures: []} = Stats.failure_signatures(workflow)
+    assert %{signatures: []} = Stats.error_signatures(workflow)
   end
 
   # The review comment this whole unit change is for: retrying a failure until
@@ -147,7 +147,7 @@ defmodule Lightning.Workflows.StatsTest do
     end
 
     assert %{success: 1, failed: 0} = Stats.outcomes(workflow).counts
-    assert %{signatures: []} = Stats.failure_signatures(workflow)
+    assert %{signatures: []} = Stats.error_signatures(workflow)
   end
 
   test "ignores work orders belonging to another workflow", %{
@@ -254,7 +254,7 @@ defmodule Lightning.Workflows.StatsTest do
     :workflow_stats |> Cachex.stream!(query) |> Enum.count()
   end
 
-  describe "failure_signatures/2" do
+  describe "error_signatures/2" do
     defp failed_run(workflow, trigger, attrs, steps \\ []) do
       {wo_attrs, run_attrs} = Keyword.split(attrs, [:last_activity])
       state = Keyword.get(run_attrs, :state, :failed)
@@ -310,12 +310,13 @@ defmodule Lightning.Workflows.StatsTest do
         step(job, exit_reason: "fail", error_type: "RuntimeError")
       ])
 
-      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
 
       assert signature == %{
                count: 1,
                exit_reason: "fail",
                error_type: "RuntimeError",
+               job_id: job.id,
                step_name: job.name,
                adaptor: job.adaptor
              }
@@ -341,10 +342,45 @@ defmodule Lightning.Workflows.StatsTest do
       })
       |> Repo.update!()
 
-      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
 
       assert signature.step_name == job.name
       assert signature.adaptor == job.adaptor
+    end
+
+    # The row is keyed by `job_id`, not by the resolved name — that is what
+    # keeps a job renamed mid-window as one row instead of splitting into a
+    # before-rename row and an after-rename row. The label comes off the
+    # newer of the two snapshots, since that is the name the job actually has
+    # by the time anyone triages it.
+    test "merges a job renamed mid-window into one row, labelled with the newer name",
+         %{workflow: workflow, trigger: trigger} do
+      job = hd(workflow.jobs)
+      job_id = job.id
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: "RuntimeError")
+      ])
+
+      job
+      |> Ecto.Changeset.change(name: "Renamed")
+      |> Repo.update!()
+
+      # `current_snapshot/1` only creates a new snapshot when none exists for
+      # the workflow's current `lock_version`, so the rename alone would still
+      # resolve against the snapshot already made above. Bumping it forces a
+      # second snapshot — the newer one the label tiebreak has to pick.
+      workflow
+      |> Ecto.Changeset.change(lock_version: workflow.lock_version + 1)
+      |> Repo.update!()
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: "RuntimeError")
+      ])
+
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
+
+      assert %{count: 2, job_id: ^job_id, step_name: "Renamed"} = signature
     end
 
     # `mark_steps_lost/1` stamps the step's exit_reason and nothing else, so
@@ -360,7 +396,7 @@ defmodule Lightning.Workflows.StatsTest do
         [step(job, exit_reason: "lost", error_type: nil)]
       )
 
-      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
       assert signature.exit_reason == "lost"
       assert signature.error_type == "LostAfterStart"
       assert signature.step_name == job.name
@@ -372,12 +408,13 @@ defmodule Lightning.Workflows.StatsTest do
     } do
       failed_run(workflow, trigger, state: :crashed, error_type: "CompileError")
 
-      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
 
       assert signature == %{
                count: 1,
                exit_reason: "crash",
                error_type: "CompileError",
+               job_id: nil,
                step_name: nil,
                adaptor: nil
              }
@@ -392,15 +429,51 @@ defmodule Lightning.Workflows.StatsTest do
     } do
       work_order(workflow, trigger, state: :rejected)
 
-      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
 
       assert signature == %{
                count: 1,
                exit_reason: "rejected",
                error_type: "RunLimitExceeded",
+               job_id: nil,
                step_name: nil,
                adaptor: nil
              }
+    end
+
+    # `"" || x` returns `""` in Elixir, so an empty error type would otherwise
+    # coalesce to itself instead of falling through — splitting one signature
+    # into two rows that render identically and each half the count.
+    test "treats an empty error type the same as a missing one", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      job = hd(workflow.jobs)
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: "")
+      ])
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: nil)
+      ])
+
+      assert %{signatures: [%{count: 2, error_type: nil}]} =
+               Stats.error_signatures(workflow)
+    end
+
+    # And on the run's own error type, which the step falls through to: it is
+    # read straight into the signature, so an empty one splits the rows there
+    # instead.
+    test "treats an empty error type on the run the same as a missing one", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      failed_run(workflow, trigger, state: :crashed, error_type: "")
+      failed_run(workflow, trigger, state: :crashed, error_type: nil)
+
+      assert %{signatures: [%{count: 2, exit_reason: "crash", error_type: nil}]} =
+               Stats.error_signatures(workflow)
     end
 
     test "groups matching work orders and sorts the heaviest first", %{
@@ -418,7 +491,7 @@ defmodule Lightning.Workflows.StatsTest do
       failed_run(workflow, trigger, state: :crashed, error_type: "CompileError")
 
       assert %{signatures: [first, second]} =
-               Stats.failure_signatures(workflow)
+               Stats.error_signatures(workflow)
 
       assert %{count: 3, error_type: "RuntimeError"} = first
       assert %{count: 1, error_type: "CompileError"} = second
@@ -451,7 +524,7 @@ defmodule Lightning.Workflows.StatsTest do
       run.(job_a, "FirstAttempt", DateTime.add(now, -60))
       run.(job_b, "Retry", now)
 
-      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
       assert %{count: 1, error_type: "Retry", step_name: name} = signature
       assert name == job_b.name
     end
@@ -479,7 +552,7 @@ defmodule Lightning.Workflows.StatsTest do
         )
       ])
 
-      assert %{signatures: signatures} = Stats.failure_signatures(workflow)
+      assert %{signatures: signatures} = Stats.error_signatures(workflow)
 
       assert [
                %{count: 1, error_type: "Earlier", step_name: job_a.name},
@@ -504,7 +577,7 @@ defmodule Lightning.Workflows.StatsTest do
       ])
 
       assert %{signatures: [%{count: 1, error_type: "RuntimeError"}]} =
-               Stats.failure_signatures(workflow)
+               Stats.error_signatures(workflow)
     end
 
     test "ignores steps that succeeded and work orders that succeeded", %{
@@ -527,7 +600,7 @@ defmodule Lightning.Workflows.StatsTest do
       insert_run(workflow, trigger, :success)
 
       assert %{signatures: [%{count: 1, error_type: "RuntimeError"}]} =
-               Stats.failure_signatures(workflow)
+               Stats.error_signatures(workflow)
     end
 
     test "still finds a failing step that never stamped a start time", %{
@@ -542,7 +615,7 @@ defmodule Lightning.Workflows.StatsTest do
       ])
 
       assert %{signatures: [%{error_type: "RuntimeError", step_name: name}]} =
-               Stats.failure_signatures(workflow)
+               Stats.error_signatures(workflow)
 
       assert name == job.name
     end
@@ -559,7 +632,7 @@ defmodule Lightning.Workflows.StatsTest do
         last_activity: days_ago(31)
       )
 
-      assert %{signatures: []} = Stats.failure_signatures(workflow)
+      assert %{signatures: []} = Stats.error_signatures(workflow)
     end
 
     # Both render as `unknown`, so ungrouped the table drew two rows under one
@@ -578,7 +651,7 @@ defmodule Lightning.Workflows.StatsTest do
         step(job, exit_reason: "fail", error_type: nil)
       ])
 
-      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
       assert %{count: 2, error_type: nil} = signature
     end
 
@@ -596,7 +669,7 @@ defmodule Lightning.Workflows.StatsTest do
         [step(job, exit_reason: "lost", error_type: "")]
       )
 
-      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
       assert signature.error_type == "LostAfterStart"
     end
 

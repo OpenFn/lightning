@@ -17,7 +17,10 @@ defmodule Lightning.WorkOrders.SearchParams do
     :wo_date_after,
     :wo_date_before,
     :sort_by,
-    :sort_direction
+    :sort_direction,
+    :error_signature_exit_reason,
+    :error_signature_error_type,
+    :error_signature_job_id
   ]
 
   @derive {Jason.Encoder, only: @fields}
@@ -51,7 +54,10 @@ defmodule Lightning.WorkOrders.SearchParams do
           wo_date_after: DateTime.t(),
           wo_date_before: DateTime.t(),
           sort_by: String.t(),
-          sort_direction: String.t()
+          sort_direction: String.t(),
+          error_signature_exit_reason: String.t(),
+          error_signature_error_type: String.t(),
+          error_signature_job_id: Ecto.UUID.t()
         }
 
   @primary_key false
@@ -72,6 +78,15 @@ defmodule Lightning.WorkOrders.SearchParams do
     field(:wo_date_before, :utc_datetime_usec)
     field(:sort_by, :string)
     field(:sort_direction, :string)
+
+    # The error signature the workflow health page's triage row draws its
+    # "View" button from. `error_signature_exit_reason` switches the
+    # filter on; a present `error_signature_job_id` is a step-level row,
+    # an absent one a run-level row. See
+    # `Lightning.Invocation.filter_by_error_signature/2`.
+    field(:error_signature_exit_reason, :string)
+    field(:error_signature_error_type, :string)
+    field(:error_signature_job_id, :binary_id)
   end
 
   # Raises on invalid input. A malformed filter is only reachable by hand-editing
@@ -99,25 +114,26 @@ defmodule Lightning.WorkOrders.SearchParams do
   end
 
   defp from_uri(params) do
-    statuses =
-      Enum.map(params, fn {key, value} ->
-        if key in @statuses and value in [true, "true"] do
-          key
-        end
-      end)
-      |> Enum.reject(&is_nil/1)
-
-    search_fields =
-      Enum.map(params, fn {key, value} ->
-        if key in @search_fields and value in [true, "true"] do
-          key
-        end
-      end)
-      |> Enum.reject(&is_nil/1)
-
     params
-    |> Map.put_new("status", statuses)
-    |> Map.put_new("search_fields", search_fields)
+    |> Map.put_new("status", selected(params, @statuses))
+    |> put_search_fields(params)
+  end
+
+  # A URL with none of the four search-field flags in it hasn't turned them
+  # off — it just didn't mention them. Leaving the key out lets the schema
+  # default (all four) stand; setting it to `[]` makes every search term match
+  # nothing. The form ships a hidden `false` beside every checkbox, so an
+  # actual "all off" still arrives as four keys rather than as none.
+  defp put_search_fields(uri_params, params) do
+    if Enum.any?(@search_fields, &Map.has_key?(params, &1)) do
+      Map.put_new(uri_params, "search_fields", selected(params, @search_fields))
+    else
+      uri_params
+    end
+  end
+
+  defp selected(params, keys) do
+    for {key, value} <- params, key in keys, value in [true, "true"], do: key
   end
 
   def to_uri_params(search_params) do

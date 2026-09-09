@@ -50,9 +50,10 @@ defmodule Lightning.WorkOrder do
   @doc """
   Returns the list of failure states for a work order.
 
-  These are all final states except `:success`.
+  Every final state except `:success` and `:cancelled` — a cancelled work
+  order stopped because someone stopped it, not because anything failed.
   """
-  def failure_states, do: final_states() -- [:success]
+  def failure_states, do: final_states() -- [:success, :cancelled]
 
   @derive {Jason.Encoder,
            only: [
