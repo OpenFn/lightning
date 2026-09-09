@@ -1,6 +1,6 @@
 defmodule Lightning.Workflows.Stats do
   @moduledoc """
-  Stats for a single workflow, shaped for the workflow health page.
+  Stats for a single workflow or a whole project, shaped for the health pages.
 
   One public function per chart, each returning only what that chart draws, so a
   cheap chart renders without waiting on an expensive one.
@@ -18,9 +18,11 @@ defmodule Lightning.Workflows.Stats do
   import Ecto.Query
 
   alias Lightning.Invocation.Step
+  alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Run
   alias Lightning.RunStep
+  alias Lightning.Workflows.Query
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Workflow
   alias Lightning.WorkOrder
@@ -44,30 +46,54 @@ defmodule Lightning.Workflows.Stats do
   @state_reasons Run.state_reasons()
 
   @doc """
-  Work order counts by final state over the last `days_back` days.
+  Work order counts by final state over the last `days_back` days, for a
+  single workflow or aggregated across every non-deleted workflow in a
+  project.
   """
-  def outcomes(%Workflow{id: workflow_id}, days_back \\ @default_days_back)
-      when days_back > 0 do
-    cached({:outcomes, workflow_id, days_back}, fn ->
-      to = DateTime.utc_now()
-      since = DateTime.add(to, -days_back, :day)
+  def outcomes(scope, days_back \\ @default_days_back)
 
-      %{
-        window: %{from: since, to: to},
-        counts: count_work_orders(workflow_id, since)
-      }
+  def outcomes(%Workflow{id: workflow_id}, days_back) when days_back > 0 do
+    cached({:outcomes, :workflow, workflow_id, days_back}, fn ->
+      build_outcomes(dynamic([wo], wo.workflow_id == ^workflow_id), days_back)
     end)
+  end
+
+  def outcomes(%Project{id: project_id} = project, days_back)
+      when days_back > 0 do
+    cached({:outcomes, :project, project_id, days_back}, fn ->
+      # `exclude(:order_by)` because `workflows_for/1` sorts, which is
+      # meaningless inside an `IN` subquery.
+      workflow_ids =
+        project
+        |> Query.workflows_for()
+        |> exclude(:order_by)
+        |> select([w], w.id)
+
+      build_outcomes(
+        dynamic([wo], wo.workflow_id in subquery(workflow_ids)),
+        days_back
+      )
+    end)
+  end
+
+  defp build_outcomes(scope_filter, days_back) do
+    to = DateTime.utc_now()
+    since = DateTime.add(to, -days_back, :day)
+
+    %{
+      window: %{from: since, to: to},
+      counts: count_work_orders(scope_filter, since)
+    }
   end
 
   # Every final state is reported and zero-filled, so both donuts read the same
   # aggregate two ways without a second round trip. The window is anchored on
   # `last_activity`, not `inserted_at`: an old work order retried today is
   # counted as the work it currently is.
-  defp count_work_orders(workflow_id, since) do
+  defp count_work_orders(scope_filter, since) do
     from(wo in WorkOrder,
-      where:
-        wo.workflow_id == ^workflow_id and wo.last_activity > ^since and
-          wo.state in ^@final_states,
+      where: ^scope_filter,
+      where: wo.last_activity > ^since and wo.state in ^@final_states,
       group_by: wo.state,
       select: {wo.state, count(wo.id)}
     )
