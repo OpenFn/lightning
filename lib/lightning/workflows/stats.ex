@@ -28,9 +28,9 @@ defmodule Lightning.Workflows.Stats do
 
   @default_days_back 30
 
-  # Short enough that the page stays honest during an incident, long enough to
-  # collapse a burst of viewers into one query.
-  @ttl :timer.seconds(30)
+  # Caps what the marker cannot see — the window rolling, the retention purge —
+  # and stops keys piling up.
+  @ttl :timer.minutes(5)
 
   @final_states WorkOrder.final_states()
   @zero_counts Map.new(@final_states, &{&1, 0})
@@ -205,42 +205,66 @@ defmodule Lightning.Workflows.Stats do
     end)
   end
 
-  @doc """
-  Drops every cached slice and window for a workflow, so the next read
-  recomputes.
-
-  Called when one of its work orders settles. Without it, the refresh the
-  health page just triggered would be answered out of the value cached before
-  the change — the page would make a request and draw the same numbers.
-  """
-  def invalidate(workflow_id) do
-    # Every key is `{slice, workflow_id, days_back}`, so element 2 is the
-    # workflow. The filter runs in ETS: only this workflow's keys cross back
-    # into Elixir, however many other workflows are cached alongside it.
-    query =
-      Cachex.Query.build(
-        where: {:==, {:element, 2, :key}, workflow_id},
-        output: :key
-      )
-
-    :workflow_stats
-    |> Cachex.stream!(query)
-    |> Enum.each(&Cachex.del(:workflow_stats, &1))
-  end
-
   defp window(days_back) do
     to = DateTime.utc_now()
     %{from: DateTime.add(to, -days_back, :day), to: to}
   end
 
   # Cached whole, `window` included — that is what stops the window rolling per
-  # request. `Cachex.fetch/4` dedupes concurrent misses on the same key.
-  defp cached(key, fun) do
+  # request.
+  #
+  # The marker goes in the key rather than the cache being invalidated when
+  # something settles: a poll that finds nothing has moved is a hit on every
+  # pod, because the answer is read from Postgres and not from one node's ETS.
+  # The trade is that a workflow settling work orders faster than the poll
+  # recomputes on every poll.
+  #
+  # The marker only moves when a work order settles, so a stat counting unsettled
+  # work orders — a queue depth, a running count — needs its own marker.
+  #
+  # Every key must map to exactly one computation. Cachex tracks a fetch in
+  # flight by key alone and ignores the fallback closure
+  # (`deps/cachex/lib/cachex/services/courier.ex:60-62`), so a second caller
+  # with a different closure for the same key never runs its own and is handed
+  # the first one's answer. `outcomes/2` and `error_signatures/2` are safe
+  # because their key prefixes differ.
+  defp cached({_slice, workflow_id, _days} = key, fun) do
+    key = Tuple.insert_at(key, 3, change_marker(workflow_id))
+
     case Cachex.fetch(:workflow_stats, key, fn ->
            {:commit, fun.(), expire: @ttl}
          end) do
-      {tag, value} when tag in [:ok, :commit] -> value
+      {tag, value} when tag in [:ok, :commit] ->
+        value
+
+      # Cachex rescues whatever the fallback raised and hands it back as a
+      # value. Reraised with its original stack, Sentry gets the DB failure
+      # that actually happened instead of a `CaseClauseError` on a tuple.
+      {:error, %Cachex.Error{stack: stack} = error} ->
+        reraise error, stack
+
+      {:error, reason} ->
+        raise "workflow stats cache failed: #{inspect(reason)}"
     end
+  end
+
+  # Only settled work orders move the marker, because only settled work orders
+  # are counted. `last_activity` moves when a run merely starts, so an
+  # unfiltered max would recompute for every open tab on every poll of a
+  # workflow with a cron.
+  #
+  # The gap is a work order that is not final while something it holds already
+  # is — a retry, or a run that settles while a sibling is still in flight. That
+  # work order stops counting until it settles, or until the entry expires.
+  #
+  # Indexed as `(workflow_id, last_activity)`, so this is a lookup, not a scan.
+  defp change_marker(workflow_id) do
+    Repo.one(
+      from(wo in WorkOrder,
+        where: wo.workflow_id == ^workflow_id and wo.state in ^@final_states,
+        select: max(wo.last_activity)
+      )
+    )
   end
 
   # One row per failing step of the work order's latest run — the run whose
@@ -258,7 +282,9 @@ defmodule Lightning.Workflows.Stats do
         where: rs.run_id == parent_as(:latest_run).run_id,
         select: %{
           exit_reason: s.exit_reason,
-          error_type: s.error_type,
+          # `""` is the same "we were not told" as NULL, but it groups apart
+          # and, being truthy, masks the run's own type in `to_signature/2`.
+          error_type: fragment("NULLIF(?, '')", s.error_type),
           snapshot_id: s.snapshot_id,
           job_id: s.job_id
         }
@@ -300,7 +326,7 @@ defmodule Lightning.Workflows.Stats do
         work_order_state: wo.state,
         run_id: r.id,
         run_state: r.state,
-        run_error_type: r.error_type
+        run_error_type: fragment("NULLIF(?, '')", r.error_type)
       }
     )
     |> Query.order_by_run_recency()

@@ -169,19 +169,90 @@ defmodule Lightning.Workflows.StatsTest do
              Map.new(WorkOrder.final_states(), &{&1, 0})
   end
 
-  # The 30 s TTL is what snaps the rolling window and dedupes a burst of viewers
-  # onto one query. Entries key on the workflow, so this cannot leak between
-  # tests.
-  test "serves a repeat call from the cache rather than requerying", %{
+  # Freshness is the cache key's job, not the TTL's: the key carries the
+  # workflow's latest `last_activity`, so nothing settling means the same key
+  # and one computation, however many pods are asked.
+  test "asks the same question once while nothing settles", %{
+    workflow: workflow,
+    trigger: trigger
+  } do
+    insert_run(workflow, trigger, :success)
+
+    first = Stats.outcomes(workflow)
+
+    assert Stats.outcomes(workflow) == first
+
+    # Also pins the key shape, which `change_marker/1` and `cached/2` have to
+    # agree on and nothing else would notice going out of step.
+    assert {:ok, true} =
+             Cachex.exists?(
+               :workflow_stats,
+               {:outcomes, workflow.id, 30, marker(workflow)}
+             )
+
+    assert cached_keys(workflow) == 1
+  end
+
+  test "recomputes once a work order settles", %{
+    workflow: workflow,
+    trigger: trigger
+  } do
+    insert_run(workflow, trigger, :success)
+    assert %{success: 1, failed: 0} = Stats.outcomes(workflow).counts
+
+    insert_run(workflow, trigger, :failed)
+
+    assert %{success: 1, failed: 1} = Stats.outcomes(workflow).counts
+  end
+
+  # `last_activity` moves when a run starts, not only when one settles, so an
+  # unfiltered marker would hand every open tab a new key, and a full
+  # recompute, on every poll of a workflow with a cron.
+  test "does not recompute while a work order is only running", %{
     workflow: workflow,
     trigger: trigger
   } do
     insert_run(workflow, trigger, :success)
     first = Stats.outcomes(workflow)
 
-    insert_run(workflow, trigger, :failed)
+    work_order(workflow, trigger,
+      state: :running,
+      last_activity: DateTime.utc_now()
+    )
 
     assert Stats.outcomes(workflow) == first
+    assert cached_keys(workflow) == 1
+  end
+
+  # `cached/2` is private, so this drives it through `outcomes/2` with a window
+  # wide enough to blow up the date arithmetic. Which failure is beside the
+  # point; that it escapes as an exception, not a match error, is not.
+  test "reraises a failed computation instead of matching on the error tuple",
+       %{workflow: workflow} do
+    assert_raise Cachex.Error, fn -> Stats.outcomes(workflow, 100_000_000) end
+  end
+
+  defp marker(workflow) do
+    Lightning.Repo.one(
+      from(wo in WorkOrder,
+        where:
+          wo.workflow_id == ^workflow.id and
+            wo.state in ^WorkOrder.final_states(),
+        select: max(wo.last_activity)
+      )
+    )
+  end
+
+  # Scoped to this workflow: the file is `async: true` against a cache shared
+  # by the whole node, so a count of everything in it would be a coin toss.
+  defp cached_keys(workflow) do
+    query =
+      Cachex.Query.build(
+        where: {:==, {:element, 2, :key}, workflow.id},
+        output: :key
+      )
+
+    :workflow_stats |> Cachex.stream!(query) |> Enum.count()
   end
 
   describe "error_signatures/2" do
@@ -565,6 +636,44 @@ defmodule Lightning.Workflows.StatsTest do
       assert %{signatures: []} = Stats.error_signatures(workflow)
     end
 
+    # Both render as `unknown`, so ungrouped the table drew two rows under one
+    # React key.
+    test "groups an empty error type with a missing one", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      job = hd(workflow.jobs)
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: "")
+      ])
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: nil)
+      ])
+
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
+      assert %{count: 2, error_type: nil} = signature
+    end
+
+    # `""` is truthy, so it won the `||` in `to_signature/2`.
+    test "does not let an empty step error type mask the run's", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      job = hd(workflow.jobs)
+
+      failed_run(
+        workflow,
+        trigger,
+        [state: :lost, error_type: "LostAfterStart"],
+        [step(job, exit_reason: "lost", error_type: "")]
+      )
+
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
+      assert signature.error_type == "LostAfterStart"
+    end
+
     defp two_jobs(workflow) do
       case workflow.jobs do
         [job] ->
@@ -683,41 +792,6 @@ defmodule Lightning.Workflows.StatsTest do
       assert Enum.sum_by(buckets, fn bucket ->
                bucket |> Map.delete(:at) |> Map.values() |> Enum.sum()
              end) == 0
-    end
-  end
-
-  describe "invalidate/1" do
-    test "drops every slice and window the workflow has cached", ctx do
-      %{workflow: workflow, trigger: trigger} = ctx
-      insert_run(workflow, trigger, :failed)
-
-      # Two windows, so this fails the moment `invalidate/1` goes back to
-      # deleting a hardcoded list of keys.
-      Stats.outcomes(workflow)
-      Stats.outcomes(workflow, 7)
-      Stats.error_signatures(workflow)
-      Stats.runs(workflow)
-
-      other = insert(:simple_workflow)
-      Stats.outcomes(other)
-
-      Stats.invalidate(workflow.id)
-
-      assert {:ok, nil} =
-               Cachex.get(:workflow_stats, {:outcomes, workflow.id, 30})
-
-      assert {:ok, nil} =
-               Cachex.get(:workflow_stats, {:outcomes, workflow.id, 7})
-
-      assert {:ok, nil} =
-               Cachex.get(:workflow_stats, {:failures, workflow.id, 30})
-
-      assert {:ok, nil} = Cachex.get(:workflow_stats, {:runs, workflow.id, 30})
-
-      # Another workflow's numbers did not change, so its cache should not have
-      # been swept up in the scan.
-      assert {:ok, %{counts: _}} =
-               Cachex.get(:workflow_stats, {:outcomes, other.id, 30})
     end
   end
 end

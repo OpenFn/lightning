@@ -46,9 +46,8 @@ and this project adheres to
   a triage table grouping failures by error signature, heaviest first. Each row
   has a View button linking to the history page filtered to just the work orders
   behind it, where the existing "retry all" can retry the group. The page
-  refreshes itself as that workflow's work orders settle, at most once every 30
-  seconds. Reachable from the workflows list via a "Health" link in each row's
-  Actions column.
+  re-reads its numbers every 30 seconds while the tab is open. Reachable from
+  the workflows list via a "Health" link in each row's Actions column.
 - Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
   scenario file (users, API tokens, credentials, projects, workflows) via
   `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and
