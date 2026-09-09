@@ -40,6 +40,34 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                workflow_id: "babd29f7-bf15-4a66-af21-51209217ebd4"
              } == SearchParams.new(params)
     end
+
+    # A server-built link naming a workflow and a date carries no search-field
+    # flags. Reading that as "search nothing" makes the search box on the
+    # landed page match nothing at all.
+    test "falls back to every search field when the params name none of them" do
+      params =
+        SearchParams.new(%{
+          "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4",
+          "search_term" => "hello"
+        })
+
+      assert params.search_fields == [:id, :body, :log, :dataclip_name]
+    end
+
+    # And an unticked box still arrives, marked false, so turning them all off
+    # is a different thing from a link that never mentioned them.
+    test "searches nothing when every search field is present and false" do
+      params =
+        SearchParams.new(%{
+          "id" => "false",
+          "body" => "false",
+          "log" => "false",
+          "dataclip_name" => "false",
+          "search_term" => "hello"
+        })
+
+      assert params.search_fields == []
+    end
   end
 
   describe "from_map/1" do
