@@ -284,6 +284,12 @@ and this project adheres to
 
 ### Fixed
 
+- Merging a sandbox no longer deletes the parent project's collections, ever.
+  Collections that exist only in the sandbox are created empty in the target and
+  are individually selectable in the merge screen, like workflows and
+  credentials; collections that exist only in the target are always kept.
+  Deleting a collection remains available in the project's settings.
+  [#5054](https://github.com/OpenFn/lightning/pull/5054)
 - The global AI chat now honours its "Send logs" and "Send scrubbed I/O"
   checkboxes. Run logs and scrubbed step input and output are forwarded to
   Apollo as attachments, with each log line carrying its job, step and level;
