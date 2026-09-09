@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-EFDC1888.js"></script>
+    <script defer src="dist/sidebar_items-ED886297.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -143,6 +143,8 @@ from a project and its workflows.</p>
 
       </div>
 
+        <div class="summary-synopsis"><p>Builds the project spec.</p></div>
+
     </div>
 
 </div>
@@ -169,7 +171,7 @@ from a project and its workflows.</p>
       <h1 class="signature" translate="no">build_yaml_tree(workflows, project)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils.ex#L361" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils.ex#L390" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -193,7 +195,7 @@ from a project and its workflows.</p>
       <h1 class="signature" translate="no">generate_new_yaml(project, snapshots \\ nil)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils.ex#L492" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/export_utils.ex#L532" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -208,11 +210,13 @@ from a project and its workflows.</p>
   <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(),
   [<a href="Lightning.Workflows.Snapshot.html#t:t/0">Lightning.Workflows.Snapshot.t</a>()] | nil
 ) ::
-  {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}</pre>
+  {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}</pre>
 
       </div>
 
-
+<p>Builds the project spec.</p><p>Returns <code class="inline">{:error, message}</code> when two entities in the project would be written
+under the same spec key. That is refused rather than exported, because the
+key is what the CLI addresses the entity by. The message names both.</p>
   </section>
 </section>
 

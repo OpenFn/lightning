@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-EFDC1888.js"></script>
+    <script defer src="dist/sidebar_items-ED886297.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -225,7 +225,18 @@ the role before and after.</li><li>Webhook auth methods now account for channels
 methods table shows counts like &quot;2 triggers, 1 channel&quot;, each auth method's
 detail view lists every linked workflow and channel, and deleting one now
 warns which triggers and channels will lose authentication.</li><li>Deleting a webhook auth method now logs each trigger and channel it was
-detached from, in addition to the deletion itself.</li></ul><h3 id="changed-2" class="section-heading"><a href="#changed-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Remove the unreachable, non-streaming code in the AI assistant
+detached from, in addition to the deletion itself.</li></ul><h3 id="changed-2" class="section-heading"><a href="#changed-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><blockquote><p>If one project holds two names that become the same key once spaces turn into
+hyphens, like <code class="inline">My Flow</code> and <code class="inline">My-Flow</code>, sync and export now fail and name both,
+where they used to silently drop one. Rename one of them before upgrading.</p></blockquote><ul><li>Job and workflow names may now hold any character except a control one.
+Names were restricted to letters, digits, spaces, underscores and hyphens, so
+a team working in French, Spanish, Arabic or Japanese could not name a step
+in their own language. Any script, punctuation, symbol or emoji is accepted
+now, and names are composed to NFC on save so two spellings of the same
+accented word are one name. Control characters are refused rather than
+stripped, because a null byte in a name cannot be written to the workflow
+snapshot and used to fail the save with a 500. The same rule now covers
+credential names, workflow template names and edge condition labels.
+<a href="https://github.com/OpenFn/lightning/issues/4577">#4577</a></li><li>Remove the unreachable, non-streaming code in the AI assistant
 <a href="https://github.com/OpenFn/lightning/issues/5046">#5046</a></li><li>The global chat now starts streaming Apollo's response earlier, so users wait
 less before seeing output. Lightning handles the several streaming event types
 Apollo sends, including status updates.
@@ -315,7 +326,37 @@ authentication.</li><li>Fixed a session-teardown issue where revoking an account
 (disabling, scheduling deletion, or resetting password/email) left
 already-open pages running on stale permissions.</li><li>Fixed an issue where project emails (failure alerts, digests, retention
 notices, export links) could reach recipients who could no longer open the
-project themselves.</li></ul><h2 id="2-18-1-2026-08-28" class="section-heading"><a href="#2-18-1-2026-08-28" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[2.18.1] - 2026-08-28</span></h2><h3 id="added-2" class="section-heading"><a href="#added-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li><code class="inline">step:complete</code> now accepts <code class="inline">output_dataclip</code> as a decoded value, not just a
+project themselves.</li><li>A workflow name longer than the 255 characters the column holds now comes
+back as an ordinary validation error instead of a 500, including when the
+<code class="inline">_del</code> suffix added on delete is what pushes it over.</li><li>The provisioning API validated workflow names differently from every other
+write path, so a control character in a workflow name reached the database
+and returned a 500 on <code class="inline">POST /api/provision</code>.
+<a href="https://github.com/OpenFn/lightning/issues/4893">#4893</a></li><li>A workflow name is no longer rendered as HTML in the dashboard and history
+tooltips, where markup in a name became live elements for anyone viewing the
+project.
+<a href="https://github.com/OpenFn/lightning/issues/4577">#4577</a></li><li>The workflow YAML download in the editor no longer produces a file called
+<code class="inline">.yaml</code> when the workflow's name has no ASCII in it.
+<a href="https://github.com/OpenFn/lightning/issues/4577">#4577</a></li><li>Project YAML export now quotes and escapes names properly. A name containing
+an apostrophe, such as a credential called <code class="inline">MailChimp June'24</code>, produced a
+spec no YAML parser could read; a name of <code class="inline">null</code> or <code class="inline">42</code> came back as nil or
+a number, and a job key of <code class="inline">007</code> came back as <code class="inline">7</code>; and a name containing a
+newline or a control character corrupted the spec around it. What gets quoted
+is measured against the two parsers we ship against rather than taken from
+the YAML spec, so a name of <code class="inline">off</code> or <code class="inline">2026-08-27</code> is still written plainly.
+Names that already exported correctly are byte for byte unchanged, so a
+synced project repo sees no diff.
+<a href="https://github.com/OpenFn/lightning/issues/2808">#2808</a>
+<a href="https://github.com/OpenFn/lightning/issues/4577">#4577</a></li><li>Job bodies, project descriptions and edge condition expressions are now
+written as block scalars safely. A body whose first line started with a space
+lost that indentation on the way back, a body containing a carriage return
+lost it silently or produced a spec that would not parse, and two or more
+trailing blank lines collapsed to one.
+<a href="https://github.com/OpenFn/lightning/issues/2966">#2966</a></li><li>Exporting a project where two workflows, credentials, collections or channels
+share a spec key (<code class="inline">a b</code> and <code class="inline">a-b</code> both become <code class="inline">a-b</code>) now fails with a message
+naming both, instead of silently dropping one of the pair. A GitHub sync
+checks the export before firing the Action, so that message reaches the user
+in Lightning rather than dying in an Actions log.
+<a href="https://github.com/OpenFn/lightning/issues/4577">#4577</a></li></ul><h2 id="2-18-1-2026-08-28" class="section-heading"><a href="#2-18-1-2026-08-28" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[2.18.1] - 2026-08-28</span></h2><h3 id="added-2" class="section-heading"><a href="#added-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li><code class="inline">step:complete</code> now accepts <code class="inline">output_dataclip</code> as a decoded value, not just a
 JSON string, while staying compatible with workers that still send a string.
 <a href="https://github.com/OpenFn/lightning/pull/5098">#5098</a></li></ul><h2 id="2-18-0-2026-08-20" class="section-heading"><a href="#2-18-0-2026-08-20" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[2.18.0] - 2026-08-20</span></h2><h2 id="2-18-0-pre2-2026-08-18" class="section-heading"><a href="#2-18-0-pre2-2026-08-18" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[2.18.0-pre2] - 2026-08-18</span></h2><h3 id="added-3" class="section-heading"><a href="#added-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Job code can now read the work order, workflow and project a run belongs to
 from the <code class="inline">meta</code> global, alongside the run id it already had:
@@ -1685,20 +1726,20 @@ existing snapshots could be incorrect (e.g. missing steps, missing edges).
 In order to fix this, you will need to manually create new snapshots for
 each of your workflows. This can be done either by modifying the workflow in
 the UI and saving it. Or running a command on the running instance:</p><pre><code class="makeup elixir" translate="no"><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Repo</span><span class="w">
-</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="0333877664-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="0333877664-1">}</span><span class="w">
+</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="5693106913-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="5693106913-1">}</span><span class="w">
 
-</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="0333877664-2">(</span><span class="k" data-group-id="0333877664-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="5693106913-2">(</span><span class="k" data-group-id="5693106913-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
   </span><span class="n">snapshots</span><span class="w"> </span><span class="o">=</span><span class="w">
-    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="0333877664-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="0333877664-4">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0333877664-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="0333877664-5">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0333877664-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="0333877664-6">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="0333877664-7">(</span><span class="k" data-group-id="0333877664-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-      </span><span class="p" data-group-id="0333877664-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="0333877664-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="0333877664-10">(</span><span class="n">workflow</span><span class="p" data-group-id="0333877664-10">)</span><span class="w">
+    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="5693106913-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="5693106913-4">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="5693106913-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="5693106913-5">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="5693106913-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="5693106913-6">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="5693106913-7">(</span><span class="k" data-group-id="5693106913-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+      </span><span class="p" data-group-id="5693106913-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="5693106913-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="5693106913-10">(</span><span class="n">workflow</span><span class="p" data-group-id="5693106913-10">)</span><span class="w">
       </span><span class="n">snapshot</span><span class="w">
-    </span><span class="k" data-group-id="0333877664-8">end</span><span class="p" data-group-id="0333877664-7">)</span><span class="w">
+    </span><span class="k" data-group-id="5693106913-8">end</span><span class="p" data-group-id="5693106913-7">)</span><span class="w">
 
- </span><span class="p" data-group-id="0333877664-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="0333877664-11">}</span><span class="w">
-</span><span class="k" data-group-id="0333877664-3">end</span><span class="p" data-group-id="0333877664-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-82" class="section-heading"><a href="#added-82" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
+ </span><span class="p" data-group-id="5693106913-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="5693106913-11">}</span><span class="w">
+</span><span class="k" data-group-id="5693106913-3">end</span><span class="p" data-group-id="5693106913-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-82" class="section-heading"><a href="#added-82" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
 <a href="https://github.com/OpenFn/lightning/pull/2438">#2438</a></li><li>Persist AI Assistant conversations and enable it for all users
 <a href="https://github.com/OpenFn/lightning/issues/2296">#2296</a></li></ul><h3 id="changed-94" class="section-heading"><a href="#changed-94" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Rename <code class="inline">new_table</code> component to <code class="inline">table</code>.
 <a href="https://github.com/OpenFn/lightning/pull/2448">#2448</a></li></ul><h3 id="fixed-124" class="section-heading"><a href="#fixed-124" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix <code class="inline">workflow_id</code> presence in state.json during Github sync
@@ -2147,7 +2188,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="4177140004-1">(</span><span class="p" data-group-id="4177140004-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="7115643825-1">(</span><span class="p" data-group-id="7115643825-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-120" class="section-heading"><a href="#added-120" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Fix flaky job name input behavior on error

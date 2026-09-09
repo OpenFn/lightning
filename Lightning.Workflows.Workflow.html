@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-EFDC1888.js"></script>
+    <script defer src="dist/sidebar_items-ED886297.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -112,7 +112,11 @@ Lightning
 
     <section id="moduledoc">
 <p>Ecto model for Workflows.</p><p>A Workflow contains the fields for defining a workflow.</p><ul><li><code class="inline">name</code>
-A plain text identifier</li></ul>
+A plain text identifier. Any codepoint except a control character, see
+<a href="Lightning.Validators.html#validate_name/3"><code class="inline">Lightning.Validators.validate_name/3</code></a>, and at most 255 of them, which is
+the width of the column. The cap is higher than a job's 100 because
+workflow names predate any rule on the field, and nothing longer than the
+column width can already be stored.</li></ul>
     </section>
 
 </div>
@@ -205,7 +209,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L21" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L25" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -268,7 +272,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
       <h1 class="signature" translate="no">request_deletion_changeset(workflow, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L99" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L124" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -290,7 +294,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
       <h1 class="signature" translate="no">touch(workflow)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L129" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L154" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -320,7 +324,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
       <h1 class="signature" translate="no">validate(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L87" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L91" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -342,7 +346,7 @@ triggers and a snapshot needs to made; but the Workflow itself didn't change.</p
       <h1 class="signature" translate="no">workflow_activated?(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L111" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L136" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

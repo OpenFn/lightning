@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-EFDC1888.js"></script>
+    <script defer src="dist/sidebar_items-ED886297.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -229,6 +229,8 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
 
       </div>
 
+        <div class="summary-synopsis"><p>Fires the GitHub Action that pulls the project spec and commits it.</p></div>
+
     </div>
 
     <div class="summary-row">
@@ -323,7 +325,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">create_github_connection(attrs, user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L33" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L34" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -336,7 +338,10 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
 
           <pre translate="no"><span class="attribute">@spec</span> create_github_connection(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) ::
   {:ok, <a href="Lightning.VersionControl.ProjectRepoConnection.html#t:t/0">Lightning.VersionControl.ProjectRepoConnection.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>()}</pre>
+  | {:error,
+     <a href="https://hexdocs.pm/ecto/3.13.2/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()
+     | <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>()
+     | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}</pre>
 
       </div>
 
@@ -353,7 +358,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">delete_github_oauth_grant(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L430" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L463" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -382,7 +387,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">exchange_code_for_oauth_token(code)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L299" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L332" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -412,7 +417,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">fetch_installation_repos(installation_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L210" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L243" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -434,7 +439,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">fetch_repo_branches(user, installation_id, repo_name)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L261" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L294" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -462,7 +467,7 @@ to that installation.</p>
       <h1 class="signature" translate="no">fetch_user_access_token(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L381" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L414" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -492,7 +497,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
       <h1 class="signature" translate="no">fetch_user_installations(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L197" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L230" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -514,7 +519,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
       <h1 class="signature" translate="no">get_repo_connection_for_project(project_id)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L130" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L133" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -536,7 +541,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
       <h1 class="signature" translate="no">get_repo_connection_for_token(token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L134" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L137" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -558,7 +563,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
       <h1 class="signature" translate="no">github_enabled?()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L502" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L535" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -580,7 +585,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
       <h1 class="signature" translate="no">initiate_sync(repo_connection, commit_message)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L142" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L153" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -594,11 +599,16 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
           <pre translate="no"><span class="attribute">@spec</span> initiate_sync(
   repo_connection :: <a href="Lightning.VersionControl.ProjectRepoConnection.html#t:t/0">Lightning.VersionControl.ProjectRepoConnection.t</a>(),
   commit_message :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
-) :: :ok | {:error, <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()}</pre>
+) ::
+  :ok
+  | {:error, <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}</pre>
 
       </div>
 
-
+<p>Fires the GitHub Action that pulls the project spec and commits it.</p><p>The export runs here first and its result is thrown away. The Action fetches
+<code class="inline">/api/provision/:id.yaml</code>, and a 400 there lands in a GitHub Actions log
+Lightning cannot read, so the user sees a sync that failed with no reason.
+Costs one extra full spec generation on every successful sync.</p>
   </section>
 </section>
 <section class="detail" id="oauth_token_valid?/1">
@@ -611,7 +621,7 @@ If the access token has expired, it <code class="inline">refreshes</code> the to
       <h1 class="signature" translate="no">oauth_token_valid?(token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L359" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L392" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -642,7 +652,7 @@ This function simply checks if the token has a <code class="inline">refresh_toke
       <h1 class="signature" translate="no">reconfigure_github_connection(repo_connection, params, user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L55" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L58" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -657,7 +667,9 @@ This function simply checks if the token has a <code class="inline">refresh_toke
   <a href="Lightning.VersionControl.ProjectRepoConnection.html#t:t/0">Lightning.VersionControl.ProjectRepoConnection.t</a>(),
   <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
   <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()
-) :: :ok | {:error, <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()}</pre>
+) ::
+  :ok
+  | {:error, <a href="Lightning.Extensions.UsageLimiting.html#t:message/0">Lightning.Extensions.UsageLimiting.message</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}</pre>
 
       </div>
 
@@ -674,7 +686,7 @@ This function simply checks if the token has a <code class="inline">refresh_toke
       <h1 class="signature" translate="no">refresh_oauth_token(refresh_token)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L328" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L361" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -704,7 +716,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">remove_github_connection(repo_connection, user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L110" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L113" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -728,7 +740,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">save_oauth_token(user, token, opts \\ [notify: true])</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L461" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L494" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -757,7 +769,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">subscribe(user)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L25" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L26" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -779,7 +791,7 @@ For more info: <a href="https://docs.github.com/en/apps/creating-github-apps/aut
       <h1 class="signature" translate="no">verify_github_connection(repo_connection)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L71" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L74" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
