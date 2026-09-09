@@ -549,7 +549,9 @@ describe('MiniHistory', () => {
 
       // The muted label carries the state text; the colour lives on the
       // adjacent dot (its previous sibling within the status indicator).
-      const label = screen.getByText(state.charAt(0).toUpperCase() + state.slice(1));
+      const label = screen.getByText(
+        state.charAt(0).toUpperCase() + state.slice(1)
+      );
       const dot = label.previousElementSibling;
       expect(dot?.className).toContain(dotColor);
       expect(dot?.className).toContain('rounded-full');

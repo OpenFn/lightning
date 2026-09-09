@@ -82,6 +82,18 @@ export const HeexReactComponent = {
             JSON.stringify([['patch', { replace, href: path }]])
           );
         },
+        // A live navigation, not a patch. It remounts the LiveView, so every
+        // mount hook runs again and the access gate is correct by
+        // construction. A patch keeps the mount, which would leave the old
+        // project's scope and permissions resolved: that is the gate not
+        // running, not a stale label.
+        redirect: (path, options) => {
+          const replace = options?.replace ?? false;
+          this.liveSocket.execJS(
+            this.el,
+            JSON.stringify([['navigate', { replace, href: path }]])
+          );
+        },
       },
       /* eslint-enable */
       this.__view(),

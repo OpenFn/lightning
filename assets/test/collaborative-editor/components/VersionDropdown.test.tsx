@@ -656,7 +656,9 @@ describe('VersionDropdown', () => {
       const newestButton = screen
         .getAllByRole('menuitem')
         .find(btn => btn.textContent?.includes('v3'));
-      expect(newestButton?.querySelector('.hero-check')).not.toBeInTheDocument();
+      expect(
+        newestButton?.querySelector('.hero-check')
+      ).not.toBeInTheDocument();
     });
 
     test('marks the newest row when unpinned (following live)', async () => {

@@ -13,12 +13,34 @@ import {
   isUnloadWarningSuppressed,
   resetUnloadWarning,
 } from '../../../js/collaborative-editor/lib/unloadGuard';
+import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import type { Sandbox } from '../../../js/collaborative-editor/types/workflow';
 
 // The picker registers a MODAL-priority Escape handler, so it must render inside
 // a KeyboardProvider (useKeyboardShortcut throws otherwise).
 const renderPicker = (ui: ReactElement) =>
   render(ui, { wrapper: KeyboardProvider });
+
+const redirect = vi.fn();
+
+// With a LiveView to ask, the picker asks it to navigate rather than reloading
+// the browser. Without one, it falls back to the hard navigation.
+const renderPickerInLiveView = (ui: ReactElement) =>
+  render(ui, {
+    wrapper: ({ children }: { children: React.ReactNode }) => (
+      <LiveViewActionsProvider
+        actions={{
+          pushEvent: vi.fn(),
+          pushEventTo: vi.fn(),
+          handleEvent: vi.fn(() => vi.fn()),
+          navigate: vi.fn(),
+          redirect,
+        }}
+      >
+        <KeyboardProvider>{children}</KeyboardProvider>
+      </LiveViewActionsProvider>
+    ),
+  });
 
 const listSandboxes = vi.fn<() => Promise<Sandbox[]>>();
 const editInSandbox =
@@ -117,6 +139,7 @@ describe('EditInSandboxPicker', () => {
     saveWorkflow.mockResolvedValue(undefined);
     hasChanges = false;
     resetUnloadWarning();
+    redirect.mockReset();
     listSandboxes.mockResolvedValue([]);
   });
 
@@ -722,6 +745,73 @@ describe('EditInSandboxPicker', () => {
         expect(
           screen.queryByTestId('discard-changes-dialog')
         ).not.toBeInTheDocument();
+      } finally {
+        nav.restore();
+      }
+    });
+  });
+  describe('leaving for a sandbox', () => {
+    test('asks the LiveView to navigate rather than reloading', async () => {
+      listSandboxes.mockResolvedValue(sandboxes);
+      const nav = stubNavigation();
+      const user = userEvent.setup();
+
+      try {
+        renderPickerInLiveView(
+          <EditInSandboxPicker isOpen onClose={() => {}} />
+        );
+        await user.click(
+          (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
+        );
+
+        // The socket survives, so there is no white flash, and because it is a
+        // navigation rather than a patch the LiveView remounts and the access
+        // gate runs again.
+        expect(redirect).toHaveBeenCalledWith(
+          '/projects/sandbox-a/w/wf-clone-a'
+        );
+        expect(nav.hrefSetter).not.toHaveBeenCalled();
+      } finally {
+        nav.restore();
+      }
+    });
+
+    test('does not need to suppress the unload warning', async () => {
+      listSandboxes.mockResolvedValue(sandboxes);
+      const nav = stubNavigation();
+      const user = userEvent.setup();
+
+      try {
+        renderPickerInLiveView(
+          <EditInSandboxPicker isOpen onClose={() => {}} />
+        );
+        await user.click(
+          (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
+        );
+
+        // The page never unloads, so there is nothing to warn about and no
+        // suppression left standing with no pageshow to clear it.
+        expect(isUnloadWarningSuppressed()).toBe(false);
+      } finally {
+        nav.restore();
+      }
+    });
+
+    test('falls back to a hard navigation with no LiveView to ask', async () => {
+      listSandboxes.mockResolvedValue(sandboxes);
+      const nav = stubNavigation();
+      const user = userEvent.setup();
+
+      try {
+        renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+        await user.click(
+          (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
+        );
+
+        expect(nav.hrefSetter).toHaveBeenCalledWith(
+          '/projects/sandbox-a/w/wf-clone-a'
+        );
+        expect(redirect).not.toHaveBeenCalled();
       } finally {
         nav.restore();
       }

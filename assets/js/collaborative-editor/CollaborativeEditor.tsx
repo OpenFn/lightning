@@ -298,6 +298,7 @@ export const CollaborativeEditor: WithActionProps<
     pushEventTo: props.pushEventTo,
     handleEvent: props.handleEvent,
     navigate: props.navigate,
+    redirect: props.redirect,
   };
 
   // Monaco ref for diff preview - shared between FullScreenIDE and AIAssistantPanelWrapper

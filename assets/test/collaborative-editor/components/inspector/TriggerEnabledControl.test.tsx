@@ -134,6 +134,7 @@ function setup(options: SetupOptions = {}) {
           pushEventTo: vi.fn(),
           handleEvent: vi.fn(() => vi.fn()),
           navigate: vi.fn(),
+          redirect: vi.fn(),
         }}
       >
         <StoreContext.Provider value={storeValue}>
@@ -153,7 +154,6 @@ function setup(options: SetupOptions = {}) {
 // that footer, so TriggerEnabledControl currently has no production caller.
 // The control's own behaviour is still covered below; re-home the control and
 // restore placement coverage when the new panels get an enable affordance.
-
 
 describe('TriggerEnabledControl - enable/disable behavior', () => {
   beforeEach(() => {

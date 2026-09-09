@@ -177,6 +177,7 @@ async function createTestSetup(options: WrapperOptions = {}) {
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
   // Create wrapper (still needed for React context)

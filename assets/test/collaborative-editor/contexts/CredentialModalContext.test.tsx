@@ -31,6 +31,7 @@ interface MockLiveViewActions {
   pushEventTo: ReturnType<typeof vi.fn>;
   handleEvent: ReturnType<typeof vi.fn>;
   navigate: ReturnType<typeof vi.fn>;
+  redirect: ReturnType<typeof vi.fn>;
 }
 
 // Store event callbacks so tests can trigger them
@@ -54,6 +55,7 @@ function createMockLiveViewActions(eventCallbacks: EventCallbacks = {}) {
       }
     ),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 }
 

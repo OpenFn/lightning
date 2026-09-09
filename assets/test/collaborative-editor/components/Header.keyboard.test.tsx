@@ -190,6 +190,7 @@ async function createTestSetup(options: WrapperOptions = {}) {
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
   // Wrapper with KeyboardProvider (keyboard-specific)
@@ -1096,6 +1097,7 @@ async function createRunSetup(
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (

@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
+import { useOptionalLiveViewActions } from '../contexts/LiveViewActionsContext';
 import { useDiscardGuard } from '../hooks/useDiscardGuard';
 import { useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
@@ -171,11 +172,23 @@ function SandboxListSkeleton() {
   );
 }
 
-const navigateToSandbox = (projectId: string, workflowId: string) => {
+// Asks the LiveView to navigate rather than reloading the browser. The socket
+// survives, so there is no white flash and no unload warning to suppress, and
+// because it is a navigation rather than a patch the LiveView remounts and
+// every mount hook runs again. That matters: the project scope and the
+// workflow-ownership check are mount hooks, so a patch would leave the old
+// project's permissions resolved.
+//
+// The fallback is the old hard navigation, for the case where the editor is
+// rendered without a LiveView to ask.
+const sandboxPath = (projectId: string, workflowId: string) =>
+  `/projects/${projectId}/w/${workflowId}`;
+
+const hardNavigateToSandbox = (projectId: string, workflowId: string) => {
   // A deliberate departure, already agreed to, so the browser's own warning
   // would only ask the same question a second time.
   suppressUnloadWarning();
-  window.location.href = `/projects/${projectId}/w/${workflowId}`;
+  window.location.href = sandboxPath(projectId, workflowId);
 };
 
 export function EditInSandboxPicker({
@@ -183,6 +196,20 @@ export function EditInSandboxPicker({
   onClose,
 }: EditInSandboxPickerProps) {
   const { listSandboxes, editInSandbox } = useWorkflowActions();
+  // The picker is mounted whether or not there is a LiveView to ask, so this
+  // does not insist on one: without it the old hard navigation still works.
+  const liveView = useOptionalLiveViewActions();
+
+  const goToSandbox = useCallback(
+    (projectId: string, workflowId: string) => {
+      if (liveView?.redirect) {
+        liveView.redirect(sandboxPath(projectId, workflowId));
+      } else {
+        hardNavigateToSandbox(projectId, workflowId);
+      }
+    },
+    [liveView]
+  );
   const { guard, ...discardPrompt } = useDiscardGuard();
 
   // High-priority Escape handler to prevent closing the parent IDE/inspector.
@@ -244,7 +271,7 @@ export function EditInSandboxPicker({
         // Leaving is a hard navigation, so uncommitted edits on this workflow
         // would go with it.
         guard(() => {
-          navigateToSandbox(project_id, workflow_id);
+          goToSandbox(project_id, workflow_id);
         });
       } catch (error) {
         // A rejected name (duplicate, invalid) belongs under the input as an
@@ -263,17 +290,17 @@ export function EditInSandboxPicker({
     };
 
     void create();
-  }, [name, editInSandbox, guard]);
+  }, [name, editInSandbox, guard, goToSandbox]);
 
   const handleJoin = useCallback(
     (sandbox: Sandbox) => {
       if (!sandbox.workflow_id) return;
       const { id, workflow_id } = sandbox;
       guard(() => {
-        navigateToSandbox(id, workflow_id);
+        goToSandbox(id, workflow_id);
       });
     },
-    [guard]
+    [guard, goToSandbox]
   );
 
   // A name is required to create. The server already returns only joinable

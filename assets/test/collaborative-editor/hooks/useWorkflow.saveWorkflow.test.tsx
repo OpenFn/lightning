@@ -72,6 +72,7 @@ async function createTestSetup(isNewWorkflow: boolean) {
         pushEventTo: vi.fn(),
         handleEvent: vi.fn(() => vi.fn()),
         navigate: mockNavigate,
+        redirect: vi.fn(),
       }}
     >
       <StoreContext.Provider value={testStores}>

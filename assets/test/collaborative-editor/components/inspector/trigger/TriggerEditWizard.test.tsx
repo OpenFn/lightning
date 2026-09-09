@@ -45,6 +45,7 @@ const mockLiveViewActions = {
   pushEventTo: vi.fn(),
   handleEvent: vi.fn(() => () => {}),
   navigate: vi.fn(),
+  redirect: vi.fn(),
 };
 
 // ---------------------------------------------------------------------------

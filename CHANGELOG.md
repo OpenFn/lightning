@@ -17,6 +17,13 @@ and this project adheres to
 
 ### Fixed
 
+- Leaving for a sandbox no longer reloads the browser. The editor asks the
+  LiveView to navigate instead, so the socket survives and the white flash goes.
+  It is a navigation rather than a patch on purpose: the project scope and the
+  workflow-ownership check are mount hooks, and a patch would leave the old
+  project's permissions resolved.
+  [#4865](https://github.com/OpenFn/lightning/issues/4865)
+
 - The editor asks before it throws away unsaved changes. Switching version,
   opening a run that pins one, and leaving for a sandbox all destroyed the
   collaborative document and took uncommitted edits with it, silently. Each now
