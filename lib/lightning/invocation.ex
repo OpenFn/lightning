@@ -759,7 +759,7 @@ defmodule Lightning.Invocation do
       )
 
     from([workorder: wo] in query,
-      where: wo.state in ^Query.failure_states(),
+      where: wo.state in ^WorkOrder.failure_states(),
       where:
         exists(
           from(r in subquery(latest_run_for_workorder()),
@@ -778,7 +778,7 @@ defmodule Lightning.Invocation do
     case Map.fetch(@reason_states, exit_reason) do
       {:ok, state} ->
         from([workorder: wo] in query,
-          where: wo.state in ^Query.failure_states(),
+          where: wo.state in ^WorkOrder.failure_states(),
           where:
             exists(
               from(r in subquery(latest_run_for_workorder()),

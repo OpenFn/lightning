@@ -40,12 +40,6 @@ defmodule Lightning.Invocation.Query do
     )
   end
 
-  # Narrower than `WorkOrder.failure_states/0`: `:cancelled` is final but not a
-  # failure — someone stopped it on purpose. Shared so the history filter
-  # narrows on the same set `Stats` does.
-  @spec failure_states() :: [atom()]
-  def failure_states, do: WorkOrder.failure_states() -- [:cancelled]
-
   @doc """
   Appends `exit_reason != "success"` to a query of `Step`.
 

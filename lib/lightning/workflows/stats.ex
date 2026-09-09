@@ -35,9 +35,6 @@ defmodule Lightning.Workflows.Stats do
   @final_states WorkOrder.final_states()
   @zero_counts Map.new(@final_states, &{&1, 0})
 
-  # Shared with the history filter, which needs the same set `Stats` narrows.
-  @failure_states Query.failure_states()
-
   @doc """
   Work order counts by final state over the last `days_back` days.
   """
@@ -179,7 +176,7 @@ defmodule Lightning.Workflows.Stats do
       on: r.work_order_id == wo.id,
       where:
         wo.workflow_id == ^workflow_id and wo.last_activity > ^since and
-          wo.state in ^@failure_states,
+          wo.state in ^WorkOrder.failure_states(),
       distinct: wo.id,
       order_by: [asc: wo.id],
       select: %{
