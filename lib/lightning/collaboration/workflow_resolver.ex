@@ -193,17 +193,29 @@ defmodule Lightning.Collaboration.WorkflowResolver do
       name: snapshot.name,
       lock_version: snapshot.lock_version,
       deleted_at: nil,
-      jobs: Enum.map(snapshot.jobs, &Map.from_struct/1),
-      edges: Enum.map(snapshot.edges, &Map.from_struct/1),
+      jobs: Enum.map(snapshot.jobs, &to_plain_map/1),
+      edges: Enum.map(snapshot.edges, &to_plain_map/1),
       triggers:
         Enum.map(snapshot.triggers, fn trigger ->
           auth_methods = Map.get(auth_methods_by_trigger, trigger.id, [])
 
           trigger
-          |> Map.from_struct()
+          |> to_plain_map()
           |> Map.put(:has_auth_method, length(auth_methods) > 0)
         end)
     }
+  end
+
+  # A snapshot's job carries association keys it never loads, its credential
+  # among them. Handing those to the JSON encoder that renders the session
+  # context raises on the unloaded value and takes the channel with it, so drop
+  # them here rather than at each place that reads this workflow.
+  defp to_plain_map(struct) do
+    struct
+    |> Map.from_struct()
+    |> Map.reject(fn {_field, value} ->
+      match?(%Ecto.Association.NotLoaded{}, value)
+    end)
   end
 
   # Snapshot triggers reference auth methods through the join table directly, so

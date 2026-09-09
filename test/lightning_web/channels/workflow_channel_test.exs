@@ -2168,6 +2168,12 @@ defmodule LightningWeb.WorkflowChannelTest do
       # would report :draft. The client reads state off this to decide which
       # lifecycle actions to offer, so it has to be the workflow's real one.
       assert response.workflow.state == :live
+
+      # The reply reaches the client as JSON, which a test's assert_reply never
+      # exercises. A snapshot's job carries association keys it never loads, and
+      # encoding one of those raised and took the channel down, so the client
+      # sat waiting for a reply that never came.
+      assert is_binary(Jason.encode!(response))
     end
   end
 
