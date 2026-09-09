@@ -718,22 +718,42 @@ defmodule Lightning.Accounts do
 
   An `Ecto.Changeset` containing any validation errors.
 
+  ## Options
+
+    * `:validate_password` - when `true` (default), require and check
+      `current_password`. Set to `false` for live validation while typing so
+      password errors only appear on submit.
+
   ## Examples
 
       iex> validate_change_user_email(user, %{"email" => "new@example.com", "current_password" => "secret"})
       %Ecto.Changeset{...}
 
   """
-  def validate_change_user_email(user, params \\ %{}) do
+  def validate_change_user_email(user, params \\ %{}, opts \\ []) do
+    validate_password? = Keyword.get(opts, :validate_password, true)
+
     data = %{email: nil, current_password: nil}
     types = %{email: :string, current_password: :string}
 
-    {data, types}
-    |> Changeset.cast(params, Map.keys(types))
-    |> Changeset.validate_required([:email, :current_password])
-    |> User.validate_email()
-    |> validate_email_changed(user)
-    |> validate_current_password(user)
+    changeset =
+      {data, types}
+      |> Changeset.cast(params, Map.keys(types))
+      |> then(fn changeset ->
+        if validate_password? do
+          Changeset.validate_required(changeset, [:email, :current_password])
+        else
+          Changeset.validate_required(changeset, [:email])
+        end
+      end)
+      |> User.validate_email()
+      |> validate_email_changed(user)
+
+    if validate_password? do
+      validate_current_password(changeset, user)
+    else
+      changeset
+    end
   end
 
   defp validate_email_changed(changeset, user) do

@@ -195,6 +195,20 @@ defmodule Lightning.AccountsTest do
       assert {"can't be blank", _} = errors[:current_password]
     end
 
+    test "skips password checks when validate_password is false" do
+      user = insert(:user)
+
+      changeset =
+        Accounts.validate_change_user_email(
+          user,
+          %{"email" => "new@example.com", "current_password" => ""},
+          validate_password: false
+        )
+
+      assert changeset.valid?
+      refute changeset.errors[:current_password]
+    end
+
     test "gives a password-less account a changeset error rather than raising" do
       # AccountHook is adapter-pluggable, so an SSO-provisioned account can have
       # no hash at all. This form is the one page such an account can reach.
