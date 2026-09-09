@@ -1791,6 +1791,43 @@ defmodule LightningWeb.ProjectLiveTest do
              } = Repo.get!(Project, project.id)
     end
 
+    test "project settings form cannot change the environment", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project,
+          name: "project-1",
+          env: "staging",
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      {:ok, view, html} = live(conn, ~p"/projects/#{project}/settings")
+
+      # It stays on the page, because it tells you which values a credential
+      # resolves here, but nobody can type in it.
+      assert html =~ "Project environment"
+
+      # The form helper refuses a field it cannot fill, which is the assertion
+      # that the input is disabled rather than merely styled to look it.
+      assert_raise ArgumentError, ~r/could not find non-disabled input/, fn ->
+        view
+        |> form("#project-settings-form", project: %{env: "main"})
+        |> render_submit()
+      end
+
+      # The field is disabled, so the form helper refuses to fill it. Push the
+      # event as a crafted submit would, which is the case that matters.
+      assert render_submit(view, "save", %{
+               "project" => %{"raw_name" => "project-1", "env" => "main"}
+             }) =~ "Project updated successfully"
+
+      # Submitting it anyway changes nothing. A project admin who could type
+      # this could read any set of values on any credential the project holds,
+      # and a sandbox admin could read the parent's production values.
+      assert %{env: "staging"} = Repo.get!(Project, project.id)
+    end
+
     test "project settings form converts uppercase name to url-safe format",
          %{
            conn: conn,

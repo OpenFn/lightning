@@ -1926,6 +1926,21 @@ defmodule Lightning.Projects.SandboxesTest do
       assert updated.name == "updated"
     end
 
+    test "ignores env, whoever asks", %{actor: actor, sandbox: sb} do
+      ensure_member!(sb, actor, :owner)
+      original_env = sb.env
+
+      {:ok, updated} =
+        Sandboxes.update_sandbox(sb, actor, %{name: "updated", env: "main"})
+
+      # The environment decides which of a credential's value sets this project
+      # reads. A sandbox holds a reference to every credential its parent holds,
+      # so an owner who could name it after the parent's would read the parent's
+      # production values.
+      assert updated.name == "updated"
+      assert updated.env == original_env
+    end
+
     test "uuid not found returns not_found", %{actor: actor} do
       bad_id = Ecto.UUID.generate()
 

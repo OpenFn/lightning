@@ -15,6 +15,17 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Security
+
+- A project's environment can no longer be changed once the project exists. It
+  decides which of a credential's value sets the project reads, so anyone who
+  could type it could read any set on any credential shared with that project.
+  A sandbox holds a reference to every credential its parent holds, and creating
+  a sandbox makes you its owner, so a sandbox admin could name their environment
+  after the parent's and read the parent's production values. The field stays on
+  the project settings page, because it tells you which values resolve there, but
+  it is read-only and no longer accepted from a form or from the sandbox update.
+
 ### Changed
 
 - The AI assistant is the global assistant for everyone. It was behind the
