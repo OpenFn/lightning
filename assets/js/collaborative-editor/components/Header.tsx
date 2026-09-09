@@ -402,7 +402,9 @@ export function Header({
   // stays on its confirm step.
   const handleConfirmPromote = useCallback(async (): Promise<boolean> => {
     try {
-      await saveWorkflow({ silent: true });
+      // The dialog owns every outcome here, so the save underneath it must not
+      // toast on its own.
+      await saveWorkflow({ notify: 'none' });
     } catch (error) {
       const description = isChannelRequestError(error)
         ? formatChannelErrorMessage({

@@ -692,7 +692,7 @@ describe('Header - lifecycle actions', () => {
       });
       // The current editor state is saved (silently) before the merge, and the
       // save happens first.
-      expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
+      expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'none' });
       expect(saveWorkflow.mock.invocationCallOrder[0]).toBeLessThan(
         promote.mock.invocationCallOrder[0]
       );
@@ -883,7 +883,7 @@ describe('Header - lifecycle actions', () => {
       );
     });
     // The save succeeded first; only the merge failed. Still on phase one.
-    expect(saveWorkflow).toHaveBeenCalledWith({ silent: true });
+    expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'none' });
     const dialog = screen.getByRole('dialog');
     expect(
       within(dialog).queryByText('Changes promoted')
