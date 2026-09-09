@@ -106,7 +106,19 @@ vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
-  useVersionSelect: () => vi.fn(),
+  useVersionSelect: () => ({
+    handleVersionSelect: vi.fn(),
+    prompt: {
+      isAsking: false,
+      cancel: vi.fn(),
+      runPending: vi.fn(),
+      saveAndRunPending: vi.fn(),
+    },
+  }),
+}));
+
+vi.mock('../../../js/collaborative-editor/hooks/useUnloadWarning', () => ({
+  useUnloadWarning: () => {},
 }));
 
 const webhook = {

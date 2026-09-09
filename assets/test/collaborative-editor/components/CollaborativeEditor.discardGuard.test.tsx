@@ -42,7 +42,11 @@ vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
-  useWorkflowActions: () => ({ saveWorkflow }),
+  useWorkflowActions: () => ({
+    saveWorkflow,
+    restoreVersion: vi.fn(),
+    checkRestore: vi.fn(() => new Promise(() => {})),
+  }),
   useWorkflowState: (selector: (state: unknown) => unknown) => {
     const state = { workflow: { id: 'workflow-1', lock_version: 1 } };
     return typeof selector === 'function' ? selector(state) : state;
@@ -100,6 +104,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),
   useLatestSnapshotLockVersion: () => 1,
   useIsNewWorkflow: () => false,
+  usePermissions: () => ({ can_edit_workflow: true }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
