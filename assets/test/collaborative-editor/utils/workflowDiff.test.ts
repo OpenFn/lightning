@@ -1093,6 +1093,61 @@ describe('deriveSnapshotChanges', () => {
     expect(rows.map(row => row.detail)).toEqual(['path removed']);
   });
 
+  it('keeps two webhooks apart in the cache salt', () => {
+    // buildYaml keys triggers by type, so this one is written out: the spec
+    // allows any key, and two webhooks are what make a type-keyed salt
+    // ambiguous. Both chains stream the same two snapshots on purpose.
+    const twoHooks = (a: string, b: string, body: string) => `id: wf-1
+name: Test Workflow
+jobs:
+  transform-data:
+    id: job-1
+    name: Transform data
+    adaptor: '@openfn/language-common@latest'
+    body: |
+      ${body}
+triggers:
+  hook-a:
+    id: trigger-a
+    type: webhook
+    enabled: true
+${a}  hook-b:
+    id: trigger-b
+    type: webhook
+    enabled: true
+${b}edges: {}
+`;
+    const path = (value: string) => `    custom_path: '${value}'\n`;
+    const unstated = '';
+
+    const first = snapshot(
+      twoHooks(unstated, unstated, 'fn(s => ({ ...s }));'),
+      0
+    );
+    const second = snapshot(
+      twoHooks(path('alpha'), unstated, 'fn(s => ({ ...s }));'),
+      1
+    );
+
+    const rows = (baselineA: string, baselineB: string) =>
+      deriveSnapshotChanges(twoHooks(baselineA, baselineB, 'fn(s => s);'), [
+        first,
+        second,
+      ]).flatMap(entry =>
+        entry.changes.structure
+          .filter(row => row.kind === 'trigger')
+          .map(row => row.detail)
+      );
+
+    // hook-a already held alpha, so the second snapshot changes nothing.
+    expect(rows(path('alpha'), path('beta'))).toEqual([]);
+    // Swapped, hook-a moves from beta to alpha. A salt that only counted the
+    // paths would read the answer above instead.
+    expect(rows(path('beta'), path('alpha'))).toEqual([
+      'path: beta \u2192 alpha',
+    ]);
+  });
+
   it('pins each change set to the segment index its snapshot carried', () => {
     const baseline = baseWorkflow('fn(s => s);');
     const edited = baseWorkflow('fn(s => s);\nconsole.log(1);');
