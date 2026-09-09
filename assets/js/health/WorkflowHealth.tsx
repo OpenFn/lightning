@@ -83,8 +83,8 @@ export const HealthContent = ({
       </div>
 
       {/* Four columns: a narrow donut beside a wide time axis, then an even
-          split. Stacks in source order below `md`. */}
-      <div className="grid gap-6 md:grid-cols-4">
+          split. Stacks in source order below `lg`. */}
+      <div className="grid gap-6 lg:grid-cols-4">
         <Card
           title="Outcomes"
           meta={outcomes.data && workOrders(outcomes.data.counts)}
@@ -103,7 +103,7 @@ export const HealthContent = ({
             names the bucket size rather than a total that won't reconcile. */}
         <Card
           title="Volume over time"
-          className="md:col-span-3"
+          className="lg:col-span-3"
           meta={volume.data && bucketMeta(volume.data.buckets)}
         >
           <Panel data={volume.data} error={volume.error}>
@@ -121,7 +121,7 @@ export const HealthContent = ({
             fix. */}
         <Card
           title="Triage"
-          className="md:col-span-2"
+          className="lg:col-span-2"
           meta="grouped by failure type · counted once per failed branch"
         >
           <Panel data={signatures.data} error={signatures.error}>
@@ -141,7 +141,7 @@ export const HealthContent = ({
             the slices here and the red wedge there cannot disagree. */}
         <Card
           title="Failure breakdown"
-          className="md:col-span-2"
+          className="lg:col-span-2"
           meta={
             outcomes.data &&
             `${failures(outcomes.data.counts)} · by work order state`
