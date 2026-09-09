@@ -504,9 +504,7 @@ defmodule Lightning.Config.Bootstrap do
       )
 
     if log_level do
-      config :logger,
-        level: log_level,
-        metadata: [:otel_trace_id, :otel_span_id, :request_id]
+      config :logger, level: log_level
     end
 
     database_url = env!("DATABASE_URL", :string, nil)

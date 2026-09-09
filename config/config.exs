@@ -160,6 +160,8 @@ config :tailwind,
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [
+    :otel_span_id,
+    :otel_trace_id,
     :request_id,
     :session_id,
     :prompt_size,
