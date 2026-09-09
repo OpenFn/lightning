@@ -6,13 +6,14 @@ defmodule Lightning.Workflows.JobTest do
 
   import Lightning.Factories
 
+  # No space in the alphabet on purpose: the changeset trims before it measures,
+  # so a name that happens to end in one would be under the cap after trimming
+  # and the length test would pass or fail depending on the seed.
   defp random_job_name(length) do
     for _ <- 1..length,
         into: "",
         do:
-          <<Enum.random(
-              ~c"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ "
-            )>>
+          <<Enum.random(~c"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")>>
   end
 
   describe "changeset/2" do
@@ -217,12 +218,274 @@ defmodule Lightning.Workflows.JobTest do
       assert errors[:name] == ["job name should be at most 100 character(s)"]
     end
 
-    test "name can't contain non url-safe chars" do
-      ["My project @ OpenFn", "Can't have a / slash"]
+    test "the 100 character cap counts graphemes, not codepoints or bytes" do
+      # A ZWJ family is one grapheme, seven codepoints and 25 bytes. Ecto counts
+      # graphemes, so 12 of them are 12 characters and not 84 or 300.
+      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+      assert String.length(family) == 1
+
+      at_cap = String.duplicate("a", 88) <> String.duplicate(family, 12)
+      assert String.length(at_cap) == 100
+
+      refute Job.changeset(%Job{}, %{name: at_cap})
+             |> errors_on()
+             |> Map.get(:name)
+
+      over_cap = String.duplicate("a", 89) <> String.duplicate(family, 12)
+      assert String.length(over_cap) == 101
+
+      assert Job.changeset(%Job{}, %{name: over_cap})
+             |> errors_on()
+             |> Map.get(:name) ==
+               ["job name should be at most 100 character(s)"]
+    end
+
+    test "a name short in graphemes but too wide for the column is rejected" do
+      # 100 ZWJ families clear the product cap at 100 graphemes but are 700
+      # codepoints, and jobs.name is varchar(255).
+      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+      name = String.duplicate(family, 100)
+
+      assert String.length(name) == 100
+      assert name |> String.codepoints() |> length() == 700
+
+      changeset =
+        Job.changeset(%Job{}, %{
+          name: name,
+          body: "fn(state => state)",
+          adaptor: "@openfn/language-common@latest",
+          workflow_id: insert(:workflow).id
+        })
+
+      assert errors_on(changeset)[:name] == [
+               "job name is too long, please use a shorter one"
+             ]
+
+      assert {:error, changeset} = Repo.insert(changeset)
+      refute changeset.valid?
+    end
+
+    test "an over-long name gets one message, not two" do
+      # The column guard stays quiet when the product cap has already spoken.
+      errors =
+        Job.changeset(%Job{}, %{name: random_job_name(300)}) |> errors_on()
+
+      assert errors[:name] == ["job name should be at most 100 character(s)"]
+    end
+
+    test "a name may hold letters, marks, punctuation and symbols from any script" do
+      [
+        "Vérifier l'état",
+        "患者確認",
+        "تسجيل المريض",
+        "רישום מטופל",
+        "step 🎉",
+        "MailChimp June'24",
+        "Flujo 1: Registro en PS y gestión de perfiles",
+        "My project @ OpenFn",
+        "Can't have a / slash",
+        "source -> target",
+        "Ampersand & co",
+        "नमस्ते"
+      ]
       |> Enum.each(fn name ->
         errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
-        assert errors[:name] == ["job name has invalid format"]
+
+        refute errors[:name], "expected #{inspect(name)} to be accepted"
       end)
+    end
+
+    test "a name may not hold a control character" do
+      [
+        "nul\u{0000}byte",
+        "tab\u{0009}here",
+        "line\u{000A}break",
+        "carriage\u{000D}return",
+        "escape\u{001B}[31m",
+        "unit\u{001F}separator",
+        "delete\u{007F}",
+        "c1\u{0080}next",
+        "c1\u{009F}end",
+        "non\u{FFFE}character",
+        "non\u{FFFF}character"
+      ]
+      |> Enum.each(fn name ->
+        errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
+
+        assert errors[:name] == ["job name can't contain control characters"],
+               "expected #{inspect(name)} to be rejected"
+      end)
+    end
+
+    test "a name made only of invisible characters is blank" do
+      # Each of these takes no space and draws nothing, and String.trim/1 does
+      # not know about them.
+      for name <- [
+            "\u{200B}",
+            "\u{FEFF}",
+            "\u{200C}",
+            "\u{00AD}",
+            "\u{180E}",
+            "\u{200B}\u{FEFF}\u{00AD}"
+          ] do
+        errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
+
+        assert "can't be blank" in errors[:name],
+               "expected #{inspect(name)} to be rejected as blank"
+      end
+    end
+
+    test "consecutive joiners do not slip past the blank check" do
+      # String.graphemes/1 fuses a ZWJ-led run into one cluster, so a
+      # per-grapheme check caught one joiner and missed two.
+      for name <- [
+            "\u{200D}\u{200D}",
+            "\u{200D}\u{200D}\u{200D}",
+            "\u{200B}\u{200D}\u{200D}",
+            "\u{2060}",
+            "\u{3164}",
+            "\u{FFA0}",
+            "\u{115F}",
+            "\u{1160}",
+            "\u{2800}",
+            "\u{200E}",
+            "\u{202E}",
+            "\u{FE0F}"
+          ] do
+        errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
+
+        assert "can't be blank" in errors[:name],
+               "expected #{inspect(name)} to be rejected as blank"
+      end
+    end
+
+    test "a body containing a NUL is a changeset error, not a jsonb crash" do
+      # Only the NUL: a body is code and legitimately holds newlines and tabs
+      # (#4893).
+      errors =
+        Job.changeset(%Job{}, %{
+          name: "step",
+          body: "fn(state => state)\u{0000}",
+          adaptor: "@openfn/language-common@latest"
+        })
+        |> errors_on()
+
+      assert errors[:body] == ["job body can't contain a null byte"]
+    end
+
+    test "a body may hold newlines, tabs and other control characters" do
+      for body <- ["a\nb", "a\tb", "a\r\nb", "a\u{001B}[31mb"] do
+        errors =
+          Job.changeset(%Job{}, %{
+            name: "step",
+            body: body,
+            adaptor: "@openfn/language-common@latest"
+          })
+          |> errors_on()
+
+        refute errors[:body], "expected #{inspect(body)} to be accepted"
+      end
+    end
+
+    test "a NUL in a body is rejected before the snapshot insert" do
+      project = insert(:project)
+
+      attrs = %{
+        name: "workflow with a bad job body",
+        project_id: project.id,
+        jobs: [
+          %{
+            id: Ecto.UUID.generate(),
+            name: "step",
+            body: "fn(state => state)\u{0000}",
+            adaptor: "@openfn/language-common@latest"
+          }
+        ],
+        triggers: [%{id: Ecto.UUID.generate(), type: :webhook}],
+        edges: []
+      }
+
+      assert {:error, changeset} =
+               Lightning.Workflows.save_workflow(attrs, insert(:user))
+
+      assert [job_changeset] = Ecto.Changeset.get_change(changeset, :jobs)
+
+      assert errors_on(job_changeset)[:body] == [
+               "job body can't contain a null byte"
+             ]
+    end
+
+    test "a name that merely contains an invisible character is fine" do
+      # ZWJ is how an emoji sequence is written, and several scripts need ZWNJ.
+      for name <- [
+            "\u{1F468}\u{200D}\u{1F469}",
+            "a\u{200B}b",
+            "\u{0915}\u{094D}\u{200C}\u{0937}"
+          ] do
+        errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
+
+        refute errors[:name], "expected #{inspect(name)} to be accepted"
+      end
+    end
+
+    test "a name is normalised to NFC on write" do
+      # e + combining acute: two codepoints going in, one coming out.
+      decomposed = "Ve\u{0301}rifier"
+      composed = "V\u{00E9}rifier"
+
+      refute decomposed == composed
+
+      changeset = Job.changeset(%Job{}, %{name: decomposed})
+
+      assert Ecto.Changeset.get_change(changeset, :name) == composed
+    end
+
+    test "the name is trimmed before it is validated, not after" do
+      # 100 characters plus trailing space. Trimming after validation, which is
+      # what this changeset used to do, made this 105 characters and rejected
+      # a name that is exactly at the cap.
+      name = String.duplicate("a", 100) <> "     "
+
+      changeset = Job.changeset(%Job{}, %{name: name})
+
+      refute errors_on(changeset)[:name]
+
+      assert Ecto.Changeset.get_change(changeset, :name) ==
+               String.duplicate("a", 100)
+    end
+
+    test "a whitespace-only name is blank" do
+      errors = Job.changeset(%Job{}, %{name: "   "}) |> errors_on()
+
+      assert errors[:name] == ["job name can't be blank"]
+    end
+
+    test "a NUL in a name is a changeset error, not a crash on the snapshot insert" do
+      project = insert(:project)
+
+      attrs = %{
+        name: "workflow with a bad job name",
+        project_id: project.id,
+        jobs: [
+          %{
+            id: Ecto.UUID.generate(),
+            name: "before\u{0000}after",
+            body: "fn(state => state)",
+            adaptor: "@openfn/language-common@latest"
+          }
+        ],
+        triggers: [%{id: Ecto.UUID.generate(), type: :webhook}],
+        edges: []
+      }
+
+      assert {:error, changeset} =
+               Lightning.Workflows.save_workflow(attrs, insert(:user))
+
+      assert [job_changeset] = Ecto.Changeset.get_change(changeset, :jobs)
+
+      assert errors_on(job_changeset)[:name] == [
+               "job name can't contain control characters"
+             ]
     end
 
     test "must have an adaptor" do

@@ -29,6 +29,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.VersionControl.VersionControlUsageLimiter
 
+  alias Lightning.Validators
   alias Lightning.Workflows
   alias Lightning.Workflows.Audit
   alias Lightning.Workflows.Edge
@@ -844,9 +845,16 @@ defmodule Lightning.Projects.Provisioner do
 
       new_project_creds_to_add =
         Enum.map(new_credential_params, fn cred_params ->
+          # Both sides normalised. The stored name went through
+          # `validate_name/3`; the spec body never did, so a client that writes
+          # a decomposed accent asks for a credential that renders identically
+          # to the stored one and is refused, with an error naming a credential
+          # the user can see on screen.
+          wanted = Validators.normalize_name_for_match(cred_params["name"])
+
           credential =
             Enum.find(user_credentials, fn cred ->
-              cred.name == cred_params["name"]
+              Validators.normalize_name_for_match(cred.name) == wanted
             end)
 
           if credential do

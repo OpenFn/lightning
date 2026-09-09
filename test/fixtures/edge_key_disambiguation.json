@@ -1,0 +1,152 @@
+[
+  {
+    "edges": [
+      [
+        "a",
+        "b"
+      ]
+    ],
+    "jobs": [
+      "a",
+      "b"
+    ],
+    "keys": [
+      "a->b"
+    ],
+    "label": "no collision"
+  },
+  {
+    "edges": [
+      [
+        "a",
+        "b->c"
+      ],
+      [
+        "a->b",
+        "c"
+      ]
+    ],
+    "jobs": [
+      "a",
+      "b->c",
+      "c",
+      "a->b"
+    ],
+    "keys": [
+      "a->b->c",
+      "a->b->c-2"
+    ],
+    "label": "the > collision"
+  },
+  {
+    "edges": [
+      [
+        "a",
+        "b->c"
+      ],
+      [
+        "a->b",
+        "c"
+      ],
+      [
+        "a->b->c",
+        "d"
+      ]
+    ],
+    "jobs": [
+      "a",
+      "b->c",
+      "a->b",
+      "c",
+      "a->b->c",
+      "d"
+    ],
+    "keys": [
+      "a->b->c",
+      "a->b->c-2",
+      "a->b->c->d"
+    ],
+    "label": "three way"
+  },
+  {
+    "edges": [
+      [
+        "a",
+        "b"
+      ],
+      [
+        "a",
+        "b"
+      ],
+      [
+        "a->b-2",
+        "x"
+      ]
+    ],
+    "jobs": [
+      "a",
+      "b",
+      "a->b-2",
+      "x"
+    ],
+    "keys": [
+      "a->b",
+      "a->b-2",
+      "a->b-2->x"
+    ],
+    "label": "suffix already taken"
+  },
+  {
+    "edges": [
+      [
+        "a",
+        "b"
+      ],
+      [
+        "a",
+        "b"
+      ],
+      [
+        "a",
+        "b-2"
+      ]
+    ],
+    "jobs": [
+      "a",
+      "b",
+      "b-2"
+    ],
+    "keys": [
+      "a->b",
+      "a->b-3",
+      "a->b-2"
+    ],
+    "label": "suffix collides with an original key"
+  },
+  {
+    "edges": [
+      [
+        "a",
+        "b"
+      ],
+      [
+        "a",
+        "b"
+      ],
+      [
+        "a",
+        "b"
+      ]
+    ],
+    "jobs": [
+      "a",
+      "b"
+    ],
+    "keys": [
+      "a->b",
+      "a->b-2",
+      "a->b-3"
+    ],
+    "label": "repeat pair"
+  }
+]

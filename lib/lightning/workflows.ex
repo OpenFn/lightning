@@ -30,6 +30,9 @@ defmodule Lightning.Workflows do
 
   require Logger
 
+  # Matches Lightning.Validators, which enforces the same width on write.
+  @name_column_limit 255
+
   @doc """
   Returns the list of workflows.
 
@@ -874,7 +877,7 @@ defmodule Lightning.Workflows do
         name: name,
         project_id: project_id
       }) do
-    base_name = "#{name}_del"
+    base_name = "#{trim_to_fit_suffix(name)}_del"
 
     existing_names =
       from(w in Workflow,
@@ -895,6 +898,23 @@ defmodule Lightning.Workflows do
     if MapSet.member?(existing_names, candidate),
       do: find_available_name(base_name, existing_names, n + 1),
       else: candidate
+  end
+
+  # workflows.name is varchar(255) and Postgres counts those in codepoints. The
+  # `_del` suffix goes on after every validation has run, so a workflow already
+  # at the column width would raise a bare Postgrex 22001 out of the delete
+  # button, in a LiveView handler with nothing to rescue it.
+  @suffix_headroom String.length("_del") + 4
+
+  defp trim_to_fit_suffix(name) do
+    limit = @name_column_limit - @suffix_headroom
+    codepoints = String.codepoints(name)
+
+    if length(codepoints) > limit do
+      codepoints |> Enum.take(limit) |> Enum.join()
+    else
+      name
+    end
   end
 
   @doc """
