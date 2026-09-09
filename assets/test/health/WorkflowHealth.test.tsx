@@ -111,93 +111,159 @@ describe('WorkflowHealth', () => {
     );
   });
 
-  test('refetches on `health:changed` without blanking the panels', async () => {
-    // Mutable so the second request can answer differently — the point of the
-    // refresh is that the numbers move.
-    const responses: Record<string, unknown> = { ...both };
-    const { fetchMock } = mount(responses);
+  test('moves the updated clock when the numbers arrive', async () => {
+    mount(both);
 
     expect(
-      await screen.findByText('Last 30 days · 1,287 work orders')
+      await screen.findByText(
+        `Last Updated ${new Date(outcomes.window.to).toLocaleTimeString()}`
+      )
     ).toBeVisible();
+  });
+
+  test('polls every 30 seconds while the tab is visible, and stops while hidden', async () => {
+    // Mutable so the polled request can answer differently.
+    const responses: Record<string, unknown> = { ...both };
+
+    // Only the interval fns: Testing Library's waiting runs on real
+    // `setTimeout`, so the first load below can still be awaited.
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+
+    const { fetchMock } = mount(responses);
+
+    await screen.findByText('Last 30 days · 1,287 work orders');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
 
     responses.outcomes = {
       ...outcomes,
       counts: { ...outcomes.counts, success: 2146 },
     };
 
-    act(() => {
-      window.dispatchEvent(new Event('phx:health:changed'));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
     });
-
-    // Still the old numbers, and no "Loading…" — a refresh is the same question
-    // asked again, so the last answer holds until the new one lands.
-    expect(screen.getByText('Last 30 days · 1,287 work orders')).toBeVisible();
-    expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
 
     expect(
       await screen.findByText('Last 30 days · 2,287 work orders')
     ).toBeVisible();
+
+    // The interval still fires; the bump is gated on visibility.
+    vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
-  test('re-reads once more after the push, when the cache has aged out', async () => {
+  test('reads again on returning to the tab, without waiting for the tick', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+
     const { fetchMock } = mount({ ...both });
 
     await screen.findByText('Last 30 days · 1,287 work orders');
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    // Faked only now, and only the timer functions: Testing Library's own
-    // waiting runs on `setTimeout`, so the first load has to land first.
-    // Random is pinned so the jitter is a known number.
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
 
-    act(() => {
-      window.dispatchEvent(new Event('phx:health:changed'));
-    });
+    const visibility = (away: boolean) => {
+      hidden.mockReturnValue(away);
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+    };
+
+    // On purpose, and not something to throttle back to the interval: someone
+    // looking away and back wants what is true now, not what was true up to
+    // half a minute ago.
+    visibility(true);
+    visibility(false);
+
     expect(fetchMock).toHaveBeenCalledTimes(4);
-
-    // The push's read may have been answered by another node's stale cache, so
-    // one more read lands after that cache's 30s has passed.
-    await act(async () => {
-      vi.advanceTimersByTime(30_000);
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(6);
-
-    // And then it stops — the trailing read does not schedule one of its own.
-    await act(async () => {
-      vi.advanceTimersByTime(120_000);
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
-  test('moves the updated clock when the numbers arrive', async () => {
-    // Only `Date` is faked — faking timers wholesale would stall the promises
-    // the fetch stub resolves through.
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date('2026-09-04T14:32:07Z'));
+  test('lets a read slower than the interval finish', async () => {
+    let land!: (body: unknown) => void;
 
+    const responses: Record<string, unknown> = {
+      ...both,
+      outcomes: new Promise(resolve => {
+        land = resolve;
+      }),
+    };
+
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+
+    const { fetchMock } = mount(responses);
+
+    const reads = () =>
+      fetchMock.mock.calls.filter(([url]) => url.includes('/outcomes')).length;
+
+    // Deliberately off the interval grid: a timer that had been running all
+    // along would be due at 120s, a full interval after the answer is 125s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(95_000);
+    });
+
+    // Skipped, not stacked: a tick that fired here would abort the read it is
+    // waiting on, and the next one would too.
+    expect(reads()).toBe(1);
+
+    land(outcomes);
+
+    expect(
+      await screen.findByText('Last 30 days · 1,287 work orders')
+    ).toBeVisible();
+
+    // And the gap that follows is a whole interval measured from the answer.
+    // On a grid measured from the request, a read this slow would be due again
+    // the moment it landed, and a slow endpoint would never get a quiet spell.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(29_000);
+    });
+    expect(reads()).toBe(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(reads()).toBe(2);
+  });
+
+  test('keeps the numbers on screen when a poll fails', async () => {
     const responses: Record<string, unknown> = { ...both };
+
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+
     mount(responses);
 
-    const first = (await screen.findByText(/^Last Updated /)).textContent;
+    await screen.findByText('Last 30 days · 1,287 work orders');
 
-    vi.setSystemTime(new Date('2026-09-04T14:32:37Z'));
-    responses.outcomes = {
+    responses['outcomes'] = 502;
+    responses['failures'] = 502;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText('Last 30 days · 1,287 work orders')).toBeVisible();
+    expect(screen.getByText('Success')).toBeVisible();
+
+    // And recovers on the tick after, with no reload.
+    responses['outcomes'] = {
       ...outcomes,
       counts: { ...outcomes.counts, success: 2146 },
     };
 
-    act(() => {
-      window.dispatchEvent(new Event('phx:health:changed'));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
     });
 
-    await screen.findByText('Last 30 days · 2,287 work orders');
-
-    // Thirty seconds later on the page's own clock — the visible proof that a
-    // push landed and the numbers were re-read.
-    expect(screen.getByText(/^Last Updated /).textContent).not.toEqual(first);
+    expect(
+      await screen.findByText('Last 30 days · 2,287 work orders')
+    ).toBeVisible();
   });
 
   test('renders the header, deriving the day count from the window', async () => {
@@ -326,7 +392,7 @@ describe('WorkflowHealth', () => {
     expect(signals.every(signal => signal.aborted)).toBe(true);
   });
 
-  // The opposite of the `health:changed` case above, and deliberately so. A
+  // The opposite of the polling case above, and deliberately so. A
   // tick re-asks the same question, so the last answer holds; a range switch is
   // a new question, so every panel drops its answer at the same moment.
   test('drops every panel on a range switch', async () => {
