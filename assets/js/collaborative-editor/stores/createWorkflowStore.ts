@@ -236,6 +236,35 @@ export interface CreateWorkflowStoreOptions {
   getCanEdit?: () => boolean;
 }
 
+export interface EditInSandboxStart {
+  /** A reviewed body, sent by value so what was checked is what lands. */
+  body?: string;
+  /** The name to give that reviewed body in the sandbox. */
+  bodyName?: string | null;
+  /** An existing named dataclip in the parent, copied by id instead. */
+  dataclipId?: string;
+}
+
+export interface EditInSandboxResult {
+  project_id: string;
+  workflow_id: string;
+  dataclip_id: string | null;
+}
+
+function startingDataPayload(start?: EditInSandboxStart) {
+  if (start?.body !== undefined) {
+    return {
+      starting_dataclip: { body: start.body, name: start.bodyName ?? null },
+    };
+  }
+
+  if (start?.dataclipId) {
+    return { dataclip_id: start.dataclipId };
+  }
+
+  return {};
+}
+
 export const createWorkflowStore = (
   options: CreateWorkflowStoreOptions = {}
 ) => {
@@ -1617,14 +1646,18 @@ export const createWorkflowStore = (
   };
 
   const editInSandbox = async (
-    name?: string
-  ): Promise<{ project_id: string; workflow_id: string }> => {
+    name?: string,
+    start?: EditInSandboxStart
+  ): Promise<EditInSandboxResult> => {
     const { provider } = ensureConnected();
 
-    const payload = name ? { name } : {};
+    const payload = {
+      ...(name ? { name } : {}),
+      ...startingDataPayload(start),
+    };
 
     try {
-      return await channelRequest<{ project_id: string; workflow_id: string }>(
+      return await channelRequest<EditInSandboxResult>(
         provider.channel,
         'edit_in_sandbox',
         payload

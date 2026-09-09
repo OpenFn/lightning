@@ -497,6 +497,166 @@ defmodule Lightning.Projects.SandboxesTest do
                ])
     end
 
+    test "carries an http request's metadata onto the copy" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      original =
+        insert(:dataclip,
+          project: parent,
+          name: "a webhook call",
+          type: :http_request,
+          body: %{"a" => 1},
+          request: %{"headers" => %{"x-thing" => "1"}}
+        )
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{
+          name: "sb-req",
+          dataclip_ids: [original.id]
+        })
+
+      # Without the request, a job reading state.request sees a different input
+      # in the sandbox than the one that ran in production.
+      assert [%{"headers" => %{"x-thing" => "1"}}] =
+               from(d in Dataclip,
+                 where: d.project_id == ^sandbox.id,
+                 select: d.request
+               )
+               |> Repo.all()
+    end
+
+    test "leaves a request off a type that must not carry one" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      # A row like this cannot be written through the app today, but legacy data
+      # can look like it, and the changeset refuses a request on this type.
+      {1, _} =
+        Repo.insert_all(Dataclip, [
+          %{
+            id: Ecto.UUID.generate(),
+            project_id: parent.id,
+            name: "legacy",
+            type: :saved_input,
+            body: %{"a" => 1},
+            request: %{"headers" => %{}},
+            inserted_at: DateTime.utc_now(),
+            updated_at: DateTime.utc_now()
+          }
+        ])
+
+      legacy = Repo.get_by!(Dataclip, name: "legacy")
+
+      assert {:ok, sandbox} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-legacy",
+                 dataclip_ids: [legacy.id]
+               })
+
+      assert [nil] =
+               from(d in Dataclip,
+                 where: d.project_id == ^sandbox.id,
+                 select: d.request
+               )
+               |> Repo.all()
+    end
+
+    test "creates the reviewed body in the sandbox rather than copying a row" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{
+          name: "sb-start",
+          starting_dataclip: %{
+            body: ~s({"name":"redacted","id":7}),
+            name: "from run 1234"
+          }
+        })
+
+      assert [
+               {"from run 1234", :saved_input,
+                %{"name" => "redacted", "id" => 7}}
+             ] =
+               from(d in Dataclip,
+                 where: d.project_id == ^sandbox.id,
+                 select: {d.name, d.type, d.body}
+               )
+               |> Repo.all()
+
+      # The parent keeps whatever it had; nothing moved.
+      assert from(d in Dataclip, where: d.project_id == ^parent.id)
+             |> Repo.aggregate(:count) > 0
+    end
+
+    test "leaves no sandbox behind when the reviewed body is not valid JSON" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      assert {:error, :starting_dataclip_invalid_json} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-bad",
+                 starting_dataclip: %{body: "{not json", name: nil}
+               })
+
+      refute Repo.get_by(Project, name: "sb-bad")
+    end
+
+    test "refuses a dataclip name carrying a NUL byte" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      assert {:error, :invalid_starting_dataclip} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-nul-name",
+                 starting_dataclip: %{
+                   body: ~s({"a":1}),
+                   name: <<"x", 0, "y">>
+                 }
+               })
+
+      refute Repo.get_by(Project, name: "sb-nul-name")
+    end
+
+    test "refuses a reviewed body carrying a NUL byte" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      # Valid JSON, an object, under the limit, and Postgres will not take it.
+      # Left to the insert this raises and kills the channel.
+      assert {:error, :starting_dataclip_invalid_json} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-nul",
+                 starting_dataclip: %{body: ~S({"a":"\u0000"}), name: nil}
+               })
+
+      refute Repo.get_by(Project, name: "sb-nul")
+    end
+
+    test "refuses a reviewed body that is not an object" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      assert {:error, :starting_dataclip_not_an_object} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-array",
+                 starting_dataclip: %{body: "[1,2,3]", name: nil}
+               })
+
+      refute Repo.get_by(Project, name: "sb-array")
+    end
+
+    test "refuses a reviewed body over the dataclip size limit" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      Mox.stub(Lightning.MockConfig, :max_dataclip_size_bytes, fn -> 10 end)
+
+      assert {:error, :starting_dataclip_too_large} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-big",
+                 starting_dataclip: %{
+                   body: ~s({"padding":"aaaaaaaaaaaaaaaaaaaa"}),
+                   name: nil
+                 }
+               })
+
+      refute Repo.get_by(Project, name: "sb-big")
+    end
+
     test "copies trigger webhook auth methods when present" do
       %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
 

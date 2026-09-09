@@ -34,6 +34,18 @@ and this project adheres to
   The versions in between stay in the history.
   [#4864](https://github.com/OpenFn/lightning/issues/4864)
 
+- Edit in sandbox now asks what the sandbox should start with: nothing, the
+  input from the run you are looking at, or one of the project's named inputs.
+  The run's input is shown before it travels so you can remove anything that
+  should not leave production, and what you see is what lands, because the
+  reviewed body is created in the sandbox rather than the original row being
+  copied. The sandbox opens with that input already selected, and says which
+  version it forked when the run used an older one.
+  [#5052](https://github.com/OpenFn/lightning/issues/5052)
+- A named dataclip is now selectable on any job in its project, not only where
+  it has already run.
+  [#5052](https://github.com/OpenFn/lightning/issues/5052)
+
 - Promoting from a sandbox now warns first when the parent project has changed
   that workflow since the sandbox was created. Promote rebuilds the parent
   workflow from the sandbox, so anything the parent gained in the meantime is

@@ -49,7 +49,7 @@ adaptor_registry_cache.json
 
 # Ignore credential schemas.
 # No trailing slash: it is often a symlink to a shared checkout, and a trailing
-# slash matches only directories.
+# slash matches only directories, not a symlink of the same name.
 /priv/schemas
 
 # In case you use Node.js/npm, you want to ignore these.

@@ -8,6 +8,8 @@ export interface DataclipFilters {
   before?: string;
   after?: string;
   named_only?: boolean;
+  /** Rows to return. Defaults to 10, which suits the run panel's short list. */
+  limit?: number;
 }
 
 export interface SearchDataclipsResponse {
@@ -50,7 +52,7 @@ export async function searchDataclips(
     ...(filters?.named_only !== undefined && {
       named_only: String(filters.named_only),
     }),
-    limit: '10',
+    limit: String(filters?.limit ?? 10),
   });
 
   const response = await fetch(
@@ -169,4 +171,18 @@ export async function submitManualRun(
   }
 
   return response.json() as Promise<ManualRunResponse>;
+}
+
+/**
+ * Fetch a dataclip's body as text. The endpoint scrubs step results and http
+ * requests, so this is what a person may safely be shown.
+ */
+export async function getDataclipBody(dataclipId: string): Promise<string> {
+  const response = await fetch(`/dataclip/body/${dataclipId}`);
+
+  if (!response.ok) {
+    throw new Error(`Could not load dataclip ${dataclipId}`);
+  }
+
+  return await response.text();
 }

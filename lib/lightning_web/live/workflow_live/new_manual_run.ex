@@ -33,7 +33,8 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
             %Job{id: job_id},
             filters,
             limit: limit,
-            offset: offset
+            offset: offset,
+            project_id: project.id
           )
 
         {:ok,

@@ -254,6 +254,60 @@ defmodule Lightning.Invocation.Query do
   end
 
   @doc """
+  Dataclips a job can be run against: the ones it has already consumed, plus
+  every named dataclip in its project.
+
+  A named dataclip is a curated input rather than a trace of a past run, so it
+  belongs to the project and is selectable on any job in it. Note that the
+  result is therefore no longer bounded by the job: callers who want only what
+  this job has run should not use this.
+
+  The two sources are unioned rather than ORed, so each side keeps its own index
+  (`steps.job_id` and `dataclips.project_id`) instead of making dataclips, the
+  largest table in the schema, the driving relation on every keystroke of the
+  picker's search. The outer query still sorts the matched set, as the query it
+  replaced did.
+  """
+  def selectable_for_job(job_id, project_id, limit) do
+    consumed = job_input_dataclip_ids(job_id)
+
+    # No resolvable project means no project to draw named inputs from, which is
+    # what an unknown job looks like.
+    selectable =
+      if project_id do
+        union(consumed, ^named_dataclip_ids(project_id))
+      else
+        consumed
+      end
+
+    # The job's own inputs sort first, so a project with many named dataclips
+    # cannot crowd them off a fixed page. The run panel resolves a followed
+    # run's input out of this list, and losing it there shows no input at all.
+    from(d in Dataclip,
+      where: d.id in subquery(selectable),
+      order_by: [
+        desc: d.id in subquery(consumed),
+        desc: d.inserted_at
+      ],
+      limit: ^limit
+    )
+  end
+
+  defp job_input_dataclip_ids(job_id) do
+    from(s in Step,
+      where: s.job_id == ^job_id and not is_nil(s.input_dataclip_id),
+      select: s.input_dataclip_id
+    )
+  end
+
+  defp named_dataclip_ids(project_id) do
+    from(d in Dataclip,
+      where: d.project_id == ^project_id and not is_nil(d.name),
+      select: d.id
+    )
+  end
+
+  @doc """
   By default, the dataclip body is not returned via a query. This query selects
   the body specifically.
   """

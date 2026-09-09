@@ -556,6 +556,144 @@ defmodule LightningWeb.WorkflowChannelTest do
       %{trigger: trigger, other_workflow: other_workflow}
     end
 
+    test "starts the sandbox holding the reviewed body and says where it landed",
+         %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{
+            "body" => ~s({"email":"redacted"}),
+            "name" => "from run 42"
+          }
+        })
+
+      assert_reply ref, :ok, %{
+        project_id: sandbox_id,
+        dataclip_id: dataclip_id
+      }
+
+      assert is_binary(dataclip_id)
+
+      dataclip = Lightning.Repo.get!(Lightning.Invocation.Dataclip, dataclip_id)
+      assert dataclip.project_id == sandbox_id
+      assert dataclip.name == "from run 42"
+      assert dataclip.type == :saved_input
+    end
+
+    test "copies a chosen saved dataclip instead when one is named", %{
+      socket: socket,
+      project: project
+    } do
+      saved =
+        insert(:dataclip,
+          project: project,
+          name: "known good",
+          type: :saved_input,
+          body: %{"ok" => true}
+        )
+
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => saved.id})
+      assert_reply ref, :ok, %{project_id: sandbox_id, dataclip_id: copied_id}
+
+      # The copy is a new row, and the sandbox opens with it selected just as
+      # the reviewed path does.
+      assert is_binary(copied_id)
+      refute copied_id == saved.id
+
+      assert ["known good"] =
+               Lightning.Invocation.Dataclip
+               |> Lightning.Repo.all()
+               |> Enum.filter(&(&1.project_id == sandbox_id))
+               |> Enum.map(& &1.name)
+    end
+
+    test "refuses a saved dataclip this project cannot copy", %{
+      socket: socket
+    } do
+      elsewhere = insert(:project)
+
+      foreign =
+        insert(:dataclip,
+          project: elsewhere,
+          name: "not yours",
+          type: :saved_input,
+          body: %{"a" => 1}
+        )
+
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => foreign.id})
+      assert_reply ref, :error, %{type: "validation_error"}
+
+      # Refused outright, so no sandbox exists to have copied it into.
+      assert [] =
+               Lightning.Invocation.Dataclip
+               |> Lightning.Repo.all()
+               |> Enum.filter(&(&1.name == "not yours"))
+               |> Enum.reject(&(&1.id == foreign.id))
+    end
+
+    test "refuses an unnamed dataclip, which retention would wipe", %{
+      socket: socket,
+      project: project
+    } do
+      unnamed =
+        insert(:dataclip, project: project, name: nil, type: :saved_input)
+
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => unnamed.id})
+      assert_reply ref, :error, %{type: "validation_error"}
+    end
+
+    test "refuses a dataclip id that is not a uuid", %{socket: socket} do
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => "not-a-uuid"})
+      assert_reply ref, :error, %{type: "validation_error"}
+    end
+
+    test "names a reviewed body that arrives without one", %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => ~s({"a":1}), "name" => nil}
+        })
+
+      assert_reply ref, :ok, %{dataclip_id: dataclip_id}
+
+      # Retention wipes unnamed dataclips, and the picker only offers named ones,
+      # so an unnamed one would vanish and never be selectable.
+      dataclip = Lightning.Repo.get!(Lightning.Invocation.Dataclip, dataclip_id)
+      assert dataclip.name == "Reviewed input"
+    end
+
+    test "says what is wrong when the reviewed body is not an object", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => "[1,2]", "name" => nil}
+        })
+
+      assert_reply ref, :error, %{
+        type: "validation_error",
+        errors: %{base: [message]}
+      }
+
+      assert message =~ "JSON object"
+    end
+
+    test "refuses a reviewed body that is not a string", %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => %{"a" => 1}}
+        })
+
+      assert_reply ref, :error, %{type: "validation_error"}
+    end
+
+    test "refuses a reviewed body that is not valid JSON", %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => "{nope", "name" => nil}
+        })
+
+      assert_reply ref, :error, _reason
+    end
+
     test "provisions a sandbox with the edited clone as a disabled draft, like the others",
          %{
            socket: socket,

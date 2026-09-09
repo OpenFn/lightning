@@ -47,6 +47,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Collections.Collection
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.Scoping
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Policies.Permissions
   alias Lightning.Projects.Events
   alias Lightning.Projects.MergeProjects
@@ -78,6 +79,9 @@ defmodule Lightning.Projects.Sandboxes do
   * `:env` - Environment identifier (e.g. `"staging"`, `"dev"`)
   * `:dataclip_ids` - UUIDs of dataclips to copy (only copies named dataclips
     of types `:global`, `:saved_input`, or `:http_request`)
+  * `:starting_dataclip` - a `%{body: json_string, name: string | nil}` map. The
+    body is created in the sandbox as a `:saved_input` dataclip rather than
+    copied from the parent, so what the caller reviewed is what lands.
 
   The sandbox's `project_users` are derived from the parent project: every
   parent user is copied across with their role preserved, except the parent
@@ -91,7 +95,11 @@ defmodule Lightning.Projects.Sandboxes do
           required(:name) => String.t(),
           optional(:color) => String.t() | nil,
           optional(:env) => String.t() | nil,
-          optional(:dataclip_ids) => [Ecto.UUID.t()]
+          optional(:dataclip_ids) => [Ecto.UUID.t()],
+          optional(:starting_dataclip) => %{
+            required(:body) => String.t(),
+            optional(:name) => String.t() | nil
+          }
         }
 
   @cloned_project_fields ~w(
@@ -143,12 +151,129 @@ defmodule Lightning.Projects.Sandboxes do
              | Ecto.Changeset.t()
              | term()}
   def provision(%Project{} = parent, %User{} = actor, attrs) do
-    if Permissions.can?(:sandboxes, :provision_sandbox, actor, parent) do
+    with true <- Permissions.can?(:sandboxes, :provision_sandbox, actor, parent),
+         {:ok, attrs} <- cast_starting_dataclip(attrs) do
       create_sandbox_from_parent(parent, actor, attrs)
     else
-      {:error, :unauthorized}
+      false -> {:error, :unauthorized}
+      {:error, _reason} = error -> error
     end
   end
+
+  @doc """
+  Whether every id names a dataclip this parent can copy into a sandbox.
+
+  `provision/3` drops ineligible ids silently, which suits a bulk selection but
+  not a caller offering one deliberate choice: that caller wants to say why
+  nothing arrived.
+  """
+  @spec copyable_dataclips?(Project.t(), [Ecto.UUID.t()]) :: boolean()
+  def copyable_dataclips?(%Project{} = parent, ids) when is_list(ids) do
+    Enum.all?(ids, &valid_uuid?/1) and
+      eligible_dataclip_count(parent.id, ids) == length(Enum.uniq(ids))
+  end
+
+  defp valid_uuid?(value) when is_binary(value) do
+    match?({:ok, _}, Ecto.UUID.cast(value))
+  end
+
+  defp valid_uuid?(_value), do: false
+
+  defp eligible_dataclip_count(parent_id, ids) do
+    from(dataclip in Dataclip,
+      where:
+        dataclip.project_id == ^parent_id and dataclip.id in ^ids and
+          dataclip.type in ^@allowed_dataclip_types and
+          not is_nil(dataclip.name) and is_nil(dataclip.wiped_at)
+    )
+    |> Repo.aggregate(:count)
+  end
+
+  defp cast_starting_dataclip(attrs) do
+    case Map.get(attrs, :starting_dataclip) do
+      nil ->
+        {:ok, attrs}
+
+      %{} = starting ->
+        with {:ok, body} <-
+               decode_dataclip_body(get_either(starting, :body)),
+             {:ok, name} <- cast_dataclip_name(get_either(starting, :name)) do
+          {:ok, Map.put(attrs, :starting_dataclip, %{body: body, name: name})}
+        end
+
+      _other ->
+        {:error, :invalid_starting_dataclip}
+    end
+  end
+
+  # Accepts either key style, because this arrives from a channel as strings and
+  # from Elixir callers as atoms.
+  defp get_either(map, key) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
+  end
+
+  # Never nameless. Retention only wipes unnamed dataclips, and the input picker
+  # only offers named ones project-wide, so an unnamed one would be invisible
+  # and short-lived: the feature would appear to do nothing.
+  @starting_dataclip_fallback_name "Reviewed input"
+
+  defp cast_dataclip_name(nil), do: {:ok, @starting_dataclip_fallback_name}
+
+  defp cast_dataclip_name(name) when is_binary(name) do
+    case String.trim(name) do
+      "" ->
+        {:ok, @starting_dataclip_fallback_name}
+
+      trimmed when byte_size(trimmed) > 255 ->
+        {:error, :invalid_starting_dataclip}
+
+      trimmed ->
+        # Postgres refuses a NUL in varchar as it does in jsonb, and this name
+        # comes from the same untrusted payload as the body.
+        if contains_null_byte?(trimmed),
+          do: {:error, :invalid_starting_dataclip},
+          else: {:ok, trimmed}
+    end
+  end
+
+  defp cast_dataclip_name(_name), do: {:error, :invalid_starting_dataclip}
+
+  defp decode_dataclip_body(body) when is_binary(body) do
+    if byte_size(body) > Lightning.Config.max_dataclip_size_bytes() do
+      {:error, :starting_dataclip_too_large}
+    else
+      case Jason.decode(body) do
+        {:ok, %{} = decoded} ->
+          # Postgres refuses a NUL byte in jsonb, and the insert raising here
+          # would take the channel with it rather than saying what was wrong.
+          if contains_null_byte?(decoded),
+            do: {:error, :starting_dataclip_invalid_json},
+            else: {:ok, decoded}
+
+        {:ok, _not_an_object} ->
+          {:error, :starting_dataclip_not_an_object}
+
+        {:error, _} ->
+          {:error, :starting_dataclip_invalid_json}
+      end
+    end
+  end
+
+  defp decode_dataclip_body(_body), do: {:error, :invalid_starting_dataclip}
+
+  defp contains_null_byte?(value) when is_binary(value),
+    do: String.contains?(value, <<0>>)
+
+  defp contains_null_byte?(value) when is_map(value) do
+    Enum.any?(value, fn {key, nested} ->
+      contains_null_byte?(key) or contains_null_byte?(nested)
+    end)
+  end
+
+  defp contains_null_byte?(value) when is_list(value),
+    do: Enum.any?(value, &contains_null_byte?/1)
+
+  defp contains_null_byte?(_value), do: false
 
   defp nesting_depth_exceeded?(%Project{id: parent_id}) do
     Lightning.Projects.depth_of(parent_id) >=
@@ -1318,6 +1443,7 @@ defmodule Lightning.Projects.Sandboxes do
     |> copy_workflow_version_history(sandbox.workflow_id_mapping)
     |> create_initial_workflow_snapshots()
     |> copy_selected_dataclips(parent.id, Map.get(original_attrs, :dataclip_ids))
+    |> create_starting_dataclip(Map.get(original_attrs, :starting_dataclip))
     |> clone_collections_from_parent(parent)
   end
 
@@ -1464,28 +1590,52 @@ defmodule Lightning.Projects.Sandboxes do
   defp copy_selected_dataclips(sandbox, parent_id, dataclip_ids)
        when is_list(dataclip_ids) do
     selected_dataclips =
-      from(dataclip in Lightning.Invocation.Dataclip,
+      from(dataclip in Dataclip,
         where:
           dataclip.project_id == ^parent_id and
             dataclip.id in ^dataclip_ids and
             dataclip.type in ^@allowed_dataclip_types and
-            not is_nil(dataclip.name),
+            not is_nil(dataclip.name) and is_nil(dataclip.wiped_at),
         select: %{
           name: dataclip.name,
           body: type(dataclip.body, :map),
+          request:
+            fragment(
+              "case when ? = 'http_request' then ? else null end",
+              dataclip.type,
+              dataclip.request
+            ),
           type: dataclip.type
         }
       )
       |> Repo.all()
 
-    Enum.each(selected_dataclips, fn dataclip_attrs ->
-      dataclip_attrs
-      |> Map.put(:project_id, sandbox.id)
-      |> Lightning.Invocation.Dataclip.new()
-      |> Repo.insert!()
-    end)
+    copied =
+      Enum.map(selected_dataclips, fn dataclip_attrs ->
+        dataclip_attrs
+        |> Map.put(:project_id, sandbox.id)
+        |> Dataclip.new()
+        |> Repo.insert!()
+      end)
 
-    sandbox
+    # Reported only when the caller asked for exactly one, which is the editor
+    # offering a single deliberate choice. A bulk selection has no "the" input
+    # to open with.
+    case copied do
+      [%Dataclip{id: id}] -> %{sandbox | starting_dataclip_id: id}
+      _ -> sandbox
+    end
+  end
+
+  defp create_starting_dataclip(sandbox, nil), do: sandbox
+
+  defp create_starting_dataclip(sandbox, %{body: body, name: name}) do
+    dataclip =
+      %{project_id: sandbox.id, body: body, name: name, type: :saved_input}
+      |> Dataclip.new()
+      |> Repo.insert!()
+
+    %{sandbox | starting_dataclip_id: dataclip.id}
   end
 
   defp get_sandbox_keychain_id(

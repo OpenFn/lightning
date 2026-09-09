@@ -485,23 +485,36 @@ defmodule LightningWeb.WorkflowChannel do
     workflow = socket.assigns.workflow
     user = socket.assigns.current_user
 
-    attrs = %{
-      name: sandbox_name(params, workflow, parent),
-      env: "dev",
-      color: LightningWeb.SandboxLive.Components.random_color()
-    }
+    attrs =
+      %{
+        name: sandbox_name(params, workflow, parent),
+        env: "dev",
+        color: LightningWeb.SandboxLive.Components.random_color()
+      }
+      |> put_starting_data(params)
 
     with :ok <- authorize_provision_sandbox(user, parent),
          :ok <- limit_new_sandbox(parent),
-         {:ok, %{sandbox: sandbox, workflow: cloned_workflow}} <-
+         :ok <- check_chosen_dataclip(parent, attrs),
+         {:ok,
+          %{
+            sandbox: sandbox,
+            workflow: cloned_workflow,
+            starting_dataclip_id: starting_dataclip_id
+          }} <-
            Projects.provision_editing_sandbox(
              parent,
              user,
              workflow.name,
              attrs
            ) do
-      {:reply, {:ok, %{project_id: sandbox.id, workflow_id: cloned_workflow.id}},
-       socket}
+      {:reply,
+       {:ok,
+        %{
+          project_id: sandbox.id,
+          workflow_id: cloned_workflow.id,
+          dataclip_id: starting_dataclip_id
+        }}, socket}
     else
       error -> workflow_error_reply(socket, error)
     end
@@ -1546,6 +1559,38 @@ defmodule LightningWeb.WorkflowChannel do
       }}, socket}
   end
 
+  defp workflow_error_reply(socket, {:error, :starting_dataclip_invalid_json}) do
+    starting_dataclip_error(socket, "The input you reviewed is not valid JSON.")
+  end
+
+  defp workflow_error_reply(
+         socket,
+         {:error, :starting_dataclip_not_an_object}
+       ) do
+    starting_dataclip_error(
+      socket,
+      "The input you reviewed must be a JSON object."
+    )
+  end
+
+  defp workflow_error_reply(socket, {:error, :starting_dataclip_too_large}) do
+    starting_dataclip_error(
+      socket,
+      "The input you reviewed is too large to copy into a sandbox."
+    )
+  end
+
+  defp workflow_error_reply(socket, {:error, :invalid_starting_dataclip}) do
+    starting_dataclip_error(socket, "The input you reviewed could not be read.")
+  end
+
+  defp workflow_error_reply(socket, {:error, :starting_dataclip_not_found}) do
+    starting_dataclip_error(
+      socket,
+      "That saved input is no longer available in this project."
+    )
+  end
+
   defp workflow_error_reply(socket, {:error, :workflow_deleted}) do
     {:reply,
      {:error,
@@ -1665,6 +1710,11 @@ defmodule LightningWeb.WorkflowChannel do
         errors: %{base: ["An internal error occurred"]},
         type: "internal_error"
       }}, socket}
+  end
+
+  defp starting_dataclip_error(socket, message) do
+    {:reply, {:error, %{errors: %{base: [message]}, type: "validation_error"}},
+     socket}
   end
 
   defp format_changeset_errors(changeset) do
@@ -1905,6 +1955,35 @@ defmodule LightningWeb.WorkflowChannel do
     case ProjectLimiter.limit_new_sandbox(parent.id) do
       :ok -> :ok
       {:error, _reason, message} -> {:error, message}
+    end
+  end
+
+  # The reviewed body travels by value, so what the person saw is what lands.
+  # A saved dataclip travels by id, and the copy is restricted to the parent's
+  # own named dataclips.
+  # The editor offers one deliberate choice, so a dataclip the parent cannot
+  # copy is refused rather than dropped into an empty sandbox unexplained.
+  defp check_chosen_dataclip(parent, %{dataclip_ids: ids}) do
+    if Sandboxes.copyable_dataclips?(parent, ids),
+      do: :ok,
+      else: {:error, :starting_dataclip_not_found}
+  end
+
+  defp check_chosen_dataclip(_parent, _attrs), do: :ok
+
+  # Matched on presence, not on shape: a malformed body must be refused rather
+  # than fall through to the copy path and report success for data that never
+  # travelled.
+  defp put_starting_data(attrs, params) do
+    case params do
+      %{"starting_dataclip" => starting} ->
+        Map.put(attrs, :starting_dataclip, starting)
+
+      %{"dataclip_id" => dataclip_id} ->
+        Map.put(attrs, :dataclip_ids, [dataclip_id])
+
+      _ ->
+        attrs
     end
   end
 
