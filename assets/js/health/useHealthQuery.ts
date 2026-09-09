@@ -29,7 +29,8 @@ export const healthBase = (projectId: string, workflowId: string) =>
  */
 export function useHealthQuery<T>(url: string): Query<T> {
   const [state, setState] = useState<Query<T>>(EMPTY);
-  const tick = usePollTick();
+  const [inFlight, setInFlight] = useState(true);
+  const tick = usePollTick(inFlight);
 
   useEffect(() => {
     // A new url is a new question, so the last answer stops being an answer.
@@ -49,6 +50,8 @@ export function useHealthQuery<T>(url: string): Query<T> {
     // response can land after the first pass has been torn down.
     const controller = new AbortController();
 
+    setInFlight(true);
+
     fetch(url, { credentials: 'same-origin', signal: controller.signal })
       .then(response => {
         if (!response.ok) throw new Error('Could not load workflow stats');
@@ -61,6 +64,10 @@ export function useHealthQuery<T>(url: string): Query<T> {
         if (!controller.signal.aborted) setState({ data, error: null });
 
         return data;
+      })
+      // Ahead of the catch, not after it, so the chain still ends in one.
+      .finally(() => {
+        if (!controller.signal.aborted) setInFlight(false);
       })
       .catch((error: unknown) => {
         // An abort is a teardown, not a failure — there is nobody left to tell.
@@ -87,23 +94,33 @@ export function useHealthQuery<T>(url: string): Query<T> {
 // finds nothing changed costs one cheap query, not a recompute.
 const POLL_MS = 30_000;
 
-function usePollTick(): number {
+// There is no timer at all while a read is out: a read slower than the
+// interval would otherwise be aborted by the tick behind it, and so never
+// finish. Restarting when the read lands also measures the gap from the
+// answer rather than from the request.
+function usePollTick(inFlight: boolean): number {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
+    if (inFlight) return;
+
     const bump = () => {
       if (!document.hidden) setTick(previous => previous + 1);
     };
 
     const interval = setInterval(bump, POLL_MS);
 
+    // Coming back to the tab reads, however recently the last one answered:
+    // someone who has just looked away and back wants what is true now, not
+    // what was true up to half a minute ago. The cost is a marker query that
+    // finds nothing moved, and the reader can only do this while watching.
     document.addEventListener('visibilitychange', bump);
 
     return () => {
       document.removeEventListener('visibilitychange', bump);
       clearInterval(interval);
     };
-  }, []);
+  }, [inFlight]);
 
   return tick;
 }

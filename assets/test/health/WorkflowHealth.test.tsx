@@ -89,8 +89,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // The polling test shadows `hidden`; drop it for jsdom's own getter.
-  Reflect.deleteProperty(document, 'hidden');
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -150,16 +148,86 @@ describe('WorkflowHealth', () => {
     ).toBeVisible();
 
     // The interval still fires; the bump is gated on visibility.
-    Object.defineProperty(document, 'hidden', {
-      configurable: true,
-      get: () => true,
-    });
+    vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
     document.dispatchEvent(new Event('visibilitychange'));
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
     expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  test('reads again on returning to the tab, without waiting for the tick', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+
+    const { fetchMock } = mount({ ...both });
+
+    await screen.findByText('Last 30 days · 1,287 work orders');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
+
+    const visibility = (away: boolean) => {
+      hidden.mockReturnValue(away);
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+    };
+
+    // On purpose, and not something to throttle back to the interval: someone
+    // looking away and back wants what is true now, not what was true up to
+    // half a minute ago.
+    visibility(true);
+    visibility(false);
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  test('lets a read slower than the interval finish', async () => {
+    let land!: (body: unknown) => void;
+
+    const responses: Record<string, unknown> = {
+      ...both,
+      outcomes: new Promise(resolve => {
+        land = resolve;
+      }),
+    };
+
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+
+    const { fetchMock } = mount(responses);
+
+    const reads = () =>
+      fetchMock.mock.calls.filter(([url]) => url.includes('/outcomes')).length;
+
+    // Deliberately off the interval grid: a timer that had been running all
+    // along would be due at 120s, a full interval after the answer is 125s.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(95_000);
+    });
+
+    // Skipped, not stacked: a tick that fired here would abort the read it is
+    // waiting on, and the next one would too.
+    expect(reads()).toBe(1);
+
+    land(outcomes);
+
+    expect(
+      await screen.findByText('Last 30 days · 1,287 work orders')
+    ).toBeVisible();
+
+    // And the gap that follows is a whole interval measured from the answer.
+    // On a grid measured from the request, a read this slow would be due again
+    // the moment it landed, and a slow endpoint would never get a quiet spell.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(29_000);
+    });
+    expect(reads()).toBe(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(reads()).toBe(2);
   });
 
   test('keeps the numbers on screen when a poll fails', async () => {
