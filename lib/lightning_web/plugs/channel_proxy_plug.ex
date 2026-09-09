@@ -410,9 +410,6 @@ defmodule LightningWeb.ChannelProxyPlug do
     conn |> put_status(status) |> json(%{"error" => message}) |> halt()
   end
 
-  defp classify_credential_error(:environment_not_found),
-    do: "credential_environment_not_found"
-
   defp classify_credential_error(:no_auth_fields),
     do: "credential_missing_auth_fields"
 

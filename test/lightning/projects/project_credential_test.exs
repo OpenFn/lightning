@@ -291,13 +291,36 @@ defmodule Lightning.Projects.ProjectCredentialTest do
       assert is_nil(Repo.reload!(ctx.share).credential_body_id)
     end
 
-    test "refuses someone who does not administer the project", ctx do
+    test "refuses a project admin who does not own the credential", ctx do
+      # An owner of the project, and still refused. Creating a sandbox makes
+      # you its owner, so a project-side gate is no gate at all: it would let
+      # an editor on a production project provision a sandbox and grant
+      # themselves that project's production values.
+      # A project can hold only one owner, so admin is the strongest role
+      # available to someone who is not the credential's owner.
+      other_owner = insert(:user)
+
+      insert(:project_user,
+        project: ctx.project,
+        user: other_owner,
+        role: :admin
+      )
+
+      assert {:error, :unauthorized} =
+               Lightning.Credentials.grant_body_to_project(
+                 ctx.project,
+                 ctx.credential.id,
+                 ctx.bodies["dev"],
+                 other_owner
+               )
+
+      assert is_nil(Repo.reload!(ctx.share).credential_body_id)
+    end
+
+    test "refuses a project member with no role on the credential", ctx do
       editor = insert(:user)
       insert(:project_user, project: ctx.project, user: editor, role: :editor)
 
-      # Granting access to a set of secrets is an administrative act. An editor
-      # can write the job that spends the credential; they cannot decide which
-      # values it spends.
       assert {:error, :unauthorized} =
                Lightning.Credentials.grant_body_to_project(
                  ctx.project,
@@ -305,8 +328,29 @@ defmodule Lightning.Projects.ProjectCredentialTest do
                  ctx.bodies["dev"],
                  editor
                )
+    end
 
-      assert is_nil(Repo.reload!(ctx.share).credential_body_id)
+    test "refuses a crafted event with no project", ctx do
+      # The event is live on the user's own credentials page too, where there
+      # is no project, and LiveView routes a frame by component id without
+      # checking the event appears in that component's markup.
+      assert {:error, :not_found} =
+               Lightning.Credentials.grant_body_to_project(
+                 nil,
+                 ctx.credential.id,
+                 ctx.bodies["dev"],
+                 ctx.owner
+               )
+    end
+
+    test "refuses a malformed credential id", ctx do
+      assert {:error, :not_found} =
+               Lightning.Credentials.grant_body_to_project(
+                 ctx.project,
+                 "not-a-uuid",
+                 ctx.bodies["dev"],
+                 ctx.owner
+               )
     end
 
     test "refuses a credential the project has no share of", ctx do

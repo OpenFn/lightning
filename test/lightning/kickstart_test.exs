@@ -329,8 +329,10 @@ defmodule Lightning.KickstartTest do
 
       credential_id = result.credentials["raw-cred"].id
 
-      assert %{body: %{"apiKey" => "from-env"}} =
-               Lightning.Credentials.get_credential_body(credential_id, "main")
+      assert [%{name: "main", body: %{"apiKey" => "from-env"}}] =
+               Lightning.Credentials.get_credential!(credential_id)
+               |> Lightning.Repo.preload(:credential_bodies)
+               |> Map.fetch!(:credential_bodies)
 
       missing =
         put_in(

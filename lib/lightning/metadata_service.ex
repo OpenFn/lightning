@@ -48,7 +48,9 @@ defmodule Lightning.MetadataService do
           Credential.t(),
           credential_body_id :: Ecto.UUID.t() | nil
         ) ::
-          {:ok, %{optional(binary) => binary}} | {:error, Error.t()}
+          {:ok, %{optional(binary) => binary}}
+          | {:error, Error.t()}
+          | {:error, term()}
   def fetch(adaptor, credential, credential_body_id) do
     Lightning.TaskWorker.start_task(@cli_task_worker, fn ->
       LightningWeb.Telemetry.with_span(
@@ -117,11 +119,11 @@ defmodule Lightning.MetadataService do
       {:error, :temporary_failure} ->
         {:error, Error.new("temporary_oauth_failure")}
 
-      # A new refusal reason must not crash the editor's metadata task. Naming
-      # it is better than a case clause error reaching a channel that cannot
-      # print a tuple.
+      # A new refusal reason must not crash the editor's metadata task. inspect
+      # rather than to_string because an OAuth refresh can hand back a raw
+      # response map or a changeset, and neither implements String.Chars.
       {:error, reason} ->
-        {:error, Error.new(to_string(reason))}
+        {:error, Error.new(inspect(reason))}
     end
   end
 

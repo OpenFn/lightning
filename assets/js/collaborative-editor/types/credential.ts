@@ -17,6 +17,10 @@ export const CredentialSchema = z.object({
   schema: z.string(),
   owner: CredentialOwnerSchema.nullable(),
   oauth_client_name: z.string().nullable(),
+  // Whether this project was given any of the credential's values. Nullish
+  // with a default so an older node during a rolling deploy cannot fail the
+  // parse and blank the credential list.
+  has_values: z.boolean().nullish().default(true),
   inserted_at: isoDateTimeSchema,
   updated_at: isoDateTimeSchema,
 });

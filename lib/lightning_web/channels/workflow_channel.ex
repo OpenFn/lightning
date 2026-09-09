@@ -188,9 +188,10 @@ defmodule LightningWeb.WorkflowChannel do
                      job.project_credential.credential_body_id
                  ) do
               {:ok, metadata} -> metadata
-              # MetadataService names every refusal, including ones it does not
-              # know, so there is nothing else to catch here.
               {:error, %{type: error_type}} -> %{error: error_type}
+              # The task worker refuses before MetadataService runs when it is
+              # at its process cap, so not every refusal is one it named.
+              {:error, reason} -> %{error: inspect(reason)}
             end
 
           %{job_id: job_id, metadata: metadata}

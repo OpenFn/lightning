@@ -320,13 +320,20 @@ defmodule Lightning.Credentials do
   recorded.
   """
   @spec grant_body_to_project(
-          Project.t(),
+          Project.t() | nil,
           Ecto.UUID.t(),
           Ecto.UUID.t() | nil,
           User.t()
         ) ::
           {:ok, ProjectCredential.t()}
           | {:error, :unauthorized | :not_found | Ecto.Changeset.t()}
+  # The event that reaches here is live on the user's own credentials page too,
+  # where there is no project, and LiveView routes a frame by component id
+  # without checking the event appears in that component's markup. So a crafted
+  # frame gets a refusal rather than taking the session down.
+  def grant_body_to_project(nil, _credential_id, _body_id, %User{}),
+    do: {:error, :not_found}
+
   def grant_body_to_project(
         %Project{} = project,
         credential_id,
@@ -444,7 +451,7 @@ defmodule Lightning.Credentials do
         # says which projects are in the way, instead of raising a 500.
         credential_body
         |> Ecto.Changeset.change(%{})
-        |> Ecto.Changeset.foreign_key_constraint(:id,
+        |> Ecto.Changeset.foreign_key_constraint(:name,
           name: :project_credentials_credential_body_fkey,
           message: granted_body_message(credential_body)
         )
@@ -463,7 +470,7 @@ defmodule Lightning.Credentials do
       )
       |> Repo.all()
 
-    "is in use by " <> Enum.join(projects, ", ")
+    "cannot be removed while " <> Enum.join(projects, ", ") <> " is using it"
   end
 
   defp add_credential_body_upserts(multi, _credential_id, [], _schema_name),
@@ -687,7 +694,8 @@ defmodule Lightning.Credentials do
       # A deletion refused because a project is granted those values. The
       # environment's name is in the operation name, and it reads better than an
       # index would.
-      {:error, op, %Ecto.Changeset{} = body_changeset, _changes} ->
+      {:error, op, %Ecto.Changeset{} = body_changeset, _changes}
+      when is_atom(op) ->
         case Atom.to_string(op) do
           "delete_env_" <> env_name ->
             {:error,
@@ -704,6 +712,12 @@ defmodule Lightning.Credentials do
                body_changeset,
                "Environment #{String.to_integer(index) + 1}"
              )}
+
+          # The multis also carry audit and propagation steps, and one of their
+          # names is a tuple. Anything not about a set of values falls through
+          # rather than crashing here.
+          _other_operation ->
+            {:error, body_changeset}
         end
 
       {:error, _op, error, _changes} ->
