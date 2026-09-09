@@ -1,11 +1,12 @@
-import type { FailureSignature } from '../types';
+import type { ErrorSignature } from '../types';
 
 /**
- * Failed work orders grouped by error signature, heaviest first.
- *
- * Purely informational — there is nothing to act on here, so no row is a link
- * or a control. The signature grammar is:
- * `exitReason:errorType [@ stepName [adaptor@version]]`.
+ * Failed work orders grouped by error signature, heaviest first. Each row
+ * links to the history page filtered to the work orders it counts, where the
+ * existing "retry all" can act on the group. The signature grammar is:
+ * `exitReason:errorType [@ stepName [adaptor]]` — the adaptor renders without
+ * its version, since a merged row can span more than one (see `job_id` on
+ * `ErrorSignature`).
  */
 
 // One sentence per error type the worker can report, written to hold
@@ -59,24 +60,36 @@ const TIPS: Record<string, string> = {
 };
 
 interface TriageTableProps {
-  signatures: FailureSignature[];
+  signatures: ErrorSignature[];
   emptyMessage: string;
+  projectId: string;
+  workflowId: string;
+  /** `window.from` off the same response — the picked range's start. */
+  from: string;
 }
 
-export const TriageTable = ({ signatures, emptyMessage }: TriageTableProps) => {
+export const TriageTable = ({
+  signatures,
+  emptyMessage,
+  projectId,
+  workflowId,
+  from,
+}: TriageTableProps) => {
   if (signatures.length === 0) {
     return <p className="text-sm text-gray-500">{emptyMessage}</p>;
   }
 
   return (
-    // A rename forks a job's history into a signature per name, so a long-lived
-    // workflow can list far more rows than it has ways of breaking. Capped in
-    // height rather than in rows: the tail is still worth reading, just not
-    // worth pushing the rest of the page down for. `max-h` over a row count so
-    // a short list keeps the card short.
-    <div className="max-h-96 overflow-y-auto">
+    // Capped in height rather than in rows: the tail is still worth reading,
+    // just not worth pushing the rest of the page down for. `max-h` over a
+    // row count so a short list keeps the card short.
+    //
+    // `-mr-6 pr-4` bleeds the scroll region out to the card's own edge (the
+    // card is `p-6`), so the scrollbar sits flush against it instead of
+    // floating in the middle of the card's padding.
+    <div className="-mr-6 max-h-96 overflow-y-auto pr-4">
       <table className="w-full text-left text-sm">
-        <thead className="sticky top-0 bg-white">
+        <thead className="sticky top-0 z-10 bg-white">
           <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
             <th scope="col" className="w-28 py-2 pr-4 font-medium">
               Work orders
@@ -84,28 +97,44 @@ export const TriageTable = ({ signatures, emptyMessage }: TriageTableProps) => {
             <th scope="col" className="py-2 font-medium">
               Signature
             </th>
+            <th scope="col" className="w-24 py-2 pl-4 font-medium">
+              <span className="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           {signatures.map(signature => (
+            // job_id joins the key: a job deleted and recreated with the same
+            // name reads as two identical-looking signatures otherwise.
             <tr
               key={[
                 signature.exit_reason,
                 signature.error_type,
                 signature.step_name,
                 signature.adaptor,
+                signature.job_id,
               ].join('|')}
-              className="border-b border-gray-100 align-top last:border-0"
+              className="border-b border-gray-100 last:border-0"
             >
               <td className="py-3 pr-4 tabular-nums text-gray-900">
                 {signature.count.toLocaleString()}
               </td>
-              <td className="py-3">
+              <td className="py-3 align-top">
                 <Signature signature={signature} />
                 <p className="mt-1">
                   <span className="font-medium text-gray-500">Tip: </span>
                   <span className="text-gray-600">{tipFor(signature)}</span>
                 </p>
+              </td>
+              {/* Nothing to link on a row whose `exit_reason` never resolved:
+                  that leaves neither a step nor a mappable run state to filter
+                  history on. */}
+              <td className="py-3 pl-4 text-right">
+                {signature.exit_reason && (
+                  <ViewButton
+                    href={historyUrl(projectId, workflowId, from, signature)}
+                  />
+                )}
               </td>
             </tr>
           ))}
@@ -115,25 +144,91 @@ export const TriageTable = ({ signatures, emptyMessage }: TriageTableProps) => {
   );
 };
 
+/**
+ * Lands on history filtered to exactly the work orders this row counts, where
+ * the existing "retry all" can act on the group. Not labelled with the row's
+ * count — the filter re-derives the count on every load, so the number moves.
+ */
+const ViewButton = ({ href }: { href: string }) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-flex items-center gap-x-1 whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100"
+  >
+    View
+    <span className="hero-arrow-right-micro h-3 w-3" />
+  </a>
+);
+
+// A rejected work order never got a run, so the signature filter would fail
+// closed on it server-side — history's existing `rejected` status filter is
+// what actually matches these. `to_signature/2` gives every rejected row the
+// same literal `exit_reason: "rejected"`, so that is the signal to switch.
+//
+// No status is ticked for the other rows: the signature filter carries
+// `wo.state in failure_states()` itself, so the group is already exactly the
+// row's, and a status the reason names would only subtract from it — a `fail:`
+// row counts every work order whose latest run holds a step that failed,
+// whatever state the run itself ended in.
+const historyUrl = (
+  projectId: string,
+  workflowId: string,
+  from: string,
+  signature: ErrorSignature
+) => {
+  const params = new URLSearchParams({
+    'filters[workflow_id]': workflowId,
+    'filters[date_after]': from,
+  });
+
+  if (signature.exit_reason === 'rejected') {
+    params.set('filters[rejected]', 'true');
+  } else {
+    params.set('filters[error_signature_exit_reason]', signature.exit_reason);
+    if (signature.error_type) {
+      params.set('filters[error_signature_error_type]', signature.error_type);
+    }
+    if (signature.job_id) {
+      params.set('filters[error_signature_job_id]', signature.job_id);
+    }
+  }
+
+  return `/projects/${projectId}/history?${params.toString()}`;
+};
+
 // The parts are styled apart rather than concatenated server-side: the error
 // type is the bit worth scanning down the column for.
-const Signature = ({ signature }: { signature: FailureSignature }) => (
+const Signature = ({ signature }: { signature: ErrorSignature }) => (
   <p className="font-mono text-gray-900">
     <span className="text-gray-500">{signature.exit_reason}:</span>
     <span className="font-semibold">{errorTypeOf(signature)}</span>
     {signature.step_name && <span> @ {signature.step_name}</span>}
     {signature.adaptor && (
-      <span className="text-gray-500"> [{signature.adaptor}]</span>
+      <span className="text-gray-500">
+        {' '}
+        [{packageNameOf(signature.adaptor)}]
+      </span>
     )}
   </p>
 );
+
+// A row is keyed and labelled by `job_id`, not by (job_id, adaptor), so a row
+// spanning an adaptor bump mid-window is labelled from its newest failing
+// snapshot. Rendering that snapshot's version would head older failures with a
+// version that isn't theirs, so only the package name renders. Strips
+// everything from the last '@' that isn't the scope's leading one, so a scoped
+// package's own '@' survives.
+const packageNameOf = (adaptor: string) => {
+  const lastAt = adaptor.lastIndexOf('@');
+  return lastAt > 0 ? adaptor.slice(0, lastAt) : adaptor;
+};
 
 // A step can finish without reporting a type, and a worker can report one as an
 // empty string. The signature still has to say something, and `default` is the
 // tip written for exactly that case — hence `||`, which catches '' as well as
 // null, where `??` would render a bare `fail:` and a tip with no sentence.
-const errorTypeOf = ({ error_type }: FailureSignature) =>
-  error_type || 'unknown';
+const errorTypeOf = ({ error_type }: ErrorSignature) => error_type || 'unknown';
 
-const tipFor = ({ error_type }: FailureSignature) =>
+const tipFor = ({ error_type }: ErrorSignature) =>
   (error_type && TIPS[error_type]) || TIPS['default'];
