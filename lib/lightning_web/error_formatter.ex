@@ -23,10 +23,6 @@ defmodule LightningWeb.ErrorFormatter do
     })
   end
 
-  def format(:project_not_found, _context) do
-    dgettext("errors", "project_not_found")
-  end
-
   def format({:no_credential_grant, credential}, %{project: project}) do
     dgettext("errors", "no_credential_grant", %{
       credentials_url: credentials_url(project),

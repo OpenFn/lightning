@@ -343,6 +343,64 @@ defmodule Lightning.Projects.ProjectCredentialTest do
                Lightning.Credentials.resolve_granted_body(ctx.credential, nil)
     end
 
+    test "a granted set of values cannot be deleted, and says who is using it",
+         ctx do
+      {:ok, _} =
+        Lightning.Credentials.grant_body_to_project(
+          ctx.project,
+          ctx.credential.id,
+          ctx.bodies["dev"],
+          ctx.owner
+        )
+
+      # Taking the values out from under a project that is granted them would
+      # break it silently, so the form is told which projects are in the way
+      # rather than raising.
+      assert {:error, changeset} =
+               Lightning.Credentials.update_credential(
+                 ctx.credential,
+                 %{
+                   "credential_bodies" => [
+                     %{"name" => "main", "body" => %{"key" => "live"}}
+                   ],
+                   "delete_environments" => ["dev"]
+                 },
+                 ctx.owner
+               )
+
+      assert %Ecto.Changeset{} = changeset
+      assert Repo.get(Lightning.Credentials.CredentialBody, ctx.bodies["dev"])
+    end
+
+    test "an ungranted set of values can still be deleted", ctx do
+      assert {:ok, _} =
+               Lightning.Credentials.update_credential(
+                 ctx.credential,
+                 %{
+                   "credential_bodies" => [
+                     %{"name" => "main", "body" => %{"key" => "live"}}
+                   ],
+                   "delete_environments" => ["dev"]
+                 },
+                 ctx.owner
+               )
+
+      refute Repo.get(Lightning.Credentials.CredentialBody, ctx.bodies["dev"])
+    end
+
+    test "metadata refuses rather than crashing when there is no grant", ctx do
+      # This reaches the editor's async metadata task, which cannot print a
+      # tuple, so an unhandled reason there took the whole task down.
+      assert {:error, %Lightning.MetadataService.Error{type: type}} =
+               Lightning.MetadataService.fetch(
+                 "@openfn/language-common",
+                 ctx.credential,
+                 nil
+               )
+
+      assert type == "no_credential_grant"
+    end
+
     test "body_grants_for_project reports what each share reads", ctx do
       {:ok, _} =
         Lightning.Credentials.grant_body_to_project(

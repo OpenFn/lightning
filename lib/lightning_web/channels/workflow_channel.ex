@@ -188,8 +188,9 @@ defmodule LightningWeb.WorkflowChannel do
                      job.project_credential.credential_body_id
                  ) do
               {:ok, metadata} -> metadata
+              # MetadataService names every refusal, including ones it does not
+              # know, so there is nothing else to catch here.
               {:error, %{type: error_type}} -> %{error: error_type}
-              {:error, reason} -> %{error: to_string(reason)}
             end
 
           %{job_id: job_id, metadata: metadata}

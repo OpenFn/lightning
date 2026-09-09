@@ -974,9 +974,6 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ credential.user.email
     end
 
-    describe_grant = fn -> :ok end
-    _ = describe_grant
-
     test "an admin can choose which values a credential uses in this project",
          %{conn: conn, user: user} do
       project =
@@ -1045,6 +1042,48 @@ defmodule LightningWeb.ProjectLiveTest do
       })
 
       assert is_nil(Lightning.Repo.reload!(share).credential_body_id)
+    end
+
+    test "a project admin who does not own the credential cannot change it",
+         %{conn: conn, user: user} do
+      credential_owner = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user_id: credential_owner.id, role: :owner},
+            %{user_id: user.id, role: :admin}
+          ]
+        )
+
+      credential =
+        insert(:credential, user: credential_owner)
+        |> with_body(%{name: "main", body: %{"key" => "live"}})
+        |> with_body(%{name: "dev", body: %{"key" => "test"}})
+
+      [main | _] =
+        Enum.filter(credential.credential_bodies, &(&1.name == "main"))
+
+      insert(:project_credential,
+        project: project,
+        credential: credential,
+        credential_body_id: main.id
+      )
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings#credentials",
+          on_error: :raise
+        )
+
+      # Admin on the project, but the values are someone else's. Being able to
+      # administer a project you created is not standing to reach into a
+      # credential you do not own.
+      assert html =~ "main"
+
+      # No picker, so no option list, so the other environment names on someone
+      # else's credential are not disclosed either.
+      refute has_element?(view, "#grant-#{credential.id}")
+      refute has_element?(view, "#grant-select-#{credential.id}")
     end
 
     test "an editor sees which values are used but cannot change them",

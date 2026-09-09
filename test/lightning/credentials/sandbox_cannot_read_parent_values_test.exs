@@ -88,6 +88,111 @@ defmodule Lightning.Credentials.SandboxCannotReadParentValuesTest do
     assert resolved.body == %{"password" => "production-secret"}
   end
 
+  test "a sandbox owner cannot grant their sandbox the parent's values", %{
+    parent: parent,
+    credential: credential
+  } do
+    # The privilege chain: provisioning a sandbox needs only an editor, and it
+    # makes the actor the sandbox's owner. So a project-side gate on the grant
+    # would let any editor on a production project grant themselves that
+    # project's production values, in two clicks instead of a rename.
+    attacker = insert(:user)
+    insert(:project_user, project: parent, user: attacker, role: :editor)
+
+    {:ok, sandbox} =
+      Lightning.Projects.Sandboxes.provision(parent, attacker, %{name: "sbx"})
+
+    [production_body] =
+      Repo.preload(credential, :credential_bodies).credential_bodies
+
+    assert {:error, :unauthorized} =
+             Lightning.Credentials.grant_body_to_project(
+               sandbox,
+               credential.id,
+               production_body.id,
+               attacker
+             )
+
+    run = run_in(sandbox, credential)
+
+    assert {:error, {:no_credential_grant, _credential}} =
+             Resolver.resolve_credential(run, credential.id)
+  end
+
+  test "an ordinary credential edit does not grant the sandbox anything", %{
+    owner: owner,
+    parent: parent,
+    credential: credential
+  } do
+    {:ok, sandbox} =
+      Lightning.Projects.Sandboxes.provision(parent, owner, %{name: "sbx"})
+
+    # Nothing about the sandbox: the owner renames their own credential.
+    {:ok, _} =
+      Lightning.Credentials.update_credential(
+        credential,
+        %{"name" => "production-dhis2-renamed"},
+        owner
+      )
+
+    run = run_in(sandbox, credential)
+
+    # Reaching every ungranted share on an edit would hand the sandbox the
+    # parent's values as a side effect of a rename.
+    assert {:error, {:no_credential_grant, _credential}} =
+             Resolver.resolve_credential(run, credential.id)
+  end
+
+  test "deleting an environment does not resurrect a revoked grant", %{
+    owner: owner,
+    parent: parent,
+    credential: credential
+  } do
+    {:ok, _} =
+      Lightning.Credentials.update_credential(
+        credential,
+        %{
+          "credential_bodies" => [
+            %{"name" => "main", "body" => %{"password" => "production-secret"}},
+            %{"name" => "dev", "body" => %{"password" => "sandbox-secret"}}
+          ]
+        },
+        owner
+      )
+
+    {:ok, sandbox} =
+      Lightning.Projects.Sandboxes.provision(parent, owner, %{name: "sbx"})
+
+    grant_body!(sandbox, credential, "dev")
+
+    # Revoked deliberately, which is recorded as no grant.
+    {:ok, _} =
+      Lightning.Credentials.grant_body_to_project(
+        sandbox,
+        credential.id,
+        nil,
+        owner
+      )
+
+    # Now only one body is left, so a "grant the sole body" step would fire.
+    {:ok, _} =
+      Lightning.Credentials.update_credential(
+        Repo.reload!(credential),
+        %{
+          "credential_bodies" => [
+            %{"name" => "main", "body" => %{"password" => "production-secret"}}
+          ],
+          "delete_environments" => ["dev"]
+        },
+        owner
+      )
+
+    run = run_in(sandbox, credential)
+
+    assert {:error, {:no_credential_grant, _credential}} =
+             Resolver.resolve_credential(run, credential.id)
+  end
+
   test "a sandbox reads values once it is granted its own", %{
     owner: owner,
     parent: parent,

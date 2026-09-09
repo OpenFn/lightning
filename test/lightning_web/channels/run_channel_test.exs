@@ -555,7 +555,10 @@ defmodule LightningWeb.RunChannelTest do
       oauth_client = credential.oauth_client
 
       credential_body =
-        Lightning.Credentials.get_credential_body(credential.id, "main")
+        credential
+        |> Lightning.Repo.preload(:credential_bodies, force: true)
+        |> Map.fetch!(:credential_bodies)
+        |> Enum.find(&(&1.name == "main"))
 
       current_expires_at = credential_body.body["expires_at"]
       new_expiry = current_expires_at + 3600

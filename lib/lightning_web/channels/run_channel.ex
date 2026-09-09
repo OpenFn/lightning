@@ -545,17 +545,6 @@ defmodule LightningWeb.RunChannel do
     |> reply_with({:ok, resolved_credential.body})
   end
 
-  defp handle_credential_error(
-         socket,
-         {:project_not_found, _credential},
-         _id,
-         _project_id,
-         _run_id
-       ) do
-    error = LightningWeb.ErrorFormatter.format(:project_not_found, %{})
-    {:reply, {:error, error}, socket}
-  end
-
   # This project was never given a set of values for the credential. Naming the
   # credential and pointing at where the choice is made is the whole of the
   # remedy: it is not something the project's environment name can fix.

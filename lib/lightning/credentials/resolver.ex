@@ -64,27 +64,12 @@ defmodule Lightning.Credentials.Resolver do
   @spec resolve_credential(Run.t(), credential_id :: String.t()) ::
           {:ok, ResolvedCredential.t() | nil}
           | {:error, :not_found | resolve_error()}
-  @spec resolve_credential(Credential.t(), environment :: String.t()) ::
-          {:ok, ResolvedCredential.t()}
-          | {:error, resolve_error()}
-
   def resolve_credential(%Run{} = run, id) do
     Logger.metadata(run_id: run.id, credential_id: id)
 
     case get_run_credential(run, id) do
       nil -> {:error, :not_found}
       credential -> resolve_granted(credential, run)
-    end
-  end
-
-  def resolve_credential(%Credential{} = credential, environment) do
-    case Credentials.resolve_credential_body(credential, environment) do
-      {:ok, body} ->
-        {:ok, ResolvedCredential.from(credential, body)}
-
-      {:error, reason} ->
-        log_resolution_error(reason)
-        {:error, {reason, credential}}
     end
   end
 

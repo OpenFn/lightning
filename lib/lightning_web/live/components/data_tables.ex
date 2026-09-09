@@ -121,7 +121,10 @@ defmodule LightningWeb.Components.DataTables do
                   <.body_grant_cell
                     credential={credential}
                     granted_body_id={Map.get(@body_grants, credential.id)}
-                    can_grant={@can_grant_bodies}
+                    can_grant={
+                      @can_grant_bodies and
+                        Map.get(credential, :can_grant_bodies, false)
+                    }
                     target={@grant_target}
                   />
                 </.td>
@@ -150,8 +153,12 @@ defmodule LightningWeb.Components.DataTables do
 
   A project's environment name used to decide this at run time, which meant
   anyone who could rename a project could reach any set of values. The choice is
-  recorded here instead, so it is made once, deliberately, by someone who
-  administers the project.
+  recorded here instead, and it belongs to whoever owns the credential: the
+  values are theirs, and a sandbox admin is someone who created their own
+  project.
+
+  Anyone else sees the name of the set in use and nothing more, so a project's
+  list does not disclose the other environments on someone else's credential.
 
   No selection means the credential resolves nothing here, which is where every
   sandbox starts.

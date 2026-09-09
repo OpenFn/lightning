@@ -78,9 +78,6 @@ msgstr ""
 "  3. Click \"Edit\" and then \"Reauthorize\""
 "If this is not your credential, send this link to the owner and ask them to reauthorize."
 
-msgid "project_not_found"
-msgstr "Project not found. The run may be associated with a deleted project."
-
 msgid "no_credential_grant"
 msgstr ""
 "This project has not been given any values for the credential '%{credential_name}'. To fix:\n"

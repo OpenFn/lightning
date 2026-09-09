@@ -156,9 +156,6 @@ defmodule Lightning.DataclipScrubber do
       join: step in assoc(run_step, :step),
       join: job in assoc(step, :job),
       join: credential in assoc(job, :credential),
-      join: run in assoc(run_step, :run),
-      join: work_order in assoc(run, :work_order),
-      join: workflow in assoc(work_order, :workflow),
       where: step.started_at <= target_step.started_at,
       select: {target_run_step.step_id, credential},
       distinct: [target_run_step.step_id, credential.id]
@@ -217,9 +214,6 @@ defmodule Lightning.DataclipScrubber do
       join: s in assoc(r1, :step),
       join: j in assoc(s, :job),
       join: c in assoc(j, :credential),
-      join: r in assoc(r1, :run),
-      join: wo in assoc(r, :work_order),
-      join: w in assoc(wo, :workflow),
       where: s.started_at <= ^started_at,
       select: c,
       distinct: c.id

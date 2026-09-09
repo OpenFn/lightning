@@ -155,27 +155,6 @@ defmodule Lightning.Credentials do
   def get_credential(id), do: Repo.get(Credential, id)
 
   @doc """
-  Gets a credential body for a specific environment.
-
-  Returns nil if no body exists for the given credential and environment combination.
-
-  ## Examples
-
-      iex> get_credential_body(credential_id, "production")
-      %CredentialBody{name: "production", body: %{...}}
-
-      iex> get_credential_body(credential_id, "nonexistent")
-      nil
-  """
-  @spec get_credential_body(String.t(), String.t()) :: CredentialBody.t() | nil
-  def get_credential_body(credential_id, env_name) do
-    from(cb in CredentialBody,
-      where: cb.credential_id == ^credential_id and cb.name == ^env_name
-    )
-    |> Repo.one()
-  end
-
-  @doc """
   Creates a new credential with its credential bodies.
 
   ## Parameters
@@ -238,33 +217,39 @@ defmodule Lightning.Credentials do
         |> cast_credential_body_change(schema_name)
       end)
     end)
-    |> grant_sole_body_to_shares()
+    |> grant_sole_body_to_new_shares()
   end
 
-  # A share names the body it may read. When a credential has exactly one body
-  # there is nothing to choose, so grant it and the credential works where it
-  # was created. With more than one the choice is the project admin's, and the
-  # share stays ungranted until they make it.
+  # A share names the body it may read. When a credential is created with
+  # exactly one body there is nothing to choose, so the shares created alongside
+  # it are granted that body and the credential works where it was made.
   #
-  # Only shares with no grant are touched. That cannot change an outcome today,
-  # since the sole body is the only one a grant could hold, but a grant is a
-  # decision and this is the one place that would otherwise overwrite one.
-  defp grant_sole_body_to_shares(multi) do
+  # Scoped to the shares this operation inserted, and only on create. Granting
+  # every ungranted share on any later edit would reach the ones the sandbox
+  # clone and the descendant propagation deliberately left empty, so renaming a
+  # credential would hand every sandbox beneath it the parent's values. It would
+  # also undo a deliberate revoke, which is recorded as no grant and is
+  # indistinguishable from never having chosen.
+  defp grant_sole_body_to_new_shares(multi) do
     Multi.run(multi, :grant_sole_body, fn repo, %{credential: credential} ->
+      # Not loaded when the credential was created without any shares, which is
+      # the ordinary case from the user's own credentials page.
+      share_ids =
+        case credential.project_credentials do
+          %Ecto.Association.NotLoaded{} -> []
+          shares -> Enum.map(shares, & &1.id)
+        end
+
       case repo.all(
              from(b in CredentialBody,
                where: b.credential_id == ^credential.id,
                select: b.id
              )
            ) do
-        [body_id] ->
+        [body_id] when share_ids != [] ->
           {count, _} =
             repo.update_all(
-              from(pc in ProjectCredential,
-                where:
-                  pc.credential_id == ^credential.id and
-                    is_nil(pc.credential_body_id)
-              ),
+              from(pc in ProjectCredential, where: pc.id in ^share_ids),
               set: [credential_body_id: body_id]
             )
 
@@ -274,6 +259,26 @@ defmodule Lightning.Credentials do
           {:ok, 0}
       end
     end)
+  end
+
+  @doc """
+  The id of a credential's only set of values, or nil when it has several.
+
+  A share created by a path that has no way to ask, such as a CLI deploy or the
+  demo data, gets the sole set when there is no choice to make. With more than
+  one the share stays ungranted and the credential's owner picks.
+  """
+  @spec sole_body_id(Ecto.UUID.t()) :: Ecto.UUID.t() | nil
+  def sole_body_id(credential_id) do
+    from(b in CredentialBody,
+      where: b.credential_id == ^credential_id,
+      select: b.id
+    )
+    |> Repo.all()
+    |> case do
+      [body_id] -> body_id
+      _none_or_several -> nil
+    end
   end
 
   @doc """
@@ -300,9 +305,15 @@ defmodule Lightning.Credentials do
   @doc """
   Points a project's share of a credential at one of that credential's bodies.
 
-  This is the only way a project gains access to a set of values, and it is a
-  deliberate act by someone who administers the project. Pass `nil` to take the
-  access away again.
+  This is the only way a project gains access to a set of values. Pass `nil` to
+  take the access away again.
+
+  **The credential's owner decides, not the project's admin.** Creating a
+  sandbox makes you its owner, and a sandbox holds a reference to every one of
+  its parent's credentials, so a project-side gate would let any editor on a
+  production project grant themselves that project's production values. The
+  values belong to the credential, and so does the decision about who reads
+  them.
 
   The body must belong to the credential the project already has a share of.
   The database enforces that too, so a mismatched pair is refused rather than
@@ -322,11 +333,12 @@ defmodule Lightning.Credentials do
         body_id,
         %User{} = actor
       ) do
-    with :ok <- authorize_project_admin(actor, project),
+    with {:ok, credential} <- fetch_credential(credential_id),
+         :ok <- authorize_credential_owner(actor, credential),
          %ProjectCredential{} = share <-
            Repo.get_by(ProjectCredential,
              project_id: project.id,
-             credential_id: credential_id
+             credential_id: credential.id
            ) do
       share
       |> ProjectCredential.changeset(%{credential_body_id: body_id})
@@ -337,16 +349,13 @@ defmodule Lightning.Credentials do
     end
   end
 
-  defp authorize_project_admin(actor, project) do
-    if Lightning.Policies.Permissions.can?(
-         :project_users,
-         :edit_project,
-         actor,
-         project
-       ) do
-      :ok
+  # A malformed id is a refusal, not a 500. The ids reach here from a form.
+  defp fetch_credential(credential_id) do
+    with {:ok, uuid} <- Ecto.UUID.cast(credential_id),
+         %Credential{} = credential <- Repo.get(Credential, uuid) do
+      {:ok, credential}
     else
-      {:error, :unauthorized}
+      _not_found_or_malformed -> {:error, :not_found}
     end
   end
 
@@ -408,7 +417,6 @@ defmodule Lightning.Credentials do
     |> Multi.update(:credential, changeset)
     |> add_environment_deletions(credential.id, delete_environments)
     |> add_credential_body_upserts(credential.id, credential_bodies, schema_name)
-    |> grant_sole_body_to_shares()
   end
 
   defp add_environment_deletions(multi, _credential_id, []), do: multi
@@ -430,9 +438,32 @@ defmodule Lightning.Credentials do
         {:ok, :not_found}
 
       credential_body ->
-        Repo.delete(credential_body)
-        {:ok, :deleted}
+        # A project granted this set of values holds a foreign key to it, so the
+        # delete is refused rather than silently taking the values out from
+        # under a running project. Surfaced as a changeset error so the form
+        # says which projects are in the way, instead of raising a 500.
+        credential_body
+        |> Ecto.Changeset.change(%{})
+        |> Ecto.Changeset.foreign_key_constraint(:id,
+          name: :project_credentials_credential_body_fkey,
+          message: granted_body_message(credential_body)
+        )
+        |> Repo.delete()
     end
+  end
+
+  defp granted_body_message(credential_body) do
+    projects =
+      from(pc in ProjectCredential,
+        join: p in Project,
+        on: p.id == pc.project_id,
+        where: pc.credential_body_id == ^credential_body.id,
+        select: p.name,
+        order_by: p.name
+      )
+      |> Repo.all()
+
+    "is in use by " <> Enum.join(projects, ", ")
   end
 
   defp add_credential_body_upserts(multi, _credential_id, [], _schema_name),
@@ -653,30 +684,27 @@ defmodule Lightning.Credentials do
       {:error, :credential, %Ecto.Changeset{} = changeset, _changes} ->
         {:error, changeset}
 
+      # A deletion refused because a project is granted those values. The
+      # environment's name is in the operation name, and it reads better than an
+      # index would.
       {:error, op, %Ecto.Changeset{} = body_changeset, _changes} ->
-        # When a credential_body operation fails, we need to return
-        # a Credential changeset with the error, not a CredentialBody changeset.
-        # Extract which environment failed from the operation name.
-        env_index =
-          op
-          |> Atom.to_string()
-          |> String.replace("credential_body_", "")
-          |> String.to_integer()
+        case Atom.to_string(op) do
+          "delete_env_" <> env_name ->
+            {:error,
+             add_body_errors(
+               credential_changeset,
+               body_changeset,
+               "Environment #{env_name}"
+             )}
 
-        errors = body_changeset.errors
-
-        changeset_with_errors =
-          Enum.reduce(errors, credential_changeset, fn {field, {msg, opts}},
-                                                       acc ->
-            Ecto.Changeset.add_error(
-              acc,
-              :credential_bodies,
-              "Environment #{env_index + 1}: #{field} #{msg}",
-              opts
-            )
-          end)
-
-        {:error, changeset_with_errors}
+          "credential_body_" <> index ->
+            {:error,
+             add_body_errors(
+               credential_changeset,
+               body_changeset,
+               "Environment #{String.to_integer(index) + 1}"
+             )}
+        end
 
       {:error, _op, error, _changes} ->
         {:error, error}
@@ -692,6 +720,19 @@ defmodule Lightning.Credentials do
            :credential_bodies
          ])}
     end
+  end
+
+  defp add_body_errors(credential_changeset, body_changeset, prefix) do
+    Enum.reduce(body_changeset.errors, credential_changeset, fn {field,
+                                                                 {msg, opts}},
+                                                                acc ->
+      Ecto.Changeset.add_error(
+        acc,
+        :credential_bodies,
+        "#{prefix}: #{field} #{msg}",
+        opts
+      )
+    end)
   end
 
   @doc """
@@ -1248,33 +1289,6 @@ defmodule Lightning.Credentials do
     |> Map.fetch!(:credential_bodies)
     |> Enum.flat_map(&basic_auth_from_body(&1.body))
     |> Enum.uniq()
-  end
-
-  @doc """
-  Gets a credential body for an environment and refreshes OAuth tokens if expired.
-
-  This is the primary function for credential resolution during workflow execution.
-  It handles the full flow: fetch body → check expiration → refresh if needed → return final body.
-
-  ## Parameters
-    - `credential`: The credential struct
-    - `environment`: Environment name (e.g., "production", "staging")
-
-  ## Returns
-    - `{:ok, body}` - The credential body (with fresh tokens if OAuth was refreshed)
-    - `{:error, :environment_not_found}` - No body exists for this environment
-    - `{:error, oauth_refresh_error()}` - OAuth refresh failed
-  """
-  @spec resolve_credential_body(Credential.t(), String.t()) ::
-          {:ok, map()} | {:error, :environment_not_found | oauth_refresh_error()}
-  def resolve_credential_body(%Credential{} = credential, environment) do
-    case get_credential_body(credential.id, environment) do
-      nil ->
-        {:error, :environment_not_found}
-
-      %CredentialBody{} = credential_body ->
-        read_body(credential, credential_body)
-    end
   end
 
   @doc """

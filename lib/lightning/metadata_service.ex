@@ -36,13 +36,18 @@ defmodule Lightning.MetadataService do
   ## Parameters
     - `adaptor`: The adaptor npm specification (e.g., "@openfn/language-http")
     - `credential`: The credential struct
-    - `environment`: the environment whose credential body to read
+    - `credential_body_id`: the set of values this project was granted, or nil
+      when it was granted none
 
   ## Returns
     - `{:ok, metadata}` - The metadata as a map
     - `{:error, Error.t()}` - An error if metadata cannot be fetched
   """
-  @spec fetch(adaptor :: String.t(), Credential.t(), environment :: String.t()) ::
+  @spec fetch(
+          adaptor :: String.t(),
+          Credential.t(),
+          credential_body_id :: Ecto.UUID.t() | nil
+        ) ::
           {:ok, %{optional(binary) => binary}} | {:error, Error.t()}
   def fetch(adaptor, credential, credential_body_id) do
     Lightning.TaskWorker.start_task(@cli_task_worker, fn ->
@@ -103,14 +108,20 @@ defmodule Lightning.MetadataService do
          {adaptor_path,
           %{"configuration" => Lightning.RedactedMap.new(credential_body)}}}
 
-      {:error, :environment_not_found} ->
-        {:error, Error.new("environment_not_found")}
+      {:error, :no_credential_grant} ->
+        {:error, Error.new("no_credential_grant")}
 
       {:error, :reauthorization_required} ->
         {:error, Error.new("reauthorization_required")}
 
       {:error, :temporary_failure} ->
         {:error, Error.new("temporary_oauth_failure")}
+
+      # A new refusal reason must not crash the editor's metadata task. Naming
+      # it is better than a case clause error reaching a channel that cannot
+      # print a tuple.
+      {:error, reason} ->
+        {:error, Error.new(to_string(reason))}
     end
   end
 

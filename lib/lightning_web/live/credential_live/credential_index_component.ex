@@ -45,15 +45,12 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
            current_user,
            project
          ),
-       # Which values a project may read is an administrative decision, so an
-       # editor sees the choice without being able to change it.
-       can_grant_bodies:
-         Policies.Permissions.can?(
-           :project_users,
-           :edit_project,
-           current_user,
-           project
-         )
+       # The credential's owner decides which of its values a project reads,
+       # not the project's admin. Creating a sandbox makes you its owner, so a
+       # project-side gate would let any editor on a production project grant
+       # themselves that project's production values. Decided per credential
+       # below, since a project's list can hold other people's.
+       can_grant_bodies: true
      })
      |> load_credentials()}
   end
@@ -77,7 +74,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
 
     socket
     |> assign(%{
-      credentials: list_credentials(project || current_user),
+      credentials: list_credentials(project || current_user, current_user.id),
       oauth_clients: list_clients(project || current_user),
       body_grants: project && Credentials.body_grants_for_project(project)
     })
@@ -472,7 +469,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
      |> push_patch(to: socket.assigns.return_to)}
   end
 
-  defp list_credentials(user_or_project) do
+  defp list_credentials(user_or_project, current_user_id) do
     user_or_project
     |> Credentials.list_credentials()
     |> Enum.map(fn credential ->
@@ -487,6 +484,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
       credential
       |> Map.put(:project_names, project_names)
       |> Map.put(:environment_names, environment_names)
+      |> Map.put(:can_grant_bodies, credential.user_id == current_user_id)
     end)
   end
 

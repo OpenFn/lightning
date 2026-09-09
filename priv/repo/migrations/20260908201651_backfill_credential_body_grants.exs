@@ -29,8 +29,18 @@ defmodule Lightning.Repo.Migrations.BackfillCredentialBodyGrants do
     report()
   end
 
+  # Only the grants this migration set. A choice someone has made since is not
+  # this migration's to discard.
   def down do
-    execute "UPDATE project_credentials SET credential_body_id = NULL"
+    execute """
+    UPDATE project_credentials pc
+    SET credential_body_id = NULL
+    FROM projects p, credential_bodies cb
+    WHERE pc.project_id = p.id
+      AND p.parent_id IS NULL
+      AND cb.id = pc.credential_body_id
+      AND cb.name = COALESCE(p.env, 'main')
+    """
   end
 
   # Counts rather than raises. None of these is a reason to stop: they all

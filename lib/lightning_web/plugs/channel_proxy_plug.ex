@@ -429,7 +429,4 @@ defmodule LightningWeb.ChannelProxyPlug do
   # more way to fail, and it still has to arrive as a recorded 502.
   defp classify_credential_error(:no_credential_grant),
     do: "credential_not_granted"
-
-  defp classify_credential_error(:project_not_found),
-    do: "credential_project_not_found"
 end
