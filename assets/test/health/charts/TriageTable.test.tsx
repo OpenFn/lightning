@@ -161,6 +161,9 @@ describe('TriageTable', () => {
           '&filters%5Bsignature_error_type%5D=RuntimeError' +
           '&filters%5Bsignature_job_id%5D=a1b2c3d4-0000-0000-0000-000000000000'
       );
+      // The health page is a dashboard people read row by row — the row they
+      // came from has to still be there when they come back.
+      expect(link).toHaveAttribute('target', '_blank');
     });
 
     // A run that crashed before reaching a step has no job to key on, so the
