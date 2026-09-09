@@ -204,6 +204,25 @@ defmodule Lightning.Workflows.StatsTest do
     assert %{success: 1, failed: 1} = Stats.outcomes(workflow).counts
   end
 
+  # `last_activity` moves when a run starts, not only when one settles, so an
+  # unfiltered marker would hand every open tab a new key, and a full
+  # recompute, on every poll of a workflow with a cron.
+  test "does not recompute while a work order is only running", %{
+    workflow: workflow,
+    trigger: trigger
+  } do
+    insert_run(workflow, trigger, :success)
+    first = Stats.outcomes(workflow)
+
+    work_order(workflow, trigger,
+      state: :running,
+      last_activity: DateTime.utc_now()
+    )
+
+    assert Stats.outcomes(workflow) == first
+    assert cached_keys(workflow) == 1
+  end
+
   # `cached/2` is private, so this drives it through `outcomes/2` with a window
   # wide enough to blow up the date arithmetic. Which failure is beside the
   # point; that it escapes as an exception, not a match error, is not.
@@ -215,7 +234,9 @@ defmodule Lightning.Workflows.StatsTest do
   defp marker(workflow) do
     Lightning.Repo.one(
       from(wo in WorkOrder,
-        where: wo.workflow_id == ^workflow.id,
+        where:
+          wo.workflow_id == ^workflow.id and
+            wo.state in ^WorkOrder.final_states(),
         select: max(wo.last_activity)
       )
     )
