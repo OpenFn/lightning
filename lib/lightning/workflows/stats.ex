@@ -27,8 +27,8 @@ defmodule Lightning.Workflows.Stats do
 
   @default_days_back 30
 
-  # Caps what the marker cannot see — the window rolling, the retention purge,
-  # the Janitor's `lost` stamps — and stops keys piling up.
+  # Caps what the marker cannot see — the window rolling, the retention purge —
+  # and stops keys piling up.
   @ttl :timer.minutes(5)
 
   @final_states WorkOrder.final_states()
