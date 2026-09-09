@@ -168,7 +168,7 @@ export function VersionDropdown({
               </div>
             ) : versions.length === 0 ? (
               <div className="px-4 py-2 text-sm text-gray-500">
-                No versions available
+                No published versions
               </div>
             ) : (
               <>

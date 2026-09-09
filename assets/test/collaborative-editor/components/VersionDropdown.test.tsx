@@ -336,7 +336,7 @@ describe('VersionDropdown', () => {
       rerender(<VersionDropdown {...props} />);
 
       expect(mockRequestVersions).toHaveBeenCalledOnce();
-      expect(screen.getByText('No versions available')).toBeInTheDocument();
+      expect(screen.getByText('No published versions')).toBeInTheDocument();
     });
 
     test('does not refetch if versions already loaded', async () => {
@@ -603,7 +603,7 @@ describe('VersionDropdown', () => {
       expect(row).toHaveTextContent('14 Jan 2024');
     });
 
-    test('shows "No versions available" when versions array is empty', async () => {
+    test('shows "No published versions" when nothing has been published', async () => {
       const user = userEvent.setup();
 
       mockUseVersions.mockReturnValue([]);
@@ -624,7 +624,7 @@ describe('VersionDropdown', () => {
 
       // Wait for loading to complete
       await waitFor(() => {
-        expect(screen.getByText('No versions available')).toBeInTheDocument();
+        expect(screen.getByText('No published versions')).toBeInTheDocument();
       });
     });
 
