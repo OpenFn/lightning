@@ -88,6 +88,20 @@ and this project adheres to
   exports, validated against the same JSON Schema.
   [#4974](https://github.com/OpenFn/lightning/issues/4974)
 
+- Webhook triggers can be given a custom URL path, so an endpoint's URL is known
+  before it is deployed. A trigger with a path of `facility-001` answers at
+  `/i/<project-id>/facility-001`, where `<project-id>` is the project's UUID.
+  Set it in the trigger panel, in `project.yaml`, or through the workflows API.
+  Existing `/i/<trigger-id>` URLs are unchanged.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
+- Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
+  scenario file (users, API tokens, credentials, projects, workflows) via
+  `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and
+  external test harnesses. Workflows in a scenario are written in the existing
+  workflow-spec format — the same YAML the collaborative editor imports and
+  exports, validated against the same JSON Schema.
+  [#4974](https://github.com/OpenFn/lightning/issues/4974)
+
 ### Changed
 
 - Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
@@ -101,6 +115,46 @@ and this project adheres to
   by another workflow in the project is reported while you type, not after you
   save. A path the server would reject shows what is wrong and is left as you
   typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
+
+- The AI assistant is the global assistant for everyone. It was behind the
+  experimental features setting and an opt-in tickbox on the chat input, and
+  both are gone: every message goes to it, and the badge naming which assistant
+  answered goes with them. Existing workflow conversations still open and read
+  as they always did, and replying in one moves it to the global assistant from
+  that message on. [#5042](https://github.com/OpenFn/lightning/issues/5042)
+
+- The AI assistant's attachment tickboxes are now about the run you are looking
+  at, and they appear wherever you are. "Send run logs" and "Send run data" sit
+  above the message box on the canvas and in the run history as well as in the
+  step editor, and appear once a run is loaded rather than sitting greyed out.
+  "Send run data" now covers every step in the run rather than the one that
+  happened to be highlighted, and still sends the shape of the data with the
+  values removed. The "Press Enter to send" hint below the box is gone, since
+  the notice and the send button now share that row.
+  [#5037](https://github.com/OpenFn/lightning/issues/5037)
+
+- The webhook trigger panel now lists every URL a trigger answers on. The
+  default URL is always there and the custom one sits next to it, editable in
+  place, with add, edit, delete and copy on the row itself. A path already used
+  by another workflow in the project is reported while you type, not after you
+  save. A path the server would reject shows what is wrong and is left as you
+  typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
+- **Breaking:** `APOLLO_TIMEOUT` is renamed `APOLLO_IDLE_TIMEOUT_MS` and joined
+  by `APOLLO_CONNECT_TIMEOUT_MS` and `APOLLO_REQUEST_TIMEOUT_MS`. The old name
+  is no longer read and logs a warning at boot if it is still set. On the wire
+  it only ever measured silence, so put its value on `APOLLO_IDLE_TIMEOUT_MS` if
+  you were setting it. All three have defaults, so a deployment need not set any
+  of them. The idle default is 30s, which assumes Apollo v3.1.1 or later and its
+  15s keepalive; on an older Apollo a working stream can go quiet for longer
+  than that, so raise it or upgrade Apollo.
+  [#4882](https://github.com/OpenFn/lightning/issues/4882)
+
+### Removed
+
+- The AI assistant's "Send code" tickbox. The assistant reads your workflow to
+  answer anything about it, so the box did nothing except in one case, where it
+  looked like a choice and was not one.
+  [#5037](https://github.com/OpenFn/lightning/issues/5037)
 
 ### Fixed
 
@@ -173,6 +227,30 @@ and this project adheres to
   so projects with a large backlog of eligible dataclips no longer time out the
   retention job.
 
+- AI chat messages no longer sit in "processing" forever when the job running
+  them is interrupted. Oban's job-stop event now has a handler, the shutdown
+  grace period is longer than the longest an AI job can run, and a cron sweep
+  clears anything still stranded. A deploy can still sever a running answer,
+  because the platform's own kill deadline is shorter than the grace period; the
+  sweep is what recovers the message when that happens.
+  [#4260](https://github.com/OpenFn/lightning/issues/4260)
+  [#5124](https://github.com/OpenFn/lightning/issues/5124)
+- Why an AI chat failed is now recorded on the message and shown on the reply it
+  belongs to, rather than as one generic banner: a hung Apollo, a lost
+  connection and a rate limit each read differently. A failed reply keeps its
+  text as an answer, with the reason and a Try again beneath it, and the
+  question you asked is no longer marked "Failed to send" when it was sent and
+  half answered. [#5125](https://github.com/OpenFn/lightning/issues/5125)
+- An AI answer that is cut off partway through is kept rather than discarded.
+  The text and any workflow YAML the user already watched appear are saved,
+  along with the status updates, in the order they were shown.
+  [#5126](https://github.com/OpenFn/lightning/issues/5126)
+  [#5127](https://github.com/OpenFn/lightning/issues/5127)
+- A failed AI stream now says which way it failed. A hung Apollo, a severed
+  connection and a genuinely short answer all read as "Stream ended without
+  complete response"; they now read as three different things.
+  [#4882](https://github.com/OpenFn/lightning/issues/4882)
+
 ### Security
 
 - Bumped `mint` to 1.10.0, clearing
@@ -181,6 +259,17 @@ and this project adheres to
   denial of service in Mint's HTTP/1 parser. Mint is our HTTP client, so they
   are reachable from a response rather than from a request into Lightning, and
   the exposure is the outbound calls Lightning makes.
+
+- A project now records which set of a credential's values it may read, on the
+  share itself. It used to be decided by matching the project's environment
+  _name_ against the credential's value sets at run time, and that name is an
+  ordinary project setting. Creating a sandbox makes you its owner, a sandbox
+  owner can edit its environment, and a sandbox already holds a reference to
+  every one of its parent's credentials, so any editor on a production project
+  could reach that project's production secrets.
+
+  Existing projects keep the values they resolve today. Sandboxes start with
+  none, and a project admin chooses them on the project's credentials tab.
 
 ## [2.18.2] - 2026-09-02
 

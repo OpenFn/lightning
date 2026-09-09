@@ -315,22 +315,6 @@ export const useMarkEnableTriggerWarningSuppressed = () => {
 };
 
 /**
- * Hook to check if the user has experimental features enabled
- */
-export const useExperimentalFeaturesEnabled = (): boolean => {
-  const sessionContextStore = useSessionContextStore();
-
-  const selectExperimentalFeaturesEnabled = sessionContextStore.withSelector(
-    state => state.experimentalFeaturesEnabled
-  );
-
-  return useSyncExternalStore(
-    sessionContextStore.subscribe,
-    selectExperimentalFeaturesEnabled
-  );
-};
-
-/**
  * Hook to access limits from session context
  * Returns limits object (empty object if not set)
  */

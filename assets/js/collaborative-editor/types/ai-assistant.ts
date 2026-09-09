@@ -26,11 +26,7 @@ export type MessageRole = 'user' | 'assistant';
  * - cancelled: Message was cancelled by user
  */
 export type MessageStatus =
-  | 'pending'
-  | 'processing'
-  | 'success'
-  | 'error'
-  | 'cancelled';
+  'pending' | 'processing' | 'success' | 'error' | 'cancelled';
 
 /**
  * User info attached to a message for attribution in collaborative sessions
@@ -99,6 +95,11 @@ export interface Message {
   /** Recorded server-side when this reply's changes never reached the canvas. */
   apply_failed?: boolean;
   /**
+   * Why this message failed, in words meant for the person reading it. Set by
+   * the server on the message that failed; absent on anything that did not.
+   */
+  failure_message?: string | null;
+  /**
    * Interleaved text/status timeline for global assistant replies.
    * `null`/absent for legacy and non-global messages (render flat `content`).
    */
@@ -110,7 +111,6 @@ export interface Message {
  */
 export interface JobCodeContext {
   job_id: string;
-  attach_code?: boolean;
   attach_logs?: boolean;
   attach_io_data?: boolean;
   step_id?: string;
@@ -138,14 +138,24 @@ export type WorkflowTemplateContext =
       code?: string;
       errors?: string;
       content?: string;
+
+      // Carried on the channel join, which is how a session's first message
+      // reaches the server.
+      follow_run_id?: string;
+      attach_logs?: boolean;
+      attach_io_data?: boolean;
+      step_id?: string;
+      use_global_assistant?: boolean;
+      page?: string;
     }
   | {
       job_id: string;
-      attach_code?: boolean;
       attach_logs?: boolean;
       attach_io_data?: boolean;
       step_id?: string;
       follow_run_id?: string;
+      use_global_assistant?: boolean;
+      page?: string;
       content?: string;
 
       job_name?: string;
@@ -173,10 +183,7 @@ export interface Session {
  * Connection state for the Phoenix Channel
  */
 export type ConnectionState =
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'error';
+  'disconnected' | 'connecting' | 'connected' | 'error';
 
 /**
  * Tracks a workflow YAML that was applied to the canvas early, during
@@ -309,7 +316,11 @@ export interface AIAssistantStore {
   _clearSessionList: () => void;
   _prependSession: (session: SessionSummary) => void;
   _addMessage: (message: Message) => void;
-  _updateMessageStatus: (messageId: string, status: MessageStatus) => void;
+  _updateMessageStatus: (
+    messageId: string,
+    status: MessageStatus,
+    failureMessage?: string
+  ) => void;
   _setSessionList: (response: SessionListResponse) => void;
   _appendSessionList: (response: SessionListResponse) => void;
   _initializeContext: (
@@ -334,7 +345,6 @@ export interface AIAssistantStore {
  * Options for sending a message
  */
 export interface MessageOptions {
-  attach_code?: boolean;
   attach_logs?: boolean;
   attach_io_data?: boolean;
   step_id?: string;

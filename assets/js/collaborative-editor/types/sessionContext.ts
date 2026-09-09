@@ -124,7 +124,6 @@ export const SessionContextResponseSchema = z.object({
   webhook_auth_methods: z.array(WebhookAuthMethodSchema),
   workflow_template: WorkflowTemplateSchema.nullable(),
   suppress_enable_trigger_warning: z.boolean().optional().default(false),
-  experimental_features_enabled: z.boolean().optional().default(false),
   limits: LimitsSchema.optional(),
   workflow: BaseWorkflowSchema.optional(),
 });
@@ -148,7 +147,6 @@ export interface SessionContextState {
   versionsError: string | null;
   workflow_template: WorkflowTemplate | null;
   suppressEnableTriggerWarning: boolean;
-  experimentalFeaturesEnabled: boolean;
   limits: Limits;
   isNewWorkflow: boolean;
   isLoading: boolean;

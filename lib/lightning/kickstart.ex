@@ -655,7 +655,8 @@ defmodule Lightning.Kickstart do
           Repo.insert!(%ProjectCredential{
             id: stable_id("#{scope}/credential:#{name}"),
             project_id: project.id,
-            credential_id: credential.id
+            credential_id: credential.id,
+            credential_body_id: Lightning.Credentials.sole_body_id(credential.id)
           })
 
       {name, project_credential.id}

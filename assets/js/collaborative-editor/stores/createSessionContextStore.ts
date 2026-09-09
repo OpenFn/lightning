@@ -122,7 +122,6 @@ export const createSessionContextStore = (
       versionsError: null,
       workflow_template: null,
       suppressEnableTriggerWarning: false,
-      experimentalFeaturesEnabled: false,
       limits: {},
       isNewWorkflow,
       isLoading: false,
@@ -191,8 +190,6 @@ export const createSessionContextStore = (
         draft.workflow_template = sessionContext.workflow_template;
         draft.suppressEnableTriggerWarning =
           sessionContext.suppress_enable_trigger_warning;
-        draft.experimentalFeaturesEnabled =
-          sessionContext.experimental_features_enabled;
         draft.limits = sessionContext.limits;
         draft.isLoading = false;
         draft.error = null;

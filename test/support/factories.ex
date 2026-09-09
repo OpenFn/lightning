@@ -276,6 +276,50 @@ defmodule Lightning.Factories do
     }
   end
 
+  @doc """
+  Shares a credential with a project and grants it the given body.
+
+  A project reads a credential's values only through the grant on its share, so
+  a test that expects resolution to succeed has to say which values the project
+  was given. `create_credential/2` does this for a credential with a single
+  body; a test that assembles one by hand has to do it here.
+
+  Returns the credential with the body merged in, so it chains after `insert`.
+  """
+  def with_granted_body(credential, project, body_attrs \\ %{}) do
+    credential = with_body(credential, body_attrs)
+    body = List.last(credential.credential_bodies)
+
+    insert(:project_credential,
+      project: project,
+      credential: credential,
+      credential_body_id: body.id
+    )
+
+    credential
+  end
+
+  @doc """
+  Grants a project's existing share of a credential the body with this name.
+  """
+  def grant_body!(project, credential, body_name) do
+    body =
+      credential
+      |> Lightning.Repo.preload(:credential_bodies, force: true)
+      |> Map.fetch!(:credential_bodies)
+      |> Enum.find(&(&1.name == body_name))
+
+    Lightning.Projects.ProjectCredential
+    |> Lightning.Repo.get_by!(
+      project_id: project.id,
+      credential_id: credential.id
+    )
+    |> Ecto.Changeset.change(credential_body_id: body.id)
+    |> Lightning.Repo.update!()
+
+    credential
+  end
+
   def oauth_client_factory do
     %Lightning.Credentials.OauthClient{
       name: sequence(:oauth_client_name, &"oauth-client#{&1}"),

@@ -9,6 +9,15 @@ defmodule Lightning.Credentials.CredentialTest do
 
   setup :verify_on_exit!
 
+  # Reads a body by name. The application resolves by grant now, but these are
+  # about what is written to and read from the column.
+  defp body_named(credential, name) do
+    credential
+    |> Lightning.Repo.preload(:credential_bodies, force: true)
+    |> Map.fetch!(:credential_bodies)
+    |> Enum.find(&(&1.name == name))
+  end
+
   describe "changeset/2" do
     test "name and user_id can't be blank" do
       errors = Credential.changeset(%Credential{}, %{}) |> errors_on()
@@ -641,7 +650,7 @@ defmodule Lightning.Credentials.CredentialTest do
         })
 
       credential_body =
-        Lightning.Credentials.get_credential_body(credential.id, "main")
+        body_named(credential, "main")
 
       assert credential_body.body == body
 
@@ -667,7 +676,7 @@ defmodule Lightning.Credentials.CredentialTest do
         })
 
       reloaded_credential_body =
-        Lightning.Credentials.get_credential_body(credential.id, "production")
+        body_named(credential, "production")
 
       assert reloaded_credential_body.body == body
     end
@@ -694,10 +703,10 @@ defmodule Lightning.Credentials.CredentialTest do
       refute persisted_bodies["staging"] == Jason.encode!(staging_body)
 
       prod_loaded =
-        Lightning.Credentials.get_credential_body(credential.id, "production")
+        body_named(credential, "production")
 
       staging_loaded =
-        Lightning.Credentials.get_credential_body(credential.id, "staging")
+        body_named(credential, "staging")
 
       assert prod_loaded.body == prod_body
       assert staging_loaded.body == staging_body

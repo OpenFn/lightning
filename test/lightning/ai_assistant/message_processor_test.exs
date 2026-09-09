@@ -4,6 +4,7 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
   @moduletag :capture_log
 
   import Mox
+  import Ecto.Query
   import Lightning.Factories
 
   alias Lightning.AiAssistant
@@ -30,7 +31,9 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       case key do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
-        :timeout -> 5_000
+        :connect_timeout -> 1_000
+        :idle_timeout -> 5_000
+        :request_timeout -> 5_000
       end
     end)
 
@@ -331,6 +334,103 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert assistant_msg.content == "Global response"
       # Flat-string responses have no timeline
       assert assistant_msg.response_segments == []
+    end
+
+    # A raise on our side is the one failure whose text must not reach the
+    # panel: it carries module names, SQL detail and inspected payloads.
+    test "an exception mid-stream is recorded without its text", %{
+      user: user,
+      project: project
+    } do
+      session = insert(:chat_session, user: user, project: project)
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "help",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        raising =
+          Stream.map([:boom], fn _ ->
+            raise "postgrex disconnected on internal-host-7"
+          end)
+
+        {:ok, %Tesla.Env{status: 200, body: raising}}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      reloaded = Repo.get!(ChatMessage, user_message.id)
+
+      assert reloaded.status == :error
+      assert reloaded.failure_category == :internal
+
+      assert reloaded.failure_message ==
+               "Something went wrong. Please try again."
+
+      refute reloaded.failure_message =~ "internal-host-7"
+    end
+
+    # A retry writes only :pending, so the run that follows it has to be what
+    # clears the last attempt's failure. Otherwise a message that failed and
+    # then succeeded is broadcast as :success carrying the old reason.
+    test "a retry that succeeds leaves no failure behind", %{
+      user: user,
+      project: project
+    } do
+      workflow = insert(:workflow, project: project)
+
+      session =
+        insert(:chat_session,
+          user: user,
+          session_type: "workflow_template",
+          project: project,
+          workflow: workflow,
+          job_id: nil
+        )
+
+      {:ok, updated_session} =
+        AiAssistant.save_message(session, %{
+          role: :user,
+          content: "help",
+          user: user
+        })
+
+      user_message = Enum.find(updated_session.messages, &(&1.role == :user))
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, %Finch.TransportError{reason: :econnrefused}}
+      end)
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      failed = Repo.get!(ChatMessage, user_message.id)
+      assert failed.status == :error
+      assert failed.failure_category == :upstream_error
+      assert failed.failure_message
+
+      Mox.stub(
+        Lightning.Tesla.Mock,
+        :call,
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "here you go",
+          "usage" => %{}
+        })
+      )
+
+      assert :ok =
+               perform_job(MessageProcessor, %{"message_id" => user_message.id})
+
+      retried = Repo.get!(ChatMessage, user_message.id)
+      assert retried.status == :success
+      refute retried.failure_category
+      refute retried.failure_message
     end
 
     test "persists the segments timeline alongside the flat response",
@@ -852,7 +952,13 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
 
       insert(:run_step, run: run, step: step)
 
-      %{workflow: workflow, job: job, run: run, step: step}
+      %{
+        workflow: workflow,
+        job: job,
+        run: run,
+        step: step,
+        snapshot: snapshot
+      }
     end
 
     # A job_code session in `project` requesting IO attachment for `step_id`,
@@ -922,9 +1028,24 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
 
         assert [
                  %{"type" => "log", "content" => [line]},
-                 %{"type" => "input_dataclip", "content" => %{"a" => "number"}},
-                 %{"type" => "output_dataclip", "content" => %{"b" => "number"}}
+                 %{
+                   "type" => "input_dataclip",
+                   "content" => %{
+                     "step" => input_step,
+                     "data" => %{"a" => "number"}
+                   }
+                 },
+                 %{
+                   "type" => "output_dataclip",
+                   "content" => %{
+                     "step" => output_step,
+                     "data" => %{"b" => "number"}
+                   }
+                 }
                ] = Jason.decode!(env.body)["attachments"]
+
+        assert input_step == job.name
+        assert output_step == job.name
 
         assert line["message"] == "boom"
         assert line["level"] == "error"
@@ -958,17 +1079,100 @@ defmodule Lightning.AiAssistant.MessageProcessorTest do
       assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
     end
 
-    test "skips the I/O attachment when step_id is not a uuid", %{
+    test "sends the I/O of every step in the run, not just the selected one", %{
       user: user,
       project: project
     } do
-      # A step_id that cannot be cast used to raise Ecto.Query.CastError from
+      %{workflow: workflow, job: job, run: run, step: step, snapshot: snapshot} =
+        step_in_run(project)
+
+      other_job = insert(:job, workflow: workflow, name: "Second step")
+
+      other_step =
+        insert(:step,
+          job: other_job,
+          snapshot: snapshot,
+          input_dataclip: build(:dataclip, project: project, body: %{"c" => 3}),
+          output_dataclip: build(:dataclip, project: project, body: %{"d" => 4})
+        )
+
+      insert(:run_step, run: run, step: other_step)
+
+      # Highlighted, and not what decides the attachment.
+      message =
+        global_message(user, project, %{
+          "attach_io_data" => true,
+          "step_id" => step.id,
+          "follow_run_id" => run.id
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        attachments = Jason.decode!(env.body)["attachments"]
+
+        assert attachments |> Enum.map(& &1["content"]["step"]) |> Enum.uniq() ==
+                 [job.name, "Second step"]
+
+        assert Enum.map(attachments, & &1["content"]["data"]) == [
+                 %{"a" => "number"},
+                 %{"b" => "number"},
+                 %{"c" => "number"},
+                 %{"d" => "number"}
+               ]
+
+        global_reply().(env, opts)
+      end)
+
+      assert :ok = perform_job(MessageProcessor, %{"message_id" => message.id})
+    end
+
+    test "warns and sends nothing when the run's steps kept no data", %{
+      user: user,
+      project: project
+    } do
+      %{run: run, step: step} = step_in_run(project)
+
+      # The step exists, so the run resolves; it just has nothing to attach.
+      Lightning.Repo.update_all(
+        from(s in Lightning.Invocation.Step),
+        set: [input_dataclip_id: nil, output_dataclip_id: nil]
+      )
+
+      # A step_id is sent, so a step-scoped lookup would have had something to
+      # go on. What is missing is the data itself.
+      message =
+        global_message(user, project, %{
+          "attach_io_data" => true,
+          "step_id" => step.id,
+          "follow_run_id" => run.id
+        })
+
+      Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        global_reply().(env, opts)
+      end)
+
+      # The run resolves, so the warning cannot hang off that.
+      logs =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok =
+                   perform_job(MessageProcessor, %{"message_id" => message.id})
+        end)
+
+      assert logs =~ "the run's steps kept none"
+    end
+
+    test "skips the I/O attachment when the run id is not a uuid", %{
+      user: user,
+      project: project
+    } do
+      # A run id that cannot be cast used to raise Ecto.Query.CastError from
       # inside the Oban job, failing the whole message rather than dropping
       # the one attachment the user asked for.
       message =
         global_message(user, project, %{
           "attach_io_data" => true,
-          "step_id" => "not-a-uuid"
+          "step_id" => Ecto.UUID.generate(),
+          "follow_run_id" => "not-a-uuid"
         })
 
       Mox.expect(Lightning.Tesla.Mock, :call, fn env, opts ->

@@ -283,6 +283,16 @@ export class AIChannelRegistry {
     this.stopDraining();
   }
 
+  private finishDrainNow(): void {
+    this.streamingDrainPos = this.streamingBuffer.length;
+    this.flushDueStatusMarkers();
+    this.stopDraining();
+
+    const callback = this.streamingDrainCallback;
+    this.streamingDrainCallback = null;
+    if (callback) callback();
+  }
+
   /**
    * Subscribe to a channel topic
    *
@@ -445,7 +455,7 @@ export class AIChannelRegistry {
    *
    * @param topic - Channel topic
    * @param content - Message content
-   * @param options - Message options (attach_code, attach_logs, etc.)
+   * @param options - Message options (attach_logs, attach_io_data, etc.)
    */
   sendMessage(topic: string, content: string, options?: MessageOptions): void {
     const entry = this.channels.get(topic);
@@ -771,8 +781,20 @@ export class AIChannelRegistry {
       const typedPayload = payload as {
         message_id: string;
         status: MessageStatus;
+        failure_message?: string;
       };
-      this.store._updateMessageStatus(typedPayload.message_id, 'error');
+
+      // Get the saved partial into the store before the error clears the
+      // buffer it is queued behind. Only when something is actually waiting:
+      // message_error names any message, and the reaper reports on ones
+      // several exchanges back while a newer reply may still be streaming.
+      if (this.streamingDrainCallback) this.finishDrainNow();
+
+      this.store._updateMessageStatus(
+        typedPayload.message_id,
+        'error',
+        typedPayload.failure_message
+      );
       this.store._setProcessingState(false);
     };
 
@@ -1021,9 +1043,6 @@ export class AIChannelRegistry {
       // JobCodeContext
       params['job_id'] = context.job_id;
 
-      if (context.follow_run_id) {
-        params['follow_run_id'] = context.follow_run_id;
-      }
       if (context.job_name) {
         params['job_name'] = context.job_name;
       }
@@ -1041,18 +1060,6 @@ export class AIChannelRegistry {
       }
       if (context.content) {
         params['content'] = context.content;
-      }
-      if (context.attach_code) {
-        params['attach_code'] = true;
-      }
-      if (context.attach_logs) {
-        params['attach_logs'] = true;
-      }
-      if (context.attach_io_data) {
-        params['attach_io_data'] = true;
-      }
-      if (context.step_id) {
-        params['step_id'] = context.step_id;
       }
     } else {
       // WorkflowTemplateContext
@@ -1078,12 +1085,26 @@ export class AIChannelRegistry {
       params['code'] = context.code;
     }
 
+    // For both context shapes, for the same reason as `code` above.
+    if ('follow_run_id' in context && context.follow_run_id) {
+      params['follow_run_id'] = context.follow_run_id;
+    }
+    if ('attach_logs' in context && context.attach_logs) {
+      params['attach_logs'] = true;
+    }
+    if ('attach_io_data' in context && context.attach_io_data) {
+      params['attach_io_data'] = true;
+    }
+    if ('step_id' in context && context.step_id) {
+      params['step_id'] = context.step_id;
+    }
+
     // Global assistant flags (applicable to both session types)
     if ('use_global_assistant' in context && context.use_global_assistant) {
       params['use_global_assistant'] = true;
     }
     if ('page' in context && context.page) {
-      params['page'] = context.page as string;
+      params['page'] = context.page;
     }
 
     return params;

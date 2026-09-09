@@ -217,7 +217,7 @@ defmodule Lightning.ScrubberTest do
         ]
       }
 
-      basic_auth = Credentials.basic_auth_for(credential, "main")
+      basic_auth = Credentials.basic_auth_for(credential)
 
       assert samples = Scrubber.encode_samples(secrets, basic_auth)
 
@@ -245,6 +245,66 @@ defmodule Lightning.ScrubberTest do
   end
 
   describe "scrub_values/1" do
+    test "caps how many keys a wide map carries, since keys are not scrubbed" do
+      # A job that keys state by record identifier puts those identifiers in
+      # key position, where nothing replaces them.
+      wide = for i <- 1..500, into: %{}, do: {"patient-#{i}", "Jane Doe"}
+
+      scrubbed = Scrubber.scrub_values(wide)
+
+      assert map_size(scrubbed) < 500
+      assert scrubbed["..."] =~ "more keys"
+
+      assert Enum.all?(Map.delete(scrubbed, "..."), fn {_k, v} ->
+               v == "string"
+             end)
+    end
+
+    test "spends the key budget across the whole structure, not per map" do
+      # Fifty keys at each of three levels is 125,000 of them, so a per-map
+      # cap alone would let nesting carry out everything it stopped flat.
+      nested =
+        for i <- 1..50,
+            into: %{},
+            do:
+              {"month-#{i}",
+               for(
+                 j <- 1..50,
+                 into: %{},
+                 do: {"patient-#{i}-#{j}", %{"nin" => "123"}}
+               )}
+
+      scrubbed = Scrubber.scrub_values(nested)
+
+      keys =
+        scrubbed
+        |> Jason.encode!()
+        |> then(&Regex.scan(~r/patient-/, &1))
+        |> length()
+
+      assert keys < 600
+    end
+
+    test "truncates a key long enough to be a record in itself" do
+      long = String.duplicate("patient-jane-doe-1984-02-11-", 40)
+
+      assert %{} = scrubbed = Scrubber.scrub_values(%{long => 1})
+      [key] = Map.keys(scrubbed)
+
+      assert String.length(key) < String.length(long)
+      assert String.length(key) == 200
+    end
+
+    test "leaves an ordinary record's keys alone" do
+      record = %{"name" => "Jane", "age" => 30, "active" => true}
+
+      assert Scrubber.scrub_values(record) == %{
+               "name" => "string",
+               "age" => "number",
+               "active" => "boolean"
+             }
+    end
+
     test "scrubs primitive values" do
       assert Scrubber.scrub_values("hello") == "string"
       assert Scrubber.scrub_values(42) == "number"

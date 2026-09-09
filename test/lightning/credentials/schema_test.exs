@@ -186,6 +186,10 @@ defmodule Lightning.Credentials.SchemaTest do
                items: {:array, :string}
              }
 
+      # Not `log == ""`. with_log/1 captures everything logged in the window,
+      # including from async tests running alongside this one, so an unrelated
+      # warning elsewhere failed this. What matters is that these types were
+      # recognised, so assert on the message that would say otherwise.
       refute log =~ "Unknown JSON Schema type"
     end
 

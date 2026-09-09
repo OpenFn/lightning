@@ -357,7 +357,6 @@ describe.concurrent('SessionContextResponseSchema', () => {
       webhook_auth_methods: [],
       workflow_template: null,
       suppress_enable_trigger_warning: false,
-      experimental_features_enabled: false,
     };
 
     const result = SessionContextResponseSchema.safeParse(validResponse);

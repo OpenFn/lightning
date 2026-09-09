@@ -17,7 +17,6 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
-  alias Lightning.Projects.Environment
   alias Lightning.Projects.Events.ProjectDeletionScheduled
   alias Lightning.Projects.Events.ProjectUserAdded
   alias Lightning.Projects.Events.ProjectUserRemoved
@@ -183,22 +182,21 @@ defmodule LightningWeb.WorkflowChannel do
 
         job ->
           # The adaptor describes a real credential, so it has to be the body
-          # this project would actually run with. A sandbox with no environment
+          # this project was actually granted. A project with no grant for it
           # reports the error the same way a missing job does, rather than
           # raising inside the task.
           metadata =
-            with {:ok, environment} <-
-                   Environment.fetch(socket.assigns.project),
-                 {:ok, metadata} <-
-                   Lightning.MetadataService.fetch(
-                     job.adaptor,
-                     job.credential,
-                     environment
-                   ) do
-              metadata
-            else
+            case Lightning.MetadataService.fetch(
+                   job.adaptor,
+                   job.credential,
+                   job.project_credential &&
+                     job.project_credential.credential_body_id
+                 ) do
+              {:ok, metadata} -> metadata
               {:error, %{type: error_type}} -> %{error: error_type}
-              {:error, reason} -> %{error: to_string(reason)}
+              # The task worker refuses before MetadataService runs when it is
+              # at its process cap, so not every refusal is one it named.
+              {:error, reason} -> %{error: inspect(reason)}
             end
 
           %{job_id: job_id, metadata: metadata}
