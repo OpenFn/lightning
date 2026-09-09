@@ -74,6 +74,12 @@ defmodule LightningWeb.AiAssistantChannel do
       {:parse_topic, {:error, :invalid_topic}} ->
         {:error, %{reason: "invalid topic format"}}
 
+      # A changeset has no Jason encoder, so putting one in the reply kills the
+      # socket before anything is sent.
+      {:session, {:error, %Ecto.Changeset{} = changeset}} ->
+        errors = format_changeset_errors(changeset)
+        {:error, %{reason: validation_sentence(errors), errors: errors}}
+
       {:session, {:error, reason}} ->
         {:error, %{reason: reason}}
 
@@ -1087,7 +1093,8 @@ defmodule LightningWeb.AiAssistantChannel do
       user: format_user(message.user),
       job_id: job_id,
       from_global: from_global,
-      apply_failed: match?(%{"apply_failed" => true}, message.meta)
+      apply_failed: match?(%{"apply_failed" => true}, message.meta),
+      code_change_failed: match?(%{"code_change_failed" => true}, message.meta)
     }
     |> put_failure(message)
   end
@@ -1135,6 +1142,19 @@ defmodule LightningWeb.AiAssistantChannel do
       failure_category: to_string(message.failure_category),
       failure_message: message.failure_message
     })
+  end
+
+  # A join reply's `reason` is shown as it stands, unlike the `type`/`errors`
+  # pair the message handlers use, so it has to read as a sentence.
+  defp validation_sentence(errors) do
+    errors
+    |> Enum.flat_map(fn {field, messages} ->
+      Enum.map(messages, &"#{field} #{&1}")
+    end)
+    |> case do
+      [] -> "the session could not be started"
+      sentences -> Enum.join(sentences, ", ")
+    end
   end
 
   defp format_user(nil), do: nil

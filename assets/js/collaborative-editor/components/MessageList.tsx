@@ -1161,6 +1161,21 @@ export function MessageList({
         const promptCarriesNotice =
           message.status === 'error' && !failedPairs.claimed.has(message.id);
 
+        // Last message only: a retry appends a reply and leaves this one
+        // flagged for good, so anything looser leaves a live button behind.
+        const editedPrompt =
+          message.code_change_failed &&
+          displayMessages.at(-1)?.id === message.id
+            ? displayMessages.slice(0, index).findLast(m => m.role === 'user')
+            : undefined;
+
+        const retryEditedPrompt =
+          onRetryMessage && editedPrompt
+            ? () => {
+                onRetryMessage(editedPrompt.id);
+              }
+            : undefined;
+
         const showMessageAddButtons =
           !isStreaming(message) &&
           message.status !== 'error' &&
@@ -1377,6 +1392,17 @@ export function MessageList({
                         onRetry={retry}
                       />
                     )}
+
+                    {/* The reply itself succeeded; the edit inside it did not,
+                        so there is nothing to apply and nothing saying why. */}
+                    {!isStreaming(message) &&
+                      message.status !== 'error' &&
+                      message.code_change_failed && (
+                        <FailureNotice
+                          reason="I tried to update the code but couldn't apply the change."
+                          onRetry={retryEditedPrompt}
+                        />
+                      )}
 
                     {!isStreaming(message) &&
                       message.status === 'processing' && (
