@@ -15,6 +15,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- Safari: give workflow trigger icons explicit size so Heroicons fill their
+  node slot, and raise adaptor-docs COPY/ADD controls above the example block.
+  [#2960](https://github.com/OpenFn/lightning/issues/2960)
+
 ### Changed
 
 - The AI assistant is the global assistant for everyone. It was behind the
