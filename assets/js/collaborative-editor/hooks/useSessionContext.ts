@@ -232,6 +232,23 @@ export const useVersions = () => {
  * Hook to get versions loading state
  * Returns true when versions are being loaded
  */
+/**
+ * Whether the versions have been fetched, whatever came back. Callers use this
+ * rather than an empty list to decide whether to ask.
+ */
+export const useVersionsLoaded = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectVersionsLoaded = sessionContextStore.withSelector(
+    state => state.versionsLoaded
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectVersionsLoaded
+  );
+};
+
 export const useVersionsLoading = (): boolean => {
   const sessionContextStore = useSessionContextStore();
 

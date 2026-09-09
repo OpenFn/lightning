@@ -118,6 +118,7 @@ export const createSessionContextStore = (
       projectRepoConnection: null,
       webhookAuthMethods: [],
       versions: [],
+      versionsLoaded: false,
       versionsLoading: false,
       versionsError: null,
       workflow_template: null,
@@ -289,6 +290,7 @@ export const createSessionContextStore = (
       // Clear versions if lock version changed (not on initial set)
       if (previousLockVersion !== null && previousLockVersion !== lockVersion) {
         draft.versions = [];
+        draft.versionsLoaded = false;
       }
 
       draft.latestSnapshotLockVersion = lockVersion;
@@ -384,6 +386,7 @@ export const createSessionContextStore = (
       if (result.success) {
         state = produce(state, draft => {
           draft.versions = result.data;
+          draft.versionsLoaded = true;
           draft.versionsLoading = false;
           draft.versionsError = null;
         });
@@ -397,6 +400,7 @@ export const createSessionContextStore = (
 
         state = produce(state, draft => {
           draft.versionsError = errorMessage;
+          draft.versionsLoaded = true;
           draft.versionsLoading = false;
         });
         notify('requestVersions:error');
@@ -405,6 +409,7 @@ export const createSessionContextStore = (
       logger.error('Versions request failed', error);
       state = produce(state, draft => {
         draft.versionsError = 'Failed to load versions';
+        draft.versionsLoaded = true;
         draft.versionsLoading = false;
       });
       notify('requestVersions:error');
@@ -417,6 +422,7 @@ export const createSessionContextStore = (
   const clearVersions = () => {
     state = produce(state, draft => {
       draft.versions = [];
+      draft.versionsLoaded = false;
     });
     notify('clearVersions');
   };

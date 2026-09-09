@@ -143,6 +143,12 @@ export interface SessionContextState {
   projectRepoConnection: ProjectRepoConnection | null;
   webhookAuthMethods: WebhookAuthMethod[];
   versions: Version[];
+  /**
+   * Whether a versions request has completed, successfully or not. Separate
+   * from the list being empty: a workflow that has never been published has no
+   * versions, and reading "empty" as "not fetched yet" asks again forever.
+   */
+  versionsLoaded: boolean;
   versionsLoading: boolean;
   versionsError: string | null;
   workflow_template: WorkflowTemplate | null;

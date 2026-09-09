@@ -66,6 +66,7 @@ export const defaultSessionContextState: SessionContextState = {
   projectRepoConnection: null,
   webhookAuthMethods: [],
   versions: [],
+  versionsLoaded: false,
   versionsLoading: false,
   versionsError: null,
   workflow_template: null,

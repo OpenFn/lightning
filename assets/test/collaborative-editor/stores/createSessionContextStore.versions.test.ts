@@ -296,6 +296,42 @@ describe('createSessionContextStore - Version Management', () => {
       expect(state.versionsLoading).toBe(false);
       expect(state.versionsError).toBe(null);
 
+      // Nothing to show, but the question has been answered. Callers read this
+      // rather than the list's length, which cannot tell "never published"
+      // apart from "not asked yet".
+      expect(state.versionsLoaded).toBe(true);
+
+      cleanup();
+    });
+
+    test('records that it asked, even when the request fails', async () => {
+      const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
+
+      mockChannel.push = createMockChannelPushError({ reason: 'nope' });
+
+      await store.requestVersions();
+
+      const state = store.getSnapshot();
+      expect(state.versionsError).toBe('Failed to load versions');
+      expect(state.versionsLoaded).toBe(true);
+
+      cleanup();
+    });
+
+    test('forgets it asked when the versions are invalidated', async () => {
+      const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
+
+      mockChannel.push = createMockChannelPushOk({ versions: [] });
+      await store.requestVersions();
+      expect(store.getSnapshot().versionsLoaded).toBe(true);
+
+      // A save publishes a new version, so the answer is stale and the next
+      // caller has to ask again.
+      store.setLatestSnapshotLockVersion(1);
+      store.setLatestSnapshotLockVersion(2);
+
+      expect(store.getSnapshot().versionsLoaded).toBe(false);
+
       cleanup();
     });
   });

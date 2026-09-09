@@ -9,6 +9,7 @@ import {
   useRequestVersions,
   useVersions,
   useVersionsError,
+  useVersionsLoaded,
   useVersionsLoading,
 } from '../hooks/useSessionContext';
 import { notifications } from '../lib/notifications';
@@ -37,6 +38,7 @@ export function VersionDropdown({
 
   // Get versions state from SessionContextStore
   const versions = useVersions();
+  const isLoaded = useVersionsLoaded();
   const isLoading = useVersionsLoading();
   const versionsError = useVersionsError();
   const requestVersions = useRequestVersions();
@@ -97,12 +99,14 @@ export function VersionDropdown({
     }
   }, [isOpen]);
 
-  // Fetch versions when dropdown opens
+  // Fetch versions when the dropdown opens, once. Asking because the list is
+  // empty asks forever on a workflow that has never been published, since the
+  // answer to that question is an empty list.
   useEffect(() => {
-    if (isOpen && versions.length === 0 && !isLoading) {
+    if (isOpen && !isLoaded && !isLoading) {
       void requestVersions();
     }
-  }, [isOpen, versions.length, isLoading, requestVersions]);
+  }, [isOpen, isLoaded, isLoading, requestVersions]);
 
   // Show error notification when versionsError is set
   useEffect(() => {

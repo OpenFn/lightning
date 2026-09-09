@@ -26,6 +26,10 @@ import type { Version } from '../../../js/collaborative-editor/types/sessionCont
 
 // Mock the hooks
 const mockUseVersions = vi.spyOn(useSessionContextModule, 'useVersions');
+const mockUseVersionsLoaded = vi.spyOn(
+  useSessionContextModule,
+  'useVersionsLoaded'
+);
 const mockUseVersionsLoading = vi.spyOn(
   useSessionContextModule,
   'useVersionsLoading'
@@ -78,6 +82,7 @@ describe('VersionDropdown', () => {
 
     // Default mock implementations
     mockUseVersions.mockReturnValue([]);
+    mockUseVersionsLoaded.mockReturnValue(false);
     mockUseVersionsLoading.mockReturnValue(false);
     mockUseVersionsError.mockReturnValue(null);
     mockUseRequestVersions.mockReturnValue(mockRequestVersions);
@@ -294,6 +299,46 @@ describe('VersionDropdown', () => {
       expect(mockRequestVersions).toHaveBeenCalledOnce();
     });
 
+    test('asks once when the workflow has never been published', async () => {
+      const user = userEvent.setup();
+
+      let loaded = false;
+      let loading = false;
+      mockUseVersions.mockReturnValue([]);
+      mockUseVersionsLoaded.mockImplementation(() => loaded);
+      mockUseVersionsLoading.mockImplementation(() => loading);
+      mockRequestVersions.mockImplementation(() => {
+        loading = true;
+        return Promise.resolve();
+      });
+
+      const props = {
+        currentVersion: 5,
+        latestVersion: 5,
+        onVersionSelect: mockOnVersionSelect,
+      };
+
+      const { rerender } = render(<VersionDropdown {...props} />);
+
+      await user.click(screen.getByRole('button'));
+      expect(mockRequestVersions).toHaveBeenCalledOnce();
+
+      // The request is in flight.
+      rerender(<VersionDropdown {...props} />);
+
+      // It comes back with nothing, because this workflow has never been
+      // published. An empty list is the answer, not the absence of one:
+      // asking again because the list is empty asks again every time the
+      // in-flight flag drops, which never stopped and left the panel saying it
+      // was loading for good.
+      loading = false;
+      loaded = true;
+      rerender(<VersionDropdown {...props} />);
+
+      expect(mockRequestVersions).toHaveBeenCalledOnce();
+      expect(screen.getByText('No versions available')).toBeInTheDocument();
+    });
+
     test('does not refetch if versions already loaded', async () => {
       const user = userEvent.setup();
 
@@ -313,6 +358,7 @@ describe('VersionDropdown', () => {
       ];
 
       mockUseVersions.mockReturnValue(mockVersions);
+      mockUseVersionsLoaded.mockReturnValue(true);
       mockUseVersionsLoading.mockReturnValue(false);
 
       render(
