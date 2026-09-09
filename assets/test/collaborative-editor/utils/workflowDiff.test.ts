@@ -1093,6 +1093,38 @@ describe('deriveSnapshotChanges', () => {
     expect(rows.map(row => row.detail)).toEqual(['path removed']);
   });
 
+  it('pairs two id-less webhooks in document order, not in reverse', () => {
+    // Both sides are identical apart from a job body. Pairing the leftovers
+    // from the end crossed the two triggers and invented a path move on each.
+    const twoHooks = (body: string) => `id: wf-1
+name: Test Workflow
+jobs:
+  transform-data:
+    id: job-1
+    name: Transform data
+    adaptor: '@openfn/language-common@latest'
+    body: |
+      ${body}
+triggers:
+  hook-a:
+    type: webhook
+    enabled: true
+    custom_path: 'alpha'
+  hook-b:
+    type: webhook
+    enabled: true
+    custom_path: 'beta'
+edges: {}
+`;
+
+    const changes = deriveWorkflowChanges(
+      twoHooks('fn(s => s);'),
+      twoHooks('fn(s => ({ ...s }));')
+    )!;
+
+    expect(changes.structure.filter(row => row.kind === 'trigger')).toEqual([]);
+  });
+
   it('keeps two webhooks apart in the cache salt', () => {
     // buildYaml keys triggers by type, so this one is written out: the spec
     // allows any key, and two webhooks are what make a type-keyed salt

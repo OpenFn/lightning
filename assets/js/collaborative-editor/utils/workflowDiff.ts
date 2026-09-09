@@ -127,14 +127,19 @@ const matchEntities = <T extends { id: string }>(
   for (const pick of [(entity: T) => entity.id, fallbackKey] as Array<
     (entity: T) => string
   >) {
-    for (let i = remainingBefore.length - 1; i >= 0; i--) {
+    // Forward, so two entities sharing a fallback key pair in document order.
+    // Walking backwards paired them in reverse, which cancels out over a whole
+    // chain but crosses their fields when both sides state one.
+    for (let i = 0; i < remainingBefore.length; ) {
       const b = remainingBefore[i]!;
       const j = remainingAfter.findIndex(a => pick(a) === pick(b));
-      if (j !== -1) {
-        pairs.push([b, remainingAfter[j]!]);
-        remainingBefore.splice(i, 1);
-        remainingAfter.splice(j, 1);
+      if (j === -1) {
+        i++;
+        continue;
       }
+      pairs.push([b, remainingAfter[j]!]);
+      remainingBefore.splice(i, 1);
+      remainingAfter.splice(j, 1);
     }
   }
 
