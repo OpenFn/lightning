@@ -17,6 +17,10 @@ and this project adheres to
 
 ### Changed
 
+- The AI assistant's reply footer now reads "Revert changes" and "Restore
+  changes" rather than "Revert this reply", and its confirmation matches.
+  [#5161](https://github.com/OpenFn/lightning/pull/5161)
+
 - The AI assistant is the global assistant for everyone. It was behind the
   experimental features setting and an opt-in tickbox on the chat input, and
   both are gone: every message goes to it, and the badge naming which assistant
