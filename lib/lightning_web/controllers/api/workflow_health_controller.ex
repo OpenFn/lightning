@@ -27,10 +27,10 @@ defmodule LightningWeb.API.WorkflowHealthController do
     )
   end
 
-  def failure_signatures(conn, _params) do
+  def error_signatures(conn, _params) do
     json(
       conn,
-      Workflows.Stats.failure_signatures(
+      Workflows.Stats.error_signatures(
         conn.assigns.workflow,
         conn.assigns.days_back
       )

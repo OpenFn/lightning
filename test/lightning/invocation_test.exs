@@ -1030,16 +1030,16 @@ defmodule Lightning.InvocationTest do
     end
   end
 
-  # The triage row's "View" button: `filter_by_signature/2` inside
+  # The triage row's "View" button: `filter_by_error_signature/2` inside
   # `search_workorders_query/2`. Exercised through `search_workorders_for_export_query/2`
   # since it applies no destructive-action side filter of its own.
-  describe "filter_by_signature/2" do
+  describe "filter_by_error_signature/2" do
     defp signature_params(exit_reason, error_type, job_id) do
       SearchParams.new(%{
         "status" => SearchParams.status_list(),
-        "signature_exit_reason" => exit_reason,
-        "signature_error_type" => error_type,
-        "signature_job_id" => job_id
+        "error_signature_exit_reason" => exit_reason,
+        "error_signature_error_type" => error_type,
+        "error_signature_job_id" => job_id
       })
     end
 
@@ -1154,9 +1154,9 @@ defmodule Lightning.InvocationTest do
       params = SearchParams.new(%{"status" => SearchParams.status_list()})
 
       assert %{
-               signature_exit_reason: nil,
-               signature_error_type: nil,
-               signature_job_id: nil
+               error_signature_exit_reason: nil,
+               error_signature_error_type: nil,
+               error_signature_job_id: nil
              } = params
 
       found =

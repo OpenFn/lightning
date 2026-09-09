@@ -50,7 +50,7 @@ export interface Outcomes {
  * matching on the resolved name would need a snapshot lookup the filter
  * doesn't do.
  */
-export interface FailureSignature {
+export interface ErrorSignature {
   count: number;
   exit_reason: string;
   error_type: string | null;
@@ -60,7 +60,7 @@ export interface FailureSignature {
 }
 
 /** The `failures` response, heaviest signature first. */
-export interface FailureSignatures {
+export interface ErrorSignatures {
   window: { from: string; to: string };
-  signatures: FailureSignature[];
+  signatures: ErrorSignature[];
 }

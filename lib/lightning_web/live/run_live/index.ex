@@ -48,9 +48,9 @@ defmodule LightningWeb.RunLive.Index do
     rejected: :boolean,
     sort_by: :string,
     sort_direction: :string,
-    signature_exit_reason: :string,
-    signature_error_type: :string,
-    signature_job_id: :string
+    error_signature_exit_reason: :string,
+    error_signature_error_type: :string,
+    error_signature_job_id: :string
   }
 
   @empty_page %{
@@ -186,8 +186,8 @@ defmodule LightningWeb.RunLive.Index do
        page_title: "History",
        step: %Step{},
        filters_changeset: filters_changeset(filters),
-       signature_job_name:
-         Jobs.get_job_name(project.id, filters["signature_job_id"]),
+       error_signature_job_name:
+         Jobs.get_job_name(project.id, filters["error_signature_job_id"]),
        pagination_path: &pagination_path(socket, project, &1, filters),
        page: @empty_page,
        async_page: AsyncResult.loading()

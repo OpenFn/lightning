@@ -1,4 +1,4 @@
-import type { FailureSignature } from '../types';
+import type { ErrorSignature } from '../types';
 
 /**
  * Failed work orders grouped by error signature, heaviest first. Each row
@@ -6,7 +6,7 @@ import type { FailureSignature } from '../types';
  * existing "retry all" can act on the group. The signature grammar is:
  * `exitReason:errorType [@ stepName [adaptor]]` — the adaptor renders without
  * its version, since a merged row can span more than one (see `job_id` on
- * `FailureSignature`).
+ * `ErrorSignature`).
  */
 
 // One sentence per error type the worker can report, written to hold
@@ -60,7 +60,7 @@ const TIPS: Record<string, string> = {
 };
 
 interface TriageTableProps {
-  signatures: FailureSignature[];
+  signatures: ErrorSignature[];
   emptyMessage: string;
   projectId: string;
   workflowId: string;
@@ -175,7 +175,7 @@ const historyUrl = (
   projectId: string,
   workflowId: string,
   from: string,
-  signature: FailureSignature
+  signature: ErrorSignature
 ) => {
   const params = new URLSearchParams({
     'filters[workflow_id]': workflowId,
@@ -185,12 +185,12 @@ const historyUrl = (
   if (signature.exit_reason === 'rejected') {
     params.set('filters[rejected]', 'true');
   } else {
-    params.set('filters[signature_exit_reason]', signature.exit_reason);
+    params.set('filters[error_signature_exit_reason]', signature.exit_reason);
     if (signature.error_type) {
-      params.set('filters[signature_error_type]', signature.error_type);
+      params.set('filters[error_signature_error_type]', signature.error_type);
     }
     if (signature.job_id) {
-      params.set('filters[signature_job_id]', signature.job_id);
+      params.set('filters[error_signature_job_id]', signature.job_id);
     }
   }
 
@@ -199,7 +199,7 @@ const historyUrl = (
 
 // The parts are styled apart rather than concatenated server-side: the error
 // type is the bit worth scanning down the column for.
-const Signature = ({ signature }: { signature: FailureSignature }) => (
+const Signature = ({ signature }: { signature: ErrorSignature }) => (
   <p className="font-mono text-gray-900">
     <span className="text-gray-500">{signature.exit_reason}:</span>
     <span className="font-semibold">{errorTypeOf(signature)}</span>
@@ -228,8 +228,7 @@ const packageNameOf = (adaptor: string) => {
 // empty string. The signature still has to say something, and `default` is the
 // tip written for exactly that case — hence `||`, which catches '' as well as
 // null, where `??` would render a bare `fail:` and a tip with no sentence.
-const errorTypeOf = ({ error_type }: FailureSignature) =>
-  error_type || 'unknown';
+const errorTypeOf = ({ error_type }: ErrorSignature) => error_type || 'unknown';
 
-const tipFor = ({ error_type }: FailureSignature) =>
+const tipFor = ({ error_type }: ErrorSignature) =>
   (error_type && TIPS[error_type]) || TIPS['default'];

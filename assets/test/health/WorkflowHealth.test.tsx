@@ -18,7 +18,7 @@ const outcomes = {
   },
 };
 
-const failureSignatures = {
+const errorSignatures = {
   window: outcomes.window,
   signatures: [
     {
@@ -32,7 +32,7 @@ const failureSignatures = {
   ],
 };
 
-const both = { outcomes, failures: failureSignatures };
+const both = { outcomes, failures: errorSignatures };
 
 const ERROR = 'Could not load workflow stats. Refresh to try again.';
 
@@ -232,7 +232,7 @@ describe('WorkflowHealth', () => {
       window: { from: '2026-08-30T10:00:00Z', to: '2026-08-31T10:00:00Z' },
     };
 
-    mount({ outcomes: dayWide, failures: failureSignatures });
+    mount({ outcomes: dayWide, failures: errorSignatures });
 
     expect(
       await screen.findByText('Last 24 hours · 1,287 work orders')
@@ -260,7 +260,7 @@ describe('WorkflowHealth', () => {
     expect(screen.queryByText('cancelled')).not.toBeInTheDocument();
   });
 
-  test('lists the failure signatures in the triage table', async () => {
+  test('lists the error signatures in the triage table', async () => {
     mount(both);
 
     expect(
@@ -283,7 +283,7 @@ describe('WorkflowHealth', () => {
   });
 
   test('degrades both donuts when the outcomes request fails', async () => {
-    mount({ outcomes: 500, failures: failureSignatures });
+    mount({ outcomes: 500, failures: errorSignatures });
 
     // Both donuts read the same response, so both degrade.
     expect(await screen.findAllByText(ERROR)).toHaveLength(2);

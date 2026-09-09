@@ -972,7 +972,7 @@ defmodule LightningWeb.RunLive.IndexTest do
       assert render(chip) =~ "Work order:"
     end
 
-    test "signature filter chip appears when the signature filter is set", %{
+    test "error signature filter chip appears when the filter is set", %{
       conn: conn,
       project: project,
       jobs: [job | _]
@@ -982,22 +982,22 @@ defmodule LightningWeb.RunLive.IndexTest do
           conn,
           Routes.project_run_index_path(conn, :index, project.id,
             filters: %{
-              signature_exit_reason: "fail",
-              signature_error_type: "AdaptorError",
-              signature_job_id: job.id
+              error_signature_exit_reason: "fail",
+              error_signature_error_type: "AdaptorError",
+              error_signature_job_id: job.id
             }
           )
         )
 
-      assert has_element?(view, "#signature-filter-chip")
-      chip = element(view, "#signature-filter-chip")
+      assert has_element?(view, "#error-signature-filter-chip")
+      chip = element(view, "#error-signature-filter-chip")
 
       assert render(chip) =~ "fail:AdaptorError @ #{job.name}"
     end
 
     # The name is read back from the id, so the read is scoped to the project
     # the page is on — a hand-edited id from elsewhere names nothing here.
-    test "signature filter chip falls back to the id for a job outside the project",
+    test "error signature filter chip falls back to the id for a job outside the project",
          %{conn: conn, project: project} do
       other_job = insert(:job, workflow: build(:workflow))
 
@@ -1006,13 +1006,13 @@ defmodule LightningWeb.RunLive.IndexTest do
           conn,
           Routes.project_run_index_path(conn, :index, project.id,
             filters: %{
-              signature_exit_reason: "fail",
-              signature_job_id: other_job.id
+              error_signature_exit_reason: "fail",
+              error_signature_job_id: other_job.id
             }
           )
         )
 
-      chip = render(element(view, "#signature-filter-chip"))
+      chip = render(element(view, "#error-signature-filter-chip"))
 
       refute chip =~ other_job.name
 
@@ -1020,25 +1020,26 @@ defmodule LightningWeb.RunLive.IndexTest do
                LightningWeb.LiveHelpers.display_short_uuid(other_job.id)
     end
 
-    test "signature filter chip omits error type and job id when absent", %{
-      conn: conn,
-      project: project
-    } do
+    test "error signature filter chip omits error type and job id when absent",
+         %{
+           conn: conn,
+           project: project
+         } do
       {:ok, view, _html} =
         live_async(
           conn,
           Routes.project_run_index_path(conn, :index, project.id,
-            filters: %{signature_exit_reason: "lost"}
+            filters: %{error_signature_exit_reason: "lost"}
           )
         )
 
-      chip = element(view, "#signature-filter-chip")
+      chip = element(view, "#error-signature-filter-chip")
       html = render(chip)
       assert html =~ "lost"
       refute html =~ "@"
     end
 
-    test "signature filter chip is absent when the signature filter is not set",
+    test "error signature filter chip is absent when the filter is not set",
          %{conn: conn, project: project} do
       {:ok, view, _html} =
         live_async(
@@ -1046,7 +1047,7 @@ defmodule LightningWeb.RunLive.IndexTest do
           Routes.project_run_index_path(conn, :index, project.id)
         )
 
-      refute has_element?(view, "#signature-filter-chip")
+      refute has_element?(view, "#error-signature-filter-chip")
     end
   end
 

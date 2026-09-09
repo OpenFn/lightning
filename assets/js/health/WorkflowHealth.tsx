@@ -6,7 +6,7 @@ import { FailureBreakdownDonut } from './charts/FailureBreakdownDonut';
 import { OutcomesDonut } from './charts/OutcomesDonut';
 import { TriageTable } from './charts/TriageTable';
 import { DEFAULT_DAYS, RangePicker } from './RangePicker';
-import type { FailureSignatures, Outcomes } from './types';
+import type { ErrorSignatures, Outcomes } from './types';
 import { FAILURE_STATES } from './types';
 import type { Query } from './useHealthQuery';
 import { healthBase, useHealthQuery } from './useHealthQuery';
@@ -58,7 +58,7 @@ export const HealthContent = ({
   const base = healthBase(projectId, workflowId);
 
   const outcomes = useHealthQuery<Outcomes>(`${base}/outcomes?days=${days}`);
-  const signatures = useHealthQuery<FailureSignatures>(
+  const signatures = useHealthQuery<ErrorSignatures>(
     `${base}/failures?days=${days}`
   );
 

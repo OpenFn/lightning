@@ -78,7 +78,7 @@ defmodule Lightning.Workflows.Stats do
   sum past the failure total the outcomes donut draws, which is the trade: a
   second broken branch is its own thing to fix, not fallout from the first.
   """
-  def failure_signatures(
+  def error_signatures(
         %Workflow{id: workflow_id},
         days_back \\ @default_days_back
       )

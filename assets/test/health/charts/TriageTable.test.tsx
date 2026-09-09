@@ -2,11 +2,11 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
 import { TriageTable } from '#/health/charts/TriageTable';
-import type { FailureSignature } from '#/health/types';
+import type { ErrorSignature } from '#/health/types';
 
 const signature = (
-  overrides: Partial<FailureSignature> = {}
-): FailureSignature => ({
+  overrides: Partial<ErrorSignature> = {}
+): ErrorSignature => ({
   count: 62,
   exit_reason: 'fail',
   error_type: 'RuntimeError',
@@ -22,7 +22,7 @@ const rowText = (name: string | RegExp) =>
 
 // Every test renders the same workflow at the same window, since only the
 // signature varies between them.
-const table = (signatures: FailureSignature[], emptyMessage = 'No failures') =>
+const table = (signatures: ErrorSignature[], emptyMessage = 'No failures') =>
   render(
     <TriageTable
       signatures={signatures}
@@ -157,9 +157,9 @@ describe('TriageTable', () => {
         '/projects/proj-1/history' +
           '?filters%5Bworkflow_id%5D=wf-1' +
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
-          '&filters%5Bsignature_exit_reason%5D=fail' +
-          '&filters%5Bsignature_error_type%5D=RuntimeError' +
-          '&filters%5Bsignature_job_id%5D=a1b2c3d4-0000-0000-0000-000000000000'
+          '&filters%5Berror_signature_exit_reason%5D=fail' +
+          '&filters%5Berror_signature_error_type%5D=RuntimeError' +
+          '&filters%5Berror_signature_job_id%5D=a1b2c3d4-0000-0000-0000-000000000000'
       );
       // The health page is a dashboard people read row by row — the row they
       // came from has to still be there when they come back.
@@ -186,7 +186,7 @@ describe('TriageTable', () => {
         '/projects/proj-1/history' +
           '?filters%5Bworkflow_id%5D=wf-1' +
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
-          '&filters%5Bsignature_exit_reason%5D=crash'
+          '&filters%5Berror_signature_exit_reason%5D=crash'
       );
     });
 
@@ -212,7 +212,7 @@ describe('TriageTable', () => {
           '&filters%5Bdate_after%5D=2026-08-01T10%3A00%3A00Z' +
           '&filters%5Brejected%5D=true'
       );
-      expect(link.getAttribute('href')).not.toContain('signature_');
+      expect(link.getAttribute('href')).not.toContain('error_signature_');
     });
 
     // Nothing to filter history on without a resolved exit_reason.
