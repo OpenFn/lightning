@@ -178,7 +178,7 @@ config :lightning, :log_metadata, log_metadata
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
-  metadata: log_metadata
+  metadata: log_metadata ++ [:otel_span_id, :otel_trace_id]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
