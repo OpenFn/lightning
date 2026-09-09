@@ -127,9 +127,7 @@ const matchEntities = <T extends { id: string }>(
   for (const pick of [(entity: T) => entity.id, fallbackKey] as Array<
     (entity: T) => string
   >) {
-    // Forward, so two entities sharing a fallback key pair in document order.
-    // Walking backwards paired them in reverse, which cancels out over a whole
-    // chain but crosses their fields when both sides state one.
+    // Forward, or two entities sharing a fallback key pair in reverse.
     for (let i = 0; i < remainingBefore.length; ) {
       const b = remainingBefore[i]!;
       const j = remainingAfter.findIndex(a => pick(a) === pick(b));
@@ -356,17 +354,13 @@ const REPLY_LABEL: Record<WebhookReply, string> = {
   after_completion: 'On Complete',
 };
 
-// An absent reply means before_start, so normalise before comparing or a
-// trigger that only ever had the default reports a change it never made.
+// An absent reply is before_start, so normalise or the default reads as a change.
 const replyOf = (trigger: StateWebhookTrigger): WebhookReply =>
   trigger.webhook_reply ?? 'before_start';
 
-// `undefined` (the answer never mentioned a path) and `null` (the answer
-// cleared it) mean opposite things here: applying a workflow that omits the key
-// keeps whatever the trigger holds, so only an explicit value is a change.
-// Blank counts as cleared, which is how the server and the panel read it.
-// Only exactly blank: the panel rejects a whitespace path rather than
-// treating it as none, so calling it a removal here would disagree.
+// Absent and null mean opposite things: applying a workflow that omits the key
+// keeps the path the trigger holds, so only an explicit value is a change.
+// Exactly blank is a clear; the panel rejects whitespace rather than ignoring it.
 const pathOf = (trigger: StateWebhookTrigger): string | null | undefined => {
   if (trigger.custom_path === undefined) return undefined;
   return trigger.custom_path === null || trigger.custom_path === ''
@@ -374,17 +368,13 @@ const pathOf = (trigger: StateWebhookTrigger): string | null | undefined => {
     : trigger.custom_path;
 };
 
-// A path with surrounding space is one the server would refuse and the panel
-// shows no URL for, and it renders as an arrow pointing at nothing. Quoted, so
-// the row reads as a value rather than a truncated sentence.
+// Quoted, or a padded path renders as an arrow pointing at blank.
 const showPath = (path: string): string =>
   path.trim() === path ? path : `'${path}'`;
 
 const codeOf = (code: number | null | undefined): string =>
   code == null ? 'default' : String(code);
 
-// A webhook with nothing configured, so a trigger that has just appeared can
-// be diffed against it and read as having set what it carries.
 const bareWebhook = (trigger: { id: string }): StateWebhookTrigger => ({
   id: trigger.id,
   type: 'webhook',
@@ -401,8 +391,7 @@ const webhookDetails = (
 ): string[] => {
   const details: string[] = [];
 
-  // A path the before never stated is a trigger with no path, since the
-  // baseline we diff against writes the key whenever there is one.
+  // The baseline writes the key whenever there is one, so unstated means none.
   const beforePath = pathOf(before) ?? null;
   const afterPath = pathOf(after);
   if (afterPath !== undefined && afterPath !== beforePath) {
@@ -463,8 +452,7 @@ const deriveTriggerChanges = (
   const changes: StructuralChange[] = [];
 
   for (const trigger of added) {
-    // A new webhook mints a public URL, so say what it answers on rather than
-    // only that a trigger appeared.
+    // A new webhook mints a public URL, so name it.
     const details =
       trigger.type === 'webhook'
         ? webhookDetails(bareWebhook(trigger), trigger, true)
@@ -477,8 +465,6 @@ const deriveTriggerChanges = (
     });
   }
   for (const trigger of removed) {
-    // Retiring a webhook stops a public URL answering, so name it for the same
-    // reason a new one is named.
     const path =
       trigger.type === 'webhook' && trigger.custom_path
         ? showPath(trigger.custom_path)
@@ -509,9 +495,8 @@ const deriveTriggerChanges = (
       );
     }
     if (afterTrigger.type === 'webhook') {
-      // A cron trigger becoming a webhook mints a public URL, so report the
-      // settings rather than only the type change. Diffing against a bare
-      // webhook reads them all as newly set, which is what they are.
+      // Becoming a webhook mints a URL too, and against a bare one its
+      // settings read as newly set, which they are.
       const becameWebhook = beforeTrigger.type !== 'webhook';
       const baseline: StateWebhookTrigger = becameWebhook
         ? bareWebhook(beforeTrigger)
@@ -752,8 +737,7 @@ const cachedDiff = (
   // Keyed on short ids rather than the documents themselves. A workflow can
   // be hundreds of KB, and pairing two of them per entry meant this cache
   // retained more text than the parse cache it sits beside.
-  // Salted, because a carried webhook path is in neither document, so the pair
-  // alone no longer says what was compared.
+  // A carried path is in neither document, so the pair alone underspecifies it.
   const key = `${documentId(beforeYaml)}:${documentId(afterYaml)}:${salt}`;
   if (diffedPairs.has(key)) {
     const cached = diffedPairs.get(key) ?? null;
@@ -784,11 +768,7 @@ export const clearWorkflowDiffCaches = (): void => {
   documentIds.clear();
 };
 
-// Positional, not by id: a snapshot without ids is parsed with a fresh uuid
-// each time, which would change the salt on every re-parse and fill the pair
-// cache with entries nothing can reach. Position comes from the YAML mapping,
-// so it is stable, and unlike the type it stays distinct when a workflow holds
-// more than one webhook.
+// Positional: ids are invented per parse, and the type is shared by two webhooks.
 const heldPaths = (state: DiffState): string =>
   state.triggers
     .map((trigger, index) =>
@@ -800,21 +780,15 @@ const heldPaths = (state: DiffState): string =>
     .join(',');
 
 /**
- * `next`, with each webhook path the snapshot left unstated filled in from the
- * state before it.
+ * `next`, with each webhook path it left unstated filled in from `previous`.
  *
- * Applying a workflow that omits a webhook's path keeps the one the trigger
- * holds, so the document does not lose it. Carrying it forward keeps the next
- * snapshot diffed against what the document actually holds, or a later
- * snapshot that clears the path is compared against nothing and says nothing.
- *
- * Copies rather than mutates: these states are cached by the YAML that
- * produced them and are handed out again.
+ * The apply keeps an unstated path, so without this a later snapshot that
+ * clears a live one is compared against nothing and reports nothing. Copies
+ * rather than mutates: these states are cached and handed out again.
  */
 const carryWebhookPaths = (previous: DiffState, next: DiffState): DiffState => {
-  // Paired the way the diff pairs them. A snapshot that omits trigger ids is
-  // parsed with an invented uuid per trigger, so matching on the raw id would
-  // carry nothing on exactly the replies where Apollo drops them.
+  // Paired as the diff pairs them: Apollo drops trigger ids on some replies,
+  // and parsing invents one per trigger, so a raw id match would carry nothing.
   const { pairs } = matchEntities(
     previous.triggers,
     next.triggers,

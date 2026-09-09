@@ -466,8 +466,6 @@ describe('deriveWorkflowChanges', () => {
     });
 
     it('says nothing when the answer never mentions the path', () => {
-      // Applying a workflow that omits the key keeps the path the trigger
-      // holds, so claiming a removal here would be a lie about a live URL.
       const intake = webhookWorkflow({
         ...webhookTrigger,
         custom_path: 'intake-form',
@@ -972,8 +970,6 @@ describe('deriveSnapshotChanges', () => {
   });
 
   it('carries a webhook path a snapshot left unstated, so a later clear is reported', () => {
-    // Applying a snapshot that omits the path keeps it, so the document still
-    // holds one when the next snapshot clears it.
     const withPath = (path: string | null | undefined, body: string) =>
       buildYaml({
         jobs: [transformJob(body)],
