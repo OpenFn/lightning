@@ -703,16 +703,23 @@ defmodule Lightning.Accounts do
   @doc """
   Validates the changes for updating a user's email address.
 
-  This function ensures that:
+  By default this function ensures that:
   - The `email` and `current_password` fields are present.
   - The new email is in a valid format.
   - The new email is different from the current one.
   - The provided `current_password` matches the user's password.
 
+  Pass `validate_password: false` for live (`phx-change`) validation so only
+  the email is checked; password presence and correctness are still enforced
+  on submit (the default).
+
   ## Parameters
 
   - `user`: The `%User{}` struct representing the current user.
-  - `params`: A map of parameters containing the new email and current password.
+  - `params`: A map of parameters containing the new email and optionally
+    the current password.
+  - `opts`: Keyword options. `:validate_password` (default `true`) controls
+    whether `current_password` is required and verified.
 
   ## Returns
 
