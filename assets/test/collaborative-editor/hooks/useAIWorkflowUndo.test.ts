@@ -122,7 +122,7 @@ describe('useAIWorkflowUndo', () => {
 
     act(() => {
       result.current.requestUndoChanges(MESSAGE_ID, modelYaml, {
-        fromModel: true,
+        restoring: true,
       });
     });
 
@@ -160,6 +160,25 @@ describe('useAIWorkflowUndo', () => {
     await waitFor(() => {
       expect(importWorkflow).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('tells the confirmation which direction it is confirming', () => {
+    const { result } = setup({ hasChanged: true });
+
+    act(() => {
+      result.current.requestUndoChanges(MESSAGE_ID, BASELINE_YAML);
+    });
+    expect(result.current.isRestoring).toBe(false);
+
+    act(() => {
+      result.current.cancelUndoChanges();
+    });
+    act(() => {
+      result.current.requestUndoChanges(MESSAGE_ID, BASELINE_YAML, {
+        restoring: true,
+      });
+    });
+    expect(result.current.isRestoring).toBe(true);
   });
 
   it('drops the pending restore when the confirmation is cancelled', () => {
