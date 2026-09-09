@@ -67,6 +67,9 @@ export function useAIWorkflowUndo({
     yaml: string;
     restoring: boolean;
   } | null>(null);
+  // Held past close, because the dialog fades out over 200ms. Reading the
+  // direction off `pending` flipped its copy to the other one on the way out.
+  const [restoringPending, setRestoringPending] = useState(false);
 
   const { run: restore } = useActionLock(
     async (messageId: string, yaml: string, fromModel: boolean) => {
@@ -104,6 +107,7 @@ export function useAIWorkflowUndo({
   const requestUndoChanges = useCallback(
     (messageId: string, yaml: string, options?: { restoring?: boolean }) => {
       const restoring = options?.restoring ?? false;
+      setRestoringPending(restoring);
       if (appliedCanvas.hasChangedSinceApply()) {
         setPending({ messageId, yaml, restoring });
         return;
@@ -128,7 +132,7 @@ export function useAIWorkflowUndo({
     undoneMessageId,
     requestUndoChanges,
     isConfirmOpen: pending !== null,
-    isRestoring: pending?.restoring ?? false,
+    isRestoring: restoringPending,
     confirmUndoChanges,
     cancelUndoChanges,
   };

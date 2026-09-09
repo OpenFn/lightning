@@ -181,6 +181,27 @@ describe('useAIWorkflowUndo', () => {
     expect(result.current.isRestoring).toBe(true);
   });
 
+  it('keeps the direction while the confirmation fades out', () => {
+    // The dialog leaves over 200ms, so it is still on screen after a confirm.
+    // Reading the direction off the pending restore flipped its copy to the
+    // other one on the way out.
+    const { result } = setup({ hasChanged: true });
+
+    act(() => {
+      result.current.requestUndoChanges(MESSAGE_ID, BASELINE_YAML, {
+        restoring: true,
+      });
+    });
+    expect(result.current.isRestoring).toBe(true);
+
+    act(() => {
+      result.current.confirmUndoChanges();
+    });
+
+    expect(result.current.isConfirmOpen).toBe(false);
+    expect(result.current.isRestoring).toBe(true);
+  });
+
   it('drops the pending restore when the confirmation is cancelled', () => {
     const { result, importWorkflow } = setup({ hasChanged: true });
 
