@@ -55,6 +55,89 @@ defmodule Lightning.WorkflowsTest do
              |> Enum.any?(& &1.enabled)
     end
 
+    test "a lifecycle transition records no new version, because a promote could not carry it",
+         %{user: user} do
+      {:ok, draft} =
+        insert(:simple_workflow)
+        |> Workflows.update_triggers_enabled_state(false)
+        |> Ecto.Changeset.put_change(:state, :draft)
+        |> Workflows.save_workflow(user)
+
+      before = Lightning.WorkflowVersions.history_for(draft)
+
+      {:ok, live} = Workflows.go_live(draft, user)
+      {:ok, back} = Workflows.switch_to_draft(live, user)
+
+      # The trail answers "does one project hold content the other does not",
+      # and a merge carries neither the lifecycle state nor a trigger's enabled
+      # flag. Recording a hash here made a sandbox report changes it could not
+      # promote, forever, after being turned on and off again.
+      assert Lightning.WorkflowVersions.history_for(back) == before
+    end
+
+    test "turning a single trigger on records no version either", %{user: user} do
+      workflow = insert(:simple_workflow)
+      [trigger] = Repo.preload(workflow, :triggers).triggers
+
+      before = Lightning.WorkflowVersions.history_for(workflow)
+
+      {:ok, _} = Workflows.set_trigger_enabled(workflow, trigger.id, false, user)
+
+      # Same reason as the lifecycle transition: a merge does not carry a
+      # trigger's enabled flag, so there is nothing here to promote.
+      assert Lightning.WorkflowVersions.history_for(workflow) == before
+    end
+
+    test "a trigger change beyond enabled in the same save does record", %{
+      user: user
+    } do
+      workflow = insert(:simple_workflow)
+      before = Lightning.WorkflowVersions.history_for(workflow)
+
+      [trigger] = Repo.preload(workflow, :triggers).triggers
+
+      {:ok, updated} =
+        workflow
+        |> Workflows.change_workflow(%{
+          triggers: [
+            %{
+              id: trigger.id,
+              type: :cron,
+              cron_expression: "0 * * * *",
+              enabled: true
+            }
+          ]
+        })
+        |> Ecto.Changeset.put_change(:state, :live)
+        |> Workflows.save_workflow(user)
+
+      assert Repo.reload!(trigger).cron_expression == "0 * * * *"
+
+      # A merge does carry a trigger's type and cron expression.
+      refute Lightning.WorkflowVersions.history_for(updated) == before
+    end
+
+    test "a content change in the same save still records a version", %{
+      user: user
+    } do
+      {:ok, draft} =
+        insert(:simple_workflow)
+        |> Workflows.update_triggers_enabled_state(false)
+        |> Ecto.Changeset.put_change(:state, :draft)
+        |> Workflows.save_workflow(user)
+
+      before = Lightning.WorkflowVersions.history_for(draft)
+
+      {:ok, renamed} =
+        draft
+        |> Workflows.change_workflow(%{name: "renamed while going live"})
+        |> Workflows.update_triggers_enabled_state(true)
+        |> Ecto.Changeset.put_change(:state, :live)
+        |> Workflows.save_workflow(user)
+
+      refute Lightning.WorkflowVersions.history_for(renamed) == before
+    end
+
     test "go_live records a v1 go-live release authored by the actor, pointing at the captured snapshot",
          %{user: user} do
       {:ok, live} = Workflows.go_live(insert(:simple_workflow), user)

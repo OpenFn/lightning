@@ -38,6 +38,7 @@ import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
 import { AlertDialog } from './AlertDialog';
 import { Breadcrumbs } from './Breadcrumbs';
+import { Button } from './Button';
 import { EditInSandboxPicker } from './EditInSandboxPicker';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
@@ -84,21 +85,17 @@ export function SaveButton({
             }
             side="bottom"
           >
-            <button
-              type="button"
-              data-testid="save-workflow-button"
-              className="rounded-md text-sm font-semibold shadow-xs
-            phx-submit-loading:opacity-75 cursor-pointer
-            disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
-            bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-300 text-white
-            focus-visible:outline-2 focus-visible:outline-offset-2
-            focus-visible:outline-primary-600 focus:ring-transparent"
-              onClick={onClick}
-              disabled={!canSave}
-            >
-              {label}
-            </button>
+            <span className="inline-block">
+              <Button
+                data-testid="save-workflow-button"
+                className="phx-submit-loading:opacity-75 cursor-pointer
+                  focus:ring-transparent"
+                onClick={onClick}
+                disabled={!canSave}
+              >
+                {label}
+              </Button>
+            </span>
           </Tooltip>
         </div>
         {hasChanges ? (
@@ -120,21 +117,17 @@ export function SaveButton({
           }
           side="bottom"
         >
-          <button
-            type="button"
-            data-testid="save-workflow-button"
-            className="rounded-l-md text-sm font-semibold shadow-xs
-            phx-submit-loading:opacity-75 cursor-pointer
-            disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
-            bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-300 text-white
-            focus-visible:outline-2 focus-visible:outline-offset-2
-            focus-visible:outline-primary-600 focus:ring-transparent"
-            onClick={onClick}
-            disabled={!canSave}
-          >
-            {label}
-          </button>
+          <span className="inline-block">
+            <Button
+              data-testid="save-workflow-button"
+              className="rounded-r-none phx-submit-loading:opacity-75
+                cursor-pointer focus:ring-transparent"
+              onClick={onClick}
+              disabled={!canSave}
+            >
+              {label}
+            </Button>
+          </span>
         </Tooltip>
         <Menu as="div" className="relative -ml-px block">
           <MenuButton
@@ -195,6 +188,20 @@ export function SaveButton({
   );
 }
 SaveButton.displayName = 'SaveButton';
+
+// Turn a refused lifecycle transition into something actionable. The activation
+// limit, a permission change and a deleted workflow all reply with real text;
+// only a genuinely unexpected failure earns "try again".
+function describeLifecycleError(error: unknown): string {
+  if (isChannelRequestError(error)) {
+    return formatChannelErrorMessage({
+      errors: error.errors as { base?: string[] } & Record<string, string[]>,
+      type: error.type,
+    });
+  }
+
+  return error instanceof Error ? error.message : 'Please try again.';
+}
 
 export function Header({
   children,
@@ -634,56 +641,99 @@ export function Header({
                     }
                     side="bottom"
                   >
-                    <button
-                      type="button"
-                      data-testid="go-live-button"
-                      disabled={isReadOnly || isTransitioning}
-                      onClick={() => {
-                        setIsTransitioning(true);
-                        void goLive()
-                          .catch(() =>
-                            notifications.alert({
-                              title: 'Could not go live',
-                              description: 'Please try again.',
-                            })
-                          )
-                          .finally(() => {
-                            setIsTransitioning(false);
-                          });
-                      }}
-                      className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
-                    >
-                      Go live
-                    </button>
+                    <span className="inline-block">
+                      <Button
+                        data-testid="go-live-button"
+                        className="inline-flex items-center"
+                        disabled={isReadOnly || isTransitioning}
+                        onClick={() => {
+                          setIsTransitioning(true);
+                          void goLive()
+                            .catch(() =>
+                              notifications.alert({
+                                title: 'Could not go live',
+                                description: 'Please try again.',
+                              })
+                            )
+                            .finally(() => {
+                              setIsTransitioning(false);
+                            });
+                        }}
+                      >
+                        Go live
+                      </Button>
+                    </span>
                   </Tooltip>
                 )}
               {!isNewWorkflow &&
                 !isSandbox &&
                 !isViewingNonCurrentVersion &&
                 lifecycleState === 'live' && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     data-testid="switch-to-draft-button"
+                    className="inline-flex items-center hover:bg-gray-50
+                      disabled:hover:inset-ring-gray-300"
                     disabled={isTransitioning}
                     onClick={() => {
                       setShowSwitchToDraftDialog(true);
                     }}
-                    className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-gray-50"
                   >
                     Switch to draft
-                  </button>
+                  </Button>
                 )}
               {!isNewWorkflow && isSandbox && !isViewingNonCurrentVersion && (
-                <button
-                  type="button"
+                <Tooltip
+                  content={
+                    lifecycleState === 'live'
+                      ? 'Turn the sandbox off and its triggers stop answering.'
+                      : "Turn the sandbox on and its own webhook URL answers, and its cron triggers fire. The parent's live workflow is untouched."
+                  }
+                  side="bottom"
+                >
+                  <span className="inline-block">
+                    <Button
+                      variant="secondary"
+                      data-testid="toggle-sandbox-button"
+                      className="inline-flex items-center hover:bg-gray-50
+                        disabled:hover:inset-ring-gray-300"
+                      disabled={isReadOnly || isTransitioning}
+                      onClick={() => {
+                        const turningOn = lifecycleState !== 'live';
+                        setIsTransitioning(true);
+                        void (turningOn ? goLive() : switchToDraft())
+                          .catch((error: unknown) => {
+                            // The refusals this button can hit all carry
+                            // actionable text: the activation limit, a
+                            // permission change, a deleted workflow. "Try
+                            // again" would be wrong for every one of them.
+                            notifications.alert({
+                              title: turningOn
+                                ? 'Could not turn the sandbox on'
+                                : 'Could not turn the sandbox off',
+                              description: describeLifecycleError(error),
+                            });
+                          })
+                          .finally(() => {
+                            setIsTransitioning(false);
+                          });
+                      }}
+                    >
+                      {lifecycleState === 'live' ? 'Turn off' : 'Turn on'}
+                    </Button>
+                  </span>
+                </Tooltip>
+              )}
+              {!isNewWorkflow && isSandbox && !isViewingNonCurrentVersion && (
+                <Button
                   data-testid="promote-sandbox-button"
+                  className="inline-flex items-center gap-1"
                   onClick={() => {
                     setShowPromoteDialog(true);
                   }}
-                  className="inline-flex items-center gap-1 rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300"
                 >
                   Promote
-                </button>
+                </Button>
               )}
               {lifecycleState === 'live' &&
                 !isSandbox &&
@@ -697,18 +747,19 @@ export function Header({
                     }
                     side="bottom"
                   >
-                    <button
-                      type="button"
-                      data-testid="edit-in-sandbox-button"
-                      disabled={!canProvisionSandbox}
-                      onClick={() => {
-                        if (!canProvisionSandbox) return;
-                        setShowEditInSandboxPicker(true);
-                      }}
-                      className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-primary-300 disabled:hover:bg-primary-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-                    >
-                      Edit in sandbox
-                    </button>
+                    <span className="inline-block">
+                      <Button
+                        data-testid="edit-in-sandbox-button"
+                        className="inline-flex items-center"
+                        disabled={!canProvisionSandbox}
+                        onClick={() => {
+                          if (!canProvisionSandbox) return;
+                          setShowEditInSandboxPicker(true);
+                        }}
+                      >
+                        Edit in sandbox
+                      </Button>
+                    </span>
                   </Tooltip>
                 )}
               {projectId && workflowId && firstTriggerId && !isReadOnly && (

@@ -15,6 +15,19 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- A sandbox can be turned on and off from the editor. A clone arrives as a draft
+  with its triggers off, and until now nothing could turn them back on, so a
+  sandbox could not receive a real webhook call or fire a schedule.
+  [#5130](https://github.com/OpenFn/lightning/issues/5130)
+
+- The Edit-in-sandbox dialog says when creating a sandbox is not available, in
+  the plan's own words, whether that is the plan not including sandboxes or the
+  project being at its cap. Joining an existing sandbox is unaffected, because
+  neither gate applies to it.
+  [#4920](https://github.com/OpenFn/lightning/issues/4920)
+
 ### Fixed
 
 - Leaving for a sandbox no longer reloads the browser. The editor asks the
@@ -29,6 +42,12 @@ and this project adheres to
   collaborative document and took uncommitted edits with it, silently. Each now
   offers to save first, and closing the tab warns.
   [#5134](https://github.com/OpenFn/lightning/issues/5134)
+
+- A lifecycle transition no longer writes a workflow version. The version trail
+  answers whether one project holds content another does not, and a merge
+  carries neither the lifecycle state nor a trigger's enabled flag, so recording
+  a hash for those made a sandbox report changes it could not promote.
+  [#5130](https://github.com/OpenFn/lightning/issues/5130)
 
 ### Changed
 
@@ -88,6 +107,11 @@ and this project adheres to
   typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
 
 ### Fixed
+
+- A lifecycle transition no longer writes a workflow version. The version trail
+  answers whether one project holds content another does not, and a merge
+  carries neither the lifecycle state nor a trigger's enabled flag, so recording
+  a hash for those made a sandbox report changes it could not promote.
 
 - Opening the merge dialog, and deleting a sandbox, no longer crash in a
   workspace with a branch more than two levels below the project you are in.

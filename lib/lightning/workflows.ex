@@ -342,11 +342,37 @@ defmodule Lightning.Workflows do
     end)
     |> maybe_capture_snapshot(changeset)
     |> maybe_audit_workflow_state_changes(changeset)
-    |> Multi.run(:workflow_version, fn _repo, %{workflow: workflow} ->
-      hash = WorkflowVersions.generate_hash(workflow)
-      WorkflowVersions.record_version(workflow, hash)
-    end)
+    |> maybe_record_version(changeset)
     |> maybe_record_go_live_release(opts)
+  end
+
+  # The version trail exists so two projects can tell whether one holds content
+  # the other does not. A merge decides what "content" means, and it never
+  # carries a trigger's enabled flag or a workflow's lifecycle state. So a save
+  # that changes only those has nothing a promote could carry, and recording a
+  # hash for it makes a sandbox report changes it cannot promote.
+  defp maybe_record_version(multi, changeset) do
+    if unmergeable_change_only?(changeset) do
+      Multi.put(multi, :workflow_version, nil)
+    else
+      Multi.run(multi, :workflow_version, fn _repo, %{workflow: workflow} ->
+        hash = WorkflowVersions.generate_hash(workflow)
+        WorkflowVersions.record_version(workflow, hash)
+      end)
+    end
+  end
+
+  # `:lock_version` and `:snapshot` ride along on every save and say nothing
+  # about content. Anything else, on the workflow or on a trigger, does.
+  @unmergeable_workflow_changes [:state, :triggers, :lock_version, :snapshot]
+
+  defp unmergeable_change_only?(%Ecto.Changeset{changes: changes}) do
+    changes |> Map.keys() |> Enum.all?(&(&1 in @unmergeable_workflow_changes)) and
+      changes |> Map.get(:triggers, []) |> Enum.all?(&enabled_only_change?/1)
+  end
+
+  defp enabled_only_change?(%Ecto.Changeset{changes: changes}) do
+    changes |> Map.keys() |> Enum.all?(&(&1 == :enabled))
   end
 
   # Records a go-live release in the same transaction as the snapshot, when the

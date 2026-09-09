@@ -63,7 +63,14 @@ vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
-  useSession: () => ({ isSynced: true }),
+  useSession: () => ({ provider: { id: 'provider-1' }, isSynced: true }),
+}));
+
+// Creating a sandbox is gated by the plan and by nesting depth; joining is not.
+let limits: Record<string, { allowed: boolean; message: string | null }> = {};
+
+vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useLimits: () => limits,
 }));
 
 const notifyAlert =
@@ -135,12 +142,13 @@ describe('EditInSandboxPicker', () => {
     listSandboxes.mockReset();
     editInSandbox.mockReset();
     notifyAlert.mockReset();
+    limits = {};
+    listSandboxes.mockResolvedValue([]);
     saveWorkflow.mockReset();
     saveWorkflow.mockResolvedValue(undefined);
     hasChanges = false;
     resetUnloadWarning();
     redirect.mockReset();
-    listSandboxes.mockResolvedValue([]);
   });
 
   test('renders the create option and fetches sandboxes on open', async () => {
@@ -150,7 +158,7 @@ describe('EditInSandboxPicker', () => {
 
     expect(screen.getByText('Create a new sandbox')).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText('e.g. Test new changes')
+      screen.getByPlaceholderText('What are you trying out?')
     ).toBeInTheDocument();
     expect(screen.getByTestId('create-sandbox-button')).toBeInTheDocument();
 
@@ -328,7 +336,7 @@ describe('EditInSandboxPicker', () => {
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     const button = screen.getByTestId('create-sandbox-button');
-    const input = screen.getByPlaceholderText('e.g. Test new changes');
+    const input = screen.getByPlaceholderText('What are you trying out?');
 
     // Blank -> disabled.
     expect(button).toBeDisabled();
@@ -360,7 +368,7 @@ describe('EditInSandboxPicker', () => {
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
       await user.type(
-        screen.getByPlaceholderText('e.g. Test new changes'),
+        screen.getByPlaceholderText('What are you trying out?'),
         'My SB'
       );
       await user.click(screen.getByTestId('create-sandbox-button'));
@@ -403,7 +411,7 @@ describe('EditInSandboxPicker', () => {
 
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-    const input = screen.getByPlaceholderText('e.g. Test new changes');
+    const input = screen.getByPlaceholderText('What are you trying out?');
     await user.type(input, 'My SB');
     await user.click(screen.getByTestId('create-sandbox-button'));
 
@@ -453,7 +461,7 @@ describe('EditInSandboxPicker', () => {
 
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-    const input = screen.getByPlaceholderText('e.g. Test new changes');
+    const input = screen.getByPlaceholderText('What are you trying out?');
     await user.type(input, 'My SB');
     await user.click(screen.getByTestId('create-sandbox-button'));
 
@@ -482,7 +490,7 @@ describe('EditInSandboxPicker', () => {
 
       // Focus the input and press Enter; no click on "Create sandbox".
       await user.type(
-        screen.getByPlaceholderText('e.g. Test new changes'),
+        screen.getByPlaceholderText('What are you trying out?'),
         'My SB{Enter}'
       );
 
@@ -505,7 +513,7 @@ describe('EditInSandboxPicker', () => {
 
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-    const input = screen.getByPlaceholderText('e.g. Test new changes');
+    const input = screen.getByPlaceholderText('What are you trying out?');
     input.focus();
     await user.keyboard('{Enter}');
 
@@ -521,7 +529,7 @@ describe('EditInSandboxPicker', () => {
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
     await user.type(
-      screen.getByPlaceholderText('e.g. Test new changes'),
+      screen.getByPlaceholderText('What are you trying out?'),
       'My SB'
     );
     await user.click(screen.getByTestId('create-sandbox-button'));
@@ -531,7 +539,9 @@ describe('EditInSandboxPicker', () => {
       expect(button).toHaveTextContent('Creating...');
     });
     expect(button).toBeDisabled();
-    expect(screen.getByPlaceholderText('e.g. Test new changes')).toBeDisabled();
+    expect(
+      screen.getByPlaceholderText('What are you trying out?')
+    ).toBeDisabled();
   });
 
   test('forwards the trimmed name to the create action', async () => {
@@ -548,7 +558,7 @@ describe('EditInSandboxPicker', () => {
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
       await user.type(
-        screen.getByPlaceholderText('e.g. Test new changes'),
+        screen.getByPlaceholderText('What are you trying out?'),
         '  My SB  '
       );
       await user.click(screen.getByTestId('create-sandbox-button'));
@@ -598,6 +608,102 @@ describe('EditInSandboxPicker', () => {
     await user.keyboard('{Escape}');
 
     expect(onClose).toHaveBeenCalled();
+  });
+  describe('when creating a sandbox is not allowed', () => {
+    test('locks Create and says why, in the limiter’s own words', async () => {
+      limits = {
+        new_sandbox: {
+          allowed: false,
+          message: 'Sandboxes are on the Pro plan. Upgrade to unlock them.',
+        },
+      };
+      const user = userEvent.setup();
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      const button = screen.getByTestId('create-sandbox-button');
+      expect(button).toBeDisabled();
+      expect(screen.getByTestId('create-sandbox-lock')).toBeInTheDocument();
+
+      await user.hover(button.parentElement as Element);
+      // Radix renders the content and an aria-live copy of it.
+      expect(
+        await screen.findAllByText(
+          'Sandboxes are on the Pro plan. Upgrade to unlock them.'
+        )
+      ).not.toHaveLength(0);
+    });
+
+    test('typing a name does not unlock it', async () => {
+      limits = {
+        new_sandbox: { allowed: false, message: 'Upgrade to unlock sandboxes' },
+      };
+      const user = userEvent.setup();
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      await user.type(
+        screen.getByPlaceholderText('What are you trying out?'),
+        'Trying something'
+      );
+
+      expect(screen.getByTestId('create-sandbox-button')).toBeDisabled();
+      expect(editInSandbox).not.toHaveBeenCalled();
+    });
+
+    test('joining an existing sandbox still works', async () => {
+      // The limit gates creation only. At a sandbox cap the project has
+      // sandboxes by definition, and they have to stay reachable.
+      limits = {
+        new_sandbox: { allowed: false, message: 'Sandbox limit reached' },
+      };
+      listSandboxes.mockResolvedValue(sandboxes);
+      const nav = stubNavigation();
+      const user = userEvent.setup();
+
+      try {
+        renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+        await user.click(
+          (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
+        );
+
+        expect(nav.hrefSetter).toHaveBeenCalledWith(
+          '/projects/sandbox-a/w/wf-clone-a'
+        );
+      } finally {
+        nav.restore();
+      }
+    });
+
+    test('Create is unlocked when the limit allows it', async () => {
+      limits = { new_sandbox: { allowed: true, message: null } };
+      const user = userEvent.setup();
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      await user.type(
+        screen.getByPlaceholderText('What are you trying out?'),
+        'Trying something'
+      );
+
+      const button = screen.getByTestId('create-sandbox-button');
+      expect(button).toBeEnabled();
+      expect(
+        screen.queryByTestId('create-sandbox-lock')
+      ).not.toBeInTheDocument();
+      expect(button.parentElement).not.toHaveAttribute('data-state');
+    });
+
+    test('Enter in the name field does not get past the lock', async () => {
+      limits = {
+        new_sandbox: { allowed: false, message: 'Upgrade to unlock sandboxes' },
+      };
+      const user = userEvent.setup();
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      const input = screen.getByPlaceholderText('What are you trying out?');
+      await user.type(input, 'Trying something');
+      await user.type(input, '{Enter}');
+
+      expect(editInSandbox).not.toHaveBeenCalled();
+    });
   });
   describe('leaving with unsaved changes', () => {
     test('asks before joining a sandbox, and navigates nowhere yet', async () => {
@@ -713,7 +819,7 @@ describe('EditInSandboxPicker', () => {
       try {
         renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
         await user.type(
-          screen.getByPlaceholderText('e.g. Test new changes'),
+          screen.getByPlaceholderText('What are you trying out?'),
           'Trying something'
         );
         await user.click(screen.getByTestId('create-sandbox-button'));

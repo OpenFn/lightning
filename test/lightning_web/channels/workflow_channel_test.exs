@@ -5553,9 +5553,36 @@ defmodule LightningWeb.WorkflowChannelTest do
                limits: %{
                  runs: %{allowed: true, message: nil},
                  workflow_activation: %{allowed: true, message: nil},
-                 github_sync: %{allowed: true, message: nil}
+                 github_sync: %{allowed: true, message: nil},
+                 new_sandbox: %{allowed: true, message: nil}
                }
              } = response
+    end
+
+    test "reports the plan's sandbox upsell when sandboxes are not available", %{
+      socket: socket,
+      project: %{id: project_id}
+    } do
+      upsell = "Upgrade to unlock sandboxes"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :new_sandbox}, %{project_id: ^project_id} ->
+            {:error, :exceeds_limit, %Lightning.Extensions.Message{text: upsell}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      assert %{limits: %{new_sandbox: %{allowed: false, message: ^upsell}}} =
+               response
     end
 
     test "includes limit error when run limit exceeded", %{
