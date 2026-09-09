@@ -541,6 +541,44 @@ defmodule Lightning.Workflows.StatsTest do
       assert %{signatures: []} = Stats.failure_signatures(workflow)
     end
 
+    # Both render as `unknown`, so ungrouped the table drew two rows under one
+    # React key.
+    test "groups an empty error type with a missing one", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      job = hd(workflow.jobs)
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: "")
+      ])
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: nil)
+      ])
+
+      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+      assert %{count: 2, error_type: nil} = signature
+    end
+
+    # `""` is truthy, so it won the `||` in `to_signature/2`.
+    test "does not let an empty step error type mask the run's", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      job = hd(workflow.jobs)
+
+      failed_run(
+        workflow,
+        trigger,
+        [state: :lost, error_type: "LostAfterStart"],
+        [step(job, exit_reason: "lost", error_type: "")]
+      )
+
+      assert %{signatures: [signature]} = Stats.failure_signatures(workflow)
+      assert signature.error_type == "LostAfterStart"
+    end
+
     defp two_jobs(workflow) do
       case workflow.jobs do
         [job] ->

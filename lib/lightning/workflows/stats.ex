@@ -166,7 +166,9 @@ defmodule Lightning.Workflows.Stats do
             s.exit_reason != "success",
         select: %{
           exit_reason: s.exit_reason,
-          error_type: s.error_type,
+          # `""` is the same "we were not told" as NULL, but it groups apart
+          # and, being truthy, masks the run's own type in `to_signature/2`.
+          error_type: fragment("NULLIF(?, '')", s.error_type),
           snapshot_id: s.snapshot_id,
           job_id: s.job_id
         }
@@ -206,7 +208,7 @@ defmodule Lightning.Workflows.Stats do
         work_order_state: wo.state,
         run_id: r.id,
         run_state: r.state,
-        run_error_type: r.error_type
+        run_error_type: fragment("NULLIF(?, '')", r.error_type)
       }
     )
   end
