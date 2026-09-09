@@ -15,6 +15,7 @@ import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors
 let lifecycleState: 'draft' | 'live' | undefined = 'live';
 let isNewWorkflow = false;
 let canProvisionSandbox = true;
+let limits: Record<string, { allowed: boolean; message: string | null }> = {};
 let canArchiveSandbox = true;
 let readOnly: {
   isReadOnly: boolean;
@@ -57,7 +58,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useIsNewWorkflow: () => isNewWorkflow,
-  useLimits: () => ({}),
+  useLimits: () => limits,
   usePermissions: () => ({
     can_provision_sandbox: canProvisionSandbox,
     can_archive_sandbox: canArchiveSandbox,
@@ -198,6 +199,7 @@ describe('Header - Edit in sandbox button gating', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     canArchiveSandbox = true;
+    limits = {};
     readOnly = { isReadOnly: false, reason: null };
   });
 
@@ -209,9 +211,10 @@ describe('Header - Edit in sandbox button gating', () => {
     renderHeader({ isSandbox: false });
     const button = screen.getByTestId('edit-in-sandbox-button');
     expect(button).toBeEnabled();
-    // No tooltip wrapper: the Tooltip renders bare children when content is null,
-    // so the Radix trigger attribute is absent when provisioning is allowed.
+    // The Tooltip renders bare children when content is null, so nothing here
+    // is a Radix trigger when provisioning is allowed.
     expect(button).not.toHaveAttribute('data-state');
+    expect(button.parentElement).not.toHaveAttribute('data-state');
   });
 
   test('renders the button disabled and tooltip-wrapped when provisioning is not allowed', () => {
@@ -220,9 +223,9 @@ describe('Header - Edit in sandbox button gating', () => {
 
     const button = screen.getByTestId('edit-in-sandbox-button');
     expect(button).toBeDisabled();
-    // The disabled button is wrapped in the shared Tooltip, so Radix marks it as
-    // a trigger with a data-state attribute.
-    expect(button).toHaveAttribute('data-state');
+    // A disabled button dispatches no pointer events, so the Radix trigger has
+    // to be the wrapper around it rather than the button itself.
+    expect(button.parentElement).toHaveAttribute('data-state');
   });
 
   test('hides the button when the workflow is in draft', () => {
@@ -255,6 +258,7 @@ describe('Header - lifecycle actions', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     canArchiveSandbox = true;
+    limits = {};
     urlParams = {};
     readOnly = { isReadOnly: false, reason: null };
     goLive.mockReset();
@@ -418,6 +422,94 @@ describe('Header - lifecycle actions', () => {
     await user.click(screen.getByTestId('edit-in-sandbox-button'));
 
     expect(screen.getByTestId('edit-in-sandbox-picker')).toBeInTheDocument();
+  });
+
+  describe('turning a sandbox on and off', () => {
+    test('offers Turn on while the sandbox is a draft', () => {
+      lifecycleState = 'draft';
+      renderHeader({ isSandbox: true });
+
+      const button = screen.getByTestId('toggle-sandbox-button');
+      expect(button).toBeEnabled();
+      expect(button).toHaveTextContent('Turn on');
+    });
+
+    test('turning it on goes through the same lifecycle transition as going live', async () => {
+      lifecycleState = 'draft';
+      const user = userEvent.setup();
+      renderHeader({ isSandbox: true });
+
+      await user.click(screen.getByTestId('toggle-sandbox-button'));
+
+      // Same transition, so it respects the activation limit and records a
+      // release exactly as the parent's Go live does.
+      await waitFor(() => {
+        expect(goLive).toHaveBeenCalledTimes(1);
+      });
+      expect(switchToDraft).not.toHaveBeenCalled();
+    });
+
+    test('offers Turn off once the sandbox is on', () => {
+      lifecycleState = 'live';
+      renderHeader({ isSandbox: true });
+
+      expect(screen.getByTestId('toggle-sandbox-button')).toHaveTextContent(
+        'Turn off'
+      );
+    });
+
+    test('turning it off switches it back to draft, with no confirmation', async () => {
+      lifecycleState = 'live';
+      const user = userEvent.setup();
+      renderHeader({ isSandbox: true });
+
+      await user.click(screen.getByTestId('toggle-sandbox-button'));
+
+      // Nothing in production is affected, so there is nothing to confirm.
+      await waitFor(() => {
+        expect(switchToDraft).toHaveBeenCalledTimes(1);
+      });
+      expect(goLive).not.toHaveBeenCalled();
+    });
+
+    test('a failed transition says so and leaves the button usable', async () => {
+      lifecycleState = 'draft';
+      goLive.mockRejectedValue(new Error('nope'));
+      const user = userEvent.setup();
+      renderHeader({ isSandbox: true });
+
+      await user.click(screen.getByTestId('toggle-sandbox-button'));
+
+      await waitFor(() => {
+        expect(notifyAlert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Could not turn the sandbox on',
+          })
+        );
+      });
+      await waitFor(() => {
+        expect(screen.getByTestId('toggle-sandbox-button')).toBeEnabled();
+      });
+    });
+
+    test('is not offered outside a sandbox', () => {
+      lifecycleState = 'draft';
+      renderHeader({ isSandbox: false });
+
+      expect(
+        screen.queryByTestId('toggle-sandbox-button')
+      ).not.toBeInTheDocument();
+    });
+
+    test('is not offered on a pinned version of a sandbox', () => {
+      lifecycleState = 'draft';
+      urlParams = { v: '2' };
+      renderHeader({ isSandbox: true });
+
+      expect(
+        screen.queryByTestId('toggle-sandbox-button')
+      ).not.toBeInTheDocument();
+    });
   });
 
   test('inside a sandbox, shows an enabled Promote button and no lifecycle transitions', () => {
@@ -863,6 +955,7 @@ describe('Header - read-only reason variations', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     canArchiveSandbox = true;
+    limits = {};
     readOnly = { isReadOnly: false, reason: null };
   });
 
@@ -924,6 +1017,7 @@ describe('Header - long workflow name', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     canArchiveSandbox = true;
+    limits = {};
     readOnly = { isReadOnly: false, reason: null };
   });
 

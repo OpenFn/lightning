@@ -106,6 +106,7 @@ export const LimitsSchema = z.object({
   workflow_activation: LimitInfoSchema.optional(),
   github_sync: LimitInfoSchema.optional(),
   ai_assistant: LimitInfoSchema.optional(),
+  new_sandbox: LimitInfoSchema.optional(),
 });
 
 export type Limits = z.infer<typeof LimitsSchema>;

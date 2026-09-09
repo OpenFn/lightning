@@ -13,6 +13,7 @@ import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
 import { useDiscardGuard } from '../hooks/useDiscardGuard';
+import { useLimits } from '../hooks/useSessionContext';
 import { useWorkflowActions } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import {
@@ -23,6 +24,7 @@ import { notifications } from '../lib/notifications';
 import { suppressUnloadWarning } from '../lib/unloadGuard';
 import type { Sandbox } from '../types/workflow';
 
+import { Button } from './Button';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 
 interface EditInSandboxPickerProps {
@@ -183,7 +185,17 @@ export function EditInSandboxPicker({
   onClose,
 }: EditInSandboxPickerProps) {
   const { listSandboxes, editInSandbox } = useWorkflowActions();
+
+  // Creating a sandbox can be gated by the plan or by nesting depth; joining an
+  // existing one never is. So the lock belongs on this button, not on the one
+  // that opens this dialog. The wording comes from whichever gate refused.
   const { guard, ...discardPrompt } = useDiscardGuard();
+
+  const newSandboxLimit = useLimits().new_sandbox ?? {
+    allowed: true,
+    message: null,
+  };
+  const createLocked = !newSandboxLimit.allowed;
 
   // High-priority Escape handler to prevent closing the parent IDE/inspector.
   // Priority 100 (MODAL) ensures this runs before the IDE handler (priority 50);
@@ -276,11 +288,6 @@ export function EditInSandboxPicker({
     [guard]
   );
 
-  // A name is required to create. The server already returns only joinable
-  // sandboxes (each holding a clone of this workflow), so the list is rendered
-  // as-is.
-  const canCreate = name.trim().length > 0;
-
   // The sandbox already exists by the time we ask, so backing out has to
   // release the create button rather than leave it spinning forever.
   const cancelDiscard = discardPrompt.cancel;
@@ -288,6 +295,11 @@ export function EditInSandboxPicker({
     cancelDiscard();
     setIsCreating(false);
   }, [cancelDiscard]);
+
+  // A name is required to create. The server already returns only joinable
+  // sandboxes (each holding a clone of this workflow), so the list is rendered
+  // as-is.
+  const canCreate = name.trim().length > 0;
 
   return (
     <>
@@ -340,14 +352,12 @@ export function EditInSandboxPicker({
                 Edit in sandbox
               </DialogTitle>
               <p className="mt-1 text-sm text-gray-600">
-                Make changes safely in a sandbox without affecting this live
-                workflow.
+                A sandbox is a copy of this project. Nothing you do in it
+                touches the live workflow until you promote it back.
               </p>
 
-              {/* Create a new sandbox. Eyebrow title + subtitle mirror the
-                "Join an active sandbox" section below so the two read as
-                visual siblings; the title/subtitle/placeholder identify the
-                field, so no separate visible label is needed. */}
+              {/* The title, subtitle and placeholder identify the field, so it
+                needs no separate visible label. */}
               <div className="mt-6">
                 <p
                   className="text-xs font-semibold uppercase tracking-wide
@@ -356,7 +366,7 @@ export function EditInSandboxPicker({
                   Create a new sandbox
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  Branch from the current live version to make changes safely.
+                  Starts from the version live now.
                 </p>
                 <form
                   className="mt-3"
@@ -364,7 +374,7 @@ export function EditInSandboxPicker({
                     event.preventDefault();
                     // Enter can submit even while the button is disabled; honour
                     // the same guards (non-empty name, no create in flight).
-                    if (isCreating || !canCreate) return;
+                    if (createLocked || isCreating || !canCreate) return;
                     handleCreate();
                   }}
                 >
@@ -382,7 +392,7 @@ export function EditInSandboxPicker({
                           // Editing the name dismisses a stale field error.
                           setNameError(null);
                         }}
-                        placeholder="e.g. Test new changes"
+                        placeholder="What are you trying out?"
                         disabled={isCreating}
                         aria-invalid={nameError ? true : undefined}
                         aria-describedby={
@@ -399,20 +409,28 @@ export function EditInSandboxPicker({
                         )}
                       />
                     </div>
-                    <button
-                      type="submit"
-                      data-testid="create-sandbox-button"
-                      disabled={isCreating || !canCreate}
-                      className="inline-flex shrink-0 items-center self-start
-                      rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold
-                      text-white shadow-sm shadow-primary-600/20
-                      hover:bg-primary-500 focus-visible:outline-2
-                      focus-visible:outline-offset-2
-                      focus-visible:outline-primary-600
-                      disabled:cursor-not-allowed disabled:opacity-50"
+                    <Tooltip
+                      content={createLocked ? newSandboxLimit.message : null}
+                      side="bottom"
                     >
-                      {isCreating ? 'Creating...' : 'Create sandbox'}
-                    </button>
+                      <span className="inline-block shrink-0 self-start">
+                        <Button
+                          type="submit"
+                          data-testid="create-sandbox-button"
+                          disabled={createLocked || isCreating || !canCreate}
+                          className="inline-flex items-center gap-1.5"
+                        >
+                          {createLocked && (
+                            <span
+                              className="hero-lock-closed size-4"
+                              data-testid="create-sandbox-lock"
+                              aria-hidden="true"
+                            />
+                          )}
+                          {isCreating ? 'Creating...' : 'Create sandbox'}
+                        </Button>
+                      </span>
+                    </Tooltip>
                   </div>
                   {/* Always-rendered slot sized for one line of error text, so
                     showing/hiding the message never shifts the OR divider or
@@ -444,8 +462,8 @@ export function EditInSandboxPicker({
                     Join an active sandbox
                   </p>
                   <p className="mt-1 text-xs text-gray-500">
-                    Continue in a sandbox that's already active for this
-                    workflow.
+                    Pick up where someone left off, in a sandbox already open
+                    for this workflow.
                   </p>
 
                   {isLoadingList ? (
