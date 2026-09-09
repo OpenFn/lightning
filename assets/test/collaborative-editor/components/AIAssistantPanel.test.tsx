@@ -134,37 +134,14 @@ describe('AIAssistantPanel', () => {
       expect(screen.getByText('Assistant')).toBeInTheDocument();
     });
 
-    it('should show Job mode badge when sessionType is job_code', () => {
+    it('should not name which assistant answered', () => {
       renderWithStore(
         <AIAssistantPanel isOpen={true} onClose={mockOnClose} page="job_code" />
       );
 
-      const badge = screen.getByText('Job');
-      expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('bg-blue-100', 'text-blue-800');
-    });
-
-    it('should show Workflow mode badge when sessionType is workflow_template', () => {
-      renderWithStore(
-        <AIAssistantPanel
-          isOpen={true}
-          onClose={mockOnClose}
-          page="workflow_template"
-        />
-      );
-
-      const badge = screen.getByText('Workflow');
-      expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('bg-purple-100', 'text-purple-800');
-    });
-
-    it('should not show mode badge when sessionType is null', () => {
-      renderWithStore(
-        <AIAssistantPanel isOpen={true} onClose={mockOnClose} page={null} />
-      );
-
       expect(screen.queryByText('Job')).not.toBeInTheDocument();
       expect(screen.queryByText('Workflow')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Global/)).not.toBeInTheDocument();
     });
 
     it('should render close button', () => {
@@ -628,7 +605,11 @@ describe('AIAssistantPanel', () => {
       expect(textarea).toBeDisabled();
     });
 
-    it('should show job controls when sessionType is job_code', () => {
+    it('should offer run context on the job page when a run is loaded', () => {
+      mockHistoryStore = createMockHistoryStore({}, {
+        id: 'run-123',
+      } as never);
+
       renderWithStore(
         <AIAssistantPanel
           isOpen={true}
@@ -638,10 +619,16 @@ describe('AIAssistantPanel', () => {
         />
       );
 
-      expect(screen.getByText(/Send code/)).toBeInTheDocument();
+      expect(
+        screen.getByRole('checkbox', { name: /send run logs/i })
+      ).toBeInTheDocument();
     });
 
-    it('should not show job controls when sessionType is workflow_template', () => {
+    it('should offer the same on the canvas', () => {
+      mockHistoryStore = createMockHistoryStore({}, {
+        id: 'run-123',
+      } as never);
+
       renderWithStore(
         <AIAssistantPanel
           isOpen={true}
@@ -650,7 +637,9 @@ describe('AIAssistantPanel', () => {
         />
       );
 
-      expect(screen.queryByText(/Send code/)).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('checkbox', { name: /send run logs/i })
+      ).toBeInTheDocument();
     });
   });
 

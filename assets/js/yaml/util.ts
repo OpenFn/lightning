@@ -1,6 +1,7 @@
 import Ajv, { type ErrorObject } from 'ajv';
 import YAML from 'yaml';
 
+import { isValidCustomPath } from '../collaborative-editor/types/trigger';
 import type { Workflow } from '../collaborative-editor/types/workflow';
 import { randomUUID } from '../common';
 
@@ -11,6 +12,7 @@ import type {
   SpecEdge,
   SpecJob,
   SpecTrigger,
+  SpecWebhookTrigger,
   StateEdge,
   StateJob,
   StateTrigger,
@@ -19,6 +21,7 @@ import type {
 } from './types';
 import {
   WorkflowError,
+  WorkflowErrorCode,
   YamlSyntaxError,
   JobNotFoundError,
   TriggerNotFoundError,
@@ -27,8 +30,13 @@ import {
   createWorkflowError,
 } from './workflow-errors';
 
+// One space, one hyphen. This has to match ExportUtils.hyphenate/1 on the
+// server exactly, because the server writes the spec the CLI reads back and a
+// key that differs by a hyphen is a different job. The server replaces each
+// single space and leaves every other whitespace character alone, so `a  b`
+// is `a--b`, not `a-b`.
 const hyphenate = (str: string) => {
-  return str.replace(/\s+/g, '-');
+  return str.replace(/ /g, '-');
 };
 
 const roundPosition = (pos: Position): Position => {
@@ -38,6 +46,38 @@ const roundPosition = (pos: Position): Position => {
   };
 };
 
+// An edge key is a label. Nothing parses it, and the edge body carries its own
+// identity in source_job, source_trigger and target_job. That matters because
+// the key joins two job keys with `->` and a job may legally hold a `>` since
+// #4577: jobs named `a` and `b->c` produce the same key as `a->b` and `c`.
+//
+// Mirrors `disambiguate_edge_keys/1` in lib/lightning/export_utils.ex.
+const disambiguateEdgeKeys = (
+  entries: [string, SpecEdge][]
+): { [key: string]: SpecEdge } => {
+  const taken = new Set(entries.map(([key]) => key));
+  const used = new Set<string>();
+  const edges = Object.create(null) as { [key: string]: SpecEdge };
+
+  for (const [key, edge] of entries) {
+    let free = key;
+    if (used.has(free)) {
+      let suffix = 2;
+      while (
+        taken.has(`${key}-${String(suffix)}`) ||
+        used.has(`${key}-${String(suffix)}`)
+      ) {
+        suffix += 1;
+      }
+      free = `${key}-${String(suffix)}`;
+    }
+    used.add(free);
+    edges[free] = edge;
+  }
+
+  return edges;
+};
+
 // Note that we don't serialize the project_credential_id or the
 // keychain_credential_id here... Should we? See discussion in
 // https://github.com/OpenFn/lightning/pull/4297
@@ -45,7 +85,11 @@ export const convertWorkflowStateToSpec = (
   workflowState: WorkflowState,
   includeIds: boolean = true
 ): WorkflowSpec => {
-  const jobs: { [key: string]: SpecJob } = {};
+  // Null-prototype: a job named `__proto__` assigned onto a plain object runs
+  // the prototype setter instead of adding a key, so the job never reaches the
+  // spec and hasOwnProperty never sees the collision. Same for `constructor`
+  // and `toString` in the seenNames check below.
+  const jobs = Object.create(null) as { [key: string]: SpecJob };
   workflowState.jobs.forEach(job => {
     const pos = workflowState.positions?.[job.id];
     const jobDetails: SpecJob = {
@@ -55,7 +99,13 @@ export const convertWorkflowStateToSpec = (
       body: job.body,
       pos: pos ? roundPosition(pos) : undefined,
     };
-    jobs[hyphenate(job.name)] = jobDetails;
+    const key = hyphenate(job.name);
+    // The server refuses this pair rather than dropping one
+    // (Lightning.ExportUtils.DuplicateKeyError), so this side says so too.
+    if (key in jobs) {
+      throw new DuplicateJobNameError(job.name, key);
+    }
+    jobs[key] = jobDetails;
   });
 
   const triggers: { [key: string]: SpecTrigger } = {};
@@ -66,7 +116,7 @@ export const convertWorkflowStateToSpec = (
       ...(includeIds && { id: trigger.id }),
       type: trigger.type,
       enabled: trigger.enabled,
-      pos: trigger.type !== 'kafka' && pos ? roundPosition(pos) : undefined,
+      pos: pos ? roundPosition(pos) : undefined,
     } as SpecTrigger;
 
     if (trigger.type === 'cron') {
@@ -81,6 +131,18 @@ export const convertWorkflowStateToSpec = (
     }
 
     if (trigger.type === 'webhook') {
+      const webhookDetails = triggerDetails as SpecWebhookTrigger;
+
+      // Per-project identity, so it goes with the ids when stripped for a
+      // template. And only one the server would accept, or the import fails.
+      if (
+        includeIds &&
+        trigger.custom_path &&
+        isValidCustomPath(trigger.custom_path)
+      ) {
+        webhookDetails.custom_path = trigger.custom_path;
+      }
+
       triggerDetails.webhook_reply = trigger.webhook_reply ?? null;
       const config = trigger.webhook_response_config;
       if (
@@ -96,11 +158,12 @@ export const convertWorkflowStateToSpec = (
       }
     }
 
-    // TODO: handle kafka config
     triggers[trigger.type] = triggerDetails;
   });
 
-  const edges: { [key: string]: SpecEdge } = {};
+  // Collected in order first, then disambiguated, because a suffix has to be
+  // checked against every original key and not just the ones seen so far.
+  const edgeEntries: [string, SpecEdge][] = [];
   workflowState.edges.forEach(edge => {
     const edgeDetails: SpecEdge = {
       ...(includeIds && { id: edge.id }),
@@ -140,8 +203,10 @@ export const convertWorkflowStateToSpec = (
     const source_name = edgeDetails.source_trigger || edgeDetails.source_job;
     const target_name = edgeDetails.target_job;
 
-    edges[`${source_name}->${target_name}`] = edgeDetails;
+    edgeEntries.push([`${source_name}->${target_name}`, edgeDetails]);
   });
+
+  const edges = disambiguateEdgeKeys(edgeEntries);
 
   const workflowSpec: WorkflowSpec = {
     ...(includeIds && { id: workflowState.id }),
@@ -158,7 +223,9 @@ export const convertWorkflowSpecToState = (
   workflowSpec: WorkflowSpec
 ): WorkflowState => {
   const positions: Record<string, Position> = {};
-  const stateJobs: Record<string, StateJob> = {};
+  // Null-prototype, same reason as the export side. The edge lookups below
+  // would also resolve `toString` and `constructor` through the prototype.
+  const stateJobs = Object.create(null) as Record<string, StateJob>;
   Object.entries(workflowSpec.jobs).forEach(([key, specJob]) => {
     const uId = specJob.id || randomUUID();
     stateJobs[key] = {
@@ -170,13 +237,16 @@ export const convertWorkflowSpecToState = (
     if (specJob.pos) positions[uId] = specJob.pos;
   });
 
-  const stateTriggers: Record<string, StateTrigger> = {};
+  const stateTriggers = Object.create(null) as Record<string, StateTrigger>;
   Object.entries(workflowSpec.triggers).forEach(([key, specTrigger]) => {
     const uId = specTrigger.id || randomUUID();
     const enabled =
       specTrigger.enabled !== undefined ? specTrigger.enabled : true;
+    // Read before the branches below narrow specTrigger away: not every caller
+    // validates against the schema first.
+    const declaredType: string = specTrigger.type;
 
-    if (specTrigger.type !== 'kafka' && specTrigger.pos) {
+    if (specTrigger.pos) {
       positions[uId] = specTrigger.pos;
     }
 
@@ -197,21 +267,31 @@ export const convertWorkflowSpecToState = (
         id: uId,
         type: 'webhook',
         enabled,
+        // Spread, so an absent key stays absent and reads as "unchanged"
+        // rather than as a clear.
+        ...(specTrigger.custom_path !== undefined && {
+          custom_path: specTrigger.custom_path,
+        }),
         webhook_reply: specTrigger.webhook_reply,
         webhook_response_config: specTrigger.webhook_response_config ?? null,
       };
     } else {
-      trigger = {
-        id: uId,
-        type: 'kafka',
-        enabled,
-      };
+      // Not every caller validates against the schema first, and quietly
+      // treating an unrecognised type as a webhook would mint a public ingest
+      // endpoint the source never asked for.
+      throw new WorkflowError({
+        code: WorkflowErrorCode.SCHEMA_INVALID_VALUE,
+        message: `Unsupported trigger type: ${declaredType}`,
+        path: `triggers/${key}`,
+        triggerKey: key,
+        allowedValues: ['webhook', 'cron'],
+      });
     }
 
     stateTriggers[key] = trigger;
   });
 
-  const stateEdges: Record<string, StateEdge> = {};
+  const stateEdges = Object.create(null) as Record<string, StateEdge>;
   Object.entries(workflowSpec.edges).forEach(([key, specEdge]) => {
     const targetJob = stateJobs[specEdge.target_job];
     if (!targetJob) {
@@ -303,14 +383,19 @@ export const parseWorkflowYAML = (yamlString: string): WorkflowSpec => {
       }
     }
 
-    // Validate job names
-    const seenNames: Record<string, boolean> = {};
+    // Validate job names. A Set rather than an object: a job named
+    // `constructor` or `toString` used to hit an inherited property and raise
+    // a duplicate error for a name that appeared once. Compared hyphenated,
+    // which is what the export side compares.
+    const seenKeys = new Set<string>();
     Object.entries(parsedYAML['jobs']).forEach(
       ([key, specJob]: [string, any]) => {
-        if (seenNames[specJob.name]) {
-          throw new DuplicateJobNameError(specJob.name, key);
+        const name = String(specJob.name);
+        const nameKey = hyphenate(name);
+        if (seenKeys.has(nameKey)) {
+          throw new DuplicateJobNameError(name, key);
         }
-        seenNames[specJob.name] = true;
+        seenKeys.add(nameKey);
       }
     );
 

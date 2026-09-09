@@ -138,7 +138,7 @@ defmodule Lightning.Credentials.SchemaTest do
         with_log(fn -> Schema.new(schema_map) end)
 
       assert schema.types == %{count: :float, label: :string}
-      refute log =~ "count"
+      refute log =~ "Unknown JSON Schema type"
 
       schema_map = put_in(schema_map["properties"]["count"]["type"], "Bogus")
 
@@ -186,7 +186,11 @@ defmodule Lightning.Credentials.SchemaTest do
                items: {:array, :string}
              }
 
-      assert log == ""
+      # Not `log == ""`. with_log/1 captures everything logged in the window,
+      # including from async tests running alongside this one, so an unrelated
+      # warning elsewhere failed this. What matters is that these types were
+      # recognised, so assert on the message that would say otherwise.
+      refute log =~ "Unknown JSON Schema type"
     end
 
     test "resolves anyOf types by picking the first concrete type" do

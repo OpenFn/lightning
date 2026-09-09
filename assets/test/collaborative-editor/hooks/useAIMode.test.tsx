@@ -108,7 +108,6 @@ describe('useAIMode', () => {
           project_id: 'project-123',
           workflow_id: 'workflow-123',
           job_id: 'job-456',
-          attach_code: false,
           attach_logs: false,
         },
         storageKey: 'ai-workflow-workflow-123',
@@ -137,7 +136,6 @@ describe('useAIMode', () => {
         project_id: 'project-123',
         workflow_id: 'workflow-123',
         job_id: 'job-456',
-        attach_code: false,
         attach_logs: false,
         job_name: 'Test Job',
         job_body: 'fn(state => state);',
@@ -160,7 +158,6 @@ describe('useAIMode', () => {
         project_id: 'project-123',
         workflow_id: 'workflow-123',
         job_id: 'job-456',
-        attach_code: false,
         attach_logs: false,
         // No job_name, job_body, job_adaptor for unsaved job
       });

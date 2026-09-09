@@ -150,6 +150,8 @@ defmodule Lightning.ApolloClient do
       Omitted from the wire payload when not supplied.
     - `:metrics_opt_in` - Optional boolean enabling Langfuse metrics tracking
       on the Apollo side. Omitted from the wire payload when not supplied.
+    - `:attachments` - Run context the user chose to send, as a list of
+      `%{"type" => type, "content" => content}` maps (default: `[]`)
   """
   @spec global_chat_stream(String.t(), opts()) :: Tesla.Env.result()
   def global_chat_stream(content, opts \\ []) do
@@ -158,6 +160,7 @@ defmodule Lightning.ApolloClient do
     history = Keyword.get(opts, :history, [])
     meta = Keyword.get(opts, :meta)
     metrics_opt_in = Keyword.get(opts, :metrics_opt_in)
+    attachments = Keyword.get(opts, :attachments, [])
 
     payload =
       %{
@@ -168,6 +171,7 @@ defmodule Lightning.ApolloClient do
         "history" => history,
         "meta" => meta,
         "metrics_opt_in" => metrics_opt_in,
+        "attachments" => attachments,
         "options" => %{"stream" => true}
       }
       |> Enum.reject(fn {_, v} -> is_nil(v) end)
@@ -182,11 +186,6 @@ defmodule Lightning.ApolloClient do
   end
 
   defp stream_client do
-    # receive_timeout bounds time-to-headers and each gap between SSE
-    # chunks, not total stream duration — the MessageProcessor job timeout
-    # bounds that.
-    timeout = Lightning.Config.apollo(:timeout)
-
     client_params = [
       {Tesla.Middleware.BaseUrl, Lightning.Config.apollo(:endpoint)},
       Tesla.Middleware.SSE,
@@ -196,7 +195,17 @@ defmodule Lightning.ApolloClient do
     if match?({Tesla.Adapter.Finch, _}, Application.get_env(:tesla, :adapter)) do
       Tesla.client(
         client_params,
-        {Tesla.Adapter.Finch, name: Lightning.Finch, receive_timeout: timeout}
+        # Our copy of Tesla's adapter, which keeps the reason a stream stopped
+        # instead of discarding it. See Lightning.Tesla.Adapter.Finch.
+        {
+          Lightning.Tesla.Adapter.Finch,
+          # Both the wait for the first byte and each gap after it, not the
+          # length of the whole answer. A reply that keeps arriving never trips
+          # this; request_timeout below is what caps the whole answer.
+          name: Lightning.Finch,
+          receive_timeout: Lightning.Config.apollo(:idle_timeout),
+          request_timeout: Lightning.Config.apollo(:request_timeout)
+        }
       )
     else
       Tesla.client(client_params)

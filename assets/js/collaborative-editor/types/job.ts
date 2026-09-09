@@ -1,5 +1,16 @@
 import { z } from 'zod';
 
+import {
+  CONTROL_CHARS_MESSAGE,
+  NAME_TOO_LONG_MESSAGE,
+  NAME_TOO_WIDE_MESSAGE,
+  hasControlChars,
+  isInvisibleOnly,
+  isNameTooLong,
+  isNameTooWideForColumn,
+  normalizeName,
+} from '#/utils/nameValidation';
+
 import { isoDateTimeSchema, uuidSchema } from './common';
 
 // NPM package format validation for adaptor field
@@ -18,10 +29,16 @@ export const JobSchema = z
     id: uuidSchema,
     name: z
       .string()
-      .min(1, "Job name can't be blank")
-      .max(100, "Job name shouldn't be longer than 100 characters.")
-      .regex(/^[a-zA-Z0-9_\- ]*$/, "Job name can't include special characters.")
-      .transform(val => val.trim()), // Auto-trim whitespace like backend
+      .transform(normalizeName)
+      .pipe(
+        z
+          .string()
+          .min(1, "Job name can't be blank")
+          .refine(val => !isInvisibleOnly(val), "Job name can't be blank")
+          .refine(val => !isNameTooLong(val), NAME_TOO_LONG_MESSAGE)
+          .refine(val => !isNameTooWideForColumn(val), NAME_TOO_WIDE_MESSAGE)
+          .refine(val => !hasControlChars(val), CONTROL_CHARS_MESSAGE)
+      ),
     body: z.string().min(1, "can't be blank"),
     adaptor: adaptorSchema.default('@openfn/language-common@latest'),
 

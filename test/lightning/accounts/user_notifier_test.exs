@@ -2,12 +2,12 @@ defmodule Lightning.Accounts.UserNotifierTest do
   use Lightning.DataCase, async: true
   use LightningWeb, :html
 
-  import Mox
+  import Lightning.ApplicationHelpers, only: [capture_info_log: 1]
+  import Lightning.Factories
   import Swoosh.TestAssertions
 
   alias Lightning.Accounts.{UserNotifier, User}
   alias Lightning.DigestEmailWorker
-  alias Lightning.Projects.Project
   alias Lightning.Credentials.Credential
 
   describe "Notification emails" do
@@ -201,8 +201,13 @@ defmodule Lightning.Accounts.UserNotifierTest do
     end
 
     test "Daily project digest email" do
-      user = %User{email: "real@email.com", first_name: "Elias"}
-      project = %Project{name: "Real Project"}
+      user = insert(:user, email: "real@email.com", first_name: "Elias")
+
+      project =
+        insert(:project,
+          name: "Real Project",
+          project_users: [%{user_id: user.id, role: :editor}]
+        )
 
       workflow_a =
         Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
@@ -277,8 +282,13 @@ defmodule Lightning.Accounts.UserNotifierTest do
     end
 
     test "weekly project digest email" do
-      user = %User{email: "real@email.com", first_name: "Elias"}
-      project = %Project{name: "Real Project"}
+      user = insert(:user, email: "real@email.com", first_name: "Elias")
+
+      project =
+        insert(:project,
+          name: "Real Project",
+          project_users: [%{user_id: user.id, role: :editor}]
+        )
 
       workflow_a =
         Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
@@ -353,8 +363,13 @@ defmodule Lightning.Accounts.UserNotifierTest do
     end
 
     test "Monthly project digest email" do
-      user = %User{email: "real@email.com", first_name: "Elias"}
-      project = %Project{name: "Real Project"}
+      user = insert(:user, email: "real@email.com", first_name: "Elias")
+
+      project =
+        insert(:project,
+          name: "Real Project",
+          project_users: [%{user_id: user.id, role: :editor}]
+        )
 
       workflow_a =
         Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
@@ -431,8 +446,14 @@ defmodule Lightning.Accounts.UserNotifierTest do
     end
 
     test "digest emails with no activity" do
-      user = %User{email: "real@email.com", first_name: "Elias"}
-      project = %Project{name: "Real Project"}
+      user = insert(:user, email: "real@email.com", first_name: "Elias")
+
+      project =
+        insert(:project,
+          name: "Real Project",
+          project_users: [%{user_id: user.id, role: :editor}]
+        )
+
       workflow = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
 
       data = [
@@ -483,76 +504,84 @@ defmodule Lightning.Accounts.UserNotifierTest do
         )
       end
     end
+  end
 
-    test "Kafka trigger failure - alternate storage disabled" do
-      stub(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
-        false
-      end)
+  describe "mail withheld from someone who may not be sent the project" do
+    # One log site covers every project mail, because they all route through
+    # `deliver_project_mail/4`. Retention is the one exercised here.
+    test "records the withheld mail in the log" do
+      user = insert(:user)
+      project = insert(:project, history_retention_period: 14)
 
-      timestamp = DateTime.utc_now()
+      {result, log} =
+        capture_info_log(fn ->
+          UserNotifier.send_data_retention_change_email(user, project)
+        end)
 
-      displayed_timestamp =
-        timestamp
-        |> DateTime.truncate(:second)
-        |> DateTime.to_iso8601()
+      assert result == {:ok, :suppressed}
 
-      user = Lightning.AccountsFixtures.user_fixture()
-      workflow = insert(:workflow)
+      assert log =~
+               "Withheld project mail \"The data retention policy for #{project.name} has been modified\""
 
-      workflow_url =
-        LightningWeb.Endpoint
-        |> url(~p"/projects/#{workflow.project_id}/w/#{workflow.id}")
+      assert log =~ "from user #{user.id} in project #{project.id}"
 
-      UserNotifier.send_trigger_failure_mail(user, workflow, timestamp)
+      # The address itself stays out of the log; the ids are enough to answer
+      # "why did this person not get mail".
+      refute log =~ user.email
+
+      refute_email_sent()
+    end
+  end
+
+  # These are the mails that must still reach someone the project-mail rule
+  # refuses. Routing any of them through `deliver_project_mail/4` would leave a
+  # disabled account with no way to hear that it is being deleted, and no way
+  # to reset its password.
+  describe "account mail reaches an account project mail would refuse" do
+    test "the deletion notice reaches a disabled account" do
+      user =
+        insert(:user,
+          disabled: true,
+          scheduled_deletion: DateTime.utc_now(:second)
+        )
+
+      UserNotifier.send_deletion_notification_email(user)
 
       assert_email_sent(
-        subject: "Kafka trigger failure on #{workflow.name}",
-        to: Swoosh.Email.Recipient.format(user),
-        text_body: """
-        As of #{displayed_timestamp}, the Kafka trigger associated with the workflow `#{workflow.name}` (#{workflow_url}) has failed to persist at least one message.
-
-        THIS LIGHTNING INSTANCE DOES NOT HAVE ALTERNATE STORAGE ENABLED, SO THESE FAILED MESSAGES CANNOT BE RECOVERED WITHOUT MAKING THEM AVAILABLE ON THE KAFKA CLUSTER AGAIN.
-
-        If you have access to the system logs, please look for entries containing 'Kafka Pipeline Error'.
-
-        OpenFn
-        """
+        subject: "Your account has been scheduled for deletion",
+        to: Swoosh.Email.Recipient.format(user)
       )
     end
 
-    test "Kafka trigger failure - alternate storage enabled" do
-      stub(Lightning.MockConfig, :kafka_alternate_storage_enabled?, fn ->
-        true
-      end)
+    test "a password reset reaches a disabled account" do
+      user = insert(:user, disabled: true)
 
-      timestamp = DateTime.utc_now()
-
-      displayed_timestamp =
-        timestamp
-        |> DateTime.truncate(:second)
-        |> DateTime.to_iso8601()
-
-      user = Lightning.AccountsFixtures.user_fixture()
-      workflow = insert(:workflow)
-
-      workflow_url =
-        LightningWeb.Endpoint
-        |> url(~p"/projects/#{workflow.project_id}/w/#{workflow.id}")
-
-      UserNotifier.send_trigger_failure_mail(user, workflow, timestamp)
+      UserNotifier.deliver_reset_password_instructions(
+        user,
+        "https://example.com/reset"
+      )
 
       assert_email_sent(
-        subject: "Kafka trigger failure on #{workflow.name}",
-        to: Swoosh.Email.Recipient.format(user),
-        text_body: """
-        As of #{displayed_timestamp}, the Kafka trigger associated with the workflow `#{workflow.name}` (#{workflow_url}) has failed to persist at least one message.
+        subject: "Finish resetting your password",
+        to: Swoosh.Email.Recipient.format(user)
+      )
+    end
 
-        This Lightning instance has alternate storage enabled. This means that any messages that failed to persist will be stored in the location referenced by the KAFKA_ALTERNATE_STORAGE_FILE_PATH environment variable. These messages can be recovered by reprocessing them.
+    # The mail that gets an unconfirmed account unstuck. Withholding it would
+    # make the barred state permanent.
+    test "the confirmation reminder reaches an unconfirmed account" do
+      user =
+        insert(:user,
+          confirmed_at: nil,
+          inserted_at: DateTime.utc_now(:second) |> DateTime.add(-50, :hour)
+        )
 
-        If you have access to the system logs, please look for entries containing 'Kafka Pipeline Error'.
+      UserNotifier.remind_account_confirmation(user, "sometoken")
 
-        OpenFn
-        """
+      # Addressed to the bare address, not the user struct, so it carries no name.
+      assert_email_sent(
+        subject: "Confirm your OpenFn account",
+        to: {"", user.email}
       )
     end
   end

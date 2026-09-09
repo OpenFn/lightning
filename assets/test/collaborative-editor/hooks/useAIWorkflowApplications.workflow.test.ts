@@ -23,14 +23,16 @@ import { createAIWorkflowApplicationsMocks } from './__helpers__/aiWorkflowAppli
 // file) because vi.mock() factories are hoisted above imports; a static
 // import here would be referenced before it's initialized.
 vi.mock('../../../js/yaml/util', async () => {
-  const { aiWorkflowApplicationsYamlUtilMock } =
-    await import('./__helpers__/aiWorkflowApplicationsTestSetup');
+  const { aiWorkflowApplicationsYamlUtilMock } = await import(
+    './__helpers__/aiWorkflowApplicationsTestSetup'
+  );
   return aiWorkflowApplicationsYamlUtilMock();
 });
 
 vi.mock('../../../js/collaborative-editor/lib/notifications', async () => {
-  const { aiWorkflowApplicationsNotificationsMock } =
-    await import('./__helpers__/aiWorkflowApplicationsTestSetup');
+  const { aiWorkflowApplicationsNotificationsMock } = await import(
+    './__helpers__/aiWorkflowApplicationsTestSetup'
+  );
   return aiWorkflowApplicationsNotificationsMock();
 });
 
@@ -89,6 +91,8 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
     });
   });
 
+  const mockOnApplyFailure = vi.fn();
+
   it('validates ID formats and rejects object IDs', async () => {
     const { result } = renderHook(() =>
       useAIWorkflowApplications({
@@ -111,6 +115,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
+        onApplyFailure: mockOnApplyFailure,
       })
     );
 
@@ -124,6 +129,14 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         description: expect.stringContaining('Invalid ID format') as string,
       });
       expect(mockImportWorkflow).not.toHaveBeenCalled();
+    });
+
+    // Reported with the step that broke, and carrying no workflow content:
+    // this is the only durable trace a failed apply leaves.
+    expect(mockOnApplyFailure).toHaveBeenCalledWith({
+      messageId: 'msg-1',
+      stage: 'validate_ids',
+      isNewWorkflow: false,
     });
   });
 
@@ -149,6 +162,7 @@ describe('useAIWorkflowApplications - handleApplyWorkflow', () => {
         appliedMessageIdsRef: { current: new Set() },
         streamingApply: null,
         streamingApplyActions: mockStreamingApplyActions,
+        onApplyFailure: mockOnApplyFailure,
       })
     );
 

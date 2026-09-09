@@ -5,15 +5,25 @@
  * - Text input and submission
  * - Keyboard shortcuts
  * - Loading states
- * - Job controls (attach code/logs)
+ * - Run attachment controls (send logs, send data)
  * - LocalStorage persistence
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ChatInput } from '../../../js/collaborative-editor/components/ChatInput';
+
+const toggleContext = async (name: RegExp) => {
+  await userEvent.click(screen.getByRole('checkbox', { name }));
+};
 
 describe('ChatInput', () => {
   let mockSendMessage: ReturnType<typeof vi.fn>;
@@ -40,14 +50,6 @@ describe('ChatInput', () => {
       expect(sendButton).toBeInTheDocument();
     });
 
-    it('should render keyboard hint', () => {
-      render(<ChatInput />);
-
-      expect(screen.getByText(/Press/)).toBeInTheDocument();
-      expect(screen.getByText(/to send/)).toBeInTheDocument();
-      expect(screen.getByText(/for new line/)).toBeInTheDocument();
-    });
-
     it('should show the AI disclaimer footer by default', () => {
       render(<ChatInput />);
 
@@ -60,14 +62,23 @@ describe('ChatInput', () => {
       );
     });
 
-    it('should show job controls when showJobControls is true', () => {
-      render(<ChatInput showJobControls />);
+    it('should offer no attachment controls when there is no run to take them from', () => {
+      render(<ChatInput />);
 
-      expect(screen.getByText(/Send code/)).toBeInTheDocument();
-      expect(screen.getByText(/Send logs/)).toBeInTheDocument();
+      expect(screen.queryByTestId('attached-context')).not.toBeInTheDocument();
+      expect(screen.getByText(/Please use AI responsibly/)).toBeInTheDocument();
+    });
+
+    it('should offer both boxes, unticked, once a run is loaded', () => {
+      render(<ChatInput selectedRunId="run-123" />);
+
+      const controls = screen.getByTestId('attached-context');
       expect(
-        screen.queryByText(/Please use AI responsibly/)
-      ).not.toBeInTheDocument();
+        within(controls).getByRole('checkbox', { name: /send run logs/i })
+      ).not.toBeChecked();
+      expect(
+        within(controls).getByRole('checkbox', { name: /send run data/i })
+      ).not.toBeChecked();
     });
   });
 
@@ -262,496 +273,256 @@ describe('ChatInput', () => {
     });
   });
 
-  describe('Job Controls', () => {
-    it('should include attach_code when job is selected', async () => {
-      render(
-        <ChatInput
-          onSendMessage={mockSendMessage}
-          showJobControls
-          selectedJobId="job-123"
-        />
-      );
-
+  describe('Message Length', () => {
+    const type = async (text: string) => {
       const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
+      // fireEvent, not userEvent: typing ten thousand characters one keystroke
+      // at a time takes minutes.
+      fireEvent.change(textarea, { target: { value: text } });
+    };
 
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_code: true, // Default when job selected
-      });
+    it('says nothing until you are close to the limit', async () => {
+      render(<ChatInput />);
+      await type('x'.repeat(9000));
+
+      expect(screen.queryByTestId('chat-input-length')).not.toBeInTheDocument();
     });
 
-    it('should include attach_logs when run is selected', async () => {
-      render(
-        <ChatInput
-          onSendMessage={mockSendMessage}
-          showJobControls
-          selectedRunId="run-123"
-        />
+    it('counts down once you are within five hundred', async () => {
+      render(<ChatInput />);
+      await type('x'.repeat(9600));
+
+      expect(screen.getByTestId('chat-input-length')).toHaveTextContent(
+        '9,600 / 10,000'
       );
-
-      // Enable logs checkbox
-      const logsCheckbox = screen.getByRole('checkbox', {
-        name: /send logs/i,
-      });
-      await userEvent.click(logsCheckbox);
-
-      const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
-
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_logs: true,
-      });
     });
 
-    it('should include attach_io_data and step_id when step is selected', async () => {
-      render(
-        <ChatInput
-          onSendMessage={mockSendMessage}
-          showJobControls
-          selectedStepId="step-123"
-        />
-      );
+    it('still sends at exactly the limit', async () => {
+      const onSendMessage = vi.fn();
+      render(<ChatInput onSendMessage={onSendMessage} />);
+      await type('x'.repeat(10000));
 
-      // Enable I/O data checkbox
-      const ioCheckbox = screen.getByRole('checkbox', {
-        name: /send scrubbed i\/o/i,
-      });
-      await userEvent.click(ioCheckbox);
-
-      const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
-
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_io_data: true,
-        step_id: 'step-123',
-      });
+      const sendButton = screen.getByRole('button', { name: /send message/i });
+      expect(sendButton).toBeEnabled();
+      await userEvent.click(sendButton);
+      expect(onSendMessage).toHaveBeenCalled();
     });
 
-    it('should include all options when job, run, and step are selected', async () => {
-      render(
-        <ChatInput
-          onSendMessage={mockSendMessage}
-          showJobControls
-          selectedJobId="job-123"
-          selectedRunId="run-123"
-          selectedStepId="step-123"
-        />
-      );
+    it('keeps the AI disclaimer alongside the counter', async () => {
+      render(<ChatInput />);
+      await type('x'.repeat(9600));
 
-      // Enable logs and I/O data checkboxes
-      const logsCheckbox = screen.getByRole('checkbox', {
-        name: /send logs/i,
-      });
-      const ioCheckbox = screen.getByRole('checkbox', {
-        name: /send scrubbed i\/o/i,
-      });
-      await userEvent.click(logsCheckbox);
-      await userEvent.click(ioCheckbox);
-
-      const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
-
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_code: true,
-        attach_logs: true,
-        attach_io_data: true,
-        step_id: 'step-123',
-      });
+      expect(screen.getByTestId('chat-input-length')).toBeInTheDocument();
+      expect(screen.getByText(/use AI responsibly/i)).toBeInTheDocument();
     });
 
-    it('should toggle attach_code checkbox when job is selected', async () => {
-      render(
-        <ChatInput
-          onSendMessage={mockSendMessage}
-          showJobControls
-          selectedJobId="job-123"
-        />
-      );
+    it('refuses to send once over it', async () => {
+      const onSendMessage = vi.fn();
+      render(<ChatInput onSendMessage={onSendMessage} />);
+      await type('x'.repeat(10001));
 
-      const codeCheckbox = screen.getByRole('checkbox', {
-        name: /send code/i,
-      });
+      const counter = screen.getByTestId('chat-input-length');
+      expect(counter).toHaveTextContent('too long to send');
 
-      // Default should be checked when job is selected
-      expect(codeCheckbox).toBeChecked();
-
-      // Uncheck
-      await userEvent.click(codeCheckbox);
-      expect(codeCheckbox).not.toBeChecked();
-
-      // Send message
-      const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
-
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_code: false,
-      });
-    });
-
-    it('should toggle attach_logs checkbox when run is selected', async () => {
-      render(
-        <ChatInput
-          onSendMessage={mockSendMessage}
-          showJobControls
-          selectedRunId="run-123"
-        />
-      );
-
-      const logsCheckbox = screen.getByRole('checkbox', {
-        name: /send logs/i,
-      });
-
-      // Default should be unchecked
-      expect(logsCheckbox).not.toBeChecked();
-
-      // Check
-      await userEvent.click(logsCheckbox);
-      expect(logsCheckbox).toBeChecked();
-
-      // Send message
-      const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
-
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_logs: true,
-      });
-    });
-
-    it('should not include options when showJobControls is false', async () => {
-      render(
-        <ChatInput onSendMessage={mockSendMessage} showJobControls={false} />
-      );
+      const sendButton = screen.getByRole('button', { name: /send message/i });
+      expect(sendButton).toBeDisabled();
 
       const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
-
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {});
-    });
-
-    it('should not include attach_code when no job is selected', async () => {
-      render(
-        <ChatInput
-          onSendMessage={mockSendMessage}
-          showJobControls
-          selectedJobId={null}
-          selectedRunId="run-123"
-        />
-      );
-
-      // Enable logs
-      const logsCheckbox = screen.getByRole('checkbox', {
-        name: /send logs/i,
-      });
-      await userEvent.click(logsCheckbox);
-
-      const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
-
-      // Should only have attach_logs, not attach_code
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_logs: true,
-      });
-    });
-
-    it('should not include attach_logs when no run is selected', async () => {
-      render(
-        <ChatInput
-          onSendMessage={mockSendMessage}
-          showJobControls
-          selectedJobId="job-123"
-          selectedRunId={null}
-        />
-      );
-
-      const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
-
-      // Should only have attach_code, not attach_logs
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_code: true,
-      });
-    });
-
-    it('should not include attach_io_data when no step is selected', async () => {
-      render(
-        <ChatInput
-          onSendMessage={mockSendMessage}
-          showJobControls
-          selectedJobId="job-123"
-          selectedStepId={null}
-        />
-      );
-
-      const textarea = screen.getByPlaceholderText('Ask me anything...');
-      await userEvent.type(textarea, 'Test{Enter}');
-
-      // Should only have attach_code, not attach_io_data
-      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
-        attach_code: true,
-      });
+      await userEvent.type(textarea, '{Enter}');
+      expect(onSendMessage).not.toHaveBeenCalled();
     });
   });
 
-  describe('Checkbox Disabled States', () => {
-    it('should disable and uncheck code checkbox when no job is selected', () => {
-      render(<ChatInput showJobControls selectedJobId={null} />);
-
-      const codeCheckbox = screen.getByRole('checkbox', {
-        name: /send code/i,
-      });
-
-      expect(codeCheckbox).toBeDisabled();
-      expect(codeCheckbox).not.toBeChecked();
-    });
-
-    it('should enable and check code checkbox when job is selected', () => {
-      render(<ChatInput showJobControls selectedJobId="job-123" />);
-
-      const codeCheckbox = screen.getByRole('checkbox', {
-        name: /send code/i,
-      });
-
-      expect(codeCheckbox).toBeEnabled();
-      expect(codeCheckbox).toBeChecked(); // Default is true
-    });
-
-    it('should disable and uncheck logs checkbox when no run is selected', () => {
-      render(<ChatInput showJobControls selectedRunId={null} />);
-
-      const logsCheckbox = screen.getByRole('checkbox', {
-        name: /send logs/i,
-      });
-
-      expect(logsCheckbox).toBeDisabled();
-      expect(logsCheckbox).not.toBeChecked();
-    });
-
-    it('should enable logs checkbox when run is selected', () => {
-      render(<ChatInput showJobControls selectedRunId="run-123" />);
-
-      const logsCheckbox = screen.getByRole('checkbox', {
-        name: /send logs/i,
-      });
-
-      expect(logsCheckbox).toBeEnabled();
-      // Default is unchecked, but it should be enabled
-      expect(logsCheckbox).not.toBeChecked();
-    });
-
-    it('should disable and uncheck I/O data checkbox when no step is selected', () => {
-      render(<ChatInput showJobControls selectedStepId={null} />);
-
-      const ioCheckbox = screen.getByRole('checkbox', {
-        name: /send scrubbed i\/o/i,
-      });
-
-      expect(ioCheckbox).toBeDisabled();
-      expect(ioCheckbox).not.toBeChecked();
-    });
-
-    it('should enable I/O data checkbox when step is selected', () => {
-      render(<ChatInput showJobControls selectedStepId="step-123" />);
-
-      const ioCheckbox = screen.getByRole('checkbox', {
-        name: /send scrubbed i\/o/i,
-      });
-
-      expect(ioCheckbox).toBeEnabled();
-      // Default is unchecked, but it should be enabled
-      expect(ioCheckbox).not.toBeChecked();
-    });
-
-    it('should show unchecked even if preference is true when disabled', () => {
-      // Set preference to true in localStorage
-      localStorage.setItem('test-key:attach-code', 'true');
-      localStorage.setItem('test-key:attach-logs', 'true');
-      localStorage.setItem('test-key:attach-io-data', 'true');
-
+  describe('Run Attachment Controls', () => {
+    it('should include both flags and the run when a run is selected', async () => {
       render(
-        <ChatInput
-          showJobControls
-          storageKey="test-key"
-          selectedJobId={null}
-          selectedRunId={null}
-          selectedStepId={null}
-        />
+        <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-123" />
       );
 
-      // All checkboxes should be unchecked even though preferences are true
-      const codeCheckbox = screen.getByRole('checkbox', {
-        name: /send code/i,
-      });
-      const logsCheckbox = screen.getByRole('checkbox', {
-        name: /send logs/i,
-      });
-      const ioCheckbox = screen.getByRole('checkbox', {
-        name: /send scrubbed i\/o/i,
-      });
+      const textarea = screen.getByPlaceholderText('Ask me anything...');
+      await userEvent.type(textarea, 'Test{Enter}');
 
-      expect(codeCheckbox).not.toBeChecked();
-      expect(logsCheckbox).not.toBeChecked();
-      expect(ioCheckbox).not.toBeChecked();
+      // Unticked is still an answer, so both ride along as false rather than
+      // being left out.
+      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
+        attach_logs: false,
+        attach_io_data: false,
+        follow_run_id: 'run-123',
+      });
     });
 
-    it('should restore checked state when selection is provided after being disabled', async () => {
-      localStorage.setItem('test-key:attach-code', 'true');
+    it('should include attach_logs when run logs are added', async () => {
+      render(
+        <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-123" />
+      );
+
+      await toggleContext(/send run logs/i);
+
+      const textarea = screen.getByPlaceholderText('Ask me anything...');
+      await userEvent.type(textarea, 'Test{Enter}');
+
+      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
+        attach_logs: true,
+        attach_io_data: false,
+        follow_run_id: 'run-123',
+      });
+    });
+
+    it('should include attach_io_data when run data is added', async () => {
+      render(
+        <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-123" />
+      );
+
+      await toggleContext(/send run data/i);
+
+      const textarea = screen.getByPlaceholderText('Ask me anything...');
+      await userEvent.type(textarea, 'Test{Enter}');
+
+      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
+        attach_logs: false,
+        attach_io_data: true,
+        follow_run_id: 'run-123',
+      });
+    });
+
+    it('should send no attachment options when no run is loaded', async () => {
+      render(
+        <ChatInput onSendMessage={mockSendMessage} selectedRunId={null} />
+      );
+
+      const textarea = screen.getByPlaceholderText('Ask me anything...');
+      await userEvent.type(textarea, 'Test{Enter}');
+
+      // A step without a run cannot be attached, so nothing goes.
+      expect(mockSendMessage).toHaveBeenCalledWith('Test', {});
+    });
+  });
+
+  describe('Attached Context', () => {
+    it('should tick only the box that was clicked', async () => {
+      render(<ChatInput selectedRunId="run-123" />);
+
+      await toggleContext(/send run logs/i);
+
+      const controls = screen.getByTestId('attached-context');
+      expect(
+        within(controls).getByRole('checkbox', { name: /send run logs/i })
+      ).toBeChecked();
+      expect(
+        within(controls).getByRole('checkbox', { name: /send run data/i })
+      ).not.toBeChecked();
+    });
+
+    it('should untick on a second click', async () => {
+      render(
+        <ChatInput onSendMessage={mockSendMessage} selectedRunId="run-1" />
+      );
+
+      await toggleContext(/send run logs/i);
+      await toggleContext(/send run logs/i);
+
+      expect(
+        screen.getByRole('checkbox', { name: /send run logs/i })
+      ).not.toBeChecked();
+
+      const textarea = screen.getByPlaceholderText('Ask me anything...');
+      await userEvent.type(textarea, 'Test{Enter}');
+
+      expect(mockSendMessage).toHaveBeenCalledWith('Test', {
+        attach_logs: false,
+        attach_io_data: false,
+        follow_run_id: 'run-1',
+      });
+    });
+
+    it('should claim nothing when there is no run, whatever was remembered', () => {
+      localStorage.setItem('test-key:attach-logs', 'true');
+      localStorage.setItem('test-key:attach-run-data', 'true');
+
+      // A step on its own is not enough: both attachments are run-scoped.
+      render(<ChatInput storageKey="test-key" selectedRunId={null} />);
+
+      expect(screen.queryByTestId('attached-context')).not.toBeInTheDocument();
+    });
+
+    it('should bring the remembered attachments back when a run arrives', async () => {
+      localStorage.setItem('test-key:attach-logs', 'true');
 
       const { rerender } = render(
-        <ChatInput showJobControls storageKey="test-key" selectedJobId={null} />
+        <ChatInput storageKey="test-key" selectedRunId={null} />
       );
 
-      // Initially disabled and unchecked
-      const disabledCheckbox = screen.getByRole('checkbox', {
-        name: /send code/i,
-      });
-      expect(disabledCheckbox).toBeDisabled();
-      expect(disabledCheckbox).not.toBeChecked();
+      expect(screen.queryByTestId('attached-context')).not.toBeInTheDocument();
 
-      // Provide job selection
-      rerender(
-        <ChatInput
-          showJobControls
-          storageKey="test-key"
-          selectedJobId="job-123"
-        />
-      );
+      rerender(<ChatInput storageKey="test-key" selectedRunId="run-123" />);
 
-      // Re-query after rerender - now should be enabled and checked (from preference)
       await waitFor(() => {
-        const enabledCheckbox = screen.getByRole('checkbox', {
-          name: /send code/i,
-        });
-        expect(enabledCheckbox).toBeEnabled();
-        expect(enabledCheckbox).toBeChecked();
+        expect(
+          screen.getByRole('checkbox', { name: /send run logs/i })
+        ).toBeChecked();
       });
     });
   });
 
   describe('LocalStorage Persistence', () => {
-    it('should load attach_code preference from localStorage', () => {
-      localStorage.setItem('test-key:attach-code', 'false');
-
-      render(
-        <ChatInput
-          showJobControls
-          storageKey="test-key"
-          selectedJobId="job-123"
-        />
-      );
-
-      const codeCheckbox = screen.getByRole('checkbox', {
-        name: /send code/i,
-      });
-      expect(codeCheckbox).not.toBeChecked();
-    });
-
-    it('should load attach_logs preference from localStorage', () => {
+    it('should load remembered attachments from localStorage', () => {
       localStorage.setItem('test-key:attach-logs', 'true');
+      localStorage.setItem('test-key:attach-run-data', 'true');
 
-      render(
-        <ChatInput
-          showJobControls
-          storageKey="test-key"
-          selectedRunId="run-123"
-        />
-      );
+      render(<ChatInput storageKey="test-key" selectedRunId="run-123" />);
 
-      const logsCheckbox = screen.getByRole('checkbox', {
-        name: /send logs/i,
-      });
-      expect(logsCheckbox).toBeChecked();
+      expect(
+        screen.getByRole('checkbox', { name: /send run logs/i })
+      ).toBeChecked();
+      expect(
+        screen.getByRole('checkbox', { name: /send run data/i })
+      ).toBeChecked();
     });
 
-    it('should default to attach_code=true when not in localStorage', () => {
-      render(
-        <ChatInput
-          showJobControls
-          storageKey="test-key"
-          selectedJobId="job-123"
-        />
-      );
+    it('should attach nothing by default', () => {
+      render(<ChatInput storageKey="test-key" selectedRunId="run-123" />);
 
-      const codeCheckbox = screen.getByRole('checkbox', {
-        name: /send code/i,
-      });
-      expect(codeCheckbox).toBeChecked();
+      expect(
+        screen.getByRole('checkbox', { name: /send run logs/i })
+      ).not.toBeChecked();
+      expect(
+        screen.getByRole('checkbox', { name: /send run data/i })
+      ).not.toBeChecked();
     });
 
-    it('should default to attach_logs=false when not in localStorage', () => {
-      render(
-        <ChatInput
-          showJobControls
-          storageKey="test-key"
-          selectedRunId="run-123"
-        />
-      );
+    it('should save each attachment to localStorage', async () => {
+      render(<ChatInput storageKey="test-key" selectedRunId="run-123" />);
 
-      const logsCheckbox = screen.getByRole('checkbox', {
-        name: /send logs/i,
-      });
-      expect(logsCheckbox).not.toBeChecked();
-    });
-
-    it('should save attach_code preference to localStorage', async () => {
-      render(
-        <ChatInput
-          showJobControls
-          storageKey="test-key"
-          selectedJobId="job-123"
-        />
-      );
-
-      const codeCheckbox = screen.getByRole('checkbox', {
-        name: /send code/i,
-      });
-
-      await userEvent.click(codeCheckbox);
-
-      await waitFor(() => {
-        expect(localStorage.getItem('test-key:attach-code')).toBe('false');
-      });
-    });
-
-    it('should save attach_logs preference to localStorage', async () => {
-      render(
-        <ChatInput
-          showJobControls
-          storageKey="test-key"
-          selectedRunId="run-123"
-        />
-      );
-
-      const logsCheckbox = screen.getByRole('checkbox', {
-        name: /send logs/i,
-      });
-
-      await userEvent.click(logsCheckbox);
-
+      await toggleContext(/send run logs/i);
       await waitFor(() => {
         expect(localStorage.getItem('test-key:attach-logs')).toBe('true');
+      });
+
+      await toggleContext(/send run data/i);
+      await waitFor(() => {
+        expect(localStorage.getItem('test-key:attach-run-data')).toBe('true');
       });
     });
 
     it('should update preferences when storageKey changes', async () => {
-      localStorage.setItem('key-1:attach-code', 'false');
-      localStorage.setItem('key-2:attach-code', 'true');
+      localStorage.setItem('key-1:attach-logs', 'false');
+      localStorage.setItem('key-2:attach-logs', 'true');
 
       const { rerender } = render(
-        <ChatInput showJobControls storageKey="key-1" selectedJobId="job-123" />
+        <ChatInput storageKey="key-1" selectedRunId="run-123" />
       );
 
-      const codeCheckbox = screen.getByRole('checkbox', {
-        name: /send code/i,
-      });
-      expect(codeCheckbox).not.toBeChecked();
+      expect(
+        screen.getByRole('checkbox', { name: /send run logs/i })
+      ).not.toBeChecked();
 
       // Change storageKey
-      rerender(
-        <ChatInput showJobControls storageKey="key-2" selectedJobId="job-123" />
-      );
+      rerender(<ChatInput storageKey="key-2" selectedRunId="run-123" />);
 
       await waitFor(() => {
-        expect(codeCheckbox).toBeChecked();
+        expect(
+          screen.getByRole('checkbox', { name: /send run logs/i })
+        ).toBeChecked();
       });
     });
 
@@ -764,7 +535,7 @@ describe('ChatInput', () => {
 
       // Should not crash
       expect(() => {
-        render(<ChatInput showJobControls storageKey="test-key" />);
+        render(<ChatInput storageKey="test-key" />);
       }).not.toThrow();
 
       // Restore

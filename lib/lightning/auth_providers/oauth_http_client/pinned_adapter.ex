@@ -35,6 +35,10 @@ defmodule Lightning.AuthProviders.OauthHTTPClient.PinnedAdapter do
 
   require Logger
 
+  # Scoped rather than filtered file-wide so `:no_return` keeps working for the
+  # rest of this module. See .dialyzer_ignore.exs.
+  @dialyzer {:nowarn_function, exchange: 4}
+
   @egress_opts [:block_private_networks, :allowed_hosts, :resolver, :dns_timeout]
 
   @impl Tesla.Adapter

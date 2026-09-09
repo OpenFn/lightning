@@ -123,6 +123,54 @@ defmodule LightningWeb.API.CollectionsControllerTest do
 
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
+
+    # The token is untouched and the project access is unchanged, so the
+    # confirmation deadline is the only thing that can cause the 401 — and
+    # confirming the address is enough to bring the same token back.
+    test "with an account past its confirmation deadline, despite project access",
+         %{conn: conn} do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user}])
+      collection = insert(:collection, project: project)
+
+      token = Lightning.Accounts.generate_api_token(user)
+
+      user =
+        user
+        |> Ecto.Changeset.change(
+          confirmed_at: nil,
+          inserted_at:
+            DateTime.utc_now()
+            |> Timex.shift(hours: -50)
+            |> DateTime.truncate(:second)
+        )
+        |> Lightning.Repo.update!()
+
+      refused =
+        conn
+        |> assign_bearer(token)
+        |> get(~p"/collections/#{collection.name}")
+
+      assert json_response(refused, 401) == %{"error" => "Unauthorized"}
+
+      user
+      |> Ecto.Changeset.change(
+        confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
+      |> Lightning.Repo.update!()
+
+      allowed =
+        conn
+        |> assign_bearer(token)
+        |> get(~p"/collections/#{collection.name}")
+
+      assert json_response(allowed, 200) == %{"items" => [], "cursor" => nil}
+    end
   end
 
   describe "GET /collections/:name/:key" do
@@ -1276,6 +1324,38 @@ defmodule LightningWeb.API.CollectionsControllerTest do
       response = get(conn, ~p"/download/collections/not-a-uuid/anything")
 
       assert response.status == 400
+    end
+
+    test "does not serve the payload to a locked-out account",
+         %{conn: conn, user: user, project: project} do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      user
+      |> Ecto.Changeset.change(
+        confirmed_at: nil,
+        inserted_at:
+          DateTime.utc_now()
+          |> Timex.shift(hours: -50)
+          |> DateTime.truncate(:second)
+      )
+      |> Lightning.Repo.update!()
+
+      collection = insert(:collection, project: project)
+
+      insert(:collection_item,
+        collection: collection,
+        key: "key-1",
+        value: ~s({"name": "Alice"})
+      )
+
+      response =
+        get(conn, ~p"/download/collections/#{project.id}/#{collection.name}")
+
+      assert redirected_to(response) == "/users/confirm-required"
+      refute response.resp_body =~ "Alice"
     end
   end
 

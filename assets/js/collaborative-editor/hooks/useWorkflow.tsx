@@ -408,6 +408,7 @@ export const useWorkflowActions = () => {
     removeJobAndClearSelection: store.removeJobAndClearSelection,
 
     setError: store.setError,
+    clearErrorField: store.clearErrorField,
     setClientErrors: (...args: Parameters<typeof store.setClientErrors>) => {
       // Note: there was something stale here
       store.setClientErrors(...args);

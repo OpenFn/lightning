@@ -10,9 +10,13 @@ import Config
 config :lightning,
   ecto_repos: [Lightning.Repo]
 
-# Apollo (AI assistant service) — see Config.Bootstrap for what the
-# timeout governs and how APOLLO_TIMEOUT overrides it.
-config :lightning, :apollo, timeout: 120_000
+# Apollo (AI assistant service). Compiled defaults so these are never nil;
+# Config.Bootstrap overrides them from the environment. See there for what
+# each one bounds.
+config :lightning, :apollo,
+  connect_timeout: 5_000,
+  idle_timeout: 30_000,
+  request_timeout: 300_000
 
 config :lightning, Lightning.Repo,
   types: Lightning.PostgrexTypes,
@@ -197,6 +201,7 @@ config :philter,
 
 config :lightning, :is_resettable_demo, false
 config :lightning, :default_retention_period, nil
+
 config :lightning, :claim_work_mem, nil
 
 config :lightning, :log_lines_search_indexing, batch_size: 2_500, max_batches: 10

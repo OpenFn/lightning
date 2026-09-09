@@ -8,12 +8,15 @@ defmodule Lightning.Invocation do
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.DataclipAudit
+  alias Lightning.Invocation.LogLine
   alias Lightning.Invocation.Query
   alias Lightning.Invocation.Step
   alias Lightning.Projects.File, as: ProjectFile
   alias Lightning.Projects.Project
   alias Lightning.Repo
   alias Lightning.Run
+  alias Lightning.RunStep
+  alias Lightning.Scrubber
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
@@ -21,6 +24,21 @@ defmodule Lightning.Invocation do
   alias Lightning.WorkOrders.ExportAudit
   alias Lightning.WorkOrders.ExportWorker
   alias Lightning.WorkOrders.SearchParams
+
+  # Comfortably above Apollo's own 250,000-character attachment limit, so a
+  # payload that would have been accepted is never shortened here.
+  @logs_byte_budget 300_000
+  @logs_line_overhead 150
+
+  # On the scrubbed output, and the step that crosses it is read whole.
+  @io_byte_budget 100_000
+
+  # Past this a body is described rather than read.
+  @io_dataclip_byte_cap 1_000_000
+
+  @io_erased "[erased by this project's retention policy]"
+  @io_too_large "[too large to summarise]"
+  @io_over_budget "[not read, the run's data ran past what can be sent]"
 
   @workorders_search_timeout 30_000
   @workorders_count_limit 50
@@ -87,7 +105,7 @@ defmodule Lightning.Invocation do
   def get_dataclip_with_body!(id) do
     # Query body as pretty-printed JSON text directly from PostgreSQL, avoiding expensive
     # deserialization to Elixir map (saves ~38x memory amplification!)
-    # For http_request/kafka types, wraps body in {"data": ..., "request": ...} structure
+    # For http_request types, wraps body in {"data": ..., "request": ...} structure
     dataclip =
       from(d in Lightning.Invocation.Dataclip, where: d.id == ^id)
       |> Query.select_as_input_text()
@@ -900,6 +918,186 @@ defmodule Lightning.Invocation do
     query
     |> Repo.all()
     |> Enum.join("\n")
+  end
+
+  @doc """
+  Return every log line for a run in `project_id`, oldest first, as maps.
+
+  Unlike the `assemble_logs_*` functions this keeps the columns needed to tell
+  the lines apart: `job_id` for attribution, `level`, and `step_id` to separate
+  retries. Run-level lines have no step, so both ids are nil for them.
+  """
+  @spec logs_for_run(Ecto.UUID.t(), Ecto.UUID.t()) :: [map()]
+  def logs_for_run(_run_id, nil), do: []
+
+  def logs_for_run(run_id, project_id) do
+    case Ecto.UUID.cast(run_id) do
+      {:ok, uuid} -> logs_for_run_id(uuid, project_id)
+      :error -> []
+    end
+  end
+
+  defp logs_for_run_id(run_id, project_id) do
+    query =
+      from(l in LogLine,
+        join: r in assoc(l, :run),
+        join: wo in assoc(r, :work_order),
+        join: w in assoc(wo, :workflow),
+        left_join: s in assoc(l, :step),
+        where: l.run_id == ^run_id and w.project_id == ^project_id,
+        order_by: [asc: l.timestamp],
+        select: %{
+          step_id: l.step_id,
+          job_id: s.job_id,
+          level: l.level,
+          message: l.message
+        }
+      )
+
+    {:ok, lines} =
+      Repo.transaction(fn ->
+        query
+        |> Repo.stream()
+        |> Enum.reduce_while({[], 0}, &take_until_over_budget/2)
+        |> then(fn {lines, _size} -> Enum.reverse(lines) end)
+      end)
+
+    lines
+  end
+
+  # A job that logs per record produces hundreds of thousands of rows.
+  defp take_until_over_budget(line, {lines, size}) do
+    # The ids and level ride along with every line, so a run of short messages
+    # costs far more on the wire than its text suggests.
+    size = size + byte_size(line.message || "") + @logs_line_overhead
+    lines = [line | lines]
+
+    if size > @logs_byte_budget do
+      {:halt, {lines, size}}
+    else
+      {:cont, {lines, size}}
+    end
+  end
+
+  @doc """
+  Return the input and output of every step in a run, oldest first, with the
+  values replaced by their types.
+
+  What comes back is the shape of the data rather than the data: every leaf
+  becomes `"string"`, `"number"`, `"boolean"`, `"null"` or `"unknown"`, and
+  long lists keep two samples. Field names survive as they are, capped in
+  number. See `Lightning.Scrubber.scrub_values/2`.
+
+  Every step in the run comes back, in the order it ran. A dataclip that was
+  never set comes back as nil; one that is erased, too large to read, or past
+  the point where the run stopped fitting comes back as a short sentence saying
+  so, because a reader that is told nothing assumes it saw everything.
+  """
+  @spec scrubbed_io_for_run(Ecto.UUID.t() | String.t(), Ecto.UUID.t() | nil) ::
+          [map()]
+  def scrubbed_io_for_run(_run_id, nil), do: []
+
+  def scrubbed_io_for_run(run_id, project_id) do
+    case Ecto.UUID.cast(run_id) do
+      {:ok, uuid} -> scrubbed_io_for_run_id(uuid, project_id)
+      :error -> []
+    end
+  end
+
+  defp scrubbed_io_for_run_id(run_id, project_id) do
+    run_id
+    |> io_steps_for_run(project_id)
+    |> Enum.map_reduce(0, &take_io_within_budget/2)
+    |> elem(0)
+  end
+
+  defp io_steps_for_run(run_id, project_id) do
+    from(rs in RunStep,
+      join: s in assoc(rs, :step),
+      join: r in assoc(rs, :run),
+      join: wo in assoc(r, :work_order),
+      join: w in assoc(wo, :workflow),
+      left_join: j in assoc(s, :job),
+      where: rs.run_id == ^run_id and w.project_id == ^project_id,
+      # A step that never started has no start time, so age breaks the tie.
+      order_by: [asc_nulls_last: s.started_at, asc: s.inserted_at, asc: s.id],
+      select: %{
+        step_name: j.name,
+        input_dataclip_id: s.input_dataclip_id,
+        output_dataclip_id: s.output_dataclip_id
+      }
+    )
+    |> Repo.all()
+  end
+
+  # Past the budget a step still appears, saying why it was not read.
+  defp take_io_within_budget(step, size) when size > @io_byte_budget do
+    entry = %{
+      step_name: step.step_name,
+      input: over_budget(step.input_dataclip_id),
+      output: over_budget(step.output_dataclip_id)
+    }
+
+    {entry, size + io_entry_size(entry)}
+  end
+
+  defp take_io_within_budget(step, size) do
+    entry = %{
+      step_name: step.step_name,
+      input: scrubbed_body(step.input_dataclip_id),
+      output: scrubbed_body(step.output_dataclip_id)
+    }
+
+    {entry, size + io_entry_size(entry)}
+  end
+
+  defp scrubbed_body(nil), do: nil
+
+  # One body at a time, and sized in Postgres so an oversized one never reaches
+  # the BEAM. octet_length measures the JSON; pg_column_size would measure the
+  # compressed datum, which on this data is smaller by a factor of tens.
+  defp scrubbed_body(dataclip_id) do
+    query =
+      from(d in Dataclip,
+        where: d.id == ^dataclip_id,
+        select: %{
+          wiped: not is_nil(d.wiped_at),
+          empty: is_nil(d.body),
+          too_large:
+            fragment(
+              "? IS NULL AND octet_length(?::text) > ?",
+              d.wiped_at,
+              d.body,
+              ^@io_dataclip_byte_cap
+            ),
+          body:
+            fragment(
+              "CASE WHEN ? IS NULL AND octet_length(?::text) <= ? THEN ? END",
+              d.wiped_at,
+              d.body,
+              ^@io_dataclip_byte_cap,
+              d.body
+            )
+        }
+      )
+
+    # A body of JSON null decodes to the same nil as an absent one, so which it
+    # was has to be asked of Postgres rather than inferred here.
+    case Repo.one(query) do
+      nil -> nil
+      %{wiped: true} -> @io_erased
+      %{empty: true} -> nil
+      %{too_large: true} -> @io_too_large
+      %{body: body} -> Scrubber.scrub_values(body)
+    end
+  end
+
+  defp over_budget(nil), do: nil
+  defp over_budget(_dataclip_id), do: @io_over_budget
+
+  defp io_entry_size(entry) do
+    # Scrubbed output is always encodable.
+    entry |> Jason.encode!() |> byte_size()
   end
 
   def assemble_logs_for_step(nil), do: nil

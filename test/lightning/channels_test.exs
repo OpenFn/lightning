@@ -318,6 +318,97 @@ defmodule Lightning.ChannelsTest do
     end
   end
 
+  describe "client auth method scoping" do
+    setup do
+      %{user: insert(:user)}
+    end
+
+    test "create_channel rejects a client webhook auth method owned by another project",
+         %{user: user} do
+      project = insert(:project)
+      other_project = insert(:project)
+      victim_auth_method = insert(:webhook_auth_method, project: other_project)
+
+      assert {:error, changeset} =
+               Channels.create_channel(
+                 %{
+                   name: "borrowed-auth",
+                   destination_url: "https://example.com/destination",
+                   project_id: project.id,
+                   client_auth_methods: [
+                     %{webhook_auth_method_id: victim_auth_method.id}
+                   ]
+                 },
+                 actor: user
+               )
+
+      refute changeset.valid?
+
+      assert %{client_auth_methods: [%{webhook_auth_method_id: [_msg]}]} =
+               errors_on(changeset)
+
+      # Nothing was persisted.
+      assert Channels.list_channels_for_project(project.id) == []
+    end
+
+    test "create_channel allows a client webhook auth method owned by the same project",
+         %{user: user} do
+      project = insert(:project)
+      own_auth_method = insert(:webhook_auth_method, project: project)
+
+      assert {:ok, %Channel{} = channel} =
+               Channels.create_channel(
+                 %{
+                   name: "own-auth",
+                   destination_url: "https://example.com/destination",
+                   project_id: project.id,
+                   client_auth_methods: [
+                     %{webhook_auth_method_id: own_auth_method.id}
+                   ]
+                 },
+                 actor: user
+               )
+
+      channel =
+        Channels.get_channel!(channel.id, include: [:client_auth_methods])
+
+      assert [%{webhook_auth_method_id: id}] = channel.client_auth_methods
+      assert id == own_auth_method.id
+    end
+
+    test "update_channel rejects adding a client webhook auth method from another project",
+         %{user: user} do
+      project = insert(:project)
+      other_project = insert(:project)
+      victim_auth_method = insert(:webhook_auth_method, project: other_project)
+
+      channel =
+        insert(:channel, project: project)
+        |> Lightning.Repo.preload(:client_auth_methods)
+
+      assert {:error, changeset} =
+               Channels.update_channel(
+                 channel,
+                 %{
+                   client_auth_methods: [
+                     %{webhook_auth_method_id: victim_auth_method.id}
+                   ]
+                 },
+                 actor: user
+               )
+
+      refute changeset.valid?
+
+      assert %{client_auth_methods: [%{webhook_auth_method_id: [_msg]}]} =
+               errors_on(changeset)
+
+      reloaded =
+        Channels.get_channel!(channel.id, include: [:client_auth_methods])
+
+      assert reloaded.client_auth_methods == []
+    end
+  end
+
   describe "update_channel/3" do
     setup do
       %{user: insert(:user)}

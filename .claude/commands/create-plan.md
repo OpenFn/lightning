@@ -9,7 +9,7 @@ You are tasked with creating detailed implementation plans through an interactiv
 
 **Usage**: `/create-plan $ARGUMENTS`
 
-If `$ARGUMENTS` is provided with an issue file path, read it fully and begin research immediately.
+If `$ARGUMENTS` is provided with an issue file path, read it and begin research immediately.
 If no argument provided, present the initial prompt and ask the user for context.
 
 ## Initial Response
@@ -17,7 +17,7 @@ If no argument provided, present the initial prompt and ask the user for context
 When this command is invoked:
 
 1. **If `$ARGUMENTS` is provided**:
-   - Immediately read the file at `$ARGUMENTS` FULLY
+   - Immediately read the file at `$ARGUMENTS`
    - Begin the research process without waiting for user input
    - Proceed directly to Step 1: Context Gathering & Initial Analysis
 
@@ -41,7 +41,7 @@ Then wait for the user's input.
 
 ### Step 1: Context Gathering & Initial Analysis
 
-1. **Read all mentioned files immediately and FULLY**:
+1. **Read all mentioned files immediately**:
    - Issue/ticket files (e.g., `.context/shared/issues/issue-1234.md`)
    - Research documents
    - Related implementation plans
@@ -153,7 +153,7 @@ After structure approval:
 
 1. **Identify agent assignments for each phase**:
    - For each implementation phase, determine which specialized agent should handle it. See [CLAUDE.md §Available Agents](../../CLAUDE.md#available-agents) for the canonical roster.
-   - Each phase uses a fresh agent instance to avoid context window issues.
+   - Each phase uses a fresh agent instance, which isolates it: a later phase cannot be misled by an earlier phase's abandoned attempts. This is the default for any plan with more than one phase; a single-phase plan may be implemented directly.
    - The agent assignment tells the implementation coordinator which agent to spawn for that phase
 
 2. **Write the plan** to `.context/shared/plans/YYYY-MM-DD-XXXX-description.md`
@@ -198,7 +198,7 @@ After structure approval:
 ## Phase 1: [Descriptive Name]
 
 **Implementation Agent**: `[agent-type]`
-<!-- See implement-plan.md for available agents and their capabilities -->
+<!-- See CLAUDE.md §Available Agents for the canonical roster -->
 
 ### Overview
 [What this phase accomplishes]
@@ -221,6 +221,7 @@ After structure approval:
 - [ ] Type checking passes: `<project typecheck command>`
 - [ ] Linting passes: `<project lint command>`
 - [ ] Integration tests pass: `<project integration test command>`
+- [ ] API endpoint returns 200: `curl localhost:<port>/api/new-endpoint`
 
 #### Manual Verification:
 - [ ] Feature works as expected when tested via UI
@@ -289,7 +290,7 @@ After structure approval:
 
 ## Important Guidelines
 
-1. **Read all context files COMPLETELY before planning**. Include specific file paths and line numbers. Automated verification steps should use project-specific commands (e.g., `mix verify`, `npm test`).
+1. Include specific file paths and line numbers. Automated verification steps should use project-specific commands (e.g., `mix verify`, `npm test`).
 
 2. **Track progress** with TodoWrite for non-trivial plans.
 
@@ -311,22 +312,10 @@ After structure approval:
    - Edge cases that are hard to automate
    - User acceptance criteria
 
-**Format example:**
-```markdown
-### Success Criteria:
-
-#### Automated Verification:
-- [ ] Database migration runs successfully: `<migrate command>`
-- [ ] All unit tests pass: `<test command>`
-- [ ] No linting errors: `<lint command>`
-- [ ] API endpoint returns 200: `curl localhost:<port>/api/new-endpoint`
-
-#### Manual Verification:
-- [ ] New feature appears correctly in the UI
-- [ ] Performance is acceptable with 1000+ items
-- [ ] Error messages are user-friendly
-- [ ] Feature works correctly on mobile devices
-```
+Review the CHANGELOG entry against the final implementation. Lightning uses
+Keep-a-Changelog; a user-visible change merging to `main` needs an accurate entry with
+an issue or PR link. Prefer broadening an existing entry over adding a second one.
+"No change needed" is a fine outcome — the review is what matters.
 
 ## Common Patterns
 
@@ -363,29 +352,17 @@ When spawning research sub-tasks:
    - Expected output format
 4. **Be specific about directories** — name the exact path (e.g., `assets/`, `lib/`):
    - Include the full path context in your prompts
-5. **Specify read-only tools** to use
-6. **Request specific file:line references** in responses
-7. **Wait for all tasks to complete** before synthesizing
-8. **Verify sub-task results**:
+5. **Request specific file:line references** in responses
+6. **Wait for all tasks to complete** before synthesizing
+7. **Verify sub-task results**:
    - If a sub-task returns unexpected results, spawn follow-up tasks
    - Cross-check findings against the actual codebase
    - Don't accept results that seem incorrect
 
-Example of spawning multiple tasks:
-```python
-# Spawn these tasks concurrently:
-tasks = [
-    Task("Research database schema", db_research_prompt),
-    Task("Find API patterns", api_research_prompt),
-    Task("Investigate UI components", ui_research_prompt),
-    Task("Check test patterns", test_research_prompt)
-]
-```
-
 ## Example Interaction Flow
 
 ```
-User: /create_plan
+User: /create-plan
 Assistant: I'll help you create a detailed implementation plan...
 
 User: We need to add workflow save functionality. See .context/shared/issues/issue-3635.md

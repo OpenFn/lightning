@@ -128,6 +128,30 @@ export const useAIStreamingSegments = () => {
 };
 
 /**
+ * Get the workflow YAML snapshots streamed so far for the in-flight reply,
+ * each pinned to the timeline segment it belongs under.
+ */
+export const useAIStreamingSnapshots = () => {
+  const store = useAIStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.streamingSnapshots)
+  );
+};
+
+/**
+ * Get the snapshots retained per finalized assistant message, so a reply
+ * keeps its per-status diffs after the stream ends.
+ */
+export const useAISnapshotsByMessageId = () => {
+  const store = useAIStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    store.withSelector(state => state.snapshotsByMessageId)
+  );
+};
+
+/**
  * Get streaming changes (code edits or workflow YAML sent before text streams)
  */
 export const useAIStreamingChanges = () => {

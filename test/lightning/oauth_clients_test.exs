@@ -126,7 +126,7 @@ defmodule Lightning.OauthClientsTest do
         project_oauth_clients: [%{project_id: project.id}]
       }
 
-      {:ok, client} = OauthClients.create_client(attrs)
+      {:ok, client} = OauthClients.create_client(attrs, user)
 
       assert audit_logged?(client, "created")
       assert audit_logged?(client, "added_to_project")
@@ -142,8 +142,9 @@ defmodule Lightning.OauthClientsTest do
     end
 
     test "fails to create an oauth client with invalid data" do
-      attrs = %{name: nil}
-      {:error, changeset} = OauthClients.create_client(attrs)
+      user = insert(:user)
+      attrs = %{name: nil, user_id: user.id}
+      {:error, changeset} = OauthClients.create_client(attrs, user)
 
       assert changeset.valid? == false
       assert changeset.errors[:name] != nil
@@ -152,8 +153,10 @@ defmodule Lightning.OauthClientsTest do
 
   describe "update_client/2 with project association changes" do
     test "updates client and modifies project associations" do
+      user = insert(:user)
+
       client =
-        insert(:oauth_client, name: "Old Name")
+        insert(:oauth_client, name: "Old Name", user: user)
         |> Repo.preload(:project_oauth_clients)
 
       [_project, another_project] = insert_list(2, :project)
@@ -163,7 +166,8 @@ defmodule Lightning.OauthClientsTest do
         project_oauth_clients: [%{project_id: another_project.id}]
       }
 
-      {:ok, updated_client} = OauthClients.update_client(client, updated_attrs)
+      {:ok, updated_client} =
+        OauthClients.update_client(client, updated_attrs, user)
 
       assert audit_logged?(updated_client, "updated")
       assert audit_logged?(updated_client, "added_to_project")
@@ -179,11 +183,13 @@ defmodule Lightning.OauthClientsTest do
 
     test "removes a project association and logs the event" do
       project = insert(:project)
+      user = insert(:user)
 
       client =
         %{project_oauth_clients: [poc]} =
         insert(:oauth_client,
           name: "Test Client",
+          user: user,
           project_oauth_clients: [%{project: project}]
         )
         |> Repo.preload(:project_oauth_clients)
@@ -194,7 +200,8 @@ defmodule Lightning.OauthClientsTest do
         ]
       }
 
-      {:ok, updated_client} = OauthClients.update_client(client, updated_attrs)
+      {:ok, updated_client} =
+        OauthClients.update_client(client, updated_attrs, user)
 
       assert audit_logged?(updated_client, "updated")
       assert audit_logged?(updated_client, "removed_from_project")
@@ -206,10 +213,13 @@ defmodule Lightning.OauthClientsTest do
     end
 
     test "returns an error when update fails due to invalid data" do
-      client = insert(:oauth_client)
+      user = insert(:user)
+      client = insert(:oauth_client, user: user)
 
       invalid_attrs = %{name: nil}
-      {:error, changeset} = OauthClients.update_client(client, invalid_attrs)
+
+      {:error, changeset} =
+        OauthClients.update_client(client, invalid_attrs, user)
 
       refute audit_logged?(client, "updated")
 
@@ -220,13 +230,14 @@ defmodule Lightning.OauthClientsTest do
 
   describe "delete_client/1" do
     test "deletes a client successfully" do
-      client = insert(:oauth_client)
+      user = insert(:user)
+      client = insert(:oauth_client, user: user)
 
       assert {:ok,
               %{
                 audit: %Lightning.Auditing.Audit{} = audit,
                 client: %Lightning.Credentials.OauthClient{} = oauth_client
-              }} = OauthClients.delete_client(client)
+              }} = OauthClients.delete_client(client, user)
 
       assert audit.event == "deleted"
       assert audit.item_id == oauth_client.id
@@ -253,17 +264,20 @@ defmodule Lightning.OauthClientsTest do
       _project_2 = insert(:project, name: "Project 2")
 
       {:ok, client} =
-        OauthClients.create_client(%{
-          name: "Global Client",
-          client_id: "client_id",
-          client_secret: "client_secret",
-          authorization_endpoint: "https://www.example.com",
-          revocation_endpoint: "https://www.example.com/revoke",
-          token_endpoint: "https://www.example.com",
-          user_id: user.id,
-          global: false,
-          project_oauth_clients: [%{project_id: project_1.id}]
-        })
+        OauthClients.create_client(
+          %{
+            name: "Global Client",
+            client_id: "client_id",
+            client_secret: "client_secret",
+            authorization_endpoint: "https://www.example.com",
+            revocation_endpoint: "https://www.example.com/revoke",
+            token_endpoint: "https://www.example.com",
+            user_id: user.id,
+            global: false,
+            project_oauth_clients: [%{project_id: project_1.id}]
+          },
+          user
+        )
 
       client = Repo.preload(client, :project_oauth_clients)
 
@@ -286,7 +300,9 @@ defmodule Lightning.OauthClientsTest do
       Repo.delete_all(Lightning.Auditing.Audit)
 
       {:ok, client} =
-        OauthClients.update_client(client, %{global: true}, allow_global: true)
+        OauthClients.update_client(client, %{global: true}, user,
+          allow_global: true
+        )
 
       associations = Repo.all(ProjectOauthClient)
 
@@ -322,6 +338,7 @@ defmodule Lightning.OauthClientsTest do
             user_id: user.id,
             global: true
           },
+          user,
           allow_global: true
         )
 
@@ -351,6 +368,7 @@ defmodule Lightning.OauthClientsTest do
               end)
               |> Enum.concat([%{project_id: project_3.id}])
           },
+          user,
           allow_global: true
         )
 
@@ -377,25 +395,86 @@ defmodule Lightning.OauthClientsTest do
       user = insert(:user)
       attrs = Map.merge(@client_attrs, %{user_id: user.id, global: true})
 
-      {:ok, client} = OauthClients.create_client(attrs)
+      {:ok, client} = OauthClients.create_client(attrs, user)
       refute client.global
 
       {:ok, global_client} =
-        OauthClients.create_client(attrs, allow_global: true)
+        OauthClients.create_client(attrs, user, allow_global: true)
 
       assert global_client.global
     end
 
     test "update_client cannot set :global unless allow_global is set" do
-      client = insert(:oauth_client, global: false)
+      user = insert(:user)
+      client = insert(:oauth_client, global: false, user: user)
 
-      {:ok, unchanged} = OauthClients.update_client(client, %{global: true})
+      {:ok, unchanged} =
+        OauthClients.update_client(client, %{global: true}, user)
+
       refute unchanged.global
 
       {:ok, promoted} =
-        OauthClients.update_client(client, %{global: true}, allow_global: true)
+        OauthClients.update_client(client, %{global: true}, user,
+          allow_global: true
+        )
 
       assert promoted.global
+    end
+  end
+
+  describe "ownership" do
+    test "a user who does not own a client cannot create, update or delete it" do
+      owner = insert(:user)
+      stranger = insert(:user)
+      client = insert(:oauth_client, name: "Owned Client", user: owner)
+
+      # Creation asks about the owner named in the attrs, not about the person
+      # calling, so a stranger cannot make a client that belongs to someone
+      # else.
+      assert {:error, :unauthorized} =
+               OauthClients.create_client(
+                 %{
+                   name: "Planted Client",
+                   client_id: "client_id",
+                   client_secret: "client_secret",
+                   authorization_endpoint: "https://www.example.com",
+                   revocation_endpoint: "https://www.example.com/revoke",
+                   token_endpoint: "https://www.example.com",
+                   user_id: owner.id
+                 },
+                 stranger
+               )
+
+      refute Repo.get_by(OauthClient, name: "Planted Client")
+
+      assert {:error, :unauthorized} =
+               OauthClients.update_client(client, %{name: "Hijacked"}, stranger)
+
+      assert {:error, :unauthorized} =
+               OauthClients.delete_client(client, stranger)
+
+      reloaded = Repo.get!(OauthClient, client.id)
+      assert reloaded.name == "Owned Client"
+    end
+
+    test "an update cannot move a client into somebody else's account" do
+      # Ownership is what the guard above asks about, so an update that could
+      # write :user_id would let the owner hand the client, and the secret they
+      # already know, to another account. The form params reach the changeset
+      # unfiltered, so the schema has to be the thing that refuses.
+      owner = insert(:user)
+      stranger = insert(:user)
+      client = insert(:oauth_client, name: "Mine", user: owner)
+
+      assert {:ok, updated} =
+               OauthClients.update_client(
+                 client,
+                 %{"name" => "Still mine", "user_id" => stranger.id},
+                 owner
+               )
+
+      assert updated.user_id == owner.id
+      assert Repo.get!(OauthClient, client.id).user_id == owner.id
     end
   end
 end

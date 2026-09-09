@@ -941,15 +941,18 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, credential} =
-        Lightning.Credentials.create_credential(%{
-          body: %{},
-          name: "some name",
-          user_id: user.id,
-          schema: "raw",
-          project_credentials: [
-            %{project_id: project.id}
-          ]
-        })
+        Lightning.Credentials.create_credential(
+          %{
+            body: %{},
+            name: "some name",
+            user_id: user.id,
+            schema: "raw",
+            project_credentials: [
+              %{project_id: project.id}
+            ]
+          },
+          user
+        )
 
       credential = Lightning.Repo.preload(credential, :user)
 
@@ -2142,6 +2145,25 @@ defmodule LightningWeb.ProjectLiveTest do
       end)
     end
 
+    # /mfa_required tells the caller the project exists and how it is
+    # configured. Only someone who would otherwise have standing may be told
+    # that; a stranger gets the same not-found they get for any other project
+    # they are not a member of.
+    test "a non-member of an MFA-required project is not told it requires MFA",
+         %{conn: conn} do
+      stranger = insert(:user, mfa_enabled: false)
+      project = insert(:project, requires_mfa: true)
+
+      assert {:error, {:redirect, %{to: "/projects", flash: flash}}} =
+               live(
+                 log_in_user(conn, stranger),
+                 ~p"/projects/#{project}/settings",
+                 on_error: :raise
+               )
+
+      assert flash == %{"nav" => :not_found}
+    end
+
     test "project admin can toggle support access",
          %{
            conn: conn,
@@ -2316,7 +2338,7 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
-    test "all project users can see the workflows linked to auth methods" do
+    test "all project users can see the workflows and channels linked to auth methods" do
       project = insert(:project)
       workflow = insert(:simple_workflow, project: project)
 
@@ -2326,30 +2348,55 @@ defmodule LightningWeb.ProjectLiveTest do
           triggers: workflow.triggers
         )
 
+      channel =
+        insert(:channel,
+          project: project,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :client,
+              webhook_auth_method: auth_method
+            )
+          ]
+        )
+
       for conn <-
             build_project_user_conns(project, [:editor, :admin, :owner, :viewer]) do
         {:ok, view, html} =
           live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
 
-        modal_id = "#linked_triggers_for_#{auth_method.id}_modal"
+        modal_id = "#linked_usage_for_#{auth_method.id}_modal"
+        link_id = "#display_linked_usage_link_#{auth_method.id}"
 
         assert html =~ auth_method.name
 
-        assert has_element?(
-                 view,
-                 "#display_linked_triggers_link_#{auth_method.id}"
-               )
+        assert view |> element(link_id) |> render() =~ "1 trigger, 1 channel"
 
         refute has_element?(view, modal_id)
 
-        view
-        |> element("#display_linked_triggers_link_#{auth_method.id}")
-        |> render_click()
+        view |> element(link_id) |> render_click()
 
         assert has_element?(view, modal_id)
 
-        assert view |> element(modal_id) |> render() =~ workflow.name
+        modal_html = view |> element(modal_id) |> render()
+
+        assert modal_html =~ "Workflow triggers (1)"
+        assert modal_html =~ workflow.name
+        assert modal_html =~ "Channels (1)"
+        assert modal_html =~ channel.name
       end
+    end
+
+    test "auth methods with no triggers or channels have no usage link" do
+      project = insert(:project)
+      auth_method = insert(:webhook_auth_method, project: project)
+
+      [conn] = build_project_user_conns(project, [:owner])
+
+      {:ok, view, html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      refute has_element?(view, "#display_linked_usage_link_#{auth_method.id}")
+      assert html =~ "No associated triggers or channels..."
     end
 
     test "owners/admins can add a new project webhook auth method, editors/viewers can't" do
@@ -2586,10 +2633,10 @@ defmodule LightningWeb.ProjectLiveTest do
           refute view |> element("##{modal_id}") |> has_element?()
         end
 
-        # the linked-triggers view (a read with no write gate) is scoped too
+        # the linked-usage view (a read with no write gate) is scoped too
         html =
           render_click(view, "show_modal", %{
-            target: "linked_triggers_for_webhook_auth_method",
+            target: "linked_usage_for_webhook_auth_method",
             id: foreign_auth_method.id
           })
 
@@ -2794,6 +2841,71 @@ defmodule LightningWeb.ProjectLiveTest do
       refute view |> has_element?("##{form_id}_password_action_button", "Show")
       assert view |> has_element?("##{form_id}_password_action_button", "Copy")
       assert render(view) =~ auth_method.password
+    end
+
+    test "the delete modal lists the dependent workflows and channels" do
+      project = insert(:project)
+      workflow = insert(:simple_workflow, project: project, name: "My Workflow")
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          triggers: workflow.triggers
+        )
+
+      channel =
+        insert(:channel,
+          project: project,
+          name: "My Channel",
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :client,
+              webhook_auth_method: auth_method
+            )
+          ]
+        )
+
+      [conn] = build_project_user_conns(project, [:owner])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      view
+      |> element("a#delete_auth_method_link_#{auth_method.id}")
+      |> render_click()
+
+      html = view |> element("#delete_auth_method_#{auth_method.id}") |> render()
+
+      assert html =~ "1 workflow trigger will stop requiring authentication"
+      assert html =~ workflow.name
+
+      assert html =~ "1 channel will accept unauthenticated requests"
+      assert html =~ channel.name
+
+      assert has_element?(
+               view,
+               ~s{a[href="/projects/#{project.id}/channels/#{channel.id}/edit"]},
+               channel.name
+             )
+    end
+
+    test "the delete modal says so when nothing depends on the auth method" do
+      project = insert(:project)
+      auth_method = insert(:webhook_auth_method, project: project)
+
+      [conn] = build_project_user_conns(project, [:owner])
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project}/settings", on_error: :raise)
+
+      view
+      |> element("a#delete_auth_method_link_#{auth_method.id}")
+      |> render_click()
+
+      html = view |> element("#delete_auth_method_#{auth_method.id}") |> render()
+
+      assert html =~ "used by no workflows or channels"
+      refute html =~ "will accept unauthenticated requests"
     end
 
     test "owners and admins can delete a project webhook auth method",
@@ -6048,6 +6160,84 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "reconnecting a project whose names collide says so, rather than blaming GitHub access",
+         %{conn: conn} do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      # Both hyphenate to `My-Flow`, so the export pre-flight inside
+      # initiate_sync/2 refuses. Snapshotted, because the sync exports the
+      # snapshot set rather than the live workflows.
+      for name <- ["My Flow", "My-Flow"] do
+        {:ok, _} =
+          insert(:simple_workflow, name: name, project: project)
+          |> Lightning.Workflows.Snapshot.create()
+      end
+
+      expected_installation = %{
+        "id" => repo_connection.github_installation_id,
+        "account" => %{"type" => "User", "login" => "username"}
+      }
+
+      expected_repo = %{
+        "full_name" => repo_connection.repo,
+        "default_branch" => "main"
+      }
+
+      expected_access_token_endpoint =
+        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
+
+      [{conn, user}] = setup_project_users(conn, project, [:admin])
+      set_valid_github_oauth_token!(user)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
+        %{url: "https://api.github.com/user/installations"}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{"installations" => [expected_installation]}
+           }}
+
+        %{url: ^expected_access_token_endpoint}, _opts ->
+          {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
+
+        %{url: "https://api.github.com/installation/repositories"}, _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
+
+        %{url: _url}, _opts ->
+          {:error, "something unexpected happened"}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      render_async(view)
+
+      # Nothing is mocked past the connection check on purpose. The export
+      # pre-flight refuses before pull.yml, the workflow files or the API
+      # secret are pushed, so verify_on_exit! asserts we never wrote to the
+      # repo at all.
+
+      view
+      |> form("#reconnect-project-form")
+      |> render_submit(
+        connection: %{"sync_direction" => "pull", "accept" => "true"}
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+      assert flash["error"] =~ "two workflows in this project"
+      assert flash["error"] =~ ~s("My Flow")
+      assert flash["error"] =~ ~s("My-Flow")
+    end
+
     test "authorized users get an error when reconnecting if the usage limiter returns an error",
          %{conn: conn} do
       %{id: project_id} = project = insert(:project)
@@ -6520,6 +6710,54 @@ defmodule LightningWeb.ProjectLiveTest do
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
         assert flash["error"] == "You are not authorized to perform this action"
       end
+    end
+
+    test "initiating a sync on a project whose names collide says which ones", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      insert(:project_repo_connection,
+        project: project,
+        repo: "someaccount/somerepo",
+        branch: "somebranch",
+        github_installation_id: "1234",
+        access_token: "someaccesstoken"
+      )
+
+      # Both hyphenate to `My-Flow`. The export pre-flight refuses before any
+      # GitHub call, so no sync mocks are set: the stub below only carries the
+      # page-load connection check, and it is halted.
+      for name <- ["My Flow", "My-Flow"] do
+        {:ok, _} =
+          insert(:simple_workflow, name: name, project: project)
+          |> Lightning.Workflows.Snapshot.create()
+      end
+
+      [{conn, user}] = setup_project_users(conn, project, [:admin])
+      set_valid_github_oauth_token!(user)
+
+      Mox.stub(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://api.github.com/user/installations"}, _opts ->
+          {:ok, %Tesla.Env{status: 400, body: %{"something" => "bad"}}}
+
+        %{url: _url}, _opts ->
+          {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      render_async(view)
+
+      view
+      |> with_target("#github-sync-component")
+      |> render_click("initiate-sync", %{})
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+      assert flash["error"] =~ "two workflows in this project"
+      assert flash["error"] =~ ~s("My Flow")
+      assert flash["error"] =~ ~s("My-Flow")
     end
 
     test "authorized users can initiate github sync successfully", %{
@@ -7541,18 +7779,6 @@ defmodule LightningWeb.ProjectLiveTest do
     |> Floki.find(selector)
     |> Enum.map(&Floki.raw_html/1)
     |> Enum.find(fn el -> el =~ "selected=\"true\"" end)
-  end
-
-  defp find_user_index_in_list(view, user) do
-    Floki.parse_fragment!(render(view))
-    |> Floki.find("#project-form tbody tr")
-    |> Enum.find_index(fn el ->
-      el
-      |> Floki.find("td:first-child()")
-      |> Floki.text() =~
-        "#{user.first_name} #{user.last_name}"
-    end)
-    |> to_string()
   end
 
   # Helper to check element order in rendered HTML using proper parsing

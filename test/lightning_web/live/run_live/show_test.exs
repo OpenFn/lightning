@@ -163,7 +163,7 @@ defmodule LightningWeb.RunLive.ShowTest do
           run_id: run_id,
           project_id: project.id,
           step_id: step.id,
-          output_dataclip: ~s({"y": 2}),
+          output_dataclip: %{"y" => 2},
           output_dataclip_id: output_dataclip_id = Ecto.UUID.generate(),
           reason: "success"
         })
@@ -207,7 +207,7 @@ defmodule LightningWeb.RunLive.ShowTest do
           run_id: run_id,
           project_id: project.id,
           step_id: step_2.id,
-          output_dataclip: ~s({"z": 2}),
+          output_dataclip: %{"z" => 2},
           output_dataclip_id: step_2_output_dataclip_id = Ecto.UUID.generate(),
           reason: "success"
         })
@@ -281,7 +281,7 @@ defmodule LightningWeb.RunLive.ShowTest do
           run_id: run_id,
           project_id: project.id,
           step_id: step.id,
-          output_dataclip: ~s({"result": 42}),
+          output_dataclip: %{"result" => 42},
           output_dataclip_id: output_dataclip_id = Ecto.UUID.generate(),
           reason: "success"
         })
@@ -465,7 +465,7 @@ defmodule LightningWeb.RunLive.ShowTest do
         run_id: run_id,
         project_id: project.id,
         step_id: step.id,
-        output_dataclip: ~s({"y": 2}),
+        output_dataclip: %{"y" => 2},
         output_dataclip_id: Ecto.UUID.generate(),
         reason: "success"
       })

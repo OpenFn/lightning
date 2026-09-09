@@ -536,87 +536,6 @@ defmodule Lightning.Config.BootstrapTest do
     end
   end
 
-  describe "kafka alternate storage" do
-    setup %{
-            tmp_dir: tmp_dir,
-            enabled: enabled,
-            misconfigured: misconfigured
-          } = context do
-      path = Map.get(context, :path, tmp_dir)
-
-      %{"KAFKA_ALTERNATE_STORAGE_ENABLED" => enabled}
-      |> then(fn vars ->
-        if path do
-          vars
-          |> Map.put("KAFKA_ALTERNATE_STORAGE_FILE_PATH", path)
-        else
-          vars
-        end
-      end)
-      |> List.wrap()
-      |> Dotenvy.source()
-
-      if misconfigured do
-        tmp_dir |> File.chmod!(0o000)
-      end
-
-      :ok
-    end
-
-    @tag tmp_dir: true, enabled: "true", misconfigured: true
-    test "raises an error if enabled and misconfigured" do
-      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
-        Bootstrap.configure()
-      end
-    end
-
-    @tag tmp_dir: true, enabled: "true", misconfigured: false, path: "xxx/yyy"
-    test "raises an error if enabled and path does not exist" do
-      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
-        Bootstrap.configure()
-      end
-    end
-
-    @tag tmp_dir: true, enabled: "true", misconfigured: false, path: nil
-    test "raises an error if enabled and path is nil" do
-      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
-        Bootstrap.configure()
-      end
-    end
-
-    @tag tmp_dir: true, enabled: "true", misconfigured: false, path: ""
-    test "raises an error if enabled and path is empty string" do
-      assert_raise RuntimeError, ~r/must be a writable directory/, fn ->
-        Bootstrap.configure()
-      end
-    end
-
-    @tag tmp_dir: true, enabled: "true", misconfigured: false
-    test "does not raise an error if enabled and properly configured" do
-      Bootstrap.configure()
-    end
-
-    @tag tmp_dir: true, enabled: "false", misconfigured: true
-    test "does not raise an error if disabled and misconfigured" do
-      Bootstrap.configure()
-    end
-
-    @tag tmp_dir: true, enabled: "false", misconfigured: false, path: nil
-    test "does not raise an error if disabled and path is nil" do
-      Bootstrap.configure()
-    end
-
-    @tag tmp_dir: true, enabled: "false", misconfigured: false, path: ""
-    test "does not raise an error if disabled and path is empty string" do
-      Bootstrap.configure()
-    end
-
-    @tag tmp_dir: true, enabled: "false", misconfigured: false, path: "xxx/yyy"
-    test "does not raise an error if disabled and path does not exist" do
-      Bootstrap.configure()
-    end
-  end
-
   describe "adaptor registry" do
     test "raises an exception when LOCAL_ADAPTORS is set to true but OPENFN_ADAPTORS_REPO is not set" do
       assert_raise RuntimeError,
@@ -728,6 +647,49 @@ defmodule Lightning.Config.BootstrapTest do
       Dotenvy.source([%{"MAX_SANDBOX_NESTING_DEPTH" => "10"}])
       Bootstrap.configure()
       assert get_env(:lightning, :max_sandbox_nesting_depth) == 10
+    end
+  end
+
+  describe "apollo timeouts" do
+    test "fall back to the compiled defaults" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+
+      apollo = get_env(:lightning, :apollo)
+
+      assert apollo[:connect_timeout] == 5_000
+      assert apollo[:idle_timeout] == 30_000
+      assert apollo[:request_timeout] == 300_000
+    end
+
+    # The names are the contract DEPLOYMENT.md documents; a typo in one would
+    # fall back to its default and ship without a failure anywhere.
+    test "each one is read from its own variable" do
+      Dotenvy.source([
+        %{
+          "APOLLO_CONNECT_TIMEOUT_MS" => "1000",
+          "APOLLO_IDLE_TIMEOUT_MS" => "2000",
+          "APOLLO_REQUEST_TIMEOUT_MS" => "3000"
+        }
+      ])
+
+      Bootstrap.configure()
+
+      apollo = get_env(:lightning, :apollo)
+
+      assert apollo[:connect_timeout] == 1_000
+      assert apollo[:idle_timeout] == 2_000
+      assert apollo[:request_timeout] == 3_000
+    end
+
+    test "records APOLLO_TIMEOUT only when it is set" do
+      Dotenvy.source([%{}])
+      Bootstrap.configure()
+      refute get_env(:lightning, :apollo_timeout_env_still_set)
+
+      Dotenvy.source([%{"APOLLO_TIMEOUT" => "120000"}])
+      Bootstrap.configure()
+      assert get_env(:lightning, :apollo_timeout_env_still_set)
     end
   end
 

@@ -2,8 +2,8 @@
  * TriggerEditWizard Component Tests
  *
  * Consolidates coverage from the former WebhookEditWizard and CronEditWizard
- * tests (#4787). Exercises the unified type-agnostic wizard for all three
- * trigger types (webhook, cron, kafka): Choose ↔ Picker ↔ Configure navigation,
+ * tests (#4787). Exercises the unified type-agnostic wizard for both
+ * trigger types (webhook, cron): Choose ↔ Picker ↔ Configure navigation,
  * the draft/commit lifecycle (Finish commits once via updateTrigger then calls
  * onDone; Cancel discards without writing), and type-specific field behaviour.
  */
@@ -61,7 +61,6 @@ function makeWebhookTrigger(
     has_auth_method: false,
     cron_expression: null,
     cron_cursor_job_id: null,
-    kafka_configuration: null,
     webhook_reply: 'before_start',
     webhook_response_config: null,
     ...overrides,
@@ -78,33 +77,6 @@ function makeCronTrigger(
     has_auth_method: false,
     cron_expression: '0 0 * * *',
     cron_cursor_job_id: null,
-    kafka_configuration: null,
-    webhook_reply: null,
-    webhook_response_config: null,
-    ...overrides,
-  } as Workflow.Trigger;
-}
-
-function makeKafkaTrigger(
-  overrides: Partial<Workflow.Trigger> = {}
-): Workflow.Trigger {
-  return {
-    id: TRIGGER_ID,
-    type: 'kafka',
-    enabled: true,
-    has_auth_method: false,
-    cron_expression: null,
-    cron_cursor_job_id: null,
-    kafka_configuration: {
-      hosts_string: 'localhost:9092',
-      topics_string: 'events',
-      ssl: false,
-      sasl: null,
-      username: '',
-      password: '',
-      initial_offset_reset_policy: 'latest',
-      connect_timeout: 30000,
-    },
     webhook_reply: null,
     webhook_response_config: null,
     ...overrides,
@@ -149,7 +121,6 @@ async function setup(
 ) {
   const { wrapper, sessionChannel } = await createTriggerTestHarness({
     canEdit: true,
-    kafkaEnabled: true,
     webhookAuthMethods: PROJECT_AUTH_METHODS,
     workflowStore,
     liveViewActions: mockLiveViewActions,
@@ -385,7 +356,7 @@ describe('TriggerEditWizard — webhook', () => {
       await userEvent.click(
         screen.getByRole('option', { name: /Basic Login/i })
       );
-      await userEvent.click(screen.getByRole('button', { name: /add/i }));
+      await userEvent.click(screen.getByRole('button', { name: 'Add' }));
       expect(
         screen.getByRole('button', { name: 'Authentication credential 2' })
       ).toBeInTheDocument();
@@ -508,115 +479,6 @@ describe('TriggerEditWizard — cron', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Next' }));
       // "*/15 * * * *" is recognised as the "every N minutes" frequency.
       expect(screen.getByLabelText('Frequency')).toHaveValue('every_n_minutes');
-    });
-  });
-});
-
-// ===========================================================================
-// KAFKA PATH
-// ===========================================================================
-
-describe('TriggerEditWizard — kafka', () => {
-  let ydoc: Y.Doc;
-
-  beforeEach(() => {
-    mockLiveViewActions.pushEvent.mockClear();
-    ydoc = createWorkflowYDoc({
-      triggers: { [TRIGGER_ID]: { id: TRIGGER_ID, type: 'kafka' } },
-    });
-    const workflowMap = ydoc.getMap('workflow');
-    workflowMap.set('id', 'workflow-1');
-    workflowMap.set('lock_version', 1);
-    workflowMap.set('deleted_at', null);
-  });
-
-  describe('navigation', () => {
-    test('starts on Choose showing "Kafka" badge, Next navigates to Configure', async () => {
-      const workflowStore = createConnectedWorkflowStore(ydoc);
-      await setup(makeKafkaTrigger(), workflowStore);
-
-      // TriggerChooseStep renders with the Kafka badge.
-      expect(
-        screen.getByRole('heading', { name: /kafka/i })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: 'Change' })
-      ).toBeInTheDocument();
-
-      await userEvent.click(screen.getByRole('button', { name: 'Next' }));
-      // Configure-only controls confirm we're on KafkaConfigureStep.
-      expect(screen.getByLabelText('Kafka Hosts')).toBeInTheDocument();
-      expect(screen.getByLabelText('Topics')).toBeInTheDocument();
-    });
-
-    test('breadcrumb Choose returns from Configure to Choose', async () => {
-      const workflowStore = createConnectedWorkflowStore(ydoc);
-      await setup(makeKafkaTrigger(), workflowStore);
-
-      await userEvent.click(screen.getByRole('button', { name: 'Next' }));
-      expect(screen.getByLabelText('Kafka Hosts')).toBeInTheDocument();
-
-      await userEvent.click(screen.getByRole('button', { name: 'Choose' }));
-      expect(screen.queryByLabelText('Kafka Hosts')).not.toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: 'Change' })
-      ).toBeInTheDocument();
-    });
-  });
-
-  describe('commit lifecycle', () => {
-    test('Finish commits updated kafka_configuration via updateTrigger then onDone', async () => {
-      const workflowStore = createConnectedWorkflowStore(ydoc);
-      const updateSpy = vi.spyOn(workflowStore, 'updateTrigger');
-      const { onDone } = await setup(makeKafkaTrigger(), workflowStore);
-
-      await userEvent.click(screen.getByRole('button', { name: 'Next' }));
-
-      // Edit the hosts field.
-      const hostsInput = screen.getByLabelText('Kafka Hosts');
-      await userEvent.clear(hostsInput);
-      await userEvent.type(hostsInput, 'broker1:9092');
-
-      await userEvent.click(screen.getByRole('button', { name: 'Finish' }));
-
-      await waitFor(() => {
-        expect(updateSpy).toHaveBeenCalledTimes(1);
-      });
-      const committed = updateSpy.mock.calls[0][1] as Workflow.Trigger;
-      expect(committed.kafka_configuration?.hosts_string).toBe('broker1:9092');
-      expect(onDone).toHaveBeenCalledTimes(1);
-    });
-
-    test('Cancel discards the draft and never calls updateTrigger', async () => {
-      const workflowStore = createConnectedWorkflowStore(ydoc);
-      const updateSpy = vi.spyOn(workflowStore, 'updateTrigger');
-      const { onDone } = await setup(makeKafkaTrigger(), workflowStore);
-
-      // Back-arrow from Choose exits without committing.
-      await userEvent.click(screen.getByRole('button', { name: 'Back' }));
-
-      expect(onDone).toHaveBeenCalledTimes(1);
-      expect(updateSpy).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('SASL fields', () => {
-    test('selecting a SASL mechanism on Configure shows username and password fields', async () => {
-      const workflowStore = createConnectedWorkflowStore(ydoc);
-      await setup(makeKafkaTrigger(), workflowStore);
-
-      await userEvent.click(screen.getByRole('button', { name: 'Next' }));
-
-      // No credentials visible with sasl: null.
-      expect(screen.queryByLabelText('Username')).not.toBeInTheDocument();
-
-      await userEvent.selectOptions(
-        screen.getByLabelText('SASL Authentication'),
-        'plain'
-      );
-
-      expect(screen.getByLabelText('Username')).toBeInTheDocument();
-      expect(screen.getByLabelText('Password')).toBeInTheDocument();
     });
   });
 });

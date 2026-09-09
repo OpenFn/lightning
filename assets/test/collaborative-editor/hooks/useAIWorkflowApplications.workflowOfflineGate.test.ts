@@ -23,14 +23,16 @@ import { createAIWorkflowApplicationsMocks } from './__helpers__/aiWorkflowAppli
 // file) because vi.mock() factories are hoisted above imports; a static
 // import here would be referenced before it's initialized.
 vi.mock('../../../js/yaml/util', async () => {
-  const { aiWorkflowApplicationsYamlUtilMock } =
-    await import('./__helpers__/aiWorkflowApplicationsTestSetup');
+  const { aiWorkflowApplicationsYamlUtilMock } = await import(
+    './__helpers__/aiWorkflowApplicationsTestSetup'
+  );
   return aiWorkflowApplicationsYamlUtilMock();
 });
 
 vi.mock('../../../js/collaborative-editor/lib/notifications', async () => {
-  const { aiWorkflowApplicationsNotificationsMock } =
-    await import('./__helpers__/aiWorkflowApplicationsTestSetup');
+  const { aiWorkflowApplicationsNotificationsMock } = await import(
+    './__helpers__/aiWorkflowApplicationsTestSetup'
+  );
   return aiWorkflowApplicationsNotificationsMock();
 });
 

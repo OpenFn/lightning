@@ -57,7 +57,10 @@ defmodule Lightning.Workflows.Snapshot do
       field :cron_expression, :string
       field :enabled, :boolean
       field :cron_cursor_job_id, :binary_id
-      field :kafka_configuration, :map
+      # :kafka is retained deliberately. Snapshots are immutable history, and a
+      # snapshot taken while the Kafka trigger existed still carries the value.
+      # Dropping it here would make those historical rows unreadable, which is a
+      # worse outcome than an unused enum member.
       field :type, Ecto.Enum, values: [:webhook, :cron, :kafka]
       field :has_auth_method, :boolean, virtual: true
 
@@ -114,8 +117,15 @@ defmodule Lightning.Workflows.Snapshot do
   end
 
   @job_fields Lightning.Workflows.Job.__schema__(:fields) -- [:workflow_id]
+  # `project_id` is denormalised routing state rather than workflow content, and
+  # it is constant for a workflow, so it is excluded like `workflow_id`.
   @trigger_fields Lightning.Workflows.Trigger.__schema__(:fields) --
-                    [:workflow_id, :webhook_response_config]
+                    [
+                      :workflow_id,
+                      :project_id,
+                      :legacy_bare_path,
+                      :webhook_response_config
+                    ]
   @edge_fields Lightning.Workflows.Edge.__schema__(:fields) -- [:workflow_id]
 
   defp job_changeset(schema, params) do
