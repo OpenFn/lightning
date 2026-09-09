@@ -71,12 +71,9 @@ export const HealthContent = ({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            {workflowName}
-          </h1>
-          <Subtitle outcomes={outcomes.data} error={outcomes.error} />
-        </div>
+        <h1 className="min-w-0 text-2xl font-semibold break-words text-gray-900">
+          {workflowName}
+        </h1>
         {/* The picker and the freshness stamp both belong to the whole page,
             so they stack in the header rather than sitting on any one card. */}
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -201,7 +198,7 @@ const Panel = <T,>({
   children: (data: T) => ReactNode;
 }) => {
   // `alert` is the assertive live region: a failure is read out at once,
-  // where the polite subtitle would only fall silent.
+  // where the polite stamp above would only fall silent.
   if (error) {
     return (
       <p role="alert" className="text-sm text-red-700">
@@ -216,8 +213,7 @@ const Panel = <T,>({
 
 // Reached on a first load and again after a failure, so it holds the chart's
 // frame either way and the card doesn't jump when the data lands. Not a live
-// region: the subtitle announces loading once for the page, this text is only
-// for a reader who lands inside the card.
+// region: this text is only for a reader who lands inside the card.
 const ChartLoading = () => (
   <div className={FRAME}>
     <span className="sr-only">Loading…</span>
@@ -226,39 +222,16 @@ const ChartLoading = () => (
 
 // The stamp is the server's compute time, not the moment the browser asked —
 // `window.to` is when the numbers were true, however long the round trip took.
-const UpdatedAt = ({ at }: { at: string | null }) => {
-  if (!at) return null;
-
-  return (
-    <span className="text-xs text-gray-500">
-      Last Updated {new Date(at).toLocaleTimeString()}
-    </span>
-  );
-};
-
-// Holds its line while empty (`min-h-5` is one `text-sm` line). It names the
-// window the numbers beside it came from, and goes back to "Loading…" on a
-// range switch rather than naming a window no panel is showing yet. The page's
-// one polite live region: a first load and a range switch are each read out
-// here once, rather than by every card in turn. Falls silent on a failure
-// rather than announcing a load that isn't happening — the cards raise that as
-// an alert, which is read out at once where this region would have to wait.
-const Subtitle = ({
-  outcomes,
-  error,
-}: {
-  outcomes: Outcomes | null;
-  error: string | null;
-}) => (
-  <p role="status" className="min-h-5 text-sm text-gray-500">
-    {outcomes
-      ? `Last ${windowLabel(outcomes.window)} · ${workOrders(outcomes.counts)}`
-      : !error && 'Loading…'}
+//
+// Holds its line while empty (`min-h-4` is one `text-xs` line) so the picker
+// above it doesn't move.
+const UpdatedAt = ({ at }: { at: string | null }) => (
+  <p className="min-h-4 text-xs text-gray-500">
+    {at && `Last Updated ${new Date(at).toLocaleTimeString()}`}
   </p>
 );
 
-// "1 work order", "1,287 work orders": the subtitle and the Outcomes card both
-// say it, so it is spelled once.
+// "1 work order", "1,287 work orders".
 const workOrders = (counts: Outcomes['counts']) => {
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
 

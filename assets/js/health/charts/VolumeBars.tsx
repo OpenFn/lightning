@@ -8,11 +8,10 @@ import {
   YAxis,
 } from 'recharts';
 
-import { cn } from '#/utils/cn';
-
 import type { FailureState } from '../types';
 import { FAILURE_STATES } from '../types';
 
+import { EMPTY } from './Donut';
 import { CANCELLED, FAILED, SUCCESS } from './OutcomesDonut';
 
 /**
@@ -58,12 +57,6 @@ const SERIES = [
   { key: 'failed', label: 'Failed', color: FAILED },
 ] as const;
 
-// The donut's `FRAME` is a fixed box and gains nothing from extra room; the
-// bars have a time axis to spread along. `flex-1` takes the height the grid
-// row stretches the card to, floored at the donut's own height so a short row
-// still lines the two up.
-const CHART = 'min-h-55 flex-1';
-
 interface VolumeBarsProps {
   buckets: RunBucket[];
   emptyMessage: string;
@@ -87,23 +80,18 @@ export const VolumeBars = ({ buckets, emptyMessage }: VolumeBarsProps) => {
   // Recharts draws a bare axis for an all-zero window, which reads as broken
   // rather than empty.
   if (totals.every(({ value }) => value === 0)) {
-    return (
-      <p
-        className={cn(
-          CHART,
-          'flex items-center justify-center text-sm text-gray-500'
-        )}
-      >
-        {emptyMessage}
-      </p>
-    );
+    return <p className={EMPTY}>{emptyMessage}</p>;
   }
 
   const hours = bucketHours(buckets);
 
   return (
     <>
-      <div className={CHART} aria-hidden="true">
+      {/* The donut's `FRAME` is a fixed box and gains nothing from extra
+          room; the bars have a time axis to spread along. `flex-1` takes the
+          height the grid row stretches the card to, floored at the donut's
+          own height so a short row still lines the two up. */}
+      <div className="min-h-55 flex-1" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={rows}

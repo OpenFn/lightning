@@ -147,7 +147,7 @@ describe('WorkflowHealth', () => {
 
     const { fetchMock } = mount(responses);
 
-    await screen.findByText('Last 30 days · 1,287 work orders');
+    await screen.findByText('1,287 work orders');
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
     responses.outcomes = {
@@ -160,9 +160,7 @@ describe('WorkflowHealth', () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(6);
 
-    expect(
-      await screen.findByText('Last 30 days · 2,287 work orders')
-    ).toBeVisible();
+    expect(await screen.findByText('2,287 work orders')).toBeVisible();
 
     // The interval still fires; the bump is gated on visibility.
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
@@ -179,7 +177,7 @@ describe('WorkflowHealth', () => {
 
     const { fetchMock } = mount({ ...both });
 
-    await screen.findByText('Last 30 days · 1,287 work orders');
+    await screen.findByText('1,287 work orders');
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
     const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
@@ -229,9 +227,7 @@ describe('WorkflowHealth', () => {
 
     land(outcomes);
 
-    expect(
-      await screen.findByText('Last 30 days · 1,287 work orders')
-    ).toBeVisible();
+    expect(await screen.findByText('1,287 work orders')).toBeVisible();
 
     // And the gap that follows is a whole interval measured from the answer.
     // On a grid measured from the request, a read this slow would be due again
@@ -254,7 +250,7 @@ describe('WorkflowHealth', () => {
 
     mount(responses);
 
-    await screen.findByText('Last 30 days · 1,287 work orders');
+    await screen.findByText('1,287 work orders');
 
     responses['outcomes'] = 502;
     responses['failures'] = 502;
@@ -264,7 +260,7 @@ describe('WorkflowHealth', () => {
     });
 
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.getByText('Last 30 days · 1,287 work orders')).toBeVisible();
+    expect(screen.getByText('1,287 work orders')).toBeVisible();
     expect(screen.getAllByText('Success')[0]).toBeVisible();
 
     // And recovers on the tick after, with no reload.
@@ -277,18 +273,16 @@ describe('WorkflowHealth', () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
 
-    expect(
-      await screen.findByText('Last 30 days · 2,287 work orders')
-    ).toBeVisible();
+    expect(await screen.findByText('2,287 work orders')).toBeVisible();
   });
 
-  test('renders the header, deriving the day count from the window', async () => {
+  test('names the workflow and totals its work orders', async () => {
     mount(both);
 
     expect(
       await screen.findByRole('heading', { name: 'Sync patients' })
     ).toBeInTheDocument();
-    expect(screen.getByText('Last 30 days · 1,287 work orders')).toBeVisible();
+    expect(screen.getByText('1,287 work orders')).toBeVisible();
   });
 
   test('refetches every slice at the selected range', async () => {
@@ -312,16 +306,18 @@ describe('WorkflowHealth', () => {
     );
   });
 
-  test('calls a one-day window "Last 24 hours", not "Last 1 day"', async () => {
-    const dayWide = {
-      ...outcomes,
+  test('calls a one-day window "24 hours", not "1 day"', async () => {
+    const quietDay = {
       window: { from: '2026-08-30T10:00:00Z', to: '2026-08-31T10:00:00Z' },
+      counts: Object.fromEntries(
+        Object.keys(outcomes.counts).map(state => [state, 0])
+      ),
     };
 
-    mount({ outcomes: dayWide, failures: errorSignatures });
+    mount({ outcomes: quietDay, failures: errorSignatures });
 
     expect(
-      await screen.findByText('Last 24 hours · 1,287 work orders')
+      await screen.findByText('No finished work orders in the last 24 hours')
     ).toBeVisible();
   });
 
@@ -434,13 +430,15 @@ describe('WorkflowHealth', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
 
     expect(screen.queryAllByText('Success')).toHaveLength(0);
-    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
+    // Each panel holds a placeholder, but only for a reader who lands inside
+    // it. jsdom does no layout, so the reserved height needs a browser.
+    expect(screen.getAllByText('Loading…')).toHaveLength(4);
   });
 
   // Why the panels drop together rather than each keeping its own last answer:
   // `outcomes` is a group-by and `failures` a three-way join, so the cheap one
-  // lands first. Keeping stale data would put the new window in the subtitle
-  // while the Triage card below still named the old one.
+  // lands first. Keeping stale data would leave the Triage card naming the old
+  // window under the new window's numbers.
   test('never names two windows at once during a range switch', async () => {
     const quiet = { window: outcomes.window, signatures: [] };
     const responses: Record<string, unknown> = { outcomes, failures: quiet };
@@ -460,7 +458,7 @@ describe('WorkflowHealth', () => {
 
     await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
 
-    await screen.findByText('Last 7 days · 1,287 work orders');
+    await screen.findByText('1,287 work orders');
 
     expect(screen.queryByText('No failures in the last 30 days')).toBeNull();
   });
@@ -480,7 +478,7 @@ describe('WorkflowHealth', () => {
 
     await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
 
-    // An `alert`, so the failure is read out where the subtitle falls silent.
+    // An `alert`, so the failure is read out at once.
     const alerts = await screen.findAllByRole('alert');
     expect(alerts.map(alert => alert.textContent)).toEqual([
       ERROR,
@@ -488,15 +486,5 @@ describe('WorkflowHealth', () => {
       ERROR,
     ]);
     expect(screen.queryAllByText('Success')).toHaveLength(0);
-  });
-
-  // One announcement for the page, from the subtitle; the cards say it too,
-  // but only to a reader who lands inside them. jsdom does no layout, so the
-  // reserved height itself can only be checked in a browser.
-  test('announces loading once, not once per panel', () => {
-    mount(both);
-
-    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
-    expect(screen.getAllByText('Loading…')).toHaveLength(5);
   });
 });

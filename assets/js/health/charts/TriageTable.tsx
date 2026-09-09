@@ -1,5 +1,7 @@
 import type { ErrorSignature } from '../types';
 
+import { EMPTY } from './Donut';
+
 /**
  * Failed work orders grouped by error signature, heaviest first. Each row
  * links to the history page filtered to the work orders it counts, where the
@@ -76,7 +78,7 @@ export const TriageTable = ({
   from,
 }: TriageTableProps) => {
   if (signatures.length === 0) {
-    return <p className="text-sm text-gray-500">{emptyMessage}</p>;
+    return <p className={EMPTY}>{emptyMessage}</p>;
   }
 
   return (

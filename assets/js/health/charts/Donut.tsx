@@ -7,8 +7,6 @@ import {
   Tooltip,
 } from 'recharts';
 
-import { cn } from '#/utils/cn';
-
 /**
  * A part-to-whole donut with the total in the middle and an always-on legend.
  *
@@ -35,22 +33,17 @@ interface DonutProps {
 // switch. Only the legend below it follows the data.
 export const FRAME = 'h-55';
 
+// An empty panel fills the card and centres its one line in it.
+export const EMPTY =
+  'flex min-h-55 flex-1 items-center justify-center text-center text-sm text-gray-500';
+
 export const Donut = ({ slices, emptyMessage }: DonutProps) => {
   const total = slices.reduce((sum, { value }) => sum + value, 0);
 
   // A pie of zeroes renders as an empty box in Recharts, which reads as
   // broken rather than empty.
   if (total === 0) {
-    return (
-      <p
-        className={cn(
-          FRAME,
-          'flex items-center justify-center text-sm text-gray-500'
-        )}
-      >
-        {emptyMessage}
-      </p>
-    );
+    return <p className={EMPTY}>{emptyMessage}</p>;
   }
 
   const share = (value: number) => `${((value / total) * 100).toFixed(1)}%`;
