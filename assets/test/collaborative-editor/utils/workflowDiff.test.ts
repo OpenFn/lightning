@@ -492,6 +492,22 @@ describe('deriveWorkflowChanges', () => {
       expect(triggerDetail(blank, blankToNamed)).toBe('path: staff-intake');
     });
 
+    it('does not call a whitespace path a removal, since the panel rejects it', () => {
+      const intake = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const spaces = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: '   ',
+      });
+
+      // The answer set a path the panel will flag as invalid. Saying it was
+      // removed would send the reader looking for a change that never happened.
+      expect(triggerDetail(intake, spaces)).not.toBe('path removed');
+      expect(triggerDetail(intake, spaces)).toContain('intake-form');
+    });
+
     it('reports the path on a webhook trigger that has just appeared', () => {
       const none = buildYaml({
         jobs: [transformJob('fn(state => state);')],
@@ -974,6 +990,42 @@ describe('deriveSnapshotChanges', () => {
     expect(rows.map(row => row.detail)).toEqual([
       'path: intake-form → staff-intake',
     ]);
+  });
+
+  it("does not let one reply's carried path answer another reply's identical pair", () => {
+    // The carried path is in neither document, so the pair alone cannot key
+    // the cache. Both chains share the same two snapshots on purpose.
+    const withPath = (path: string | null | undefined, body: string) =>
+      buildYaml({
+        jobs: [transformJob(body)],
+        triggers: [
+          {
+            ...webhookTrigger,
+            ...(path !== undefined && { custom_path: path }),
+          },
+        ],
+        edges: [webhookToTransformEdge],
+      });
+
+    const unstated = snapshot(withPath(undefined, 'fn(s => ({ ...s }));'), 0);
+    const cleared = snapshot(withPath(null, 'fn(s => ({ ...s }));'), 1);
+
+    const hadPath = deriveSnapshotChanges(
+      withPath('intake-form', 'fn(s => s);'),
+      [unstated, cleared]
+    );
+    const neverHadPath = deriveSnapshotChanges(
+      withPath(undefined, 'fn(s => s);'),
+      [unstated, cleared]
+    );
+
+    const rows = (result: ReturnType<typeof deriveSnapshotChanges>) =>
+      result.flatMap(entry =>
+        entry.changes.structure.filter(row => row.kind === 'trigger')
+      );
+
+    expect(rows(hadPath).map(row => row.detail)).toEqual(['path removed']);
+    expect(rows(neverHadPath)).toEqual([]);
   });
 
   it('pins each change set to the segment index its snapshot carried', () => {
