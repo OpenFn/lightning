@@ -575,6 +575,68 @@ defmodule Lightning.Workflows.StatsTest do
     end
   end
 
+  describe "runs/2" do
+    # A run whose `inserted_at` we choose, on a work order active at the same
+    # moment — the shape the window needs and `insert_run/4` can't give.
+    defp run_at(workflow, trigger, state, at) do
+      # A work order has no `:available`, so an in-flight run hangs off a
+      # running one.
+      wo_state = if state in WorkOrder.final_states(), do: state, else: :running
+
+      insert(:run,
+        work_order:
+          work_order(workflow, trigger, state: wo_state, last_activity: at),
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: state,
+        inserted_at: at
+      )
+    end
+
+    test "returns each run's state and insertion time, oldest first", ctx do
+      %{workflow: workflow, trigger: trigger} = ctx
+
+      older = DateTime.add(DateTime.utc_now(), -5, :hour)
+      newer = DateTime.add(DateTime.utc_now(), -90, :minute)
+
+      failed = run_at(workflow, trigger, :failed, newer)
+      succeeded = run_at(workflow, trigger, :success, older)
+
+      assert %{runs: runs, window: %{from: from, to: to}} =
+               Stats.runs(workflow, 1)
+
+      assert runs == [
+               %{
+                 id: succeeded.id,
+                 work_order_id: succeeded.work_order_id,
+                 state: :success,
+                 inserted_at: older
+               },
+               %{
+                 id: failed.id,
+                 work_order_id: failed.work_order_id,
+                 state: :failed,
+                 inserted_at: newer
+               }
+             ]
+
+      assert DateTime.diff(to, from, :day) == 1
+    end
+
+    test "skips runs outside the window, in flight, or on another workflow",
+         ctx do
+      %{workflow: workflow, trigger: trigger} = ctx
+
+      run_at(workflow, trigger, :success, days_ago(2))
+      run_at(workflow, trigger, :available, DateTime.utc_now())
+
+      other = insert(:simple_workflow)
+      run_at(other, hd(other.triggers), :success, DateTime.utc_now())
+
+      assert %{runs: []} = Stats.runs(workflow, 1)
+    end
+  end
+
   describe "invalidate/1" do
     test "drops every slice and window the workflow has cached", ctx do
       %{workflow: workflow, trigger: trigger} = ctx
@@ -585,6 +647,7 @@ defmodule Lightning.Workflows.StatsTest do
       Stats.outcomes(workflow)
       Stats.outcomes(workflow, 7)
       Stats.error_signatures(workflow)
+      Stats.runs(workflow)
 
       other = insert(:simple_workflow)
       Stats.outcomes(other)
@@ -599,6 +662,8 @@ defmodule Lightning.Workflows.StatsTest do
 
       assert {:ok, nil} =
                Cachex.get(:workflow_stats, {:failures, workflow.id, 30})
+
+      assert {:ok, nil} = Cachex.get(:workflow_stats, {:runs, workflow.id, 30})
 
       # Another workflow's numbers did not change, so its cache should not have
       # been swept up in the scan.

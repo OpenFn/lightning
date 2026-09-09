@@ -41,13 +41,8 @@ defmodule Lightning.Workflows.Stats do
   def outcomes(%Workflow{id: workflow_id}, days_back \\ @default_days_back)
       when days_back > 0 do
     cached({:outcomes, workflow_id, days_back}, fn ->
-      to = DateTime.utc_now()
-      since = DateTime.add(to, -days_back, :day)
-
-      %{
-        window: %{from: since, to: to},
-        counts: count_work_orders(workflow_id, since)
-      }
+      window = window(days_back)
+      %{window: window, counts: count_work_orders(workflow_id, window.from)}
     end)
   end
 
@@ -84,14 +79,52 @@ defmodule Lightning.Workflows.Stats do
       )
       when days_back > 0 do
     cached({:failures, workflow_id, days_back}, fn ->
-      to = DateTime.utc_now()
-      since = DateTime.add(to, -days_back, :day)
+      window = window(days_back)
 
       %{
-        window: %{from: since, to: to},
-        signatures: group_by_signature(workflow_id, since)
+        window: window,
+        signatures: group_by_signature(workflow_id, window.from)
       }
     end)
+  end
+
+  @doc """
+  Every run that reached a final state in the last `days_back` days, oldest
+  first.
+
+  Filtered on `inserted_at` — when the attempt started, not when it settled —
+  so a run stays in the bar the traffic arrived in.
+  """
+  def runs(%Workflow{id: workflow_id}, days_back \\ @default_days_back)
+      when days_back > 0 do
+    cached({:runs, workflow_id, days_back}, fn ->
+      window = window(days_back)
+      %{window: window, runs: final_runs(workflow_id, window.from)}
+    end)
+  end
+
+  # `wo.last_activity` is redundant against the run filter — a work order is
+  # touched every time one of its runs is created or settles, so its activity
+  # is never older than its newest run. It is here for the planner: it lets the
+  # `work_orders(workflow_id, last_activity)` index cut the work orders down to
+  # the window before the nested loop into `runs(work_order_id, inserted_at)`,
+  # instead of probing every work order the workflow ever had.
+  defp final_runs(workflow_id, since) do
+    from(r in Run,
+      join: wo in WorkOrder,
+      on: wo.id == r.work_order_id,
+      where:
+        wo.workflow_id == ^workflow_id and wo.last_activity > ^since and
+          r.inserted_at > ^since and r.state in ^Run.final_states(),
+      order_by: [asc: r.inserted_at],
+      select: %{
+        id: r.id,
+        work_order_id: r.work_order_id,
+        state: r.state,
+        inserted_at: r.inserted_at
+      }
+    )
+    |> Repo.all()
   end
 
   @doc """
@@ -115,6 +148,11 @@ defmodule Lightning.Workflows.Stats do
     :workflow_stats
     |> Cachex.stream!(query)
     |> Enum.each(&Cachex.del(:workflow_stats, &1))
+  end
+
+  defp window(days_back) do
+    to = DateTime.utc_now()
+    %{from: DateTime.add(to, -days_back, :day), to: to}
   end
 
   # Cached whole, `window` included — that is what stops the window rolling per

@@ -37,6 +37,13 @@ defmodule LightningWeb.API.WorkflowHealthController do
     )
   end
 
+  def runs(conn, _params) do
+    json(
+      conn,
+      Workflows.Stats.runs(conn.assigns.workflow, conn.assigns.days_back)
+    )
+  end
+
   # Closed set, string-matched — no free integer, no parse to defend.
   @days %{"1" => 1, "7" => 7, "30" => 30}
   @default_days "30"

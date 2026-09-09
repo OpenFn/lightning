@@ -33,6 +33,15 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
     )
   end
 
+  defp get_runs(conn, user, project_id, workflow_id, params \\ %{}) do
+    conn
+    |> log_in_user(user)
+    |> get(
+      ~p"/api/projects/#{project_id}/workflows/#{workflow_id}/health/runs",
+      params
+    )
+  end
+
   describe "authorization" do
     test "a project member is served", %{
       conn: conn,
@@ -196,15 +205,19 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
       assert %{status: 404} = get_outcomes(conn, user, project.id, "not-a-uuid")
     end
 
-    # Both actions share one plug, so this only has to prove the plug runs on
-    # the second one too.
-    test "the failures slice is guarded by the same check", %{
+    # Every action shares one plug, so this only has to prove the plug runs on
+    # the others too.
+    test "the other slices are guarded by the same check", %{
       conn: conn,
       project: project,
       workflow: workflow
     } do
+      stranger = insert(:user)
+
       assert %{status: 404} =
-               get_failures(conn, insert(:user), project.id, workflow.id)
+               get_failures(conn, stranger, project.id, workflow.id)
+
+      assert %{status: 404} = get_runs(conn, stranger, project.id, workflow.id)
     end
   end
 
@@ -342,6 +355,50 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
         |> json_response(200)
 
       assert body["signatures"] == []
+    end
+  end
+
+  describe "GET /health/runs" do
+    test "returns every final run in the window", %{
+      conn: conn,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      trigger = hd(workflow.triggers)
+      at = DateTime.add(DateTime.utc_now(), -90, :minute)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: insert(:dataclip),
+          state: :failed,
+          last_activity: at
+        )
+
+      run =
+        insert(:run,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: insert(:dataclip),
+          state: :failed,
+          inserted_at: at
+        )
+
+      response =
+        conn
+        |> get_runs(user, project.id, workflow.id, %{"days" => "1"})
+        |> json_response(200)
+
+      assert [
+               %{
+                 "id" => run.id,
+                 "work_order_id" => work_order.id,
+                 "state" => "failed",
+                 "inserted_at" => DateTime.to_iso8601(at)
+               }
+             ] == response["runs"]
     end
   end
 
