@@ -3,8 +3,6 @@ import { useEffect, useState } from 'react';
 export interface Query<T> {
   data: T | null;
   error: string | null;
-  /** When the data on screen was fetched, or null while there is none. */
-  fetchedAt: Date | null;
 }
 
 const MESSAGE = 'Could not load workflow stats. Refresh to try again.';
@@ -12,7 +10,7 @@ const MESSAGE = 'Could not load workflow stats. Refresh to try again.';
 // Both fields null is the loading state: a request is out and nothing has
 // answered it yet. A reply sets one or the other, so there is no fourth
 // combination to name and no separate flag to keep in step with these two.
-const EMPTY = { data: null, error: null, fetchedAt: null };
+const EMPTY = { data: null, error: null };
 
 /** Base path for one workflow's health endpoints. */
 export const healthBase = (projectId: string, workflowId: string) =>
@@ -31,7 +29,7 @@ export const healthBase = (projectId: string, workflowId: string) =>
  */
 export function useHealthQuery<T>(url: string): Query<T> {
   const [state, setState] = useState<Query<T>>(EMPTY);
-  const tick = useHealthChanged();
+  const tick = usePollTick();
 
   useEffect(() => {
     // A new url is a new question, so the last answer stops being an answer.
@@ -42,7 +40,7 @@ export function useHealthQuery<T>(url: string): Query<T> {
     //
     // A tick is the *same* question asked again, which is why it is not in
     // here: the last answer stays on screen until the new one lands, rather
-    // than the page blanking to "Loading…" every time a work order finishes.
+    // than the page blanking to "Loading…" every time the page re-reads.
     setState(EMPTY);
   }, [url]);
 
@@ -60,8 +58,7 @@ export function useHealthQuery<T>(url: string): Query<T> {
       .then(data => {
         // Same reason as the catch below: a reply that lands after the url
         // changed is an answer to a question nobody is asking any more.
-        if (!controller.signal.aborted)
-          setState({ data, error: null, fetchedAt: new Date() });
+        if (!controller.signal.aborted) setState({ data, error: null });
 
         return data;
       })
@@ -71,7 +68,11 @@ export function useHealthQuery<T>(url: string): Query<T> {
 
         console.error('workflow health request failed:', error);
 
-        setState({ data: null, error: MESSAGE, fetchedAt: null });
+        // A failed poll keeps the last answer — stale by an interval, not
+        // wrong. Only a load with nothing to keep reports.
+        setState(previous =>
+          previous.data ? previous : { data: null, error: MESSAGE }
+        );
       });
 
     return () => {
@@ -82,52 +83,25 @@ export function useHealthQuery<T>(url: string): Query<T> {
   return state;
 }
 
-// The server's stats cache is per node and lives this long, so a read that
-// races the change behind a push can be answered from another node's cache,
-// computed moments before it. One re-read after the cache has aged out settles
-// that; the jitter keeps a room full of viewers off the same instant.
-const RECHECK_MS = 30_000;
-const RECHECK_JITTER_MS = 10_000;
+// How long a settled work order can take to reach the screen. A poll that
+// finds nothing changed costs one cheap query, not a recompute.
+const POLL_MS = 30_000;
 
-/**
- * Counts `health:changed` pushes from the health LiveView.
- *
- * The page never polls on its own. The LiveView subscribes to this workflow's
- * work order events and throttles them, so a tick means the numbers actually
- * moved — a workflow that nothing is running makes no requests at all. Each
- * push schedules exactly one trailing re-read, so the requests stop once the
- * pushes do.
- *
- * LiveView dispatches every `push_event` on `window` as `phx:<name>`, so this
- * needs nothing from the `ReactComponent` hook that mounts the page.
- */
-function useHealthChanged(): number {
+function usePollTick(): number {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    let recheck: ReturnType<typeof setTimeout> | undefined;
-
     const bump = () => {
-      setTick(previous => previous + 1);
+      if (!document.hidden) setTick(previous => previous + 1);
     };
 
-    const changed = () => {
-      bump();
+    const interval = setInterval(bump, POLL_MS);
 
-      // Restarted, not stacked: a burst of pushes is one thing settling, so it
-      // earns one trailing re-read measured from the last of them.
-      clearTimeout(recheck);
-      recheck = setTimeout(
-        bump,
-        RECHECK_MS + Math.random() * RECHECK_JITTER_MS
-      );
-    };
-
-    window.addEventListener('phx:health:changed', changed);
+    document.addEventListener('visibilitychange', bump);
 
     return () => {
-      window.removeEventListener('phx:health:changed', changed);
-      clearTimeout(recheck);
+      document.removeEventListener('visibilitychange', bump);
+      clearInterval(interval);
     };
   }, []);
 

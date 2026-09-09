@@ -8,7 +8,6 @@ import { TriageTable } from './charts/TriageTable';
 import { DEFAULT_DAYS, RangePicker } from './RangePicker';
 import type { FailureSignatures, Outcomes } from './types';
 import { FAILURE_STATES } from './types';
-import type { Query } from './useHealthQuery';
 import { healthBase, useHealthQuery } from './useHealthQuery';
 
 /**
@@ -75,7 +74,7 @@ export const HealthContent = ({
             so they stack in the header rather than sitting on any one card. */}
         <div className="flex shrink-0 flex-col items-end gap-1">
           <RangePicker days={days} onChange={setDays} />
-          <UpdatedAt at={outcomes.fetchedAt} />
+          <UpdatedAt at={outcomes.data?.window.to ?? null} />
         </div>
       </div>
 
@@ -152,8 +151,8 @@ const Card = ({
 );
 
 // Each card owns its own failure, so one bad request can't take the rest of
-// the page with it. A `health:changed` refetch keeps the numbers it already
-// has; a range switch drops them, since they answer the old window.
+// the page with it. A poll keeps the numbers it already has; a range switch
+// drops them, since they answer the old window.
 const Panel = <T,>({
   data,
   error,
@@ -187,15 +186,14 @@ const ChartLoading = () => (
   </div>
 );
 
-// The page runs no timer of its own: this clock moves only when the server says
-// one of the workflow's work orders settled. A time that has just jumped is the
-// page showing that updates are still reaching it.
-const UpdatedAt = ({ at }: { at: Query<Outcomes>['fetchedAt'] }) => {
+// The stamp is the server's compute time, not the moment the browser asked —
+// `window.to` is when the numbers were true, however long the round trip took.
+const UpdatedAt = ({ at }: { at: string | null }) => {
   if (!at) return null;
 
   return (
     <span className="text-xs text-gray-500">
-      Last Updated {at.toLocaleTimeString()}
+      Last Updated {new Date(at).toLocaleTimeString()}
     </span>
   );
 };
