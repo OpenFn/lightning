@@ -124,7 +124,11 @@ describe('VersionDropdown', () => {
       expect(button).toHaveClass('bg-primary-100', 'text-primary-800');
     });
 
-    test('renders button with version number when viewing old snapshot', () => {
+    test('reads "latest" on the live document, whatever the lock versions say', () => {
+      // The store's lock_version can lag the latest snapshot for a moment after
+      // a save. With no pin in the URL the client is on the live document
+      // regardless, and the chip used to render the stale lock_version as
+      // "v3", a release number that may not exist at all.
       render(
         <VersionDropdown
           currentVersion={3}
@@ -133,9 +137,32 @@ describe('VersionDropdown', () => {
         />
       );
 
-      // Should show version number (first 7 chars)
       const button = screen.getByRole('button');
-      expect(button).toHaveTextContent('v3');
+      expect(button).toHaveTextContent('latest');
+      expect(button).not.toHaveTextContent('v3');
+    });
+
+    test('reads "as run" when viewing the workflow as a run executed it', () => {
+      window.history.pushState(
+        {},
+        '',
+        '/?as_run=abcdef12-3456-7890-abcd-ef1234567890'
+      );
+
+      // The content is that run's snapshot, which no release names. Calling it
+      // v3 put a version on screen that the version list correctly said did
+      // not exist.
+      render(
+        <VersionDropdown
+          currentVersion={3}
+          latestVersion={5}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      expect(button).toHaveTextContent('as run');
+      expect(button).not.toHaveTextContent('v3');
       expect(button).toHaveClass('bg-yellow-100', 'text-yellow-800');
     });
 

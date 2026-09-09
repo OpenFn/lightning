@@ -49,20 +49,27 @@ export function VersionDropdown({
   const isPinnedVersion = pinnedParam !== undefined && pinnedParam !== null;
   const pinnedVersionNumber = isPinnedVersion ? Number(pinnedParam) : null;
 
+  // `?as_run=` opens the workflow as one run executed it. That content is a
+  // snapshot, which no release names, so the chip says what the view is rather
+  // than inventing a version for it.
+  const isAsRun = params['as_run'] !== undefined && params['as_run'] !== null;
+
   // Show placeholder while loading version information
   const isLoadingVersion = currentVersion === null || latestVersion === null;
 
-  // Determine if viewing latest version (only when we have both values AND no pinned version)
-  const isLatestVersion =
-    !isLoadingVersion && currentVersion === latestVersion && !isPinnedVersion;
+  // With neither param set the client joined the live room, so the document is
+  // the current one whatever the store's lock_version says. Comparing lock
+  // versions here used to render one as `v1`, a release number that does not
+  // exist, next to a list that correctly said nothing had been published.
+  const isLatestVersion = !isLoadingVersion && !isPinnedVersion && !isAsRun;
 
   const currentVersionDisplay = isLoadingVersion
     ? '•'
-    : isLatestVersion
-      ? 'latest'
-      : isPinnedVersion
-        ? `v${pinnedParam}`
-        : `v${String(currentVersion).substring(0, 7)}`;
+    : isPinnedVersion
+      ? `v${pinnedParam}`
+      : isAsRun
+        ? 'as run'
+        : 'latest';
 
   // Style based on version (matching snapshot_version_chip)
   const buttonStyles = isLoadingVersion
