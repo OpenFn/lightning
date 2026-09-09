@@ -2,6 +2,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   @moduledoc false
   use LightningWeb, :component
 
+  alias Lightning.DashboardStats
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
   alias Lightning.WorkOrder
@@ -105,12 +106,12 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       |> assign(
         wo_filters:
           SearchParams.to_uri_params(%{
-            "date_after" => Timex.now() |> Timex.shift(months: -1)
+            "date_after" => DashboardStats.window_start()
           }),
         failed_wo_filters:
           SearchParams.to_uri_params(
             Map.new(WorkOrder.failure_states(), &{Atom.to_string(&1), "true"})
-            |> Map.put("date_after", Timex.now() |> Timex.shift(months: -1))
+            |> Map.put("date_after", DashboardStats.window_start())
           ),
         workflows: Enum.map(workflows_stats, &Map.merge(&1, &1.workflow)),
         empty?: Enum.empty?(workflows_stats)
@@ -497,11 +498,11 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         failed_filters:
           SearchParams.to_uri_params(
             Map.new(WorkOrder.failure_states(), &{Atom.to_string(&1), "true"})
-            |> Map.put("date_after", Timex.now() |> Timex.shift(months: -1))
+            |> Map.put("date_after", DashboardStats.window_start())
           ),
         pending_filters:
           SearchParams.to_uri_params(%{
-            "date_after" => Timex.now() |> Timex.shift(months: -1),
+            "date_after" => DashboardStats.window_start(),
             "pending" => "true",
             "running" => "true"
           })

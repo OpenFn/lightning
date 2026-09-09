@@ -150,8 +150,10 @@ defmodule Lightning.DashboardStatsTest do
       workflow_stats1 = stats(workflow1)
       workflow_stats2 = stats(workflow2)
 
-      success_rate = round(2 * 100 * 100 / 4) / 100
-      failed_percent = round(2 * 100 * 100 / 10) / 100
+      # 10 work orders and 10 runs each: 2 success, 2 failed, 6 pending.
+      completed = 2 + 2
+      success_rate = round(2 * 100 * 100 / completed) / 100
+      failed_percent = round(2 * 100 * 100 / completed) / 100
 
       assert %ProjectMetrics{
                run_metrics: %{
@@ -164,6 +166,7 @@ defmodule Lightning.DashboardStatsTest do
                work_order_metrics: %{
                  failed: 2,
                  pending: 6,
+                 success: 2,
                  failed_percentage: ^failed_percent,
                  total: 10
                }

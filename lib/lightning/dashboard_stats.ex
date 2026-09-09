@@ -205,9 +205,9 @@ defmodule Lightning.DashboardStats do
         }
       end
     )
-    |> then(fn %{success: success, failed: failed, total: total} = map ->
+    |> then(fn %{success: success, failed: failed} = map ->
       completed = success + failed
-      failed_percent = if completed > 0, do: failed * 100 / total, else: 0.0
+      failed_percent = if completed > 0, do: failed * 100 / completed, else: 0.0
       success_rate = if completed > 0, do: success * 100 / completed, else: 0.0
 
       Map.merge(map, %{
@@ -217,16 +217,23 @@ defmodule Lightning.DashboardStats do
     end)
   end
 
-  def filter_days_ago(query, days, column \\ :inserted_at) do
-    days_ago = DateTime.utc_now() |> DateTime.add(-days, :day)
+  @doc """
+  Start of the window every dashboard figure is bound to.
 
-    query
-    |> where([r], field(r, ^column) > ^days_ago)
+  The history links in `LightningWeb.WorkflowLive.DashboardComponents` use it
+  too, so a link opens the same window its count was taken from.
+  """
+  def window_start do
+    DateTime.utc_now() |> DateTime.add(-@days_back, :day)
+  end
+
+  def filter_days_ago(query, column \\ :inserted_at) do
+    where(query, [r], field(r, ^column) > ^window_start())
   end
 
   defp batch_count_workorders(workflow_ids) do
     from(wo in WorkOrder, where: wo.workflow_id in ^workflow_ids)
-    |> filter_days_ago(@days_back, :last_activity)
+    |> filter_days_ago(:last_activity)
     |> group_by([wo], [wo.workflow_id, wo.state])
     |> select([wo], {wo.workflow_id, wo.state, count(wo.id)})
     |> Repo.all()
@@ -245,7 +252,7 @@ defmodule Lightning.DashboardStats do
       join: wo in assoc(r, :work_order),
       where: wo.workflow_id in ^workflow_ids
     )
-    |> filter_days_ago(@days_back)
+    |> filter_days_ago()
     |> group_by([r, wo], [wo.workflow_id, r.state])
     |> select([r, wo], {wo.workflow_id, r.state, count(r.id)})
     |> Repo.all()
@@ -273,7 +280,7 @@ defmodule Lightning.DashboardStats do
       join: j in assoc(s, :job),
       where: j.workflow_id in ^workflow_ids
     )
-    |> filter_days_ago(@days_back)
+    |> filter_days_ago()
     |> group_by([s, j], [j.workflow_id, s.exit_reason])
     |> select([s, j], {j.workflow_id, s.exit_reason, count(s.id)})
     |> Repo.all()
@@ -296,7 +303,7 @@ defmodule Lightning.DashboardStats do
       where: wo.workflow_id in ^workflow_ids,
       where: wo.state not in ^excluded_states
     )
-    |> filter_days_ago(@days_back, :last_activity)
+    |> filter_days_ago(:last_activity)
     |> order_by([wo], asc: wo.workflow_id, desc: wo.last_activity)
     |> distinct([wo], [wo.workflow_id])
     |> select([wo], %{
