@@ -354,13 +354,12 @@ const REPLY_LABEL: Record<WebhookReply, string> = {
   after_completion: 'On Complete',
 };
 
-// An absent reply is before_start, so normalise or the default reads as a change.
 const replyOf = (trigger: StateWebhookTrigger): WebhookReply =>
   trigger.webhook_reply ?? 'before_start';
 
-// Absent and null mean opposite things: applying a workflow that omits the key
-// keeps the path the trigger holds, so only an explicit value is a change.
-// Exactly blank is a clear; the panel rejects whitespace rather than ignoring it.
+// Absent and null mean opposite things: the apply keeps a path the answer
+// omits, so only an explicit value is a change. Blank is a clear, but only
+// exactly blank, since the panel rejects whitespace rather than ignoring it.
 const pathOf = (trigger: StateWebhookTrigger): string | null | undefined => {
   if (trigger.custom_path === undefined) return undefined;
   return trigger.custom_path === null || trigger.custom_path === ''
@@ -386,7 +385,6 @@ const bareWebhook = (trigger: { id: string }): StateWebhookTrigger => ({
 const webhookDetails = (
   before: StateWebhookTrigger,
   after: StateWebhookTrigger,
-  /** The trigger is new, so a setting was chosen rather than changed. */
   asNew = false
 ): string[] => {
   const details: string[] = [];
@@ -452,7 +450,6 @@ const deriveTriggerChanges = (
   const changes: StructuralChange[] = [];
 
   for (const trigger of added) {
-    // A new webhook mints a public URL, so name it.
     const details =
       trigger.type === 'webhook'
         ? webhookDetails(bareWebhook(trigger), trigger, true)
@@ -495,8 +492,6 @@ const deriveTriggerChanges = (
       );
     }
     if (afterTrigger.type === 'webhook') {
-      // Becoming a webhook mints a URL too, and against a bare one its
-      // settings read as newly set, which they are.
       const becameWebhook = beforeTrigger.type !== 'webhook';
       const baseline: StateWebhookTrigger = becameWebhook
         ? bareWebhook(beforeTrigger)
@@ -780,11 +775,9 @@ const heldPaths = (state: DiffState): string =>
     .join(',');
 
 /**
- * `next`, with each webhook path it left unstated filled in from `previous`.
- *
- * The apply keeps an unstated path, so without this a later snapshot that
- * clears a live one is compared against nothing and reports nothing. Copies
- * rather than mutates: these states are cached and handed out again.
+ * The apply keeps a path a snapshot leaves unstated, so without carrying it a
+ * later snapshot that clears a live one is compared against nothing and reports
+ * nothing. Copies rather than mutates: these states are cached and reused.
  */
 const carryWebhookPaths = (previous: DiffState, next: DiffState): DiffState => {
   // Paired as the diff pairs them: Apollo drops trigger ids on some replies,
