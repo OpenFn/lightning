@@ -472,10 +472,17 @@ const deriveTriggerChanges = (
     });
   }
   for (const trigger of removed) {
+    // Retiring a webhook stops a public URL answering, so name it for the same
+    // reason a new one is named.
+    const path =
+      trigger.type === 'webhook' && trigger.custom_path
+        ? showPath(trigger.custom_path)
+        : null;
     changes.push({
       kind: 'trigger',
       change: 'remove',
       description: `${trigger.type} trigger`,
+      ...(path !== null && { detail: `path: ${path}` }),
     });
   }
 
@@ -772,6 +779,21 @@ export const clearWorkflowDiffCaches = (): void => {
   documentIds.clear();
 };
 
+// Positional, not by id: a snapshot without ids is parsed with a fresh uuid
+// each time, which would change the salt on every re-parse and fill the pair
+// cache with entries nothing can reach. Position comes from the YAML mapping,
+// so it is stable, and unlike the type it stays distinct when a workflow holds
+// more than one webhook.
+const heldPaths = (state: DiffState): string =>
+  state.triggers
+    .map((trigger, index) =>
+      trigger.type === 'webhook' && trigger.custom_path !== undefined
+        ? `${index}=${trigger.custom_path ?? ''}`
+        : null
+    )
+    .filter(entry => entry !== null)
+    .join(',');
+
 /**
  * `next`, with each webhook path the snapshot left unstated filled in from the
  * state before it.
@@ -784,19 +806,6 @@ export const clearWorkflowDiffCaches = (): void => {
  * Copies rather than mutates: these states are cached by the YAML that
  * produced them and are handed out again.
  */
-// Keyed on type rather than id: a snapshot without ids is parsed with a fresh
-// uuid each time, which would change the salt on every re-parse and fill the
-// pair cache with entries nothing can reach again.
-const heldPaths = (state: DiffState): string =>
-  state.triggers
-    .filter(
-      (trigger): trigger is StateWebhookTrigger =>
-        trigger.type === 'webhook' && trigger.custom_path !== undefined
-    )
-    .map(trigger => `${trigger.type}=${trigger.custom_path ?? ''}`)
-    .sort()
-    .join(',');
-
 const carryWebhookPaths = (previous: DiffState, next: DiffState): DiffState => {
   // Paired the way the diff pairs them. A snapshot that omits trigger ids is
   // parsed with an invented uuid per trigger, so matching on the raw id would

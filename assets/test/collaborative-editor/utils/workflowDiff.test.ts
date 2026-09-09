@@ -527,6 +527,24 @@ describe('deriveWorkflowChanges', () => {
       expect(row?.detail).toBe('path: intake-form');
     });
 
+    it('names the path of a webhook trigger that was removed', () => {
+      const named = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const none = buildYaml({
+        jobs: [transformJob('fn(state => state);')],
+        triggers: [],
+        edges: [],
+      });
+
+      const row = deriveWorkflowChanges(named, none)!.structure.find(
+        entry => entry.kind === 'trigger'
+      );
+      expect(row?.change).toBe('remove');
+      expect(row?.detail).toBe('path: intake-form');
+    });
+
     it("states a new trigger's settings rather than implying a previous value", () => {
       const none = buildYaml({
         jobs: [transformJob('fn(state => state);')],
