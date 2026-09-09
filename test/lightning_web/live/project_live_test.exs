@@ -456,6 +456,29 @@ defmodule LightningWeb.ProjectLiveTest do
              ])
     end
 
+    test "projects index paginates and navigates pages", %{conn: conn} do
+      for i <- 1..25 do
+        insert(:project, name: "paged-project-#{i}")
+      end
+
+      {:ok, index_live, html} =
+        live(conn, Routes.project_index_path(conn, :index))
+
+      assert html =~ "Showing"
+      assert has_element?(index_live, "nav[aria-label='Pagination'] a", "2")
+
+      index_live
+      |> element("nav[aria-label='Pagination'] a", "2")
+      |> render_click()
+
+      patched_path = assert_patch(index_live)
+      patch_uri = URI.parse(patched_path)
+      patch_params = URI.decode_query(patch_uri.query || "")
+
+      assert patch_uri.path == "/settings/projects"
+      assert patch_params["page"] == "2"
+    end
+
     test "sorting projects by created date works correctly", %{conn: conn} do
       # Create projects with different dates
       _project_old =
