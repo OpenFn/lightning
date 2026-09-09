@@ -158,6 +158,14 @@ and this project adheres to
 
 ### Fixed
 
+- Opening a run now always shows the workflow as that run executed it, and says
+  which version that was. It used to decide by comparing version numbers against
+  the document on screen, and a run view is itself a past document, so the answer
+  changed depending on where you were standing: clicking two runs of the same
+  older content alternated between a faithful read-only view and the live
+  workflow with the run's timings painted onto steps it never touched. A run of
+  the content that is live stays editable, as before.
+
 - Leaving for a sandbox no longer reloads the browser. The editor asks the
   LiveView to navigate instead, so the socket survives and the white flash goes.
   It is a navigation rather than a patch on purpose: the project scope and the

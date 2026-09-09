@@ -33,6 +33,7 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.WorkflowRelease
   alias Lightning.Workflows.WorkflowReleases
   alias Lightning.Workflows.WorkflowUsageLimiter
@@ -1344,6 +1345,7 @@ defmodule LightningWeb.WorkflowChannel do
       config: render_config_context(),
       permissions: permissions,
       latest_snapshot_lock_version: latest_lock_version,
+      latest_snapshot_id: Snapshot.current_id_for(workflow.id),
       project_repo_connection: render_repo_connection(project_repo_connection),
       webhook_auth_methods: render_webhook_auth_methods(webhook_auth_methods),
       workflow_template: render_workflow_template(workflow_template),
@@ -2315,7 +2317,10 @@ defmodule LightningWeb.WorkflowChannel do
       started_at: run.started_at,
       finished_at: run.finished_at,
       version: lock_version,
-      version_number: lock_version && Map.get(version_numbers, lock_version)
+      version_number: lock_version && Map.get(version_numbers, lock_version),
+      # Identity, so the client can ask whether this run executed the content
+      # that is live now without comparing version numbers.
+      snapshot_id: run.snapshot_id
     }
   end
 

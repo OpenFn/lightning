@@ -205,6 +205,7 @@ const WorkOrderItem: React.FC<WorkOrderItemProps> = ({
     */}
     {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
     <div
+      data-testid={`work-order-${workorder.id}`}
       className="flex w-full cursor-pointer items-center gap-2 px-3 py-2
         text-left transition-colors hover:bg-gray-50"
       onClick={e => {

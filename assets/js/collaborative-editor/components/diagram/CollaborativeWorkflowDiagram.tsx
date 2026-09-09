@@ -23,10 +23,10 @@ import {
 } from '../../hooks/useHistory';
 import {
   useIsNewWorkflow,
-  useLatestSnapshotLockVersion,
+  useLatestSnapshotId,
 } from '../../hooks/useSessionContext';
 import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
-import { useNodeSelection, useWorkflowState } from '../../hooks/useWorkflow';
+import { useNodeSelection } from '../../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../../keyboard';
 import type { RunSummary } from '../../types/history';
 import { DiscardChangesDialog } from '../DiscardChangesDialog';
@@ -47,8 +47,7 @@ export function CollaborativeWorkflowDiagram({
   const isNewWorkflow = useIsNewWorkflow();
   const isHistoryChannelConnected = useHistoryChannelConnected();
   const { params, updateSearchParams } = useURLState();
-  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
-  const workflow = useWorkflowState(state => state.workflow);
+  const latestSnapshotId = useLatestSnapshotId();
 
   const history = useHistory();
   const historyLoading = useHistoryLoading();
@@ -108,7 +107,7 @@ export function CollaborativeWorkflowDiagram({
           clearRun();
         }
         if (runParam) {
-          updateSearchParams({ run: null });
+          updateSearchParams({ run: null, step: null });
         }
         return;
       }
@@ -125,18 +124,21 @@ export function CollaborativeWorkflowDiagram({
 
   const currentRunSteps = useRunSteps(selectedRunId);
 
-  // A run of the current version overlays on the live document; a run of any
-  // other version loads that run's own snapshot, which covers draft runs that
-  // no release can address.
+  // A run is shown as it executed, on its own snapshot. The exception is a run
+  // of the content that is live now: that one overlays on the live document so
+  // the edit, run, edit loop keeps working.
+  //
+  // The comparison is against the live workflow, never against the document on
+  // screen. A run view *is* a past document, so comparing against what is
+  // displayed made the answer depend on where you happened to be standing, and
+  // clicking two runs of the same content alternated between the two views.
   const handleRunSelect = useCallback(
     (run: RunSummary) => {
-      const currentLockVersion =
-        workflow?.lock_version ?? latestSnapshotLockVersion ?? null;
-      const isDifferentVersion =
-        run.version !== null &&
-        run.version !== undefined &&
-        currentLockVersion !== null &&
-        run.version !== currentLockVersion;
+      const ranTheLiveContent =
+        latestSnapshotId !== null &&
+        run.snapshot_id !== null &&
+        run.snapshot_id !== undefined &&
+        run.snapshot_id === latestSnapshotId;
 
       // Set the flag only where the URL is really about to change. The
       // reconcile effect is what consumes it, and it only runs when a param
@@ -147,7 +149,7 @@ export function CollaborativeWorkflowDiagram({
       const alreadyThere =
         runParam === run.id && versionParam === null && asRunParam === run.id;
 
-      if (isDifferentVersion) {
+      if (!ranTheLiveContent) {
         viewAsExecuted(run.id, () => {
           if (!alreadyThere) runSelectInProgressRef.current = true;
         });
@@ -163,8 +165,7 @@ export function CollaborativeWorkflowDiagram({
       }
     },
     [
-      workflow,
-      latestSnapshotLockVersion,
+      latestSnapshotId,
       updateSearchParams,
       viewAsExecuted,
       runParam,
@@ -177,7 +178,9 @@ export function CollaborativeWorkflowDiagram({
   // URL param immediately.
   const handleDeselectRun = useCallback(() => {
     clearRun();
-    updateSearchParams({ run: null, as_run: null });
+    // The step belongs to the run. Left behind, it is re-applied to whichever
+    // run is picked next, selecting a step from a different execution.
+    updateSearchParams({ run: null, as_run: null, step: null });
   }, [clearRun, updateSearchParams]);
 
   // The run_id ensures that run's work order is included even if it is older

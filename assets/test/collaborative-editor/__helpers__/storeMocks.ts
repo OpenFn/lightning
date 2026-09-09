@@ -63,6 +63,7 @@ export const defaultSessionContextState: SessionContextState = {
   config: null,
   permissions: null,
   latestSnapshotLockVersion: null,
+  latestSnapshotId: null,
   projectRepoConnection: null,
   webhookAuthMethods: [],
   versions: [],

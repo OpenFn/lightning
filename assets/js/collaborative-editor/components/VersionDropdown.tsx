@@ -52,8 +52,9 @@ export function VersionDropdown({
 
   // `?as_run=` opens the workflow as one run executed it, so the chip names the
   // version that run executed against. A run whose snapshot was never
-  // published has no number to show, which the history panel beside it calls a
-  // draft.
+  // published has no number to name it by. It is not called a draft here: the
+  // lifecycle badge alongside already uses that word for a workflow that is not
+  // live, and this is a statement about content, not about the workflow.
   const asRunParam = params['as_run'];
   const isAsRun = asRunParam !== undefined && asRunParam !== null;
   const asRunVersionNumber = useRunVersionNumber(
@@ -77,7 +78,7 @@ export function VersionDropdown({
         ? asRunVersionNumber === undefined
           ? '•'
           : asRunVersionNumber === null
-            ? 'Draft'
+            ? 'unpublished'
             : `v${asRunVersionNumber}`
         : 'latest';
 

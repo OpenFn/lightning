@@ -56,6 +56,7 @@ describe('useVersionSelect', () => {
       v: '3',
       run: null,
       as_run: null,
+      step: null,
     });
   });
 
@@ -69,6 +70,7 @@ describe('useVersionSelect', () => {
       v: null,
       run: null,
       as_run: null,
+      step: null,
     });
   });
 
@@ -102,6 +104,7 @@ describe('useVersionSelect', () => {
       v: '3',
       run: null,
       as_run: null,
+      step: null,
     });
   });
 
@@ -123,6 +126,7 @@ describe('useVersionSelect', () => {
       v: '3',
       run: null,
       as_run: null,
+      step: null,
     });
   });
 

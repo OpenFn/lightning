@@ -172,7 +172,7 @@ describe('VersionDropdown', () => {
       expect(button).toHaveClass('bg-yellow-100', 'text-yellow-800');
     });
 
-    test('calls a run against an unpublished snapshot a draft', () => {
+    test('says unpublished for a run against content never published', () => {
       window.history.pushState(
         {},
         '',
@@ -180,8 +180,8 @@ describe('VersionDropdown', () => {
       );
       mockUseRunVersionNumber.mockReturnValue(null);
 
-      // Same word the history panel uses for that run, rather than a number
-      // no version list can show.
+      // Not "Draft": the lifecycle badge beside this uses that word for a
+      // workflow that is not live, and this is about the content.
       render(
         <VersionDropdown
           currentVersion={3}
@@ -190,7 +190,7 @@ describe('VersionDropdown', () => {
         />
       );
 
-      expect(screen.getByRole('button')).toHaveTextContent('Draft');
+      expect(screen.getByRole('button')).toHaveTextContent('unpublished');
     });
 
     test('dropdown is closed by default', () => {

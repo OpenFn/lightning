@@ -120,6 +120,12 @@ export const SessionContextResponseSchema = z.object({
   config: AppConfigSchema,
   permissions: PermissionsSchema,
   latest_snapshot_lock_version: z.number().int().nullable(),
+  /**
+   * The snapshot holding the content that is live right now. Compared against a
+   * run's own snapshot to tell a run of the live content from a run of
+   * anything else; lock versions are a proxy and not unique per workflow.
+   */
+  latest_snapshot_id: z.string().nullable().optional(),
   project_repo_connection: ProjectRepoConnectionSchema.nullable(),
   webhook_auth_methods: z.array(WebhookAuthMethodSchema),
   workflow_template: WorkflowTemplateSchema.nullable(),
@@ -140,6 +146,7 @@ export interface SessionContextState {
   config: AppConfig | null;
   permissions: Permissions | null;
   latestSnapshotLockVersion: number | null;
+  latestSnapshotId: string | null;
   projectRepoConnection: ProjectRepoConnection | null;
   webhookAuthMethods: WebhookAuthMethod[];
   versions: Version[];

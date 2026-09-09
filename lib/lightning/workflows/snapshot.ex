@@ -252,6 +252,26 @@ defmodule Lightning.Workflows.Snapshot do
     |> Repo.one()
   end
 
+  @doc """
+  The id of the snapshot holding the workflow's current content.
+
+  Callers asking "is this the content that is live right now?" need identity.
+  A lock version is a near-enough proxy until it isn't: nothing enforces one
+  snapshot per `(workflow_id, lock_version)`, and a client comparing numbers
+  cannot tell two snapshots apart.
+  """
+  @spec current_id_for(Ecto.UUID.t()) :: Ecto.UUID.t() | nil
+  def current_id_for(workflow_id) when is_binary(workflow_id) do
+    from(s in __MODULE__,
+      join: w in assoc(s, :workflow),
+      where: s.workflow_id == ^workflow_id and s.lock_version == w.lock_version,
+      order_by: [desc: s.inserted_at],
+      limit: 1,
+      select: s.id
+    )
+    |> Repo.one()
+  end
+
   defp get_current_query(workflow) do
     from(s in __MODULE__,
       join: w in assoc(s, :workflow),

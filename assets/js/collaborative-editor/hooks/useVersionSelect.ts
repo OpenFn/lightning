@@ -42,6 +42,9 @@ export function useVersionSelect() {
           v: version === 'latest' ? null : String(version),
           run: null,
           as_run: null,
+          // The step belongs to the run being cleared, and a step id means
+          // nothing in another version.
+          step: null,
         });
       });
     },

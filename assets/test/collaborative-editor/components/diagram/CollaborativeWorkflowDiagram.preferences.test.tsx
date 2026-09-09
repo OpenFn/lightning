@@ -382,6 +382,7 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         // Residual run param dropped from the URL.
         expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
           run: null,
+          step: null,
         });
       });
     });
@@ -465,6 +466,7 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       expect(closeRunViewer).not.toHaveBeenCalled();
       expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith({
         run: null,
+        step: null,
       });
     });
   });
@@ -622,6 +624,7 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
           run: null,
           as_run: null,
+          step: null,
         });
       });
 

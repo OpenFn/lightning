@@ -2169,6 +2169,11 @@ defmodule LightningWeb.WorkflowChannelTest do
       # lifecycle actions to offer, so it has to be the workflow's real one.
       assert response.workflow.state == :live
 
+      # The client compares this against each run's snapshot to tell a run of the
+      # live content from a run of anything else.
+      assert response.latest_snapshot_id ==
+               Lightning.Workflows.Snapshot.current_id_for(workflow.id)
+
       # The reply reaches the client as JSON, which a test's assert_reply never
       # exercises. A snapshot's job carries association keys it never loads, and
       # encoding one of those raised and took the channel down, so the client
@@ -4530,6 +4535,32 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Map.has_key?(first_run, :started_at)
       assert Map.has_key?(first_run, :finished_at)
       assert Map.has_key?(first_run, :version)
+    end
+
+    test "names the snapshot each run executed", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      workflow = with_snapshot(workflow)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+
+      {:ok, work_order} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: insert(:dataclip, project: project),
+          workflow: workflow
+        )
+
+      [run] = Lightning.Repo.preload(work_order, :runs).runs
+
+      ref = push(socket, "request_history", %{})
+      assert_reply ref, :ok, %{history: [work_order_payload]}
+
+      # Identity, so the client can tell a run of the live content from a run of
+      # something else without comparing lock versions, which are a proxy and
+      # not unique per workflow.
+      assert [%{snapshot_id: snapshot_id}] = work_order_payload.runs
+      assert snapshot_id == run.snapshot_id
     end
 
     test "returns empty list when workflow has no work orders", %{socket: socket} do

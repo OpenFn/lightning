@@ -31,6 +31,9 @@ export const RunSummarySchema = z.object({
   // Optional so historical payloads (and fixtures) without the field still
   // parse; the backend always includes it.
   version_number: z.number().int().nullable().optional(),
+  // The snapshot this run executed. Identity, so the client can tell a run of
+  // the live content from a run of anything else without comparing versions.
+  snapshot_id: z.string().nullable().optional(),
 });
 
 /**

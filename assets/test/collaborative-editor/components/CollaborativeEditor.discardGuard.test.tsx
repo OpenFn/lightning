@@ -174,6 +174,7 @@ describe('unsaved-changes guard, wired up', () => {
       v: '3',
       run: null,
       as_run: null,
+      step: null,
     });
     expect(
       screen.queryByTestId('discard-changes-dialog')
@@ -192,6 +193,7 @@ describe('unsaved-changes guard, wired up', () => {
       v: '3',
       run: null,
       as_run: null,
+      step: null,
     });
   });
 
@@ -213,6 +215,7 @@ describe('unsaved-changes guard, wired up', () => {
         v: '3',
         run: null,
         as_run: null,
+        step: null,
       });
     });
   });

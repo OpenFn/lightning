@@ -174,6 +174,25 @@ export const useSessionWorkflow = (): BaseWorkflow | null => {
  * Hook to get latest snapshot lock version from session context
  * Returns null if not loaded yet
  */
+/**
+ * The snapshot holding the content that is live right now.
+ *
+ * Compared against a run's own snapshot to answer "did this run execute what
+ * is live?". Identity rather than a lock version, which is a proxy: nothing
+ * enforces one snapshot per lock version, and the document on screen carries
+ * its own, so comparing numbers against it answers a different question each
+ * time the view changes.
+ */
+export const useLatestSnapshotId = (): string | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectSnapshotId = sessionContextStore.withSelector(
+    state => state.latestSnapshotId
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectSnapshotId);
+};
+
 export const useLatestSnapshotLockVersion = (): number | null => {
   const sessionContextStore = useSessionContextStore();
 
