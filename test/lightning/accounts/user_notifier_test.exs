@@ -260,19 +260,19 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         Workflow A:
         • 12 workorders were successful today
-        • 3 workorders were not (rejected, failed, crashed, killed, exception, lost)
+        • 3 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
         Click this link to review: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
         • 10 workorders were successful today
-        • 0 workorders were not (rejected, failed, crashed, killed, exception, lost)
+        • 0 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
         Click this link to review: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
         • 3 workorders were successful today
-        • 7 workorders were not (rejected, failed, crashed, killed, exception, lost)
+        • 7 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
         Click this link to review: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
@@ -341,19 +341,19 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         Workflow A:
         • 12 workorders were successful this week
-        • 3 workorders were not (rejected, failed, crashed, killed, exception, lost)
+        • 3 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
         Click this link to review: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
         • 10 workorders were successful this week
-        • 0 workorders were not (rejected, failed, crashed, killed, exception, lost)
+        • 0 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
         Click this link to review: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
         • 3 workorders were successful this week
-        • 7 workorders were not (rejected, failed, crashed, killed, exception, lost)
+        • 7 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
         Click this link to review: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
@@ -424,19 +424,19 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         Workflow A:
         • 12 workorders were successful this month
-        • 3 workorders were not (rejected, failed, crashed, killed, exception, lost)
+        • 3 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
         Click this link to review: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
         • 10 workorders were successful this month
-        • 0 workorders were not (rejected, failed, crashed, killed, exception, lost)
+        • 0 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
         Click this link to review: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
         • 3 workorders were successful this month
-        • 7 workorders were not (rejected, failed, crashed, killed, exception, lost)
+        • 7 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
         Click this link to review: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
@@ -495,7 +495,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
           Workflow A:
           • 0 workorders were successful #{period}
-          • 0 workorders were not (rejected, failed, crashed, killed, exception, lost)
+          • 0 workorders were not (crashed, exception, failed, killed, lost, rejected etc.)
 
           Click this link to review: #{UserNotifier.build_digest_url(workflow, start_date, end_date)}
 
