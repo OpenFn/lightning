@@ -43,7 +43,8 @@ defmodule LightningWeb.ProfileLiveTest do
   }
 
   @update_email_attrs %{
-    email: "new@example.com"
+    email: "new@example.com",
+    current_password: "hello world!"
   }
 
   describe "Edit user profile" do
@@ -168,6 +169,52 @@ defmodule LightningWeb.ProfileLiveTest do
       assert profile_live
              |> form("#email-form", user: %{email: user.email})
              |> render_change() =~ "Please change your email"
+    end
+
+    test "does not show password errors while typing a new email", %{
+      conn: conn
+    } do
+      {:ok, profile_live, _html} =
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
+
+      html =
+        profile_live
+        |> form("#email-form",
+          user: %{email: "new_email_123@openfn.org", current_password: ""}
+        )
+        |> render_change()
+
+      refute html =~ "This field can&#39;t be blank."
+      refute html =~ "Your passwords do not match."
+      assert html =~ ~s(disabled="disabled")
+    end
+
+    test "clears a prior password error when the user types again", %{
+      conn: conn
+    } do
+      {:ok, profile_live, _html} =
+        live(conn, Routes.profile_edit_path(conn, :edit), on_error: :raise)
+
+      assert profile_live
+             |> form("#email-form",
+               user: %{
+                 email: "new_email_123@openfn.org",
+                 current_password: "invalid"
+               }
+             )
+             |> render_submit() =~ "Your passwords do not match."
+
+      html =
+        profile_live
+        |> form("#email-form",
+          user: %{
+            email: "new_email_123@openfn.org",
+            current_password: "still typing"
+          }
+        )
+        |> render_change()
+
+      refute html =~ "Your passwords do not match."
     end
 
     test "a user can change their email address", %{conn: conn} do

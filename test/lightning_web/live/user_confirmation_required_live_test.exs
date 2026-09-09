@@ -157,6 +157,54 @@ defmodule LightningWeb.UserConfirmationRequiredLiveTest do
       refute_email_sent(subject: "Please confirm your new email")
     end
 
+    test "does not show password errors while typing a new email", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} =
+        conn |> log_in_user(user) |> live(~p"/users/confirm-required")
+
+      html =
+        view
+        |> form("#email-form",
+          user: %{email: "typo-fixed@example.com", current_password: ""}
+        )
+        |> render_change()
+
+      refute html =~ "This field can&#39;t be blank."
+      refute html =~ "Your passwords do not match."
+      assert html =~ ~s(disabled="disabled")
+    end
+
+    test "clears a prior password error when the user types again", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} =
+        conn |> log_in_user(user) |> live(~p"/users/confirm-required")
+
+      assert view
+             |> form("#email-form",
+               user: %{
+                 email: "typo-fixed@example.com",
+                 current_password: "wrong"
+               }
+             )
+             |> render_submit() =~ "Your passwords do not match."
+
+      html =
+        view
+        |> form("#email-form",
+          user: %{
+            email: "typo-fixed@example.com",
+            current_password: "still typing"
+          }
+        )
+        |> render_change()
+
+      refute html =~ "Your passwords do not match."
+    end
+
     test "sends instructions to the new address", %{conn: conn, user: user} do
       {:ok, view, _html} =
         conn |> log_in_user(user) |> live(~p"/users/confirm-required")

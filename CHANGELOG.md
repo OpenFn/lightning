@@ -15,6 +15,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- Profile email updates no longer show password validation errors while typing;
+  the current password is checked when submitting Update email.
+  [#2546](https://github.com/OpenFn/lightning/issues/2546)
+
 ### Changed
 
 - The AI assistant is the global assistant for everyone. It was behind the
