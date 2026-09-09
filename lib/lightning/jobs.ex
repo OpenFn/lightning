@@ -159,10 +159,8 @@ defmodule Lightning.Jobs do
   supplies.
   """
   def get_job_with_credential(id, workflow_id) do
-    # The share is preloaded because it carries the grant, which is what says
-    # which of the credential's values this project may read.
     Repo.get_by(Job, id: id, workflow_id: workflow_id)
-    |> Repo.preload([:credential, :project_credential])
+    |> Repo.preload(:credential)
   end
 
   @doc """

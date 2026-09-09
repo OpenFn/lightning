@@ -545,20 +545,46 @@ defmodule LightningWeb.RunChannel do
     |> reply_with({:ok, resolved_credential.body})
   end
 
-  # This project was never given a set of values for the credential. Naming the
-  # credential and pointing at where the choice is made is the whole of the
-  # remedy: it is not something the project's environment name can fix.
   defp handle_credential_error(
          socket,
-         {:no_credential_grant, credential},
+         {:environment_not_configured, _credential},
          _id,
          _project_id,
          _run_id
        ) do
     error =
+      LightningWeb.ErrorFormatter.format(:environment_not_configured, %{
+        project: socket.assigns.project_id
+      })
+
+    {:reply, {:error, error}, socket}
+  end
+
+  defp handle_credential_error(
+         socket,
+         {:project_not_found, _credential},
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    error = LightningWeb.ErrorFormatter.format(:project_not_found, %{})
+    {:reply, {:error, error}, socket}
+  end
+
+  defp handle_credential_error(
+         socket,
+         {:environment_mismatch, credential},
+         _id,
+         _project_id,
+         _run_id
+       ) do
+    project_env =
+      Lightning.Projects.get_project!(socket.assigns.project_id).env || "unknown"
+
+    error =
       LightningWeb.ErrorFormatter.format(
-        {:no_credential_grant, credential},
-        %{project: socket.assigns.project_id}
+        {:environment_mismatch, credential},
+        %{project: socket.assigns.project_id, project_env: project_env}
       )
 
     {:reply, {:error, error}, socket}

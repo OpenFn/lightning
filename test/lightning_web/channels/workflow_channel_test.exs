@@ -2726,10 +2726,10 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert job_id == job.id
     end
 
-    test "metadata reads the values the project was granted" do
-      # The hole this closes: metadata was fetched by environment name, so a
-      # sandbox naming its parent's environment saw the parent's production
-      # credential. It reads the grant on the job's own share now.
+    test "a sandbox asks for its own environment, not the parent's" do
+      # The bug this closes: metadata was fetched against "main" whatever
+      # project the job belonged to, so a sandbox saw its parent's production
+      # credential. Reverting the fix has to fail here.
       Mimic.copy(Lightning.MetadataService)
 
       root = insert(:project)
@@ -2738,40 +2738,20 @@ defmodule LightningWeb.WorkflowChannelTest do
       sandbox =
         insert(:project,
           parent: root,
-          env: "main",
+          env: "staging",
           project_users: [%{user: user, role: :owner}]
         )
 
       workflow = insert(:workflow, project: sandbox)
-
-      credential =
-        insert(:credential, user: user, schema: "http")
-        |> with_body(%{name: "main", body: %{"key" => "production"}})
-        |> with_body(%{name: "staging", body: %{"key" => "sandbox"}})
-
-      staging =
-        credential
-        |> Lightning.Repo.preload(:credential_bodies, force: true)
-        |> Map.fetch!(:credential_bodies)
-        |> Enum.find(&(&1.name == "staging"))
-
-      # Granted the staging values. The sandbox's env says "main", the same as
-      # the root's, and that decides nothing.
-      share =
-        insert(:project_credential,
-          project: sandbox,
-          credential: credential,
-          credential_body_id: staging.id
-        )
-
-      job = insert(:job, workflow: workflow, project_credential: share)
+      credential = insert(:credential, user: user, schema: "http")
+      job = insert(:job, workflow: workflow, credential: credential)
 
       test_pid = self()
 
       Mimic.stub(Lightning.MetadataService, :fetch, fn _adaptor,
                                                        _credential,
-                                                       body_id ->
-        send(test_pid, {:metadata_body_id, body_id})
+                                                       environment ->
+        send(test_pid, {:metadata_environment, environment})
         {:ok, %{"name" => "ok"}}
       end)
 
@@ -2791,8 +2771,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(socket, "request_metadata", %{"job_id" => job.id})
       assert_reply ref, :ok, %{job_id: _}
 
-      staging_id = staging.id
-      assert_receive {:metadata_body_id, ^staging_id}
+      assert_receive {:metadata_environment, "staging"}
     end
 
     test "returns job_not_found for a job in another project (no cross-tenant credential use)",

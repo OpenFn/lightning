@@ -555,10 +555,7 @@ defmodule LightningWeb.RunChannelTest do
       oauth_client = credential.oauth_client
 
       credential_body =
-        credential
-        |> Lightning.Repo.preload(:credential_bodies, force: true)
-        |> Map.fetch!(:credential_bodies)
-        |> Enum.find(&(&1.name == "main"))
+        Lightning.Credentials.get_credential_body(credential.id, "main")
 
       current_expires_at = credential_body.body["expires_at"]
       new_expiry = current_expires_at + 3600
@@ -2798,10 +2795,6 @@ defmodule LightningWeb.RunChannelTest do
         condition_expression: "state.a == 33"
       })
       |> insert()
-
-    # A project reads a credential's values only through the grant on its share,
-    # so a run that is expected to receive them has to be granted them.
-    grant_body!(project, credential, "main")
 
     {:ok, snapshot} = Workflows.Snapshot.create(workflow)
 

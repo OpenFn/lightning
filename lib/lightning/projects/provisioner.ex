@@ -979,14 +979,9 @@ defmodule Lightning.Projects.Provisioner do
             end)
 
           if credential do
-            # A deploy has no way to ask which values the project should read,
-            # so it takes the only set when there is one and leaves the share
-            # ungranted when there is a choice to make.
             change(%ProjectCredential{
               id: cred_params["id"],
-              credential_id: credential.id,
-              credential_body_id:
-                Lightning.Credentials.sole_body_id(credential.id)
+              credential_id: credential.id
             })
           else
             change(%ProjectCredential{

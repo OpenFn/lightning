@@ -36,28 +36,21 @@ defmodule Lightning.MetadataService do
   ## Parameters
     - `adaptor`: The adaptor npm specification (e.g., "@openfn/language-http")
     - `credential`: The credential struct
-    - `credential_body_id`: the set of values this project was granted, or nil
-      when it was granted none
+    - `environment`: the environment whose credential body to read
 
   ## Returns
     - `{:ok, metadata}` - The metadata as a map
     - `{:error, Error.t()}` - An error if metadata cannot be fetched
   """
-  @spec fetch(
-          adaptor :: String.t(),
-          Credential.t(),
-          credential_body_id :: Ecto.UUID.t() | nil
-        ) ::
-          {:ok, %{optional(binary) => binary}}
-          | {:error, Error.t()}
-          | {:error, term()}
-  def fetch(adaptor, credential, credential_body_id) do
+  @spec fetch(adaptor :: String.t(), Credential.t(), environment :: String.t()) ::
+          {:ok, %{optional(binary) => binary}} | {:error, Error.t()}
+  def fetch(adaptor, credential, environment) do
     Lightning.TaskWorker.start_task(@cli_task_worker, fn ->
       LightningWeb.Telemetry.with_span(
         [:lightning, :fetch_metadata],
-        %{adaptor: adaptor},
+        %{adaptor: adaptor, environment: environment},
         fn ->
-          do_fetch(adaptor, credential, credential_body_id)
+          do_fetch(adaptor, credential, environment)
         end
       )
     end)
@@ -69,9 +62,9 @@ defmodule Lightning.MetadataService do
 
   # false positive, adaptor is resolved by a regex and given by a install function
   # sobelow_skip ["Traversal.FileModule"]
-  defp do_fetch(adaptor, credential, credential_body_id) do
+  defp do_fetch(adaptor, credential, environment) do
     with {:ok, {adaptor, state}} <-
-           assemble_args(adaptor, credential, credential_body_id),
+           assemble_args(adaptor, credential, environment),
          {:ok, adaptor_path} <- get_adaptor_path(adaptor),
          res <- CLI.metadata(state, adaptor_path),
          {:ok, path} <- get_output_path(res) do
@@ -84,7 +77,7 @@ defmodule Lightning.MetadataService do
     end
   end
 
-  defp assemble_args(adaptor, credential, credential_body_id) do
+  defp assemble_args(adaptor, credential, environment) do
     case {adaptor, credential} do
       {nil, _} ->
         {:error, Error.new("no_adaptor")}
@@ -96,34 +89,28 @@ defmodule Lightning.MetadataService do
         {:error, Error.new("no_credential")}
 
       {adaptor_path, %Credential{} = cred} ->
-        resolve_and_assemble(adaptor_path, cred, credential_body_id)
+        resolve_and_assemble(adaptor_path, cred, environment)
 
       {_adaptor_path, %{}} ->
         {:error, Error.new("unsupported_credential")}
     end
   end
 
-  defp resolve_and_assemble(adaptor_path, credential, credential_body_id) do
-    case Credentials.resolve_granted_body(credential, credential_body_id) do
+  defp resolve_and_assemble(adaptor_path, credential, environment) do
+    case Credentials.resolve_credential_body(credential, environment) do
       {:ok, credential_body} ->
         {:ok,
          {adaptor_path,
           %{"configuration" => Lightning.RedactedMap.new(credential_body)}}}
 
-      {:error, :no_credential_grant} ->
-        {:error, Error.new("no_credential_grant")}
+      {:error, :environment_not_found} ->
+        {:error, Error.new("environment_not_found")}
 
       {:error, :reauthorization_required} ->
         {:error, Error.new("reauthorization_required")}
 
       {:error, :temporary_failure} ->
         {:error, Error.new("temporary_oauth_failure")}
-
-      # A new refusal reason must not crash the editor's metadata task. inspect
-      # rather than to_string because an OAuth refresh can hand back a raw
-      # response map or a changeset, and neither implements String.Chars.
-      {:error, reason} ->
-        {:error, Error.new(inspect(reason))}
     end
   end
 

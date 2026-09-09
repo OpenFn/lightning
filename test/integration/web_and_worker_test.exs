@@ -341,13 +341,9 @@ defmodule Lightning.WebAndWorkerTest do
 
       # Is set to use keychain_credential, which matches on the webhook body
       # and resolves to the project_credential_2
-      # The values the project was granted, which is what the run resolves.
+      # Get the credential body from the "main" environment
       credential_2_body =
-        credential_2
-        |> Lightning.Repo.preload(:credential_bodies, force: true)
-        |> Map.fetch!(:credential_bodies)
-        |> Enum.find(&(&1.name == "main"))
-        |> Map.fetch!(:body)
+        Lightning.Credentials.get_credential_body(credential_2.id, "main").body
 
       assert pick_out_config(step_3.log_lines) |> Jason.decode!() ==
                credential_2_body

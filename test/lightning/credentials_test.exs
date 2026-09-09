@@ -17,19 +17,6 @@ defmodule Lightning.CredentialsTest do
 
   setup :verify_on_exit!
 
-  # The grant names a body by id, so a test that wants a particular set of
-  # values looks it up by name first.
-  defp body_id(credential, name) do
-    credential
-    |> Lightning.Repo.preload(:credential_bodies, force: true)
-    |> Map.fetch!(:credential_bodies)
-    |> Enum.find(&(&1.name == name))
-    |> case do
-      nil -> nil
-      body -> body.id
-    end
-  end
-
   describe "Model interactions" do
     @invalid_attrs %{name: nil}
 
@@ -905,20 +892,19 @@ defmodule Lightning.CredentialsTest do
       assert Credentials.sensitive_values_for(credential.id) == secrets
     end
 
-    test "collects sensitive values from every environment" do
+    test "collects sensitive values from specific environment" do
       credential =
         insert(:credential, schema: "raw", user: insert(:user))
         |> with_body(%{name: "main", body: %{"password" => "main_secret"}})
         |> with_body(%{name: "staging", body: %{"password" => "staging_secret"}})
 
-      # Used to mask secrets out of stored dataclips. Nothing records which
-      # values a given step actually spent, so it covers every environment:
-      # masking one that was never at risk costs nothing, missing one puts a
-      # secret on screen.
-      values = Credentials.sensitive_values_for(credential)
+      assert Credentials.sensitive_values_for(credential, "main") == [
+               "main_secret"
+             ]
 
-      assert "main_secret" in values
-      assert "staging_secret" in values
+      assert Credentials.sensitive_values_for(credential, "staging") == [
+               "staging_secret"
+             ]
     end
 
     test "returns only unique values when duplicates exist" do
@@ -947,17 +933,14 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
-  describe "resolve_granted_body/2" do
+  describe "resolve_credential_body/2" do
     test "returns body for non-OAuth credentials" do
       credential =
         insert(:credential, schema: "raw", user: insert(:user))
         |> with_body(%{name: "main", body: %{"api_key" => "secret"}})
 
       assert {:ok, body} =
-               Credentials.resolve_granted_body(
-                 credential,
-                 body_id(credential, "main")
-               )
+               Credentials.resolve_credential_body(credential, "main")
 
       assert body == %{"api_key" => "secret"}
     end
@@ -984,10 +967,7 @@ defmodule Lightning.CredentialsTest do
         })
 
       assert {:ok, body} =
-               Credentials.resolve_granted_body(
-                 credential,
-                 body_id(credential, "production")
-               )
+               Credentials.resolve_credential_body(credential, "production")
 
       assert body["access_token"] == "fresh_token"
     end
@@ -1034,20 +1014,17 @@ defmodule Lightning.CredentialsTest do
         |> Repo.preload(:oauth_client)
 
       assert {:ok, body} =
-               Credentials.resolve_granted_body(
-                 credential,
-                 body_id(credential, "production")
-               )
+               Credentials.resolve_credential_body(credential, "production")
 
       assert body["access_token"] == "new_token"
       assert body["expires_at"] == new_expires_at
     end
 
-    test "refuses when there is no grant" do
+    test "returns error when environment doesn't exist" do
       credential = insert(:credential, schema: "oauth", user: insert(:user))
 
-      assert {:error, :no_credential_grant} =
-               Credentials.resolve_granted_body(credential, nil)
+      assert {:error, :environment_not_found} =
+               Credentials.resolve_credential_body(credential, "nonexistent")
     end
   end
 
@@ -1767,10 +1744,7 @@ defmodule Lightning.CredentialsTest do
 
       # ✅ Now tests resolve_credential_body instead
       assert {:error, error} =
-               Credentials.resolve_granted_body(
-                 credential,
-                 body_id(credential, "production")
-               )
+               Credentials.resolve_credential_body(credential, "production")
 
       # The error will be wrapped differently now
       assert error in [:temporary_failure, :reauthorization_required] ||
@@ -1943,10 +1917,7 @@ defmodule Lightning.CredentialsTest do
       end)
 
       assert {:error, _error} =
-               Credentials.resolve_granted_body(
-                 credential,
-                 body_id(credential, "production")
-               )
+               Credentials.resolve_credential_body(credential, "production")
 
       reloaded =
         Repo.get!(Credential, credential.id)
@@ -2001,10 +1972,7 @@ defmodule Lightning.CredentialsTest do
 
       # ✅ resolve_credential_body handles refresh automatically
       assert {:ok, body} =
-               Credentials.resolve_granted_body(
-                 credential,
-                 body_id(credential, "production")
-               )
+               Credentials.resolve_credential_body(credential, "production")
 
       assert body["access_token"] == "new_token"
       assert body["refresh_token"] == "new_refresh"
@@ -2053,10 +2021,7 @@ defmodule Lightning.CredentialsTest do
       end)
 
       assert {:error, :reauthorization_required} =
-               Credentials.resolve_granted_body(
-                 credential,
-                 body_id(credential, "production")
-               )
+               Credentials.resolve_credential_body(credential, "production")
 
       # Test 429 error
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
@@ -2069,10 +2034,7 @@ defmodule Lightning.CredentialsTest do
       end)
 
       assert {:error, :temporary_failure} =
-               Credentials.resolve_granted_body(
-                 credential,
-                 body_id(credential, "production")
-               )
+               Credentials.resolve_credential_body(credential, "production")
 
       # Test 503 error
       expect(Lightning.AuthProviders.OauthHTTPClient.Mock, :call, fn
@@ -2085,10 +2047,7 @@ defmodule Lightning.CredentialsTest do
       end)
 
       assert {:error, :temporary_failure} =
-               Credentials.resolve_granted_body(
-                 credential,
-                 body_id(credential, "production")
-               )
+               Credentials.resolve_credential_body(credential, "production")
     end
   end
 

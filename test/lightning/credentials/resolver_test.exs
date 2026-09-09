@@ -9,27 +9,6 @@ defmodule ResolverTest do
   import Lightning.Factories
   import ExUnit.CaptureLog
 
-  # Reads a credential's values the way the run path does, by the id of the body
-  # granted to a project, rather than by matching an environment name. These
-  # cases are about body reading and OAuth refresh, which the grant does not
-  # change; the tests that are about the grant itself use a real run.
-  defp resolve_body(credential, body_name) do
-    body =
-      credential
-      |> Repo.preload(:credential_bodies, force: true)
-      |> Map.fetch!(:credential_bodies)
-      |> Enum.find(&(&1.name == body_name))
-
-    case Lightning.Credentials.resolve_granted_body(credential, body && body.id) do
-      {:ok, resolved_body} ->
-        {:ok,
-         Lightning.Credentials.ResolvedCredential.from(credential, resolved_body)}
-
-      {:error, reason} ->
-        {:error, {reason, credential}}
-    end
-  end
-
   describe "resolve_credential/1 with regular credential" do
     test "returns ResolvedCredential with credential body" do
       user = insert(:user)
@@ -53,7 +32,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = resolve_body(credential, "main")
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       credential = Repo.preload(credential, :credential_bodies)
@@ -84,7 +63,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = resolve_body(credential, "main")
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
 
       # Empty strings should be removed
       expected_body = %{
@@ -130,7 +109,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = resolve_body(credential, "main")
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should have all the data
@@ -165,7 +144,7 @@ defmodule ResolverTest do
           }
         })
 
-      assert {:ok, resolved} = resolve_body(credential, "main")
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should remove empty values
@@ -221,7 +200,7 @@ defmodule ResolverTest do
 
       credential = Repo.preload(credential, :oauth_client)
 
-      assert {:ok, resolved} = resolve_body(credential, "main")
+      assert {:ok, resolved} = Resolver.resolve_credential(credential, "main")
       assert %Lightning.Credentials.ResolvedCredential{} = resolved
 
       # Should have refreshed token data merged with credential body
@@ -275,15 +254,14 @@ defmodule ResolverTest do
 
       {result, log} =
         capture_info_log(fn ->
-          resolve_body(credential, "main")
+          Resolver.resolve_credential(credential, "main")
         end)
 
       assert {:error, {:reauthorization_required, credential}} = result
       assert credential.name == "Test Googlesheets Credential"
 
-      # The resolver's own logging is exercised on the run path; these cases
-      # are about how a failed refresh is reported.
-      _ = log
+      assert log =~ "[info]"
+      assert log =~ "OAuth refresh token has expired"
     end
 
     test "when refresh fails with rate limit returns temporary_failure error", %{
@@ -316,11 +294,13 @@ defmodule ResolverTest do
 
       {result, log} =
         capture_info_log(fn ->
-          resolve_body(credential, "main")
+          Resolver.resolve_credential(credential, "main")
         end)
 
       assert {:error, {:temporary_failure, _credential}} = result
-      _ = log
+
+      assert log =~ "[info]"
+      assert log =~ "Could not reach the OAuth provider"
     end
 
     test "when refresh fails with other error returns generic error", %{
@@ -352,11 +332,21 @@ defmodule ResolverTest do
       credential = Repo.preload(credential, :oauth_client)
 
       assert {:error, {original_error, _credential}} =
-               resolve_body(credential, "main")
+               Resolver.resolve_credential(credential, "main")
 
       # Should return the original error for generic failures
       assert original_error != :reauthorization_required
       assert original_error != :temporary_failure
+    end
+  end
+
+  describe "resolve_credential/1 with keychain credential" do
+    test "is unsupported" do
+      credential = insert(:keychain_credential)
+
+      assert_raise FunctionClauseError, fn ->
+        Resolver.resolve_credential(credential, "main")
+      end
     end
   end
 
@@ -413,16 +403,9 @@ defmodule ResolverTest do
           }
         })
 
-      # Share each credential with the project AND grant it the values, because
-      # the grant is what decides which values the project may read.
+      # Associate credentials with project
       for credential <- [credential_a, credential_b, default_credential] do
-        [body] = Repo.preload(credential, :credential_bodies).credential_bodies
-
-        insert(:project_credential,
-          project: project,
-          credential: credential,
-          credential_body_id: body.id
-        )
+        insert(:project_credential, project: project, credential: credential)
       end
 
       # Create keychain credential using the factory
@@ -701,7 +684,6 @@ defmodule ResolverTest do
             "expires_at" => expires_at
           }
         })
-        |> then(&grant_body!(project, &1, "main"))
 
       %{jobs: [job]} =
         workflow =
@@ -785,8 +767,6 @@ defmodule ResolverTest do
         })
         |> insert()
 
-      grant_body!(project, credential, "main")
-
       dataclip = insert(:dataclip)
 
       %{runs: [run]} =
@@ -843,13 +823,13 @@ defmodule ResolverTest do
                Resolver.resolve_credential(run, other_credential.id)
     end
 
-    test "refuses, and says so, when the project was granted no values", %{
-      user: user
-    } do
-      project = insert(:project, project_users: [%{user: user}])
+    test "logs environment_mismatch at warning level when credential lacks the project environment body",
+         %{user: user} do
+      project =
+        insert(:project, env: "staging", project_users: [%{user: user}])
 
       credential =
-        insert(:credential, user: user, name: "Ungranted Credential")
+        insert(:credential, user: user, name: "Mismatch Credential")
         |> with_body(%{name: "main", body: %{"key" => "value"}})
 
       %{jobs: [job]} =
@@ -869,27 +849,26 @@ defmodule ResolverTest do
       {result, log} =
         with_log(fn -> Resolver.resolve_credential(run, credential.id) end)
 
-      # The share exists, so the project can see the credential. It was never
-      # given a set of values, so it reads none. There is deliberately no
-      # fallback: matching a name is what let a sandbox read its parent's
-      # production values.
-      assert {:error, {:no_credential_grant, _credential}} = result
+      assert {:error, {:environment_mismatch, _credential}} = result
 
       assert log =~ "[warning]"
-
-      assert log =~
-               "Project has not been granted any values for this credential"
+      assert log =~ "Credential environment does not match project environment"
     end
 
-    test "reads the granted values, whatever the project's environment is named",
+    test "logs environment_not_configured at warning level for a non-root project with no env",
          %{user: user} do
-      # The project's env deliberately matches nothing. It is not consulted.
+      parent = insert(:project, env: "main")
+
       project =
-        insert(:project, env: "whatever", project_users: [%{user: user}])
+        insert(:project,
+          parent_id: parent.id,
+          env: nil,
+          project_users: [%{user: user}]
+        )
 
       credential =
-        insert(:credential, user: user, name: "Granted Credential")
-        |> with_body(%{name: "main", body: %{"key" => "the granted values"}})
+        insert(:credential, user: user, name: "Unconfigured Env Credential")
+        |> with_body(%{name: "main", body: %{"key" => "value"}})
 
       %{jobs: [job]} =
         workflow =
@@ -899,19 +878,24 @@ defmodule ResolverTest do
         })
         |> insert()
 
-      grant_body!(project, credential, "main")
-
       dataclip = insert(:dataclip)
 
       %{runs: [run]} =
         insert(:workorder, workflow: workflow)
         |> with_run(%{dataclip: dataclip, starting_job: job})
 
-      assert {:ok, resolved} = Resolver.resolve_credential(run, credential.id)
-      assert resolved.body == %{"key" => "the granted values"}
+      {result, log} =
+        with_log(fn -> Resolver.resolve_credential(run, credential.id) end)
+
+      assert {:error, {:environment_not_configured, nil}} = result
+
+      assert log =~ "[warning]"
+      assert log =~ "Project has no environment configured"
     end
 
-    test "a deleted project resolves nothing, because there is no grant" do
+    test "logs project_not_found at error level when the run's project is missing" do
+      # No project_users / project_credentials so the project can be removed
+      # without tripping restrict FKs; project lookup is what we exercise.
       project = insert(:project)
 
       %{jobs: [job]} =
@@ -926,15 +910,22 @@ defmodule ResolverTest do
         insert(:workorder, workflow: workflow)
         |> with_run(%{dataclip: dataclip, starting_job: job})
 
+      # Remove the project so the run's in-memory struct resolves to a
+      # missing project (workflow/workorder/run cascade-delete, but the
+      # struct still drives get_project_for_run/1 -> nil).
       Repo.delete_all(
         from(p in Lightning.Projects.Project, where: p.id == ^project.id)
       )
 
-      # The resolver no longer looks the project up: it asks for the grant on
-      # the share, and a deleted project has none. So this is not_found rather
-      # than a project error, and nothing raises.
-      assert {:error, :not_found} =
-               Resolver.resolve_credential(run, Ecto.UUID.generate())
+      fake_credential_id = Ecto.UUID.generate()
+
+      {result, log} =
+        with_log(fn -> Resolver.resolve_credential(run, fake_credential_id) end)
+
+      assert {:error, {:project_not_found, nil}} = result
+
+      assert log =~ "[error]"
+      assert log =~ "Project not found for run"
     end
   end
 end

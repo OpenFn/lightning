@@ -22,7 +22,6 @@ defmodule LightningWeb.Channels.WorkflowJSON do
         project_credentials
         |> Enum.map(fn %ProjectCredential{
                          credential: credential,
-                         credential_body_id: credential_body_id,
                          id: project_credential_id
                        } ->
           %{
@@ -33,10 +32,6 @@ defmodule LightningWeb.Channels.WorkflowJSON do
             schema: credential.schema,
             owner: render_owner(credential.user),
             oauth_client_name: render_oauth_client_name(credential.oauth_client),
-            # Whether this project was given any of the credential's values.
-            # Without it the editor can only find out by running the job and
-            # watching it fail.
-            has_values: not is_nil(credential_body_id),
             inserted_at: credential.inserted_at,
             updated_at: credential.updated_at
           }

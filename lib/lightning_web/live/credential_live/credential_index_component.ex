@@ -44,13 +44,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
            :create_keychain_credential,
            current_user,
            project
-         ),
-       # The credential's owner decides which of its values a project reads,
-       # not the project's admin. Creating a sandbox makes you its owner, so a
-       # project-side gate would let any editor on a production project grant
-       # themselves that project's production values. Decided per credential
-       # below, since a project's list can hold other people's.
-       can_grant_bodies: true
+         )
      })
      |> load_credentials()}
   end
@@ -60,13 +54,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         %{current_user: _, projects: _, return_to: _} = assigns,
         socket
       ) do
-    # The user's own credential list is not a project, so there is no share to
-    # show a grant for.
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(%{body_grants: nil, can_grant_bodies: false})
-     |> load_credentials()}
+    {:ok, socket |> assign(assigns) |> load_credentials()}
   end
 
   defp load_credentials(socket) do
@@ -74,9 +62,8 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
 
     socket
     |> assign(%{
-      credentials: list_credentials(project || current_user, current_user.id),
-      oauth_clients: list_clients(project || current_user),
-      body_grants: project && Credentials.body_grants_for_project(project)
+      credentials: list_credentials(project || current_user),
+      oauth_clients: list_clients(project || current_user)
     })
     |> then(fn socket ->
       if socket.assigns.project do
@@ -91,39 +78,6 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
         socket
       end
     end)
-  end
-
-  @impl true
-  def handle_event(
-        "grant_body",
-        %{"credential_id" => credential_id} = params,
-        socket
-      ) do
-    # The "None" option posts an empty string, which the changeset casts to nil.
-    # That is how access is taken away.
-    case Credentials.grant_body_to_project(
-           socket.assigns.project,
-           credential_id,
-           Map.get(params, "credential_body_id"),
-           socket.assigns.current_user
-         ) do
-      {:ok, _share} ->
-        {:noreply, load_credentials(socket)}
-
-      {:error, :unauthorized} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           "You are not authorized to change which values this project uses."
-         )}
-
-      {:error, _reason} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Could not change which values this project uses.")
-         |> load_credentials()}
-    end
   end
 
   @impl true
@@ -469,7 +423,7 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
      |> push_patch(to: socket.assigns.return_to)}
   end
 
-  defp list_credentials(user_or_project, current_user_id) do
+  defp list_credentials(user_or_project) do
     user_or_project
     |> Credentials.list_credentials()
     |> Enum.map(fn credential ->
@@ -484,7 +438,6 @@ defmodule LightningWeb.CredentialLive.CredentialIndexComponent do
       credential
       |> Map.put(:project_names, project_names)
       |> Map.put(:environment_names, environment_names)
-      |> Map.put(:can_grant_bodies, credential.user_id == current_user_id)
     end)
   end
 

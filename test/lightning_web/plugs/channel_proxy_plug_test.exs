@@ -1006,11 +1006,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         |> with_body(%{body: %{"access_token" => "dest-token-xyz"}})
 
       project_credential =
-        insert(:project_credential,
-          project: project,
-          credential: credential,
-          credential_body_id: sole_body_id(credential)
-        )
+        insert(:project_credential, project: project, credential: credential)
 
       channel =
         insert(:channel,
@@ -1132,8 +1128,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       project_credential =
         insert(:project_credential,
           project: project,
-          credential: credential,
-          credential_body_id: sole_body_id(credential)
+          credential: credential
         )
 
       client_encoded = Base.encode64("user:password")
@@ -1205,8 +1200,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       project_credential =
         insert(:project_credential,
           project: project,
-          credential: credential,
-          credential_body_id: sole_body_id(credential)
+          credential: credential
         )
 
       insert(:channel,
@@ -1335,19 +1329,22 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       assert auth_header == ["authorization", "[REDACTED]"]
     end
 
-    test "a share with no grant returns 502 with observable error",
+    test "credential environment_not_found returns 502 with observable error",
          %{bypass: bypass} do
+      # Create a credential with NO credential_body for "main" environment
       project = insert(:project)
       user = insert(:user)
 
       credential =
-        insert(:credential, schema: "http", name: "ungranted", user: user)
-        |> with_body(%{body: %{"username" => "u", "password" => "p"}})
+        insert(:credential, schema: "http", name: "no-body", user: user)
 
-      # Shared with the project and granted nothing, which is where every
-      # sandbox starts.
+      # Don't call with_body — no CredentialBody exists
+
       project_credential =
-        insert(:project_credential, project: project, credential: credential)
+        insert(:project_credential,
+          project: project,
+          credential: credential
+        )
 
       channel =
         insert(:channel,
@@ -1382,17 +1379,16 @@ defmodule LightningWeb.ChannelProxyPlugTest do
           from(e in ChannelEvent, where: e.channel_request_id == ^request.id)
         )
 
-      assert event.error_message == "credential_not_granted"
+      assert event.error_message == "credential_environment_not_found"
     end
 
-    test "a sandbox uses the values it was granted, not the parent's",
+    test "a sandbox authenticates with its own environment, not the parent's",
          %{bypass: bypass} do
-      # The hole this closes: the proxy resolved by environment name, so a
-      # sandbox naming its parent's environment reached its destination holding
-      # the parent's production secret. The grant is on the share now, so
-      # naming anything cannot widen it.
+      # The bug this PR fixes: the proxy asked for "main" whatever project it
+      # was acting for, so a sandbox reached its destination holding the
+      # parent's production secret. Reverting the fix has to fail here.
       root = insert(:project)
-      sandbox = insert(:project, parent: root, env: "main")
+      sandbox = insert(:project, parent: root, env: "staging")
       user = insert(:user)
 
       credential =
@@ -1406,20 +1402,8 @@ defmodule LightningWeb.ChannelProxyPlugTest do
           body: %{"username" => "sbx", "password" => "sbx-secret"}
         })
 
-      staging =
-        credential
-        |> Lightning.Repo.preload(:credential_bodies, force: true)
-        |> Map.fetch!(:credential_bodies)
-        |> Enum.find(&(&1.name == "staging"))
-
-      # The sandbox is granted the staging values. Its env says "main", the
-      # same as the root's, and that no longer decides anything.
       project_credential =
-        insert(:project_credential,
-          project: sandbox,
-          credential: credential,
-          credential_body_id: staging.id
-        )
+        insert(:project_credential, project: sandbox, credential: credential)
 
       channel =
         insert(:channel,
@@ -1450,6 +1434,57 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         |> send_to_endpoint()
 
       assert resp.status == 200
+    end
+
+    test "a sandbox with no environment set returns 502 with observable error",
+         %{bypass: bypass} do
+      # Deriving the environment instead of assuming "main" gave this path two
+      # new failure reasons. They have to land as a recorded 502 like every
+      # other credential error, not as an unhandled crash.
+      root = insert(:project)
+      sandbox = insert(:project, parent: root, env: nil)
+      user = insert(:user)
+
+      credential =
+        insert(:credential, schema: "http", name: "parent", user: user)
+
+      project_credential =
+        insert(:project_credential, project: sandbox, credential: credential)
+
+      channel =
+        insert(:channel,
+          project: sandbox,
+          destination_url: "http://localhost:#{bypass.port}",
+          enabled: true,
+          channel_auth_methods: [
+            build(:channel_auth_method,
+              role: :destination,
+              webhook_auth_method: nil,
+              project_credential: project_credential
+            )
+          ]
+        )
+
+      resp =
+        conn(:get, "/channels/#{channel.id}/test")
+        |> send_to_endpoint()
+
+      assert resp.status == 502
+      assert %{"error" => "Bad Gateway"} = json_response(resp, 502)
+
+      request =
+        Lightning.Repo.one!(
+          from(r in ChannelRequest, where: r.channel_id == ^channel.id)
+        )
+
+      assert request.state == :error
+
+      event =
+        Lightning.Repo.one!(
+          from(e in ChannelEvent, where: e.channel_request_id == ^request.id)
+        )
+
+      assert event.error_message == "credential_environment_not_configured"
     end
 
     test "credential with missing auth fields returns 502 with observable error",
@@ -1696,11 +1731,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         |> with_body(%{body: %{"baseUrl" => "https://example.com"}})
 
       project_credential =
-        insert(:project_credential,
-          project: project,
-          credential: credential,
-          credential_body_id: sole_body_id(credential)
-        )
+        insert(:project_credential, project: project, credential: credential)
 
       channel =
         insert(:channel,
@@ -1915,11 +1946,14 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       credential =
         insert(:credential, schema: "http", name: "no-body", user: user)
 
-      # Don't call with_body — there is nothing to grant, so credential
-      # resolution fails and `record_credential_error/3` is invoked.
+      # Don't call with_body — no CredentialBody exists, so credential
+      # resolution will fail and `record_credential_error/3` is invoked.
 
       project_credential =
-        insert(:project_credential, project: project, credential: credential)
+        insert(:project_credential,
+          project: project,
+          credential: credential
+        )
 
       channel =
         insert(:channel,
@@ -1961,7 +1995,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
                type: :error,
                request_path: nil,
                request_method: "GET",
-               error_message: "credential_not_granted"
+               error_message: "credential_environment_not_found"
              } = event
     end
 
@@ -1974,7 +2008,10 @@ defmodule LightningWeb.ChannelProxyPlugTest do
         insert(:credential, schema: "http", name: "no-body", user: user)
 
       project_credential =
-        insert(:project_credential, project: project, credential: credential)
+        insert(:project_credential,
+          project: project,
+          credential: credential
+        )
 
       channel =
         insert(:channel,
@@ -2014,7 +2051,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
                type: :error,
                request_path: "/channels/" <> _,
                request_method: "GET",
-               error_message: "credential_not_granted"
+               error_message: "credential_environment_not_found"
              } = event
     end
   end
@@ -2204,16 +2241,5 @@ defmodule LightningWeb.ChannelProxyPlugTest do
 
   defp send_to_endpoint(conn) do
     LightningWeb.Endpoint.call(conn, LightningWeb.Endpoint.init([]))
-  end
-
-  # The destination secret is read through the grant on the project's share, so
-  # a test that expects the header to be built has to grant the values.
-  defp sole_body_id(credential) do
-    [body] =
-      credential
-      |> Lightning.Repo.preload(:credential_bodies, force: true)
-      |> Map.fetch!(:credential_bodies)
-
-    body.id
   end
 end

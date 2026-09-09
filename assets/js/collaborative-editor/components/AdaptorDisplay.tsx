@@ -87,12 +87,6 @@ export function AdaptorDisplay({
 
   // Check if credential is connected and found
   const hasCredential = !!credentialId;
-
-  // A credential this project was never given any values for. The run fails at
-  // the moment it asks for them, which is a poor way to find out, so say it
-  // where the credential is shown.
-  const credentialHasNoValues =
-    credential?.type === 'project' && credential.has_values === false;
   const credentialNotFound = hasCredential && !credential;
   const needsCredential = !ADAPTORS_WITHOUT_CREDENTIALS.includes(
     extractAdaptorName(adaptorPackage as string) ?? ''
@@ -221,44 +215,21 @@ export function AdaptorDisplay({
         {hasCredential && credential && (
           <Tooltip
             content={
-              credentialHasNoValues ? (
-                <>
-                  This project has not been given any values for{' '}
-                  {credential.name}, so a run cannot use it. Its owner chooses
-                  them on the project's credentials page.
-                </>
-              ) : (
-                <>
-                  {credential.name}
-                  {credential.type === 'project' && credential.owner?.email && (
-                    <> ({credential.owner.email})</>
-                  )}
-                </>
-              )
+              <>
+                {credential.name}
+                {credential.type === 'project' && credential.owner?.email && (
+                  <> ({credential.owner.email})</>
+                )}
+              </>
             }
             side="top"
           >
             <span
-              className={
-                credentialHasNoValues
-                  ? 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 flex-shrink-0 max-w-[150px]'
-                  : 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-800 flex-shrink-0 max-w-[150px]'
-              }
-              aria-label={
-                credentialHasNoValues
-                  ? `Credential has no values in this project: ${credential.name}`
-                  : `Credential connected: ${credential.name}`
-              }
-              data-testid={
-                credentialHasNoValues ? 'credential-no-values' : undefined
-              }
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-800 flex-shrink-0 max-w-[150px]`}
+              aria-label={`Credential connected: ${credential.name}`}
             >
               <span
-                className={
-                  credentialHasNoValues
-                    ? `hero-exclamation-triangle ${config.badgeIconSize} flex-shrink-0`
-                    : `hero-key ${config.badgeIconSize} flex-shrink-0`
-                }
+                className={`hero-key ${config.badgeIconSize} flex-shrink-0`}
               />
               <span
                 className={`${config.versionTextSize} font-medium truncate`}
