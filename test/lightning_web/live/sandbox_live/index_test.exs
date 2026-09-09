@@ -1424,7 +1424,7 @@ defmodule LightningWeb.SandboxLive.IndexTest do
       assert html =~ ~r/\(in \d+ days\)/
     end
 
-    test "tooltip shows '1 day' when scheduled exactly one day out", %{
+    test "tooltip shows '1 day' when scheduled just over one day out", %{
       conn: conn,
       user: user
     } do
@@ -1439,9 +1439,13 @@ defmodule LightningWeb.SandboxLive.IndexTest do
           name: "soon",
           parent: parent,
           project_users: [%{user: user, role: :owner}],
+          # The label counts elapsed seconds, so exactly one day out lands on
+          # the boundary: truncating to the second, and the time the page takes
+          # to render, both put it under 24 hours and it reads "(today)".
           scheduled_deletion:
             DateTime.utc_now()
             |> DateTime.add(1, :day)
+            |> DateTime.add(2, :minute)
             |> DateTime.truncate(:second)
         )
 
