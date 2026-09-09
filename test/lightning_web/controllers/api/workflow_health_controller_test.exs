@@ -359,7 +359,7 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
   end
 
   describe "GET /health/runs" do
-    test "returns every final run in the window", %{
+    test "returns every bucket in the window, counted by state", %{
       conn: conn,
       user: user,
       project: project,
@@ -377,28 +377,21 @@ defmodule LightningWeb.API.WorkflowHealthControllerTest do
           last_activity: at
         )
 
-      run =
-        insert(:run,
-          work_order: work_order,
-          starting_trigger: trigger,
-          dataclip: insert(:dataclip),
-          state: :failed,
-          inserted_at: at
-        )
+      insert(:run,
+        work_order: work_order,
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: :failed,
+        inserted_at: at
+      )
 
       response =
         conn
         |> get_runs(user, project.id, workflow.id, %{"days" => "1"})
         |> json_response(200)
 
-      assert [
-               %{
-                 "id" => run.id,
-                 "work_order_id" => work_order.id,
-                 "state" => "failed",
-                 "inserted_at" => DateTime.to_iso8601(at)
-               }
-             ] == response["runs"]
+      assert Enum.sum_by(response["buckets"], & &1["failed"]) == 1
+      assert Enum.sum_by(response["buckets"], & &1["success"]) == 0
     end
   end
 
