@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
@@ -15,6 +15,8 @@ import { Header } from './components/Header';
 import { LandingScreen } from './components/LandingScreen';
 import { LoadingBoundary } from './components/LoadingBoundary';
 import { PromotedNotice } from './components/PromotedNotice';
+import { RestoreVersionDialog } from './components/RestoreVersionDialog';
+import type { RestoreCost } from './components/RestoreVersionDialog';
 import { TemplateBrowserModalWrapper } from './components/TemplateBrowserModalWrapper';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
@@ -33,6 +35,7 @@ import {
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useLimits,
+  usePermissions,
   useProject,
 } from './hooks/useSessionContext';
 import {
@@ -42,8 +45,14 @@ import {
 } from './hooks/useUI';
 import { useUnloadWarning } from './hooks/useUnloadWarning';
 import { useVersionSelect } from './hooks/useVersionSelect';
-import { useCreateWorkflowFlow, useWorkflowState } from './hooks/useWorkflow';
+import {
+  useCreateWorkflowFlow,
+  useWorkflowActions,
+  useWorkflowState,
+} from './hooks/useWorkflow';
 import { KeyboardProvider } from './keyboard';
+import { formatChannelErrorMessage, isChannelRequestError } from './lib/errors';
+import { notifications } from './lib/notifications';
 
 export interface CollaborativeEditorDataProps {
   'data-workflow-id': string;
@@ -110,6 +119,76 @@ export function BreadcrumbContent({
   const { handleVersionSelect, prompt: versionPrompt } = useVersionSelect();
 
   useUnloadWarning();
+  const canEditWorkflow = usePermissions()?.can_edit_workflow ?? false;
+  const { restoreVersion, checkRestore } = useWorkflowActions();
+
+  // Held here rather than in the dropdown, which closes as soon as Restore is
+  // clicked and would take the dialog with it.
+  const [restoring, setRestoring] = useState<number | null>(null);
+  const [cost, setCost] = useState<RestoreCost | null>(null);
+
+  // Which version the open dialog is about, readable synchronously when a
+  // check replies. A check for a version the user has since cancelled can land
+  // after a later one, and would otherwise replace a real warning with silence.
+  const askingAboutRef = useRef<number | null>(null);
+
+  const handleVersionRestore = useCallback(
+    (versionNumber: number) => {
+      askingAboutRef.current = versionNumber;
+      setRestoring(versionNumber);
+      setCost(null);
+
+      // Advisory. A failure here must not block the restore, so an unanswered
+      // check reads as nothing to lose.
+      void checkRestore(versionNumber)
+        .then(({ losing_triggers, returning_triggers, version_number }) => {
+          if (askingAboutRef.current === version_number) {
+            setCost({ losing: losing_triggers, returning: returning_triggers });
+          }
+
+          return version_number;
+        })
+        .catch(() => {
+          if (askingAboutRef.current === versionNumber) {
+            setCost({ losing: [], returning: [] });
+          }
+        });
+    },
+    [checkRestore]
+  );
+
+  const handleConfirmRestore = useCallback(async () => {
+    if (restoring === null) return false;
+
+    try {
+      await restoreVersion(restoring);
+    } catch (error) {
+      notifications.alert({
+        title: `Could not restore v${restoring}`,
+        description: isChannelRequestError(error)
+          ? formatChannelErrorMessage({
+              errors: error.errors as { base?: string[] } & Record<
+                string,
+                string[]
+              >,
+              type: error.type,
+            })
+          : 'Please try again.',
+      });
+
+      return false;
+    }
+
+    notifications.success({
+      title: `Restored v${restoring}`,
+      description: 'The workflow is live on that version\u2019s content.',
+    });
+
+    askingAboutRef.current = null;
+    setRestoring(null);
+
+    return true;
+  }, [restoring, restoreVersion]);
 
   // Clicking the workflow title returns to the root workflow editor view: it
   // closes the full IDE (and any other panel), deselects the current node, and
@@ -168,6 +247,9 @@ export function BreadcrumbContent({
             currentVersion={workflowFromStore?.lock_version ?? null}
             latestVersion={latestSnapshotLockVersion}
             onVersionSelect={handleVersionSelect}
+            {...(canEditWorkflow && {
+              onVersionRestore: handleVersionRestore,
+            })}
           />
           {projectEnv && (
             <div
@@ -197,6 +279,8 @@ export function BreadcrumbContent({
     latestSnapshotLockVersion,
     handleTitleClick,
     handleVersionSelect,
+    handleVersionRestore,
+    canEditWorkflow,
   ]);
 
   // Hide header until the first save clears isNewWorkflow in the store.
@@ -215,14 +299,24 @@ export function BreadcrumbContent({
       >
         {breadcrumbElements}
       </Header>
-      {/* Outside the memo above, which does not depend on the prompt, and
-          outside Header, whose Breadcrumbs treat their last child as the
-          title. */}
+      {/* Outside the memo above, which does not depend on either dialog's
+          state, and outside Header, whose Breadcrumbs treat their last child as
+          the title. */}
       <DiscardChangesDialog
         isOpen={versionPrompt.isAsking}
         onSaveAndContinue={versionPrompt.saveAndRunPending}
         onDiscardAndContinue={versionPrompt.runPending}
         onCancel={versionPrompt.cancel}
+      />
+      <RestoreVersionDialog
+        isOpen={restoring !== null}
+        versionNumber={restoring}
+        cost={cost}
+        onConfirm={handleConfirmRestore}
+        onCancel={() => {
+          askingAboutRef.current = null;
+          setRestoring(null);
+        }}
       />
     </>
   );

@@ -19,6 +19,238 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Workflows.WorkflowReleases
   alias Lightning.WorkOrder
 
+  describe "restore_version/3" do
+    setup do
+      %{user: insert(:user)}
+    end
+
+    # Publishes the workflow as it stands and hands back the release, so a test
+    # can restore to it later.
+    defp publish(workflow, user) do
+      {:ok, live} = Workflows.go_live(workflow, user)
+      [release] = WorkflowReleases.list_for_workflow(live)
+      {live, release}
+    end
+
+    test "puts the old content back without taking the workflow offline", %{
+      user: user
+    } do
+      {live, v1} = publish(insert(:simple_workflow), user)
+      [job] = Repo.preload(live, :jobs).jobs
+
+      {:ok, changed} =
+        live
+        |> Workflows.change_workflow(%{
+          jobs: [%{id: job.id, body: "// broken by a bad go-live"}]
+        })
+        |> Workflows.save_workflow(user)
+
+      {:ok, restored} = Workflows.restore_version(changed, v1, user)
+
+      assert [%{body: body}] = Repo.preload(restored, :jobs, force: true).jobs
+      assert body == job.body
+      refute body =~ "broken"
+
+      # The whole point: a rollback must not take production offline.
+      assert restored.state == :live
+
+      assert Repo.preload(restored, :triggers, force: true).triggers
+             |> Enum.all?(& &1.enabled)
+    end
+
+    test "leaves a trigger that was off in the restored version switched on", %{
+      user: user
+    } do
+      workflow = insert(:simple_workflow)
+      [trigger] = Repo.preload(workflow, :triggers).triggers
+
+      # The version being restored has to have captured a DISABLED trigger, and
+      # go_live always enables, so publish the snapshot the draft save took. A
+      # promote of a sandbox whose triggers were off lands in exactly this state.
+      {:ok, off} =
+        workflow
+        |> Workflows.update_triggers_enabled_state(false)
+        |> Ecto.Changeset.put_change(:state, :draft)
+        |> Workflows.save_workflow(user)
+
+      draft_snapshot = Snapshot.get_current_for(off)
+      refute draft_snapshot.triggers |> Enum.any?(& &1.enabled)
+
+      {:ok, v1} =
+        WorkflowReleases.insert_release(Repo, %{
+          workflow_id: off.id,
+          kind: :promote,
+          snapshot_id: draft_snapshot.id,
+          published_by_id: user.id
+        })
+
+      {:ok, live} = Workflows.go_live(off, user)
+      assert Repo.reload!(trigger).enabled
+
+      {:ok, restored} =
+        Workflows.restore_version(live, Repo.preload(v1, :snapshot), user)
+
+      # Restoring an old enabled flag would stop production receiving in the
+      # middle of a rollback, so the surviving trigger keeps the state it has.
+      assert Repo.reload!(trigger).enabled
+      assert restored.state == :live
+    end
+
+    test "deletes a trigger added after the restored version", %{user: user} do
+      {live, v1} = publish(insert(:simple_workflow), user)
+
+      {:ok, with_cron} =
+        live
+        |> Workflows.change_workflow(%{
+          triggers: [
+            %{
+              type: :cron,
+              cron_expression: "0 * * * *",
+              custom_path: "added-later"
+            }
+          ]
+        })
+        |> Workflows.save_workflow(user)
+
+      added =
+        Repo.preload(with_cron, :triggers, force: true).triggers
+        |> Enum.find(&(&1.type == :cron))
+
+      assert added
+
+      {:ok, restored} = Workflows.restore_version(with_cron, v1, user)
+
+      # Correct behaviour for a revert, and the reason the UI has to say so
+      # before it happens: the URL built from this trigger stops answering.
+      refute Repo.reload(added)
+
+      refute Repo.preload(restored, :triggers, force: true).triggers
+             |> Enum.any?(&(&1.type == :cron))
+    end
+
+    test "a re-created trigger comes back off, because its auth is not restored",
+         %{user: user} do
+      workflow = insert(:simple_workflow)
+      [original] = Repo.preload(workflow, :triggers).triggers
+      {live, v1} = publish(workflow, user)
+
+      # Delete the trigger v1 held, and add another in its place.
+      {:ok, replaced} =
+        live
+        |> Repo.preload([:triggers, :jobs, :edges])
+        |> Workflows.change_workflow(%{
+          triggers: [%{type: :cron, cron_expression: "0 * * * *"}]
+        })
+        |> Workflows.save_workflow(user)
+
+      refute Repo.reload(original)
+
+      {:ok, restored} = Workflows.restore_version(replaced, v1, user)
+
+      back = Repo.preload(restored, :triggers, force: true).triggers
+      assert [%{id: id, enabled: false}] = back
+      assert id == original.id
+
+      # A snapshot never recorded which webhook auth methods were attached, so
+      # switching this on for the user would put the URL back without its
+      # authentication. It comes back inert and the dialog says so.
+      assert restored.state == :live
+    end
+
+    test "does not wipe the canvas when the restored version has no positions",
+         %{user: user} do
+      workflow = insert(:simple_workflow)
+      {live, v1} = publish(workflow, user)
+
+      snapshot = Repo.preload(v1, :snapshot).snapshot
+      assert is_nil(snapshot.positions)
+
+      {:ok, arranged} =
+        live
+        |> Repo.preload([:triggers, :jobs, :edges])
+        |> Workflows.change_workflow(%{
+          positions: %{"node-a" => %{"x" => 10, "y" => 20}}
+        })
+        |> Workflows.save_workflow(user)
+
+      {:ok, restored} = Workflows.restore_version(arranged, v1, user)
+
+      # Writing the snapshot's nil would drop the layout back to auto, with no
+      # way back.
+      assert restored.positions == %{"node-a" => %{"x" => 10, "y" => 20}}
+    end
+
+    test "puts the webhook response config back", %{user: user} do
+      workflow = insert(:simple_workflow)
+      [trigger] = Repo.preload(workflow, :triggers).triggers
+
+      {:ok, configured} =
+        workflow
+        |> Repo.preload([:triggers, :jobs, :edges])
+        |> Workflows.change_workflow(%{
+          triggers: [
+            %{
+              id: trigger.id,
+              webhook_reply: :after_completion,
+              webhook_response_config: %{success_code: 202, error_code: 422}
+            }
+          ]
+        })
+        |> Workflows.save_workflow(user)
+
+      {live, v1} = publish(configured, user)
+
+      {:ok, changed} =
+        live
+        |> Repo.preload([:triggers, :jobs, :edges])
+        |> Workflows.change_workflow(%{
+          triggers: [
+            %{
+              id: trigger.id,
+              webhook_reply: :after_completion,
+              webhook_response_config: %{success_code: 500, error_code: 599}
+            }
+          ]
+        })
+        |> Workflows.save_workflow(user)
+
+      {:ok, restored} = Workflows.restore_version(changed, v1, user)
+
+      # An embed is left alone when its key is absent, so omitting it left the
+      # trigger replying with the codes from the version being rolled away from.
+      [back] = Repo.preload(restored, :triggers, force: true).triggers
+      assert back.webhook_response_config.success_code == 202
+      assert back.webhook_response_config.error_code == 422
+    end
+
+    test "records the restore as the next version, naming the one it came from",
+         %{user: user} do
+      {live, v1} = publish(insert(:simple_workflow), user)
+      [job] = Repo.preload(live, :jobs).jobs
+
+      {:ok, changed} =
+        live
+        |> Workflows.change_workflow(%{jobs: [%{id: job.id, body: "// bad"}]})
+        |> Workflows.save_workflow(user)
+
+      {:ok, restored} = Workflows.restore_version(changed, v1, user)
+
+      releases = WorkflowReleases.list_for_workflow(restored)
+
+      assert %WorkflowRelease{
+               version_number: 2,
+               kind: :restore,
+               restored_from_version_number: 1,
+               published_by_id: published_by_id
+             } = hd(releases)
+
+      assert published_by_id == user.id
+
+      # The trail reads forward: v1 is still there.
+      assert Enum.any?(releases, &(&1.version_number == 1))
+    end
+  end
+
   describe "go_live/2 and switch_to_draft/2" do
     setup do
       %{user: insert(:user)}

@@ -69,6 +69,9 @@ export const VersionSchema = z.object({
   published_by: z.string().nullable(),
   source_project: z.string().nullable(),
   lock_version: z.number().int(),
+  // nullish with a default so a new asset bundle served against an older node
+  // during a rolling deploy does not fail the parse and blank the dropdown.
+  restored_from_version_number: z.number().int().nullish().default(null),
   is_latest: z.boolean(),
 });
 

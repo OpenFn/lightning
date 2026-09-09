@@ -74,10 +74,16 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),
   useLatestSnapshotLockVersion: () => 1,
   useIsNewWorkflow: () => false,
+  // The breadcrumbs offer Restore per version, which only editors get.
+  usePermissions: () => ({ can_edit_workflow: true }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
-  useWorkflowActions: () => ({ saveWorkflow: vi.fn() }),
+  useWorkflowActions: () => ({
+    saveWorkflow: vi.fn(),
+    restoreVersion: vi.fn(),
+    checkRestore: vi.fn().mockResolvedValue({ losing_triggers: [] }),
+  }),
   useWorkflowState: (selector: (state: unknown) => unknown) => {
     const state = { workflow: { id: 'workflow-1', lock_version: 1 } };
     return typeof selector === 'function' ? selector(state) : state;
@@ -106,9 +112,9 @@ vi.mock('../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
 }));
 
 function renderBreadcrumbs() {
-  // The breadcrumbs carry the unsaved-changes dialog, which registers a
-  // MODAL-priority Escape handler, and in the app they render inside the
-  // editor's KeyboardProvider.
+  // The breadcrumbs carry the unsaved-changes dialog and the restore
+  // confirmation, which register MODAL-priority Escape handlers, and in the app
+  // they render inside the editor's KeyboardProvider.
   return render(
     <KeyboardProvider>
       <BreadcrumbContent

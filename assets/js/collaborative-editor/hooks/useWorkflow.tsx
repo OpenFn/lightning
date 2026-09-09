@@ -731,6 +731,12 @@ export const useWorkflowActions = () => {
     checkPromote: store.checkPromote,
     archiveSandbox: store.archiveSandbox,
 
+    // Put an earlier version's content back without taking the workflow
+    // offline. checkRestore asks what that will destroy, so the confirmation
+    // can say so before anyone agrees.
+    restoreVersion: store.restoreVersion,
+    checkRestore: store.checkRestore,
+
     resetWorkflow: store.resetWorkflow,
     importWorkflow: store.importWorkflow,
 
@@ -1100,8 +1106,7 @@ export const useWorkflowReadOnly = (): {
   if (isViewingAsExecuted) {
     return {
       isReadOnly: true,
-      tooltipMessage:
-        'You are viewing this workflow as a past run executed it',
+      tooltipMessage: 'You are viewing this workflow as a past run executed it',
       reason: 'as_run',
     };
   }

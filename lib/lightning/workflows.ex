@@ -23,6 +23,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowRelease
   alias Lightning.Workflows.WorkflowReleases
   alias Lightning.WorkflowVersions
   alias Lightning.WorkOrder
@@ -390,27 +391,32 @@ defmodule Lightning.Workflows do
   # updated the workflow row, so two concurrent publishes cannot read the same
   # max(version_number).
   defp maybe_record_go_live_release(multi, opts) do
-    if Keyword.get(opts, :record_release) == :go_live do
-      Multi.run(multi, :workflow_release, fn repo, changes ->
-        %{workflow: workflow, actor: actor} = changes
-
-        case changes[:snapshot] do
-          nil ->
-            {:ok, nil}
-
-          snapshot ->
-            WorkflowReleases.insert_release(repo, %{
-              workflow_id: workflow.id,
-              kind: :go_live,
-              snapshot_id: snapshot.id,
-              published_by_id: actor_id(actor),
-              source_project_id: nil
-            })
-        end
-      end)
-    else
-      multi
+    case Keyword.get(opts, :record_release) do
+      nil -> multi
+      :go_live -> record_release(multi, :go_live, nil)
+      {:restore, from} -> record_release(multi, :restore, from)
     end
+  end
+
+  defp record_release(multi, kind, restored_from) do
+    Multi.run(multi, :workflow_release, fn repo, changes ->
+      %{workflow: workflow, actor: actor} = changes
+
+      case changes[:snapshot] do
+        nil ->
+          {:ok, nil}
+
+        snapshot ->
+          WorkflowReleases.insert_release(repo, %{
+            workflow_id: workflow.id,
+            kind: kind,
+            snapshot_id: snapshot.id,
+            published_by_id: actor_id(actor),
+            source_project_id: nil,
+            restored_from_version_number: restored_from
+          })
+      end
+    end)
   end
 
   defp actor_id(%Lightning.Accounts.User{id: id}), do: id
@@ -1414,6 +1420,44 @@ defmodule Lightning.Workflows do
     |> update_triggers_enabled_state(true)
     |> Ecto.Changeset.put_change(:state, :live)
     |> save_workflow(actor, record_release: :go_live)
+  end
+
+  @doc """
+  Puts an earlier version's content back, without taking the workflow offline.
+
+  A restore is a publish, not an edit. It writes the chosen release's snapshot
+  in as the workflow's content, leaves the lifecycle state and every surviving
+  trigger's enabled flag alone, and records the result as the next version
+  labelled with the version it came from. The bad version stays in the history
+  rather than being erased, so the trail reads forward.
+
+  Anything the snapshot does not hold is deleted, which is what makes this a
+  revert rather than a merge. A trigger added since that version goes, and the
+  URL built from it stops answering.
+
+  The caller must authorise this and must reconcile any open editor afterwards,
+  the way a promote does. `save_workflow/3` is asked to skip its own reconcile
+  because a wholesale replacement produces changes the incremental reconciler
+  cannot express.
+  """
+  @spec restore_version(Workflow.t(), WorkflowRelease.t(), struct()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def restore_version(
+        %Workflow{} = workflow,
+        %WorkflowRelease{snapshot: %Snapshot{} = snapshot} = release,
+        actor
+      ) do
+    # Read the row again rather than trusting the caller's struct, which is
+    # usually the one a channel joined on. The replacement is computed against
+    # these children, so stale ones leave rows behind that the snapshot does not
+    # hold, and a stale lock_version turns the write into a StaleEntryError.
+    workflow.id
+    |> get_workflow(include: [:triggers, :jobs, :edges])
+    |> change_workflow(Snapshot.to_workflow_attrs(snapshot))
+    |> save_workflow(actor,
+      skip_reconcile: true,
+      record_release: {:restore, release.version_number}
+    )
   end
 
   @doc """

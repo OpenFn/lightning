@@ -28,6 +28,68 @@ and this project adheres to
   neither gate applies to it.
   [#4920](https://github.com/OpenFn/lightning/issues/4920)
 
+- You can restore an earlier version of a workflow. It puts that version's
+  content back and publishes it, so production keeps running throughout, and it
+  tells you first which triggers it will delete and which URLs stop answering.
+  The versions in between stay in the history.
+  [#4864](https://github.com/OpenFn/lightning/issues/4864)
+
+- Promoting from a sandbox now warns first when the parent project has changed
+  that workflow since the sandbox was created. Promote rebuilds the parent
+  workflow from the sandbox, so anything the parent gained in the meantime is
+  removed rather than merged, and the confirm step names the parent and says so
+  before you commit to it.
+  [#4863](https://github.com/OpenFn/lightning/issues/4863)
+
+- The editor's version list now shows published versions rather than every
+  intermediate save, each with who published it, when, and whether it came from
+  going live or a promote. Picking one opens it read-only, and Recent History
+  tags each run with the version it ran against, or Draft when it ran against a
+  snapshot that was never published. Pinning a version scopes the history feed
+  to that version's runs. A single run can be pinned instead, which opens the
+  workflow exactly as that run saw it, including runs that were never published.
+  [#5128](https://github.com/OpenFn/lightning/pull/5128)
+
+- The AI assistant now shows what changed as a global reply edits your workflow.
+  Each change renders under the status that made it, while the reply is still
+  streaming, as a per-step code diff with syntax highlighting, old and new line
+  numbers and a link to open that step in the editor, alongside a compact
+  summary of structural changes like added or removed paths, trigger changes and
+  step renames. Each diff block copies the step's code, and the latest reply can
+  be undone, restoring the workflow to how it stood before that reply and
+  offering to redo it. Undo confirms first when the workflow has been edited
+  since, because it replaces the whole workflow.
+  [#5036](https://github.com/OpenFn/lightning/issues/5036)
+
+- Webhook triggers can be given a custom URL path, so an endpoint's URL is known
+  before it is deployed. A trigger with a path of `facility-001` answers at
+  `/i/<project-id>/facility-001`, where `<project-id>` is the project's UUID.
+  Set it in the trigger panel, in `project.yaml`, or through the workflows API.
+  Existing `/i/<trigger-id>` URLs are unchanged.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
+
+- Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
+  scenario file (users, API tokens, credentials, projects, workflows) via
+  `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and
+  external test harnesses. Workflows in a scenario are written in the existing
+  workflow-spec format — the same YAML the collaborative editor imports and
+  exports, validated against the same JSON Schema.
+  [#4974](https://github.com/OpenFn/lightning/issues/4974)
+
+### Changed
+
+- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
+  first character of a string, which breaks names in many languages. Lightning
+  does not normalise anything today, but #4577 adds it on every name, so the
+  runtime moves first.
+
+- The webhook trigger panel now lists every URL a trigger answers on. The
+  default URL is always there and the custom one sits next to it, editable in
+  place, with add, edit, delete and copy on the row itself. A path already used
+  by another workflow in the project is reported while you type, not after you
+  save. A path the server would reject shows what is wrong and is left as you
+  typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
+
 ### Fixed
 
 - Leaving for a sandbox no longer reloads the browser. The editor asks the
@@ -48,70 +110,6 @@ and this project adheres to
   carries neither the lifecycle state nor a trigger's enabled flag, so recording
   a hash for those made a sandbox report changes it could not promote.
   [#5130](https://github.com/OpenFn/lightning/issues/5130)
-
-### Changed
-
-- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
-  first character of a string, which breaks names in many languages. Lightning
-  does not normalise anything today, but #4577 adds it on every name, so the
-  runtime moves first.
-
-### Added
-
-- Promoting from a sandbox now warns first when the parent project has changed
-  that workflow since the sandbox was created. Promote rebuilds the parent
-  workflow from the sandbox, so anything the parent gained in the meantime is
-  removed rather than merged, and the confirm step names the parent and says so
-  before you commit to it.
-  [#4863](https://github.com/OpenFn/lightning/issues/4863)
-- The editor's version list now shows published versions rather than every
-  intermediate save, each with who published it, when, and whether it came from
-  going live or a promote. Picking one opens it read-only, and Recent History
-  tags each run with the version it ran against, or Draft when it ran against a
-  snapshot that was never published. Pinning a version scopes the history feed
-  to that version's runs. A single run can be pinned instead, which opens the
-  workflow exactly as that run saw it, including runs that were never published.
-  [#5128](https://github.com/OpenFn/lightning/pull/5128)
-- The AI assistant now shows what changed as a global reply edits your workflow.
-  Each change renders under the status that made it, while the reply is still
-  streaming, as a per-step code diff with syntax highlighting, old and new line
-  numbers and a link to open that step in the editor, alongside a compact
-  summary of structural changes like added or removed paths, trigger changes and
-  step renames. Each diff block copies the step's code, and the latest reply can
-  be undone, restoring the workflow to how it stood before that reply and
-  offering to redo it. Undo confirms first when the workflow has been edited
-  since, because it replaces the whole workflow.
-  [#5036](https://github.com/OpenFn/lightning/issues/5036)
-
-- Webhook triggers can be given a custom URL path, so an endpoint's URL is known
-  before it is deployed. A trigger with a path of `facility-001` answers at
-  `/i/<project-id>/facility-001`, where `<project-id>` is the project's UUID.
-  Set it in the trigger panel, in `project.yaml`, or through the workflows API.
-  Existing `/i/<trigger-id>` URLs are unchanged.
-  [#4952](https://github.com/OpenFn/lightning/issues/4952)
-- Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
-  scenario file (users, API tokens, credentials, projects, workflows) via
-  `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and
-  external test harnesses. Workflows in a scenario are written in the existing
-  workflow-spec format — the same YAML the collaborative editor imports and
-  exports, validated against the same JSON Schema.
-  [#4974](https://github.com/OpenFn/lightning/issues/4974)
-
-### Changed
-
-- The webhook trigger panel now lists every URL a trigger answers on. The
-  default URL is always there and the custom one sits next to it, editable in
-  place, with add, edit, delete and copy on the row itself. A path already used
-  by another workflow in the project is reported while you type, not after you
-  save. A path the server would reject shows what is wrong and is left as you
-  typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
-
-### Fixed
-
-- A lifecycle transition no longer writes a workflow version. The version trail
-  answers whether one project holds content another does not, and a merge
-  carries neither the lifecycle state nor a trigger's enabled flag, so recording
-  a hash for those made a sandbox report changes it could not promote.
 
 - Opening the merge dialog, and deleting a sandbox, no longer crash in a
   workspace with a branch more than two levels below the project you are in.
