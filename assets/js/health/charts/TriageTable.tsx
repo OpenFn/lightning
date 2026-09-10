@@ -97,7 +97,7 @@ export const TriageTable = ({
               Work orders
             </th>
             <th scope="col" className="py-2 font-medium">
-              Signature
+              Failure type
             </th>
             <th scope="col" className="w-24 py-2 pl-4 font-medium">
               <span className="sr-only">Actions</span>

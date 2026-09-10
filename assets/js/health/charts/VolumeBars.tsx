@@ -198,16 +198,14 @@ const bucketHours = (buckets: RunBucket[]) => {
 export const bucketMeta = (buckets: RunBucket[]) => {
   const hours = bucketHours(buckets);
 
-  return hours >= 24
-    ? 'daily buckets (runs) · UTC'
-    : `${hours}-hour bucket (runs) · UTC`;
+  return hours >= 24 ? 'daily buckets' : `${hours}-hour buckets`;
 };
 
 const TICK_FILL = '#6b7280';
 
 // Rendered in UTC because that is where the buckets are: the server lays the
 // grid on the raw epoch, so a day starts at UTC midnight — 03:00 in Nairobi,
-// 05:30 in Delhi. The card's meta says UTC for the same reason.
+// 05:30 in Delhi. The tooltip says UTC for the same reason.
 const dayLabel = (date: Date) =>
   date.toLocaleDateString(undefined, {
     month: 'short',

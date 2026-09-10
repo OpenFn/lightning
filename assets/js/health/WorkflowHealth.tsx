@@ -10,7 +10,7 @@ import { TriageTable } from './charts/TriageTable';
 import type { RunVolume } from './charts/VolumeBars';
 import { bucketMeta, VolumeBars } from './charts/VolumeBars';
 import { DEFAULT_DAYS, RangePicker } from './RangePicker';
-import type { ErrorSignatures, Outcomes } from './types';
+import type { ErrorSignature, ErrorSignatures, Outcomes } from './types';
 import { FAILURE_STATES } from './types';
 import { healthBase, useHealthQuery } from './useHealthQuery';
 
@@ -102,7 +102,7 @@ export const HealthContent = ({
         {/* Runs, where the donut beside it counts work orders — so the meta
             names the bucket size rather than a total that won't reconcile. */}
         <Card
-          title="Volume over time"
+          title="Runs over time"
           className="lg:col-span-3"
           meta={volume.data && bucketMeta(volume.data.buckets)}
         >
@@ -116,23 +116,25 @@ export const HealthContent = ({
           </Panel>
         </Card>
 
-        {/* Counts are per failed step, so the rows can sum past the failure
-            total the donuts draw: a second broken branch is its own thing to
-            fix. */}
-        <Card
-          title="Triage"
-          className="lg:col-span-2"
-          meta="grouped by failure type · counted once per failed branch"
-        >
+        <Card title="Triage" className="lg:col-span-2">
           <Panel data={signatures.data} error={signatures.error}>
             {({ signatures, window }) => (
-              <TriageTable
-                signatures={signatures}
-                emptyMessage={emptyMessage(window, 'failures')}
-                projectId={projectId}
-                workflowId={workflowId}
-                from={window.from}
-              />
+              <>
+                <TriageTable
+                  signatures={signatures}
+                  emptyMessage={emptyMessage(window, 'failures')}
+                  projectId={projectId}
+                  workflowId={workflowId}
+                  from={window.from}
+                />
+                {outcomes.data &&
+                  overCounts(signatures, outcomes.data.counts) && (
+                    <p className="mt-3 text-xs text-gray-500">
+                      Some work orders failed on more than one branch, so they
+                      appear in more than one row.
+                    </p>
+                  )}
+              </>
             )}
           </Panel>
         </Card>
@@ -142,10 +144,7 @@ export const HealthContent = ({
         <Card
           title="Failure breakdown"
           className="lg:col-span-2"
-          meta={
-            outcomes.data &&
-            `${failures(outcomes.data.counts)} · by work order state`
-          }
+          meta={outcomes.data && failures(outcomes.data.counts)}
         >
           <Panel data={outcomes.data} error={outcomes.error}>
             {({ counts, window }) => (
@@ -168,7 +167,7 @@ const Card = ({
   children,
 }: {
   title: string;
-  meta: ReactNode;
+  meta?: ReactNode;
   className?: string;
   children: ReactNode;
 }) => (
@@ -238,15 +237,25 @@ const workOrders = (counts: Outcomes['counts']) => {
   return `${total.toLocaleString()} work order${total === 1 ? '' : 's'}`;
 };
 
+const failureCount = (counts: Outcomes['counts']) =>
+  FAILURE_STATES.reduce((sum, state) => sum + counts[state], 0);
+
 // The donut's centre total sits inside the `aria-hidden` frame and the legend
 // below lists slices but never their sum, so this is the only place a screen
 // reader can reach the number of failures. Summed from `FAILURE_STATES` rather
 // than the drawn slices, which drop the states that never happened.
 const failures = (counts: Outcomes['counts']) => {
-  const total = FAILURE_STATES.reduce((sum, state) => sum + counts[state], 0);
+  const total = failureCount(counts);
 
-  return `${total.toLocaleString()} failure${total === 1 ? '' : 's'}`;
+  return `${total.toLocaleString()} failed work order${total === 1 ? '' : 's'}`;
 };
+
+// A work order with two broken branches lands in two triage rows, so the
+// column can sum past the failure total the donut draws. Only worth a word
+// when it actually happened — most windows reconcile and need no footnote.
+const overCounts = (signatures: ErrorSignature[], counts: Outcomes['counts']) =>
+  signatures.reduce((sum, signature) => sum + signature.count, 0) >
+  failureCount(counts);
 
 const emptyMessage = (
   window: Outcomes['window'],
