@@ -24,6 +24,7 @@ defmodule Lightning.Adaptors.Scheduler do
   alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Config
   alias Lightning.Adaptors.IconCache
+  alias Lightning.Adaptors.IconField
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   require Logger
@@ -556,8 +557,8 @@ defmodule Lightning.Adaptors.Scheduler do
           IconCache.write!(source, record.name, shape, ext, bytes, sha)
 
           record
-          |> Map.put(:"icon_#{shape}_ext", ext)
-          |> Map.put(:"icon_#{shape}_sha256", sha)
+          |> Map.put(IconField.ext(shape), ext)
+          |> Map.put(IconField.sha256(shape), sha)
           |> maybe_put_etag(shape, Map.get(entry, :etag))
         rescue
           e ->
@@ -585,7 +586,7 @@ defmodule Lightning.Adaptors.Scheduler do
   defp maybe_put_etag(record, _shape, nil), do: record
 
   defp maybe_put_etag(record, shape, etag) when is_binary(etag) do
-    Map.put(record, :"icon_#{shape}_etag", etag)
+    Map.put(record, IconField.etag(shape), etag)
   end
 
   defp reapply_icons(existing_rows, icons, state) do
@@ -628,8 +629,8 @@ defmodule Lightning.Adaptors.Scheduler do
   end
 
   defp accumulate_icon_change(acc, shape, row, package_icons, state) do
-    sha_key = :"icon_#{shape}_sha256"
-    etag_key = :"icon_#{shape}_etag"
+    sha_key = IconField.sha256(shape)
+    etag_key = IconField.etag(shape)
 
     case Map.get(package_icons, shape) do
       %{data: bytes, ext: ext, sha256: sha} = entry when is_binary(bytes) ->
@@ -652,9 +653,9 @@ defmodule Lightning.Adaptors.Scheduler do
   end
 
   defp accumulate_fetched_icon(acc, shape, row, entry, ext, sha, bytes, state) do
-    sha_key = :"icon_#{shape}_sha256"
-    ext_key = :"icon_#{shape}_ext"
-    etag_key = :"icon_#{shape}_etag"
+    sha_key = IconField.sha256(shape)
+    ext_key = IconField.ext(shape)
+    etag_key = IconField.etag(shape)
 
     IconCache.write!(state.source, row.name, shape, ext, bytes, sha)
 
