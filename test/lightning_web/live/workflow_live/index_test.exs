@@ -8,6 +8,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   import Lightning.WorkflowsFixtures
   import Lightning.WorkflowLive.Helpers
 
+  alias Lightning.DashboardStats
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
   setup :create_workflow
@@ -140,11 +142,10 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              )
 
       pending_and_date_filter =
-        Timex.now()
-        |> Timex.shift(months: -1)
+        DashboardStats.window_start()
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]=#{date}"
+          "filters[date_after]=#{date}.*&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]="
         end)
 
       assert html
@@ -170,7 +171,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              )
 
       failed_filter_pattern =
-        "filters[cancelled]=true.*filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true"
+        "filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true.*filters[rejected]=true"
 
       assert html
              |> has_history_link_pattern?(
@@ -216,11 +217,10 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       # work order date filter without status filter
       date_filter =
-        Timex.now()
-        |> Timex.shift(months: -1)
+        DashboardStats.window_start()
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[wo_date_after]=#{date}"
+          "filters[date_after]=#{date}.*&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[wo_date_after]="
         end)
 
       assert html

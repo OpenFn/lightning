@@ -17,17 +17,20 @@ and this project adheres to
 
 ### Changed
 
+- "A failed work order" now means the same thing on the workflows list, its
+  history links, the health page and the digest email: cancelled no longer
+  counts, and rejected now does. Each 30-day window is measured from a work
+  order's last activity rather than when it was created, so one retried today
+  counts as recent everywhere.
 - The AI assistant's reply footer now reads "Revert changes" and "Restore
   changes" rather than "Revert this reply", and its confirmation matches.
   [#5161](https://github.com/OpenFn/lightning/pull/5161)
-
 - The AI assistant is the global assistant for everyone. It was behind the
   experimental features setting and an opt-in tickbox on the chat input, and
   both are gone: every message goes to it, and the badge naming which assistant
   answered goes with them. Existing workflow conversations still open and read
   as they always did, and replying in one moves it to the global assistant from
   that message on. [#5042](https://github.com/OpenFn/lightning/issues/5042)
-
 - The AI assistant's attachment tickboxes are now about the run you are looking
   at, and they appear wherever you are. "Send run logs" and "Send run data" sit
   above the message box on the canvas and in the run history as well as in the
@@ -37,7 +40,6 @@ and this project adheres to
   values removed. The "Press Enter to send" hint below the box is gone, since
   the notice and the send button now share that row.
   [#5037](https://github.com/OpenFn/lightning/issues/5037)
-
 - Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
   first character of a string, which breaks names in many languages. Lightning
   does not normalise anything today, but #4577 adds it on every name, so the
@@ -56,7 +58,6 @@ and this project adheres to
   custom path being set, changed or cleared shows as its own row, as do the
   reply timing and the response codes, all of which used to land with nothing
   said about them. [#5149](https://github.com/OpenFn/lightning/issues/5149)
-
 - The AI assistant now shows what changed as a global reply edits your workflow.
   Each change renders under the status that made it, while the reply is still
   streaming, as a per-step code diff with syntax highlighting, old and new line
@@ -74,13 +75,12 @@ and this project adheres to
   Existing `/i/<trigger-id>` URLs are unchanged.
   [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - A workflow health page at `/projects/:project_id/w/:workflow_id/health`,
-  summarising one workflow over a selectable window (last 24 hours, 7 days, or
-  30 days): a donut of work order outcomes, a breakdown of the failing ones, and
-  a triage table grouping failures by error signature, heaviest first. Each row
-  has a View button linking to the history page filtered to just the work orders
-  behind it, where the existing "retry all" can retry the group. The page
-  re-reads its numbers every 30 seconds while the tab is open. Reachable from
-  the workflows list via a "Health" link in each row's Actions column.
+  reached from the "Health" link on each row of the workflows list. It covers
+  the last 24 hours, 7 days or 30 days: a donut of work order outcomes, a
+  breakdown of the failing ones, and a triage table grouping failures by error
+  signature, heaviest first. Each triage row links to history filtered to its
+  own work orders, where "retry all" can retry the group. The page re-reads its
+  numbers every 30 seconds while the tab is open.
 - Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
   scenario file (users, API tokens, credentials, projects, workflows) via
   `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and
@@ -144,7 +144,6 @@ and this project adheres to
   connection and a genuinely short answer all read as "Stream ended without
   complete response"; they now read as three different things.
   [#4882](https://github.com/OpenFn/lightning/issues/4882)
-
 - The global assistant no longer offers to paste a reply's code block into
   whichever job you have open. It applies its own changes and shows them as
   diffs, so those blocks are data it quoted back or work it has already done.
@@ -165,7 +164,6 @@ and this project adheres to
   accept or reject when the only control was a close button, and reloading
   revealed the change had been written all along.
   [#5118](https://github.com/OpenFn/lightning/issues/5118)
-
 - Changing a webhook trigger's custom path now marks the workflow as unsaved, so
   the Save button offers to save it. The unsaved-changes check did not look at
   the field, so the edit could be lost by navigating away.

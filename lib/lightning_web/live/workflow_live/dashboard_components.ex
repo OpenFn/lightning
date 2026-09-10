@@ -2,6 +2,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   @moduledoc false
   use LightningWeb, :component
 
+  alias Lightning.DashboardStats
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
   alias Lightning.WorkOrder
@@ -78,6 +79,15 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     """
   end
 
+  # One definition of "the failed work orders behind this number", so every
+  # link opens the same window and the same states its count was taken from.
+  defp failed_wo_filters do
+    WorkOrder.failure_states()
+    |> Map.new(&{to_string(&1), "true"})
+    |> Map.put("date_after", DashboardStats.window_start())
+    |> SearchParams.to_uri_params()
+  end
+
   defp table_title(assigns) do
     ~H"""
     <h3 class="text-3xl font-bold">
@@ -105,18 +115,9 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       |> assign(
         wo_filters:
           SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1)
+            "date_after" => DashboardStats.window_start()
           }),
-        failed_wo_filters:
-          SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
-            "failed" => "true",
-            "crashed" => "true",
-            "killed" => "true",
-            "cancelled" => "true",
-            "lost" => "true",
-            "exception" => "true"
-          }),
+        failed_wo_filters: failed_wo_filters(),
         workflows: Enum.map(workflows_stats, &Map.merge(&1, &1.workflow)),
         empty?: Enum.empty?(workflows_stats)
       )
@@ -499,19 +500,10 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     assigns =
       assigns
       |> assign(
-        failed_filters:
-          SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
-            "failed" => "true",
-            "crashed" => "true",
-            "killed" => "true",
-            "cancelled" => "true",
-            "lost" => "true",
-            "exception" => "true"
-          }),
+        failed_filters: failed_wo_filters(),
         pending_filters:
           SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
+            "date_after" => DashboardStats.window_start(),
             "pending" => "true",
             "running" => "true"
           })

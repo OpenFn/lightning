@@ -1,6 +1,6 @@
 /**
  * Every state a work order finishes in that counts as a failure. Mirrors
- * `Stats`'s `@failure_states`; work orders still in flight never reach the
+ * `WorkOrder.failure_states/0`; work orders still in flight never reach the
  * client, since they have no outcome yet.
  *
  * `cancelled` is deliberately not here — it is a final state, but someone

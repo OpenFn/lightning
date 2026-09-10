@@ -44,9 +44,8 @@ defmodule Lightning.Invocation.Query do
   Appends `exit_reason != "success"` to a query of `Step`.
 
   A step that never finished carries a `nil` `exit_reason`, and `NULL !=
-  'success'` is false in SQL, so it is excluded here too — the same answer
-  the janitor's own race resolves to. Do not "fix" this to `IS DISTINCT
-  FROM`; that changes which side of the race a lost step lands on.
+  'success'` is false in SQL, so it is excluded here too: a step still in
+  flight is not yet a failure.
   """
   @spec where_step_failed(Ecto.Queryable.t()) :: Ecto.Queryable.t()
   def where_step_failed(query) do
