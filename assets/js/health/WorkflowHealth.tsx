@@ -11,7 +11,7 @@ import type { RunVolume } from './charts/VolumeBars';
 import { bucketMeta, VolumeBars } from './charts/VolumeBars';
 import { DEFAULT_DAYS, RangePicker } from './RangePicker';
 import type { ErrorSignature, ErrorSignatures, Outcomes } from './types';
-import { FAILURE_STATES } from './types';
+import { failureTotal } from './types';
 import { healthBase, useHealthQuery } from './useHealthQuery';
 
 /**
@@ -33,29 +33,11 @@ interface WorkflowHealthProps {
   'data-workflow-name': string;
 }
 
-// Keyed on the workflow: a patch between two workflows' health pages remounts
-// everything, the picked range included, rather than leaving one workflow's
-// page state under another's heading.
-export const WorkflowHealth = (props: WorkflowHealthProps) => (
-  <HealthContent
-    key={props['data-workflow-id']}
-    workflowId={props['data-workflow-id']}
-    projectId={props['data-project-id']}
-    workflowName={props['data-workflow-name']}
-  />
-);
-
-interface HealthContentProps {
-  workflowId: string;
-  projectId: string;
-  workflowName: string;
-}
-
-export const HealthContent = ({
-  workflowId,
-  projectId,
-  workflowName,
-}: HealthContentProps) => {
+export const WorkflowHealth = ({
+  'data-workflow-id': workflowId,
+  'data-project-id': projectId,
+  'data-workflow-name': workflowName,
+}: WorkflowHealthProps) => {
   const [days, setDays] = useState<string>(DEFAULT_DAYS);
 
   const base = healthBase(projectId, workflowId);
@@ -230,30 +212,27 @@ const UpdatedAt = ({ at }: { at: string | null }) => (
   </p>
 );
 
-// "1 work order", "1,287 work orders".
-const workOrders = (counts: Outcomes['counts']) => {
-  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+// "1 work order", "1,287 failed work orders".
+const count = (n: number, noun: string) =>
+  `${n.toLocaleString()} ${noun}${n === 1 ? '' : 's'}`;
 
-  return `${total.toLocaleString()} work order${total === 1 ? '' : 's'}`;
-};
-
-const failureCount = (counts: Outcomes['counts']) =>
-  FAILURE_STATES.reduce((sum, state) => sum + counts[state], 0);
+const workOrders = (counts: Outcomes['counts']) =>
+  count(
+    Object.values(counts).reduce((sum, n) => sum + n, 0),
+    'work order'
+  );
 
 // The donut's centre total sits inside the `aria-hidden` frame and the legend
 // below lists slices but never their sum, so this is the only place a screen
 // reader can reach the number of failures. Summed from `FAILURE_STATES` rather
 // than the drawn slices, which drop the states that never happened.
-const failures = (counts: Outcomes['counts']) => {
-  const total = failureCount(counts);
-
-  return `${total.toLocaleString()} failed work order${total === 1 ? '' : 's'}`;
-};
+const failures = (counts: Outcomes['counts']) =>
+  count(failureTotal(counts), 'failed work order');
 
 // Rows count failed branches, so they can sum past the failure total.
 const overCounts = (signatures: ErrorSignature[], counts: Outcomes['counts']) =>
   signatures.reduce((sum, signature) => sum + signature.count, 0) >
-  failureCount(counts);
+  failureTotal(counts);
 
 const emptyMessage = (
   window: Outcomes['window'],

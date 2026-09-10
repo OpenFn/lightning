@@ -6,11 +6,11 @@ import { cn } from '#/utils/cn';
  * Hover panel for the health charts, in the page's own card chrome.
  *
  * Recharts' default panel is a square-cornered box of coloured text, which
- * matches nothing else here. This one borrows the card it floats over
- * (`WorkflowHealth.tsx:178` — white, `rounded-lg`, a shadow) and lays its rows
- * out like the legends under the charts: swatch, name, count. The swatch is
- * what carries the series colour, so the counts stay readable rather than
- * trading contrast for identity.
+ * matches nothing else here. This one borrows the card `WorkflowHealth`'s own
+ * panels use — white, `rounded-lg`, a shadow — and lays its rows out like the
+ * legends under the charts: swatch, name, count. The swatch is what carries
+ * the series colour, so the counts stay readable rather than trading contrast
+ * for identity.
  */
 
 interface ChartTooltipProps

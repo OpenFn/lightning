@@ -28,6 +28,15 @@ export type WorkOrderStateCounts = Record<
 >;
 
 /**
+ * How many work orders failed. Summed from `FAILURE_STATES` rather than taken
+ * as `total - success`, so the outcomes donut's Failed wedge, the failure
+ * breakdown's slices and the page's own caption are all driven by the same
+ * list.
+ */
+export const failureTotal = (counts: WorkOrderStateCounts) =>
+  FAILURE_STATES.reduce((sum, state) => sum + counts[state], 0);
+
+/**
  * The `outcomes` response from `LightningWeb.API.WorkflowHealthController`.
  * Counts only; `Lightning.Workflows.Stats` does the bucketing.
  *

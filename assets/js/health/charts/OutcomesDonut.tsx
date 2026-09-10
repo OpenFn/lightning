@@ -1,4 +1,4 @@
-import { FAILURE_STATES, type WorkOrderStateCounts } from '../types';
+import { failureTotal, type WorkOrderStateCounts } from '../types';
 
 import { Donut } from './Donut';
 
@@ -60,8 +60,3 @@ export const OutcomesDonut = ({ counts, emptyMessage }: OutcomesDonutProps) => (
     emptyMessage={emptyMessage}
   />
 );
-
-// Summed from `FAILURE_STATES` rather than taken as `total - success`, so this
-// wedge and the failure breakdown's slices are driven by the same list.
-const failureTotal = (counts: WorkOrderStateCounts) =>
-  FAILURE_STATES.reduce((sum, state) => sum + counts[state], 0);

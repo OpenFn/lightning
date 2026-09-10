@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { HealthContent } from '#/health/WorkflowHealth';
+import { WorkflowHealth } from '#/health/WorkflowHealth';
 
 import { bucket } from './charts/counts';
 
@@ -86,10 +86,10 @@ function mount(responses: Record<string, unknown>) {
   const stub = stubFetch(responses);
 
   const rendered = render(
-    <HealthContent
-      workflowId="wf-1"
-      projectId="proj-1"
-      workflowName="Sync patients"
+    <WorkflowHealth
+      data-workflow-id="wf-1"
+      data-project-id="proj-1"
+      data-workflow-name="Sync patients"
     />
   );
 
