@@ -27,6 +27,9 @@ defmodule Lightning.Adaptors.Seed do
     * `:sup` - supervisor instance whose topic the broadcasts go to,
       defaulting to `Lightning.Adaptors.Config.default_instance/0`
   """
+  # `path` is a mix-task argument (`mix lightning.adaptors.import`) or a
+  # release-command argument — an operator's own filesystem, not a request.
+  # sobelow_skip ["Traversal.FileModule"]
   @spec seed_from_file(Path.t(), keyword()) :: {:ok, non_neg_integer()}
   def seed_from_file(path, opts \\ []) do
     source = Keyword.get(opts, :source, :npm)

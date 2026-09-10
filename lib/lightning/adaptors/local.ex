@@ -166,6 +166,10 @@ defmodule Lightning.Adaptors.Local do
     records
   end
 
+  # `dir` is under a path an operator configured for this strategy
+  # (`Config.strategy_opts(__MODULE__)[:paths]`), never request input.
+  # Applies to `read_schema/1` and `read_icon/2` below too.
+  # sobelow_skip ["Traversal.FileModule"]
   defp read_package_dir(dir) do
     pkg_json_path = Path.join(dir, "package.json")
 
@@ -241,6 +245,7 @@ defmodule Lightning.Adaptors.Local do
     }
   end
 
+  # sobelow_skip ["Traversal.FileModule"]
   defp read_schema(dir) do
     case File.read(Path.join(dir, @schema_filename)) do
       {:ok, body} -> Lightning.Adaptors.Strategy.digest_schema(body)
@@ -249,6 +254,7 @@ defmodule Lightning.Adaptors.Local do
     end
   end
 
+  # sobelow_skip ["Traversal.FileModule"]
   defp read_icon(dir, shape) do
     Enum.find_value(@icon_exts, {:error, :not_found}, fn ext ->
       case File.read(icon_path(dir, shape, ext)) do
