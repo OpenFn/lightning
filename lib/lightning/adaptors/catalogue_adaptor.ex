@@ -9,6 +9,8 @@ defmodule Lightning.Adaptors.Catalogue.Adaptor do
 
   import Ecto.Changeset
 
+  alias Lightning.Adaptors.IconField
+
   defmodule JSONBinary do
     @moduledoc """
     Ecto type for `schema_data`: a JSON binary in a `text` column.
@@ -106,18 +108,16 @@ defmodule Lightning.Adaptors.Catalogue.Adaptor do
     |> validate_format(:name, Lightning.Adaptors.PackageName.name_format())
     |> validate_inclusion(:icon_square_ext, ~w(png svg))
     |> validate_inclusion(:icon_rectangle_ext, ~w(png svg))
-    |> validate_icon_sha256_pair(:icon_square)
-    |> validate_icon_sha256_pair(:icon_rectangle)
+    |> validate_icon_sha256_pair(:square)
+    |> validate_icon_sha256_pair(:rectangle)
     |> unique_constraint([:name, :source])
   end
 
-  @spec validate_icon_sha256_pair(
-          Ecto.Changeset.t(),
-          :icon_square | :icon_rectangle
-        ) :: Ecto.Changeset.t()
+  @spec validate_icon_sha256_pair(Ecto.Changeset.t(), IconField.shape()) ::
+          Ecto.Changeset.t()
   defp validate_icon_sha256_pair(changeset, shape) do
-    ext_field = :"#{shape}_ext"
-    sha_field = :"#{shape}_sha256"
+    ext_field = IconField.ext(shape)
+    sha_field = IconField.sha256(shape)
 
     case {get_field(changeset, ext_field), get_field(changeset, sha_field)} do
       {nil, nil} ->

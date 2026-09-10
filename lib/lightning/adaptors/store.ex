@@ -15,6 +15,7 @@ defmodule Lightning.Adaptors.Store do
   alias Lightning.Adaptors.Catalogue
   alias Lightning.Adaptors.Config
   alias Lightning.Adaptors.IconCache
+  alias Lightning.Adaptors.IconField
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
   alias LightningWeb.AdaptorIconURL
 
@@ -275,7 +276,7 @@ defmodule Lightning.Adaptors.Store do
   @spec ext_for_shape(icon_meta(), :square | :rectangle) ::
           {:ok, String.t()} | {:error, :not_found}
   defp ext_for_shape(meta, shape) do
-    case Map.get(meta, :"icon_#{shape}_ext") do
+    case Map.get(meta, IconField.ext(shape)) do
       nil -> {:error, :not_found}
       ext -> {:ok, ext}
     end
@@ -284,7 +285,7 @@ defmodule Lightning.Adaptors.Store do
   @spec sha256_for_shape(icon_meta(), :square | :rectangle) ::
           {:ok, binary()} | {:error, :not_found}
   defp sha256_for_shape(meta, shape) do
-    case Map.get(meta, :"icon_#{shape}_sha256") do
+    case Map.get(meta, IconField.sha256(shape)) do
       nil -> {:error, :not_found}
       sha -> {:ok, sha}
     end
