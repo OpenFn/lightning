@@ -533,7 +533,8 @@ describe('GitHubSyncModal - Save & Sync Action', () => {
           commit_message: expect.stringContaining(
             'initiated a sync from Lightning'
           ),
-        })
+        }),
+        expect.any(Number)
       );
     });
   });
@@ -678,7 +679,8 @@ describe('GitHubSyncModal - Save & Sync Action', () => {
         'save_and_sync',
         expect.objectContaining({
           commit_message: 'Test commit message',
-        })
+        }),
+        expect.any(Number)
       );
     });
   });
@@ -726,7 +728,11 @@ describe('GitHubSyncModal - Keyboard Shortcuts', () => {
     await user.type(textarea, '{Control>}{Enter}{/Control}');
 
     await waitFor(() => {
-      expect(pushSpy).toHaveBeenCalledWith('save_and_sync', expect.any(Object));
+      expect(pushSpy).toHaveBeenCalledWith(
+        'save_and_sync',
+        expect.any(Object),
+        expect.any(Number)
+      );
     });
   });
 
@@ -767,7 +773,11 @@ describe('GitHubSyncModal - Keyboard Shortcuts', () => {
     await user.type(textarea, '{Meta>}{Enter}{/Meta}');
 
     await waitFor(() => {
-      expect(pushSpy).toHaveBeenCalledWith('save_and_sync', expect.any(Object));
+      expect(pushSpy).toHaveBeenCalledWith(
+        'save_and_sync',
+        expect.any(Object),
+        expect.any(Number)
+      );
     });
   });
 
