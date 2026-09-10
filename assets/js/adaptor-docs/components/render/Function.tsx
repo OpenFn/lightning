@@ -70,8 +70,11 @@ const Example = ({ eg, onInsert }: ExampleProps) => {
       <label className="block text-sm text-secondary-700 mt-2">
         Example{caption && `: ${caption}`}
       </label>
-      <div style={{ marginTop: '-6px' }}>
-        <div className="w-full px-5 text-right" style={{ height: '13px' }}>
+      <div style={{ marginTop: '-6px', position: 'relative' }}>
+        <div
+          className="w-full px-5 text-right relative z-10"
+          style={{ height: '13px' }}
+        >
           <PreButton
             label="COPY"
             onClick={() => doCopy(code)}
@@ -85,7 +88,7 @@ const Example = ({ eg, onInsert }: ExampleProps) => {
             />
           )}
         </div>
-        <pre className="rounded-md pl-4 pr-30 py-2 mx-4 my-0 font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 min-h-full text-xs overflow-x-auto">
+        <pre className="rounded-md pl-4 pr-30 py-2 mx-4 my-0 font-mono bg-slate-100 border-2 border-slate-200 text-slate-800 min-h-full text-xs overflow-x-auto relative z-0">
           {code}
         </pre>
       </div>

@@ -58,7 +58,7 @@ function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
         label: 'Webhook trigger',
         sublabel: `On each request received`,
         tooltip: 'Click to copy webhook URL',
-        primaryIcon: <GlobeAltIcon />,
+        primaryIcon: <GlobeAltIcon className="h-full w-full" />,
         secondaryIcon: trigger.has_auth_method ? lockClosedIcon : null,
       };
     case 'cron':
@@ -73,7 +73,7 @@ function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
       return {
         label: 'Cron trigger',
         sublabel,
-        primaryIcon: <ClockIcon />,
+        primaryIcon: <ClockIcon className="h-full w-full" />,
         secondaryIcon: null,
       };
   }
