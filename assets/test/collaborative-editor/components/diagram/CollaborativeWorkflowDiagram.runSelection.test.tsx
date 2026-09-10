@@ -111,7 +111,9 @@ const workOrder = (id: string, runs: ReturnType<typeof run>[]) => ({
   runs,
 });
 
-function createWrapper(): React.ComponentType<{ children: React.ReactNode }> {
+function createWrapper(
+  experimentalFeaturesEnabled = true
+): React.ComponentType<{ children: React.ReactNode }> {
   const editorPreferencesStore = createEditorPreferencesStore();
 
   const workflowState = {
@@ -131,6 +133,7 @@ function createWrapper(): React.ComponentType<{ children: React.ReactNode }> {
     permissions: {},
     latestSnapshotId: LIVE_SNAPSHOT,
     latestSnapshotLockVersion: 3,
+    experimentalFeaturesEnabled,
   };
 
   const historyState = {
@@ -296,6 +299,45 @@ describe('selecting a run', () => {
         expect.objectContaining({ as_run: 'run-old-a' })
       );
     });
+  });
+
+  test('selects a run on the open document without experimental features', async () => {
+    // Without the flag there is no as-executed view to move to, so a run is
+    // selected where the user already is and the version-mismatch banner says
+    // the shape on screen is not the shape that ran. This is the run of older
+    // content, the case the flag-on path sends to its own snapshot.
+    const user = userEvent.setup();
+    render(<CollaborativeWorkflowDiagram />, {
+      wrapper: createWrapper(false),
+    });
+
+    await clickRun(user, 'wo-old-a');
+
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      run: 'run-old-a',
+    });
+    expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith(
+      expect.objectContaining({ as_run: 'run-old-a' })
+    );
+  });
+
+  test('leaves a ?run= alone without experimental features', async () => {
+    // The reconcile pass turns a bare `?run=` of older content into an
+    // as-executed view, however the URL got that way. Without the flag it must
+    // leave the URL as it found it.
+    urlState.setParams({ run: 'run-old-a' });
+
+    render(<CollaborativeWorkflowDiagram />, {
+      wrapper: createWrapper(false),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('workflow-diagram-impl')).toBeInTheDocument();
+    });
+
+    expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith(
+      expect.objectContaining({ as_run: 'run-old-a' })
+    );
   });
 
   test('shows a run as executed when its snapshot is unknown', async () => {

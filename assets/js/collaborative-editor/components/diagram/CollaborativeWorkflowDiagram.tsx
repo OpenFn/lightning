@@ -25,7 +25,10 @@ import {
 import {
   useIsNewWorkflow,
   useLatestSnapshotId,
+  useExperimentalFeatures,
 } from '../../hooks/useSessionContext';
+import { useVersionMismatch } from '../../hooks/useVersionMismatch';
+import { useVersionSelect } from '../../hooks/useVersionSelect';
 import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
 import { useNodeSelection } from '../../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../../keyboard';
@@ -58,6 +61,11 @@ export function CollaborativeWorkflowDiagram({
 
   const { viewAsExecuted, prompt: runPinPrompt } = useViewAsExecuted();
 
+  // Switching to the version a run executed against destroys the document, so
+  // it is guarded like every other switch. Offered by the mini history's
+  // banner; owned here, because this is where the prompt can be rendered.
+  const { handleVersionSelect, prompt: versionPrompt } = useVersionSelect();
+
   const historyCollapsed = useHistoryPanelCollapsed();
   const { setHistoryPanelCollapsed } = useEditorPreferencesCommands();
 
@@ -83,6 +91,11 @@ export function CollaborativeWorkflowDiagram({
 
   const runParam = params['run'] ?? null;
   const { release: releaseParam, asRun: asRunParam } = usePinnedView();
+
+  // Opening a run on its own snapshot is the experimental experience. Without
+  // the flag a run is only ever selected on the document already open, so none
+  // of the view-switching below applies.
+  const experimentalFeatures = useExperimentalFeatures();
   const restoredRunRef = useRef<string | null>(null);
 
   // Which document is on screen: a pinned release, a run's own snapshot, or the
@@ -99,10 +112,15 @@ export function CollaborativeWorkflowDiagram({
   // the view is that run's own, or when the run executed the content that is
   // live. Undefined snapshot means the history has not arrived, and nothing is
   // decided until it has.
+  //
+  // Without experimental features it always does, because there is no other
+  // document to move it to: a run is selected where the user already is. That
+  // makes the as-executed switch below inert, which is the whole gate.
   const urlRun = useRunSummary(runParam);
   const runBelongsHere =
     runParam !== null &&
-    (asRunParam === runParam ||
+    (!experimentalFeatures ||
+      asRunParam === runParam ||
       (urlRun?.snapshot_id != null && urlRun.snapshot_id === latestSnapshotId));
 
   const { clearRun } = useFollowRun(selectedRunId);
@@ -154,6 +172,7 @@ export function CollaborativeWorkflowDiagram({
       restoredRunRef.current = null;
     }
   }, [
+    experimentalFeatures,
     viewKey,
     runParam,
     asRunParam,
@@ -166,6 +185,17 @@ export function CollaborativeWorkflowDiagram({
 
   const currentRunSteps = useRunSteps(selectedRunId);
 
+  // Only ever set without experimental features. With the flag on, a run of
+  // older content opens that content read-only, so the shape on screen is the
+  // shape that ran and there is nothing to warn about.
+  const versionMismatch = useVersionMismatch(selectedRunId);
+
+  const handleGoToVersion = useCallback(() => {
+    if (versionMismatch) {
+      handleVersionSelect(versionMismatch.runVersion);
+    }
+  }, [handleVersionSelect, versionMismatch]);
+
   // A run is shown as it executed, on its own snapshot. The exception is a run
   // of the content that is live now: that one overlays on the live document so
   // the edit, run, edit loop keeps working.
@@ -176,6 +206,15 @@ export function CollaborativeWorkflowDiagram({
   // clicking two runs of the same content alternated between the two views.
   const handleRunSelect = useCallback(
     (run: RunSummary) => {
+      // Opening a run on its own snapshot is part of the experimental
+      // experience. Without the flag a run is selected on whatever document is
+      // already open, as the editor did before, and the version-mismatch banner
+      // is what says the shape on screen is not the shape that ran.
+      if (!experimentalFeatures) {
+        updateSearchParams({ run: run.id });
+        return;
+      }
+
       const ranTheLiveContent =
         latestSnapshotId !== null &&
         run.snapshot_id !== null &&
@@ -188,7 +227,7 @@ export function CollaborativeWorkflowDiagram({
         updateSearchParams({ ...CLEAR_PINNED_VIEW, run: run.id });
       }
     },
-    [latestSnapshotId, updateSearchParams, viewAsExecuted]
+    [experimentalFeatures, latestSnapshotId, updateSearchParams, viewAsExecuted]
   );
 
   // Closes the run viewer in the store too, or the restore effect re-adds the
@@ -279,6 +318,8 @@ export function CollaborativeWorkflowDiagram({
         {/* Only show history panel when NOT creating a new workflow */}
         {!isNewWorkflow && (
           <MiniHistory
+            versionMismatch={versionMismatch}
+            onGoToVersion={handleGoToVersion}
             collapsed={historyCollapsed}
             history={historyWithSelection}
             onCollapseHistory={handleToggleHistory}
@@ -294,6 +335,13 @@ export function CollaborativeWorkflowDiagram({
           />
         )}
       </ReactFlowProvider>
+      <DiscardChangesDialog
+        isOpen={versionPrompt.isAsking}
+        onSaveAndContinue={versionPrompt.saveAndRunPending}
+        onDiscardAndContinue={versionPrompt.runPending}
+        onCancel={versionPrompt.cancel}
+        description="Switching to the version this run executed against loads that version, and your unsaved changes cannot come with it. Switch without saving and they are gone."
+      />
       <DiscardChangesDialog
         isOpen={runPinPrompt.isAsking}
         onSaveAndContinue={runPinPrompt.saveAndRunPending}

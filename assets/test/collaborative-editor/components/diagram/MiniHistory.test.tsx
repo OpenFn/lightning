@@ -15,8 +15,9 @@
  * - Use descriptive test names that explain the behavior being tested
  */
 
-import { describe, expect, test, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import MiniHistory from '../../../../js/collaborative-editor/components/diagram/MiniHistory';
 import {
   createMockRun,
@@ -42,7 +43,10 @@ vi.mock('../../../../js/hooks', () => ({
 }));
 
 // Mock session context hooks to provide project ID
+let experimentalFeatures = true;
+
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useExperimentalFeatures: () => experimentalFeatures,
   useProject: () => ({
     id: 'test-project-id',
     name: 'Test Project',
@@ -88,6 +92,95 @@ describe('MiniHistory', () => {
       'http://localhost/projects/test-project-id/w/test-workflow-id';
     mockLocation.pathname = '/projects/test-project-id/w/test-workflow-id';
     mockLocationAssign.mockClear();
+  });
+
+  // ==========================================================================
+  // THE EXPERIMENTAL FLAG
+  // ==========================================================================
+
+  describe('what the experimental flag changes', () => {
+    afterEach(() => {
+      experimentalFeatures = true;
+    });
+
+    // The version tag sits on the runs, which only appear once a work order is
+    // expanded.
+    const renderExpanded = () => {
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={[mockMultiRunWorkOrder]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+        />
+      );
+
+      fireEvent.click(
+        screen.getByRole('button', { name: /Expand work order details/i })
+      );
+    };
+
+    test('names the release a run published against, with the flag on', () => {
+      renderExpanded();
+
+      expect(
+        screen.getAllByText(/^(v\d+|unpublished)$/).length
+      ).toBeGreaterThan(0);
+    });
+
+    test('names no version at all without the flag', () => {
+      // The tag numbers by the publish trail, which is the experimental
+      // numbering. Without the flag there is no publish trail to read, so
+      // showing "unpublished" beside every run would be a statement about a
+      // concept the user does not have.
+      experimentalFeatures = false;
+
+      renderExpanded();
+
+      expect(screen.queryAllByText(/^(v\d+|unpublished)$/)).toHaveLength(0);
+    });
+
+    test('offers the run its own version when the canvas shows another', async () => {
+      // The flag-off answer to a run of older content: the run is painted onto
+      // the document already open, and this says the shape on screen is not the
+      // shape that ran. The caller owns the switch, so this only has to offer.
+      const user = userEvent.setup();
+      const onGoToVersion = vi.fn();
+
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={mockHistoryList}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          versionMismatch={{ runVersion: 3, currentVersion: 7 }}
+          onGoToVersion={onGoToVersion}
+        />
+      );
+
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'This run took place on version 3.'
+      );
+
+      await user.click(
+        screen.getByRole('button', { name: /View as executed/i })
+      );
+      expect(onGoToVersion).toHaveBeenCalledTimes(1);
+    });
+
+    test('says nothing when the canvas shows what the run ran', () => {
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={mockHistoryList}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          versionMismatch={null}
+        />
+      );
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
   });
 
   // ==========================================================================

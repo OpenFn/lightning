@@ -122,6 +122,10 @@ function createWrapper(
     error: null,
     config: {},
     permissions: {},
+    // These tests are about the run views, which are the experimental
+    // experience. Without the flag a run is only ever selected on the document
+    // already open.
+    experimentalFeaturesEnabled: true,
     ...sessionStateOverride,
   };
   const historyState = historyStateOverride || {

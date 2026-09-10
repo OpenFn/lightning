@@ -32,7 +32,10 @@ import { Tooltip } from '../../../components/Tooltip';
 import { relativeLocale } from '../../../hooks';
 import { duration } from '../../../utils/duration';
 import truncateUid from '../../../utils/truncateUID';
-import { useProject } from '../../hooks/useSessionContext';
+import {
+  useExperimentalFeatures,
+  useProject,
+} from '../../hooks/useSessionContext';
 import { useWorkflowState } from '../../hooks/useWorkflow';
 import type { RunSummary, WorkOrder } from '../../types/history';
 import {
@@ -42,6 +45,8 @@ import {
 } from '../../utils/navigation';
 import { RunBadge } from '../common/RunBadge';
 import { ShortcutKeys } from '../ShortcutKeys';
+
+import { VersionMismatchBanner } from './VersionMismatchBanner';
 
 // Extended types with selection state for UI
 type RunWithSelection = RunSummary & { selected?: boolean };
@@ -92,13 +97,23 @@ const StatusIndicator: React.FC<{ state: string }> = ({ state }) => {
 // A run of content that was never published has no version to name it by. The
 // same word as the version chip, and deliberately not "Draft", which is the
 // lifecycle badge's word for a workflow that is not live.
+//
+// It names a release, so it belongs only to the experimental experience. It
+// reads the flag here rather than being threaded down through RunItem, which is
+// otherwise a pure component.
 const VersionTag: React.FC<{ versionNumber: number | null | undefined }> = ({
   versionNumber,
-}) => (
-  <span className="whitespace-nowrap font-medium text-gray-400">
-    {versionNumber == null ? 'unpublished' : `v${versionNumber}`}
-  </span>
-);
+}) => {
+  const experimentalFeatures = useExperimentalFeatures();
+
+  if (!experimentalFeatures) return null;
+
+  return (
+    <span className="whitespace-nowrap font-medium text-gray-400">
+      {versionNumber == null ? 'unpublished' : `v${versionNumber}`}
+    </span>
+  );
+};
 
 // Extracted RunItem component for displaying individual runs
 interface RunItemProps {
@@ -290,6 +305,23 @@ interface MiniHistoryProps {
   // New props for panel variant
   variant?: 'floating' | 'panel';
   onBack?: () => void;
+  /**
+   * Set when the selected run executed against content other than what is on
+   * the canvas, so the shape being looked at is not the shape that ran. Only
+   * ever set without experimental features: with the flag on, a run of older
+   * content opens that content read-only instead of being painted onto a
+   * document it never ran against, so there is nothing to warn about.
+   */
+  versionMismatch?: {
+    runVersion: number;
+    currentVersion: number;
+  } | null;
+  /**
+   * Switches to the version the run executed against. Owned by the caller,
+   * which is where the unsaved-changes prompt for that switch is rendered, so
+   * this panel stays presentational.
+   */
+  onGoToVersion?: () => void;
 }
 
 export default function MiniHistory({
@@ -304,6 +336,8 @@ export default function MiniHistory({
   onRetry,
   variant = 'floating',
   onBack,
+  versionMismatch,
+  onGoToVersion,
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState('');
   const now = new Date();
@@ -603,6 +637,24 @@ export default function MiniHistory({
           timelineList
         )}
       </div>
+
+      {/* Collapsed, there is no room for the sentence, only the offer. */}
+      {collapsed && versionMismatch && (
+        <VersionMismatchBanner
+          runVersion={versionMismatch.runVersion}
+          currentVersion={versionMismatch.currentVersion}
+          onGoToVersion={onGoToVersion ?? (() => undefined)}
+          compact={true}
+        />
+      )}
+
+      {!collapsed && versionMismatch && (
+        <VersionMismatchBanner
+          runVersion={versionMismatch.runVersion}
+          currentVersion={versionMismatch.currentVersion}
+          onGoToVersion={onGoToVersion ?? (() => undefined)}
+        />
+      )}
     </div>
   );
 }
