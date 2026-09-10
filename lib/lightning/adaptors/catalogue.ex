@@ -296,9 +296,9 @@ defmodule Lightning.Adaptors.Catalogue do
           order_by: [asc: v.inserted_at, asc: v.version],
           select: {a.name, v.version}
       )
-      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-
-    # TODO: 👆would it not be easier to do the group by in the query? That elem,elem group by isn't that easy to understand
+      |> Enum.group_by(fn {name, _version} -> name end, fn {_name, version} ->
+        version
+      end)
 
     Enum.map(adaptors, fn adaptor ->
       Map.put(adaptor, :versions, Map.get(versions_by_name, adaptor.name, []))
