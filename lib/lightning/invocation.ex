@@ -634,6 +634,7 @@ defmodule Lightning.Invocation do
     |> filter_by_wo_date_before(search_params.wo_date_before)
     |> filter_by_date_after(search_params.date_after)
     |> filter_by_date_before(search_params.date_before)
+    |> filter_by_error_signature(search_params)
     |> filter_by_body_or_log_or_id(
       search_params.search_fields,
       search_params.search_term
@@ -727,6 +728,114 @@ defmodule Lightning.Invocation do
     from([workorder: workorder] in query,
       where: workorder.last_activity <= ^date_before
     )
+  end
+
+  # The inverse of `Run.state_reasons/0`, for reading a run-level signature's
+  # `exit_reason` back into the state it came from. `"rejected"` is not a
+  # value in that map — it is `to_signature/2`'s own literal for a work order
+  # that never got a run — so it naturally misses here and falls through to
+  # `filter_by_error_signature/2`'s fail-closed branch, exactly like any
+  # other exit_reason no run can actually be in.
+  @reason_states Run.states_by_reason()
+
+  # A triage row's "View" button, scoped to exactly the work orders it
+  # counted. `error_signature_exit_reason` switches the filter on; a
+  # present `error_signature_job_id` reads as the step-level row, an
+  # absent one as the run-level row (no failing step) — safe because
+  # `steps.job_id` is `NOT NULL`.
+  #
+  # Carries `wo.state in failure_states()` itself: a *successful* work order
+  # can still hold a `fail` step in its latest run (an `on_job_failure`
+  # handler that ran fine), so without this a signature filter would match
+  # work orders the triage row never counted, and bulk retry would follow.
+  defp filter_by_error_signature(query, %SearchParams{
+         error_signature_exit_reason: nil
+       }),
+       do: query
+
+  defp filter_by_error_signature(query, %SearchParams{
+         error_signature_exit_reason: exit_reason,
+         error_signature_error_type: error_type,
+         error_signature_job_id: job_id
+       })
+       when is_binary(job_id) do
+    step_match =
+      from(s in failing_steps_of_latest_run(),
+        where: s.job_id == ^job_id and s.exit_reason == ^exit_reason,
+        where:
+          fragment(
+            "coalesce(nullif(?, ''), nullif(?, '')) IS NOT DISTINCT FROM ?",
+            s.error_type,
+            parent_as(:latest_run).error_type,
+            type(^error_type, :string)
+          )
+      )
+
+    from([workorder: wo] in query,
+      where: wo.state in ^WorkOrder.failure_states(),
+      where:
+        exists(
+          from(r in subquery(latest_run_for_workorder()),
+            as: :latest_run,
+            where: exists(subquery(step_match))
+          )
+        )
+    )
+  end
+
+  defp filter_by_error_signature(query, %SearchParams{
+         error_signature_exit_reason: exit_reason,
+         error_signature_error_type: error_type,
+         error_signature_job_id: nil
+       }) do
+    case Map.fetch(@reason_states, exit_reason) do
+      {:ok, state} ->
+        from([workorder: wo] in query,
+          where: wo.state in ^WorkOrder.failure_states(),
+          where:
+            exists(
+              from(r in subquery(latest_run_for_workorder()),
+                as: :latest_run,
+                where: r.state == ^state,
+                where:
+                  fragment(
+                    "nullif(?, '') IS NOT DISTINCT FROM ?",
+                    r.error_type,
+                    type(^error_type, :string)
+                  ),
+                where: not exists(subquery(failing_steps_of_latest_run()))
+              )
+            )
+        )
+
+      # An `exit_reason` no run can actually be in — fail closed rather than
+      # drop the filter, which would widen a bulk retry to every failure.
+      :error ->
+        from([workorder: wo] in query, where: false)
+    end
+  end
+
+  # The run that speaks for a work order: most recently finished first, ties
+  # broken by id. Correlated on the outer query's `:workorder` binding.
+  defp latest_run_for_workorder do
+    from(r in Run,
+      as: :run,
+      where: r.work_order_id == parent_as(:workorder).id
+    )
+    |> Query.order_by_run_recency()
+    |> limit(1)
+  end
+
+  # Every step of the `:latest_run` binding's run that did not succeed.
+  # Correlated on `:latest_run`, so it only makes sense nested inside a query
+  # that introduces that binding.
+  defp failing_steps_of_latest_run do
+    from(s in Step,
+      join: rs in RunStep,
+      on: rs.step_id == s.id,
+      where: rs.run_id == parent_as(:latest_run).id
+    )
+    |> Query.where_step_failed()
   end
 
   defp filter_by_body_or_log_or_id(query, _search_fields, nil), do: query

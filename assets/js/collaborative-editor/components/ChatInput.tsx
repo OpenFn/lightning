@@ -8,7 +8,8 @@ import { AIDisclaimerFooter } from './AIDisclaimerFooter';
 
 interface ChatInputProps {
   onSendMessage?:
-    ((content: string, options?: MessageOptions) => void) | undefined;
+    | ((content: string, options?: MessageOptions) => void)
+    | undefined;
   isLoading?: boolean | undefined;
   /** Disabled state (separate from loading, e.g., due to limits) */
   isDisabled?: boolean | undefined;

@@ -38,6 +38,34 @@ defmodule Lightning.WorkOrder do
   """
   def active_states, do: @active_states
 
+  @doc """
+  Returns the list of final states for a work order.
+
+  Every state a work order can settle in: `Run.final_states/0` plus
+  `:rejected`, which is what a work order whose run was never created settles
+  in.
+  """
+  def final_states, do: states() -- active_states()
+
+  @failure_states (@state_values -- @active_states) -- [:success, :cancelled]
+
+  @doc """
+  Returns the list of failure states for a work order.
+
+  These are all final states except `:success` and `:cancelled` — someone
+  stopped a cancelled work order on purpose, so it is not a failure.
+  """
+  def failure_states, do: @failure_states
+
+  @doc """
+  Buckets a work order state into `:success`, `:cancelled`, `:pending` or
+  `:failed`.
+  """
+  def outcome(:success), do: :success
+  def outcome(:cancelled), do: :cancelled
+  def outcome(state) when state in @active_states, do: :pending
+  def outcome(state) when state in @failure_states, do: :failed
+
   @derive {Jason.Encoder,
            only: [
              :id,

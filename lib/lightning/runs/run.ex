@@ -72,12 +72,37 @@ defmodule Lightning.Run do
   """
   def active_states, do: @active_states
 
-  @doc """
-  Returns the list of failure states for a run.
+  # The worker's own vocabulary for a finished run. `Handlers.CompleteRun` reads
+  # this inbound to turn a reason into a state; `Workflows.Stats` reads it back
+  # out to name a run-level failure in an error signature. One table, so the two
+  # directions cannot drift. `:lost` is Lightning's own word — a worker never
+  # reports it, since a lost run is one that stopped reporting.
+  @state_reasons %{
+    success: "ok",
+    failed: "fail",
+    crashed: "crash",
+    cancelled: "cancel",
+    killed: "kill",
+    exception: "exception",
+    lost: "lost"
+  }
 
-  These are all final states except :success.
+  @doc """
+  Returns the worker reason each final state came from, keyed by state.
   """
-  def failure_states, do: final_states() -- [:success]
+  def state_reasons, do: @state_reasons
+
+  @states_by_reason Map.new(@state_reasons, fn {state, reason} ->
+                      {reason, state}
+                    end)
+
+  @doc """
+  Returns the final state each worker reason maps to, keyed by reason.
+
+  The inverse of `state_reasons/0`, built from the same table so the two
+  directions cannot drift.
+  """
+  def states_by_reason, do: @states_by_reason
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

@@ -150,4 +150,17 @@ defmodule Lightning.Invocation.RunTest do
              "run should still be assigned to the job"
     end
   end
+
+  describe "state_reasons/0" do
+    # The whole point of the shared table: `Handlers.CompleteRun` reads it
+    # inbound and `Workflows.Stats` reads it back out, so a state gaining a
+    # reason on one side but not the other has to fail here.
+    test "names every final state exactly once" do
+      assert Map.keys(Run.state_reasons()) |> Enum.sort() ==
+               Enum.sort(Run.final_states())
+
+      reasons = Map.values(Run.state_reasons())
+      assert Enum.uniq(reasons) == reasons
+    end
+  end
 end

@@ -141,14 +141,14 @@ defmodule Lightning.Workflows do
   @doc """
   Gets a workflow by id, scoped to the given project.
 
-  Returns `nil` when the id is malformed, missing, or belongs to another
-  project, so it can't be used to read or mutate a workflow across projects.
+  Returns `nil` when the id is malformed, missing, belongs to another project,
+  or is marked for deletion, so it can't be used to read or mutate a workflow
+  across projects or one on its way out.
   """
   def get_workflow_for_project(%Project{} = project, id, opts \\ []) do
     if Lightning.Validators.valid_uuid?(id) do
-      id
-      |> get_workflow_query(opts)
-      |> where([w], w.project_id == ^project.id)
+      from(w in Query.workflows_for(project), where: w.id == ^id)
+      |> preload(^Keyword.get(opts, :include, []))
       |> Repo.one()
     end
   end
@@ -1218,14 +1218,14 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-    Checks if a workflow exists in the given project
+  Checks if a workflow exists in the given project
   """
   def workflow_exists_in_project?(project_id, workflow_id) do
-    query =
-      from q in Query.workflows_for(%Project{id: project_id}),
-        where: q.id == ^workflow_id
-
-    Repo.exists?(query)
+    Lightning.Validators.valid_uuid?(workflow_id) &&
+      from(w in Query.workflows_for(%Project{id: project_id}),
+        where: w.id == ^workflow_id
+      )
+      |> Repo.exists?()
   end
 
   @doc """

@@ -41,6 +41,27 @@ defmodule Lightning.Invocation.Query do
   end
 
   @doc """
+  Appends `exit_reason != "success"` to a query of `Step`.
+
+  A step that never finished carries a `nil` `exit_reason`, and `NULL !=
+  'success'` is false in SQL, so it is excluded here too: a step still in
+  flight is not yet a failure.
+  """
+  @spec where_step_failed(Ecto.Queryable.t()) :: Ecto.Queryable.t()
+  def where_step_failed(query) do
+    from(s in query, where: s.exit_reason != "success")
+  end
+
+  # Shared so the health page's bulk `DISTINCT ON` and the history filter's
+  # correlated per-work-order lookup can't drift apart on what "latest" means.
+  @spec order_by_run_recency(Ecto.Queryable.t()) :: Ecto.Queryable.t()
+  def order_by_run_recency(query) do
+    from([run: r] in query,
+      order_by: [desc_nulls_last: r.finished_at, desc: r.id]
+    )
+  end
+
+  @doc """
   Runs for a specific project, or all runs available to the requesting user
   """
   @spec runs_for(User.t()) :: Ecto.Queryable.t()
