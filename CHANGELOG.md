@@ -15,6 +15,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [2.19.0-pre] - 2026-09-10
+
 ### Changed
 
 - "A failed work order" now means the same thing on the workflows list, its
