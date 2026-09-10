@@ -116,6 +116,10 @@ defmodule LightningWeb.Router do
     get "/projects/:project_id/workflows/:workflow_id/health/failures",
         API.WorkflowHealthController,
         :error_signatures
+
+    get "/projects/:project_id/workflows/:workflow_id/health/runs",
+        API.WorkflowHealthController,
+        :runs
   end
 
   ## Collections

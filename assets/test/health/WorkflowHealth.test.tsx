@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { HealthContent } from '#/health/WorkflowHealth';
 
+import { bucket } from './charts/counts';
+
 const outcomes = {
   window: { from: '2026-08-01T10:00:00Z', to: '2026-08-31T10:00:00Z' },
   counts: {
@@ -32,7 +34,17 @@ const errorSignatures = {
   ],
 };
 
-const both = { outcomes, failures: errorSignatures };
+// Two buckets is the least the chart can measure its own width from. What the
+// bars look like is `VolumeBars`'s own test; the page only hands them through.
+const runVolume = {
+  window: outcomes.window,
+  buckets: [
+    bucket('2026-08-30T00:00:00Z', { success: 40, failed: 3 }),
+    bucket('2026-08-31T00:00:00Z', { success: 60, failed: 1 }),
+  ],
+};
+
+const both = { outcomes, failures: errorSignatures, runs: runVolume };
 
 const ERROR = 'Could not load workflow stats. Refresh to try again.';
 
@@ -99,7 +111,7 @@ describe('WorkflowHealth', () => {
   test('requests each slice from the project-scoped health path', async () => {
     const { fetchMock } = mount(both);
 
-    await screen.findByText('Success');
+    await screen.findAllByText('Success');
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/projects/proj-1/workflows/wf-1/health/outcomes?days=30',
@@ -107,6 +119,10 @@ describe('WorkflowHealth', () => {
     );
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/projects/proj-1/workflows/wf-1/health/failures?days=30',
+      expect.objectContaining({ credentials: 'same-origin' })
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/proj-1/workflows/wf-1/health/runs?days=30',
       expect.objectContaining({ credentials: 'same-origin' })
     );
   });
@@ -131,8 +147,8 @@ describe('WorkflowHealth', () => {
 
     const { fetchMock } = mount(responses);
 
-    await screen.findByText('Last 30 days · 1,287 work orders');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await screen.findByText('1,287 work orders');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
 
     responses.outcomes = {
       ...outcomes,
@@ -142,11 +158,9 @@ describe('WorkflowHealth', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
 
-    expect(
-      await screen.findByText('Last 30 days · 2,287 work orders')
-    ).toBeVisible();
+    expect(await screen.findByText('2,287 work orders')).toBeVisible();
 
     // The interval still fires; the bump is gated on visibility.
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
@@ -155,7 +169,7 @@ describe('WorkflowHealth', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   test('reads again on returning to the tab, without waiting for the tick', async () => {
@@ -163,8 +177,8 @@ describe('WorkflowHealth', () => {
 
     const { fetchMock } = mount({ ...both });
 
-    await screen.findByText('Last 30 days · 1,287 work orders');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await screen.findByText('1,287 work orders');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
 
     const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
 
@@ -181,7 +195,7 @@ describe('WorkflowHealth', () => {
     visibility(true);
     visibility(false);
 
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   test('lets a read slower than the interval finish', async () => {
@@ -213,9 +227,7 @@ describe('WorkflowHealth', () => {
 
     land(outcomes);
 
-    expect(
-      await screen.findByText('Last 30 days · 1,287 work orders')
-    ).toBeVisible();
+    expect(await screen.findByText('1,287 work orders')).toBeVisible();
 
     // And the gap that follows is a whole interval measured from the answer.
     // On a grid measured from the request, a read this slow would be due again
@@ -238,7 +250,7 @@ describe('WorkflowHealth', () => {
 
     mount(responses);
 
-    await screen.findByText('Last 30 days · 1,287 work orders');
+    await screen.findByText('1,287 work orders');
 
     responses['outcomes'] = 502;
     responses['failures'] = 502;
@@ -248,8 +260,8 @@ describe('WorkflowHealth', () => {
     });
 
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.getByText('Last 30 days · 1,287 work orders')).toBeVisible();
-    expect(screen.getByText('Success')).toBeVisible();
+    expect(screen.getByText('1,287 work orders')).toBeVisible();
+    expect(screen.getAllByText('Success')[0]).toBeVisible();
 
     // And recovers on the tick after, with no reload.
     responses['outcomes'] = {
@@ -261,24 +273,22 @@ describe('WorkflowHealth', () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
 
-    expect(
-      await screen.findByText('Last 30 days · 2,287 work orders')
-    ).toBeVisible();
+    expect(await screen.findByText('2,287 work orders')).toBeVisible();
   });
 
-  test('renders the header, deriving the day count from the window', async () => {
+  test('names the workflow and totals its work orders', async () => {
     mount(both);
 
     expect(
       await screen.findByRole('heading', { name: 'Sync patients' })
     ).toBeInTheDocument();
-    expect(screen.getByText('Last 30 days · 1,287 work orders')).toBeVisible();
+    expect(screen.getByText('1,287 work orders')).toBeVisible();
   });
 
-  test('refetches both slices at the selected range', async () => {
+  test('refetches every slice at the selected range', async () => {
     const { fetchMock } = mount(both);
 
-    await screen.findByText('Success');
+    await screen.findAllByText('Success');
 
     await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
 
@@ -290,18 +300,24 @@ describe('WorkflowHealth', () => {
       '/api/projects/proj-1/workflows/wf-1/health/failures?days=7',
       expect.objectContaining({ credentials: 'same-origin' })
     );
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/proj-1/workflows/wf-1/health/runs?days=7',
+      expect.objectContaining({ credentials: 'same-origin' })
+    );
   });
 
-  test('calls a one-day window "Last 24 hours", not "Last 1 day"', async () => {
-    const dayWide = {
-      ...outcomes,
+  test('calls a one-day window "24 hours", not "1 day"', async () => {
+    const quietDay = {
       window: { from: '2026-08-30T10:00:00Z', to: '2026-08-31T10:00:00Z' },
+      counts: Object.fromEntries(
+        Object.keys(outcomes.counts).map(state => [state, 0])
+      ),
     };
 
-    mount({ outcomes: dayWide, failures: errorSignatures });
+    mount({ outcomes: quietDay, failures: errorSignatures });
 
     expect(
-      await screen.findByText('Last 24 hours · 1,287 work orders')
+      await screen.findByText('No finished work orders in the last 24 hours')
     ).toBeVisible();
   });
 
@@ -310,9 +326,9 @@ describe('WorkflowHealth', () => {
 
     // 98 + 24 + 12 + 7 — one response feeds both donuts, so the two panels can
     // only disagree if this fold drifts from the breakdown's own total.
-    expect(await screen.findByText('Failed')).toBeVisible();
+    expect((await screen.findAllByText('Failed'))[0]).toBeVisible();
     expect(screen.getByText('141')).toBeVisible();
-    expect(screen.getByText('Success')).toBeVisible();
+    expect(screen.getAllByText('Success')[0]).toBeVisible();
   });
 
   test('breaks the same failures down by work order state', async () => {
@@ -340,39 +356,64 @@ describe('WorkflowHealth', () => {
     ).toBeVisible();
   });
 
-  test('reports a refused request without echoing the server', async () => {
-    mount({ outcomes: 404, failures: 404 });
+  // The rows count a work order once per failed branch, so they can sum past
+  // the failure total the donut draws. Say so only when it happened.
+  test('footnotes the triage rows only when they outrun the failures', async () => {
+    const { unmount } = mount(both);
 
-    // Both slices refused takes every panel with it.
-    expect(await screen.findAllByText(ERROR)).toHaveLength(3);
+    expect(
+      await screen.findByRole('heading', { name: 'Triage' })
+    ).toBeVisible();
+    expect(screen.queryByText(/more than one branch/)).toBeNull();
+    unmount();
+
+    const doubled = {
+      ...errorSignatures,
+      signatures: [{ ...errorSignatures.signatures[0], count: 200 }],
+    };
+
+    mount({ ...both, failures: doubled });
+
+    expect(await screen.findByText(/more than one branch/)).toBeVisible();
+  });
+
+  test('reports a refused request without echoing the server', async () => {
+    mount({ outcomes: 404, failures: 404, runs: 404 });
+
+    // Every slice refused takes every panel with it.
+    expect(await screen.findAllByText(ERROR)).toHaveLength(4);
     expect(screen.queryByText(/404|Not Found/)).toBeNull();
   });
 
   test('degrades both donuts when the outcomes request fails', async () => {
-    mount({ outcomes: 500, failures: errorSignatures });
+    mount({ ...both, outcomes: 500 });
 
-    // Both donuts read the same response, so both degrade.
+    // Both donuts read the same response, so both degrade — and only those
+    // two: the volume chart asked its own question and still has an answer.
     expect(await screen.findAllByText(ERROR)).toHaveLength(2);
   });
 
   // The whole point of requesting each slice separately: one failing query
   // must not blank the panels that answered.
   test('keeps the donuts when only the triage query fails', async () => {
-    mount({ outcomes, failures: 500 });
+    mount({ ...both, failures: 500 });
 
     expect(await screen.findByText(ERROR)).toBeVisible();
-    expect(screen.getByText('Success')).toBeVisible();
+    expect(screen.getAllByText('Success')[0]).toBeVisible();
     expect(screen.getByText('69.5%')).toBeVisible();
   });
 
   test('keeps the page around a failed chart', async () => {
-    mount({ outcomes: 500, failures: 500 });
+    mount({ outcomes: 500, failures: 500, runs: 500 });
 
     await screen.findAllByText(ERROR);
     expect(
       screen.getByRole('heading', { name: 'Sync patients' })
     ).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Outcomes' })).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'Runs over time' })
+    ).toBeVisible();
     expect(
       screen.getByRole('heading', { name: 'Failure breakdown' })
     ).toBeVisible();
@@ -382,9 +423,9 @@ describe('WorkflowHealth', () => {
   test('aborts in-flight requests on unmount', async () => {
     const { unmount, signals } = mount(both);
 
-    await screen.findByText('Success');
+    await screen.findAllByText('Success');
 
-    expect(signals).toHaveLength(2);
+    expect(signals).toHaveLength(3);
     expect(signals.every(signal => signal.aborted)).toBe(false);
 
     unmount();
@@ -400,22 +441,25 @@ describe('WorkflowHealth', () => {
 
     mount(responses);
 
-    await screen.findByText('Success');
+    await screen.findAllByText('Success');
 
     // A body that never resolves: the range request stays in flight.
     responses['outcomes'] = new Promise(() => {});
     responses['failures'] = new Promise(() => {});
+    responses['runs'] = new Promise(() => {});
 
     await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
 
-    expect(screen.queryByText('Success')).toBeNull();
-    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
+    expect(screen.queryAllByText('Success')).toHaveLength(0);
+    // Each panel holds a placeholder, but only for a reader who lands inside
+    // it. jsdom does no layout, so the reserved height needs a browser.
+    expect(screen.getAllByText('Loading…')).toHaveLength(4);
   });
 
   // Why the panels drop together rather than each keeping its own last answer:
   // `outcomes` is a group-by and `failures` a three-way join, so the cheap one
-  // lands first. Keeping stale data would put the new window in the subtitle
-  // while the Triage card below still named the old one.
+  // lands first. Keeping stale data would leave the Triage card naming the old
+  // window under the new window's numbers.
   test('never names two windows at once during a range switch', async () => {
     const quiet = { window: outcomes.window, signatures: [] };
     const responses: Record<string, unknown> = { outcomes, failures: quiet };
@@ -435,7 +479,7 @@ describe('WorkflowHealth', () => {
 
     await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
 
-    await screen.findByText('Last 7 days · 1,287 work orders');
+    await screen.findByText('1,287 work orders');
 
     expect(screen.queryByText('No failures in the last 30 days')).toBeNull();
   });
@@ -448,25 +492,20 @@ describe('WorkflowHealth', () => {
 
     mount(responses);
 
-    await screen.findByText('Success');
+    await screen.findAllByText('Success');
 
     responses['outcomes'] = 500;
+    responses['runs'] = 500;
 
     await userEvent.click(screen.getByRole('radio', { name: 'Last 7 days' }));
 
-    // An `alert`, so the failure is read out where the subtitle falls silent.
+    // An `alert`, so the failure is read out at once.
     const alerts = await screen.findAllByRole('alert');
-    expect(alerts.map(alert => alert.textContent)).toEqual([ERROR, ERROR]);
-    expect(screen.queryByText('Success')).toBeNull();
-  });
-
-  // One announcement for the page, from the subtitle; the cards say it too,
-  // but only to a reader who lands inside them. jsdom does no layout, so the
-  // reserved height itself can only be checked in a browser.
-  test('announces loading once, not once per panel', () => {
-    mount(both);
-
-    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
-    expect(screen.getAllByText('Loading…')).toHaveLength(4);
+    expect(alerts.map(alert => alert.textContent)).toEqual([
+      ERROR,
+      ERROR,
+      ERROR,
+    ]);
+    expect(screen.queryAllByText('Success')).toHaveLength(0);
   });
 });

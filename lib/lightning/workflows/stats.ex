@@ -41,13 +41,8 @@ defmodule Lightning.Workflows.Stats do
   def outcomes(%Workflow{id: workflow_id}, days_back \\ @default_days_back)
       when days_back > 0 do
     cached({:outcomes, workflow_id, days_back}, fn ->
-      to = DateTime.utc_now()
-      since = DateTime.add(to, -days_back, :day)
-
-      %{
-        window: %{from: since, to: to},
-        counts: count_work_orders(workflow_id, since)
-      }
+      window = window(days_back)
+      %{window: window, counts: count_work_orders(workflow_id, window.from)}
     end)
   end
 
@@ -84,14 +79,135 @@ defmodule Lightning.Workflows.Stats do
       )
       when days_back > 0 do
     cached({:failures, workflow_id, days_back}, fn ->
-      to = DateTime.utc_now()
-      since = DateTime.add(to, -days_back, :day)
+      window = window(days_back)
 
       %{
-        window: %{from: since, to: to},
-        signatures: group_by_signature(workflow_id, since)
+        window: window,
+        signatures: group_by_signature(workflow_id, window.from)
       }
     end)
+  end
+
+  # How the runs chart slices each window: `{bucket_seconds, bucket_count}`.
+  # Every width divides a day evenly, so a window whose `from` sits on the grid
+  # keeps every bucket boundary on the clock — 2-hourly, AM/PM, midnight.
+  #
+  # One bucket more than the width divides into: `now` sits mid-bucket, so a
+  # grid of exactly `days_back / width` bars would start *after*
+  # `now - days_back` and leave the oldest hours of the window undrawn while
+  # the donuts beside it counted them. The oldest bar instead reaches back
+  # past `from`, and `window` reports the range actually covered.
+  @buckets %{1 => {7_200, 13}, 7 => {43_200, 15}, 30 => {86_400, 31}}
+
+  @zero_run_counts Map.new(Run.final_states(), &{&1, 0})
+
+  @typedoc "One bar of the runs chart: when its slot starts, and its counts."
+  @type run_bucket :: %{
+          :at => DateTime.t(),
+          optional(atom()) => non_neg_integer()
+        }
+
+  @doc """
+  Final run counts per state, bucketed across the last `days_back` days:
+  2-hourly over a day, AM/PM over a week, daily over a month.
+
+  Bucketed here rather than in the browser, because the alternative is shipping
+  every run in the window — six figures of rows on a busy workflow, cached
+  whole and JSON-encoded — to draw thirty bars.
+
+  Buckets are counted on `inserted_at` — when the attempt started, not when it
+  settled — so a run stays in the bar the traffic arrived in. Every bucket and
+  every state is present, zero-filled: the chart draws a flat window without
+  reasoning about which bars are missing.
+
+  The last bucket is the one `now` falls in, so it is still filling; the first
+  reaches back past `now - days_back`, so nothing in the window goes undrawn.
+  `window` is the range the bars actually cover.
+
+  A bucket is `at` alongside one key per state, flat rather than nested, which
+  is the row shape Recharts takes as `data` — the list goes to the chart
+  untouched, and each `Bar` names the state it draws.
+  """
+  @spec runs(Workflow.t(), 1 | 7 | 30) :: %{
+          window: %{from: DateTime.t(), to: DateTime.t()},
+          buckets: [run_bucket()]
+        }
+  def runs(%Workflow{id: workflow_id}, days_back \\ @default_days_back)
+      when is_map_key(@buckets, days_back) do
+    cached({:runs, workflow_id, days_back}, fn ->
+      {seconds, count} = Map.fetch!(@buckets, days_back)
+      window = bucket_window(seconds, count)
+
+      %{
+        window: window,
+        buckets: bucket_runs(workflow_id, window.from, seconds, count)
+      }
+    end)
+  end
+
+  # Anchored on the bucket `now` is in, not on `now` itself: a window that ends
+  # mid-bucket would put every boundary at whatever minute the request landed
+  # on, and the labels the chart draws — "2am", "PM", a date — would be lies.
+  defp bucket_window(seconds, count) do
+    to = DateTime.utc_now()
+    current = DateTime.from_unix!(div(DateTime.to_unix(to), seconds) * seconds)
+
+    %{from: DateTime.add(current, -(count - 1) * seconds, :second), to: to}
+  end
+
+  defp bucket_runs(workflow_id, from, seconds, count) do
+    tallies = tally_runs(workflow_id, from, seconds)
+
+    Enum.map(0..(count - 1), fn index ->
+      tallies
+      |> Map.get(index, [])
+      |> Enum.into(@zero_run_counts)
+      |> Map.put(:at, DateTime.add(from, index * seconds, :second))
+    end)
+  end
+
+  # `wo.last_activity` is redundant against the run filter — a work order is
+  # touched every time one of its runs is created or settles, so its activity
+  # is never older than its newest run. It is here for the planner: it lets the
+  # `work_orders(workflow_id, last_activity)` index cut the work orders down to
+  # the window before the nested loop into `runs(work_order_id, inserted_at)`,
+  # instead of probing every work order the workflow ever had.
+  #
+  # The grid is aligned, so integer division by the bucket width is the whole
+  # of the bucketing — no `date_trunc` special case per width. `floor` before
+  # the cast because `extract` yields `numeric` and `numeric::bigint` rounds:
+  # without it a run at 01:59:59.7 is counted in the 02:00 bar.
+  defp tally_runs(workflow_id, from, seconds) do
+    from(r in Run,
+      join: wo in WorkOrder,
+      on: wo.id == r.work_order_id,
+      where:
+        wo.workflow_id == ^workflow_id and wo.last_activity >= ^from and
+          r.inserted_at >= ^from and r.state in ^Run.final_states(),
+      group_by: [selected_as(:bucket), r.state],
+      select: {
+        selected_as(
+          fragment(
+            "div(floor(extract(epoch from ? - ?))::bigint, ?)::int",
+            r.inserted_at,
+            type(^from, :utc_datetime_usec),
+            type(^seconds, :integer)
+          ),
+          :bucket
+        ),
+        r.state,
+        count(r.id)
+      }
+    )
+    |> Repo.all()
+    |> Enum.group_by(fn {bucket, _, _} -> bucket end, fn {_, state, count} ->
+      {state, count}
+    end)
+  end
+
+  defp window(days_back) do
+    to = DateTime.utc_now()
+    %{from: DateTime.add(to, -days_back, :day), to: to}
   end
 
   # Cached whole, `window` included — that is what stops the window rolling per

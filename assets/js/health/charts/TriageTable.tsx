@@ -1,5 +1,7 @@
 import type { ErrorSignature } from '../types';
 
+import { EMPTY } from './Donut';
+
 /**
  * Failed work orders grouped by error signature, heaviest first. Each row
  * links to the history page filtered to the work orders it counts, where the
@@ -76,7 +78,7 @@ export const TriageTable = ({
   from,
 }: TriageTableProps) => {
   if (signatures.length === 0) {
-    return <p className="text-sm text-gray-500">{emptyMessage}</p>;
+    return <p className={EMPTY}>{emptyMessage}</p>;
   }
 
   return (
@@ -95,7 +97,7 @@ export const TriageTable = ({
               Work orders
             </th>
             <th scope="col" className="py-2 font-medium">
-              Signature
+              Failure type
             </th>
             <th scope="col" className="w-24 py-2 pl-4 font-medium">
               <span className="sr-only">Actions</span>
@@ -154,7 +156,7 @@ const ViewButton = ({ href }: { href: string }) => (
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="inline-flex items-center gap-x-1 whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100"
+    className="inline-flex items-center gap-x-1 whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
   >
     View
     <span className="hero-arrow-right-micro h-3 w-3" />
@@ -177,9 +179,14 @@ const historyUrl = (
   from: string,
   signature: ErrorSignature
 ) => {
+  // History only applies its own defaults to a visit that names no filters at
+  // all, and this link names several. Without `log`, arriving here drops the
+  // one search field a normal history visit starts with, and the first search
+  // term typed into the box matches nothing with every toggle visibly off.
   const params = new URLSearchParams({
     'filters[workflow_id]': workflowId,
     'filters[date_after]': from,
+    'filters[log]': 'true',
   });
 
   if (signature.exit_reason === 'rejected') {

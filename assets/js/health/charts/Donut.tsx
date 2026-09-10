@@ -7,7 +7,7 @@ import {
   Tooltip,
 } from 'recharts';
 
-import { cn } from '#/utils/cn';
+import { ChartTooltip } from './ChartTooltip';
 
 /**
  * A part-to-whole donut with the total in the middle and an always-on legend.
@@ -35,22 +35,17 @@ interface DonutProps {
 // switch. Only the legend below it follows the data.
 export const FRAME = 'h-55';
 
+// An empty panel fills the card and centres its one line in it.
+export const EMPTY =
+  'flex min-h-55 flex-1 items-center justify-center text-center text-sm text-gray-500';
+
 export const Donut = ({ slices, emptyMessage }: DonutProps) => {
   const total = slices.reduce((sum, { value }) => sum + value, 0);
 
   // A pie of zeroes renders as an empty box in Recharts, which reads as
   // broken rather than empty.
   if (total === 0) {
-    return (
-      <p
-        className={cn(
-          FRAME,
-          'flex items-center justify-center text-sm text-gray-500'
-        )}
-      >
-        {emptyMessage}
-      </p>
-    );
+    return <p className={EMPTY}>{emptyMessage}</p>;
   }
 
   const share = (value: number) => `${((value / total) * 100).toFixed(1)}%`;
@@ -60,11 +55,18 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
       <div className={FRAME} aria-hidden="true">
         <ResponsiveContainer width="100%" height={220}>
           <PieChart accessibilityLayer={false}>
+            {/* Recharts transitions the panel's transform, so it slides
+                diagonally across the plot as the pointer moves between
+                slices. */}
             <Tooltip
-              formatter={(value, name) => [
-                `${Number(value).toLocaleString()} (${share(Number(value))})`,
-                name,
-              ]}
+              isAnimationActive={false}
+              content={
+                <ChartTooltip
+                  formatValue={value =>
+                    `${value.toLocaleString()} (${share(value)})`
+                  }
+                />
+              }
             />
             {/* `accessibilityLayer` only governs the svg; the pie's own root
                 group is a tab stop by default (`rootTabIndex` 0), and

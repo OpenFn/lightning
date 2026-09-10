@@ -3,6 +3,7 @@ defmodule Lightning.Workflows.StatsTest do
 
   import Lightning.Factories
 
+  alias Lightning.Run
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Stats
   alias Lightning.Workflows.Workflow
@@ -681,6 +682,116 @@ defmodule Lightning.Workflows.StatsTest do
         jobs ->
           Enum.take(jobs, 2)
       end
+    end
+  end
+
+  describe "runs/2" do
+    # A run whose `inserted_at` we choose, on a work order active at the same
+    # moment — the shape the window needs and `insert_run/4` can't give.
+    defp run_at(workflow, trigger, state, at) do
+      # A work order has no `:available`, so an in-flight run hangs off a
+      # running one.
+      wo_state = if state in WorkOrder.final_states(), do: state, else: :running
+
+      insert(:run,
+        work_order:
+          work_order(workflow, trigger, state: wo_state, last_activity: at),
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: state,
+        inserted_at: at
+      )
+    end
+
+    # Written out rather than a fixed index, because the grid moves with the
+    # clock: at 09:59 the last 2-hourly bucket is 08:00, at 10:01 it is 10:00.
+    defp bucket_of(%{window: %{from: from}, buckets: [a, b | _]}, at) do
+      DateTime.diff(at, from, :second)
+      |> div(DateTime.diff(b.at, a.at, :second))
+    end
+
+    test "counts each state into the bucket its run started in", ctx do
+      %{workflow: workflow, trigger: trigger} = ctx
+
+      older = DateTime.add(DateTime.utc_now(), -5, :hour)
+      newer = DateTime.add(DateTime.utc_now(), -90, :minute)
+
+      # A hair inside a bucket, not in the next one: `extract(epoch ...)` is
+      # `numeric` and casting it rounds, so the query has to floor first.
+      edge =
+        DateTime.utc_now()
+        |> DateTime.to_unix()
+        |> div(7_200)
+        |> Kernel.*(7_200)
+        |> DateTime.from_unix!()
+        |> DateTime.add(-4, :hour)
+        |> DateTime.add(-100, :millisecond)
+
+      run_at(workflow, trigger, :failed, newer)
+      run_at(workflow, trigger, :success, older)
+      run_at(workflow, trigger, :success, older)
+      run_at(workflow, trigger, :crashed, edge)
+
+      assert %{buckets: buckets} = result = Stats.runs(workflow, 1)
+
+      assert %{success: 2, failed: 0} =
+               Enum.at(buckets, bucket_of(result, older))
+
+      assert %{success: 0, failed: 1} =
+               Enum.at(buckets, bucket_of(result, newer))
+
+      assert %{crashed: 1} = Enum.at(buckets, bucket_of(result, edge))
+    end
+
+    # Boundaries on the clock, so the chart can label a bar "2am" or "Tuesday"
+    # and be telling the truth. And a bar chart with holes in it is a different
+    # chart, so every bucket carries every final state, zero-filled.
+    test "cuts each window into clock-aligned, zero-filled buckets", ctx do
+      %{workflow: workflow} = ctx
+
+      zeroed = Map.new(Run.final_states(), &{&1, 0})
+
+      for {days, seconds, count} <- [
+            {1, 7_200, 13},
+            {7, 43_200, 15},
+            {30, 86_400, 31}
+          ] do
+        assert %{buckets: buckets, window: window} = Stats.runs(workflow, days)
+
+        assert length(buckets) == count
+        assert rem(DateTime.to_unix(window.from), seconds) == 0
+
+        assert DateTime.compare(
+                 window.from,
+                 DateTime.add(window.to, -days, :day)
+               ) != :gt
+
+        assert DateTime.diff(Enum.at(buckets, 1).at, hd(buckets).at) == seconds
+
+        for bucket <- buckets, do: assert(Map.delete(bucket, :at) == zeroed)
+
+        # The window ends inside the last bucket, which is still filling.
+        last = List.last(buckets).at
+        assert DateTime.compare(last, window.to) == :lt
+        assert DateTime.diff(window.to, last, :second) < seconds
+      end
+    end
+
+    test "skips runs outside the window, in flight, or on another workflow",
+         ctx do
+      %{workflow: workflow, trigger: trigger} = ctx
+
+      run_at(workflow, trigger, :success, days_ago(2))
+      run_at(workflow, trigger, :available, DateTime.utc_now())
+
+      other = insert(:simple_workflow)
+      run_at(other, hd(other.triggers), :success, DateTime.utc_now())
+
+      assert %{buckets: buckets} = Stats.runs(workflow, 1)
+
+      assert Enum.sum_by(buckets, fn bucket ->
+               bucket |> Map.delete(:at) |> Map.values() |> Enum.sum()
+             end) == 0
     end
   end
 end
