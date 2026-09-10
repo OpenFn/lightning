@@ -66,6 +66,16 @@ describe('readPinnedView', () => {
     });
   });
 
+  test('carries the pinned number whichever numbering set it', () => {
+    // For callers that only need to notice a switch, not resolve the number.
+    // Reading one scheme means missing every switch made in the other, which is
+    // how the AI assistant kept a stale panel open across a `?v=` switch.
+    expect(readPinnedView({ [RELEASE_PARAM]: '3' }).version).toBe('3');
+    expect(readPinnedView({ [SNAPSHOT_PARAM]: '7' }).version).toBe('7');
+    expect(readPinnedView({ [AS_RUN_PARAM]: 'run-1' }).version).toBe(null);
+    expect(readPinnedView({}).version).toBe(null);
+  });
+
   test('the live workflow is nothing pinned at all', () => {
     expect(readPinnedView({})).toMatchObject({
       release: null,

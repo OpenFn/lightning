@@ -142,6 +142,9 @@ function createWrapper(
       workOrder('wo-old-b', [run('run-old-b', OLD_SNAPSHOT)]),
       workOrder('wo-live', [run('run-live', LIVE_SNAPSHOT)]),
       workOrder('wo-unknown', [run('run-unknown', null)]),
+      workOrder('wo-current', [
+        { ...run('run-current', LIVE_SNAPSHOT), version: 3 },
+      ]),
     ],
     loading: false,
     error: null,
@@ -301,11 +304,11 @@ describe('selecting a run', () => {
     });
   });
 
-  test('selects a run on the open document without experimental features', async () => {
-    // Without the flag there is no as-executed view to move to, so a run is
-    // selected where the user already is and the version-mismatch banner says
-    // the shape on screen is not the shape that ran. This is the run of older
-    // content, the case the flag-on path sends to its own snapshot.
+  test("pins the run's own snapshot without experimental features", async () => {
+    // The editor's existing behaviour: the run executed a different version, so
+    // the canvas switches to that version, read-only. `?v=` numbers by
+    // lock_version, which is what the run carries. No as-executed view is
+    // involved; that is the flag-on answer.
     const user = userEvent.setup();
     render(<CollaborativeWorkflowDiagram />, {
       wrapper: createWrapper(false),
@@ -314,11 +317,28 @@ describe('selecting a run', () => {
     await clickRun(user, 'wo-old-a');
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      v: '1',
       run: 'run-old-a',
     });
     expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith(
       expect.objectContaining({ as_run: 'run-old-a' })
     );
+  });
+
+  test('clears the pin for a run of the current version, without the flag', async () => {
+    // The other half of main's rule, and the reason it exists: a run of the
+    // current version must not leave the canvas pinned and read-only.
+    const user = userEvent.setup();
+    urlState.setParams({ v: '1' });
+
+    render(<CollaborativeWorkflowDiagram />, { wrapper: createWrapper(false) });
+
+    await clickRun(user, 'wo-current');
+
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      v: null,
+      run: 'run-current',
+    });
   });
 
   test('leaves a ?run= alone without experimental features', async () => {

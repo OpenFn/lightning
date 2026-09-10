@@ -47,6 +47,12 @@ export interface PinnedView {
    */
   isPinnedVersion: boolean;
   /**
+   * The pinned number, by whichever numbering is in use, or null. For callers
+   * that only need to notice a switch rather than resolve the number: reading
+   * one scheme means missing every switch made in the other.
+   */
+  version: string | null;
+  /**
    * Any of the three. A view of the past is for reading, so this is the answer
    * to "may this be edited, run, or saved?" for all of them at once.
    */
@@ -71,6 +77,7 @@ export function readPinnedView(
     isPinnedSnapshot: snapshot !== null,
     isViewingAsExecuted: asRun !== null,
     isPinnedVersion: release !== null || snapshot !== null,
+    version: release ?? snapshot,
     isPinnedView: release !== null || snapshot !== null || asRun !== null,
   };
 }

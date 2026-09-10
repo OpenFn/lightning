@@ -140,6 +140,23 @@ describe('MiniHistory', () => {
       expect(screen.queryAllByText(/^(v\d+|unpublished)$/)).toHaveLength(0);
     });
 
+    test('leaves no stray separator where the version tag was', () => {
+      // The separator sat between the version tag and the run id. With the tag
+      // hidden it stranded itself in front of the id, so a flag-off user saw a
+      // leading dot on every run.
+      experimentalFeatures = false;
+
+      renderExpanded();
+
+      const rows = screen.getAllByText(/^[0-9a-f]{8}$/i);
+      expect(rows.length).toBeGreaterThan(0);
+
+      rows.forEach(id => {
+        const row = id.closest("div[class*='px-3']");
+        expect(row?.textContent ?? '').not.toContain('\u00b7');
+      });
+    });
+
     test('offers the run its own version when the canvas shows another', async () => {
       // The flag-off answer to a run of older content: the run is painted onto
       // the document already open, and this says the shape on screen is not the
@@ -509,9 +526,10 @@ describe('MiniHistory', () => {
       expect(allText).toContain('s'); // Duration should be present
     });
 
-    test('run selection highlights the selected run (no deselect X)', () => {
+    test('the selected run is highlighted and offers a way out', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
+      const onDeselectRun = vi.fn();
 
       render(
         <MiniHistory
@@ -519,6 +537,7 @@ describe('MiniHistory', () => {
           history={[mockSelectedWorkOrder]}
           onCollapseHistory={onCollapseHistory}
           selectRunHandler={selectRunHandler}
+          onDeselectRun={onDeselectRun}
         />
       );
 
@@ -526,15 +545,17 @@ describe('MiniHistory', () => {
       const selectedRun = screen.getByText(/d1f87a82/);
       expect(selectedRun).toBeInTheDocument();
 
-      // Selected run should have special styling - find the run container (px-3 py-1.5)
       const runElement = selectedRun.closest("div[class*='px-3']");
       expect(runElement?.className).toContain('bg-indigo-50');
       expect(runElement?.className).toContain('border-l-indigo-500');
 
-      // No trailing X icon: deselect is by clicking the selected run again.
-      // The X used to sit after the run id and pushed it out of column alignment.
-      const xIcon = runElement?.querySelector('span.hero-x-mark');
-      expect(xIcon).not.toBeInTheDocument();
+      // Clicking the row again also deselects, but that is not something a
+      // reader can see. The button leads the row, so it does not disturb the
+      // right-aligned run id.
+      const deselect = screen.getByRole('button', { name: /deselect run/i });
+      fireEvent.click(deselect);
+      expect(onDeselectRun).toHaveBeenCalledTimes(1);
+      expect(selectRunHandler).not.toHaveBeenCalled();
     });
 
     test('clicking run calls selectRunHandler', () => {

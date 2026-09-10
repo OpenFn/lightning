@@ -37,7 +37,11 @@ export const PermissionsSchema = z.object({
   can_edit_workflow: z.boolean(),
   can_run_workflow: z.boolean(),
   can_write_webhook_auth_method: z.boolean(),
-  can_provision_sandbox: z.boolean(),
+  // Optional for the same reason as its neighbour below: an older node during a
+  // rolling deploy does not send it, and a required field would fail the whole
+  // parse and leave the client with no permissions at all rather than one
+  // missing answer.
+  can_provision_sandbox: z.boolean().optional().default(false),
   // Whether this user may archive (retire) this sandbox. Defaults to false so a
   // payload that omits it degrades safely to "cannot archive" rather than
   // offering an action the server would refuse, mirroring the other optional

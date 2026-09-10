@@ -25,6 +25,7 @@ import {
 import {
   useIsNewWorkflow,
   useLatestSnapshotId,
+  useLatestSnapshotLockVersion,
   useExperimentalFeatures,
 } from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
@@ -32,7 +33,11 @@ import { useVersionSelect } from '../../hooks/useVersionSelect';
 import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
 import { useNodeSelection } from '../../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../../keyboard';
-import { CLEAR_PINNED_VIEW, usePinnedView } from '../../lib/pinnedView';
+import {
+  CLEAR_PINNED_VIEW,
+  SNAPSHOT_PARAM,
+  usePinnedView,
+} from '../../lib/pinnedView';
 import type { RunSummary } from '../../types/history';
 import { DiscardChangesDialog } from '../DiscardChangesDialog';
 
@@ -53,6 +58,7 @@ export function CollaborativeWorkflowDiagram({
   const isHistoryChannelConnected = useHistoryChannelConnected();
   const { params, updateSearchParams } = useURLState();
   const latestSnapshotId = useLatestSnapshotId();
+  const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
   const history = useHistory();
   const historyLoading = useHistoryLoading();
@@ -206,12 +212,21 @@ export function CollaborativeWorkflowDiagram({
   // clicking two runs of the same content alternated between the two views.
   const handleRunSelect = useCallback(
     (run: RunSummary) => {
-      // Opening a run on its own snapshot is part of the experimental
-      // experience. Without the flag a run is selected on whatever document is
-      // already open, as the editor did before, and the version-mismatch banner
-      // is what says the shape on screen is not the shape that ran.
+      // Without experimental features, selecting a run pins the snapshot that
+      // run executed against, unless it executed the current one — in which
+      // case the pin is cleared so the document stays editable. That is the
+      // editor's existing behaviour, and the version-mismatch banner covers the
+      // case where the pin cannot be resolved.
       if (!experimentalFeatures) {
-        updateSearchParams({ run: run.id });
+        const ranAnotherVersion =
+          run.version !== null &&
+          run.version !== undefined &&
+          run.version !== latestSnapshotLockVersion;
+
+        updateSearchParams({
+          [SNAPSHOT_PARAM]: ranAnotherVersion ? String(run.version) : null,
+          run: run.id,
+        });
         return;
       }
 
@@ -227,7 +242,13 @@ export function CollaborativeWorkflowDiagram({
         updateSearchParams({ ...CLEAR_PINNED_VIEW, run: run.id });
       }
     },
-    [experimentalFeatures, latestSnapshotId, updateSearchParams, viewAsExecuted]
+    [
+      experimentalFeatures,
+      latestSnapshotId,
+      latestSnapshotLockVersion,
+      updateSearchParams,
+      viewAsExecuted,
+    ]
   );
 
   // Closes the run viewer in the store too, or the restore effect re-adds the

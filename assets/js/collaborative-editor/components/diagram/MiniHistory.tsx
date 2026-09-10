@@ -109,9 +109,16 @@ const VersionTag: React.FC<{ versionNumber: number | null | undefined }> = ({
   if (!experimentalFeatures) return null;
 
   return (
-    <span className="whitespace-nowrap font-medium text-gray-400">
-      {versionNumber == null ? 'unpublished' : `v${versionNumber}`}
-    </span>
+    <>
+      <span className="whitespace-nowrap font-medium text-gray-400">
+        {versionNumber == null ? 'unpublished' : `v${versionNumber}`}
+      </span>
+      {/* Owned by the tag, so it cannot strand itself in front of the run id
+          when the tag is hidden. */}
+      <span className="text-gray-300" aria-hidden="true">
+        &middot;
+      </span>
+    </>
   );
 };
 
@@ -153,6 +160,22 @@ const RunItem: React.FC<RunItemProps> = ({
       }
     }}
   >
+    {run.selected && (
+      <button
+        type="button"
+        onClick={e => {
+          e.preventDefault();
+          e.stopPropagation();
+          onDeselect?.();
+        }}
+        className="flex items-center text-gray-400 transition-colors
+          hover:text-gray-600"
+        aria-label="Deselect run"
+      >
+        <span className="hero-x-mark h-4 w-4" />
+      </button>
+    )}
+
     {/* Primary line: status + when it ran. */}
     <StatusIndicator state={run.state} />
     {(run.started_at || run.finished_at) && (
@@ -175,9 +198,6 @@ const RunItem: React.FC<RunItemProps> = ({
     {/* Secondary, de-emphasised: one light identifier (version + run id). */}
     <div className="flex items-center gap-1.5 whitespace-nowrap text-[11px]">
       <VersionTag versionNumber={run.version_number} />
-      <span className="text-gray-300" aria-hidden="true">
-        &middot;
-      </span>
       <button
         type="button"
         onClick={e => onNavigateToRun(e, run.id)}

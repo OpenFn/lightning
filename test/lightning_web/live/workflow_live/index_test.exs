@@ -337,6 +337,36 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       refute view |> has_element?("#new-workflow-button[type=button][disabled]")
     end
 
+    test "the toggle, its tooltip and its sort all read the triggers", %{
+      conn: conn,
+      project: project
+    } do
+      # The lifecycle column is backfilled `live` for a workflow with ANY
+      # enabled trigger, while the tooltip and the Enabled sort both ask whether
+      # they are ALL enabled. A workflow with one of each is where those two
+      # readings part company, and the toggle used to side with the lifecycle
+      # while the tooltip beside it said the opposite.
+      #
+      # Nothing a user does here creates that state: go-live enables every
+      # trigger and switch-to-draft disables every one. It arrives with
+      # migrated data and with provisioning.
+      on_trigger = build(:trigger, type: :webhook, enabled: true)
+      off_trigger = build(:trigger, type: :cron, enabled: false)
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project, state: :live)
+        |> with_job(job)
+        |> with_trigger(on_trigger)
+        |> with_trigger(off_trigger)
+        |> with_edge({on_trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      refute view |> has_element?("##{workflow.id}[checked]")
+    end
+
     test "toggling a workflow keeps state and triggers coherent", %{
       conn: conn,
       project: project

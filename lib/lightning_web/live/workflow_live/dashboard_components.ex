@@ -252,7 +252,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                     id={workflow.id}
                     type="toggle"
                     name="workflow_state"
-                    value={workflow.state == :live}
+                    value={Helpers.workflow_enabled?(workflow)}
                     tooltip={Helpers.workflow_state_tooltip(workflow)}
                     on_click="toggle_workflow_state"
                     value_key={workflow.id}

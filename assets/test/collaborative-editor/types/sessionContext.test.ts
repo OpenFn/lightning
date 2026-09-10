@@ -4,6 +4,7 @@ import {
   UserContextSchema,
   ProjectContextSchema,
   AppConfigSchema,
+  PermissionsSchema,
   SessionContextResponseSchema,
 } from '../../../js/collaborative-editor/types/sessionContext';
 
@@ -370,6 +371,23 @@ describe.concurrent('SessionContextResponseSchema', () => {
         content_locked: false,
         experimental_features_enabled: false,
       });
+    }
+  });
+
+  test('survives a payload with no sandbox permissions', () => {
+    // An older node during a rolling deploy sends neither sandbox permission.
+    // Both are optional so the parse still succeeds: one missing answer must
+    // not cost the client every permission it has.
+    const parsed = PermissionsSchema.safeParse({
+      can_edit_workflow: true,
+      can_run_workflow: true,
+      can_write_webhook_auth_method: true,
+    });
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.can_provision_sandbox).toBe(false);
+      expect(parsed.data.can_archive_sandbox).toBe(false);
     }
   });
 
