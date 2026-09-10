@@ -49,9 +49,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
   end
 
   # Replace the supervisor's inert auto-started (HighlanderPG-wrapped)
-  # Scheduler with a controlled one under test ownership. Application
-  # env is restored immediately after start_supervised!/1 returns
-  # because the Scheduler captures interval_ms in init/1.
+  # Scheduler with a controlled one under test ownership.
   #
   # The test-owned Scheduler bypasses HighlanderPG entirely: we
   # register the GenServer directly under the same `{:global, …}` name
@@ -59,15 +57,6 @@ defmodule Lightning.Adaptors.SchedulerTest do
   # `AdaptorsSupervisor.global_scheduler_name/1` exactly as production
   # callers do.
   defp start_scheduler(sup, opts \\ []) do
-    interval = Keyword.get(opts, :interval, 99_999_999)
-    original_env = Application.get_env(:lightning, Lightning.Adaptors, [])
-
-    Application.put_env(
-      :lightning,
-      Lightning.Adaptors,
-      Keyword.put(original_env, :refresh_interval, interval)
-    )
-
     global_name = AdaptorsSupervisor.global_scheduler_name(sup)
     source_topic = AdaptorsSupervisor.source_topic(sup)
 
@@ -84,14 +73,12 @@ defmodule Lightning.Adaptors.SchedulerTest do
         lock_key: AdaptorsSupervisor.lock_key(sup),
         cache: AdaptorsSupervisor.cache_name(sup),
         tasks: AdaptorsSupervisor.tasks_name(sup),
-        source_topic: source_topic
+        source_topic: source_topic,
+        refresh_interval: Keyword.get(opts, :interval, 99_999_999),
+        warn_when_empty: Keyword.get(opts, :warn_when_empty, false)
       ] ++ Keyword.take(opts, [:checked_at])
 
-    pid = start_supervised!({Scheduler, scheduler_opts})
-
-    Application.put_env(:lightning, Lightning.Adaptors, original_env)
-
-    pid
+    start_supervised!({Scheduler, scheduler_opts})
   end
 
   defp drain_tick_ran do
@@ -221,7 +208,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       assert {%Postgrex.Error{}, _stacktrace} = reason
     end
 
-    test "an empty catalogue logs a boot warning and still ticks when interval > 0",
+    test "an empty catalogue ticks at once, without warning, when interval > 0",
          %{sup: sup} do
       test_pid = self()
 
@@ -236,10 +223,10 @@ defmodule Lightning.Adaptors.SchedulerTest do
           assert_receive :tick_ran, 2000
         end)
 
-      assert log =~ "catalogue is empty at boot"
+      refute log =~ "catalogue is empty"
     end
 
-    test "an empty catalogue logs a boot warning and schedules no tick when interval is 0",
+    test "an empty catalogue warns an operator and schedules no tick when interval is 0",
          %{sup: sup} do
       test_pid = self()
 
@@ -248,13 +235,29 @@ defmodule Lightning.Adaptors.SchedulerTest do
         {:ok, []}
       end)
 
+      # start_scheduler/2 defaults the warning off; pose as a real
+      # deployment to see it.
       log =
         capture_log(fn ->
-          start_scheduler(sup, checked_at: fn _source -> nil end, interval: 0)
+          start_scheduler(sup,
+            checked_at: fn _source -> nil end,
+            interval: 0,
+            warn_when_empty: true
+          )
+
           refute_receive :tick_ran, 200
         end)
 
-      assert log =~ "catalogue is empty at boot"
+      assert log =~ "catalogue is empty and refreshes are disabled"
+    end
+
+    test "an empty catalogue stays quiet when the warning is off", %{sup: sup} do
+      log =
+        capture_log(fn ->
+          start_scheduler(sup, checked_at: fn _source -> nil end, interval: 0)
+        end)
+
+      refute log =~ "catalogue is empty"
     end
   end
 

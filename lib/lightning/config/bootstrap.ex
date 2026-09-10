@@ -235,7 +235,7 @@ defmodule Lightning.Config.Bootstrap do
       adaptors_path: env!("ADAPTORS_PATH", :string, "./priv/openfn")
 
     # Comma-separated to match the ws-worker parser, so the picker view and
-    # @local resolution agree on the same repo list. See RUNNINGLOCAL.md.
+    # @local resolution agree on the same repo list. See ADAPTORS.md.
     local_adaptors_repos =
       parse_repo_list(env!("OPENFN_ADAPTORS_REPO", :string, nil))
 

@@ -108,7 +108,11 @@ config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Test
 
 config :lightning, Lightning.Adaptors,
   strategy: Lightning.Adaptors.StrategyMock,
-  refresh_interval: 0
+  refresh_interval: 0,
+  # The instance application.ex starts comes up on an empty catalogue with
+  # refreshes off, which is exactly the state the operator warning is for.
+  # Test-owned instances pass their own opts instead.
+  warn_when_empty: false
 
 # The reconciler runs against the shared production catalogue table, which
 # tests seed freely; each test that needs it starts its own named instance.

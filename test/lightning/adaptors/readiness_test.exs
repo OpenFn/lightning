@@ -53,6 +53,8 @@ defmodule Lightning.Adaptors.ReadinessTest do
         cache: AdaptorsSupervisor.cache_name(sup),
         tasks: AdaptorsSupervisor.tasks_name(sup),
         source_topic: AdaptorsSupervisor.source_topic(sup),
+        refresh_interval: 0,
+        warn_when_empty: false,
         checked_at: fn _source -> nil end
       })
 

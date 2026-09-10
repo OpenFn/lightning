@@ -24,6 +24,11 @@ defmodule Lightning.Adaptors.Supervisor do
       defaulting to `Lightning.Adaptors.Config.strategy/0`
     * `:lock_key` - `HighlanderPG` advisory-lock key, defaulting to
       `lock_key(name)`
+    * `:refresh_interval` - scheduler tick interval in milliseconds,
+      defaulting to `Lightning.Adaptors.Config.refresh_interval/0`
+    * `:warn_when_empty` - whether the scheduler warns when it boots on an
+      empty catalogue that no timer will fill, defaulting to
+      `Lightning.Adaptors.Config.warn_when_empty?/0`
     * `:checked_at` - forwarded to the scheduler; see
       `Lightning.Adaptors.Scheduler.start_link/1`
   """
@@ -38,6 +43,12 @@ defmodule Lightning.Adaptors.Supervisor do
     name = Keyword.fetch!(opts, :name)
     strategy = Keyword.get(opts, :strategy, Config.strategy())
     lock_key = Keyword.get(opts, :lock_key, lock_key(name))
+
+    refresh_interval =
+      Keyword.get(opts, :refresh_interval, Config.refresh_interval())
+
+    warn_when_empty =
+      Keyword.get(opts, :warn_when_empty, Config.warn_when_empty?())
 
     # Per-instance config for stateless callers that hold only the name.
     # Children take theirs from the child spec (see lock_key), not from here.
@@ -63,7 +74,9 @@ defmodule Lightning.Adaptors.Supervisor do
                lock_key: lock_key,
                cache: cache,
                tasks: tasks,
-               source_topic: source_topic
+               source_topic: source_topic,
+               refresh_interval: refresh_interval,
+               warn_when_empty: warn_when_empty
              ] ++ Keyword.take(opts, [:checked_at])
            ]}
       }

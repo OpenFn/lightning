@@ -15,14 +15,6 @@ defmodule Lightning.AdaptorsTest do
   setup :isolated_adaptors
 
   defp start_scheduler(sup) do
-    original_env = Application.get_env(:lightning, Lightning.Adaptors, [])
-
-    Application.put_env(
-      :lightning,
-      Lightning.Adaptors,
-      Keyword.put(original_env, :refresh_interval, 99_999_999)
-    )
-
     # Stop the supervisor's auto-started HighlanderPG (and its wrapped
     # Scheduler) so we can start a replacement under the controlled
     # interval without name collision. The test-owned Scheduler registers
@@ -30,20 +22,17 @@ defmodule Lightning.AdaptorsTest do
     :ok =
       Supervisor.terminate_child(sup, AdaptorsSupervisor.highlander_name(sup))
 
-    pid =
-      start_supervised!({
-        Scheduler,
-        name: AdaptorsSupervisor.global_scheduler_name(sup),
-        sup: sup,
-        lock_key: AdaptorsSupervisor.lock_key(sup),
-        cache: AdaptorsSupervisor.cache_name(sup),
-        tasks: AdaptorsSupervisor.tasks_name(sup),
-        source_topic: AdaptorsSupervisor.source_topic(sup)
-      })
-
-    Application.put_env(:lightning, Lightning.Adaptors, original_env)
-
-    pid
+    start_supervised!({
+      Scheduler,
+      name: AdaptorsSupervisor.global_scheduler_name(sup),
+      sup: sup,
+      lock_key: AdaptorsSupervisor.lock_key(sup),
+      cache: AdaptorsSupervisor.cache_name(sup),
+      tasks: AdaptorsSupervisor.tasks_name(sup),
+      source_topic: AdaptorsSupervisor.source_topic(sup),
+      refresh_interval: 99_999_999,
+      warn_when_empty: false
+    })
   end
 
   describe "packages/1" do
