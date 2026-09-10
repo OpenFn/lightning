@@ -225,7 +225,7 @@ const ChartLoading = () => (
 // Holds its line while empty (`min-h-4` is one `text-xs` line) so the picker
 // above it doesn't move.
 const UpdatedAt = ({ at }: { at: string | null }) => (
-  <p className="min-h-4 text-xs text-gray-500">
+  <p role="status" className="min-h-4 text-xs text-gray-500">
     {at && `Last Updated ${new Date(at).toLocaleTimeString()}`}
   </p>
 );
@@ -250,9 +250,7 @@ const failures = (counts: Outcomes['counts']) => {
   return `${total.toLocaleString()} failed work order${total === 1 ? '' : 's'}`;
 };
 
-// A work order with two broken branches lands in two triage rows, so the
-// column can sum past the failure total the donut draws. Only worth a word
-// when it actually happened — most windows reconcile and need no footnote.
+// Rows count failed branches, so they can sum past the failure total.
 const overCounts = (signatures: ErrorSignature[], counts: Outcomes['counts']) =>
   signatures.reduce((sum, signature) => sum + signature.count, 0) >
   failureCount(counts);
@@ -262,8 +260,10 @@ const emptyMessage = (
   noun = 'finished work orders'
 ) => `No ${noun} in the last ${windowLabel(window)}`;
 
+// The runs window ends with the bucket `now` sits in, so it is `days` plus a
+// part-bucket. Floor it, or a 30-day view reads as "31 days" after midday.
 const windowDays = ({ from, to }: { from: string; to: string }) =>
-  Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
+  Math.floor((Date.parse(to) - Date.parse(from)) / 86_400_000);
 
 // Matches the picker's own wording — "24 hours", not "1 day".
 const windowLabel = (window: Outcomes['window']) => {
