@@ -173,8 +173,11 @@ describe('EdgeInspector - Footer Button States', () => {
     });
   });
 
-  test('footer is hidden in read-only mode', () => {
-    // beforeEach already sets read-only permissions
+  test('footer stays put and disabled in read-only mode', () => {
+    // beforeEach already sets read-only permissions, and no experimental
+    // features. Without them there is no lifecycle badge alongside to say why
+    // the view is read-only, so these controls are the only place the reason
+    // appears: they stay, disabled, carrying it in their tooltips.
     const edge = workflowStore.getSnapshot().edges[0];
     const mockOnClose = vi.fn();
 
@@ -188,9 +191,45 @@ describe('EdgeInspector - Footer Button States', () => {
       ),
     });
 
-    // On a read-only workflow the footer collapses entirely: the enabled toggle
-    // and the delete-path button are edit actions and are hidden, so there is
-    // no empty bordered bar.
+    expect(screen.getByLabelText(/enabled/i)).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
+  });
+
+  test('footer is hidden in read-only mode with experimental features', () => {
+    const edge = workflowStore.getSnapshot().edges[0];
+    const mockOnClose = vi.fn();
+
+    act(() => {
+      (mockChannel as any)._test.emit('session_context', {
+        user: null,
+        project: null,
+        config: { require_email_verification: false },
+        permissions: {
+          can_edit_workflow: false,
+          can_run_workflow: false,
+          can_write_webhook_auth_method: false,
+          can_provision_sandbox: false,
+        },
+        experimental_features_enabled: true,
+        latest_snapshot_lock_version: 1,
+        project_repo_connection: null,
+        webhook_auth_methods: [],
+        workflow_template: null,
+      });
+    });
+
+    render(<EdgeInspector edge={edge} onClose={mockOnClose} />, {
+      wrapper: createWrapper(
+        workflowStore,
+        credentialStore,
+        sessionContextStore,
+        adaptorStore,
+        awarenessStore
+      ),
+    });
+
+    // With the flag on the lifecycle badge explains the state, so the empty
+    // bordered bar goes.
     expect(screen.queryByLabelText(/enabled/i)).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /delete/i })

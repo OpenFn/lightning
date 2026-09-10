@@ -33,6 +33,7 @@ import {
   useCredentialsCommands,
 } from '../../hooks/useCredentials';
 import {
+  useActiveRun,
   useFollowRun,
   useHistory,
   useHistoryCommands,
@@ -44,7 +45,12 @@ import { useMetadata } from '../../hooks/useMetadata';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
-import { useProject } from '../../hooks/useSessionContext';
+import {
+  useExperimentalFeatures,
+  useProject,
+} from '../../hooks/useSessionContext';
+import { useVersionMismatch } from '../../hooks/useVersionMismatch';
+import { useVersionSelect } from '../../hooks/useVersionSelect';
 import {
   useCanRun,
   useCanSave,
@@ -61,6 +67,7 @@ import { CollaborativeMonaco, type MonacoHandle } from '../CollaborativeMonaco';
 import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import MiniHistory from '../diagram/MiniHistory';
+import { VersionMismatchBanner } from '../diagram/VersionMismatchBanner';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
@@ -727,6 +734,25 @@ export function FullScreenIDE({
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
 
+  // With experimental features a read-only view drops the run controls, because
+  // the header's lifecycle badge is there to explain it. Without them the
+  // controls stay and go grey, carrying the reason themselves.
+  const experimentalFeatures = useExperimentalFeatures();
+  const hideOnReadOnly = experimentalFeatures && isReadOnly;
+
+  // The run being read executed content other than what is on screen. Only ever
+  // set without experimental features; with them a run of older content opens
+  // that content instead.
+  const activeRun = useActiveRun();
+  const versionMismatch = useVersionMismatch(activeRun?.id ?? null);
+  const { handleVersionSelect } = useVersionSelect();
+
+  const handleGoToVersion = useCallback(() => {
+    if (versionMismatch) {
+      handleVersionSelect(versionMismatch.runVersion);
+    }
+  }, [handleVersionSelect, versionMismatch]);
+
   // Check loading state but don't use early return (violates rules of hooks)
   // Only check for job existence, not ytext/awareness
   // ytext and awareness persist during disconnection for offline editing
@@ -889,17 +915,22 @@ export function FullScreenIDE({
             </Tooltip>
 
             {/* New Run button - shown when no panel or viewing history.
-                Hidden on a read-only workflow: run creation is unavailable,
-                but history, the run viewer, job switching and navigation stay. */}
-            {!isReadOnly &&
+                With experimental features it goes on a read-only workflow,
+                where the header's lifecycle badge explains why. Without them it
+                stays and goes grey, carrying the reason, as it does today. */}
+            {!hideOnReadOnly &&
               (panelState === undefined || panelState === 'history') && (
-                <NewRunButton onClick={handleNavigateToCreateRun} />
+                <NewRunButton
+                  onClick={handleNavigateToCreateRun}
+                  disabled={isReadOnly}
+                />
               )}
 
             {/* Run/Retry button - shown when creating a new run or viewing an
-                existing run. Hidden on a read-only workflow (both Run and Retry
-                create runs); the run viewer itself remains available. */}
-            {!isReadOnly &&
+                existing run. Both create runs, so a read-only workflow refuses
+                them; with experimental features the button goes, without them it
+                stays disabled. The run viewer itself is always available. */}
+            {!hideOnReadOnly &&
               (panelState === 'run-viewer' || panelState === 'create-run') && (
                 <RunRetryButton
                   isRetryable={isRetryable}
@@ -1035,9 +1066,7 @@ export function FullScreenIDE({
                             <div className="flex-1">
                               <Tabs
                                 value={selectedDocsTab}
-                                onChange={tab =>
-                                  setSelectedDocsTab(tab)
-                                }
+                                onChange={tab => setSelectedDocsTab(tab)}
                                 variant="pills"
                                 options={[
                                   {
@@ -1185,6 +1214,20 @@ export function FullScreenIDE({
                 </div>
               ) : (
                 <div className="h-full flex flex-col">
+                  {/* The run on screen executed different content, so the
+                      shape being read is not the shape that ran. Only ever set
+                      without experimental features: with them, opening a run of
+                      older content loads that content instead of painting the
+                      run onto a document it never touched. */}
+                  {panelState === 'run-viewer' && versionMismatch && (
+                    <VersionMismatchBanner
+                      runVersion={versionMismatch.runVersion}
+                      currentVersion={versionMismatch.currentVersion}
+                      onGoToVersion={handleGoToVersion}
+                      className="py-1"
+                    />
+                  )}
+
                   {/* Panel heading - only for run-viewer */}
                   {panelState === 'run-viewer' && (
                     <div className="shrink-0">
