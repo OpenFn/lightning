@@ -6160,6 +6160,84 @@ defmodule LightningWeb.ProjectLiveTest do
       end
     end
 
+    test "reconnecting a project whose names collide says so, rather than blaming GitHub access",
+         %{conn: conn} do
+      project = insert(:project)
+
+      repo_connection =
+        insert(:project_repo_connection,
+          project: project,
+          repo: "someaccount/somerepo",
+          branch: "somebranch",
+          github_installation_id: "1234",
+          access_token: "someaccesstoken"
+        )
+
+      # Both hyphenate to `My-Flow`, so the export pre-flight inside
+      # initiate_sync/2 refuses. Snapshotted, because the sync exports the
+      # snapshot set rather than the live workflows.
+      for name <- ["My Flow", "My-Flow"] do
+        {:ok, _} =
+          insert(:simple_workflow, name: name, project: project)
+          |> Lightning.Workflows.Snapshot.create()
+      end
+
+      expected_installation = %{
+        "id" => repo_connection.github_installation_id,
+        "account" => %{"type" => "User", "login" => "username"}
+      }
+
+      expected_repo = %{
+        "full_name" => repo_connection.repo,
+        "default_branch" => "main"
+      }
+
+      expected_access_token_endpoint =
+        "https://api.github.com/app/installations/#{repo_connection.github_installation_id}/access_tokens"
+
+      [{conn, user}] = setup_project_users(conn, project, [:admin])
+      set_valid_github_oauth_token!(user)
+
+      Mox.expect(Lightning.Tesla.Mock, :call, 5, fn
+        %{url: "https://api.github.com/user/installations"}, _opts ->
+          {:ok,
+           %Tesla.Env{
+             status: 200,
+             body: %{"installations" => [expected_installation]}
+           }}
+
+        %{url: ^expected_access_token_endpoint}, _opts ->
+          {:ok, %Tesla.Env{status: 201, body: %{"token" => "some-token"}}}
+
+        %{url: "https://api.github.com/installation/repositories"}, _opts ->
+          {:ok, %Tesla.Env{status: 200, body: %{"repositories" => []}}}
+
+        %{url: _url}, _opts ->
+          {:error, "something unexpected happened"}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      render_async(view)
+
+      # Nothing is mocked past the connection check on purpose. The export
+      # pre-flight refuses before pull.yml, the workflow files or the API
+      # secret are pushed, so verify_on_exit! asserts we never wrote to the
+      # repo at all.
+
+      view
+      |> form("#reconnect-project-form")
+      |> render_submit(
+        connection: %{"sync_direction" => "pull", "accept" => "true"}
+      )
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+      assert flash["error"] =~ "two workflows in this project"
+      assert flash["error"] =~ ~s("My Flow")
+      assert flash["error"] =~ ~s("My-Flow")
+    end
+
     test "authorized users get an error when reconnecting if the usage limiter returns an error",
          %{conn: conn} do
       %{id: project_id} = project = insert(:project)
@@ -6632,6 +6710,54 @@ defmodule LightningWeb.ProjectLiveTest do
         flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
         assert flash["error"] == "You are not authorized to perform this action"
       end
+    end
+
+    test "initiating a sync on a project whose names collide says which ones", %{
+      conn: conn
+    } do
+      project = insert(:project)
+
+      insert(:project_repo_connection,
+        project: project,
+        repo: "someaccount/somerepo",
+        branch: "somebranch",
+        github_installation_id: "1234",
+        access_token: "someaccesstoken"
+      )
+
+      # Both hyphenate to `My-Flow`. The export pre-flight refuses before any
+      # GitHub call, so no sync mocks are set: the stub below only carries the
+      # page-load connection check, and it is halted.
+      for name <- ["My Flow", "My-Flow"] do
+        {:ok, _} =
+          insert(:simple_workflow, name: name, project: project)
+          |> Lightning.Workflows.Snapshot.create()
+      end
+
+      [{conn, user}] = setup_project_users(conn, project, [:admin])
+      set_valid_github_oauth_token!(user)
+
+      Mox.stub(Lightning.Tesla.Mock, :call, fn
+        %{url: "https://api.github.com/user/installations"}, _opts ->
+          {:ok, %Tesla.Env{status: 400, body: %{"something" => "bad"}}}
+
+        %{url: _url}, _opts ->
+          {:ok, %Tesla.Env{status: 404, body: %{"something" => "not right"}}}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/settings#vcs")
+
+      render_async(view)
+
+      view
+      |> with_target("#github-sync-component")
+      |> render_click("initiate-sync", %{})
+
+      flash = assert_redirected(view, ~p"/projects/#{project.id}/settings#vcs")
+
+      assert flash["error"] =~ "two workflows in this project"
+      assert flash["error"] =~ ~s("My Flow")
+      assert flash["error"] =~ ~s("My-Flow")
     end
 
     test "authorized users can initiate github sync successfully", %{

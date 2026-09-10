@@ -251,6 +251,34 @@ The following environment variables are required:
   an Anthropic key.
 - `APOLLO_ENDPOINT` - the endpoint for the OpenFn Apollo AI service.
 
+Three optional variables control how long Lightning waits on Apollo. Each one
+has a default, so set them only if those defaults do not suit your deployment.
+
+- `APOLLO_CONNECT_TIMEOUT_MS` - how long to wait to reach Apollo at all.
+  Defaults to 5000. Reaching Apollo happens inside the idle budget, so a value
+  above `APOLLO_IDLE_TIMEOUT_MS` never takes effect; Lightning warns at boot if
+  you set one.
+- `APOLLO_IDLE_TIMEOUT_MS` - the longest acceptable silence, both before the
+  first byte of an answer and between the chunks that follow. Defaults to 30000.
+- `APOLLO_REQUEST_TIMEOUT_MS` - the longest one whole request may take, however
+  steadily it is streaming. Defaults to 300000.
+
+The idle default assumes Apollo v3.1.1 or later, which sends a keepalive every
+15 seconds. On an older Apollo a stream can go quiet for minutes while a model
+is thinking, and 30 seconds will cut it off, so raise `APOLLO_IDLE_TIMEOUT_MS`
+or upgrade Apollo.
+
+The three added together, plus a ten-second buffer, bound how long one AI job
+may run, and that has to stay under Oban's shutdown grace period of six minutes.
+Raising them past it means a deploy landing on a running answer kills it with
+nothing left to report the failure, so Lightning warns at boot if the sum gets
+too close. Note that the longer grace period also makes rolling restarts slower,
+since Oban now waits up to six minutes for a running job rather than two.
+
+`APOLLO_TIMEOUT` is the old name for `APOLLO_IDLE_TIMEOUT_MS`. On the wire it
+only ever covered the silence, never the other two. It is no longer read, and
+Lightning logs a warning at boot if it is still set.
+
 ### OAuth credential connections (Google, Salesforce, etc.)
 
 OAuth clients that **jobs** use to connect to external systems (Google Sheets,
