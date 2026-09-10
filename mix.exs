@@ -164,7 +164,7 @@ defmodule Lightning.MixProject do
       {:retry, "~> 0.18"},
       {:scrivener, "~> 2.7"},
       {:sentry, "~> 13.2.0"},
-      {:sobelow, "~> 0.14.1", only: [:test, :dev]},
+      {:sobelow, "~> 0.15.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
       {:swoosh, "~> 1.26"},
       {:gen_smtp, "~> 1.1"},
