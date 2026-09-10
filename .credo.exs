@@ -30,7 +30,8 @@
           "apps/*/lib/",
           "apps/*/src/",
           "apps/*/test/",
-          "apps/*/web/"
+          "apps/*/web/",
+          "tooling/adaptor_cache/lib/"
         ],
         excluded: [~r"/_build/", ~r"/deps/", ~r"/node_modules/"]
       },

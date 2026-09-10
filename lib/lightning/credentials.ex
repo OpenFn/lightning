@@ -587,16 +587,53 @@ defmodule Lightning.Credentials do
   """
   @spec get_schema(String.t()) :: Credentials.Schema.t()
   def get_schema(schema_name) do
-    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
+    resolved = Lightning.Adaptors.resolve_name(schema_name)
 
-    File.read("#{schemas_path}/#{schema_name}.json")
-    |> case do
-      {:ok, raw_json} ->
-        Credentials.Schema.new(raw_json, schema_name)
+    case Lightning.Adaptors.schema(resolved) do
+      {:ok, schema_body} ->
+        Credentials.Schema.new(schema_body, resolved)
 
       {:error, reason} ->
-        raise "Error reading credential schema. Got: #{reason |> inspect()}"
+        raise "Error reading credential schema. Got: #{inspect(reason)}"
     end
+  end
+
+  @doc """
+  Resolves every credential's legacy short-form `schema` to its full npm
+  package name, in place. Idempotent; safe to call repeatedly.
+
+  Does not touch `updated_at` or emit audit events; this is a
+  storage-format fix, not an edit.
+  """
+  @spec reconcile_legacy_schema_names(atom()) :: non_neg_integer()
+  def reconcile_legacy_schema_names(sup) do
+    updated =
+      from(c in Credential,
+        where: not like(c.schema, "@%"),
+        select: c.schema,
+        distinct: true
+      )
+      |> Repo.all()
+      |> Enum.reduce(0, fn short, count ->
+        case Lightning.Adaptors.resolve_name(sup, short) do
+          ^short ->
+            count
+
+          full ->
+            {n, _} =
+              Repo.update_all(from(c in Credential, where: c.schema == ^short),
+                set: [schema: full]
+              )
+
+            count + n
+        end
+      end)
+
+    if updated > 0 do
+      Logger.info("Reconciled #{updated} legacy credential schema name(s)")
+    end
+
+    updated
   end
 
   defp cast_credential_body_change(

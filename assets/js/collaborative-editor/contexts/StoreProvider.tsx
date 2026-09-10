@@ -152,6 +152,12 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     };
   });
 
+  // Fetch the adaptor catalogue over HTTP as soon as the store mounts,
+  // independent of Phoenix channel connection/document sync.
+  useEffect(() => {
+    void stores.adaptorStore.requestAdaptors();
+  }, [stores.adaptorStore]);
+
   // Bridge the SessionContextStore's `isNewWorkflow` flag up to SessionProvider
   // so the channel-join `action` stays honest across in-place reconnects.
   //

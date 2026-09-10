@@ -29,35 +29,28 @@ import type {
   ProjectCredential,
 } from '../../../js/collaborative-editor/types/credential';
 
-// Mock useAdaptorIcons to avoid fetching icon manifest
-vi.mock('#/workflow-diagram/useAdaptorIcons', () => ({
-  default: () => null,
-}));
-
 // Mock adaptor data
 const mockProjectAdaptors: Adaptor[] = [
   {
     name: '@openfn/language-http',
-    latest: '1.5.0',
-    versions: [
-      { version: '1.5.0' },
-      { version: '1.0.0' },
-      { version: '0.9.0' },
-    ],
+    latest_version: '1.5.0',
+    versions: ['1.5.0', '1.0.0', '0.9.0'],
+    repository: 'https://github.com/openfn/language-http',
+    icon_urls: { square: null, rectangle: null },
   },
   {
     name: '@openfn/language-salesforce',
-    latest: '2.1.0',
-    versions: [
-      { version: '2.1.0' },
-      { version: '2.0.0' },
-      { version: '1.9.0' },
-    ],
+    latest_version: '2.1.0',
+    versions: ['2.1.0', '2.0.0', '1.9.0'],
+    repository: 'https://github.com/openfn/language-salesforce',
+    icon_urls: { square: null, rectangle: null },
   },
   {
     name: '@openfn/language-common',
-    latest: '2.0.0',
-    versions: [{ version: '2.0.0' }],
+    latest_version: '2.0.0',
+    versions: ['2.0.0'],
+    repository: 'https://github.com/openfn/language-common',
+    icon_urls: { square: null, rectangle: null },
   },
 ];
 
@@ -67,7 +60,7 @@ const mockProjectCredentials: ProjectCredential[] = [
     id: 'cred-1',
     project_credential_id: 'proj-cred-1',
     name: 'Salesforce Production',
-    schema: 'salesforce',
+    schema: '@openfn/language-salesforce',
     external_id: 'ext-1',
     inserted_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -78,7 +71,7 @@ const mockProjectCredentials: ProjectCredential[] = [
     id: 'cred-2',
     project_credential_id: 'proj-cred-2',
     name: 'Salesforce Testing',
-    schema: 'salesforce',
+    schema: '@openfn/language-salesforce',
     external_id: 'ext-2',
     inserted_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -89,7 +82,7 @@ const mockProjectCredentials: ProjectCredential[] = [
     id: 'cred-3',
     project_credential_id: 'proj-cred-3',
     name: 'HTTP API Key',
-    schema: 'http',
+    schema: '@openfn/language-http',
     external_id: 'ext-3',
     inserted_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
@@ -413,15 +406,10 @@ describe('ConfigureAdaptorModal', () => {
       // Create adaptor with versions that need semantic sorting
       const adaptorWithManyVersions: Adaptor = {
         name: '@openfn/language-test',
-        latest: '10.0.0',
-        versions: [
-          { version: '2.0.0' },
-          { version: '10.0.0' },
-          { version: '1.9.0' },
-          { version: '9.0.0' },
-          { version: '1.10.0' },
-        ],
-        repo: 'https://github.com/openfn/language-test',
+        latest_version: '10.0.0',
+        versions: ['2.0.0', '10.0.0', '1.9.0', '9.0.0', '1.10.0'],
+        repository: 'https://github.com/openfn/language-test',
+        icon_urls: { square: null, rectangle: null },
       };
 
       renderWithProviders(
@@ -1355,7 +1343,7 @@ describe('ConfigureAdaptorModal', () => {
         id: 'cred-other',
         project_credential_id: 'proj-cred-other',
         name: 'Other User Credential',
-        schema: 'salesforce',
+        schema: '@openfn/language-salesforce',
         external_id: 'ext-other',
         inserted_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',

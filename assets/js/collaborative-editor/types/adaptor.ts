@@ -13,10 +13,11 @@ import { z } from 'zod';
 // =============================================================================
 
 /**
- * Individual adaptor version schema
+ * Square and rectangle icon URLs for an adaptor. Either may be unavailable.
  */
-export const AdaptorVersionSchema = z.object({
-  version: z.string(),
+export const AdaptorIconUrlsSchema = z.object({
+  square: z.string().nullable(),
+  rectangle: z.string().nullable(),
 });
 
 /**
@@ -24,9 +25,10 @@ export const AdaptorVersionSchema = z.object({
  */
 export const AdaptorSchema = z.object({
   name: z.string(),
-  versions: z.array(AdaptorVersionSchema),
-  repo: z.string(),
-  latest: z.string(),
+  latest_version: z.string(),
+  versions: z.array(z.string()),
+  repository: z.string().nullable(),
+  icon_urls: AdaptorIconUrlsSchema,
 });
 
 /**
@@ -37,11 +39,6 @@ export const AdaptorsListSchema = z.array(AdaptorSchema);
 // =============================================================================
 // TYPESCRIPT TYPES (Compile-time)
 // =============================================================================
-
-/**
- * Individual adaptor version
- */
-export type AdaptorVersion = z.infer<typeof AdaptorVersionSchema>;
 
 /**
  * Single adaptor with all its versions and metadata
@@ -60,9 +57,6 @@ export interface AdaptorState {
   /** Current list of available adaptors */
   adaptors: AdaptorsList;
 
-  /** Project-specific adaptors used across workflows */
-  projectAdaptors: AdaptorsList;
-
   /** Loading state for initial fetch */
   isLoading: boolean;
 
@@ -79,9 +73,6 @@ export interface AdaptorState {
 export interface AdaptorCommands {
   /** Request adaptors list from server */
   requestAdaptors: () => Promise<void>;
-
-  /** Request project-specific adaptors from server */
-  requestProjectAdaptors: () => Promise<void>;
 
   /** Manually set adaptors (for testing/fallback) */
   setAdaptors: (adaptors: AdaptorsList) => void;
@@ -116,7 +107,7 @@ export interface AdaptorQueries {
   getLatestVersion: (adaptorName: string) => string | null;
 
   /** Get all versions for adaptor */
-  getVersions: (adaptorName: string) => AdaptorVersion[];
+  getVersions: (adaptorName: string) => string[];
 }
 
 /**

@@ -1,6 +1,7 @@
 defmodule LightningWeb.WorkflowLive.CollaborateTest do
   use LightningWeb.ConnCase, async: false
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Lightning.WorkflowsFixtures
   import Phoenix.LiveViewTest
@@ -1028,6 +1029,13 @@ defmodule LightningWeb.WorkflowLive.CollaborateTest do
   end
 
   describe "credential modal interactions" do
+    setup :isolated_adaptors
+
+    setup do
+      Lightning.AdaptorTestHelpers.seed_credential_schema("http")
+      :ok
+    end
+
     test "opens credential modal with schema via handle_event", %{conn: conn} do
       user = insert(:user)
 

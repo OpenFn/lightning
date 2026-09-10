@@ -1002,7 +1002,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       user = insert(:user)
 
       credential =
-        insert(:credential, schema: "http", name: "destination-cred", user: user)
+        insert(:credential,
+          schema: "@openfn/language-http",
+          name: "destination-cred",
+          user: user
+        )
         |> with_body(%{body: %{"access_token" => "dest-token-xyz"}})
 
       project_credential =
@@ -1122,7 +1126,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       user = insert(:user)
 
       credential =
-        insert(:credential, schema: "http", name: "destination-cred", user: user)
+        insert(:credential,
+          schema: "@openfn/language-http",
+          name: "destination-cred",
+          user: user
+        )
         |> with_body(%{body: %{"access_token" => "dest-token-xyz"}})
 
       project_credential =
@@ -1220,7 +1228,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     test "Bearer token sent to upstream when channel has http credential with access_token",
          %{bypass: bypass} do
       channel =
-        create_destination_auth_channel(bypass, "http", %{
+        create_destination_auth_channel(bypass, "@openfn/language-http", %{
           "access_token" => "tok-123"
         })
 
@@ -1240,7 +1248,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     test "Basic auth sent when channel has http credential with username/password",
          %{bypass: bypass} do
       channel =
-        create_destination_auth_channel(bypass, "http", %{
+        create_destination_auth_channel(bypass, "@openfn/language-http", %{
           "username" => "u",
           "password" => "p"
         })
@@ -1263,7 +1271,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     test "ApiToken sent when channel has dhis2 credential with pat",
          %{bypass: bypass} do
       channel =
-        create_destination_auth_channel(bypass, "dhis2", %{
+        create_destination_auth_channel(bypass, "@openfn/language-dhis2", %{
           "pat" => "d2pat_abc"
         })
 
@@ -1298,7 +1306,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     test "authorization header redacted in persisted ChannelEvent",
          %{bypass: bypass} do
       channel =
-        create_destination_auth_channel(bypass, "http", %{
+        create_destination_auth_channel(bypass, "@openfn/language-http", %{
           "access_token" => "secret-token"
         })
 
@@ -1336,7 +1344,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       user = insert(:user)
 
       credential =
-        insert(:credential, schema: "http", name: "no-body", user: user)
+        insert(:credential,
+          schema: "@openfn/language-http",
+          name: "no-body",
+          user: user
+        )
 
       # Don't call with_body — no CredentialBody exists
 
@@ -1392,7 +1404,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       user = insert(:user)
 
       credential =
-        insert(:credential, schema: "http", name: "shared", user: user)
+        insert(:credential,
+          schema: "@openfn/language-http",
+          name: "shared",
+          user: user
+        )
         |> with_body(%{
           name: "main",
           body: %{"username" => "prod", "password" => "prod-secret"}
@@ -1446,7 +1462,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       user = insert(:user)
 
       credential =
-        insert(:credential, schema: "http", name: "parent", user: user)
+        insert(:credential,
+          schema: "@openfn/language-http",
+          name: "parent",
+          user: user
+        )
 
       project_credential =
         insert(:project_credential, project: sandbox, credential: credential)
@@ -1490,7 +1510,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     test "credential with missing auth fields returns 502 with observable error",
          %{bypass: bypass} do
       channel =
-        create_destination_auth_channel(bypass, "http", %{
+        create_destination_auth_channel(bypass, "@openfn/language-http", %{
           "baseUrl" => "https://example.com"
         })
 
@@ -1519,7 +1539,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     test "proxy headers (x-forwarded-*) still forwarded alongside auth header",
          %{bypass: bypass} do
       channel =
-        create_destination_auth_channel(bypass, "http", %{
+        create_destination_auth_channel(bypass, "@openfn/language-http", %{
           "access_token" => "tok-with-proxy"
         })
 
@@ -1690,7 +1710,7 @@ defmodule LightningWeb.ChannelProxyPlugTest do
     test "persists destination_credential_id on successful proxy with destination auth",
          %{bypass: bypass} do
       channel =
-        create_destination_auth_channel(bypass, "http", %{
+        create_destination_auth_channel(bypass, "@openfn/language-http", %{
           "access_token" => "tok-123"
         })
 
@@ -1727,7 +1747,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       user = insert(:user)
 
       credential =
-        insert(:credential, schema: "http", name: "bad-cred", user: user)
+        insert(:credential,
+          schema: "@openfn/language-http",
+          name: "bad-cred",
+          user: user
+        )
         |> with_body(%{body: %{"baseUrl" => "https://example.com"}})
 
       project_credential =
@@ -1944,7 +1968,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       user = insert(:user)
 
       credential =
-        insert(:credential, schema: "http", name: "no-body", user: user)
+        insert(:credential,
+          schema: "@openfn/language-http",
+          name: "no-body",
+          user: user
+        )
 
       # Don't call with_body — no CredentialBody exists, so credential
       # resolution will fail and `record_credential_error/3` is invoked.
@@ -2005,7 +2033,11 @@ defmodule LightningWeb.ChannelProxyPlugTest do
       user = insert(:user)
 
       credential =
-        insert(:credential, schema: "http", name: "no-body", user: user)
+        insert(:credential,
+          schema: "@openfn/language-http",
+          name: "no-body",
+          user: user
+        )
 
       project_credential =
         insert(:project_credential,

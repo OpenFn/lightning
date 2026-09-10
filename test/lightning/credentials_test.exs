@@ -7,6 +7,7 @@ defmodule Lightning.CredentialsTest do
   alias Lightning.Credentials.Credential
   alias Lightning.Repo
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.Factories
   import Ecto.Query
   import Mox
@@ -334,6 +335,14 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "create_credential/1" do
+    setup :isolated_adaptors
+
+    setup do
+      # create_credential/1 needs a schema on file for body casting to work.
+      Lightning.AdaptorTestHelpers.seed_credential_schema("postgresql")
+      :ok
+    end
+
     test "fails if another cred exists with the same name for the same user" do
       user = insert(:user)
 
@@ -491,6 +500,13 @@ defmodule Lightning.CredentialsTest do
   end
 
   describe "update_credential/2" do
+    setup :isolated_adaptors
+
+    setup do
+      Lightning.AdaptorTestHelpers.seed_credential_schema("postgresql")
+      :ok
+    end
+
     test "updates an OAuth credential with new scopes" do
       user = insert(:user)
       oauth_client = insert(:oauth_client)
@@ -2816,6 +2832,59 @@ defmodule Lightning.CredentialsTest do
         assert length(credentials) == 1,
                "Credential should be present in project #{project.name}"
       end
+    end
+  end
+
+  describe "reconcile_legacy_schema_names/1" do
+    setup :isolated_adaptors
+
+    test "promotes a resolvable short-name row to the full npm name", %{
+      sup: sup
+    } do
+      Lightning.AdaptorTestHelpers.seed_adaptor_package(
+        "@openfn/language-postgresql",
+        "1.0.0"
+      )
+
+      credential = insert(:credential, schema: "postgresql")
+      other = insert(:credential, schema: "postgresql")
+
+      assert Credentials.reconcile_legacy_schema_names(sup) == 2
+
+      assert Repo.get!(Credential, credential.id).schema ==
+               "@openfn/language-postgresql"
+
+      assert Repo.get!(Credential, other.id).schema ==
+               "@openfn/language-postgresql"
+
+      assert Repo.get!(Credential, credential.id).updated_at ==
+               credential.updated_at
+    end
+
+    test "leaves raw, oauth, and an unresolvable custom short name untouched",
+         %{sup: sup} do
+      raw = insert(:credential, schema: "raw")
+      oauth = insert(:credential, schema: "oauth")
+      custom = insert(:credential, schema: "totally-custom")
+
+      assert Credentials.reconcile_legacy_schema_names(sup) == 0
+
+      assert Repo.get!(Credential, raw.id).schema == "raw"
+      assert Repo.get!(Credential, oauth.id).schema == "oauth"
+      assert Repo.get!(Credential, custom.id).schema == "totally-custom"
+    end
+  end
+
+  describe "get_schema/1" do
+    setup :isolated_adaptors
+
+    test "returns the adaptor's schema when one is present" do
+      seed_credential_schema("http")
+
+      assert %Credentials.Schema{fields: fields} =
+               Credentials.get_schema("@openfn/language-http")
+
+      assert fields != []
     end
   end
 end

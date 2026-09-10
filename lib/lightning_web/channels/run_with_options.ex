@@ -1,7 +1,7 @@
 defmodule LightningWeb.RunWithOptions do
   @moduledoc false
 
-  alias Lightning.AdaptorRegistry
+  alias Lightning.Adaptors
   alias Lightning.Run
   alias Lightning.Workflows.Snapshot.Edge
   alias Lightning.Workflows.Snapshot.Job
@@ -17,19 +17,22 @@ defmodule LightningWeb.RunWithOptions do
   for that mapping: it takes a bunch of Lightning resources and turns them into
   a Worker-executable plan for a run.
   """
-  @spec render(Run.t()) :: map()
+  @spec render(Run.t()) :: {:ok, map()} | {:error, term()}
   def render(%Run{} = run) do
-    %{
-      "id" => run.id,
-      "project_id" => run.snapshot.workflow.project_id,
-      "triggers" => run.snapshot.triggers |> Enum.map(&render/1),
-      "jobs" => run.snapshot.jobs |> Enum.map(&render/1),
-      "edges" => run.snapshot.edges |> Enum.map(&render/1),
-      "starting_node_id" => run.starting_trigger_id || run.starting_job_id,
-      "dataclip_id" => run.dataclip_id,
-      "options" => options_for_worker(run.options),
-      "meta" => render_meta(run)
-    }
+    with {:ok, jobs} <- render_jobs(run.snapshot.jobs) do
+      {:ok,
+       %{
+         "id" => run.id,
+         "project_id" => run.snapshot.workflow.project_id,
+         "triggers" => run.snapshot.triggers |> Enum.map(&render/1),
+         "jobs" => jobs,
+         "edges" => run.snapshot.edges |> Enum.map(&render/1),
+         "starting_node_id" => run.starting_trigger_id || run.starting_job_id,
+         "dataclip_id" => run.dataclip_id,
+         "options" => options_for_worker(run.options),
+         "meta" => render_meta(run)
+       }}
+    end
   end
 
   def render(%Trigger{} = trigger) do
@@ -39,13 +42,16 @@ defmodule LightningWeb.RunWithOptions do
   end
 
   def render(%Job{} = job) do
-    %{
-      "id" => job.id,
-      "adaptor" => AdaptorRegistry.resolve_adaptor(job.adaptor),
-      "credential_id" => get_credential_id(job),
-      "body" => job.body,
-      "name" => job.name
-    }
+    with {:ok, adaptor} <- Adaptors.to_wire(job.adaptor) do
+      {:ok,
+       %{
+         "id" => job.id,
+         "adaptor" => adaptor,
+         "credential_id" => get_credential_id(job),
+         "body" => job.body,
+         "name" => job.name
+       }}
+    end
   end
 
   def render(
@@ -70,6 +76,15 @@ defmodule LightningWeb.RunWithOptions do
       "enabled" => edge.enabled,
       "target_job_id" => edge.target_job_id
     }
+  end
+
+  defp render_jobs(jobs) do
+    rendered = Enum.map(jobs, &render/1)
+
+    case Enum.find(rendered, &match?({:error, _}, &1)) do
+      nil -> {:ok, Enum.map(rendered, fn {:ok, job} -> job end)}
+      error -> error
+    end
   end
 
   defp render_meta(run) do

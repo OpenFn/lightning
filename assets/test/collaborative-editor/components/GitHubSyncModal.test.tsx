@@ -24,7 +24,6 @@ import { createAdaptorStore } from '../../../js/collaborative-editor/stores/crea
 import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
 import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
 import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../js/collaborative-editor/types/session';
@@ -32,6 +31,7 @@ import {
   createGithubConnectedContext,
   createSessionContext,
 } from '../__helpers__/sessionContextFactory';
+import { createTestSessionStore } from '../__helpers__/sessionStoreHelpers';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
@@ -58,7 +58,7 @@ function createTestSetup(options: WrapperOptions = {}) {
   } = options;
 
   // Create all stores
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const sessionContextStore = createSessionContextStore(false);
   const workflowStore = createWorkflowStore();
   const adaptorStore = createAdaptorStore();
@@ -533,7 +533,8 @@ describe('GitHubSyncModal - Save & Sync Action', () => {
           commit_message: expect.stringContaining(
             'initiated a sync from Lightning'
           ),
-        })
+        }),
+        expect.any(Number)
       );
     });
   });
@@ -678,7 +679,8 @@ describe('GitHubSyncModal - Save & Sync Action', () => {
         'save_and_sync',
         expect.objectContaining({
           commit_message: 'Test commit message',
-        })
+        }),
+        expect.any(Number)
       );
     });
   });
@@ -726,7 +728,11 @@ describe('GitHubSyncModal - Keyboard Shortcuts', () => {
     await user.type(textarea, '{Control>}{Enter}{/Control}');
 
     await waitFor(() => {
-      expect(pushSpy).toHaveBeenCalledWith('save_and_sync', expect.any(Object));
+      expect(pushSpy).toHaveBeenCalledWith(
+        'save_and_sync',
+        expect.any(Object),
+        expect.any(Number)
+      );
     });
   });
 
@@ -767,7 +773,11 @@ describe('GitHubSyncModal - Keyboard Shortcuts', () => {
     await user.type(textarea, '{Meta>}{Enter}{/Meta}');
 
     await waitFor(() => {
-      expect(pushSpy).toHaveBeenCalledWith('save_and_sync', expect.any(Object));
+      expect(pushSpy).toHaveBeenCalledWith(
+        'save_and_sync',
+        expect.any(Object),
+        expect.any(Number)
+      );
     });
   });
 

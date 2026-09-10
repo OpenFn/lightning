@@ -12,24 +12,21 @@ import { AdaptorSelectionModal } from '../../../js/collaborative-editor/componen
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import type { Adaptor } from '../../../js/collaborative-editor/types/adaptor';
 
-// Mock useAdaptorIcons to avoid fetching icon manifest
-vi.mock('#/workflow-diagram/useAdaptorIcons', () => ({
-  default: () => null,
-}));
-
 // Mock adaptor data
 const mockProjectAdaptors: Adaptor[] = [
   {
     name: '@openfn/language-http',
-    latest: '1.0.0',
-    versions: [{ version: '1.0.0' }, { version: '0.9.0' }],
-    repo: 'git+https://github.com/openfn/adaptors.git',
+    latest_version: '1.0.0',
+    versions: ['1.0.0', '0.9.0'],
+    repository: 'git+https://github.com/openfn/adaptors.git',
+    icon_urls: { square: null, rectangle: null },
   },
   {
     name: '@openfn/language-salesforce',
-    latest: '2.1.0',
-    versions: [{ version: '2.1.0' }, { version: '2.0.0' }],
-    repo: 'git+https://github.com/openfn/adaptors.git',
+    latest_version: '2.1.0',
+    versions: ['2.1.0', '2.0.0'],
+    repository: 'git+https://github.com/openfn/adaptors.git',
+    icon_urls: { square: null, rectangle: null },
   },
 ];
 
@@ -37,38 +34,39 @@ const mockAllAdaptors: Adaptor[] = [
   ...mockProjectAdaptors,
   {
     name: '@openfn/language-dhis2',
-    latest: '3.2.1',
-    versions: [{ version: '3.2.1' }, { version: '3.2.0' }],
-    repo: 'git+https://github.com/openfn/adaptors.git',
+    latest_version: '3.2.1',
+    versions: ['3.2.1', '3.2.0'],
+    repository: 'git+https://github.com/openfn/adaptors.git',
+    icon_urls: { square: null, rectangle: null },
   },
   {
     name: '@openfn/language-common',
-    latest: '2.0.0',
-    versions: [{ version: '2.0.0' }, { version: '1.9.0' }],
-    repo: 'git+https://github.com/openfn/adaptors.git',
+    latest_version: '2.0.0',
+    versions: ['2.0.0', '1.9.0'],
+    repository: 'git+https://github.com/openfn/adaptors.git',
+    icon_urls: { square: null, rectangle: null },
   },
 ];
 
 // Mock store context with proper structure
-function createMockStoreContext() {
+function createMockStoreContext(
+  isLoading = false,
+  error: string | null = null
+) {
+  const snapshot = {
+    adaptors: isLoading || error ? [] : mockAllAdaptors,
+    projectAdaptors: mockProjectAdaptors,
+    isLoading,
+    error,
+  };
   return {
     adaptorStore: {
       subscribe: vi.fn(() => vi.fn()),
-      getSnapshot: vi.fn(() => ({
-        adaptors: mockAllAdaptors,
-        projectAdaptors: mockProjectAdaptors,
-        isLoading: false,
-        error: null,
-      })),
-      withSelector: vi.fn(
-        selector => () =>
-          selector({
-            adaptors: mockAllAdaptors,
-            projectAdaptors: mockProjectAdaptors,
-            isLoading: false,
-            error: null,
-          })
-      ),
+      getSnapshot: vi.fn(() => snapshot),
+      withSelector: vi.fn(selector => () => selector(snapshot)),
+      requestAdaptors: vi.fn(),
+      setAdaptors: vi.fn(),
+      clearError: vi.fn(),
     },
     credentialStore: {
       subscribe: vi.fn(() => vi.fn()),
@@ -125,7 +123,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -147,6 +145,47 @@ describe('AdaptorSelectionModal', () => {
         screen.queryByPlaceholderText('Search for an adaptor to connect...')
       ).not.toBeInTheDocument();
     });
+
+    it('shows a loading state instead of the search list while the catalogue is loading', () => {
+      renderWithProviders(
+        <AdaptorSelectionModal
+          isOpen={true}
+          onClose={onClose}
+          onSelect={onSelect}
+          adaptorsInUse={[]}
+        />,
+        createMockStoreContext(true)
+      );
+
+      expect(screen.getByTestId('adaptor-list-loading')).toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('Search for an adaptor to connect...')
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows an error state with a retry affordance when the catalogue fetch fails', () => {
+      const mockStoreContext = createMockStoreContext(false, 'Server error');
+
+      renderWithProviders(
+        <AdaptorSelectionModal
+          isOpen={true}
+          onClose={onClose}
+          onSelect={onSelect}
+          adaptorsInUse={[]}
+        />,
+        mockStoreContext
+      );
+
+      expect(screen.getByTestId('adaptor-list-error')).toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('Search for an adaptor to connect...')
+      ).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(
+        mockStoreContext.adaptorStore.requestAdaptors
+      ).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('adaptor display', () => {
@@ -156,7 +195,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -172,7 +211,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -187,7 +226,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={[]}
+          adaptorsInUse={[]}
         />
       );
 
@@ -203,7 +242,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -220,7 +259,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -243,7 +282,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -263,7 +302,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -287,7 +326,7 @@ describe('AdaptorSelectionModal', () => {
               isOpen={isOpen}
               onClose={onClose}
               onSelect={onSelect}
-              projectAdaptors={mockProjectAdaptors}
+              adaptorsInUse={mockProjectAdaptors}
             />
           </StoreContext.Provider>
         </KeyboardProvider>
@@ -329,7 +368,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 
@@ -349,7 +388,7 @@ describe('AdaptorSelectionModal', () => {
           isOpen={true}
           onClose={onClose}
           onSelect={onSelect}
-          projectAdaptors={mockProjectAdaptors}
+          adaptorsInUse={mockProjectAdaptors}
         />
       );
 

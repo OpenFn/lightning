@@ -44,11 +44,6 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => getURLStateMockValue(urlState),
 }));
 
-// Mock useAdaptorIcons to prevent async fetch warnings
-vi.mock('../../../js/workflow-diagram/useAdaptorIcons', () => ({
-  default: () => ({}),
-}));
-
 let storeCleanup: (() => void) | null = null;
 
 afterEach(() => {

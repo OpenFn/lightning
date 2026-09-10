@@ -68,7 +68,7 @@ defmodule Lightning.AiAssistant.UnsavedJobTest do
         enriched_session = AiAssistant.enrich_session_with_job_context(session)
 
         assert enriched_session.expression == "fn(state => state);"
-        # AdaptorRegistry.resolve_adaptor returns versioned adaptor
+
         assert String.starts_with?(
                  enriched_session.adaptor,
                  "@openfn/language-http"
