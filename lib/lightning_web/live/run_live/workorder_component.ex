@@ -193,7 +193,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             >
               <Common.wrapper_tooltip
                 id={"workflow-name-#{@work_order.id}"}
-                tooltip={"#{@workflow_name}<br/><span class=\"text-xs text-gray-500\">Click to view</span>"}
+                tooltip={@workflow_name}
+                subtitle="Click to view"
               >
                 <span
                   class="truncate text-gray-900 workflow-name hover:text-primary-600 cursor-pointer"

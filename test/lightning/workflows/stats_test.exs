@@ -3,6 +3,7 @@ defmodule Lightning.Workflows.StatsTest do
 
   import Lightning.Factories
 
+  alias Lightning.Run
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Stats
   alias Lightning.Workflows.Workflow
@@ -168,19 +169,90 @@ defmodule Lightning.Workflows.StatsTest do
              Map.new(WorkOrder.final_states(), &{&1, 0})
   end
 
-  # The 30 s TTL is what snaps the rolling window and dedupes a burst of viewers
-  # onto one query. Entries key on the workflow, so this cannot leak between
-  # tests.
-  test "serves a repeat call from the cache rather than requerying", %{
+  # Freshness is the cache key's job, not the TTL's: the key carries the
+  # workflow's latest `last_activity`, so nothing settling means the same key
+  # and one computation, however many pods are asked.
+  test "asks the same question once while nothing settles", %{
+    workflow: workflow,
+    trigger: trigger
+  } do
+    insert_run(workflow, trigger, :success)
+
+    first = Stats.outcomes(workflow)
+
+    assert Stats.outcomes(workflow) == first
+
+    # Also pins the key shape, which `change_marker/1` and `cached/2` have to
+    # agree on and nothing else would notice going out of step.
+    assert {:ok, true} =
+             Cachex.exists?(
+               :workflow_stats,
+               {:outcomes, workflow.id, 30, marker(workflow)}
+             )
+
+    assert cached_keys(workflow) == 1
+  end
+
+  test "recomputes once a work order settles", %{
+    workflow: workflow,
+    trigger: trigger
+  } do
+    insert_run(workflow, trigger, :success)
+    assert %{success: 1, failed: 0} = Stats.outcomes(workflow).counts
+
+    insert_run(workflow, trigger, :failed)
+
+    assert %{success: 1, failed: 1} = Stats.outcomes(workflow).counts
+  end
+
+  # `last_activity` moves when a run starts, not only when one settles, so an
+  # unfiltered marker would hand every open tab a new key, and a full
+  # recompute, on every poll of a workflow with a cron.
+  test "does not recompute while a work order is only running", %{
     workflow: workflow,
     trigger: trigger
   } do
     insert_run(workflow, trigger, :success)
     first = Stats.outcomes(workflow)
 
-    insert_run(workflow, trigger, :failed)
+    work_order(workflow, trigger,
+      state: :running,
+      last_activity: DateTime.utc_now()
+    )
 
     assert Stats.outcomes(workflow) == first
+    assert cached_keys(workflow) == 1
+  end
+
+  # `cached/2` is private, so this drives it through `outcomes/2` with a window
+  # wide enough to blow up the date arithmetic. Which failure is beside the
+  # point; that it escapes as an exception, not a match error, is not.
+  test "reraises a failed computation instead of matching on the error tuple",
+       %{workflow: workflow} do
+    assert_raise Cachex.Error, fn -> Stats.outcomes(workflow, 100_000_000) end
+  end
+
+  defp marker(workflow) do
+    Lightning.Repo.one(
+      from(wo in WorkOrder,
+        where:
+          wo.workflow_id == ^workflow.id and
+            wo.state in ^WorkOrder.final_states(),
+        select: max(wo.last_activity)
+      )
+    )
+  end
+
+  # Scoped to this workflow: the file is `async: true` against a cache shared
+  # by the whole node, so a count of everything in it would be a coin toss.
+  defp cached_keys(workflow) do
+    query =
+      Cachex.Query.build(
+        where: {:==, {:element, 2, :key}, workflow.id},
+        output: :key
+      )
+
+    :workflow_stats |> Cachex.stream!(query) |> Enum.count()
   end
 
   describe "error_signatures/2" do
@@ -564,6 +636,44 @@ defmodule Lightning.Workflows.StatsTest do
       assert %{signatures: []} = Stats.error_signatures(workflow)
     end
 
+    # Both render as `unknown`, so ungrouped the table drew two rows under one
+    # React key.
+    test "groups an empty error type with a missing one", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      job = hd(workflow.jobs)
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: "")
+      ])
+
+      failed_run(workflow, trigger, [], [
+        step(job, exit_reason: "fail", error_type: nil)
+      ])
+
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
+      assert %{count: 2, error_type: nil} = signature
+    end
+
+    # `""` is truthy, so it won the `||` in `to_signature/2`.
+    test "does not let an empty step error type mask the run's", %{
+      workflow: workflow,
+      trigger: trigger
+    } do
+      job = hd(workflow.jobs)
+
+      failed_run(
+        workflow,
+        trigger,
+        [state: :lost, error_type: "LostAfterStart"],
+        [step(job, exit_reason: "lost", error_type: "")]
+      )
+
+      assert %{signatures: [signature]} = Stats.error_signatures(workflow)
+      assert signature.error_type == "LostAfterStart"
+    end
+
     defp two_jobs(workflow) do
       case workflow.jobs do
         [job] ->
@@ -575,35 +685,113 @@ defmodule Lightning.Workflows.StatsTest do
     end
   end
 
-  describe "invalidate/1" do
-    test "drops every slice and window the workflow has cached", ctx do
-      %{workflow: workflow, trigger: trigger} = ctx
-      insert_run(workflow, trigger, :failed)
+  describe "runs/2" do
+    # A run whose `inserted_at` we choose, on a work order active at the same
+    # moment — the shape the window needs and `insert_run/4` can't give.
+    defp run_at(workflow, trigger, state, at) do
+      # A work order has no `:available`, so an in-flight run hangs off a
+      # running one.
+      wo_state = if state in WorkOrder.final_states(), do: state, else: :running
 
-      # Two windows, so this fails the moment `invalidate/1` goes back to
-      # deleting a hardcoded list of keys.
-      Stats.outcomes(workflow)
-      Stats.outcomes(workflow, 7)
-      Stats.error_signatures(workflow)
+      insert(:run,
+        work_order:
+          work_order(workflow, trigger, state: wo_state, last_activity: at),
+        starting_trigger: trigger,
+        dataclip: insert(:dataclip),
+        state: state,
+        inserted_at: at
+      )
+    end
+
+    # Written out rather than a fixed index, because the grid moves with the
+    # clock: at 09:59 the last 2-hourly bucket is 08:00, at 10:01 it is 10:00.
+    defp bucket_of(%{window: %{from: from}, buckets: [a, b | _]}, at) do
+      DateTime.diff(at, from, :second)
+      |> div(DateTime.diff(b.at, a.at, :second))
+    end
+
+    test "counts each state into the bucket its run started in", ctx do
+      %{workflow: workflow, trigger: trigger} = ctx
+
+      older = DateTime.add(DateTime.utc_now(), -5, :hour)
+      newer = DateTime.add(DateTime.utc_now(), -90, :minute)
+
+      # A hair inside a bucket, not in the next one: `extract(epoch ...)` is
+      # `numeric` and casting it rounds, so the query has to floor first.
+      edge =
+        DateTime.utc_now()
+        |> DateTime.to_unix()
+        |> div(7_200)
+        |> Kernel.*(7_200)
+        |> DateTime.from_unix!()
+        |> DateTime.add(-4, :hour)
+        |> DateTime.add(-100, :millisecond)
+
+      run_at(workflow, trigger, :failed, newer)
+      run_at(workflow, trigger, :success, older)
+      run_at(workflow, trigger, :success, older)
+      run_at(workflow, trigger, :crashed, edge)
+
+      assert %{buckets: buckets} = result = Stats.runs(workflow, 1)
+
+      assert %{success: 2, failed: 0} =
+               Enum.at(buckets, bucket_of(result, older))
+
+      assert %{success: 0, failed: 1} =
+               Enum.at(buckets, bucket_of(result, newer))
+
+      assert %{crashed: 1} = Enum.at(buckets, bucket_of(result, edge))
+    end
+
+    # Boundaries on the clock, so the chart can label a bar "2am" or "Tuesday"
+    # and be telling the truth. And a bar chart with holes in it is a different
+    # chart, so every bucket carries every final state, zero-filled.
+    test "cuts each window into clock-aligned, zero-filled buckets", ctx do
+      %{workflow: workflow} = ctx
+
+      zeroed = Map.new(Run.final_states(), &{&1, 0})
+
+      for {days, seconds, count} <- [
+            {1, 7_200, 13},
+            {7, 43_200, 15},
+            {30, 86_400, 31}
+          ] do
+        assert %{buckets: buckets, window: window} = Stats.runs(workflow, days)
+
+        assert length(buckets) == count
+        assert rem(DateTime.to_unix(window.from), seconds) == 0
+
+        assert DateTime.compare(
+                 window.from,
+                 DateTime.add(window.to, -days, :day)
+               ) != :gt
+
+        assert DateTime.diff(Enum.at(buckets, 1).at, hd(buckets).at) == seconds
+
+        for bucket <- buckets, do: assert(Map.delete(bucket, :at) == zeroed)
+
+        # The window ends inside the last bucket, which is still filling.
+        last = List.last(buckets).at
+        assert DateTime.compare(last, window.to) == :lt
+        assert DateTime.diff(window.to, last, :second) < seconds
+      end
+    end
+
+    test "skips runs outside the window, in flight, or on another workflow",
+         ctx do
+      %{workflow: workflow, trigger: trigger} = ctx
+
+      run_at(workflow, trigger, :success, days_ago(2))
+      run_at(workflow, trigger, :available, DateTime.utc_now())
 
       other = insert(:simple_workflow)
-      Stats.outcomes(other)
+      run_at(other, hd(other.triggers), :success, DateTime.utc_now())
 
-      Stats.invalidate(workflow.id)
+      assert %{buckets: buckets} = Stats.runs(workflow, 1)
 
-      assert {:ok, nil} =
-               Cachex.get(:workflow_stats, {:outcomes, workflow.id, 30})
-
-      assert {:ok, nil} =
-               Cachex.get(:workflow_stats, {:outcomes, workflow.id, 7})
-
-      assert {:ok, nil} =
-               Cachex.get(:workflow_stats, {:failures, workflow.id, 30})
-
-      # Another workflow's numbers did not change, so its cache should not have
-      # been swept up in the scan.
-      assert {:ok, %{counts: _}} =
-               Cachex.get(:workflow_stats, {:outcomes, other.id, 30})
+      assert Enum.sum_by(buckets, fn bucket ->
+               bucket |> Map.delete(:at) |> Map.values() |> Enum.sum()
+             end) == 0
     end
   end
 end

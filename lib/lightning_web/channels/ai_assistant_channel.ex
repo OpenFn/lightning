@@ -74,6 +74,12 @@ defmodule LightningWeb.AiAssistantChannel do
       {:parse_topic, {:error, :invalid_topic}} ->
         {:error, %{reason: "invalid topic format"}}
 
+      # A changeset has no Jason encoder, so putting one in the reply kills the
+      # socket before anything is sent.
+      {:session, {:error, %Ecto.Changeset{} = changeset}} ->
+        errors = format_changeset_errors(changeset)
+        {:error, %{reason: validation_sentence(errors), errors: errors}}
+
       {:session, {:error, reason}} ->
         {:error, %{reason: reason}}
 
@@ -328,9 +334,11 @@ defmodule LightningWeb.AiAssistantChannel do
   @impl true
   def handle_info(
         {:ai_assistant, :message_status_changed,
-         %{status: {status, updated_session}, session_id: session_id}},
+         %{status: {status, updated_session}, session_id: session_id} = payload},
         socket
       ) do
+    failed_id = Map.get(payload, :message_id)
+
     if socket.assigns.session_id == session_id do
       case status do
         :processing ->
@@ -352,29 +360,30 @@ defmodule LightningWeb.AiAssistantChannel do
           end
 
         :error ->
-          # Broadcast error state so all users can see and retry
-          user_message =
-            updated_session.messages
-            |> Enum.reverse()
-            |> Enum.find(fn msg -> msg.role == :user end)
+          # A stream that died partway through still saves what arrived. Send
+          # it before the error, or the client clears its buffer and the reply
+          # the user watched appear vanishes until they reload.
+          broadcast_partial_answer(socket, updated_session)
 
-          if user_message do
-            broadcast(socket, "message_error", %{
-              message_id: user_message.id,
-              status: "error"
-            })
+          # Broadcast error state so all users can see and retry
+          failed_message = failed_message(updated_session, failed_id)
+
+          if failed_message do
+            broadcast(
+              socket,
+              "message_error",
+              %{message_id: failed_message.id, status: "error"}
+              |> put_failure(failed_message)
+            )
           end
 
         :failed ->
           # Handle failed status (similar to error)
-          user_message =
-            updated_session.messages
-            |> Enum.reverse()
-            |> Enum.find(fn msg -> msg.role == :user end)
+          failed_message = failed_message(updated_session, failed_id)
 
-          if user_message do
+          if failed_message do
             broadcast(socket, "message_error", %{
-              message_id: user_message.id,
+              message_id: failed_message.id,
               status: "failed"
             })
           end
@@ -941,7 +950,7 @@ defmodule LightningWeb.AiAssistantChannel do
 
     # Include message_options for the initial message (attach_io_data, step_id, etc.)
     meta =
-      if params["attach_io_data"] || params["step_id"] || params["attach_code"] ||
+      if params["attach_io_data"] || params["step_id"] ||
            params["attach_logs"] || params["use_global_assistant"] do
         Map.put(meta, "message_options", build_message_options(params))
       else
@@ -1037,7 +1046,6 @@ defmodule LightningWeb.AiAssistantChannel do
 
   defp build_message_options(params) do
     %{
-      "code" => params["attach_code"] == true,
       "log" => params["attach_logs"] == true,
       "attach_io_data" => params["attach_io_data"] == true,
       "step_id" => params["step_id"],
@@ -1085,8 +1093,68 @@ defmodule LightningWeb.AiAssistantChannel do
       user: format_user(message.user),
       job_id: job_id,
       from_global: from_global,
-      apply_failed: match?(%{"apply_failed" => true}, message.meta)
+      apply_failed: match?(%{"apply_failed" => true}, message.meta),
+      code_change_failed: match?(%{"code_change_failed" => true}, message.meta)
     }
+    |> put_failure(message)
+  end
+
+  # Only an assistant message kept from a cut-off stream: a failed user message
+  # is already on screen, and a session whose newest assistant reply succeeded
+  # has nothing partial to send.
+  defp broadcast_partial_answer(socket, session) do
+    # By role, not by taking the last: inserted_at is stored to the second, so a
+    # turn that dies quickly ties with its own question and can sort either way
+    # round. Re-sending is safe, since the client dedupes by id.
+    partial =
+      session.messages
+      |> Enum.filter(&(&1.role == :assistant))
+      |> List.last()
+
+    case partial do
+      %{failure_category: :incomplete_response} = partial ->
+        broadcast(socket, "new_message", %{message: format_message(partial)})
+
+      _ ->
+        :ok
+    end
+  end
+
+  # Falling back to the newest is only right when the broadcaster named nothing;
+  # the reaper reports on messages several exchanges back.
+  defp failed_message(session, nil) do
+    session.messages
+    |> Enum.reverse()
+    |> Enum.find(fn msg -> msg.role == :user end)
+  end
+
+  defp failed_message(session, message_id) do
+    Enum.find(session.messages, fn msg -> msg.id == message_id end) ||
+      failed_message(session, nil)
+  end
+
+  # Only present on a failed message, so a reconnecting client sees the same
+  # reason as one that was watching when it happened.
+  defp put_failure(payload, %{failure_category: nil}), do: payload
+
+  defp put_failure(payload, message) do
+    Map.merge(payload, %{
+      failure_category: to_string(message.failure_category),
+      failure_message: message.failure_message
+    })
+  end
+
+  # A join reply's `reason` is shown as it stands, unlike the `type`/`errors`
+  # pair the message handlers use, so it has to read as a sentence.
+  defp validation_sentence(errors) do
+    errors
+    |> Enum.flat_map(fn {field, messages} ->
+      Enum.map(messages, &"#{field} #{&1}")
+    end)
+    |> case do
+      [] -> "the session could not be started"
+      sentences -> Enum.join(sentences, ", ")
+    end
   end
 
   defp format_user(nil), do: nil

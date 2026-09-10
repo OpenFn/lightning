@@ -14,7 +14,12 @@ defmodule Lightning.AiAssistant.ChatMessage do
     for assistant messages (global chat); `[]` for flat messages (the column
     is NULL, which `embeds_many` loads as an empty list)
   * `role` - Who sent the message: `:user` or `:assistant`
-  * `status` - Processing status: `:pending`, `:success`, `:error`, or `:cancelled`
+  * `status` - Processing status: `:pending`, `:processing`, `:success`,
+    `:error`, or `:cancelled`
+  * `failure_category` - Why a failed message failed, for grouping; `nil` on
+    anything that has not failed
+  * `failure_message` - The sentence a person reads for that failure, at most
+    500 characters; `nil` alongside a `nil` category
   * `is_deleted` - Soft deletion flag (defaults to false)
   * `is_public` - Whether the message is publicly visible (defaults to true)
   * `meta` - Additional metadata (e.g., `"unsaved_job"` for job data not yet saved)
@@ -129,6 +134,12 @@ defmodule Lightning.AiAssistant.ChatMessage do
   # rows that get re-serialized on every channel join.
   @max_response_segments 200
 
+  @max_content_length 10_000
+
+  # A sentence, not a story. Bounded because the column is read back and
+  # re-sent on every channel join.
+  @max_failure_message_length 500
+
   @type role() :: :user | :assistant
   @type status() :: :pending | :processing | :success | :error | :cancelled
 
@@ -160,6 +171,23 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
     field :status, Ecto.Enum,
       values: [:pending, :processing, :success, :error, :cancelled]
+
+    # Kept on the row as well as broadcast: the failure that matters most is a
+    # deploy interrupting a run, which is exactly when the browser reconnects
+    # to a different node and a PubSub-only signal is already gone.
+    field :failure_category, Ecto.Enum,
+      values: [
+        :upstream_error,
+        :timeout,
+        :interrupted,
+        :abandoned,
+        :incomplete_response,
+        :internal
+      ]
+
+    # User-facing prose only. Raw error terms and upstream response bodies go
+    # to the log, never here - they can carry internal hostnames or stack traces.
+    field :failure_message, :string
 
     field :is_deleted, :boolean, default: false
     field :is_public, :boolean, default: true
@@ -200,6 +228,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
       :code,
       :role,
       :status,
+      :failure_category,
+      :failure_message,
       :is_deleted,
       :is_public,
       :meta,
@@ -210,7 +240,8 @@ defmodule Lightning.AiAssistant.ChatMessage do
     |> cast_embed(:response_segments)
     |> validate_length(:response_segments, max: @max_response_segments)
     |> validate_required([:content, :role])
-    |> validate_length(:content, min: 1, max: 10_000)
+    |> validate_length(:content, min: 1, max: @max_content_length)
+    |> validate_length(:failure_message, max: @max_failure_message_length)
     |> maybe_put_user_assoc(attrs[:user] || attrs["user"])
     |> maybe_put_job_assoc(attrs[:job] || attrs["job"])
     |> maybe_require_user()
@@ -219,6 +250,12 @@ defmodule Lightning.AiAssistant.ChatMessage do
 
   @doc "Maximum number of segments accepted on a message."
   def max_response_segments, do: @max_response_segments
+
+  @doc "Maximum length of a message's `content`."
+  def max_content_length, do: @max_content_length
+
+  @doc "Maximum length of a message's `failure_message`."
+  def max_failure_message_length, do: @max_failure_message_length
 
   @doc """
   Creates a changeset for updating message status.

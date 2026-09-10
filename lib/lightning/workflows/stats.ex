@@ -28,9 +28,9 @@ defmodule Lightning.Workflows.Stats do
 
   @default_days_back 30
 
-  # Short enough that the page stays honest during an incident, long enough to
-  # collapse a burst of viewers into one query.
-  @ttl :timer.seconds(30)
+  # Caps what the marker cannot see — the window rolling, the retention purge —
+  # and stops keys piling up.
+  @ttl :timer.minutes(5)
 
   @final_states WorkOrder.final_states()
   @zero_counts Map.new(@final_states, &{&1, 0})
@@ -41,13 +41,8 @@ defmodule Lightning.Workflows.Stats do
   def outcomes(%Workflow{id: workflow_id}, days_back \\ @default_days_back)
       when days_back > 0 do
     cached({:outcomes, workflow_id, days_back}, fn ->
-      to = DateTime.utc_now()
-      since = DateTime.add(to, -days_back, :day)
-
-      %{
-        window: %{from: since, to: to},
-        counts: count_work_orders(workflow_id, since)
-      }
+      window = window(days_back)
+      %{window: window, counts: count_work_orders(workflow_id, window.from)}
     end)
   end
 
@@ -84,47 +79,192 @@ defmodule Lightning.Workflows.Stats do
       )
       when days_back > 0 do
     cached({:failures, workflow_id, days_back}, fn ->
-      to = DateTime.utc_now()
-      since = DateTime.add(to, -days_back, :day)
+      window = window(days_back)
 
       %{
-        window: %{from: since, to: to},
-        signatures: group_by_signature(workflow_id, since)
+        window: window,
+        signatures: group_by_signature(workflow_id, window.from)
       }
     end)
   end
 
+  # How the runs chart slices each window: `{bucket_seconds, bucket_count}`.
+  # Every width divides a day evenly, so a window whose `from` sits on the grid
+  # keeps every bucket boundary on the clock — 2-hourly, AM/PM, midnight.
+  #
+  # One bucket more than the width divides into: `now` sits mid-bucket, so a
+  # grid of exactly `days_back / width` bars would start *after*
+  # `now - days_back` and leave the oldest hours of the window undrawn while
+  # the donuts beside it counted them. The oldest bar instead reaches back
+  # past `from`, and `window` reports the range actually covered.
+  @buckets %{1 => {7_200, 13}, 7 => {43_200, 15}, 30 => {86_400, 31}}
+
+  @zero_run_counts Map.new(Run.final_states(), &{&1, 0})
+
+  @typedoc "One bar of the runs chart: when its slot starts, and its counts."
+  @type run_bucket :: %{
+          :at => DateTime.t(),
+          optional(atom()) => non_neg_integer()
+        }
+
   @doc """
-  Drops every cached slice and window for a workflow, so the next read
-  recomputes.
+  Final run counts per state, bucketed across the last `days_back` days:
+  2-hourly over a day, AM/PM over a week, daily over a month.
 
-  Called when one of its work orders settles. Without it, the refresh the
-  health page just triggered would be answered out of the value cached before
-  the change — the page would make a request and draw the same numbers.
+  Bucketed here rather than in the browser, because the alternative is shipping
+  every run in the window — six figures of rows on a busy workflow, cached
+  whole and JSON-encoded — to draw thirty bars.
+
+  Buckets are counted on `inserted_at` — when the attempt started, not when it
+  settled — so a run stays in the bar the traffic arrived in. Every bucket and
+  every state is present, zero-filled: the chart draws a flat window without
+  reasoning about which bars are missing.
+
+  The last bucket is the one `now` falls in, so it is still filling; the first
+  reaches back past `now - days_back`, so nothing in the window goes undrawn.
+  `window` is the range the bars actually cover.
+
+  A bucket is `at` alongside one key per state, flat rather than nested, which
+  is the row shape Recharts takes as `data` — the list goes to the chart
+  untouched, and each `Bar` names the state it draws.
   """
-  def invalidate(workflow_id) do
-    # Every key is `{slice, workflow_id, days_back}`, so element 2 is the
-    # workflow. The filter runs in ETS: only this workflow's keys cross back
-    # into Elixir, however many other workflows are cached alongside it.
-    query =
-      Cachex.Query.build(
-        where: {:==, {:element, 2, :key}, workflow_id},
-        output: :key
-      )
+  @spec runs(Workflow.t(), 1 | 7 | 30) :: %{
+          window: %{from: DateTime.t(), to: DateTime.t()},
+          buckets: [run_bucket()]
+        }
+  def runs(%Workflow{id: workflow_id}, days_back \\ @default_days_back)
+      when is_map_key(@buckets, days_back) do
+    cached({:runs, workflow_id, days_back}, fn ->
+      {seconds, count} = Map.fetch!(@buckets, days_back)
+      window = bucket_window(seconds, count)
 
-    :workflow_stats
-    |> Cachex.stream!(query)
-    |> Enum.each(&Cachex.del(:workflow_stats, &1))
+      %{
+        window: window,
+        buckets: bucket_runs(workflow_id, window.from, seconds, count)
+      }
+    end)
+  end
+
+  # Anchored on the bucket `now` is in, not on `now` itself: a window that ends
+  # mid-bucket would put every boundary at whatever minute the request landed
+  # on, and the labels the chart draws — "2am", "PM", a date — would be lies.
+  defp bucket_window(seconds, count) do
+    to = DateTime.utc_now()
+    current = DateTime.from_unix!(div(DateTime.to_unix(to), seconds) * seconds)
+
+    %{from: DateTime.add(current, -(count - 1) * seconds, :second), to: to}
+  end
+
+  defp bucket_runs(workflow_id, from, seconds, count) do
+    tallies = tally_runs(workflow_id, from, seconds)
+
+    Enum.map(0..(count - 1), fn index ->
+      tallies
+      |> Map.get(index, [])
+      |> Enum.into(@zero_run_counts)
+      |> Map.put(:at, DateTime.add(from, index * seconds, :second))
+    end)
+  end
+
+  # `wo.last_activity` is redundant against the run filter — a work order is
+  # touched every time one of its runs is created or settles, so its activity
+  # is never older than its newest run. It is here for the planner: it lets the
+  # `work_orders(workflow_id, last_activity)` index cut the work orders down to
+  # the window before the nested loop into `runs(work_order_id, inserted_at)`,
+  # instead of probing every work order the workflow ever had.
+  #
+  # The grid is aligned, so integer division by the bucket width is the whole
+  # of the bucketing — no `date_trunc` special case per width. `floor` before
+  # the cast because `extract` yields `numeric` and `numeric::bigint` rounds:
+  # without it a run at 01:59:59.7 is counted in the 02:00 bar.
+  defp tally_runs(workflow_id, from, seconds) do
+    from(r in Run,
+      join: wo in WorkOrder,
+      on: wo.id == r.work_order_id,
+      where:
+        wo.workflow_id == ^workflow_id and wo.last_activity >= ^from and
+          r.inserted_at >= ^from and r.state in ^Run.final_states(),
+      group_by: [selected_as(:bucket), r.state],
+      select: {
+        selected_as(
+          fragment(
+            "div(floor(extract(epoch from ? - ?))::bigint, ?)::int",
+            r.inserted_at,
+            type(^from, :utc_datetime_usec),
+            type(^seconds, :integer)
+          ),
+          :bucket
+        ),
+        r.state,
+        count(r.id)
+      }
+    )
+    |> Repo.all()
+    |> Enum.group_by(fn {bucket, _, _} -> bucket end, fn {_, state, count} ->
+      {state, count}
+    end)
+  end
+
+  defp window(days_back) do
+    to = DateTime.utc_now()
+    %{from: DateTime.add(to, -days_back, :day), to: to}
   end
 
   # Cached whole, `window` included — that is what stops the window rolling per
-  # request. `Cachex.fetch/4` dedupes concurrent misses on the same key.
-  defp cached(key, fun) do
+  # request.
+  #
+  # The marker goes in the key rather than the cache being invalidated when
+  # something settles: a poll that finds nothing has moved is a hit on every
+  # pod, because the answer is read from Postgres and not from one node's ETS.
+  # The trade is that a workflow settling work orders faster than the poll
+  # recomputes on every poll.
+  #
+  # The marker only moves when a work order settles, so a stat counting unsettled
+  # work orders — a queue depth, a running count — needs its own marker.
+  #
+  # Every key must map to exactly one computation. Cachex tracks a fetch in
+  # flight by key alone and ignores the fallback closure
+  # (`deps/cachex/lib/cachex/services/courier.ex:60-62`), so a second caller
+  # with a different closure for the same key never runs its own and is handed
+  # the first one's answer. `outcomes/2` and `error_signatures/2` are safe
+  # because their key prefixes differ.
+  defp cached({_slice, workflow_id, _days} = key, fun) do
+    key = Tuple.insert_at(key, 3, change_marker(workflow_id))
+
     case Cachex.fetch(:workflow_stats, key, fn ->
            {:commit, fun.(), expire: @ttl}
          end) do
-      {tag, value} when tag in [:ok, :commit] -> value
+      {tag, value} when tag in [:ok, :commit] ->
+        value
+
+      # Cachex rescues whatever the fallback raised and hands it back as a
+      # value. Reraised with its original stack, Sentry gets the DB failure
+      # that actually happened instead of a `CaseClauseError` on a tuple.
+      {:error, %Cachex.Error{stack: stack} = error} ->
+        reraise error, stack
+
+      {:error, reason} ->
+        raise "workflow stats cache failed: #{inspect(reason)}"
     end
+  end
+
+  # Only settled work orders move the marker, because only settled work orders
+  # are counted. `last_activity` moves when a run merely starts, so an
+  # unfiltered max would recompute for every open tab on every poll of a
+  # workflow with a cron.
+  #
+  # The gap is a work order that is not final while something it holds already
+  # is — a retry, or a run that settles while a sibling is still in flight. That
+  # work order stops counting until it settles, or until the entry expires.
+  #
+  # Indexed as `(workflow_id, last_activity)`, so this is a lookup, not a scan.
+  defp change_marker(workflow_id) do
+    Repo.one(
+      from(wo in WorkOrder,
+        where: wo.workflow_id == ^workflow_id and wo.state in ^@final_states,
+        select: max(wo.last_activity)
+      )
+    )
   end
 
   # One row per failing step of the work order's latest run — the run whose
@@ -142,7 +282,9 @@ defmodule Lightning.Workflows.Stats do
         where: rs.run_id == parent_as(:latest_run).run_id,
         select: %{
           exit_reason: s.exit_reason,
-          error_type: s.error_type,
+          # `""` is the same "we were not told" as NULL, but it groups apart
+          # and, being truthy, masks the run's own type in `to_signature/2`.
+          error_type: fragment("NULLIF(?, '')", s.error_type),
           snapshot_id: s.snapshot_id,
           job_id: s.job_id
         }
@@ -184,17 +326,18 @@ defmodule Lightning.Workflows.Stats do
         work_order_state: wo.state,
         run_id: r.id,
         run_state: r.state,
-        run_error_type: r.error_type
+        run_error_type: fragment("NULLIF(?, '')", r.error_type)
       }
     )
     |> Query.order_by_run_recency()
   end
 
   # The job's name and adaptor come off the run's own snapshot, not the live
-  # `jobs` table: a rename or an adaptor bump must not relabel history, and a
-  # job since deleted still has to be nameable. Resolving after the group keeps
-  # the jsonb unnest down to the few snapshots that actually failed in the
-  # window — joining it in would unnest every snapshot the workflow ever had.
+  # `jobs` table, so a job since deleted is still nameable. The label a merged
+  # group ends up with is the newest failing snapshot's — see `merge_group/1`.
+  # Resolving after the group keeps the jsonb unnest down to the few snapshots
+  # that actually failed in the window — joining it in would unnest every
+  # snapshot the workflow ever had.
   defp group_by_signature(workflow_id, since) do
     rows =
       from(a in subquery(attributed_failures(workflow_id, since)),

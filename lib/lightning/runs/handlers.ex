@@ -136,9 +136,7 @@ defmodule Lightning.Runs.Handlers do
       |> validate_required([:state, :timestamp])
     end
 
-    @reason_states Map.new(Run.state_reasons(), fn {state, reason} ->
-                     {reason, state}
-                   end)
+    @reason_states Run.states_by_reason()
 
     # An unrecognised reason passes through unchanged, so `validate_required`
     # reports the worker's own word rather than a state we invented for it.

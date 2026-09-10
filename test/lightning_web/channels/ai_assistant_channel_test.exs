@@ -29,7 +29,9 @@ defmodule LightningWeb.AiAssistantChannelTest do
       case key do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
-        :timeout -> 5_000
+        :connect_timeout -> 1_000
+        :idle_timeout -> 5_000
+        :request_timeout -> 5_000
       end
     end)
 
@@ -316,6 +318,43 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
+  describe "join with an invalid first message" do
+    test "returns a clean error rather than crashing the socket", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      too_long =
+        String.duplicate(
+          "x",
+          Lightning.AiAssistant.ChatMessage.max_content_length() + 1
+        )
+
+      params = %{
+        "project_id" => project.id,
+        "workflow_id" => workflow.id,
+        "content" => too_long
+      }
+
+      assert {:error, reply} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 params
+               )
+
+      assert {:ok, _json} = Jason.encode(reply)
+
+      assert %{reason: reason, errors: errors} = reply
+      assert %{"content" => [message]} = errors
+      assert message =~ "should be at most 10000 character(s)"
+
+      # Shown to the reader as it stands, so it cannot be a code.
+      assert reason =~ "should be at most 10000 character(s)"
+    end
+  end
+
   describe "message serialization" do
     test "serializes from_global marker with nil job_id", %{
       socket: socket,
@@ -360,6 +399,156 @@ defmodule LightningWeb.AiAssistantChannelTest do
                },
                %{from_global: false}
              ] = messages
+    end
+
+    test "serializes the flag for a reply whose code edit did not apply", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :assistant,
+              content: "Here is what I changed.",
+              status: :success,
+              meta: %{"from_global" => true, "code_change_failed" => true}
+            }
+          ]
+        )
+
+      assert {:ok, %{messages: [message]}, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      assert message.code_change_failed == true
+    end
+
+    # Everyone in the session sees a failure, not just whoever sent the message.
+    # The partial has to go out before the error, or the client clears its
+    # streaming buffer and the reply the user watched appear vanishes until
+    # they reload.
+    test "sends the partial before the error, and says why it failed", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :user,
+              content: "how?",
+              user: user,
+              status: :error,
+              failure_category: :upstream_error,
+              failure_message: "The connection to the assistant was lost."
+            },
+            %{
+              role: :assistant,
+              content: "half an answer",
+              status: :error,
+              failure_category: :incomplete_response,
+              failure_message: "The connection to the assistant was lost.",
+              inserted_at: DateTime.utc_now() |> DateTime.add(1)
+            }
+          ]
+        )
+
+      assert {:ok, _reply, socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      loaded = AiAssistant.get_session!(session.id)
+      user_message = Enum.find(loaded.messages, &(&1.role == :user))
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:error, loaded},
+           session_id: session.id,
+           message_id: user_message.id
+         }}
+      )
+
+      assert_broadcast "new_message", %{message: %{content: "half an answer"}}
+
+      assert_broadcast "message_error", %{
+        message_id: broadcast_id,
+        status: "error",
+        failure_category: "upstream_error",
+        failure_message: "The connection to the assistant was lost."
+      }
+
+      # The broadcaster named the message, so the reason lands on that one
+      # rather than on whichever happens to be newest.
+      assert broadcast_id == user_message.id
+    end
+
+    # The panel reads these two off the message to show why a reply failed, so
+    # a reconnecting client has to be told the same thing as one that was
+    # watching when it happened.
+    test "serializes the failure reason on a failed message", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :assistant,
+              content: "half an answer",
+              status: :error,
+              failure_category: :incomplete_response,
+              failure_message: "The connection to the assistant was lost."
+            },
+            %{
+              role: :assistant,
+              content: "a clean answer",
+              status: :success,
+              inserted_at: DateTime.utc_now() |> DateTime.add(1)
+            }
+          ]
+        )
+
+      assert {:ok, %{messages: messages}, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      assert [failed, clean] = messages
+
+      assert failed.failure_category == "incomplete_response"
+
+      assert failed.failure_message ==
+               "The connection to the assistant was lost."
+
+      # Nothing failed, so nothing is said about failing.
+      refute Map.has_key?(clean, :failure_category)
+      refute Map.has_key?(clean, :failure_message)
     end
 
     test "serializes segments timeline when present", %{
@@ -744,32 +933,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert errors.base == ["Message cannot be empty"]
     end
 
-    test "includes code when attach_code is true", %{
-      socket: socket,
-      job: job,
-      user: user
-    } do
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
-
-      ref =
-        push(socket, "new_message", %{
-          "content" => "Explain this code",
-          "attach_code" => true
-        })
-
-      assert_reply ref, :ok, %{message: message}
-      assert message.content == "Explain this code"
-    end
-
     test "returns limit error when quota is exceeded", %{
       socket: socket,
       job: job,
@@ -887,7 +1050,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{}
         )
 
-      # Simulate user selecting a run and checking "Send logs"
+      # Simulate user selecting a run and checking "Send run logs"
       ref =
         push(socket, "new_message", %{
           "content" => "Help me debug these logs",
@@ -3004,65 +3167,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
-  describe "extract_message_options edge cases" do
-    test "handles attach_code and attach_logs for job_code", %{
-      socket: socket,
-      job: job,
-      user: user
-    } do
-      # Use manual mode to prevent AI response from being generated inline
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
-
-      # Test with both attach_code and attach_logs true
-      ref =
-        push(socket, "new_message", %{
-          "content" => "Help with logs",
-          "attach_code" => true,
-          "attach_logs" => true
-        })
-
-      assert_reply ref, :ok, %{message: message}
-      assert message.role == "user"
-    end
-
-    test "handles attach_code false for job_code", %{
-      socket: socket,
-      job: job,
-      user: user
-    } do
-      # Use manual mode to prevent AI response from being generated inline
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
-
-      # Test with attach_code explicitly false
-      ref =
-        push(socket, "new_message", %{
-          "content" => "Help without code",
-          "attach_code" => false
-        })
-
-      assert_reply ref, :ok, %{message: message}
-      assert message.role == "user"
-    end
-  end
-
   describe "extract_session_options edge cases" do
     test "creates workflow_template session without follow_run_id", %{
       socket: socket,
@@ -3150,7 +3254,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert message_options["step_id"] == step.id
     end
 
-    test "includes attach_code and attach_logs when creating new session", %{
+    test "includes attach_logs when creating new session", %{
       socket: socket,
       job: job,
       project: project
@@ -3159,7 +3263,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
         "job_id" => job.id,
         "project_id" => project.id,
         "content" => "Help me with logs",
-        "attach_code" => true,
         "attach_logs" => true
       }
 
@@ -3174,8 +3277,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
       session = AiAssistant.get_session!(response.session_id)
       message_options = session.meta["message_options"]
 
-      assert message_options["code"] == true
       assert message_options["log"] == true
+      refute Map.has_key?(message_options, "code")
     end
 
     test "excludes message_options when not opted in", %{

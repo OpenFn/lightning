@@ -125,7 +125,7 @@ export const buildChannelTopic = (
  * const { sendMessage, retryMessage, isConnected } = useAISessionCommands();
  *
  * const handleSend = () => {
- *   sendMessage('Hello AI!', { attach_code: true });
+ *   sendMessage('Hello AI!', { attach_logs: true });
  * };
  * ```
  */

@@ -31,9 +31,11 @@ interface UseAIWorkflowUndoReturn {
   requestUndoChanges: (
     messageId: string,
     yaml: string,
-    options?: { fromModel?: boolean }
+    options?: { restoring?: boolean }
   ) => void;
   isConfirmOpen: boolean;
+  /** Whether the pending confirmation is a redo, so its copy can say so */
+  isRestoring: boolean;
   confirmUndoChanges: () => void;
   cancelUndoChanges: () => void;
 }
@@ -63,8 +65,11 @@ export function useAIWorkflowUndo({
   const [pending, setPending] = useState<{
     messageId: string;
     yaml: string;
-    fromModel: boolean;
+    restoring: boolean;
   } | null>(null);
+  // Held past close, because the dialog fades out over 200ms. Reading the
+  // direction off `pending` flipped its copy to the other one on the way out.
+  const [restoringPending, setRestoringPending] = useState(false);
 
   const { run: restore } = useActionLock(
     async (messageId: string, yaml: string, fromModel: boolean) => {
@@ -100,20 +105,22 @@ export function useAIWorkflowUndo({
   );
 
   const requestUndoChanges = useCallback(
-    (messageId: string, yaml: string, options?: { fromModel?: boolean }) => {
-      const fromModel = options?.fromModel ?? false;
+    (messageId: string, yaml: string, options?: { restoring?: boolean }) => {
+      const restoring = options?.restoring ?? false;
+      setRestoringPending(restoring);
       if (appliedCanvas.hasChangedSinceApply()) {
-        setPending({ messageId, yaml, fromModel });
+        setPending({ messageId, yaml, restoring });
         return;
       }
-      void restore(messageId, yaml, fromModel);
+      // Only a redo restores the reply's own YAML, so it alone is model-written.
+      void restore(messageId, yaml, restoring);
     },
     [appliedCanvas, restore]
   );
 
   const confirmUndoChanges = useCallback(() => {
     if (pending)
-      void restore(pending.messageId, pending.yaml, pending.fromModel);
+      void restore(pending.messageId, pending.yaml, pending.restoring);
     setPending(null);
   }, [pending, restore]);
 
@@ -125,6 +132,7 @@ export function useAIWorkflowUndo({
     undoneMessageId,
     requestUndoChanges,
     isConfirmOpen: pending !== null,
+    isRestoring: restoringPending,
     confirmUndoChanges,
     cancelUndoChanges,
   };

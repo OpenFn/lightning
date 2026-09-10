@@ -1,4 +1,4 @@
-import { FAILURE_STATES, type WorkOrderStateCounts } from '../types';
+import { failureTotal, type WorkOrderStateCounts } from '../types';
 
 import { Donut } from './Donut';
 
@@ -16,9 +16,12 @@ import { Donut } from './Donut';
 // are reserved so they never impersonate a series. Grey for cancelled is the
 // convention the rest of the app already uses (`dashboard_components.ex` gives
 // it `bg-gray-500`), and it reads as "stopped, not broken" beside the red.
-const SUCCESS = '#0ca30c';
-const FAILED = '#d03b3b';
-const CANCELLED = '#6b7280';
+//
+// Exported because the volume chart shares this row: a green bar and a green
+// wedge on one screen have to mean the same thing.
+export const SUCCESS = '#0ca30c';
+export const FAILED = '#d03b3b';
+export const CANCELLED = '#6b7280';
 
 interface OutcomesDonutProps {
   counts: WorkOrderStateCounts;
@@ -57,8 +60,3 @@ export const OutcomesDonut = ({ counts, emptyMessage }: OutcomesDonutProps) => (
     emptyMessage={emptyMessage}
   />
 );
-
-// Summed from `FAILURE_STATES` rather than taken as `total - success`, so this
-// wedge and the failure breakdown's slices are driven by the same list.
-const failureTotal = (counts: WorkOrderStateCounts) =>
-  FAILURE_STATES.reduce((sum, state) => sum + counts[state], 0);

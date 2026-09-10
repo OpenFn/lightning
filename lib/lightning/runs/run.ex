@@ -92,6 +92,18 @@ defmodule Lightning.Run do
   """
   def state_reasons, do: @state_reasons
 
+  @states_by_reason Map.new(@state_reasons, fn {state, reason} ->
+                      {reason, state}
+                    end)
+
+  @doc """
+  Returns the final state each worker reason maps to, keyed by reason.
+
+  The inverse of `state_reasons/0`, built from the same table so the two
+  directions cannot drift.
+  """
+  def states_by_reason, do: @states_by_reason
+
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,

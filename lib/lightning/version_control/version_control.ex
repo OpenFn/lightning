@@ -11,6 +11,7 @@ defmodule Lightning.VersionControl do
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Extensions.UsageLimiting
+  alias Lightning.Projects
   alias Lightning.Repo
   alias Lightning.VersionControl.Audit
   alias Lightning.VersionControl.Events
@@ -29,7 +30,7 @@ defmodule Lightning.VersionControl do
   """
   @spec create_github_connection(map(), User.t()) ::
           {:ok, ProjectRepoConnection.t()}
-          | {:error, Ecto.Changeset.t() | UsageLimiting.message()}
+          | {:error, Ecto.Changeset.t() | UsageLimiting.message() | binary()}
   def create_github_connection(attrs, user) do
     changeset =
       ProjectRepoConnection.create_changeset(%ProjectRepoConnection{}, attrs)
@@ -50,8 +51,10 @@ defmodule Lightning.VersionControl do
     end)
   end
 
+  # `binary()` because this reaches `initiate_sync/2`, whose export pre-flight
+  # fails with a plain string naming the colliding entities.
   @spec reconfigure_github_connection(ProjectRepoConnection.t(), map(), User.t()) ::
-          :ok | {:error, UsageLimiting.message() | map()}
+          :ok | {:error, UsageLimiting.message() | map() | binary()}
   def reconfigure_github_connection(repo_connection, params, user) do
     changeset =
       ProjectRepoConnection.reconfigure_changeset(repo_connection, params)
@@ -135,10 +138,18 @@ defmodule Lightning.VersionControl do
     Repo.get_by(ProjectRepoConnection, access_token: token)
   end
 
+  @doc """
+  Fires the GitHub Action that pulls the project spec and commits it.
+
+  The export runs here first and its result is thrown away. The Action fetches
+  `/api/provision/:id.yaml`, and a 400 there lands in a GitHub Actions log
+  Lightning cannot read, so the user sees a sync that failed with no reason.
+  Costs one extra full spec generation on every successful sync.
+  """
   @spec initiate_sync(
           repo_connection :: ProjectRepoConnection.t(),
           commit_message :: String.t()
-        ) :: :ok | {:error, UsageLimiting.message() | map()}
+        ) :: :ok | {:error, UsageLimiting.message() | map() | binary()}
   def initiate_sync(repo_connection, commit_message) do
     with :ok <-
            VersionControlUsageLimiter.limit_github_sync(
@@ -146,6 +157,12 @@ defmodule Lightning.VersionControl do
            ),
          snapshots <-
            list_snapshots_for_project(repo_connection),
+         {:ok, _spec} <-
+           Projects.export_project(
+             :yaml,
+             repo_connection.project_id,
+             snapshot_ids_for_export(snapshots)
+           ),
          {:ok, client} <-
            GithubClient.build_installation_client(
              repo_connection.github_installation_id
@@ -184,6 +201,22 @@ defmodule Lightning.VersionControl do
         select: s.id
 
     Repo.all(current_query)
+  end
+
+  # Mirrors maybe_add_snapshots/2 below: an empty list means the Action fetches
+  # the current workflows rather than a set of snapshots, so the pre-flight has
+  # to ask for the same spec the Action will.
+  defp snapshot_ids_for_export([]), do: nil
+  defp snapshot_ids_for_export(snapshot_ids), do: snapshot_ids
+
+  defp export_preflight(repo_connection) do
+    Projects.export_project(
+      :yaml,
+      repo_connection.project_id,
+      repo_connection
+      |> list_snapshots_for_project()
+      |> snapshot_ids_for_export()
+    )
   end
 
   defp maybe_add_snapshots(inputs, snapshot_ids) do
@@ -759,9 +792,14 @@ defmodule Lightning.VersionControl do
   end
 
   @spec configure_github_repo(ProjectRepoConnection.t(), User.t()) ::
-          :ok | {:error, map()}
+          :ok | {:error, map() | binary()}
   defp configure_github_repo(repo_connection, user) do
-    with {:ok, user_token} <- fetch_user_access_token(user),
+    # Before anything is written to the repo. This path pushes pull.yml, the
+    # workflow files and the API secret before it reaches initiate_sync/2, so a
+    # project whose names collide would otherwise leave a modified GitHub repo
+    # behind and no connection row to show for it.
+    with {:ok, _spec} <- export_preflight(repo_connection),
+         {:ok, user_token} <- fetch_user_access_token(user),
          {:ok, tesla_client} <- GithubClient.build_bearer_client(user_token),
          {:ok, _} <-
            push_pull_yml_to_default_branch(tesla_client, repo_connection),

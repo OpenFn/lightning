@@ -11,7 +11,12 @@
 
 import { structuredPatch } from 'diff';
 
-import type { StateEdge, StateJob, WorkflowState } from '../../yaml/types';
+import type {
+  StateEdge,
+  StateJob,
+  StateWebhookTrigger,
+  WorkflowState,
+} from '../../yaml/types';
 import { convertWorkflowSpecToState, parseWorkflowYAML } from '../../yaml/util';
 import type { WorkflowSnapshot } from '../types/ai-assistant';
 
@@ -122,14 +127,17 @@ const matchEntities = <T extends { id: string }>(
   for (const pick of [(entity: T) => entity.id, fallbackKey] as Array<
     (entity: T) => string
   >) {
-    for (let i = remainingBefore.length - 1; i >= 0; i--) {
+    // Forward, or two entities sharing a fallback key pair in reverse.
+    for (let i = 0; i < remainingBefore.length; ) {
       const b = remainingBefore[i]!;
       const j = remainingAfter.findIndex(a => pick(a) === pick(b));
-      if (j !== -1) {
-        pairs.push([b, remainingAfter[j]!]);
-        remainingBefore.splice(i, 1);
-        remainingAfter.splice(j, 1);
+      if (j === -1) {
+        i++;
+        continue;
       }
+      pairs.push([b, remainingAfter[j]!]);
+      remainingBefore.splice(i, 1);
+      remainingAfter.splice(j, 1);
     }
   }
 
@@ -338,6 +346,89 @@ const deriveEdgeChanges = (
   return changes;
 };
 
+type WebhookReply = NonNullable<StateWebhookTrigger['webhook_reply']>;
+
+/** Wording taken from the response type picker, so a row reads like the panel. */
+const REPLY_LABEL: Record<WebhookReply, string> = {
+  before_start: 'Immediately',
+  after_completion: 'On Complete',
+};
+
+const replyOf = (trigger: StateWebhookTrigger): WebhookReply =>
+  trigger.webhook_reply ?? 'before_start';
+
+// Absent and null mean opposite things: the apply keeps a path the answer
+// omits, so only an explicit value is a change. Blank is a clear, but only
+// exactly blank, since the panel rejects whitespace rather than ignoring it.
+const pathOf = (trigger: StateWebhookTrigger): string | null | undefined => {
+  if (trigger.custom_path === undefined) return undefined;
+  return trigger.custom_path === null || trigger.custom_path === ''
+    ? null
+    : trigger.custom_path;
+};
+
+// Quoted, or a padded path renders as an arrow pointing at blank.
+const showPath = (path: string): string =>
+  path.trim() === path ? path : `'${path}'`;
+
+const codeOf = (code: number | null | undefined): string =>
+  code == null ? 'default' : String(code);
+
+const bareWebhook = (trigger: { id: string }): StateWebhookTrigger => ({
+  id: trigger.id,
+  type: 'webhook',
+  enabled: false,
+  webhook_reply: null,
+  custom_path: null,
+});
+
+const webhookDetails = (
+  before: StateWebhookTrigger,
+  after: StateWebhookTrigger,
+  asNew = false
+): string[] => {
+  const details: string[] = [];
+
+  // The baseline writes the key whenever there is one, so unstated means none.
+  const beforePath = pathOf(before) ?? null;
+  const afterPath = pathOf(after);
+  if (afterPath !== undefined && afterPath !== beforePath) {
+    details.push(
+      afterPath === null
+        ? 'path removed'
+        : beforePath === null
+          ? `path: ${showPath(afterPath)}`
+          : `path: ${showPath(beforePath)} → ${showPath(afterPath)}`
+    );
+  }
+
+  if (replyOf(before) !== replyOf(after)) {
+    details.push(
+      asNew
+        ? `reply: ${REPLY_LABEL[replyOf(after)]}`
+        : `reply: ${REPLY_LABEL[replyOf(before)]} → ${REPLY_LABEL[replyOf(after)]}`
+    );
+  }
+
+  const codes = [
+    ['success', 'success_code'],
+    ['error', 'error_code'],
+  ] as const;
+  for (const [name, field] of codes) {
+    const beforeCode = before.webhook_response_config?.[field] ?? null;
+    const afterCode = after.webhook_response_config?.[field] ?? null;
+    if (beforeCode !== afterCode) {
+      details.push(
+        asNew
+          ? `${name} code: ${codeOf(afterCode)}`
+          : `${name} code: ${codeOf(beforeCode)} → ${codeOf(afterCode)}`
+      );
+    }
+  }
+
+  return details;
+};
+
 const deriveTriggerChanges = (
   before: DiffState,
   after: DiffState
@@ -359,17 +450,27 @@ const deriveTriggerChanges = (
   const changes: StructuralChange[] = [];
 
   for (const trigger of added) {
+    const details =
+      trigger.type === 'webhook'
+        ? webhookDetails(bareWebhook(trigger), trigger, true)
+        : [];
     changes.push({
       kind: 'trigger',
       change: 'add',
       description: `${trigger.type} trigger`,
+      ...(details.length > 0 && { detail: details.join('; ') }),
     });
   }
   for (const trigger of removed) {
+    const path =
+      trigger.type === 'webhook' && trigger.custom_path
+        ? showPath(trigger.custom_path)
+        : null;
     changes.push({
       kind: 'trigger',
       change: 'remove',
       description: `${trigger.type} trigger`,
+      ...(path !== null && { detail: `path: ${path}` }),
     });
   }
 
@@ -389,6 +490,13 @@ const deriveTriggerChanges = (
       details.push(
         `schedule: ${beforeTrigger.cron_expression} → ${afterTrigger.cron_expression}`
       );
+    }
+    if (afterTrigger.type === 'webhook') {
+      const becameWebhook = beforeTrigger.type !== 'webhook';
+      const baseline: StateWebhookTrigger = becameWebhook
+        ? bareWebhook(beforeTrigger)
+        : beforeTrigger;
+      details.push(...webhookDetails(baseline, afterTrigger, becameWebhook));
     }
 
     if (details.length > 0) {
@@ -618,12 +726,14 @@ const cachedDiff = (
   beforeYaml: string,
   afterYaml: string,
   before: DiffState,
-  after: DiffState
+  after: DiffState,
+  salt: string
 ): WorkflowChangeSet | null => {
   // Keyed on short ids rather than the documents themselves. A workflow can
   // be hundreds of KB, and pairing two of them per entry meant this cache
   // retained more text than the parse cache it sits beside.
-  const key = `${documentId(beforeYaml)}:${documentId(afterYaml)}`;
+  // A carried path is in neither document, so the pair alone underspecifies it.
+  const key = `${documentId(beforeYaml)}:${documentId(afterYaml)}:${salt}`;
   if (diffedPairs.has(key)) {
     const cached = diffedPairs.get(key) ?? null;
     diffedPairs.delete(key);
@@ -653,6 +763,55 @@ export const clearWorkflowDiffCaches = (): void => {
   documentIds.clear();
 };
 
+// Positional: ids are invented per parse, and the type is shared by two webhooks.
+const heldPaths = (state: DiffState): string =>
+  state.triggers
+    .map((trigger, index) =>
+      trigger.type === 'webhook' && trigger.custom_path !== undefined
+        ? `${index}=${trigger.custom_path ?? ''}`
+        : null
+    )
+    .filter(entry => entry !== null)
+    .join(',');
+
+/**
+ * The apply keeps a path a snapshot leaves unstated, so without carrying it a
+ * later snapshot that clears a live one is compared against nothing and reports
+ * nothing. Copies rather than mutates: these states are cached and reused.
+ */
+const carryWebhookPaths = (previous: DiffState, next: DiffState): DiffState => {
+  // Paired as the diff pairs them: Apollo drops trigger ids on some replies,
+  // and parsing invents one per trigger, so a raw id match would carry nothing.
+  const { pairs } = matchEntities(
+    previous.triggers,
+    next.triggers,
+    trigger => `type:${trigger.type}`
+  );
+
+  const held = new Map<string, string | null>();
+  for (const [previousTrigger, nextTrigger] of pairs) {
+    if (
+      previousTrigger.type === 'webhook' &&
+      nextTrigger.type === 'webhook' &&
+      previousTrigger.custom_path !== undefined
+    ) {
+      held.set(nextTrigger.id, previousTrigger.custom_path);
+    }
+  }
+  if (held.size === 0) return next;
+
+  return {
+    ...next,
+    triggers: next.triggers.map(trigger =>
+      trigger.type === 'webhook' &&
+      trigger.custom_path === undefined &&
+      held.has(trigger.id)
+        ? { ...trigger, custom_path: held.get(trigger.id) ?? null }
+        : trigger
+    ),
+  };
+};
+
 export const deriveSnapshotChanges = (
   baselineYaml: string | null | undefined,
   snapshots: WorkflowSnapshot[]
@@ -678,11 +837,17 @@ export const deriveSnapshotChanges = (
     // costs its own block instead of poisoning every snapshot after it.
     if (!after) continue;
 
-    const changes = cachedDiff(beforeYaml, snapshot.yaml, before, after);
+    const changes = cachedDiff(
+      beforeYaml,
+      snapshot.yaml,
+      before,
+      after,
+      heldPaths(before)
+    );
     if (changes) {
       out.push({ segmentIndex: snapshot.segmentIndex, changes });
     }
-    before = after;
+    before = carryWebhookPaths(before, after);
     beforeYaml = snapshot.yaml;
   }
 

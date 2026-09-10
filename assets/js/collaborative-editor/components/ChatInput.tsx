@@ -13,12 +13,6 @@ interface ChatInputProps {
   isLoading?: boolean | undefined;
   /** Disabled state (separate from loading, e.g., due to limits) */
   isDisabled?: boolean | undefined;
-  /** Show job-specific controls (attach code, attach logs) */
-  showJobControls?: boolean | undefined;
-  /** Show the experimental global assistant toggle */
-  showGlobalAssistantOption?: boolean | undefined;
-  /** Callback when global assistant checkbox changes */
-  onGlobalAssistantChange?: ((active: boolean) => void) | undefined;
   /** Storage key for persisting checkbox preferences */
   storageKey?: string | undefined;
   /** Enable automatic focus management for the input */
@@ -29,55 +23,59 @@ interface ChatInputProps {
   placeholder?: string | undefined;
   /** Message to show in tooltip when input is disabled */
   disabledMessage?: string | undefined;
-  /** Selected step ID for attaching I/O data */
-  selectedStepId?: string | null;
-  /** Selected run ID for attaching logs */
+  /** The run both attachments are scoped to, and what gates them */
   selectedRunId?: string | null;
-  /** Selected job ID for attaching code */
-  selectedJobId?: string | null;
 }
 
 interface MessageOptions {
-  attach_code?: boolean;
   attach_logs?: boolean;
   attach_io_data?: boolean;
-  step_id?: string;
-  use_global_assistant?: boolean;
+  follow_run_id?: string;
 }
+
+/** What can be attached beyond the workflow, which the assistant always reads. */
+const ATTACHMENTS = [
+  {
+    key: 'logs',
+    label: 'Send run logs',
+    description:
+      'Sends every log line from this run, so the assistant can see what ' +
+      'actually happened.',
+  },
+  {
+    key: 'data',
+    label: 'Send run data',
+    description:
+      "Sends the shape of every step's input and output. Field names go as " +
+      'they are; the values are replaced by their types.',
+  },
+] as const;
+
+type AttachmentKey = (typeof ATTACHMENTS)[number]['key'];
 
 const MIN_TEXTAREA_HEIGHT = 52;
 const MAX_TEXTAREA_HEIGHT = 200;
+
+// Mirrors ChatMessage.max_content_length/0.
+const MAX_MESSAGE_LENGTH = 10_000;
+
+// An always-on counter reads as a warning about a limit almost nobody meets.
+const COUNT_FROM = MAX_MESSAGE_LENGTH - 500;
 
 export function ChatInput({
   onSendMessage,
   isLoading = false,
   isDisabled = false,
-  showJobControls = false,
-  showGlobalAssistantOption = false,
-  onGlobalAssistantChange,
   storageKey,
   enableAutoFocus = false,
   focusTrigger,
   placeholder = 'Ask me anything...',
   disabledMessage,
-  selectedStepId,
   selectedRunId,
-  selectedJobId,
 }: ChatInputProps) {
   const [input, setInput] = useState('');
-
-  const [attachCode, setAttachCode] = useState(() => {
-    if (!storageKey) {
-      return true;
-    }
-    try {
-      const key = `${storageKey}:attach-code`;
-      const saved = localStorage.getItem(key);
-      return saved === null ? true : saved === 'true';
-    } catch {
-      return true;
-    }
-  });
+  const tooLong = input.length > MAX_MESSAGE_LENGTH;
+  const showCount = input.length >= COUNT_FROM;
 
   const [attachLogs, setAttachLogs] = useState(() => {
     if (!storageKey) {
@@ -97,7 +95,7 @@ export function ChatInput({
       return false;
     }
     try {
-      const key = `${storageKey}:attach-io-data`;
+      const key = `${storageKey}:attach-run-data`;
       const saved = localStorage.getItem(key);
       return saved === 'true';
     } catch {
@@ -105,19 +103,24 @@ export function ChatInput({
     }
   });
 
-  const [useGlobalAssistant, setUseGlobalAssistant] = useState(() => {
-    if (!storageKey) return false;
-    try {
-      return (
-        localStorage.getItem(`${storageKey}:use-global-assistant`) === 'true'
-      );
-    } catch {
-      return false;
-    }
-  });
-
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isLoadingFromStorageRef = useRef(false);
+
+  const attachmentState: Record<AttachmentKey, boolean> = {
+    logs: attachLogs,
+    data: attachIoData,
+  };
+
+  const toggleAttachment = (key: AttachmentKey) => {
+    switch (key) {
+      case 'logs':
+        setAttachLogs(current => !current);
+        break;
+      case 'data':
+        setAttachIoData(current => !current);
+        break;
+    }
+  };
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -137,15 +140,6 @@ export function ChatInput({
     isLoadingFromStorageRef.current = true;
 
     try {
-      const codeKey = `${storageKey}:attach-code`;
-      const savedCode = localStorage.getItem(codeKey);
-      const codeValue = savedCode === null ? true : savedCode === 'true';
-      setAttachCode(codeValue);
-    } catch {
-      // Ignore localStorage errors
-    }
-
-    try {
       const logsKey = `${storageKey}:attach-logs`;
       const savedLogs = localStorage.getItem(logsKey);
       const logsValue = savedLogs === 'true';
@@ -155,18 +149,10 @@ export function ChatInput({
     }
 
     try {
-      const ioDataKey = `${storageKey}:attach-io-data`;
+      const ioDataKey = `${storageKey}:attach-run-data`;
       const savedIoData = localStorage.getItem(ioDataKey);
       const ioDataValue = savedIoData === 'true';
       setAttachIoData(ioDataValue);
-    } catch {
-      // Ignore localStorage errors
-    }
-
-    try {
-      const globalValue =
-        localStorage.getItem(`${storageKey}:use-global-assistant`) === 'true';
-      setUseGlobalAssistant(globalValue);
     } catch {
       // Ignore localStorage errors
     }
@@ -175,16 +161,6 @@ export function ChatInput({
       isLoadingFromStorageRef.current = false;
     }, 0);
   }, [storageKey]);
-
-  useEffect(() => {
-    if (!storageKey) return;
-    if (isLoadingFromStorageRef.current) return;
-    try {
-      localStorage.setItem(`${storageKey}:attach-code`, String(attachCode));
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [attachCode, storageKey]);
 
   useEffect(() => {
     if (!storageKey) return;
@@ -201,30 +177,13 @@ export function ChatInput({
     if (isLoadingFromStorageRef.current) return;
     try {
       localStorage.setItem(
-        `${storageKey}:attach-io-data`,
+        `${storageKey}:attach-run-data`,
         String(attachIoData)
       );
     } catch {
       // Ignore localStorage errors
     }
   }, [attachIoData, storageKey]);
-
-  useEffect(() => {
-    if (!storageKey) return;
-    if (isLoadingFromStorageRef.current) return;
-    try {
-      localStorage.setItem(
-        `${storageKey}:use-global-assistant`,
-        String(useGlobalAssistant)
-      );
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [useGlobalAssistant, storageKey]);
-
-  useEffect(() => {
-    onGlobalAssistantChange?.(useGlobalAssistant);
-  }, [useGlobalAssistant, onGlobalAssistantChange]);
 
   useEffect(() => {
     if (enableAutoFocus && textareaRef.current) {
@@ -245,28 +204,15 @@ export function ChatInput({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || isDisabled) return;
+    if (!input.trim() || isLoading || isDisabled || tooLong) return;
 
     const options: MessageOptions = {};
-    if (showJobControls) {
-      if (selectedRunId) {
-        options.attach_logs = attachLogs;
-        // The run the checkbox was gated on, so what we promise to attach and
-        // what the backend looks up cannot drift. useAIMode reads the run from
-        // the URL, and LiveView push_patch strips that param.
-        options.follow_run_id = selectedRunId;
-      }
-      if (selectedJobId) {
-        options.attach_code = attachCode;
-      }
-      if (selectedStepId) {
-        options.attach_io_data = attachIoData;
-        options.step_id = selectedStepId;
-      }
-    }
-
-    if (showGlobalAssistantOption && useGlobalAssistant) {
-      options.use_global_assistant = true;
+    // The run rides along so what we promise to attach and what the backend
+    // looks up cannot drift: LiveView push_patch strips the URL param.
+    if (selectedRunId) {
+      options.attach_logs = attachLogs;
+      options.attach_io_data = attachIoData;
+      options.follow_run_id = selectedRunId;
     }
 
     onSendMessage?.(input.trim(), options);
@@ -304,6 +250,40 @@ export function ChatInput({
                     : 'border-gray-200 hover:border-gray-300'
                 )}
               >
+                {selectedRunId && (
+                  <div
+                    className="flex flex-wrap items-center gap-3 px-3 pt-3"
+                    data-testid="attached-context"
+                  >
+                    {ATTACHMENTS.map(({ key, label, description }) => (
+                      <Tooltip key={key} content={description} side="top">
+                        <label className="flex items-center gap-1.5 group cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={attachmentState[key]}
+                            onChange={() => {
+                              toggleAttachment(key);
+                            }}
+                            className={cn(
+                              'w-3.5 h-3.5 rounded border-gray-300',
+                              'text-primary-600 cursor-pointer',
+                              'focus:ring-primary-500 focus:ring-offset-0'
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              'text-[11px] font-medium text-gray-600',
+                              'group-hover:text-gray-900'
+                            )}
+                          >
+                            {label}
+                          </span>
+                        </label>
+                      </Tooltip>
+                    ))}
+                  </div>
+                )}
+
                 <textarea
                   ref={textareaRef}
                   data-testid="chat-input"
@@ -328,185 +308,38 @@ export function ChatInput({
                   }}
                 />
 
-                <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100">
-                  <div className="flex items-center gap-3">
-                    {showJobControls ? (
-                      <>
-                        <Tooltip
-                          content={
-                            selectedJobId
-                              ? undefined
-                              : 'Select a job to include code'
-                          }
-                          side="top"
-                        >
-                          <label
-                            className={cn(
-                              'flex items-center gap-1.5 group',
-                              selectedJobId
-                                ? 'cursor-pointer'
-                                : 'cursor-not-allowed opacity-50'
-                            )}
-                          >
-                            <input
-                              type="checkbox"
-                              // NOTE: Regardless of preferences, we show it
-                              // unchecked if no job is selected because code
-                              // can't be sent without a job
-                              checked={attachCode && !!selectedJobId}
-                              onChange={e => setAttachCode(e.target.checked)}
-                              disabled={!selectedJobId}
-                              className={cn(
-                                'w-3.5 h-3.5 rounded border-gray-300 text-primary-600',
-                                'focus:ring-primary-500 focus:ring-offset-0',
-                                selectedJobId
-                                  ? 'cursor-pointer'
-                                  : 'cursor-not-allowed'
-                              )}
-                            />
-                            <span
-                              className={cn(
-                                'text-[11px] font-medium',
-                                selectedJobId
-                                  ? 'text-gray-600 group-hover:text-gray-900'
-                                  : 'text-gray-400'
-                              )}
-                            >
-                              Send code
-                            </span>
-                          </label>
-                        </Tooltip>
-
-                        <Tooltip
-                          content={
-                            selectedRunId
-                              ? undefined
-                              : 'Select a run to include logs'
-                          }
-                          side="top"
-                        >
-                          <label
-                            className={cn(
-                              'flex items-center gap-1.5 group',
-                              selectedRunId
-                                ? 'cursor-pointer'
-                                : 'cursor-not-allowed opacity-50'
-                            )}
-                          >
-                            <input
-                              type="checkbox"
-                              // NOTE: Regardless of preferences, we show it
-                              // unchecked if no run is selected because logs
-                              // can't be sent without a run
-                              checked={attachLogs && !!selectedRunId}
-                              onChange={e => setAttachLogs(e.target.checked)}
-                              disabled={!selectedRunId}
-                              className={cn(
-                                'w-3.5 h-3.5 rounded border-gray-300 text-primary-600',
-                                'focus:ring-primary-500 focus:ring-offset-0',
-                                selectedRunId
-                                  ? 'cursor-pointer'
-                                  : 'cursor-not-allowed'
-                              )}
-                            />
-                            <span
-                              className={cn(
-                                'text-[11px] font-medium',
-                                selectedRunId
-                                  ? 'text-gray-600 group-hover:text-gray-900'
-                                  : 'text-gray-400'
-                              )}
-                            >
-                              Send logs
-                            </span>
-                          </label>
-                        </Tooltip>
-
-                        <Tooltip
-                          content={
-                            selectedStepId
-                              ? 'Include scrubbed I/O data structure (values removed)'
-                              : 'Select a step to include I/O data'
-                          }
-                          side="top"
-                        >
-                          <label
-                            className={cn(
-                              'flex items-center gap-1.5 group',
-                              selectedStepId
-                                ? 'cursor-pointer'
-                                : 'cursor-not-allowed opacity-50'
-                            )}
-                          >
-                            <input
-                              type="checkbox"
-                              // NOTE: Regardless of preferences, we show it
-                              // unchecked if no step is selected because I/O
-                              // can't be sent without a step
-                              checked={attachIoData && !!selectedStepId}
-                              onChange={e => setAttachIoData(e.target.checked)}
-                              disabled={!selectedStepId}
-                              className={cn(
-                                'w-3.5 h-3.5 rounded border-gray-300 text-primary-600',
-                                'focus:ring-primary-500 focus:ring-offset-0',
-                                selectedStepId
-                                  ? 'cursor-pointer'
-                                  : 'cursor-not-allowed'
-                              )}
-                            />
-                            <span
-                              className={cn(
-                                'text-[11px] font-medium',
-                                selectedStepId
-                                  ? 'text-gray-600 group-hover:text-gray-900'
-                                  : 'text-gray-400'
-                              )}
-                            >
-                              Send scrubbed I/O
-                            </span>
-                          </label>
-                        </Tooltip>
-                      </>
-                    ) : (
+                <div className="flex items-center justify-between gap-3 px-3 pb-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
                       <AIDisclaimerFooter />
-                    )}
-
-                    {showGlobalAssistantOption && (
-                      <Tooltip
-                        content="Route messages to the experimental global assistant"
-                        side="top"
-                      >
-                        <label className="flex items-center gap-1.5 group cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={useGlobalAssistant}
-                            onChange={e =>
-                              setUseGlobalAssistant(e.target.checked)
-                            }
-                            className={cn(
-                              'w-3.5 h-3.5 rounded border-amber-400 text-amber-600',
-                              'focus:ring-amber-500 focus:ring-offset-0',
-                              'cursor-pointer'
-                            )}
-                          />
-                          <span className="text-[11px] font-medium text-amber-600 group-hover:text-amber-700">
-                            Global assistant (experimental)
-                          </span>
-                        </label>
-                      </Tooltip>
-                    )}
+                      {showCount && (
+                        <span
+                          data-testid="chat-input-length"
+                          className={cn(
+                            'text-xs whitespace-nowrap',
+                            tooLong ? 'text-red-600' : 'text-gray-400'
+                          )}
+                        >
+                          {input.length.toLocaleString()} /{' '}
+                          {MAX_MESSAGE_LENGTH.toLocaleString()}
+                          {tooLong ? ' — too long to send' : null}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <button
                     type="submit"
                     data-testid="send-message-button"
-                    disabled={!input.trim() || isLoading || isDisabled}
+                    disabled={
+                      !input.trim() || isLoading || isDisabled || tooLong
+                    }
                     className={cn(
                       'inline-flex items-center justify-center',
                       'h-7 w-7 rounded-lg',
                       'transition-all duration-200',
                       'focus:outline-none focus:ring-2 focus:ring-offset-2',
-                      input.trim() && !isLoading && !isDisabled
+                      input.trim() && !isLoading && !isDisabled && !tooLong
                         ? 'bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     )}
@@ -522,20 +355,6 @@ export function ChatInput({
                     )}
                   </button>
                 </div>
-              </div>
-
-              <div className="mt-2 text-center">
-                <span className="text-[11px] text-gray-500">
-                  Press{' '}
-                  <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] font-medium border border-gray-200">
-                    Enter
-                  </kbd>{' '}
-                  to send,{' '}
-                  <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] font-medium border border-gray-200">
-                    Shift + Enter
-                  </kbd>{' '}
-                  for new line
-                </span>
               </div>
             </div>
           </Tooltip>
