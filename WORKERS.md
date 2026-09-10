@@ -4,11 +4,11 @@ The OpenFn Runtime used by Lightning is a [Node.js](https://nodejs.org/en/)
 application that runs on a server. It is responsible for executing the code that
 you write in your OpenFn jobs.
 
-A Runtime Manager is a module or application that processes Runs, which
-contains reference to the Workflow, the starting point and the initial data.
+A Runtime Manager is a module or application that processes Runs, which contains
+reference to the Workflow, the starting point and the initial data.
 
-Runs are enqueued, and Runtime Managers request work to be performed when
-they are ready.
+Runs are enqueued, and Runtime Managers request work to be performed when they
+are ready.
 
 ## History
 
@@ -16,8 +16,8 @@ In previous versions of OpenFn products, the server would invoke a NodeJS child
 process for each Run that needs to be executed. Deciding which Job to run in a
 workflow is decided after each run is completed.
 
-The current approach to executing Runs, is that a worker checks out the
-entire run and executes it and all the jobs required.
+The current approach to executing Runs, is that a worker checks out the entire
+run and executes it and all the jobs required.
 
 The advantage of this approach is a significant reduction in latency of
 launching new workers for every Run to be processed.
