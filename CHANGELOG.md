@@ -158,6 +158,14 @@ and this project adheres to
 
 ### Fixed
 
+- The version list ticks the version whose content is on screen, and ticks
+  nothing when no version published it. It used to tick the newest version
+  whenever nothing was pinned, so it claimed you were looking at a version you
+  were not: in a run view, and on a live workflow saved since it last went live.
+  A run of content that was never published now says "unpublished" in both the
+  version chip and the history list, leaving "Draft" to mean the workflow's
+  lifecycle alone.
+
 - Opening a run now always shows the workflow as that run executed it, and says
   which version that was. It used to decide by comparing version numbers against
   the document on screen, and a run view is itself a past document, so the answer

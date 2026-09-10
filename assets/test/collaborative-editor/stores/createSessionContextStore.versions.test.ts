@@ -33,6 +33,7 @@ const makeVersion = (overrides: Partial<Version> = {}): Version => ({
   published_by: 'Test User',
   source_project: null,
   lock_version: 1,
+  snapshot_id: 'snapshot-1',
   restored_from_version_number: null,
   is_latest: false,
   ...overrides,

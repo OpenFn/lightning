@@ -1243,7 +1243,7 @@ describe('MiniHistory', () => {
   // ==========================================================================
 
   describe('version-aware history', () => {
-    test('renders a per-run version tag (vN / Draft) prefixing the run id', () => {
+    test('renders a per-run version tag (vN / unpublished) prefixing the run id', () => {
       const workOrder = createMockWorkOrder({
         id: 'wo-tags',
         runs: [
@@ -1270,7 +1270,7 @@ describe('MiniHistory', () => {
       );
 
       expect(screen.getByText('v2')).toBeInTheDocument();
-      expect(screen.getByText('Draft')).toBeInTheDocument();
+      expect(screen.getByText('unpublished')).toBeInTheDocument();
     });
   });
 });

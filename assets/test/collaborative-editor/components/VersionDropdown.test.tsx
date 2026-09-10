@@ -27,9 +27,10 @@ import type { Version } from '../../../js/collaborative-editor/types/sessionCont
 
 // Mock the hooks
 const mockUseVersions = vi.spyOn(useSessionContextModule, 'useVersions');
-const mockUseRunVersionNumber = vi.spyOn(
-  useHistoryModule,
-  'useRunVersionNumber'
+const mockUseRunSummary = vi.spyOn(useHistoryModule, 'useRunSummary');
+const mockUseLatestSnapshotId = vi.spyOn(
+  useSessionContextModule,
+  'useLatestSnapshotId'
 );
 const mockUseVersionsLoaded = vi.spyOn(
   useSessionContextModule,
@@ -59,6 +60,22 @@ vi.spyOn(notificationsModule, 'notifications', 'get').mockReturnValue(
   mockNotifications
 );
 
+// The history's summary of the run a `?as_run=` view is showing.
+const runSummary = (
+  overrides: Partial<ReturnType<typeof baseRunSummary>> = {}
+) => ({ ...baseRunSummary(), ...overrides });
+
+const baseRunSummary = () => ({
+  id: 'abcdef12-3456-7890-abcd-ef1234567890',
+  state: 'success' as const,
+  error_type: null,
+  started_at: '2026-09-09T21:13:00Z',
+  finished_at: '2026-09-09T21:13:01Z',
+  version: 1,
+  version_number: null as number | null,
+  snapshot_id: null as string | null,
+});
+
 // Mock version data factory matching the release payload shape
 const createMockVersion = (overrides?: Partial<Version>): Version => ({
   version_number: 1,
@@ -67,6 +84,7 @@ const createMockVersion = (overrides?: Partial<Version>): Version => ({
   published_by: 'Test User',
   source_project: null,
   lock_version: 1,
+  snapshot_id: 'snapshot-1',
   restored_from_version_number: null,
   is_latest: false,
   ...overrides,
@@ -87,7 +105,8 @@ describe('VersionDropdown', () => {
 
     // Default mock implementations
     mockUseVersions.mockReturnValue([]);
-    mockUseRunVersionNumber.mockReturnValue(undefined);
+    mockUseRunSummary.mockReturnValue(undefined);
+    mockUseLatestSnapshotId.mockReturnValue(null);
     mockUseVersionsLoaded.mockReturnValue(false);
     mockUseVersionsLoading.mockReturnValue(false);
     mockUseVersionsError.mockReturnValue(null);
@@ -154,7 +173,9 @@ describe('VersionDropdown', () => {
         '',
         '/?as_run=abcdef12-3456-7890-abcd-ef1234567890'
       );
-      mockUseRunVersionNumber.mockReturnValue(2);
+      mockUseRunSummary.mockReturnValue(
+        runSummary({ version_number: 2, snapshot_id: 'snapshot-v2' })
+      );
 
       // The document is that run's snapshot. What names it is the release the
       // run executed against, not the document's lock_version, which used to
@@ -178,7 +199,12 @@ describe('VersionDropdown', () => {
         '',
         '/?as_run=abcdef12-3456-7890-abcd-ef1234567890'
       );
-      mockUseRunVersionNumber.mockReturnValue(null);
+      mockUseRunSummary.mockReturnValue(
+        runSummary({
+          version_number: null,
+          snapshot_id: 'snapshot-unpublished',
+        })
+      );
 
       // Not "Draft": the lifecycle badge beside this uses that word for a
       // workflow that is not live, and this is about the content.
@@ -724,6 +750,7 @@ describe('VersionDropdown', () => {
         createMockVersion({
           version_number: 3,
           lock_version: 30,
+          snapshot_id: 'snapshot-v3',
           restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
@@ -731,6 +758,7 @@ describe('VersionDropdown', () => {
         createMockVersion({
           version_number: 1,
           lock_version: 22,
+          snapshot_id: 'snapshot-v1',
           restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: false,
@@ -777,13 +805,14 @@ describe('VersionDropdown', () => {
       ).not.toBeInTheDocument();
     });
 
-    test('marks the newest row when unpinned (following live)', async () => {
+    test('marks the row holding the live content', async () => {
       const user = userEvent.setup();
 
       const mockVersions: Version[] = [
         createMockVersion({
           version_number: 3,
           lock_version: 30,
+          snapshot_id: 'snapshot-v3',
           restored_from_version_number: null,
           inserted_at: '2024-01-15T10:30:00Z',
           is_latest: true,
@@ -791,6 +820,7 @@ describe('VersionDropdown', () => {
         createMockVersion({
           version_number: 2,
           lock_version: 20,
+          snapshot_id: 'snapshot-v2',
           restored_from_version_number: null,
           inserted_at: '2024-01-14T10:30:00Z',
           is_latest: false,
@@ -798,6 +828,8 @@ describe('VersionDropdown', () => {
       ];
 
       mockUseVersions.mockReturnValue(mockVersions);
+      // The live document is still the content v3 published.
+      mockUseLatestSnapshotId.mockReturnValue('snapshot-v3');
 
       // No ?v= pin (afterEach resets the URL)
       render(
@@ -821,6 +853,91 @@ describe('VersionDropdown', () => {
         .getAllByRole('menuitem')
         .find(btn => btn.textContent?.includes('v2'));
       expect(olderButton?.querySelector('.hero-check')).not.toBeInTheDocument();
+    });
+
+    test('marks nothing when the live content has moved past the last publish', async () => {
+      const user = userEvent.setup();
+
+      mockUseVersions.mockReturnValue([
+        createMockVersion({
+          version_number: 3,
+          lock_version: 30,
+          snapshot_id: 'snapshot-v3',
+          inserted_at: '2024-01-15T10:30:00Z',
+          is_latest: true,
+        }),
+      ]);
+      // Saved since going live, so the document on screen is content no
+      // version published. Ticking the newest row would claim otherwise.
+      mockUseLatestSnapshotId.mockReturnValue('snapshot-since-v3');
+
+      render(
+        <VersionDropdown
+          currentVersion={31}
+          latestVersion={31}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      await user.click(screen.getByRole('button'));
+
+      const row = screen
+        .getAllByRole('menuitem')
+        .find(btn => btn.textContent?.includes('v3'));
+      expect(row?.querySelector('.hero-check')).not.toBeInTheDocument();
+    });
+
+    test('marks the row a run executed, in a run view', async () => {
+      const user = userEvent.setup();
+
+      window.history.pushState(
+        {},
+        '',
+        '/?as_run=abcdef12-3456-7890-abcd-ef1234567890'
+      );
+
+      mockUseVersions.mockReturnValue([
+        createMockVersion({
+          version_number: 3,
+          lock_version: 30,
+          snapshot_id: 'snapshot-v3',
+          inserted_at: '2024-01-15T10:30:00Z',
+          is_latest: true,
+        }),
+        createMockVersion({
+          version_number: 2,
+          lock_version: 20,
+          snapshot_id: 'snapshot-v2',
+          inserted_at: '2024-01-14T10:30:00Z',
+          is_latest: false,
+        }),
+      ]);
+      mockUseLatestSnapshotId.mockReturnValue('snapshot-v3');
+      mockUseRunSummary.mockReturnValue(
+        runSummary({ version_number: 2, snapshot_id: 'snapshot-v2' })
+      );
+
+      render(
+        <VersionDropdown
+          currentVersion={20}
+          latestVersion={30}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      await user.click(screen.getByRole('button'));
+
+      // The tick follows what is on screen. Reading it as "nothing pinned, so
+      // the newest" ticked a version the user was not looking at.
+      const ran = screen
+        .getAllByRole('menuitem')
+        .find(btn => btn.textContent?.includes('v2'));
+      expect(ran?.querySelector('.hero-check')).toBeInTheDocument();
+
+      const newest = screen
+        .getAllByRole('menuitem')
+        .find(btn => btn.textContent?.includes('v3'));
+      expect(newest?.querySelector('.hero-check')).not.toBeInTheDocument();
     });
 
     test('newest release is the first row with a green v-pill and no "latest" text', async () => {

@@ -6186,6 +6186,11 @@ defmodule LightningWeb.WorkflowChannelTest do
              ] = versions
 
       assert is_binary(published_by) and published_by =~ "anna"
+
+      # The client ticks the row holding the content on screen, so each version
+      # names its own content rather than leaving the client to infer it from a
+      # number.
+      assert Enum.all?(versions, &(&1.snapshot_id == snapshot.id))
     end
 
     test "does not include ordinary saves, only releases", %{

@@ -1460,6 +1460,9 @@ defmodule LightningWeb.WorkflowChannel do
       # The client pins a version via `?v=<version_number>`; lock_version is kept
       # here only as informational snapshot metadata.
       lock_version: release.snapshot && release.snapshot.lock_version,
+      # The content this version published. The client ticks the row whose
+      # content it is looking at, so it needs identity rather than a number.
+      snapshot_id: release.snapshot_id,
       restored_from_version_number: release.restored_from_version_number,
       is_latest: is_latest
     }

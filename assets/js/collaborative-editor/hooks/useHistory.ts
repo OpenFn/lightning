@@ -23,6 +23,7 @@ import type {
   WorkflowRunHistory,
   RunStepsData,
   RunDetail,
+  RunSummary,
   StepDetail,
 } from '../types/history';
 import { transformToRunInfo } from '../utils/runStepsTransformer';
@@ -61,22 +62,20 @@ export const useHistory = (): WorkflowRunHistory => {
 };
 
 /**
- * The release number the given run executed against.
+ * The history's summary of one run, or `undefined` while the history has not
+ * arrived.
  *
- * `null` means the run's snapshot was never published, which the UI calls a
- * draft. `undefined` means the history has not arrived yet, so the caller can
- * hold its tongue rather than call a published run a draft for a moment.
+ * Callers ask this for the two things only the run knows: the content it
+ * executed, and the version that content was published as, if it ever was.
  */
-export const useRunVersionNumber = (
-  runId: string | null
-): number | null | undefined => {
+export const useRunSummary = (runId: string | null): RunSummary | undefined => {
   const history = useHistory();
 
   if (runId === null) return undefined;
 
   for (const workOrder of history) {
     const run = workOrder.runs.find(candidate => candidate.id === runId);
-    if (run) return run.version_number ?? null;
+    if (run) return run;
   }
 
   return undefined;

@@ -89,12 +89,14 @@ const StatusIndicator: React.FC<{ state: string }> = ({ state }) => {
   );
 };
 
-// Runs whose snapshot was never released show "Draft".
+// A run of content that was never published has no version to name it by. The
+// same word as the version chip, and deliberately not "Draft", which is the
+// lifecycle badge's word for a workflow that is not live.
 const VersionTag: React.FC<{ versionNumber: number | null | undefined }> = ({
   versionNumber,
 }) => (
   <span className="whitespace-nowrap font-medium text-gray-400">
-    {versionNumber == null ? 'Draft' : `v${versionNumber}`}
+    {versionNumber == null ? 'unpublished' : `v${versionNumber}`}
   </span>
 );
 

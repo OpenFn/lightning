@@ -5,8 +5,9 @@ import { useURLState } from '#/react/lib/use-url-state';
 
 import { Tooltip } from '../../components/Tooltip';
 import { cn } from '../../utils/cn';
-import { useRunVersionNumber } from '../hooks/useHistory';
+import { useRunSummary } from '../hooks/useHistory';
 import {
+  useLatestSnapshotId,
   useRequestVersions,
   useVersions,
   useVersionsError,
@@ -39,6 +40,7 @@ export function VersionDropdown({
 
   // Get versions state from SessionContextStore
   const versions = useVersions();
+  const latestSnapshotId = useLatestSnapshotId();
   const isLoaded = useVersionsLoaded();
   const isLoading = useVersionsLoading();
   const versionsError = useVersionsError();
@@ -57,9 +59,9 @@ export function VersionDropdown({
   // live, and this is a statement about content, not about the workflow.
   const asRunParam = params['as_run'];
   const isAsRun = asRunParam !== undefined && asRunParam !== null;
-  const asRunVersionNumber = useRunVersionNumber(
-    isAsRun ? String(asRunParam) : null
-  );
+  const asRun = useRunSummary(isAsRun ? String(asRunParam) : null);
+  const asRunVersionNumber =
+    asRun === undefined ? undefined : (asRun.version_number ?? null);
 
   // Show placeholder while loading version information
   const isLoadingVersion = currentVersion === null || latestVersion === null;
@@ -69,6 +71,16 @@ export function VersionDropdown({
   // versions here used to render one as `v1`, a release number that does not
   // exist, next to a list that correctly said nothing had been published.
   const isLatestVersion = !isLoadingVersion && !isPinnedVersion && !isAsRun;
+
+  // The content on screen, whichever way it was reached. The list ticks the
+  // version that published it and ticks nothing when no version did, so the
+  // chip and the tick are two readings of one value and cannot disagree.
+  const viewedSnapshotId = isPinnedVersion
+    ? (versions.find(version => version.version_number === pinnedVersionNumber)
+        ?.snapshot_id ?? null)
+    : isAsRun
+      ? (asRun?.snapshot_id ?? null)
+      : latestSnapshotId;
 
   const currentVersionDisplay = isLoadingVersion
     ? '•'
@@ -195,12 +207,13 @@ export function VersionDropdown({
                 </p>
 
                 {versions.map(version => {
-                  // Unpinned follows live, so the newest release is the one
-                  // being viewed.
+                  // Ticked when this version published the content on screen.
+                  // Reading it as "nothing pinned, so it must be the newest"
+                  // ticked a version you were not looking at: in a run view, and
+                  // on a live document that has been saved since it went live.
                   const isActive =
-                    pinnedVersionNumber === null
-                      ? version.is_latest
-                      : version.version_number === pinnedVersionNumber;
+                    version.snapshot_id != null &&
+                    version.snapshot_id === viewedSnapshotId;
 
                   const date = new Date(version.inserted_at);
                   const validDate = !Number.isNaN(date.getTime());
