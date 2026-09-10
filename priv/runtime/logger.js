@@ -1,6 +1,7 @@
 function generateRandomString(length) {
   let result = '';
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const characters =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
   for (let i = 0; i < length; i++) {
     const randomIndex = Math.floor(Math.random() * characters.length);
@@ -13,14 +14,12 @@ function generateRandomString(length) {
 // Number of bytes you want (1023 in this case)
 const numberOfBytes = 1023;
 
-
 const logInterval = 3000; // Logging interval in milliseconds
 
 // Function to log a message
 function logMessage() {
   // Generate a random string of the specified length
   const randomString = generateRandomString(numberOfBytes);
-
 
   for (let i = 0; i < randomString.length; i++) {
     process.stdout.write(randomString.charAt(i));
@@ -30,7 +29,6 @@ function logMessage() {
   process.stdout.write('😀');
 
   process.stdout.write('\n');
-
 }
 
 // Start logging
