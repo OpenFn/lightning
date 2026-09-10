@@ -7,6 +7,8 @@ import {
   Tooltip,
 } from 'recharts';
 
+import { ChartTooltip } from './ChartTooltip';
+
 /**
  * A part-to-whole donut with the total in the middle and an always-on legend.
  *
@@ -53,11 +55,18 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
       <div className={FRAME} aria-hidden="true">
         <ResponsiveContainer width="100%" height={220}>
           <PieChart accessibilityLayer={false}>
+            {/* Recharts transitions the panel's transform, so it slides
+                diagonally across the plot as the pointer moves between
+                slices. */}
             <Tooltip
-              formatter={(value, name) => [
-                `${Number(value).toLocaleString()} (${share(Number(value))})`,
-                name,
-              ]}
+              isAnimationActive={false}
+              content={
+                <ChartTooltip
+                  formatValue={value =>
+                    `${value.toLocaleString()} (${share(value)})`
+                  }
+                />
+              }
             />
             {/* `accessibilityLayer` only governs the svg; the pie's own root
                 group is a tab stop by default (`rootTabIndex` 0), and

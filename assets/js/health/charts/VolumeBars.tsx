@@ -11,6 +11,7 @@ import {
 import type { FailureState } from '../types';
 import { FAILURE_STATES } from '../types';
 
+import { ChartTooltip } from './ChartTooltip';
 import { EMPTY } from './Donut';
 import { CANCELLED, FAILED, SUCCESS } from './OutcomesDonut';
 
@@ -121,18 +122,19 @@ export const VolumeBars = ({ buckets, emptyMessage }: VolumeBarsProps) => {
               width={44}
               tick={{ fontSize: 11, fill: TICK_FILL }}
             />
-            {/* Recharts lists rows in `Bar` declaration order, the reverse of
-                the stack, so they are sorted back into `SERIES` order. */}
+            {/* Recharts transitions the panel's transform, so it slides
+                diagonally across the plot as the pointer moves between bars.
+                Its rows arrive in `Bar` declaration order, the reverse of the
+                stack, so the panel is flipped back into `SERIES` order. */}
             <Tooltip
+              isAnimationActive={false}
               cursor={{ fill: '#f9fafb' }}
-              itemSorter={({ dataKey }) =>
-                SERIES.findIndex(({ key }) => key === dataKey)
+              content={
+                <ChartTooltip
+                  reverse
+                  formatLabel={at => rangeLabel(at, hours)}
+                />
               }
-              labelFormatter={at => rangeLabel(at as string, hours)}
-              formatter={(value, name) => [
-                Number(value).toLocaleString(),
-                name,
-              ]}
             />
             {/* Reversed, so failures land on the axis and can be read against
                 a fixed baseline day to day rather than judged by thickness. */}
