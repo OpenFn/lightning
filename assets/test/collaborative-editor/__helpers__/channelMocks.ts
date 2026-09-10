@@ -14,7 +14,7 @@
  */
 
 import { vi } from 'vitest';
-import type { Channel } from 'phoenix';
+
 import type { MockPush } from '../mocks/phoenixChannel';
 
 // Re-export base Phoenix Channel mocks
@@ -92,6 +92,17 @@ export interface MockPushConfig {
  * // Timeout response
  * const push = createMockPush({ shouldTimeout: true });
  */
+/**
+ * The shape `MockPhoenixChannel.push` has. These helpers are only ever assigned
+ * to that, never to a real phoenix `Channel`, and typing them as the latter made
+ * every assignment a type error the suite carried around.
+ */
+export type MockChannelPush = (
+  event: string,
+  payload: unknown,
+  timeout?: number
+) => MockPush;
+
 export function createMockPush(config: MockPushConfig = {}): MockPush {
   const {
     okResponse,
@@ -139,11 +150,11 @@ export function createMockPush(config: MockPushConfig = {}): MockPush {
  * @example
  * mockChannel.push = createMockChannelPushOk({ saved_at: "...", lock_version: 1 });
  */
-export function createMockChannelPushOk(response: unknown): Channel['push'] {
+export function createMockChannelPushOk(response: unknown): MockChannelPush {
   const pushFn = (_event: string, _payload: unknown) =>
     createMockPush({ okResponse: response });
 
-  return vi.fn(pushFn) as unknown as Channel['push'];
+  return vi.fn(pushFn) as unknown as MockChannelPush;
 }
 
 /**
@@ -167,11 +178,11 @@ export function createMockChannelPushOk(response: unknown): Channel['push'] {
 export function createMockChannelPushError(
   message: string,
   type: string = 'error'
-): Channel['push'] {
+): MockChannelPush {
   const pushFn = (_event: string, _payload: unknown) =>
     createMockPush({ errorResponse: createChannelError(message, type) });
 
-  return vi.fn(pushFn) as unknown as Channel['push'];
+  return vi.fn(pushFn) as unknown as MockChannelPush;
 }
 
 /**
@@ -187,11 +198,11 @@ export function createMockChannelPushError(
  * @example
  * mockChannel.push = createMockChannelPushTimeout();
  */
-export function createMockChannelPushTimeout(): Channel['push'] {
+export function createMockChannelPushTimeout(): MockChannelPush {
   const pushFn = (_event: string, _payload: unknown) =>
     createMockPush({ shouldTimeout: true });
 
-  return vi.fn(pushFn) as unknown as Channel['push'];
+  return vi.fn(pushFn) as unknown as MockChannelPush;
 }
 
 /**
@@ -254,7 +265,7 @@ interface EventResponseConfig {
  */
 export function createMockChannelPushByEvent(
   config: EventResponseConfig
-): Channel['push'] {
+): MockChannelPush {
   const { events, defaultResponse } = config;
 
   const pushFn = (event: string, _payload: unknown) => {
@@ -291,7 +302,7 @@ export function createMockChannelPushByEvent(
     });
   };
 
-  return vi.fn(pushFn) as unknown as Channel['push'];
+  return vi.fn(pushFn) as unknown as MockChannelPush;
 }
 
 /**
@@ -331,11 +342,11 @@ export function createMockChannelPushByEvent(
  */
 export function createMockChannelPushWithHandler(
   handler: (event: string, payload: unknown) => MockPushConfig
-): Channel['push'] {
+): MockChannelPush {
   const pushFn = (event: string, payload: unknown) => {
     const config = handler(event, payload);
     return createMockPush(config);
   };
 
-  return vi.fn(pushFn) as unknown as Channel['push'];
+  return vi.fn(pushFn) as unknown as MockChannelPush;
 }

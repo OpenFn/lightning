@@ -80,6 +80,21 @@ export const ReleaseSchema = z.object({
 
 export type Release = z.infer<typeof ReleaseSchema>;
 
+/**
+ * One saved snapshot of a workflow, numbered by its own `lock_version`.
+ *
+ * The other numbering. Every save captures a snapshot; only a deliberate
+ * publish records a [Release]. This is the list a user without experimental
+ * features sees, and what `?v=` pins.
+ */
+export const VersionSchema = z.object({
+  lock_version: z.number().int(),
+  inserted_at: z.string(),
+  is_latest: z.boolean(),
+});
+
+export type Version = z.infer<typeof VersionSchema>;
+
 export const WorkflowTemplateSchema = z.object({
   id: uuidSchema,
   name: z.string(),
@@ -183,6 +198,11 @@ export interface SessionContextState {
   releasesLoaded: boolean;
   releasesLoading: boolean;
   releasesError: string | null;
+  /** Saved snapshots, numbered by lock_version. The flag-off list. */
+  versions: Version[];
+  versionsLoaded: boolean;
+  versionsLoading: boolean;
+  versionsError: string | null;
   workflow_template: WorkflowTemplate | null;
   suppressEnableTriggerWarning: boolean;
   limits: Limits;
@@ -196,6 +216,8 @@ interface SessionContextCommands {
   requestSessionContext: () => Promise<void>;
   requestReleases: () => Promise<void>;
   clearReleases: () => void;
+  requestVersions: () => Promise<void>;
+  clearVersions: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;

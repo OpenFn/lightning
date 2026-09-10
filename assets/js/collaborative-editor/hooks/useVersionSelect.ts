@@ -6,12 +6,14 @@
  *
  *
  * Version switching works by:
- * 1. Updating the URL parameter (?release=1, a release version_number, or no
- *    param for latest)
+ * 1. Updating the URL parameter: `?release=1` for a release version_number with
+ *    experimental features on, `?v=1` for a snapshot lock_version without, or
+ *    no param for latest
  * 2. SessionProvider detects the change and creates a new Y.Doc/provider
  * 3. The new provider connects to the appropriate room:
  *    - Latest: workflow:collaborate:{id}
  *    - Release: workflow:collaborate:{id}:release{version_number}
+ *    - Snapshot: workflow:collaborate:{id}:v{lock_version}
  * 4. Y.Doc syncs fresh data from the server for the selected version
  *
  */
@@ -20,9 +22,14 @@ import { useCallback } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
-import { CLEAR_PINNED_VIEW, RELEASE_PARAM } from '../lib/pinnedView';
+import {
+  CLEAR_PINNED_VIEW,
+  RELEASE_PARAM,
+  SNAPSHOT_PARAM,
+} from '../lib/pinnedView';
 
 import { useDiscardGuard } from './useDiscardGuard';
+import { useExperimentalFeatures } from './useSessionContext';
 
 /**
  * Hook that provides a version selection handler.
@@ -34,15 +41,22 @@ export function useVersionSelect() {
   const { updateSearchParams } = useURLState();
   const { guard, ...prompt } = useDiscardGuard();
 
+  // Which numbering the picker on screen is using. A release version_number and
+  // a snapshot lock_version are different numbers for different content, so
+  // writing one into the other's parameter would open the wrong document.
+  const experimentalFeatures = useExperimentalFeatures();
+
   const handleVersionSelect = useCallback(
     (version: number | 'latest') => {
       // Switching destroys the document, so ask first when that would take
       // uncommitted edits with it. A run belongs to one version, so it must not
       // leak across a switch either.
+      const param = experimentalFeatures ? RELEASE_PARAM : SNAPSHOT_PARAM;
+
       guard(() => {
         updateSearchParams({
           ...CLEAR_PINNED_VIEW,
-          [RELEASE_PARAM]: version === 'latest' ? null : String(version),
+          [param]: version === 'latest' ? null : String(version),
           run: null,
           // The step belongs to the run being cleared, and a step id means
           // nothing in another version.
@@ -50,7 +64,7 @@ export function useVersionSelect() {
         });
       });
     },
-    [guard, updateSearchParams]
+    [experimentalFeatures, guard, updateSearchParams]
   );
 
   return { handleVersionSelect, prompt };

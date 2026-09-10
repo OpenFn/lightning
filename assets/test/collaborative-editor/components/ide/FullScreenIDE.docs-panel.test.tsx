@@ -129,6 +129,7 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useExperimentalFeatures: () => true,
   useProject: () => ({
     id: 'project-1',
     name: 'Test Project',

@@ -92,6 +92,7 @@ import {
   type SessionContextStore,
   SessionContextResponseSchema,
   ReleaseSchema,
+  VersionSchema,
   WebhookAuthMethodSchema,
   WorkflowTemplateSchema,
 } from '../types/sessionContext';
@@ -141,6 +142,10 @@ export const createSessionContextStore = (
       releasesLoaded: false,
       releasesLoading: false,
       releasesError: null,
+      versions: [],
+      versionsLoaded: false,
+      versionsLoading: false,
+      versionsError: null,
       workflow_template: null,
       suppressEnableTriggerWarning: false,
       limits: {},
@@ -441,6 +446,78 @@ export const createSessionContextStore = (
   };
 
   /**
+   * Request the workflow's saved snapshots, numbered by lock_version.
+   *
+   * A different question from `requestReleases`, with differently shaped rows,
+   * which is why it is a different event. This is the list for a user without
+   * experimental features.
+   */
+  const requestVersions = async (): Promise<void> => {
+    if (state.versionsLoading || !_channelProvider?.channel) {
+      if (!_channelProvider?.channel) {
+        logger.warn('Cannot request versions - no channel connected');
+      }
+      return;
+    }
+
+    state = produce(state, draft => {
+      draft.versionsLoading = true;
+      draft.versionsError = null;
+    });
+    notify('requestVersions:start');
+
+    try {
+      logger.debug('Requesting workflow versions');
+      const response = await channelRequest<{ versions: unknown[] }>(
+        _channelProvider.channel,
+        'request_versions',
+        {}
+      );
+
+      const result = z.array(VersionSchema).safeParse(response.versions);
+
+      if (result.success) {
+        state = produce(state, draft => {
+          draft.versions = result.data;
+          draft.versionsLoaded = true;
+          draft.versionsLoading = false;
+          draft.versionsError = null;
+        });
+        notify('requestVersions:success');
+      } else {
+        const errorMessage = `Invalid versions data: ${result.error.message}`;
+        logger.error('Failed to parse versions data', {
+          error: result.error,
+          response,
+        });
+
+        state = produce(state, draft => {
+          draft.versionsError = errorMessage;
+          draft.versionsLoaded = true;
+          draft.versionsLoading = false;
+        });
+        notify('requestVersions:error');
+      }
+    } catch (error) {
+      logger.error('Versions request failed', error);
+      state = produce(state, draft => {
+        draft.versionsError = 'Failed to load versions';
+        draft.versionsLoaded = true;
+        draft.versionsLoading = false;
+      });
+      notify('requestVersions:error');
+    }
+  };
+
+  const clearVersions = () => {
+    state = produce(state, draft => {
+      draft.versions = [];
+      draft.versionsLoaded = false;
+    });
+    notify('clearVersions');
+  };
+
+  /**
    * Clear releases cache
    */
   const clearReleases = () => {
@@ -697,6 +774,8 @@ export const createSessionContextStore = (
     requestSessionContext,
     requestReleases,
     clearReleases,
+    requestVersions,
+    clearVersions,
     setLoading,
     setError,
     clearError,

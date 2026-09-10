@@ -17,6 +17,7 @@ import { LoadingBoundary } from './components/LoadingBoundary';
 import { PromotedNotice } from './components/PromotedNotice';
 import { RestoreVersionDialog } from './components/RestoreVersionDialog';
 import type { RestoreCost } from './components/RestoreVersionDialog';
+import { SnapshotVersionDropdown } from './components/SnapshotVersionDropdown';
 import { TemplateBrowserModalWrapper } from './components/TemplateBrowserModalWrapper';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
@@ -32,6 +33,7 @@ import { StoreProvider } from './contexts/StoreProvider';
 import { useActionLock } from './hooks/useActionLock';
 import { useHistoryCommands } from './hooks/useHistory';
 import {
+  useExperimentalFeatures,
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useLimits,
@@ -120,6 +122,7 @@ export function BreadcrumbContent({
 
   useUnloadWarning();
   const canEditWorkflow = usePermissions()?.can_edit_workflow ?? false;
+  const experimentalFeatures = useExperimentalFeatures();
   const { restoreVersion, checkRestore } = useWorkflowActions();
 
   // Held here rather than in the dropdown, which closes as soon as Restore is
@@ -243,14 +246,27 @@ export function BreadcrumbContent({
           {currentWorkflowName}
         </BreadcrumbLink>
         <div className="flex items-center gap-1.5">
-          <VersionDropdown
-            currentVersion={workflowFromStore?.lock_version ?? null}
-            latestVersion={latestSnapshotLockVersion}
-            onVersionSelect={handleVersionSelect}
-            {...(canEditWorkflow && {
-              onVersionRestore: handleVersionRestore,
-            })}
-          />
+          {/* Two pickers, two numberings. The releases one reads the publish
+              trail and offers Restore; the snapshots one lists every save, as
+              the editor did before this work. Which one is on screen decides
+              which parameter pins a version and therefore which collaboration
+              room the session joins. */}
+          {experimentalFeatures ? (
+            <VersionDropdown
+              currentVersion={workflowFromStore?.lock_version ?? null}
+              latestVersion={latestSnapshotLockVersion}
+              onVersionSelect={handleVersionSelect}
+              {...(canEditWorkflow && {
+                onVersionRestore: handleVersionRestore,
+              })}
+            />
+          ) : (
+            <SnapshotVersionDropdown
+              currentVersion={workflowFromStore?.lock_version ?? null}
+              latestVersion={latestSnapshotLockVersion}
+              onVersionSelect={handleVersionSelect}
+            />
+          )}
           {projectEnv && (
             <div
               id="canvas-project-env-container"
@@ -281,6 +297,7 @@ export function BreadcrumbContent({
     handleVersionSelect,
     handleVersionRestore,
     canEditWorkflow,
+    experimentalFeatures,
   ]);
 
   // Hide header until the first save clears isNewWorkflow in the store.

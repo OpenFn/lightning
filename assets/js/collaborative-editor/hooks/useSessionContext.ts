@@ -344,6 +344,64 @@ export const useRequestReleases = () => {
 };
 
 /**
+ * The workflow's saved snapshots, numbered by lock_version.
+ *
+ * The other list. Every save captures a snapshot; only a deliberate publish
+ * records a release. This is what a user without experimental features sees,
+ * and what `?v=` pins.
+ */
+export const useVersions = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectVersions = sessionContextStore.withSelector(
+    state => state.versions
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectVersions);
+};
+
+export const useVersionsLoading = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectLoading = sessionContextStore.withSelector(
+    state => state.versionsLoading
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLoading);
+};
+
+/**
+ * Whether a versions request has finished, whatever came back. Separate from
+ * the list being empty, so a workflow with no snapshots is not asked about
+ * forever.
+ */
+export const useVersionsLoaded = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectLoaded = sessionContextStore.withSelector(
+    state => state.versionsLoaded
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLoaded);
+};
+
+export const useVersionsError = (): string | null => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectError = sessionContextStore.withSelector(
+    state => state.versionsError
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectError);
+};
+
+export const useRequestVersions = () => {
+  const sessionContextStore = useSessionContextStore();
+
+  return sessionContextStore.requestVersions;
+};
+
+/**
  * Hook to get workflow template data
  * Returns null if no template is published for this workflow
  */

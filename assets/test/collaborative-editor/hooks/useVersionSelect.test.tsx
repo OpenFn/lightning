@@ -1,9 +1,14 @@
 /**
  * useVersionSelect Hook Tests
  *
- * Switching version updates the ?v param AND clears the selected run (?run),
- * so a run selected on one version never leaks into another (the Recent History
- * widget is version-scoped).
+ * Switching version updates the pin parameter AND clears the selected run
+ * (?run), so a run selected on one version never leaks into another (the Recent
+ * History widget is version-scoped).
+ *
+ * Which parameter it writes depends on the picker the user has: `?release=` for
+ * the publish trail with experimental features on, `?v=` for a snapshot's own
+ * lock_version without. The two numbers mean different content, so writing one
+ * into the other's parameter would open the wrong document.
  */
 
 import { act, renderHook } from '@testing-library/react';
@@ -38,10 +43,17 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({ saveWorkflow }),
 }));
 
+let experimentalFeatures = true;
+
+vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useExperimentalFeatures: () => experimentalFeatures,
+}));
+
 describe('useVersionSelect', () => {
   beforeEach(() => {
     urlState.reset();
     hasChanges = false;
+    experimentalFeatures = true;
     saveWorkflow.mockReset();
     saveWorkflow.mockResolvedValue(undefined);
   });
@@ -57,6 +69,25 @@ describe('useVersionSelect', () => {
       // Both numbering schemes are cleared, so a bookmark carrying the other one
       // cannot survive the switch and pin the view straight back.
       v: null,
+      run: null,
+      as_run: null,
+      step: null,
+    });
+  });
+
+  test('pins a snapshot with ?v when experimental features are off', () => {
+    // Without the flag the picker lists saves, numbered by lock_version, and
+    // those go in `?v=`. Writing them into `?release=` would ask the server for
+    // release 3 and get whichever content that published, which is a different
+    // snapshot.
+    experimentalFeatures = false;
+
+    const { result } = renderHook(() => useVersionSelect());
+    result.current.handleVersionSelect(3);
+
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      release: null,
+      v: '3',
       run: null,
       as_run: null,
       step: null,
