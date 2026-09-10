@@ -656,6 +656,73 @@ defmodule Lightning.Projects.ProvisionerTest do
     end
   end
 
+  describe "collaboration reconcile" do
+    setup do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn _flag -> nil end)
+      :ok
+    end
+
+    test "a plain import leaves open editors alone" do
+      # What a deploy did before this work. Rebuilding someone's document under
+      # them mid-edit is visible, and it reaches every collaborator in the room
+      # whether or not they asked for any of this, so it is opt-in.
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+      workflow = insert(:workflow, project: project)
+
+      Lightning.Collaboration.WorkflowReconciler.subscribe(workflow.id)
+
+      {:ok, _project} =
+        Provisioner.import_document(project, user, %{
+          "id" => project.id,
+          "name" => project.name,
+          "workflows" => [
+            %{
+              "id" => workflow.id,
+              "name" => "Renamed",
+              "jobs" => [],
+              "triggers" => [],
+              "edges" => []
+            }
+          ]
+        })
+
+      refute_receive %Lightning.Collaboration.WorkflowReconciler.ReconcileRequested{},
+                     200
+    end
+
+    test "a caller that asks for it gets it" do
+      user = insert(:user)
+      project = insert(:project, project_users: [%{user: user, role: :owner}])
+      workflow = insert(:workflow, project: project)
+
+      Lightning.Collaboration.WorkflowReconciler.subscribe(workflow.id)
+
+      {:ok, _project} =
+        Provisioner.import_document(
+          project,
+          user,
+          %{
+            "id" => project.id,
+            "name" => project.name,
+            "workflows" => [
+              %{
+                "id" => workflow.id,
+                "name" => "Renamed",
+                "jobs" => [],
+                "triggers" => [],
+                "edges" => []
+              }
+            ]
+          },
+          reconcile_collaboration: true
+        )
+
+      assert_receive %Lightning.Collaboration.WorkflowReconciler.ReconcileRequested{},
+                     500
+    end
+  end
+
   describe "import_document/2 workflow state inference" do
     setup do
       Mox.verify_on_exit!()

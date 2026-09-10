@@ -109,6 +109,25 @@ describe('useVersionSelect', () => {
     });
   });
 
+  test('switches straight away without experimental features', () => {
+    // The prompt is part of what this work added. Today the editor discards
+    // silently, so a user who did not opt in must not meet a dialog they have
+    // never seen.
+    experimentalFeatures = false;
+    hasChanges = true;
+
+    const { result } = renderHook(() => useVersionSelect());
+
+    act(() => {
+      result.current.handleVersionSelect(3);
+    });
+
+    expect(result.current.prompt.isAsking).toBe(false);
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(
+      expect.objectContaining({ v: '3' })
+    );
+  });
+
   test('asks first when there are unsaved changes, and switches nothing yet', () => {
     hasChanges = true;
 

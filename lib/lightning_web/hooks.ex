@@ -296,8 +296,20 @@ defmodule LightningWeb.Hooks do
   # the user still has standing, so send them there rather than all the way out
   # to the projects list. If they had a workflow open, land on the parent's copy
   # of it: promote matches workflows by name, so the same name identifies it.
+  #
+  # Only for someone who opted into experimental features. Sandboxes ship
+  # already, so a user without the flag can archive one today and be told
+  # "Project deleted." on the way back to the projects list. That is what they
+  # have, and the new wording talks about a promote they cannot do.
   defp handle_project_user_event(%ProjectDeletionScheduled{} = event, socket) do
-    case archived_sandbox_destination(event, socket) do
+    destination =
+      if Lightning.Accounts.experimental_features_enabled?(
+           socket.assigns.current_user
+         ) do
+        archived_sandbox_destination(event, socket)
+      end
+
+    case destination do
       nil ->
         {:halt,
          socket

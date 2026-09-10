@@ -22,6 +22,12 @@ let isSynced = true;
 // reads off the provider's identity.
 let provider: object | null = { id: 'provider-1' };
 
+let experimentalFeatures = true;
+
+vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useExperimentalFeatures: () => experimentalFeatures,
+}));
+
 vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
   useUnsavedChanges: () => ({ hasChanges }),
 }));
@@ -40,6 +46,7 @@ function leavePage() {
 describe('useUnloadWarning', () => {
   beforeEach(() => {
     hasChanges = false;
+    experimentalFeatures = true;
     isSynced = true;
     provider = { id: 'provider-1' };
     resetUnloadWarning();
@@ -50,6 +57,17 @@ describe('useUnloadWarning', () => {
     renderHook(() => useUnloadWarning());
 
     expect(leavePage()).toBe(true);
+  });
+
+  test('says nothing to a user without experimental features', () => {
+    // The warning is part of what this work added. Today closing the tab asks
+    // nothing, and a user who did not opt in should get today's editor.
+    experimentalFeatures = false;
+    hasChanges = true;
+
+    renderHook(() => useUnloadWarning());
+
+    expect(leavePage()).toBe(false);
   });
 
   test('says nothing when there is nothing to lose', () => {

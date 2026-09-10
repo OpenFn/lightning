@@ -58,13 +58,15 @@ defmodule Lightning.Projects.Provisioner do
   ## Options
     * `:allow_stale` - If true, allows stale operations during import (useful for
       merge operations where concurrent modifications are expected). Defaults to false.
-    * `:reconcile_collaboration` - If true (the default), broadcasts a
-      collaboration reconcile request for each affected workflow AFTER the import
-      transaction commits, so any live collaborative document re-syncs from the
-      database. Callers that nest this import inside a larger transaction (e.g.
-      `Lightning.Projects.Sandboxes.merge/4`) pass `false` and broadcast
-      themselves after their own commit, since the subscriber reloads through a
-      separate database connection.
+    * `:reconcile_collaboration` - If true, broadcasts a collaboration reconcile
+      request for each affected workflow AFTER the import transaction commits,
+      so any live collaborative document re-syncs from the database.
+
+      Defaults to FALSE, which is what a deploy did before this work: an editor
+      that was open stayed as it was. Rebuilding someone's document under them
+      mid-edit is a visible change, and it would reach every collaborator in the
+      room whether or not they asked for any of this. Callers that need it ask
+      for it, and none of them is a plain import.
   """
   @spec import_document(
           Project.t() | nil,
@@ -84,7 +86,10 @@ defmodule Lightning.Projects.Provisioner do
 
   def import_document(project, user_or_repo_connection, data, opts) do
     allow_stale = Keyword.get(opts, :allow_stale, false)
-    reconcile_collaboration = Keyword.get(opts, :reconcile_collaboration, true)
+
+    reconcile_collaboration =
+      Keyword.get(opts, :reconcile_collaboration, false)
+
     release = Keyword.get(opts, :release)
 
     result =

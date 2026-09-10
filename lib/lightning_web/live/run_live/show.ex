@@ -218,6 +218,11 @@ defmodule LightningWeb.RunLive.Show do
                   <.step_item
                     step={step}
                     workflow_version={@workflow.lock_version}
+                    experimental_features={
+                      Lightning.Accounts.experimental_features_enabled?(
+                        @current_user
+                      )
+                    }
                     is_clone={
                       DateTime.compare(step.inserted_at, run.inserted_at) == :lt
                     }

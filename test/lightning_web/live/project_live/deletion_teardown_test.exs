@@ -27,7 +27,10 @@ defmodule LightningWeb.ProjectLive.DeletionTeardownTest do
       & &1
     )
 
-    owner = insert(:user)
+    # Landing in the parent after an archive is part of the promote flow, so it
+    # only happens for someone who opted in. Without the flag they get what
+    # ships today: "Project deleted." and the projects list.
+    owner = insert(:user, preferences: %{"experimental_features" => true})
 
     project =
       insert(:project, project_users: [%{user: owner, role: :owner}])
@@ -103,6 +106,30 @@ defmodule LightningWeb.ProjectLive.DeletionTeardownTest do
         )
 
       assert flash["info"] == "Sandbox archived."
+    end
+
+    test "without the flag, an archived sandbox reads as a deleted project", %{
+      conn: conn
+    } do
+      # Sandboxes ship already, so this is reachable without any of this work.
+      # They get what they have today: the projects list, and wording that does
+      # not mention a promote they cannot do.
+      plain = insert(:user)
+      parent = insert(:project, project_users: [%{user: plain, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: plain, role: :owner}]
+        )
+
+      conn = log_in_user(conn, plain)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{sandbox.id}/w")
+
+      {:ok, _} = Lightning.Projects.schedule_project_deletion(sandbox)
+
+      assert_redirect(view, ~p"/projects")
     end
 
     test "an archived sandbox falls back to the parent's workflow list", %{

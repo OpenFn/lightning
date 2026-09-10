@@ -48,12 +48,9 @@ export function useVersionSelect() {
 
   const handleVersionSelect = useCallback(
     (version: number | 'latest') => {
-      // Switching destroys the document, so ask first when that would take
-      // uncommitted edits with it. A run belongs to one version, so it must not
-      // leak across a switch either.
       const param = experimentalFeatures ? RELEASE_PARAM : SNAPSHOT_PARAM;
 
-      guard(() => {
+      const switchTo = () => {
         updateSearchParams({
           ...CLEAR_PINNED_VIEW,
           [param]: version === 'latest' ? null : String(version),
@@ -62,7 +59,21 @@ export function useVersionSelect() {
           // nothing in another version.
           step: null,
         });
-      });
+      };
+
+      // Switching destroys the document, so with experimental features on we
+      // ask first when that would take uncommitted edits with it.
+      //
+      // Without them, it switches straight away and the edits go, which is what
+      // the editor does today. The prompt is a good addition and it is still an
+      // addition; a user who did not opt in should not meet a dialog they have
+      // never seen.
+      if (!experimentalFeatures) {
+        switchTo();
+        return;
+      }
+
+      guard(switchTo);
     },
     [experimentalFeatures, guard, updateSearchParams]
   );

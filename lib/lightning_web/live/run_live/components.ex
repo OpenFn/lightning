@@ -191,6 +191,7 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   attr :workflow_version, :integer, required: true
+  attr :experimental_features, :boolean, default: false
   attr :step, Lightning.Invocation.Step, required: true
   attr :is_clone, :boolean, default: false
   attr :run_id, :string
@@ -256,7 +257,7 @@ defmodule LightningWeb.RunLive.Components do
             <.link
               class="pl-1"
               patch={
-                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{run: @run_id, panel: "editor", job: @job.id}, @step.snapshot.lock_version, @workflow_version)}" <> "#log"
+                ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{run: @run_id, panel: "editor", job: @job.id}, @step.snapshot.lock_version, @workflow_version, @experimental_features)}" <> "#log"
               }
             >
               <.icon
@@ -277,13 +278,28 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   # A release is pinned with `?release=`, which numbers by the publish trail, so
-  # a historical run is pinned with `?as_run=`: the channel resolves that run's
-  # own snapshot, which works for draft and test runs that were never released.
-  defp maybe_add_snapshot_version(params, snapshot_version, workflow_version) do
-    if snapshot_version != workflow_version do
-      Map.merge(params, %{as_run: params[:run]})
-    else
-      params
+  # for someone with experimental features a historical run is pinned with
+  # `?as_run=`: the channel resolves that run's own snapshot, which works for
+  # draft and test runs that were never released.
+  #
+  # Without the flag it is `?v=` and the snapshot's own lock_version, which is
+  # the link this page has always produced and the only one that user's editor
+  # knows how to open.
+  defp maybe_add_snapshot_version(
+         params,
+         snapshot_version,
+         workflow_version,
+         experimental_features
+       ) do
+    cond do
+      snapshot_version == workflow_version ->
+        params
+
+      experimental_features ->
+        Map.merge(params, %{as_run: params[:run]})
+
+      true ->
+        Map.merge(params, %{v: snapshot_version})
     end
   end
 
@@ -332,6 +348,7 @@ defmodule LightningWeb.RunLive.Components do
   attr :project, :map, required: true
   attr :run, :map, required: true
   attr :workflow_version, :integer, required: true
+  attr :experimental_features, :boolean, default: false
   attr :can_edit_data_retention, :boolean, required: true
   attr :can_run_workflow, :boolean, required: true
 
@@ -359,6 +376,7 @@ defmodule LightningWeb.RunLive.Components do
           run={@run}
           can_edit_data_retention={@can_edit_data_retention}
           workflow_version={@workflow_version}
+          experimental_features={@experimental_features}
           step={step}
         />
       <% end %>
@@ -369,6 +387,7 @@ defmodule LightningWeb.RunLive.Components do
   attr :step, :map, required: true
   attr :run, :map, required: true
   attr :workflow_version, :integer, required: true
+  attr :experimental_features, :boolean, default: false
   attr :project_id, :string, required: true
   attr :can_run_workflow, :boolean, required: true
   attr :can_edit_data_retention, :boolean, required: true
@@ -451,7 +470,7 @@ defmodule LightningWeb.RunLive.Components do
             aria-label="Inspect this step"
             class="cursor-pointer"
             navigate={
-              ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{run: @run.id, panel: "editor", job: @job.id}, @step.snapshot.lock_version, @workflow_version)}"
+              ~p"/projects/#{@project_id}/w/#{@step.snapshot.workflow_id}?#{maybe_add_snapshot_version(%{run: @run.id, panel: "editor", job: @job.id}, @step.snapshot.lock_version, @workflow_version, @experimental_features)}"
                 <> "#log"
             }
           >
