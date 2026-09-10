@@ -366,6 +366,22 @@ export const useNodeSelection = () => {
   };
 };
 
+/**
+ * Whether the workflow is on, and how to turn it on or off.
+ *
+ * Reads the triggers, not the lifecycle column: a user without experimental
+ * features has no lifecycle, and this switch is what they have instead.
+ */
+export const useWorkflowEnabled = () => {
+  return useWorkflowSelector(
+    (state, store) => ({
+      enabled: state.enabled,
+      setEnabled: store.setEnabled,
+    }),
+    []
+  );
+};
+
 // =============================================================================
 // ACTION HOOKS (COMMANDS)
 // =============================================================================

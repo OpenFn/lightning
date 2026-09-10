@@ -157,6 +157,11 @@ const EdgeShape = EdgeSchema.shape;
 
 // Helper to update derived state (defined first to avoid hoisting issues)
 function updateDerivedState(draft: Workflow.State) {
+  // Whether the workflow is on, computed from its triggers. The lifecycle
+  // column answers a different question and only exists behind the flag.
+  draft.enabled =
+    draft.triggers.length > 0 ? draft.triggers.some(t => t.enabled) : null;
+
   // Compute selected node
   if (draft.selectedJobId) {
     draft.selectedNode =
@@ -193,6 +198,7 @@ function produceInitialState() {
       selectedEdgeId: null,
 
       // Initialize computed state
+      enabled: null,
       selectedNode: null,
       selectedEdge: null,
 

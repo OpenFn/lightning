@@ -241,6 +241,7 @@ mockYText.insert(0, 'fn(state => state)');
 const mockReadOnlyState = { isReadOnly: false, tooltipMessage: '' };
 
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowEnabled: () => ({ enabled: true, setEnabled: vi.fn() }),
   useCanSave: () => ({
     canSave: true,
     tooltipMessage: 'Save workflow',

@@ -24,6 +24,7 @@ import {
   useCanSave,
   useNodeSelection,
   useWorkflowActions,
+  useWorkflowEnabled,
   useWorkflowReadOnly,
   useWorkflowSettingsErrors,
   useWorkflowState,
@@ -36,6 +37,7 @@ import {
 } from '../lib/errors';
 import { notifications } from '../lib/notifications';
 import { usePinnedView } from '../lib/pinnedView';
+import { Switch } from './inputs/Switch';
 import { isFinalState } from '../types/history';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
@@ -236,6 +238,7 @@ export function Header({
     archiveSandbox,
   } = useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
+  const { enabled, setEnabled } = useWorkflowEnabled();
   const triggers = useWorkflowState(state => state.triggers);
   const { canRun } = useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
@@ -322,6 +325,16 @@ export function Header({
       : undefined;
 
   const showChangeIndicator = hasChanges && canSave;
+
+  // Whether Run and Save vanish on a read-only view, or stay put and disabled
+  // with a tooltip saying why.
+  //
+  // The releases experience hides them, which reads fine there: the lifecycle
+  // badge and Switch to draft are alongside to explain the state and offer a
+  // way out. Without the flag none of that is on screen, so hiding them would
+  // leave a header with no controls and no reason, where today it shows both
+  // greyed out. `canRun` and `canSave` already carry the reason.
+  const hideOnReadOnly = experimentalFeatures && isReadOnly;
 
   const handleRunClick = useCallback(async () => {
     if (!firstTriggerId || !projectId || !workflowId) return;
@@ -696,6 +709,20 @@ export function Header({
 
           <div className="flex flex-row gap-2 items-center">
             <div className="flex flex-row gap-2 items-center">
+              {/* Turning the workflow on and off. Only without experimental
+                  features: with them, the lifecycle badge and Go live /
+                  Switch to draft answer the same question, and two controls
+                  for one thing would contradict each other. */}
+              {!experimentalFeatures && !isViewingNonCurrentVersion && (
+                <span className="inline-flex items-center">
+                  <Switch
+                    checked={enabled ?? false}
+                    onChange={setEnabled}
+                    disabled={isReadOnly}
+                  />
+                </span>
+              )}
+
               <div>
                 <button
                   type="button"
@@ -873,7 +900,7 @@ export function Header({
                     Retry
                   </Button>
                 )}
-              {projectId && workflowId && firstTriggerId && !isReadOnly && (
+              {projectId && workflowId && firstTriggerId && !hideOnReadOnly && (
                 <NewRunButton
                   onClick={() => {
                     void (isRetryable ? handleRetryClick() : handleRunClick());
@@ -884,7 +911,7 @@ export function Header({
                   text={isRetryable ? 'Run (Retry)' : 'Run'}
                 />
               )}
-              {(!isReadOnly || readOnlyReason === 'unsaved_new') && (
+              {(!hideOnReadOnly || readOnlyReason === 'unsaved_new') && (
                 <SaveButton
                   canSave={canSave && !hasSettingsErrors}
                   tooltipMessage={tooltipMessage}

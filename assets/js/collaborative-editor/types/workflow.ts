@@ -159,6 +159,12 @@ export namespace Workflow {
     selectedEdgeId: string | null;
 
     // Computed/derived state
+    /**
+     * Whether any trigger is on, or null when there are no triggers. Drives the
+     * header's on/off switch, which is what a user without experimental
+     * features has instead of the lifecycle controls.
+     */
+    enabled: boolean | null;
     selectedNode: Workflow.Job | Workflow.Trigger | null;
     selectedEdge: Workflow.Edge | null;
 

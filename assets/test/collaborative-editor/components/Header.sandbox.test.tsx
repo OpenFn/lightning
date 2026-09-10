@@ -14,6 +14,8 @@ import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors
 
 let lifecycleState: 'draft' | 'live' | undefined = 'live';
 let experimentalFeatures = true;
+let workflowEnabled: boolean | null = true;
+const setEnabled = vi.fn();
 let isNewWorkflow = false;
 let canProvisionSandbox = true;
 let limits: Record<string, { allowed: boolean; message: string | null }> = {};
@@ -100,6 +102,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowEnabled: () => ({ enabled: workflowEnabled, setEnabled }),
   useCanRun: () => ({ canRun: true }),
   useCanSave: () => ({ canSave: true, tooltipMessage: '' }),
   useNodeSelection: () => ({ selectNode: vi.fn() }),
@@ -217,6 +220,8 @@ describe('Header - Edit in sandbox button gating', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     experimentalFeatures = true;
+    workflowEnabled = true;
+    setEnabled.mockReset();
     canArchiveSandbox = true;
     limits = {};
     readOnly = { isReadOnly: false, reason: null };
@@ -282,6 +287,8 @@ describe('Header - lifecycle actions', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     experimentalFeatures = true;
+    workflowEnabled = true;
+    setEnabled.mockReset();
     canArchiveSandbox = true;
     limits = {};
     urlParams = {};
@@ -315,6 +322,30 @@ describe('Header - lifecycle actions', () => {
     renderHeader();
     const badges = screen.getAllByTestId('workflow-lifecycle-badge');
     expect(badges.at(-1)).toHaveTextContent('Draft');
+  });
+
+  test('keeps the on/off switch for a user without experimental features', () => {
+    // Their only way to turn a workflow on or off. With the flag on, the
+    // lifecycle badge and Go live / Switch to draft answer the same question,
+    // so the switch would be a second, contradicting control.
+    experimentalFeatures = false;
+    workflowEnabled = true;
+
+    renderHeader();
+
+    const toggle = screen.getByRole('switch');
+    expect(toggle).toBeInTheDocument();
+    expect(toggle).toBeChecked();
+  });
+
+  test('drops the switch once experimental features are on', () => {
+    experimentalFeatures = true;
+    lifecycleState = 'live';
+
+    renderHeader();
+
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.getByTestId('workflow-lifecycle-badge')).toBeInTheDocument();
   });
 
   test('shows none of it to a user without experimental features', () => {
@@ -1097,6 +1128,8 @@ describe('Header - read-only reason variations', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     experimentalFeatures = true;
+    workflowEnabled = true;
+    setEnabled.mockReset();
     canArchiveSandbox = true;
     limits = {};
     readOnly = { isReadOnly: false, reason: null };
@@ -1160,6 +1193,8 @@ describe('Header - long workflow name', () => {
     isNewWorkflow = false;
     canProvisionSandbox = true;
     experimentalFeatures = true;
+    workflowEnabled = true;
+    setEnabled.mockReset();
     canArchiveSandbox = true;
     limits = {};
     readOnly = { isReadOnly: false, reason: null };
