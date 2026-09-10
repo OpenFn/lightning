@@ -333,10 +333,11 @@ defmodule Lightning.Workflows.Stats do
   end
 
   # The job's name and adaptor come off the run's own snapshot, not the live
-  # `jobs` table: a rename or an adaptor bump must not relabel history, and a
-  # job since deleted still has to be nameable. Resolving after the group keeps
-  # the jsonb unnest down to the few snapshots that actually failed in the
-  # window — joining it in would unnest every snapshot the workflow ever had.
+  # `jobs` table, so a job since deleted is still nameable. The label a merged
+  # group ends up with is the newest failing snapshot's — see `merge_group/1`.
+  # Resolving after the group keeps the jsonb unnest down to the few snapshots
+  # that actually failed in the window — joining it in would unnest every
+  # snapshot the workflow ever had.
   defp group_by_signature(workflow_id, since) do
     rows =
       from(a in subquery(attributed_failures(workflow_id, since)),

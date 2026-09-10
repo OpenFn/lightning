@@ -736,9 +736,7 @@ defmodule Lightning.Invocation do
   # that never got a run — so it naturally misses here and falls through to
   # `filter_by_error_signature/2`'s fail-closed branch, exactly like any
   # other exit_reason no run can actually be in.
-  @reason_states Map.new(Run.state_reasons(), fn {state, reason} ->
-                   {reason, state}
-                 end)
+  @reason_states Run.states_by_reason()
 
   # A triage row's "View" button, scoped to exactly the work orders it
   # counted. `error_signature_exit_reason` switches the filter on; a
