@@ -158,6 +158,11 @@ and this project adheres to
 
 ### Fixed
 
+- Leaving a run's view for the latest version now clears the run. It only
+  watched the version parameter, and going from a run view back to latest never
+  changes that parameter, so the run was restored onto the live workflow with
+  its timings over steps it never touched.
+
 - The version list ticks the version whose content is on screen, and ticks
   nothing when no version published it. It used to tick the newest version
   whenever nothing was pinned, so it claimed you were looking at a version you

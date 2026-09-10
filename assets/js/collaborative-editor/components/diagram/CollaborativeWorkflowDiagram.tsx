@@ -83,8 +83,16 @@ export function CollaborativeWorkflowDiagram({
   const versionParam = params['v'] ?? null;
   const asRunParam = params['as_run'] ?? null;
   const restoredRunRef = useRef<string | null>(null);
-  const previousVersionRef = useRef<string | null>(versionParam);
-  // A `?v` change means two different things: a dropdown switch, which must
+
+  // Which document is on screen: a pinned release, a run's own snapshot, or the
+  // live one. Leaving any of those for another is what has to drop the selected
+  // run, and watching `?v` alone missed the commonest way out of a run view.
+  // Picking "latest" from a run view clears `as_run` while `?v` stays null, so
+  // nothing counted as a change, and the restore below put the run straight back
+  // on the live document with its timings over steps it never touched.
+  const viewKey = `${versionParam ?? ''}|${asRunParam ?? ''}`;
+  const previousViewRef = useRef<string>(viewKey);
+  // A view change means two different things: a dropdown switch, which must
   // clear the selected run, or selecting a run of another version, which must
   // not. Set on run-select, consumed by the reconcile effect below.
   const runSelectInProgressRef = useRef(false);
@@ -95,12 +103,12 @@ export function CollaborativeWorkflowDiagram({
   // the restore would race to re-add the run the switch is dropping. The ref
   // limits the restore to once per run to avoid a loop.
   useEffect(() => {
-    const versionChanged = previousVersionRef.current !== versionParam;
+    const viewChanged = previousViewRef.current !== viewKey;
     const wasRunSelect = runSelectInProgressRef.current;
     runSelectInProgressRef.current = false;
 
-    if (versionChanged) {
-      previousVersionRef.current = versionParam;
+    if (viewChanged) {
+      previousViewRef.current = viewKey;
       if (!wasRunSelect) {
         restoredRunRef.current = null;
         if (activeRunId) {
@@ -120,7 +128,7 @@ export function CollaborativeWorkflowDiagram({
     if (runParam) {
       restoredRunRef.current = null;
     }
-  }, [versionParam, runParam, activeRunId, clearRun, updateSearchParams]);
+  }, [viewKey, runParam, activeRunId, clearRun, updateSearchParams]);
 
   const currentRunSteps = useRunSteps(selectedRunId);
 

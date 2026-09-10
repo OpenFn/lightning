@@ -387,6 +387,52 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       });
     });
 
+    test('leaving a run view for latest clears the run', async () => {
+      storage.varStorage.setItem(
+        'lightning.editor.historyPanelCollapsed',
+        'false'
+      );
+      store = createEditorPreferencesStore();
+
+      const closeRunViewer = vi.fn();
+      wrapper = createWrapper(
+        store,
+        {
+          history: [],
+          isLoading: false,
+          error: null,
+          isChannelConnected: true,
+          activeRun: { id: 'old-run' },
+          runStepsCache: {},
+          runStepsSubscribers: {},
+          runStepsLoading: new Set(),
+        },
+        { _closeRunViewer: closeRunViewer }
+      );
+
+      // Looking at a run as it executed.
+      urlState.setParams({ run: 'old-run', as_run: 'old-run' });
+
+      const { rerender } = render(<CollaborativeWorkflowDiagram />, {
+        wrapper,
+      });
+
+      // Picking "latest" from the version dropdown drops as_run. ?v never
+      // changes, since it was null throughout, so watching ?v alone saw nothing
+      // happen: the run stayed selected and was restored onto the live
+      // document, painting its timings over steps it never touched.
+      urlState.deleteParam('as_run');
+      rerender(<CollaborativeWorkflowDiagram />);
+
+      await waitFor(() => {
+        expect(closeRunViewer).toHaveBeenCalled();
+        expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+          run: null,
+          step: null,
+        });
+      });
+    });
+
     test('clicking a run of a different version loads it as-executed WITHOUT clearing it', async () => {
       storage.varStorage.setItem(
         'lightning.editor.historyPanelCollapsed',
