@@ -35,7 +35,10 @@ defmodule Lightning.Adaptors.Scheduler do
 
   @doc """
   Starts the Scheduler. Required opts: `:name`, `:sup`, `:lock_key`,
-  `:cache`, `:tasks`, `:source_topic`. Optional: `:checked_at` (1-arity fn,
+  `:cache`, `:tasks`, `:source_topic`, `:refresh_interval` (tick interval
+  in milliseconds; `0` disables the timer) and `:warn_when_empty` (whether
+  booting on an empty catalogue with the timer disabled logs a warning).
+  Optional: `:checked_at` (1-arity fn,
   default `&Catalogue.max_checked_at/1`) reads the source's last-checked
   timestamp; called once at boot to schedule the delay before the scheduler's
   initial tick.
@@ -48,6 +51,8 @@ defmodule Lightning.Adaptors.Scheduler do
     _ = Keyword.fetch!(opts, :cache)
     _ = Keyword.fetch!(opts, :tasks)
     _ = Keyword.fetch!(opts, :source_topic)
+    _ = Keyword.fetch!(opts, :refresh_interval)
+    _ = Keyword.fetch!(opts, :warn_when_empty)
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
@@ -120,12 +125,13 @@ defmodule Lightning.Adaptors.Scheduler do
     checked_at = Keyword.get(opts, :checked_at, &Catalogue.max_checked_at/1)
 
     source = AdaptorsSupervisor.source(sup)
-    interval_ms = Config.refresh_interval()
+    interval_ms = Keyword.fetch!(opts, :refresh_interval)
 
     state = %{
       sup: sup,
       source: source,
       interval_ms: interval_ms,
+      warn_when_empty: Keyword.fetch!(opts, :warn_when_empty),
       source_topic: source_topic,
       cache: cache,
       tasks: tasks,
@@ -142,16 +148,12 @@ defmodule Lightning.Adaptors.Scheduler do
   @impl true
   def handle_continue(:check_catalogue, state) do
     # Read runs, and delay is computed, even when interval_ms == 0 — that's
-    # the only way an interval=0 (disabled) deployment still gets the
-    # empty-catalogue warning below. Don't skip it for that branch.
+    # the only way an interval=0 (disabled) deployment still learns its
+    # catalogue is empty. Don't skip it for that branch.
     checked_at =
       case read_checked_at(state) do
         nil ->
-          Logger.warning(
-            "Adaptors[#{state.source}]: catalogue is empty at boot — see " <>
-              "ADAPTORS.md's \"Running without internet access\" section"
-          )
-
+          log_empty_catalogue(state)
           nil
 
         :error ->
@@ -177,6 +179,27 @@ defmodule Lightning.Adaptors.Scheduler do
     end
 
     {:noreply, state}
+  end
+
+  # An empty catalogue only needs an operator's attention when no timer will
+  # fill it; with an interval set the first tick is already due immediately.
+  defp log_empty_catalogue(state) do
+    cond do
+      state.interval_ms > 0 ->
+        Logger.info(
+          "Adaptors[#{state.source}]: catalogue is empty at boot — refreshing now"
+        )
+
+      state.warn_when_empty ->
+        Logger.warning(
+          "Adaptors[#{state.source}]: catalogue is empty and refreshes are " <>
+            "disabled (interval=0) — see ADAPTORS.md's \"Running without " <>
+            "internet access\" section"
+        )
+
+      true ->
+        :ok
+    end
   end
 
   defp read_checked_at(state) do

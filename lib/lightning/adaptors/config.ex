@@ -68,6 +68,16 @@ defmodule Lightning.Adaptors.Config do
   end
 
   @doc """
+  Whether a scheduler booting on an empty catalogue that no timer will
+  fill should warn an operator. Defaults to true. Read once by
+  `Lightning.Adaptors.Supervisor` at boot and passed to the scheduler.
+  """
+  @spec warn_when_empty?() :: boolean()
+  def warn_when_empty? do
+    get(:warn_when_empty, true)
+  end
+
+  @doc """
   How long a read waits for a cache fill, in milliseconds. Defaults to
   15 seconds.
   """
