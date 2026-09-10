@@ -65,6 +65,14 @@ interface ManualRunPanelProps {
 
 type TabValue = 'empty' | 'custom' | 'existing';
 
+const toUtcIsoDateTime = (value: string): string => {
+  if (!value) return '';
+
+  // Parse datetime in the browser timezone, then serialize to UTC for the API.
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
+};
+
 export function ManualRunPanel({
   workflow,
   projectId,
@@ -336,8 +344,10 @@ export function ManualRunPanel({
   const buildFilters = useCallback(() => {
     const filters: Record<string, string> = {};
     if (selectedClipType) filters['type'] = selectedClipType;
-    if (selectedDates.before) filters['before'] = selectedDates.before;
-    if (selectedDates.after) filters['after'] = selectedDates.after;
+    if (selectedDates.before)
+      filters['before'] = toUtcIsoDateTime(selectedDates.before);
+    if (selectedDates.after)
+      filters['after'] = toUtcIsoDateTime(selectedDates.after);
     if (namedOnly) filters['named_only'] = 'true';
     return filters;
   }, [selectedClipType, selectedDates.before, selectedDates.after, namedOnly]);
@@ -394,8 +404,10 @@ export function ManualRunPanel({
     const timeoutId = setTimeout(() => {
       const filters: Record<string, string> = {};
       if (selectedClipType) filters['type'] = selectedClipType;
-      if (selectedDates.before) filters['before'] = selectedDates.before;
-      if (selectedDates.after) filters['after'] = selectedDates.after;
+      if (selectedDates.before)
+        filters['before'] = toUtcIsoDateTime(selectedDates.before);
+      if (selectedDates.after)
+        filters['after'] = toUtcIsoDateTime(selectedDates.after);
       if (namedOnly) filters['named_only'] = 'true';
 
       void dataclipApi

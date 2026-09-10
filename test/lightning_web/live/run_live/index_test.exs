@@ -928,6 +928,30 @@ defmodule LightningWeb.RunLive.IndexTest do
       assert html =~ "after"
     end
 
+    test "datetime-local filter fields keep URL wall-time value (no visual timezone shift)",
+         %{
+           conn: conn,
+           project: project
+         } do
+      conn =
+        put_connect_params(conn, %{
+          "tz_offset_minutes" => "-480"
+        })
+
+      {:ok, view, _html} =
+        live_async(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{wo_date_after: "2026-07-22T10:05"}
+          )
+        )
+
+      assert has_element?(
+               view,
+               "input[name='filters[wo_date_after]'][value='2026-07-22T10:05']"
+             )
+    end
+
     test "clearing date filter resets chip", %{
       conn: conn,
       project: project
