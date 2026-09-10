@@ -209,6 +209,7 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useIsNewWorkflow: () => false,
   useSessionWorkflow: () => null,
+  useExperimentalFeatures: () => true,
   useProjectRepoConnection: () => undefined,
   useProject: () => ({
     id: 'project-1',

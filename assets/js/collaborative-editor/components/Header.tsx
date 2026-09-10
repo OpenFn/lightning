@@ -8,6 +8,7 @@ import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
 import { useActiveRun } from '../hooks/useHistory';
 import {
+  useExperimentalFeatures,
   useIsNewWorkflow,
   useLatestSnapshotId,
   useLimits,
@@ -247,7 +248,18 @@ export function Header({
   const getLimits = storeContext?.sessionContextStore.getLimits;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const sessionWorkflow = useSessionWorkflow();
-  const lifecycleState = sessionWorkflow?.state;
+
+  // The whole sandboxes-and-releases experience hangs off this one flag. Every
+  // action it added is already guarded by the lifecycle state or by being inside
+  // a sandbox, so reading both as absent when the flag is off leaves the header
+  // exactly the shape it had before any of this existed. One gate, rather than a
+  // condition bolted onto each button, so a new action cannot be added and
+  // forget to check.
+  const experimentalFeatures = useExperimentalFeatures();
+  const lifecycleState = experimentalFeatures
+    ? sessionWorkflow?.state
+    : undefined;
+  const inSandbox = experimentalFeatures && isSandbox;
   const permissions = usePermissions();
   const canProvisionSandbox = permissions?.can_provision_sandbox ?? false;
   const canArchiveSandbox = permissions?.can_archive_sandbox ?? false;
@@ -649,14 +661,14 @@ export function Header({
           {!(
             lifecycleState === 'live' &&
             !isNewWorkflow &&
-            !isSandbox &&
+            !inSandbox &&
             readOnlyReason !== 'pinned_version' &&
             readOnlyReason !== 'as_run' &&
             readOnlyReason !== 'deleted'
           ) && <ReadOnlyWarning className="ml-3" />}
           {lifecycleState &&
             !isNewWorkflow &&
-            !isSandbox &&
+            !inSandbox &&
             !isViewingNonCurrentVersion && (
               <Tooltip
                 content={
@@ -712,7 +724,7 @@ export function Header({
             </div>
             <div className="relative flex gap-2">
               {!isNewWorkflow &&
-                !isSandbox &&
+                !inSandbox &&
                 !isViewingNonCurrentVersion &&
                 lifecycleState === 'draft' && (
                   <Tooltip
@@ -746,7 +758,7 @@ export function Header({
                   </Tooltip>
                 )}
               {!isNewWorkflow &&
-                !isSandbox &&
+                !inSandbox &&
                 !isReadingHistoryWithoutRun &&
                 lifecycleState === 'live' && (
                   <Button
@@ -762,7 +774,7 @@ export function Header({
                     Switch to draft
                   </Button>
                 )}
-              {!isNewWorkflow && isSandbox && !isViewingNonCurrentVersion && (
+              {!isNewWorkflow && inSandbox && !isViewingNonCurrentVersion && (
                 <Tooltip
                   content={
                     lifecycleState === 'live'
@@ -804,7 +816,7 @@ export function Header({
                   </span>
                 </Tooltip>
               )}
-              {!isNewWorkflow && isSandbox && !isViewingNonCurrentVersion && (
+              {!isNewWorkflow && inSandbox && !isViewingNonCurrentVersion && (
                 <Button
                   data-testid="promote-sandbox-button"
                   className="inline-flex items-center gap-1"
@@ -816,7 +828,7 @@ export function Header({
                 </Button>
               )}
               {lifecycleState === 'live' &&
-                !isSandbox &&
+                !inSandbox &&
                 !isNewWorkflow &&
                 !isReadingHistoryWithoutRun && (
                   <Tooltip
@@ -847,7 +859,7 @@ export function Header({
                   Run button, so without this there is no way to retry the one
                   thing a person came to a failed run to do. */}
               {lifecycleState === 'live' &&
-                !isSandbox &&
+                !inSandbox &&
                 !isNewWorkflow &&
                 isRetryable && (
                   <Button

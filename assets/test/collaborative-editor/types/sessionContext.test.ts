@@ -363,9 +363,13 @@ describe.concurrent('SessionContextResponseSchema', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      // The lifecycle lock defaults in, so the parsed object carries it even
-      // when the node did not send it.
-      expect(result.data).toEqual({ ...validResponse, content_locked: false });
+      // The lifecycle lock and the experimental-features flag both default in,
+      // so the parsed object carries them even when the node sent neither.
+      expect(result.data).toEqual({
+        ...validResponse,
+        content_locked: false,
+        experimental_features_enabled: false,
+      });
     }
   });
 

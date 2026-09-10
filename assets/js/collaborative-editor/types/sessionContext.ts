@@ -144,6 +144,15 @@ export const SessionContextResponseSchema = z.object({
   webhook_auth_methods: z.array(WebhookAuthMethodSchema),
   workflow_template: WorkflowTemplateSchema.nullable(),
   suppress_enable_trigger_warning: z.boolean().optional().default(false),
+  /**
+   * Whether this user has turned experimental features on. The sandboxes and
+   * releases experience is gated on it, so a user without it sees the editor
+   * they had before.
+   *
+   * Defaults false, which is the safe direction: an older node that does not
+   * send it shows the old editor rather than half of a new one.
+   */
+  experimental_features_enabled: z.boolean().optional().default(false),
   limits: LimitsSchema.optional(),
   workflow: BaseWorkflowSchema.optional(),
 });
@@ -160,6 +169,7 @@ export interface SessionContextState {
   config: AppConfig | null;
   permissions: Permissions | null;
   contentLocked: boolean;
+  experimentalFeaturesEnabled: boolean;
   latestSnapshotLockVersion: number | null;
   latestSnapshotId: string | null;
   projectRepoConnection: ProjectRepoConnection | null;

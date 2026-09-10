@@ -157,6 +157,23 @@ export const usePermissions = (): Permissions | null => {
 };
 
 /**
+ * Whether this user has experimental features turned on.
+ *
+ * The sandboxes and releases experience hangs off this. A user without it gets
+ * the editor they had before: versions numbered by save rather than by publish,
+ * no lifecycle, no sandboxes.
+ */
+export const useExperimentalFeatures = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectEnabled = sessionContextStore.withSelector(
+    state => state.experimentalFeaturesEnabled
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectEnabled);
+};
+
+/**
  * Whether the workflow's content is frozen by its lifecycle. A live workflow
  * outside a sandbox is locked for everyone, whatever their role, so this is a
  * separate question from `usePermissions`.

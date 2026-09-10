@@ -13,6 +13,7 @@ import { ChannelRequestError } from '../../../js/collaborative-editor/lib/errors
 // ---------------------------------------------------------------------------
 
 let lifecycleState: 'draft' | 'live' | undefined = 'live';
+let experimentalFeatures = true;
 let isNewWorkflow = false;
 let canProvisionSandbox = true;
 let limits: Record<string, { allowed: boolean; message: string | null }> = {};
@@ -79,6 +80,9 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useLatestSnapshotId: () => latestSnapshotId,
   useReleases: () => releases,
   useSessionWorkflow: () => ({ state: lifecycleState }),
+  // Defaults on, because most of these tests are about the experimental
+  // experience. The gating tests turn it off.
+  useExperimentalFeatures: () => experimentalFeatures,
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useUI', () => ({
@@ -212,6 +216,7 @@ describe('Header - Edit in sandbox button gating', () => {
     lifecycleState = 'live';
     isNewWorkflow = false;
     canProvisionSandbox = true;
+    experimentalFeatures = true;
     canArchiveSandbox = true;
     limits = {};
     readOnly = { isReadOnly: false, reason: null };
@@ -276,6 +281,7 @@ describe('Header - lifecycle actions', () => {
     lifecycleState = 'live';
     isNewWorkflow = false;
     canProvisionSandbox = true;
+    experimentalFeatures = true;
     canArchiveSandbox = true;
     limits = {};
     urlParams = {};
@@ -309,6 +315,51 @@ describe('Header - lifecycle actions', () => {
     renderHeader();
     const badges = screen.getAllByTestId('workflow-lifecycle-badge');
     expect(badges.at(-1)).toHaveTextContent('Draft');
+  });
+
+  test('shows none of it to a user without experimental features', () => {
+    // The point of the flag: a user who has not turned it on gets the header
+    // they had before. Everything the sandboxes-and-releases work added is
+    // guarded by the lifecycle state or by being inside a sandbox, so the flag
+    // reads both as absent rather than each button testing it separately.
+    //
+    // The workflow really is live in the database here, which is the case that
+    // matters: a colleague with the flag on can publish a shared workflow.
+    experimentalFeatures = false;
+    lifecycleState = 'live';
+
+    renderHeader();
+
+    expect(
+      screen.queryByTestId('workflow-lifecycle-badge')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('edit-in-sandbox-button')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Switch to draft' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Go live' })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('retry-run-button')).not.toBeInTheDocument();
+  });
+
+  test('shows none of it inside a sandbox either, without the flag', () => {
+    experimentalFeatures = false;
+    lifecycleState = 'draft';
+
+    renderHeader({ isSandbox: true });
+
+    expect(
+      screen.queryByTestId('toggle-sandbox-button')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Promote' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('workflow-lifecycle-badge')
+    ).not.toBeInTheDocument();
   });
 
   test('hides the Live badge when viewing a pinned older version', () => {
@@ -1045,6 +1096,7 @@ describe('Header - read-only reason variations', () => {
     lifecycleState = 'live';
     isNewWorkflow = false;
     canProvisionSandbox = true;
+    experimentalFeatures = true;
     canArchiveSandbox = true;
     limits = {};
     readOnly = { isReadOnly: false, reason: null };
@@ -1107,6 +1159,7 @@ describe('Header - long workflow name', () => {
     lifecycleState = 'live';
     isNewWorkflow = false;
     canProvisionSandbox = true;
+    experimentalFeatures = true;
     canArchiveSandbox = true;
     limits = {};
     readOnly = { isReadOnly: false, reason: null };

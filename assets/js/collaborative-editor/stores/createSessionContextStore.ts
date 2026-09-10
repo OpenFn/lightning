@@ -132,6 +132,7 @@ export const createSessionContextStore = (
       config: null,
       permissions: null,
       contentLocked: false,
+      experimentalFeaturesEnabled: false,
       latestSnapshotLockVersion: null,
       latestSnapshotId: null,
       projectRepoConnection: null,
@@ -204,6 +205,8 @@ export const createSessionContextStore = (
         draft.config = sessionContext.config;
         draft.permissions = sessionContext.permissions;
         draft.contentLocked = sessionContext.content_locked;
+        draft.experimentalFeaturesEnabled =
+          sessionContext.experimental_features_enabled;
         draft.latestSnapshotLockVersion =
           sessionContext.latest_snapshot_lock_version;
         draft.latestSnapshotId = sessionContext.latest_snapshot_id ?? null;

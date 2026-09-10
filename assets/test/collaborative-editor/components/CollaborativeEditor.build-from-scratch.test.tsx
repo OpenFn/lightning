@@ -177,6 +177,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   // draft buttons. These tests are about the build-from-scratch import flow, so
   // leave it absent and keep the lifecycle controls out of the tree.
   useSessionWorkflow: () => undefined,
+  useExperimentalFeatures: () => true,
   // The header gates Edit in sandbox on can_provision_sandbox. Grant the full
   // set so the import flow under test is not blocked by permissions.
   usePermissions: () => ({
