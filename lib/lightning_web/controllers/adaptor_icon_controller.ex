@@ -13,10 +13,12 @@ defmodule LightningWeb.AdaptorIconURL do
   Returns `nil` when `meta` has no ext or sha256 for the requested shape
   — i.e. when no icon is available.
   """
-  @spec build(String.t(), map(), :square | :rectangle) :: String.t() | nil
+  alias Lightning.Adaptors.IconField
+
+  @spec build(String.t(), map(), IconField.shape()) :: String.t() | nil
   def build(name, meta, shape) do
-    with ext when not is_nil(ext) <- ext_for_shape(meta, shape),
-         sha when not is_nil(sha) <- sha_for_shape(meta, shape) do
+    with ext when not is_nil(ext) <- Map.get(meta, IconField.ext(shape)),
+         sha when not is_nil(sha) <- Map.get(meta, IconField.sha256(shape)) do
       sha8 = sha |> binary_part(0, 4) |> Base.encode16(case: :lower)
 
       "/adaptors/icons/#{URI.encode(name, &URI.char_unreserved?/1)}/" <>
@@ -25,14 +27,6 @@ defmodule LightningWeb.AdaptorIconURL do
       _ -> nil
     end
   end
-
-  defp ext_for_shape(meta, :square), do: Map.get(meta, :icon_square_ext)
-  defp ext_for_shape(meta, :rectangle), do: Map.get(meta, :icon_rectangle_ext)
-
-  defp sha_for_shape(meta, :square), do: Map.get(meta, :icon_square_sha256)
-
-  defp sha_for_shape(meta, :rectangle),
-    do: Map.get(meta, :icon_rectangle_sha256)
 end
 
 defmodule LightningWeb.AdaptorIconController do
@@ -55,6 +49,7 @@ defmodule LightningWeb.AdaptorIconController do
   use LightningWeb, :controller
 
   alias Lightning.Adaptors
+  alias Lightning.Adaptors.IconField
 
   @immutable_cache "public, max-age=31536000, immutable"
 
@@ -85,16 +80,17 @@ defmodule LightningWeb.AdaptorIconController do
         %{"name" => name, "shape" => shape, "sha8" => sha8, "ext" => ext}
       )
       when shape in ~w(square rectangle) do
+    shape = String.to_existing_atom(shape)
+
     case Adaptors.icon_meta(name) do
       {:error, :not_found} ->
         send_resp(conn, 404, "")
 
       {:ok, meta} ->
-        cond do
-          ext_for_shape_param(meta, shape) != ext ->
-            send_resp(conn, 404, "")
+        stored_ext = Map.get(meta, IconField.ext(shape))
 
-          not has_icon?(meta, shape) ->
+        cond do
+          is_nil(stored_ext) or stored_ext != ext ->
             send_resp(conn, 404, "")
 
           sha_matches?(meta, shape, sha8) ->
@@ -108,11 +104,23 @@ defmodule LightningWeb.AdaptorIconController do
 
   def show(conn, _params), do: send_resp(conn, 404, "")
 
-  defp serve_bytes(conn, name, shape, ext) do
-    case Adaptors.icon(name, String.to_existing_atom(shape)) do
+  defp serve_bytes(conn, name, shape, "png") do
+    conn |> put_resp_content_type("image/png") |> send_icon(name, shape)
+  end
+
+  defp serve_bytes(conn, name, shape, "svg") do
+    conn |> put_resp_content_type("image/svg+xml") |> send_icon(name, shape)
+  end
+
+  defp serve_bytes(conn, _name, _shape, _ext), do: send_resp(conn, 404, "")
+
+  # `path` is a cache path built by `Adaptors.icon/2` from a catalogue row,
+  # reached only after `icon_meta/1` confirmed the adaptor exists.
+  # sobelow_skip ["Traversal.SendFile"]
+  defp send_icon(conn, name, shape) do
+    case Adaptors.icon(name, shape) do
       {:ok, path} ->
         conn
-        |> put_resp_content_type(content_type_for(ext))
         |> put_resp_header("cache-control", @immutable_cache)
         |> merge_resp_headers(LightningWeb.Utils.sandboxed_asset_headers())
         |> send_file(200, path)
@@ -123,12 +131,7 @@ defmodule LightningWeb.AdaptorIconController do
   end
 
   defp redirect_to_current(conn, name, meta, shape) do
-    url =
-      LightningWeb.AdaptorIconURL.build(
-        name,
-        meta,
-        String.to_existing_atom(shape)
-      )
+    url = LightningWeb.AdaptorIconURL.build(name, meta, shape)
 
     conn
     |> put_resp_header("cache-control", "no-store")
@@ -136,24 +139,11 @@ defmodule LightningWeb.AdaptorIconController do
     |> send_resp(302, "")
   end
 
-  defp has_icon?(meta, shape), do: not is_nil(ext_for_shape_param(meta, shape))
-
-  defp ext_for_shape_param(meta, "square"), do: Map.get(meta, :icon_square_ext)
-
-  defp ext_for_shape_param(meta, "rectangle"),
-    do: Map.get(meta, :icon_rectangle_ext)
-
-  defp sha_matches?(meta, "square", sha8),
-    do: sha_prefix_matches?(Map.get(meta, :icon_square_sha256), sha8)
-
-  defp sha_matches?(meta, "rectangle", sha8),
-    do: sha_prefix_matches?(Map.get(meta, :icon_rectangle_sha256), sha8)
+  defp sha_matches?(meta, shape, sha8),
+    do: sha_prefix_matches?(Map.get(meta, IconField.sha256(shape)), sha8)
 
   defp sha_prefix_matches?(<<prefix::binary-size(4), _::binary>>, sha8),
     do: Base.encode16(prefix, case: :lower) == String.downcase(sha8)
 
   defp sha_prefix_matches?(_, _sha8), do: false
-
-  defp content_type_for("png"), do: "image/png"
-  defp content_type_for("svg"), do: "image/svg+xml"
 end
