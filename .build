@@ -259,6 +259,7 @@ Lightning.Workflows.Snapshot.Job.html
 Lightning.Workflows.Snapshot.Trigger.html
 Lightning.Workflows.Snapshot.html
 Lightning.Workflows.Spec.html
+Lightning.Workflows.Stats.html
 Lightning.Workflows.Trigger.html
 Lightning.Workflows.Triggers.WebhookResponseConfig.html
 Lightning.Workflows.WebhookAuthMethod.html
@@ -279,6 +280,7 @@ LightningWeb.API.ProvisioningController.html
 LightningWeb.API.RegistrationController.html
 LightningWeb.API.RunController.html
 LightningWeb.API.WorkOrdersController.html
+LightningWeb.API.WorkflowHealthController.html
 LightningWeb.API.WorkflowsController.html
 LightningWeb.AiAssistantChannel.html
 LightningWeb.AuditLive.Index.html
@@ -414,6 +416,7 @@ LightningWeb.WorkerSocket.html
 LightningWeb.WorkflowChannel.html
 LightningWeb.WorkflowController.html
 LightningWeb.WorkflowLive.Collaborate.html
+LightningWeb.WorkflowLive.Health.html
 LightningWeb.WorkflowLive.Helpers.html
 LightningWeb.WorkflowLive.NewManualRun.html
 LightningWeb.html
@@ -442,8 +445,8 @@ dist/lato-latin-700-normal-2XVSBPG4.woff2
 dist/lato-latin-ext-400-normal-N27NCBWW.woff2
 dist/lato-latin-ext-700-normal-Q2L5DVMW.woff2
 dist/remixicon-QPNJX265.woff2
-dist/search_data-E37F57D8.js
-dist/sidebar_items-0EB162AD.js
+dist/search_data-8083FCAF.js
+dist/sidebar_items-022655FF.js
 index.html
 provisioning.html
 readme.html

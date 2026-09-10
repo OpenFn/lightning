@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-0EB162AD.js"></script>
+    <script defer src="dist/sidebar_items-022655FF.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -154,6 +154,37 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#failure_states/0" data-no-tooltip="" translate="no">failure_states()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the list of failure states for a work order.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#final_states/0" data-no-tooltip="" translate="no">final_states()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the list of final states for a work order.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#outcome/1" data-no-tooltip="" translate="no">outcome(state)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Buckets a work order state into <code class="inline">:success</code>, <code class="inline">:cancelled</code>, <code class="inline">:pending</code> or
+<code class="inline">:failed</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#states/0" data-no-tooltip="" translate="no">states()</a>
 
       </div>
@@ -264,6 +295,76 @@ Lightning
 <p>Returns the list of active (in-progress) work order states.</p>
   </section>
 </section>
+<section class="detail" id="failure_states/0">
+
+  <div class="detail-header">
+    <a href="#failure_states/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">failure_states()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/workorder.ex#L58" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns the list of failure states for a work order.</p><p>These are all final states except <code class="inline">:success</code> and <code class="inline">:cancelled</code> — someone
+stopped a cancelled work order on purpose, so it is not a failure.</p>
+  </section>
+</section>
+<section class="detail" id="final_states/0">
+
+  <div class="detail-header">
+    <a href="#final_states/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">final_states()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/workorder.ex#L48" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns the list of final states for a work order.</p><p>Every state a work order can settle in: <code class="inline">Run.final_states/0</code> plus
+<code class="inline">:rejected</code>, which is what a work order whose run was never created settles
+in.</p>
+  </section>
+</section>
+<section class="detail" id="outcome/1">
+
+  <div class="detail-header">
+    <a href="#outcome/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">outcome(state)</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/workorder.ex#L64" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Buckets a work order state into <code class="inline">:success</code>, <code class="inline">:cancelled</code>, <code class="inline">:pending</code> or
+<code class="inline">:failed</code>.</p>
+  </section>
+</section>
 <section class="detail" id="states/0">
 
   <div class="detail-header">
@@ -296,7 +397,7 @@ Lightning
       <h1 class="signature" translate="no">validate(changeset)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/workorder.ex#L86" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workorders/workorder.ex#L114" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 

@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-0EB162AD.js"></script>
+    <script defer src="dist/sidebar_items-022655FF.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -109,14 +109,18 @@ Lightning
 
 <p>All notable changes to this project will be documented in this file.</p><ul><li><code class="inline">Added</code> for new features.</li><li><code class="inline">Changed</code> for changes in existing functionality.</li><li><code class="inline">Deprecated</code> for soon-to-be removed features.</li><li><code class="inline">Removed</code> for now removed features.</li><li><code class="inline">Fixed</code> for any bug fixes.</li><li><code class="inline">Security</code> in case of vulnerabilities.</li></ul><p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
 and this project adheres to
-<a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p><h2 id="unreleased" class="section-heading"><a href="#unreleased" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[Unreleased]</span></h2><h3 id="changed" class="section-heading"><a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li><p>The AI assistant's reply footer now reads &quot;Revert changes&quot; and &quot;Restore
+<a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p><h2 id="unreleased" class="section-heading"><a href="#unreleased" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[Unreleased]</span></h2><h3 id="changed" class="section-heading"><a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>&quot;A failed work order&quot; now means the same thing on the workflows list, its
+history links, the health page and the digest email: cancelled no longer
+counts, and rejected now does. Each 30-day window is measured from a work
+order's last activity rather than when it was created, so one retried today
+counts as recent everywhere.</li><li>The AI assistant's reply footer now reads &quot;Revert changes&quot; and &quot;Restore
 changes&quot; rather than &quot;Revert this reply&quot;, and its confirmation matches.
-<a href="https://github.com/OpenFn/lightning/pull/5161">#5161</a></p></li><li><p>The AI assistant is the global assistant for everyone. It was behind the
+<a href="https://github.com/OpenFn/lightning/pull/5161">#5161</a></li><li>The AI assistant is the global assistant for everyone. It was behind the
 experimental features setting and an opt-in tickbox on the chat input, and
 both are gone: every message goes to it, and the badge naming which assistant
 answered goes with them. Existing workflow conversations still open and read
 as they always did, and replying in one moves it to the global assistant from
-that message on. <a href="https://github.com/OpenFn/lightning/issues/5042">#5042</a></p></li><li><p>The AI assistant's attachment tickboxes are now about the run you are looking
+that message on. <a href="https://github.com/OpenFn/lightning/issues/5042">#5042</a></li><li>The AI assistant's attachment tickboxes are now about the run you are looking
 at, and they appear wherever you are. &quot;Send run logs&quot; and &quot;Send run data&quot; sit
 above the message box on the canvas and in the run history as well as in the
 step editor, and appear once a run is loaded rather than sitting greyed out.
@@ -124,17 +128,16 @@ step editor, and appear once a run is loaded rather than sitting greyed out.
 happened to be highlighted, and still sends the shape of the data with the
 values removed. The &quot;Press Enter to send&quot; hint below the box is gone, since
 the notice and the send button now share that row.
-<a href="https://github.com/OpenFn/lightning/issues/5037">#5037</a></p></li><li><p>Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
+<a href="https://github.com/OpenFn/lightning/issues/5037">#5037</a></li><li>Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
 first character of a string, which breaks names in many languages. Lightning
 does not normalise anything today, but #4577 adds it on every name, so the
-runtime moves first.</p></li></ul><h3 id="removed" class="section-heading"><a href="#removed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Removed</span></h3><ul><li>The AI assistant's &quot;Send code&quot; tickbox. The assistant reads your workflow to
+runtime moves first.</li></ul><h3 id="removed" class="section-heading"><a href="#removed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Removed</span></h3><ul><li>The AI assistant's &quot;Send code&quot; tickbox. The assistant reads your workflow to
 answer anything about it, so the box did nothing except in one case, where it
 looked like a choice and was not one.
-<a href="https://github.com/OpenFn/lightning/issues/5037">#5037</a></li></ul><h3 id="added" class="section-heading"><a href="#added" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li><p>The assistant's change summary now reports a webhook trigger's settings. A
+<a href="https://github.com/OpenFn/lightning/issues/5037">#5037</a></li></ul><h3 id="added" class="section-heading"><a href="#added" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>The assistant's change summary now reports a webhook trigger's settings. A
 custom path being set, changed or cleared shows as its own row, as do the
 reply timing and the response codes, all of which used to land with nothing
-said about them.
-<a href="https://github.com/OpenFn/lightning/issues/5149">#5149</a></p></li><li><p>The AI assistant now shows what changed as a global reply edits your workflow.
+said about them. <a href="https://github.com/OpenFn/lightning/issues/5149">#5149</a></li><li>The AI assistant now shows what changed as a global reply edits your workflow.
 Each change renders under the status that made it, while the reply is still
 streaming, as a per-step code diff with syntax highlighting, old and new line
 numbers and a link to open that step in the editor, alongside a compact
@@ -143,18 +146,24 @@ step renames. Each diff block copies the step's code, and the latest reply can
 be undone, restoring the workflow to how it stood before that reply and
 offering to redo it. Undo confirms first when the workflow has been edited
 since, because it replaces the whole workflow.
-<a href="https://github.com/OpenFn/lightning/issues/5036">#5036</a></p></li><li><p>Webhook triggers can be given a custom URL path, so an endpoint's URL is known
+<a href="https://github.com/OpenFn/lightning/issues/5036">#5036</a></li><li>Webhook triggers can be given a custom URL path, so an endpoint's URL is known
 before it is deployed. A trigger with a path of <code class="inline">facility-001</code> answers at
 <code class="inline">/i/&lt;project-id&gt;/facility-001</code>, where <code class="inline">&lt;project-id&gt;</code> is the project's UUID.
 Set it in the trigger panel, in <code class="inline">project.yaml</code>, or through the workflows API.
 Existing <code class="inline">/i/&lt;trigger-id&gt;</code> URLs are unchanged.
-<a href="https://github.com/OpenFn/lightning/issues/4952">#4952</a></p></li><li><p>Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
+<a href="https://github.com/OpenFn/lightning/issues/4952">#4952</a></li><li>A workflow health page at <code class="inline">/projects/:project_id/w/:workflow_id/health</code>,
+reached from the &quot;Health&quot; link on each row of the workflows list. It covers
+the last 24 hours, 7 days or 30 days: a donut of work order outcomes, a
+breakdown of the failing ones, and a triage table grouping failures by error
+signature, heaviest first. Each triage row links to history filtered to its
+own work orders, where &quot;retry all&quot; can retry the group. The page re-reads its
+numbers every 30 seconds while the tab is open.</li><li>Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
 scenario file (users, API tokens, credentials, projects, workflows) via
 <a href="Mix.Tasks.Lightning.Kickstart.html"><code class="inline">mix lightning.kickstart</code></a> and <code class="inline">bin/e2e --scenario</code>, for local work and
 external test harnesses. Workflows in a scenario are written in the existing
 workflow-spec format — the same YAML the collaborative editor imports and
 exports, validated against the same JSON Schema.
-<a href="https://github.com/OpenFn/lightning/issues/4974">#4974</a></p></li></ul><h3 id="changed-1" class="section-heading"><a href="#changed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>The webhook trigger panel now lists every URL a trigger answers on. The
+<a href="https://github.com/OpenFn/lightning/issues/4974">#4974</a></li></ul><h3 id="changed-1" class="section-heading"><a href="#changed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>The webhook trigger panel now lists every URL a trigger answers on. The
 default URL is always there and the custom one sits next to it, editable in
 place, with add, edit, delete and copy on the row itself. A path already used
 by another workflow in the project is reported while you type, not after you
@@ -167,58 +176,58 @@ you were setting it. All three have defaults, so a deployment need not set any
 of them. The idle default is 30s, which assumes Apollo v3.1.1 or later and its
 15s keepalive; on an older Apollo a working stream can go quiet for longer
 than that, so raise it or upgrade Apollo.
-<a href="https://github.com/OpenFn/lightning/issues/4882">#4882</a></li></ul><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li><p>The assistant says when it tried to change your code and could not. Apollo
+<a href="https://github.com/OpenFn/lightning/issues/4882">#4882</a></li></ul><h3 id="fixed" class="section-heading"><a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>The assistant says when it tried to change your code and could not. Apollo
 reports how many of its edits landed, and none landing used to arrive as a
 reply with nothing to apply and no explanation, which read as the assistant
 declining to help. There is now a line saying so, with a way to try again.
 Needs Apollo v3.1.2 or later, which reports that on the direct single-step
 route as well as through the planner.
-<a href="https://github.com/OpenFn/lightning/issues/5133">#5133</a></p></li><li><p>Starting an AI chat with a message over the 10,000 character limit no longer
+<a href="https://github.com/OpenFn/lightning/issues/5133">#5133</a></li><li>Starting an AI chat with a message over the 10,000 character limit no longer
 kills the connection. The reply carried a raw changeset, which cannot be
 encoded, so the socket died before answering and the assistant appeared to do
 nothing. The limit is also shown in the box now, once you are near it.
-<a href="https://github.com/OpenFn/lightning/issues/4883">#4883</a></p></li><li><p>AI chat messages no longer sit in &quot;processing&quot; forever when the job running
+<a href="https://github.com/OpenFn/lightning/issues/4883">#4883</a></li><li>AI chat messages no longer sit in &quot;processing&quot; forever when the job running
 them is interrupted. Oban's job-stop event now has a handler, the shutdown
 grace period is longer than the longest an AI job can run, and a cron sweep
 clears anything still stranded. A deploy can still sever a running answer,
 because the platform's own kill deadline is shorter than the grace period; the
 sweep is what recovers the message when that happens.
 <a href="https://github.com/OpenFn/lightning/issues/4260">#4260</a>
-<a href="https://github.com/OpenFn/lightning/issues/5124">#5124</a></p></li><li><p>Why an AI chat failed is now recorded on the message and shown on the reply it
+<a href="https://github.com/OpenFn/lightning/issues/5124">#5124</a></li><li>Why an AI chat failed is now recorded on the message and shown on the reply it
 belongs to, rather than as one generic banner: a hung Apollo, a lost
 connection and a rate limit each read differently. A failed reply keeps its
 text as an answer, with the reason and a Try again beneath it, and the
 question you asked is no longer marked &quot;Failed to send&quot; when it was sent and
-half answered. <a href="https://github.com/OpenFn/lightning/issues/5125">#5125</a></p></li><li><p>An AI answer that is cut off partway through is kept rather than discarded.
+half answered. <a href="https://github.com/OpenFn/lightning/issues/5125">#5125</a></li><li>An AI answer that is cut off partway through is kept rather than discarded.
 The text and any workflow YAML the user already watched appear are saved,
 along with the status updates, in the order they were shown.
 <a href="https://github.com/OpenFn/lightning/issues/5126">#5126</a>
-<a href="https://github.com/OpenFn/lightning/issues/5127">#5127</a></p></li><li><p>A failed AI stream now says which way it failed. A hung Apollo, a severed
+<a href="https://github.com/OpenFn/lightning/issues/5127">#5127</a></li><li>A failed AI stream now says which way it failed. A hung Apollo, a severed
 connection and a genuinely short answer all read as &quot;Stream ended without
 complete response&quot;; they now read as three different things.
-<a href="https://github.com/OpenFn/lightning/issues/4882">#4882</a></p></li><li><p>The global assistant no longer offers to paste a reply's code block into
+<a href="https://github.com/OpenFn/lightning/issues/4882">#4882</a></li><li>The global assistant no longer offers to paste a reply's code block into
 whichever job you have open. It applies its own changes and shows them as
 diffs, so those blocks are data it quoted back or work it has already done.
-<a href="https://github.com/OpenFn/lightning/issues/5118">#5118</a></p></li><li><p>AI assistant code blocks share the surface the workflow diffs use, so a reply
+<a href="https://github.com/OpenFn/lightning/issues/5118">#5118</a></li><li>AI assistant code blocks share the surface the workflow diffs use, so a reply
 and the diff below it no longer read as two different products.
-<a href="https://github.com/OpenFn/lightning/issues/5118">#5118</a></p></li><li><p>A global assistant reply whose changes could not be applied now says so on the
+<a href="https://github.com/OpenFn/lightning/issues/5118">#5118</a></li><li>A global assistant reply whose changes could not be applied now says so on the
 reply itself, beside the diffs that did not land, and offers to try again. It
 used to fall back to a raw YAML panel.
-<a href="https://github.com/OpenFn/lightning/issues/5118">#5118</a></p></li><li><p>A failed apply is now remembered, so reloading no longer turns it back into a
+<a href="https://github.com/OpenFn/lightning/issues/5118">#5118</a></li><li>A failed apply is now remembered, so reloading no longer turns it back into a
 success. The reply kept its diff blocks and offered to undo changes that had
 never landed. A retry that works clears the record.
-<a href="https://github.com/OpenFn/lightning/issues/5118">#5118</a></p></li><li><p>Editing an open step with the global assistant no longer puts a diff in the
+<a href="https://github.com/OpenFn/lightning/issues/5118">#5118</a></li><li>Editing an open step with the global assistant no longer puts a diff in the
 code editor. The change is already applied, so the diff read as a proposal to
 accept or reject when the only control was a close button, and reloading
 revealed the change had been written all along.
-<a href="https://github.com/OpenFn/lightning/issues/5118">#5118</a></p></li><li><p>Changing a webhook trigger's custom path now marks the workflow as unsaved, so
+<a href="https://github.com/OpenFn/lightning/issues/5118">#5118</a></li><li>Changing a webhook trigger's custom path now marks the workflow as unsaved, so
 the Save button offers to save it. The unsaved-changes check did not look at
 the field, so the edit could be lost by navigating away.
-<a href="https://github.com/OpenFn/lightning/issues/4952">#4952</a></p></li><li><p><code class="inline">eligible_for_claim/0</code> now breaks ties with <code class="inline">id</code> after <code class="inline">priority</code> and
+<a href="https://github.com/OpenFn/lightning/issues/4952">#4952</a></li><li><code class="inline">eligible_for_claim/0</code> now breaks ties with <code class="inline">id</code> after <code class="inline">priority</code> and
 <code class="inline">inserted_at</code>, so two runs inserted in the same microsecond no longer get
-claimed in a nondeterministic order.</p></li><li><p>Dataclip retention wiping now runs in batches instead of one unbatched update,
+claimed in a nondeterministic order.</li><li>Dataclip retention wiping now runs in batches instead of one unbatched update,
 so projects with a large backlog of eligible dataclips no longer time out the
-retention job.</p></li></ul><h3 id="security" class="section-heading"><a href="#security" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Security</span></h3><ul><li>Bumped <code class="inline">mint</code> to 1.10.0, clearing
+retention job.</li></ul><h3 id="security" class="section-heading"><a href="#security" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Security</span></h3><ul><li>Bumped <code class="inline">mint</code> to 1.10.0, clearing
 <a href="https://osv.dev/vulnerability/EEF-CVE-2026-82728">EEF-CVE-2026-82728</a> and
 <a href="https://osv.dev/vulnerability/EEF-CVE-2026-82729">EEF-CVE-2026-82729</a>, both
 denial of service in Mint's HTTP/1 parser. Mint is our HTTP client, so they
@@ -239,15 +248,15 @@ detail view lists every linked workflow and channel, and deleting one now
 warns which triggers and channels will lose authentication.</li><li>Deleting a webhook auth method now logs each trigger and channel it was
 detached from, in addition to the deletion itself.</li></ul><h3 id="changed-2" class="section-heading"><a href="#changed-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><blockquote><p>If one project holds two names that become the same key once spaces turn into
 hyphens, like <code class="inline">My Flow</code> and <code class="inline">My-Flow</code>, sync and export now fail and name both,
-where they used to silently drop one. Rename one of them before upgrading.</p></blockquote><ul><li>Job and workflow names may now hold any character except a control one.
-Names were restricted to letters, digits, spaces, underscores and hyphens, so
-a team working in French, Spanish, Arabic or Japanese could not name a step
-in their own language. Any script, punctuation, symbol or emoji is accepted
-now, and names are composed to NFC on save so two spellings of the same
-accented word are one name. Control characters are refused rather than
-stripped, because a null byte in a name cannot be written to the workflow
-snapshot and used to fail the save with a 500. The same rule now covers
-credential names, workflow template names and edge condition labels.
+where they used to silently drop one. Rename one of them before upgrading.</p></blockquote><ul><li>Job and workflow names may now hold any character except a control one. Names
+were restricted to letters, digits, spaces, underscores and hyphens, so a team
+working in French, Spanish, Arabic or Japanese could not name a step in their
+own language. Any script, punctuation, symbol or emoji is accepted now, and
+names are composed to NFC on save so two spellings of the same accented word
+are one name. Control characters are refused rather than stripped, because a
+null byte in a name cannot be written to the workflow snapshot and used to
+fail the save with a 500. The same rule now covers credential names, workflow
+template names and edge condition labels.
 <a href="https://github.com/OpenFn/lightning/issues/4577">#4577</a></li><li>Remove the unreachable, non-streaming code in the AI assistant
 <a href="https://github.com/OpenFn/lightning/issues/5046">#5046</a></li><li>The global chat now starts streaming Apollo's response earlier, so users wait
 less before seeing output. Lightning handles the several streaming event types
@@ -343,25 +352,24 @@ authentication.</li><li>Fixed a session-teardown issue where revoking an account
 (disabling, scheduling deletion, or resetting password/email) left
 already-open pages running on stale permissions.</li><li>Fixed an issue where project emails (failure alerts, digests, retention
 notices, export links) could reach recipients who could no longer open the
-project themselves.</li><li>A workflow name longer than the 255 characters the column holds now comes
-back as an ordinary validation error instead of a 500, including when the
-<code class="inline">_del</code> suffix added on delete is what pushes it over.</li><li>The provisioning API validated workflow names differently from every other
-write path, so a control character in a workflow name reached the database
-and returned a 500 on <code class="inline">POST /api/provision</code>.
+project themselves.</li><li>A workflow name longer than the 255 characters the column holds now comes back
+as an ordinary validation error instead of a 500, including when the <code class="inline">_del</code>
+suffix added on delete is what pushes it over.</li><li>The provisioning API validated workflow names differently from every other
+write path, so a control character in a workflow name reached the database and
+returned a 500 on <code class="inline">POST /api/provision</code>.
 <a href="https://github.com/OpenFn/lightning/issues/4893">#4893</a></li><li>A workflow name is no longer rendered as HTML in the dashboard and history
 tooltips, where markup in a name became live elements for anyone viewing the
-project.
-<a href="https://github.com/OpenFn/lightning/issues/4577">#4577</a></li><li>The workflow YAML download in the editor no longer produces a file called
+project. <a href="https://github.com/OpenFn/lightning/issues/4577">#4577</a></li><li>The workflow YAML download in the editor no longer produces a file called
 <code class="inline">.yaml</code> when the workflow's name has no ASCII in it.
 <a href="https://github.com/OpenFn/lightning/issues/4577">#4577</a></li><li>Project YAML export now quotes and escapes names properly. A name containing
 an apostrophe, such as a credential called <code class="inline">MailChimp June'24</code>, produced a
-spec no YAML parser could read; a name of <code class="inline">null</code> or <code class="inline">42</code> came back as nil or
-a number, and a job key of <code class="inline">007</code> came back as <code class="inline">7</code>; and a name containing a
+spec no YAML parser could read; a name of <code class="inline">null</code> or <code class="inline">42</code> came back as nil or a
+number, and a job key of <code class="inline">007</code> came back as <code class="inline">7</code>; and a name containing a
 newline or a control character corrupted the spec around it. What gets quoted
-is measured against the two parsers we ship against rather than taken from
-the YAML spec, so a name of <code class="inline">off</code> or <code class="inline">2026-08-27</code> is still written plainly.
-Names that already exported correctly are byte for byte unchanged, so a
-synced project repo sees no diff.
+is measured against the two parsers we ship against rather than taken from the
+YAML spec, so a name of <code class="inline">off</code> or <code class="inline">2026-08-27</code> is still written plainly. Names
+that already exported correctly are byte for byte unchanged, so a synced
+project repo sees no diff.
 <a href="https://github.com/OpenFn/lightning/issues/2808">#2808</a>
 <a href="https://github.com/OpenFn/lightning/issues/4577">#4577</a></li><li>Job bodies, project descriptions and edge condition expressions are now
 written as block scalars safely. A body whose first line started with a space
@@ -1743,20 +1751,20 @@ existing snapshots could be incorrect (e.g. missing steps, missing edges).
 In order to fix this, you will need to manually create new snapshots for
 each of your workflows. This can be done either by modifying the workflow in
 the UI and saving it. Or running a command on the running instance:</p><pre><code class="makeup elixir" translate="no"><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Repo</span><span class="w">
-</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="4096288830-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="4096288830-1">}</span><span class="w">
+</span><span class="kn">alias</span><span class="w"> </span><span class="nc">Lightning.Workflows</span><span class="o">.</span><span class="p" data-group-id="7308022915-1">{</span><span class="nc">Workflow</span><span class="p">,</span><span class="w"> </span><span class="nc">Snapshot</span><span class="p" data-group-id="7308022915-1">}</span><span class="w">
 
-</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="4096288830-2">(</span><span class="k" data-group-id="4096288830-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+</span><span class="nc">Repo</span><span class="o">.</span><span class="n">transaction</span><span class="p" data-group-id="7308022915-2">(</span><span class="k" data-group-id="7308022915-3">fn</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
   </span><span class="n">snapshots</span><span class="w"> </span><span class="o">=</span><span class="w">
-    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="4096288830-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="4096288830-4">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="4096288830-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="4096288830-5">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="4096288830-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="4096288830-6">)</span><span class="w">
-    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="4096288830-7">(</span><span class="k" data-group-id="4096288830-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
-      </span><span class="p" data-group-id="4096288830-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="4096288830-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="4096288830-10">(</span><span class="n">workflow</span><span class="p" data-group-id="4096288830-10">)</span><span class="w">
+    </span><span class="nc">Repo</span><span class="o">.</span><span class="n">all</span><span class="p" data-group-id="7308022915-4">(</span><span class="nc">Workflow</span><span class="p" data-group-id="7308022915-4">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="7308022915-5">(</span><span class="o">&amp;</span><span class="nc">Workflow</span><span class="o">.</span><span class="n">touch</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="7308022915-5">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="7308022915-6">(</span><span class="o">&amp;</span><span class="nc">Repo</span><span class="o">.</span><span class="n">update!</span><span class="o">/</span><span class="mi">1</span><span class="p" data-group-id="7308022915-6">)</span><span class="w">
+    </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Enum</span><span class="o">.</span><span class="n">map</span><span class="p" data-group-id="7308022915-7">(</span><span class="k" data-group-id="7308022915-8">fn</span><span class="w"> </span><span class="n">workflow</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">
+      </span><span class="p" data-group-id="7308022915-9">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshot</span><span class="p" data-group-id="7308022915-9">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Snapshot</span><span class="o">.</span><span class="n">create</span><span class="p" data-group-id="7308022915-10">(</span><span class="n">workflow</span><span class="p" data-group-id="7308022915-10">)</span><span class="w">
       </span><span class="n">snapshot</span><span class="w">
-    </span><span class="k" data-group-id="4096288830-8">end</span><span class="p" data-group-id="4096288830-7">)</span><span class="w">
+    </span><span class="k" data-group-id="7308022915-8">end</span><span class="p" data-group-id="7308022915-7">)</span><span class="w">
 
- </span><span class="p" data-group-id="4096288830-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="4096288830-11">}</span><span class="w">
-</span><span class="k" data-group-id="4096288830-3">end</span><span class="p" data-group-id="4096288830-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-82" class="section-heading"><a href="#added-82" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
+ </span><span class="p" data-group-id="7308022915-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">snapshots</span><span class="p" data-group-id="7308022915-11">}</span><span class="w">
+</span><span class="k" data-group-id="7308022915-3">end</span><span class="p" data-group-id="7308022915-2">)</span></code></pre></blockquote></li></ul><h2 id="v2-9-0-2024-09-06" class="section-heading"><a href="#v2-9-0-2024-09-06" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">[v2.9.0] - 2024-09-06</span></h2><h3 id="added-82" class="section-heading"><a href="#added-82" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Limit AI queries and hook the increment of AI queries to allow usage limiting.
 <a href="https://github.com/OpenFn/lightning/pull/2438">#2438</a></li><li>Persist AI Assistant conversations and enable it for all users
 <a href="https://github.com/OpenFn/lightning/issues/2296">#2296</a></li></ul><h3 id="changed-94" class="section-heading"><a href="#changed-94" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Changed</span></h3><ul><li>Rename <code class="inline">new_table</code> component to <code class="inline">table</code>.
 <a href="https://github.com/OpenFn/lightning/pull/2448">#2448</a></li></ul><h3 id="fixed-124" class="section-heading"><a href="#fixed-124" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Fixed</span></h3><ul><li>Fix <code class="inline">workflow_id</code> presence in state.json during Github sync
@@ -2205,7 +2213,7 @@ work orders up to <code class="inline">v0.10.0</code>, though the granularity of
 will be less than <code class="inline">v0.10.0</code> and the final states are not guaranteed to be
 accurate for workflows with multiple branches and leaf nodes with varying exit
 reasons.</p><p>The migration scripts can be run with a single function call in SetupUtils from
-a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="4458028551-1">(</span><span class="p" data-group-id="4458028551-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
+a connect <code class="inline">iex</code> session:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Lightning.SetupUtils</span><span class="o">.</span><span class="n">approximate_state_for_attempts_and_workorders</span><span class="p" data-group-id="9241584450-1">(</span><span class="p" data-group-id="9241584450-1">)</span></code></pre><p>Note that (like lots of <em>other</em> functionality in <code class="inline">SetupUtils</code>, calling this
 function is a destructive action and you should only do it if you've backed up
 your data and you know what you're doing.)</p><p>As always, we recommend backing up your data before migrating. (And thanks for
 bearing with us as we move towards our first stable Lightning release.)</p><h3 id="added-120" class="section-heading"><a href="#added-120" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Added</span></h3><ul><li>Fix flaky job name input behavior on error

@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-VYWJUHZE.css" />
 
-    <script defer src="dist/sidebar_items-0EB162AD.js"></script>
+    <script defer src="dist/sidebar_items-022655FF.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-XBCM4BHM.js"></script>
 
@@ -162,16 +162,6 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#failure_states/0" data-no-tooltip="" translate="no">failure_states()</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Returns the list of failure states for a run.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#final_states/0" data-no-tooltip="" translate="no">final_states()</a>
 
       </div>
@@ -206,11 +196,31 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#state_reasons/0" data-no-tooltip="" translate="no">state_reasons()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the worker reason each final state came from, keyed by state.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#states/0" data-no-tooltip="" translate="no">states()</a>
 
       </div>
 
         <div class="summary-synopsis"><p>Returns all possible states for a run.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#states_by_reason/0" data-no-tooltip="" translate="no">states_by_reason()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns the final state each worker reason maps to, keyed by reason.</p></div>
 
     </div>
 
@@ -238,7 +248,7 @@ Lightning
       <h1 class="signature" translate="no">t()</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L82" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L107" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -333,7 +343,7 @@ Lightning
       <h1 class="signature" translate="no">complete(run, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L195" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L220" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -386,28 +396,6 @@ Lightning
 
   </section>
 </section>
-<section class="detail" id="failure_states/0">
-
-  <div class="detail-header">
-    <a href="#failure_states/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-    </a>
-    <div class="heading-with-actions">
-      <h1 class="signature" translate="no">failure_states()</h1>
-
-
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L80" class="icon-action" rel="help" aria-label="View Source">
-          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-        </a>
-
-    </div>
-  </div>
-
-  <section class="docstring">
-
-<p>Returns the list of failure states for a run.</p><p>These are all final states except :success.</p>
-  </section>
-</section>
 <section class="detail" id="final_states/0">
 
   <div class="detail-header">
@@ -440,7 +428,7 @@ Lightning
       <h1 class="signature" translate="no">for(trigger, attrs)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L137" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L162" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -464,7 +452,7 @@ Lightning
       <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L169" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L194" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -486,7 +474,7 @@ Lightning
       <h1 class="signature" translate="no">start(run, params)</h1>
 
 
-        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L185" class="icon-action" rel="help" aria-label="View Source">
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L210" class="icon-action" rel="help" aria-label="View Source">
           <i class="ri-code-s-slash-line" aria-hidden="true"></i>
         </a>
 
@@ -496,6 +484,28 @@ Lightning
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="state_reasons/0">
+
+  <div class="detail-header">
+    <a href="#state_reasons/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">state_reasons()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L93" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns the worker reason each final state came from, keyed by state.</p>
   </section>
 </section>
 <section class="detail" id="states/0">
@@ -518,6 +528,29 @@ Lightning
   <section class="docstring">
 
 <p>Returns all possible states for a run.</p>
+  </section>
+</section>
+<section class="detail" id="states_by_reason/0">
+
+  <div class="detail-header">
+    <a href="#states_by_reason/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">states_by_reason()</h1>
+
+
+        <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/runs/run.ex#L105" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Returns the final state each worker reason maps to, keyed by reason.</p><p>The inverse of <a href="#state_reasons/0"><code class="inline">state_reasons/0</code></a>, built from the same table so the two
+directions cannot drift.</p>
   </section>
 </section>
 
