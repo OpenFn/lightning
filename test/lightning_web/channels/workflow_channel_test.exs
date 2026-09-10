@@ -54,6 +54,58 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
     end
 
+    test "closes the write gate on every other socket in the room", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      other = insert(:user)
+      insert(:project_user, project: project, user: other, role: :editor)
+
+      author = join_as(user, project, workflow)
+      colleague = join_as(other, project, workflow)
+      assert colleague.assigns.can_edit_workflow
+
+      session_pid = colleague.assigns.session_pid
+
+      # Positive control: this socket's frames reach the document before the
+      # lifecycle moves.
+      probe =
+        build_name_mutation(session_pid, :sync_update, "Edited while draft")
+
+      push(colleague, "yjs", {:binary, probe})
+      await_channel_processed(colleague)
+      assert workflow_name(session_pid) == "Edited while draft"
+
+      original_name = workflow_name(session_pid)
+
+      ref = push(author, "go_live", %{})
+      assert_reply ref, :ok, _reply
+      await_channel_processed(colleague)
+
+      # Editability folds in the lifecycle lock and was resolved at join, so
+      # only the socket that acted learned about it. The colleague's gate stayed
+      # open: their frames kept reaching the document while the save they
+      # eventually pressed was refused against the row, with nothing on screen
+      # to say why. The gate lives in the other channel's own state, which is
+      # the only honest place to read it.
+      assert %{assigns: %{can_edit_workflow: false}} =
+               channel_socket(colleague)
+
+      # The document is shared, so going live published whatever the colleague
+      # had typed. Their gate closing is what tells them, through a fresh
+      # session context, rather than leaving them to discover it on save.
+      _ = {session_pid, original_name}
+    end
+
+    test "intercepts the save broadcast, or the gate above never closes in production" do
+      # Phoenix hands a broadcast the channel does not intercept straight to the
+      # transport, so handle_out never runs. A channel test has no transport and
+      # runs it either way, which makes the test above pass with or without the
+      # intercept. This is the only honest way to pin the line.
+      assert "workflow_saved" in LightningWeb.WorkflowChannel.__intercepts__()
+    end
+
     test "go_live pushes a session context whose permissions reflect the new state",
          %{socket: socket} do
       # can_edit_workflow folds in the lifecycle lock and is resolved at join, so
@@ -6674,6 +6726,12 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   defp await_channel_processed(socket) do
+    :sys.get_state(socket.channel_pid)
+  end
+
+  # The write gate is an assign on the channel process, so a second
+  # participant's gate can only be read from that process's own state.
+  defp channel_socket(socket) do
     :sys.get_state(socket.channel_pid)
   end
 

@@ -172,6 +172,12 @@ and this project adheres to
   with it. A pinned version has no run to carry into a fix, so it stays a
   reading view.
 
+- Going live now closes the write gate for everyone else in the workflow. It
+  only refreshed the person who clicked, so their colleagues kept typing into a
+  workflow that had just gone live, their edits kept reaching the document, and
+  the save they eventually pressed was refused with nothing on screen to say
+  why. They now get a fresh session context the moment it happens.
+
 - A run loaded on a live workflow can be retried. Retrying re-runs the content
   that is live now with that run's input, in the same work order, which is what
   turns a red work order green once the fix is in. There was no way to do that

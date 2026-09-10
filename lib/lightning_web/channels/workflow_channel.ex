@@ -1193,11 +1193,47 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
+  # Editability folds in the lifecycle lock, and it is resolved at join. So a
+  # go-live from one socket left every other socket in the room with an open
+  # write gate: their frames kept reaching the document, and the save they
+  # eventually pressed was refused against the row, with nothing on screen to
+  # say why. Intercepting the save broadcast is what lets each socket recompute
+  # for itself.
+
+  # Phoenix sends a broadcast the channel does not intercept straight to the
+  # transport, so without this line the clause below never runs in production.
+  # A channel test has no transport and calls it either way, which is why the
+  # intercept is asserted directly rather than through behaviour.
+
+  intercept ["workflow_saved"]
+
   @impl true
+  def handle_out("workflow_saved", payload, socket) do
+    push(socket, "workflow_saved", payload)
+
+    {:noreply, refresh_lifecycle_from_broadcast(socket, payload)}
+  end
+
   def handle_out(event, payload, socket) do
     push(socket, event, payload)
     {:noreply, socket}
   end
+
+  # Only the live room, and only when the lifecycle actually moved: an ordinary
+  # save broadcasts here too, and a version room is a reading view whose
+  # permissions do not follow the row.
+  defp refresh_lifecycle_from_broadcast(
+         %{assigns: %{workflow_kind: :existing, workflow: %{state: was}}} =
+           socket,
+         %{workflow: %{state: now} = workflow}
+       )
+       when was != now do
+    socket = refresh_lifecycle_permissions(socket, workflow)
+    push(socket, "session_context_updated", build_session_context(socket))
+    socket
+  end
+
+  defp refresh_lifecycle_from_broadcast(socket, _payload), do: socket
 
   defp async_task(socket, event, task_fn) do
     channel_pid = self()
