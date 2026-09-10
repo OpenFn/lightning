@@ -101,7 +101,7 @@ defmodule LightningWeb.WorkflowChannel do
          session_pid: session_pid,
          project_user: project_user,
          workflow_kind: workflow_kind,
-         content_locked: content_locked?(workflow, project)
+         content_locked: content_locked?(workflow, project, user)
        )
        |> assign(permissions)}
     else
@@ -1599,8 +1599,18 @@ defmodule LightningWeb.WorkflowChannel do
   #
   # This assign gates the inbound yjs writes as well as the client's UI, so the
   # lock is enforced on the server rather than advised to the client.
-  defp content_locked?(workflow, project) do
-    not Lightning.Workflows.editable_state?(workflow, project)
+  #
+  # It also has to answer for the person after all, on one point: the lock only
+  # applies to a user who has opted into experimental features. The lifecycle
+  # column is backfilled so that every workflow with an enabled trigger is
+  # `:live`, which is every workflow anyone is actually running. Applying the
+  # lock to everyone would make those workflows read-only the moment this
+  # deploys, for people who never asked for a lifecycle and have no button to
+  # release it. So without the flag there is no lock, which is exactly the
+  # editor they have today.
+  defp content_locked?(workflow, project, user) do
+    Lightning.Accounts.experimental_features_enabled?(user) and
+      not Lightning.Workflows.editable_state?(workflow, project)
   end
 
   # Without a membership row the policy needs the project itself to weigh up
@@ -1940,7 +1950,14 @@ defmodule LightningWeb.WorkflowChannel do
   defp refresh_lifecycle_lock(socket, workflow) do
     socket
     |> assign(:workflow, workflow)
-    |> assign(:content_locked, content_locked?(workflow, socket.assigns.project))
+    |> assign(
+      :content_locked,
+      content_locked?(
+        workflow,
+        socket.assigns.project,
+        socket.assigns.current_user
+      )
+    )
   end
 
   # Content edits (save, save-and-sync, reset) are gated on top of the role
@@ -1955,18 +1972,19 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   defp ensure_editable_state(socket) do
-    if Workflows.editable_state?(
+    if content_locked?(
          current_workflow(socket),
-         socket.assigns.project
+         socket.assigns.project,
+         socket.assigns.current_user
        ) do
-      :ok
-    else
       {:error,
        %{
          type: "unauthorized",
          message:
            "This workflow is live. Switch it to draft or edit it in a sandbox to make changes."
        }}
+    else
+      :ok
     end
   end
 

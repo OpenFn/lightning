@@ -41,6 +41,8 @@ defmodule LightningWeb.WorkflowChannelTest do
   end
 
   describe "go_live and switch_to_draft" do
+    setup :with_experimental_user
+
     test "go_live sets the workflow live; switch_to_draft returns it to draft",
          %{socket: socket, workflow: workflow} do
       ref = push(socket, "go_live", %{})
@@ -59,7 +61,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       project: project,
       workflow: workflow
     } do
-      other = insert(:user)
+      other = insert(:user, preferences: %{"experimental_features" => true})
       insert(:project_user, project: project, user: other, role: :editor)
 
       author = join_as(user, project, workflow)
@@ -107,7 +109,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       project: project,
       workflow: workflow
     } do
-      other = insert(:user)
+      other = insert(:user, preferences: %{"experimental_features" => true})
       insert(:project_user, project: project, user: other, role: :editor)
 
       author = join_as(user, project, workflow)
@@ -277,10 +279,12 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Lightning.Repo.reload!(trigger).enabled
     end
 
-    test "is refused on a live workflow outside a sandbox", %{
-      socket: socket,
-      workflow: workflow
-    } do
+    test "is refused on a live workflow outside a sandbox", %{} do
+      # The lock only applies to a user who opted into experimental features,
+      # and it is read off the user the socket captured, so the preference has
+      # to be on before joining.
+      %{socket: socket, workflow: workflow} = with_experimental_user(%{})
+
       trigger =
         insert(:trigger, workflow: workflow, type: :webhook, enabled: false)
 
@@ -398,7 +402,76 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "a live workflow, for someone without experimental features" do
+    # The lifecycle lock cannot apply to them, and this is the reason.
+    #
+    # `state` is a new column, and its migration backfills `live` for every
+    # workflow that has an enabled trigger, which is every workflow anyone is
+    # actually running. Applying the lock to everyone would make all of those
+    # read-only the moment this deploys, for people who never asked for a
+    # lifecycle and have no button to release it. So without the flag there is
+    # no lock, and the editor behaves exactly as it does today.
+    # Live first, then join. `content_locked` is resolved at join and the yjs
+    # gate reads that assign, so a socket joined while the workflow was still a
+    # draft carries a stale `false` and would pass whatever the gate decides.
+    setup %{project: project, user: user} do
+      workflow = insert(:workflow, project: project)
+      {:ok, live} = Lightning.Workflows.go_live(workflow, user)
+
+      socket = join_as(user, project, live)
+      on_exit(fn -> ensure_doc_supervisor_stopped(live.id) end)
+
+      refute Lightning.Accounts.experimental_features_enabled?(user)
+
+      %{socket: socket, workflow: live}
+    end
+
+    test "is not reported as locked", %{socket: socket} do
+      ref = push(socket, "get_context", %{})
+      assert_reply ref, :ok, %{content_locked: false}
+    end
+
+    test "still saves", %{socket: socket, workflow: workflow} do
+      ref = push(socket, "save_workflow", %{})
+      assert_reply ref, :ok, _reply
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :live
+    end
+
+    test "still accepts document writes", %{socket: socket} do
+      session_pid = socket.assigns.session_pid
+
+      chunk =
+        build_name_mutation(session_pid, :sync_update, "Edited while live")
+
+      push(socket, "yjs", {:binary, chunk})
+      await_channel_processed(socket)
+
+      assert workflow_name(session_pid) == "Edited while live"
+    end
+
+    test "still attaches webhook auth methods", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method, project: project, auth_type: :basic)
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => [auth_method.id]
+        })
+
+      assert_reply ref, :ok, _reply
+    end
+  end
+
   describe "content edits on a live workflow" do
+    setup :with_experimental_user
+
     setup %{socket: socket} do
       # Take the workflow live so content edits should be refused server-side.
       ref = push(socket, "go_live", %{})
@@ -6982,6 +7055,22 @@ defmodule LightningWeb.WorkflowChannelTest do
     project
     |> membership_params(%{project_user => role})
     |> submit_membership()
+  end
+
+  # A user who has opted into experimental features, with their own socket.
+  #
+  # The lifecycle lock only applies to such a user, and it is resolved at join
+  # (`content_locked`) and read off the user struct the socket captured
+  # (`ensure_editable_state`), so the preference has to be on before joining.
+  defp with_experimental_user(_context) do
+    user = insert(:user, preferences: %{"experimental_features" => true})
+    project = insert(:project, project_users: [%{user: user, role: :owner}])
+    workflow = insert(:workflow, project: project)
+    socket = join_as(user, project, workflow)
+
+    on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+    %{socket: socket, user: user, project: project, workflow: workflow}
   end
 
   defp join_as(user, project, workflow) do
