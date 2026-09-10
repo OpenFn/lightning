@@ -14,6 +14,7 @@ import { notifications } from '../../../js/collaborative-editor/lib/notification
 
 import {
   createMockSessionContext,
+  createSessionContext,
   mockAppConfig,
   mockProjectContext,
   mockSessionContextResponse,
@@ -30,21 +31,29 @@ import {
 
 describe('createSessionContextStore - Event Handling & Performance', () => {
   describe('lifecycle_changed', () => {
-    const connect = () => {
+    const connect = (experimentalFeatures = true) => {
       const store = createSessionContextStore();
       const mockChannel = createMockPhoenixChannel();
       const cleanup = store._connectChannel(
         createMockPhoenixChannelProvider(mockChannel)
       );
 
-      return {
-        cleanup,
-        emit: (
-          mockChannel as MockPhoenixChannel & {
-            _test: { emit: (event: string, message: unknown) => void };
-          }
-        )._test.emit,
-      };
+      const emit = (
+        mockChannel as MockPhoenixChannel & {
+          _test: { emit: (event: string, message: unknown) => void };
+        }
+      )._test.emit;
+
+      // The lifecycle is part of the experimental experience, so the store has
+      // to know whether this user has it before it will say anything about it.
+      emit(
+        'session_context',
+        createSessionContext({
+          experimental_features_enabled: experimentalFeatures,
+        })
+      );
+
+      return { cleanup, emit };
     };
 
     test('says so when someone else publishes the workflow', () => {
@@ -59,6 +68,23 @@ describe('createSessionContextStore - Event Handling & Performance', () => {
       expect(info).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'This workflow just went live' })
       );
+
+      info.mockRestore();
+      cleanup();
+    });
+
+    test('says nothing to a user without experimental features', () => {
+      // A colleague with the flag can publish a shared workflow. Both of these
+      // sentences name actions this user has no buttons for, so announcing them
+      // would be the feature leaking out of the flag. Their editor still goes
+      // read-only; the read-only tooltip is what explains that.
+      const info = vi.spyOn(notifications, 'info').mockReturnValue(1);
+      const { cleanup, emit } = connect(false);
+
+      emit('lifecycle_changed', { state: 'live' });
+      emit('lifecycle_changed', { state: 'draft' });
+
+      expect(info).not.toHaveBeenCalled();
 
       info.mockRestore();
       cleanup();

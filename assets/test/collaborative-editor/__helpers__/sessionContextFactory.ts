@@ -290,6 +290,11 @@ export interface CreateSessionContextOptions {
    * it, which the schema then defaults to false.
    */
   content_locked?: boolean;
+  /**
+   * Whether this user has experimental features on. Omit to stand in for an
+   * older node that does not send it, which the schema defaults to false.
+   */
+  experimental_features_enabled?: boolean;
   latest_snapshot_lock_version?: number;
   project_repo_connection?: Partial<ProjectRepoConnection> | null;
   webhook_auth_methods?: WebhookAuthMethod[];
@@ -420,6 +425,11 @@ export function createSessionContext(
   // node that does not send the field at all.
   if (options.content_locked !== undefined) {
     response.content_locked = options.content_locked;
+  }
+
+  if (options.experimental_features_enabled !== undefined) {
+    response.experimental_features_enabled =
+      options.experimental_features_enabled;
   }
 
   return response;

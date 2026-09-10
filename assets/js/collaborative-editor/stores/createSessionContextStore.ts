@@ -555,20 +555,28 @@ export const createSessionContextStore = (
     // Sent only to the sockets that did not act, so it always means someone
     // else moved the workflow. Their editor changes under them, which is worth
     // a word rather than leaving them to notice on save.
+    //
+    // Not to a user without experimental features, though. A colleague with the
+    // flag can publish a shared workflow, and both of these sentences name
+    // actions that user has no buttons for. Their editor does go read-only, and
+    // the read-only tooltip is what explains that; announcing a lifecycle they
+    // do not have would be the feature leaking out of the flag.
     const lifecycleChangedHandler = (message: unknown) => {
-      const state =
+      if (!state.experimentalFeaturesEnabled) return;
+
+      const nextState =
         typeof message === 'object' &&
         message !== null &&
         'state' in message &&
         (message as { state: unknown }).state;
 
-      if (state === 'live') {
+      if (nextState === 'live') {
         notifications.info({
           title: 'This workflow just went live',
           description:
             'Someone else published it, so it is read-only here now. Switch it to draft or edit it in a sandbox to make changes.',
         });
-      } else if (state === 'draft') {
+      } else if (nextState === 'draft') {
         notifications.info({
           title: 'This workflow is a draft again',
           description:
