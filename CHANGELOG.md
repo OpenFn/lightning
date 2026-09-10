@@ -17,13 +17,11 @@ and this project adheres to
 
 ### Changed
 
-- Unified what counts as "a failed work order" across the workflow list, its
-  history link, the health page and the digest email, and the date each measures
-  its 30-day window from. A cancelled work order is no longer counted as a
-  failure anywhere; a rejected one (a webhook dropped for being over the
-  project's run limit) now is. Every window is now measured from when a work
-  order last did something, not when it was created, so a stale work order
-  retried today counts as recent everywhere.
+- "A failed work order" now means the same thing on the workflows list, its
+  history links, the health page and the digest email: cancelled no longer
+  counts, and rejected now does. Each 30-day window is measured from a work
+  order's last activity rather than when it was created, so one retried today
+  counts as recent everywhere.
 - Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
   first character of a string, which breaks names in many languages. Lightning
   does not normalise anything today, but #4577 adds it on every name, so the
@@ -48,14 +46,12 @@ and this project adheres to
   Existing `/i/<trigger-id>` URLs are unchanged.
   [#4952](https://github.com/OpenFn/lightning/issues/4952)
 - A workflow health page at `/projects/:project_id/w/:workflow_id/health`,
-  summarising one workflow over a selectable window (last 24 hours, 7 days, or
-  30 days): a donut of work order outcomes, a breakdown of the failing ones, and
-  a triage table grouping failures by error signature, heaviest first. Each row
-  has a View button linking to the history page filtered to just the work orders
-  behind it, where the existing "retry all" can retry the group. The page
-  refreshes itself as that workflow's work orders settle, at most once every 30
-  seconds. Reachable from the workflows list via a "Health" link in each row's
-  Actions column.
+  reached from the "Health" link on each row of the workflows list. It covers
+  the last 24 hours, 7 days or 30 days: a donut of work order outcomes, a
+  breakdown of the failing ones, and a triage table grouping failures by error
+  signature, heaviest first. Each triage row links to history filtered to its
+  own work orders, where "retry all" can retry the group. The page updates
+  itself as work orders settle.
 - Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
   scenario file (users, API tokens, credentials, projects, workflows) via
   `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and

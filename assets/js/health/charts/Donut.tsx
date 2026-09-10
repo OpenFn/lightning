@@ -13,7 +13,7 @@ import { cn } from '#/utils/cn';
  * A part-to-whole donut with the total in the middle and an always-on legend.
  *
  * Takes slices rather than any `Stats` payload, so it renders in a test or on
- * another page without a channel. Callers decide what a slice is and what the
+ * another page without a fetch. Callers decide what a slice is and what the
  * shares are of — the outcomes panel's denominator is every finished run, the
  * failure panel's is only the failures.
  */

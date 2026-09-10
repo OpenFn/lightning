@@ -185,7 +185,7 @@ defmodule Lightning.DigestEmailWorker do
   end
 
   # Builds search parameters for failed workorders by including all failure states.
-  # This ensures new failure states added to WorkOrder.final_states() are automatically included.
+  # This ensures new failure states added to WorkOrder.failure_states() are automatically included.
   defp build_failed_status_params(base_params) do
     failure_states = Lightning.WorkOrder.failure_states()
 

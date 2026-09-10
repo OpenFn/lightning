@@ -92,11 +92,11 @@ const RECHECK_JITTER_MS = 10_000;
 /**
  * Counts `health:changed` pushes from the health LiveView.
  *
- * The page never polls on its own. The LiveView subscribes to this workflow's
- * work order events and throttles them, so a tick means the numbers actually
- * moved — a workflow that nothing is running makes no requests at all. Each
- * push schedules exactly one trailing re-read, so the requests stop once the
- * pushes do.
+ * The page never polls on its own. The LiveView subscribes to the project's
+ * work order events, keeps this workflow's and throttles them, so a tick means
+ * the numbers actually moved — a workflow that nothing is running makes no
+ * requests at all. Each push schedules exactly one trailing re-read, so the
+ * requests stop once the pushes do.
  *
  * LiveView dispatches every `push_event` on `window` as `phx:<name>`, so this
  * needs nothing from the `ReactComponent` hook that mounts the page.

@@ -114,8 +114,9 @@ export const HealthContent = ({
         </Card>
       </div>
 
-      {/* Counts are per failed step, so the rows can sum past the failure total
-          the donuts draw: a second broken branch is its own thing to fix. */}
+      {/* Counts are per failing branch, so the rows can sum past the failure
+          total the donuts draw: a second broken branch is its own thing to
+          fix. */}
       <Card
         title="Triage"
         meta="grouped by failure type · counted once per failed branch"

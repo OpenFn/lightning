@@ -60,9 +60,6 @@ defmodule Lightning.WorkOrder do
   @doc """
   Buckets a work order state into `:success`, `:cancelled`, `:pending` or
   `:failed`.
-
-  Exhaustive over `states()` by construction: a state added to the schema and
-  forgotten here raises, instead of silently becoming a failure.
   """
   def outcome(:success), do: :success
   def outcome(:cancelled), do: :cancelled

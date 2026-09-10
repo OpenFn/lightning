@@ -12,8 +12,8 @@ defmodule Lightning.Workflows.Stats do
 
   Deliberately independent of `Lightning.DashboardStats`, which serves the
   workflow list view: it batches across many workflows to avoid an N+1 while
-  this page queries one, and `count_workorders/1` collapses every failure state
-  into a single `:failed` bucket — the granularity both donuts need apart.
+  this page queries one, and it collapses every failure state into a single
+  `:failed` bucket — the granularity both donuts need apart.
   """
   import Ecto.Query
 
