@@ -71,7 +71,7 @@ defmodule Lightning.Workflows.WorkflowReleases do
   Fetches the release published as `version_number` for the workflow, preloaded
   with its snapshot so the caller can resolve the pinned content.
 
-  `version_number` is the human version the UI shows as vN and the value `?v=`
+  `version_number` is the human version the UI shows as vN and the value `?release=`
   carries. Returns nil when the workflow has no release with that number (a
   hand-typed number, or an old lock_version that was never published).
   """

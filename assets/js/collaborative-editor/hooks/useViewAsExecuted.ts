@@ -3,8 +3,8 @@
  *
  * Loads the workflow read-only exactly as a given run executed it.
  *
- * Unlike `?v=<version_number>` (which pins a published *release* and builds the
- * `:v<N>` snapshot room) and `?run=<id>` (which merely selects a run for step
+ * Unlike `?release=<version_number>` (which pins a published release and builds
+ * the `:release<N>` room) and `?run=<id>` (which merely selects a run for step
  * highlighting on the current document), this sets a distinct `?as_run=<run_id>`
  * param. SessionProvider turns that into the run-scoped room
  * `workflow:collaborate:{id}:run:{run_id}`, which the backend loads read-only
@@ -12,13 +12,15 @@
  * including runs against unreleased/draft snapshots.
  *
  * `run` is set alongside `as_run` so the executed steps still highlight on the
- * canvas; any prior `?v=` release pin is cleared since the two are mutually
- * exclusive views.
+ * canvas; any prior version pin is cleared since the two are mutually exclusive
+ * views.
  */
 
 import { useCallback } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+
+import { AS_RUN_PARAM, CLEAR_PINNED_VIEW } from '../lib/pinnedView';
 
 import { useDiscardGuard } from './useDiscardGuard';
 
@@ -36,7 +38,11 @@ export function useViewAsExecuted() {
       // before that takes uncommitted edits with it.
       guard(() => {
         onProceed?.();
-        updateSearchParams({ v: null, as_run: runId, run: runId });
+        updateSearchParams({
+          ...CLEAR_PINNED_VIEW,
+          [AS_RUN_PARAM]: runId,
+          run: runId,
+        });
       });
     },
     [guard, updateSearchParams]

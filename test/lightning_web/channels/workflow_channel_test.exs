@@ -2220,7 +2220,7 @@ defmodule LightningWeb.WorkflowChannelTest do
         |> socket("user_#{user.id}", %{current_user: user})
         |> subscribe_and_join(
           LightningWeb.WorkflowChannel,
-          "workflow:collaborate:#{workflow.id}:v#{release.version_number}",
+          "workflow:collaborate:#{workflow.id}:release#{release.version_number}",
           %{project_id: project.id, action: "edit"}
         )
 
@@ -2480,7 +2480,7 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
-  describe "version-pinned join (?v=version_number)" do
+  describe "release-pinned join (?release=version_number)" do
     test "loads the snapshot belonging to the release with that version_number",
          %{project: project, workflow: workflow, user: user} do
       # A published snapshot whose lock_version deliberately differs from the
@@ -2509,7 +2509,7 @@ defmodule LightningWeb.WorkflowChannelTest do
         |> socket("user_#{user.id}", %{current_user: user})
         |> subscribe_and_join(
           LightningWeb.WorkflowChannel,
-          "workflow:collaborate:#{workflow.id}:v#{release.version_number}",
+          "workflow:collaborate:#{workflow.id}:release#{release.version_number}",
           %{project_id: project.id, action: "edit"}
         )
 
@@ -2536,7 +2536,7 @@ defmodule LightningWeb.WorkflowChannelTest do
                |> socket("user_#{user.id}", %{current_user: user})
                |> subscribe_and_join(
                  LightningWeb.WorkflowChannel,
-                 "workflow:collaborate:#{workflow.id}:v99",
+                 "workflow:collaborate:#{workflow.id}:release99",
                  %{project_id: project.id, action: "edit"}
                )
     end
@@ -2551,9 +2551,123 @@ defmodule LightningWeb.WorkflowChannelTest do
                |> socket("user_#{user.id}", %{current_user: user})
                |> subscribe_and_join(
                  LightningWeb.WorkflowChannel,
-                 "workflow:collaborate:#{workflow.id}:vabc",
+                 "workflow:collaborate:#{workflow.id}:releaseabc",
                  %{project_id: project.id, action: "edit"}
                )
+    end
+  end
+
+  describe "release and snapshot rooms are separate namespaces" do
+    setup %{workflow: workflow, user: user} do
+      # A snapshot sitting at lock_version 3, and a release numbered 3 whose
+      # content sits at lock_version 7. Two different pieces of content that a
+      # single `:v3` room could not tell apart.
+      at_lock_version_3 =
+        insert(:snapshot,
+          workflow: workflow,
+          lock_version: 3,
+          name: "the save numbered 3"
+        )
+
+      releases =
+        for lock_version <- [5, 6, 7] do
+          snapshot =
+            insert(:snapshot,
+              workflow: workflow,
+              lock_version: lock_version,
+              name: "the publish at lock_version #{lock_version}"
+            )
+
+          {:ok, release} =
+            Lightning.Workflows.WorkflowReleases.insert_release(
+              Lightning.Repo,
+              %{
+                workflow_id: workflow.id,
+                kind: :go_live,
+                snapshot_id: snapshot.id,
+                published_by_id: user.id
+              }
+            )
+
+          release
+        end
+
+      release_3 = Enum.find(releases, &(&1.version_number == 3))
+      assert release_3.snapshot_id
+
+      on_exit(fn ->
+        Lightning.Collaborate.stop_document("workflow:#{workflow.id}:release3")
+        Lightning.Collaborate.stop_document("workflow:#{workflow.id}:v3")
+      end)
+
+      %{at_lock_version_3: at_lock_version_3, release_3: release_3}
+    end
+
+    test "the number 3 means the publish in `:release3` and the save in `:v3`",
+         %{
+           project: project,
+           workflow: workflow,
+           user: user,
+           at_lock_version_3: at_lock_version_3
+         } do
+      join = fn suffix ->
+        {:ok, _, socket} =
+          LightningWeb.UserSocket
+          |> socket("user_#{user.id}", %{current_user: user})
+          |> subscribe_and_join(
+            LightningWeb.WorkflowChannel,
+            "workflow:collaborate:#{workflow.id}:#{suffix}",
+            %{project_id: project.id, action: "edit"}
+          )
+
+        socket.assigns.workflow
+      end
+
+      release_view = join.("release3")
+      snapshot_view = join.("v3")
+
+      # The publish trail numbers by release; a save numbers by lock_version.
+      assert release_view.lock_version == 7
+      assert release_view.name == "the publish at lock_version 7"
+
+      assert snapshot_view.lock_version == 3
+      assert snapshot_view.name == at_lock_version_3.name
+    end
+
+    test "the two views occupy two collaborative documents", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      # This is the reason the suffixes differ. A document is identified by its
+      # name alone, and `Lightning.Collaborate.start/2` hands a document that is
+      # already running to the next joiner exactly as it stands, discarding the
+      # workflow it was passed. Under one name the second view would be served
+      # the first one's content.
+      for suffix <- ["release3", "v3"] do
+        {:ok, _, _socket} =
+          LightningWeb.UserSocket
+          |> socket("user_#{user.id}", %{current_user: user})
+          |> subscribe_and_join(
+            LightningWeb.WorkflowChannel,
+            "workflow:collaborate:#{workflow.id}:#{suffix}",
+            %{project_id: project.id, action: "edit"}
+          )
+      end
+
+      release_doc =
+        Lightning.Collaboration.Registry.whereis(
+          {:doc_supervisor, "workflow:#{workflow.id}:release3"}
+        )
+
+      snapshot_doc =
+        Lightning.Collaboration.Registry.whereis(
+          {:doc_supervisor, "workflow:#{workflow.id}:v3"}
+        )
+
+      assert is_pid(release_doc)
+      assert is_pid(snapshot_doc)
+      assert release_doc != snapshot_doc
     end
   end
 
@@ -2587,7 +2701,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Enum.map(loaded.jobs, & &1.name) |> Enum.sort() ==
                Enum.map(snapshot.jobs, & &1.name) |> Enum.sort()
 
-      # Resolved via the same read-only version-view path as ?v=.
+      # Resolved via the same read-only version-view path as ?release=.
       assert executed_socket.assigns.workflow_kind == :version
     end
 
@@ -2631,13 +2745,14 @@ defmodule LightningWeb.WorkflowChannelTest do
                )
     end
 
-    test "a release ?v= join still resolves by version_number, not run id", %{
-      project: project,
-      workflow: workflow,
-      user: user
-    } do
+    test "a release ?release= join still resolves by version_number, not run id",
+         %{
+           project: project,
+           workflow: workflow,
+           user: user
+         } do
       # The release's snapshot lock_version deliberately differs from its
-      # version_number, proving the ?v= contract is untouched by the run path.
+      # version_number, proving the release contract is untouched by the run path.
       snapshot = insert(:snapshot, workflow: workflow, lock_version: 8)
       {:ok, release} = publish_release(workflow, snapshot, user)
 
@@ -2646,7 +2761,7 @@ defmodule LightningWeb.WorkflowChannelTest do
         |> socket("user_#{user.id}", %{current_user: user})
         |> subscribe_and_join(
           LightningWeb.WorkflowChannel,
-          "workflow:collaborate:#{workflow.id}:v#{release.version_number}",
+          "workflow:collaborate:#{workflow.id}:release#{release.version_number}",
           %{project_id: project.id, action: "edit"}
         )
 
@@ -3050,7 +3165,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert snapshot_v0.lock_version == 0
 
       topic_with_version =
-        "workflow:collaborate:#{workflow.id}:v#{release_v1.version_number}"
+        "workflow:collaborate:#{workflow.id}:release#{release_v1.version_number}"
 
       {:ok, _, snapshot_socket} =
         LightningWeb.UserSocket
@@ -6397,7 +6512,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       # :built struct with lock_version == 0, BUT this is a version-view, not a
       # genuinely-new workflow, so request_versions must NOT short-circuit to [].
       topic_with_version =
-        "workflow:collaborate:#{workflow.id}:v#{release.version_number}"
+        "workflow:collaborate:#{workflow.id}:release#{release.version_number}"
 
       {:ok, _, snapshot_socket} =
         LightningWeb.UserSocket

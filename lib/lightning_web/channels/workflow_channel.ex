@@ -50,7 +50,9 @@ defmodule LightningWeb.WorkflowChannel do
       ) do
     # Room formats (the suffix after the workflow id selects what to load):
     # - "workflow_id"           → latest (the live collaborative editing room)
-    # - "workflow_id:vN"        → release version N (isolated, read-only)
+    # - "workflow_id:releaseN"  → release version N (isolated, read-only)
+    # - "workflow_id:vN"        → the snapshot at lock_version N (isolated,
+    #                             read-only)
     # - "workflow_id:run:<id>"  → the exact snapshot a run executed against
     #                             ("view as executed", isolated, read-only)
     {workflow_id, view} = parse_room_topic(rest)
@@ -270,7 +272,7 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   # Version-scoped history. `version_number` is either an integer release version
-  # (the same vN the `?v=` contract uses) or the string "draft" for the
+  # (the same vN the `?release=` contract uses) or the string "draft" for the
   # unversioned runs (drafts, tests, intermediate saves). Both stay capped at the
   # recent-history limit, matching the default feed; the unbounded per-version
   # listing lives on the separate full history page. Absent → the default top-20
@@ -743,8 +745,8 @@ defmodule LightningWeb.WorkflowChannel do
   # Returns the workflow's published versions (releases recorded at each go-live
   # and promote), newest first. This is deliberately NOT every save: a save
   # captures a snapshot, but only a deliberate publish records a release. The
-  # client pins a version via `?v=<version_number>`; each entry also carries the
-  # snapshot's lock_version as informational metadata.
+  # client pins a version via `?release=<version_number>`; each entry also
+  # carries the snapshot's lock_version as informational metadata.
   @impl true
   def handle_in(
         "check_custom_path",
@@ -1499,8 +1501,8 @@ defmodule LightningWeb.WorkflowChannel do
       inserted_at: release.inserted_at,
       published_by: render_release_publisher(release.published_by),
       source_project: render_release_source_project(release.source_project),
-      # The client pins a version via `?v=<version_number>`; lock_version is kept
-      # here only as informational snapshot metadata.
+      # The client pins a version via `?release=<version_number>`; lock_version
+      # is kept here only as informational snapshot metadata.
       lock_version: release.snapshot && release.snapshot.lock_version,
       # The content this version published. The client ticks the row whose
       # content it is looking at, so it needs identity rather than a number.
@@ -2133,11 +2135,18 @@ defmodule LightningWeb.WorkflowChannel do
 
   # Splits the room's `rest` (everything after "workflow:collaborate:") into the
   # workflow id and the view selector. The workflow id is a UUID and never
-  # contains a colon, so the first colon delimits the optional suffix. The `?v=`
-  # release contract and the run-scoped "view as executed" contract get distinct
-  # suffixes (`:vN` vs `:run:<id>`) so they can never collide.
+  # contains a colon, so the first colon delimits the optional suffix.
+  #
+  # Each of the three reading views gets a suffix of its own, because the suffix
+  # is the only thing identifying a collaborative document: the document name
+  # comes from the suffix alone (`Lightning.Collaborate.extract_document_name/1`)
+  # and a document already running is reused as it stands, resolved content and
+  # all. Two views that mean different content must therefore never share a
+  # suffix. Release 3 and lock_version 3 are ordinarily different snapshots, so
+  # they are `:release3` and `:v3`, never both `:v3`.
   defp parse_room_topic(rest) do
     case String.split(rest, ":", parts: 2) do
+      [workflow_id, "release" <> version] -> {workflow_id, {:release, version}}
       [workflow_id, "v" <> version] -> {workflow_id, {:version, version}}
       [workflow_id, "run:" <> run_id] -> {workflow_id, {:as_executed, run_id}}
       [workflow_id] -> {workflow_id, :latest}
@@ -2145,13 +2154,12 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Version-pinned view. `?v=` carries the release version_number (what the UI
-  # shows as vN), not the snapshot's lock_version. The channel owns version
-  # parsing (and the "invalid version format" error); it translates the
+  # Release-pinned view. `?release=` carries the release version_number, the vN
+  # the publish trail shows, not the snapshot's lock_version. The channel owns
+  # version parsing (and the "invalid version format" error); it translates the
   # version_number to its snapshot via the workflow_releases table, then reuses
-  # the resolver's snapshot-load path. Resolve before auth, so a not-found beats
-  # the auth error.
-  defp load_workflow("edit", workflow_id, project, user, {:version, version}) do
+  # the resolver's snapshot-load path.
+  defp load_workflow("edit", workflow_id, project, user, {:release, version}) do
     Logger.info("Loading workflow release version: #{version}")
 
     case Integer.parse(version) do
@@ -2163,12 +2171,30 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
+  # Snapshot-pinned view. `?v=` carries a snapshot's own lock_version, which is
+  # how every save is numbered when there is no publish trail to read. Nothing in
+  # the release experience joins this room; it is the contract for a client
+  # without that experience, and it stays a separate suffix from `:releaseN`
+  # precisely so the two numbering schemes cannot be handed the same document.
+  defp load_workflow("edit", workflow_id, project, user, {:version, version}) do
+    Logger.info("Loading workflow snapshot version: #{version}")
+
+    case Integer.parse(version) do
+      {lock_version, ""} ->
+        resolve_snapshot(workflow_id, lock_version, version, project, user)
+
+      _ ->
+        {:error, "invalid version format"}
+    end
+  end
+
   # "View as executed". Loads the workflow exactly as a specific run saw it, for
   # ANY run including draft/test runs whose snapshot is not a release. This is a
-  # separate contract from `?v=version_number` on purpose: it addresses a run,
-  # resolves that run's snapshot lock_version, and hydrates it read-only through
-  # the same resolver path the version view uses (kind :version). Because it never
-  # touches version_number, it cannot collide with the release contract.
+  # separate contract from `?release=<version_number>` on purpose: it addresses
+  # a run, resolves that run's snapshot lock_version, and hydrates it read-only
+  # through the same resolver path the version view uses (kind :version). Because
+  # it never touches version_number, it cannot collide with the release
+  # contract.
   defp load_workflow(
          "edit",
          workflow_id,
@@ -2237,6 +2263,29 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
+  # Authorise before resolving, so a non-member cannot learn whether a workflow
+  # exists from the error, and so a foreign or deleted workflow reads the same as
+  # a missing one.
+  defp resolve_snapshot(workflow_id, lock_version, version, project, user) do
+    with :ok <- Permissions.can(:workflows, :access_read, user, project),
+         {:ok, workflow, kind} <-
+           WorkflowResolver.resolve(workflow_id, :edit,
+             version: lock_version,
+             project: project
+           ) do
+      {:ok, workflow, kind}
+    else
+      {:error, :unauthorized} ->
+        {:error, "unauthorized"}
+
+      {:error, :snapshot_not_found} ->
+        {:error, "snapshot version #{version} not found"}
+
+      {:error, reason} when reason in [:wrong_project, :workflow_not_found] ->
+        {:error, "workflow not found"}
+    end
+  end
+
   defp resolve_released_snapshot(workflow_id, version_number, version, project) do
     with %WorkflowRelease{snapshot: %{lock_version: lock_version}} <-
            WorkflowReleases.get_by_version_number(workflow_id, version_number),
@@ -2298,16 +2347,16 @@ defmodule LightningWeb.WorkflowChannel do
   # "draft"/"unversioned" selects the runs whose snapshot was never released.
   # Anything else falls back to the draft view rather than erroring.
   defp history_filter(v) when v in ["draft", "unversioned"], do: :draft
-  defp history_filter(v) when is_integer(v), do: {:version, v}
+  defp history_filter(v) when is_integer(v), do: {:release, v}
 
   defp history_filter(v) when is_binary(v) do
     case Integer.parse(v) do
-      {n, ""} -> {:version, n}
+      {n, ""} -> {:release, n}
       _ -> :draft
     end
   end
 
-  defp get_filtered_run_history(workflow_id, {:version, version_number}) do
+  defp get_filtered_run_history(workflow_id, {:release, version_number}) do
     version_numbers =
       WorkflowReleases.version_numbers_by_lock_version(workflow_id)
 

@@ -10,7 +10,7 @@
  * - Does not refetch if versions already loaded
  * - Shows error toast when versionsError is set
  * - Handles version selection correctly
- * - Newest release returns to live (clears ?v=); older releases pin by version_number
+ * - Newest release returns to live (clears the pin); older releases pin by version_number
  * - Renders the "Version history" list: v-pill, initials avatar, kind sentence, absolute date
  * - Marks the currently-viewed row with a checkmark
  */
@@ -94,10 +94,12 @@ describe('VersionDropdown', () => {
   const mockRequestVersions = vi.fn();
   const mockOnVersionSelect = vi.fn();
 
-  // Pin a version by driving the shared URL store through the patched
-  // history.pushState (?v= now carries a version_number, e.g. ?v=1).
+  // Pin a release by driving the shared URL store through the patched
+  // history.pushState. `?release=` carries a version_number from the publish
+  // trail, which is a different numbering from `?v=` (a snapshot's own
+  // lock_version) and so gets a parameter of its own.
   const pinVersion = (versionNumber: number) => {
-    window.history.pushState({}, '', `/?v=${versionNumber}`);
+    window.history.pushState({}, '', `/?release=${versionNumber}`);
   };
 
   beforeEach(() => {
@@ -114,7 +116,7 @@ describe('VersionDropdown', () => {
   });
 
   afterEach(() => {
-    // Reset the URL so a pinned ?v= does not leak into the next test.
+    // Reset the URL so a pinned ?release= does not leak into the next test.
     window.history.pushState({}, '', '/');
   });
 
@@ -767,7 +769,7 @@ describe('VersionDropdown', () => {
 
       mockUseVersions.mockReturnValue(mockVersions);
 
-      // Pinned to version_number 1 via ?v=1
+      // Pinned to version_number 1 via ?release=1
       pinVersion(1);
 
       render(
@@ -778,7 +780,7 @@ describe('VersionDropdown', () => {
         />
       );
 
-      // Trigger button reads v{?v} directly (the version_number, not v22)
+      // Trigger button reads v{?release} directly (the version_number, not v22)
       const button = screen.getByRole('button');
       expect(button).toHaveTextContent('v1');
       expect(button).not.toHaveTextContent('v22');
@@ -831,7 +833,7 @@ describe('VersionDropdown', () => {
       // The live document is still the content v3 published.
       mockUseLatestSnapshotId.mockReturnValue('snapshot-v3');
 
-      // No ?v= pin (afterEach resets the URL)
+      // No ?release= pin (afterEach resets the URL)
       render(
         <VersionDropdown
           currentVersion={30}
@@ -1062,7 +1064,7 @@ describe('VersionDropdown', () => {
       await user.click(button);
 
       // Click the older release (displayed as v1, lock_version 30). Pinning now
-      // uses version_number (1), which is what ?v= carries, NOT lock_version.
+      // uses version_number (1), which is what ?release= carries, NOT lock_version.
       const oldVersionButton = screen.getByText('v1').closest('button');
       expect(oldVersionButton).not.toBeNull();
       await user.click(oldVersionButton!);

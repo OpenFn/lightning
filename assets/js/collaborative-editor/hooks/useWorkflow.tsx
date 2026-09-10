@@ -45,6 +45,7 @@ import { useLiveViewActions } from '../contexts/LiveViewActionsContext';
 import { StoreContext } from '../contexts/StoreProvider';
 import { isChannelRequestError } from '../lib/errors';
 import { notifications } from '../lib/notifications';
+import { usePinnedView } from '../lib/pinnedView';
 import type { WorkflowStoreInstance } from '../stores/createWorkflowStore';
 import type { Workflow } from '../types/workflow';
 
@@ -857,7 +858,7 @@ export function useCreateWorkflowFlow() {
  * - hasPermission: User has can_edit_workflow permission
  * - isConnected: Session is synced with backend
  * - isDeleted: Workflow has been deleted
- * - isPinnedVersion: Viewing a pinned version (any ?v parameter in URL)
+ * - isPinnedView: Reading the past rather than the live workflow
  *
  * @internal This is shared logic between useCanSave and useCanRun
  */
@@ -865,26 +866,22 @@ const useWorkflowConditions = () => {
   const { isSynced } = useSession();
   const permissions = usePermissions();
   const workflow = useWorkflowState(state => state.workflow);
-  const { params } = useURLState();
 
   const hasEditPermission = permissions?.can_edit_workflow ?? false;
   const hasRunPermission = permissions?.can_run_workflow ?? false;
   const isConnected = isSynced;
   const isDeleted = workflow !== null && workflow.deleted_at !== null;
 
-  // Check if version is pinned via URL parameter, or viewing a workflow as a
-  // past run executed it (?as_run=). Both are read-only views that must block
-  // save/run.
-  const isPinnedVersion =
-    (params['v'] !== undefined && params['v'] !== null) ||
-    (params['as_run'] !== undefined && params['as_run'] !== null);
+  // A pinned release, a pinned snapshot, or a run's own view. All three read
+  // the past, so all three block save and run.
+  const { isPinnedView } = usePinnedView();
 
   return {
     hasEditPermission,
     hasRunPermission,
     isConnected,
     isDeleted,
-    isPinnedVersion,
+    isPinnedView,
   };
 };
 
@@ -898,11 +895,11 @@ const useWorkflowConditions = () => {
  * Checks:
  * 1. User permissions (can_edit_workflow)
  * 2. Connection state (isSynced)
- * 3. Version pinning (any ?v parameter in URL)
+ * 3. Reading the past (a pinned release, a pinned snapshot, or a run's view)
  * 4. Workflow deletion state (deleted_at)
  */
 export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
-  const { hasEditPermission, isConnected, isDeleted, isPinnedVersion } =
+  const { hasEditPermission, isConnected, isDeleted, isPinnedView } =
     useWorkflowConditions();
 
   // Check if any apply operation in progress
@@ -924,7 +921,7 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canSave = false;
     tooltipMessage = 'Workflow has been deleted';
-  } else if (isPinnedVersion) {
+  } else if (isPinnedView) {
     canSave = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
   } else if (isApplyingJobCode) {
@@ -948,7 +945,7 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
  * Checks:
  * 1. User permissions (can_edit_workflow or can_run_workflow)
  * 2. Connection state (isSynced)
- * 3. Version pinning (any ?v parameter in URL)
+ * 3. Reading the past (a pinned release, a pinned snapshot, or a run's view)
  * 4. Workflow deletion state (deleted_at)
  * 5. Run limits (from session context)
  * 6. Read-only workflow (live on main, deleted, pinned, no edit permission,
@@ -964,7 +961,7 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
     hasRunPermission,
     isConnected,
     isDeleted,
-    isPinnedVersion,
+    isPinnedView,
   } = useWorkflowConditions();
 
   // Get run limits from session context (defaults to allowed if missing)
@@ -991,7 +988,7 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canRun = false;
     tooltipMessage = 'Workflow has been deleted';
-  } else if (isPinnedVersion) {
+  } else if (isPinnedView) {
     canRun = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
   } else if (!runLimits.allowed && runLimits.message) {
@@ -1043,7 +1040,6 @@ export const useWorkflowReadOnly = (): {
   const workflow = useWorkflowState(state => state.workflow);
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
-  const { params } = useURLState();
 
   // The session-context workflow carries the lifecycle state. A live workflow
   // on the main project is locked read-only, which the server expresses as
@@ -1051,12 +1047,7 @@ export const useWorkflowReadOnly = (): {
   const sessionWorkflow = useSessionWorkflow();
   const isLive = sessionWorkflow?.state === 'live';
 
-  // Check if version is pinned via URL parameter
-  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
-
-  // "View as executed" loads the workflow read-only exactly as a run ran it.
-  const isViewingAsExecuted =
-    params['as_run'] !== undefined && params['as_run'] !== null;
+  const { isPinnedVersion, isViewingAsExecuted } = usePinnedView();
 
   // Check if this is a new workflow with content (from template or AI)
   // Users must click "Create" before they can edit

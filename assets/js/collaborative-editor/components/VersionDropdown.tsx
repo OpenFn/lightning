@@ -1,8 +1,6 @@
 import { format } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 
-import { useURLState } from '#/react/lib/use-url-state';
-
 import { Tooltip } from '../../components/Tooltip';
 import { cn } from '../../utils/cn';
 import { useRunSummary } from '../hooks/useHistory';
@@ -15,6 +13,7 @@ import {
   useVersionsLoading,
 } from '../hooks/useSessionContext';
 import { notifications } from '../lib/notifications';
+import { usePinnedView } from '../lib/pinnedView';
 import type { Version } from '../types/sessionContext';
 import { releaseActionLabel } from '../utils/releaseLabel';
 
@@ -46,20 +45,21 @@ export function VersionDropdown({
   const versionsError = useVersionsError();
   const requestVersions = useRequestVersions();
 
-  // `?v=` carries a release version_number, not a snapshot lock_version.
-  const { params } = useURLState();
-  const pinnedParam = params['v'];
-  const isPinnedVersion = pinnedParam !== undefined && pinnedParam !== null;
-  const pinnedVersionNumber = isPinnedVersion ? Number(pinnedParam) : null;
+  // `?release=` carries a release version_number, not a snapshot lock_version.
+  const {
+    release: pinnedParam,
+    isPinnedRelease,
+    asRun: asRunParam,
+    isViewingAsExecuted: isAsRun,
+  } = usePinnedView();
+  const pinnedVersionNumber = isPinnedRelease ? Number(pinnedParam) : null;
 
   // `?as_run=` opens the workflow as one run executed it, so the chip names the
   // version that run executed against. A run whose snapshot was never
   // published has no number to name it by. It is not called a draft here: the
   // lifecycle badge alongside already uses that word for a workflow that is not
   // live, and this is a statement about content, not about the workflow.
-  const asRunParam = params['as_run'];
-  const isAsRun = asRunParam !== undefined && asRunParam !== null;
-  const asRun = useRunSummary(isAsRun ? String(asRunParam) : null);
+  const asRun = useRunSummary(asRunParam);
   const asRunVersionNumber =
     asRun === undefined ? undefined : (asRun.version_number ?? null);
 
@@ -70,12 +70,12 @@ export function VersionDropdown({
   // the current one whatever the store's lock_version says. Comparing lock
   // versions here used to render one as `v1`, a release number that does not
   // exist, next to a list that correctly said nothing had been published.
-  const isLatestVersion = !isLoadingVersion && !isPinnedVersion && !isAsRun;
+  const isLatestVersion = !isLoadingVersion && !isPinnedRelease && !isAsRun;
 
   // The content on screen, whichever way it was reached. The list ticks the
   // version that published it and ticks nothing when no version did, so the
   // chip and the tick are two readings of one value and cannot disagree.
-  const viewedSnapshotId = isPinnedVersion
+  const viewedSnapshotId = isPinnedRelease
     ? (versions.find(version => version.version_number === pinnedVersionNumber)
         ?.snapshot_id ?? null)
     : isAsRun
@@ -84,7 +84,7 @@ export function VersionDropdown({
 
   const currentVersionDisplay = isLoadingVersion
     ? '•'
-    : isPinnedVersion
+    : isPinnedRelease
       ? `v${pinnedParam}`
       : isAsRun
         ? asRunVersionNumber === undefined

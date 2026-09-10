@@ -171,7 +171,8 @@ describe('unsaved-changes guard, wired up', () => {
     await user.click(screen.getByTestId('pick-version-3'));
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
-      v: '3',
+      release: '3',
+      v: null,
       run: null,
       as_run: null,
       step: null,
@@ -190,7 +191,8 @@ describe('unsaved-changes guard, wired up', () => {
     await user.click(await screen.findByRole('button', { name: 'Switch' }));
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
-      v: '3',
+      release: '3',
+      v: null,
       run: null,
       as_run: null,
       step: null,
@@ -212,7 +214,8 @@ describe('unsaved-changes guard, wired up', () => {
     });
     await waitFor(() => {
       expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
-        v: '3',
+        release: '3',
+        v: null,
         run: null,
         as_run: null,
         step: null,

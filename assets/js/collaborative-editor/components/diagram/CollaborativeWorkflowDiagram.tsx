@@ -29,6 +29,7 @@ import {
 import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
 import { useNodeSelection } from '../../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../../keyboard';
+import { CLEAR_PINNED_VIEW, usePinnedView } from '../../lib/pinnedView';
 import type { RunSummary } from '../../types/history';
 import { DiscardChangesDialog } from '../DiscardChangesDialog';
 
@@ -81,17 +82,17 @@ export function CollaborativeWorkflowDiagram({
   );
 
   const runParam = params['run'] ?? null;
-  const versionParam = params['v'] ?? null;
-  const asRunParam = params['as_run'] ?? null;
+  const { release: releaseParam, asRun: asRunParam } = usePinnedView();
   const restoredRunRef = useRef<string | null>(null);
 
   // Which document is on screen: a pinned release, a run's own snapshot, or the
   // live one. Leaving any of those for another is what has to drop the selected
-  // run, and watching `?v` alone missed the commonest way out of a run view.
-  // Picking "latest" from a run view clears `as_run` while `?v` stays null, so
-  // nothing counted as a change, and the restore below put the run straight back
-  // on the live document with its timings over steps it never touched.
-  const viewKey = `${versionParam ?? ''}|${asRunParam ?? ''}`;
+  // run, and watching the release param alone missed the commonest way out of a
+  // run view. Picking "latest" from a run view clears `as_run` while the release
+  // param stays null, so nothing counted as a change, and the restore below put
+  // the run straight back on the live document with its timings over steps it
+  // never touched.
+  const viewKey = `${releaseParam ?? ''}|${asRunParam ?? ''}`;
   const previousViewRef = useRef<string>(viewKey);
 
   // Does the run in the URL belong on the document in the URL? It does when
@@ -184,7 +185,7 @@ export function CollaborativeWorkflowDiagram({
       if (!ranTheLiveContent) {
         viewAsExecuted(run.id);
       } else {
-        updateSearchParams({ v: null, as_run: null, run: run.id });
+        updateSearchParams({ ...CLEAR_PINNED_VIEW, run: run.id });
       }
     },
     [latestSnapshotId, updateSearchParams, viewAsExecuted]
@@ -212,7 +213,7 @@ export function CollaborativeWorkflowDiagram({
     if (shouldRequest) {
       void historyCommands.requestHistory(
         selectedRunId || undefined,
-        versionParam || undefined
+        releaseParam || undefined
       );
       hasRequestedHistory.current = true;
     }
@@ -222,17 +223,17 @@ export function CollaborativeWorkflowDiagram({
     isHistoryChannelConnected,
     historyCommands,
     selectedRunId,
-    versionParam,
+    releaseParam,
   ]);
 
-  // A pinned version is a different feed, so allow one more request.
-  const lastVersionParam = useRef(versionParam);
+  // A pinned release is a different feed, so allow one more request.
+  const lastReleaseParam = useRef(releaseParam);
   useEffect(() => {
-    if (lastVersionParam.current !== versionParam) {
-      lastVersionParam.current = versionParam;
+    if (lastReleaseParam.current !== releaseParam) {
+      lastReleaseParam.current = releaseParam;
       hasRequestedHistory.current = false;
     }
-  }, [versionParam]);
+  }, [releaseParam]);
 
   // Find the selected run object in history
   const selectedRun = useMemo(() => {

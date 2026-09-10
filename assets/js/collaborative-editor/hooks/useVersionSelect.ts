@@ -6,12 +6,12 @@
  *
  *
  * Version switching works by:
- * 1. Updating the URL parameter (?v=1, a release version_number, or no param
- *    for latest)
+ * 1. Updating the URL parameter (?release=1, a release version_number, or no
+ *    param for latest)
  * 2. SessionProvider detects the change and creates a new Y.Doc/provider
  * 3. The new provider connects to the appropriate room:
  *    - Latest: workflow:collaborate:{id}
- *    - Snapshot: workflow:collaborate:{id}:v{version_number}
+ *    - Release: workflow:collaborate:{id}:release{version_number}
  * 4. Y.Doc syncs fresh data from the server for the selected version
  *
  */
@@ -19,6 +19,8 @@
 import { useCallback } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+
+import { CLEAR_PINNED_VIEW, RELEASE_PARAM } from '../lib/pinnedView';
 
 import { useDiscardGuard } from './useDiscardGuard';
 
@@ -39,9 +41,9 @@ export function useVersionSelect() {
       // leak across a switch either.
       guard(() => {
         updateSearchParams({
-          v: version === 'latest' ? null : String(version),
+          ...CLEAR_PINNED_VIEW,
+          [RELEASE_PARAM]: version === 'latest' ? null : String(version),
           run: null,
-          as_run: null,
           // The step belongs to the run being cleared, and a step id means
           // nothing in another version.
           step: null,

@@ -46,27 +46,31 @@ describe('useVersionSelect', () => {
     saveWorkflow.mockResolvedValue(undefined);
   });
 
-  test('pinning a version sets ?v and clears ?run / ?as_run', () => {
+  test('pinning a version sets ?release and clears ?run / ?as_run', () => {
     urlState.setParam('run', 'run-from-previous-version');
 
     const { result } = renderHook(() => useVersionSelect());
     result.current.handleVersionSelect(3);
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
-      v: '3',
+      release: '3',
+      // Both numbering schemes are cleared, so a bookmark carrying the other one
+      // cannot survive the switch and pin the view straight back.
+      v: null,
       run: null,
       as_run: null,
       step: null,
     });
   });
 
-  test('returning to latest clears ?v, ?run and ?as_run', () => {
+  test('returning to latest clears the version pins, ?run and ?as_run', () => {
     urlState.setParam('run', 'run-from-previous-version');
 
     const { result } = renderHook(() => useVersionSelect());
     result.current.handleVersionSelect('latest');
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      release: null,
       v: null,
       run: null,
       as_run: null,
@@ -101,7 +105,10 @@ describe('useVersionSelect', () => {
     });
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
-      v: '3',
+      release: '3',
+      // Both numbering schemes are cleared, so a bookmark carrying the other one
+      // cannot survive the switch and pin the view straight back.
+      v: null,
       run: null,
       as_run: null,
       step: null,
@@ -123,7 +130,10 @@ describe('useVersionSelect', () => {
 
     expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'error-only' });
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
-      v: '3',
+      release: '3',
+      // Both numbering schemes are cleared, so a bookmark carrying the other one
+      // cannot survive the switch and pin the view straight back.
+      v: null,
       run: null,
       as_run: null,
       step: null,

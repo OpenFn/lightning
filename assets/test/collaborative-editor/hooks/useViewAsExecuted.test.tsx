@@ -3,8 +3,8 @@
  *
  * Verifies the hook produces the distinct `?as_run=<run_id>` param that
  * SessionProvider turns into the `:run:<run_id>` room, loading the workflow
- * read-only as that run executed. It must clear any release pin (`?v=`) and set
- * `run` for step highlighting, using the SPA URL update (no page reload).
+ * read-only as that run executed. It must clear any version pin and set `run`
+ * for step highlighting, using the SPA URL update (no page reload).
  *
  * Pinning a run destroys the document, so it is also guarded: with unsaved
  * edits the hook asks first and offers to save.
@@ -48,13 +48,14 @@ describe('useViewAsExecuted', () => {
     saveWorkflow.mockResolvedValue(undefined);
   });
 
-  test('sets ?as_run and ?run for the run, clearing any ?v release pin', () => {
-    urlState.setParam('v', '3'); // a stale release pin that must be cleared
+  test('sets ?as_run and ?run for the run, clearing any version pin', () => {
+    urlState.setParam('release', '3'); // a stale release pin that must be cleared
 
     const { result } = renderHook(() => useViewAsExecuted());
     result.current.viewAsExecuted('run-abc');
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      release: null,
       v: null,
       as_run: 'run-abc',
       run: 'run-abc',
@@ -92,6 +93,7 @@ describe('useViewAsExecuted', () => {
     });
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      release: null,
       v: null,
       as_run: 'run-abc',
       run: 'run-abc',
@@ -112,6 +114,7 @@ describe('useViewAsExecuted', () => {
 
     expect(saveWorkflow).toHaveBeenCalledWith({ notify: 'error-only' });
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      release: null,
       v: null,
       as_run: 'run-abc',
       run: 'run-abc',

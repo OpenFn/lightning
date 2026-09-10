@@ -370,10 +370,11 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         wrapper,
       });
 
-      // Dropdown switch to version 2: the ?v param changes with NO run-select in
-      // progress. Even if ?run lingers, the diagram must drop it and close the
-      // store's active run so the stale run does not persist on the new version.
-      urlState.setParams({ v: '2' });
+      // Dropdown switch to version 2: the ?release param changes with NO
+      // run-select in progress. Even if ?run lingers, the diagram must drop it
+      // and close the store's active run so the stale run does not persist on
+      // the new version.
+      urlState.setParams({ release: '2' });
       rerender(<CollaborativeWorkflowDiagram />);
 
       await waitFor(() => {
@@ -485,9 +486,10 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         { latestSnapshotLockVersion: 9 }
       );
 
-      // Start pinned to v2, so selecting the run (which clears ?v) is a genuine
-      // ?v change — the exact case that must NOT be treated as a version switch.
-      urlState.setParams({ v: '2' });
+      // Start pinned to v2, so selecting the run (which clears the pin) is a
+      // genuine ?release change — the exact case that must NOT be treated as a
+      // version switch.
+      urlState.setParams({ release: '2' });
 
       const { rerender } = render(<CollaborativeWorkflowDiagram />, {
         wrapper,
@@ -500,8 +502,9 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       rerender(<CollaborativeWorkflowDiagram />);
 
       await waitFor(() => {
-        // Loaded as-executed: ?as_run set to the run, ?v cleared.
+        // Loaded as-executed: ?as_run set to the run, the version pins cleared.
         expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+          release: null,
           v: null,
           as_run: 'run-old',
           run: 'run-old',

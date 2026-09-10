@@ -34,6 +34,7 @@ import {
   isChannelRequestError,
 } from '../lib/errors';
 import { notifications } from '../lib/notifications';
+import { usePinnedView } from '../lib/pinnedView';
 import { isFinalState } from '../types/history';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
@@ -273,12 +274,8 @@ export function Header({
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
 
-  // Check if viewing a pinned version via URL parameter
-  // When ?v= is present, user is viewing a specific version (even if latest)
-  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
-
-  const isViewingAsExecuted =
-    params['as_run'] !== undefined && params['as_run'] !== null;
+  // Which view of the past, if any, the URL is asking for.
+  const { isPinnedVersion, isViewingAsExecuted } = usePinnedView();
 
   // The Live badge describes the workflow's current state, which would be a lie
   // on these views, so it is suppressed and the version badge carries the

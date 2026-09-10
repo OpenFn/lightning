@@ -276,7 +276,7 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  # `?v=` now carries a release version_number, not a snapshot lock_version, so
+  # A release is pinned with `?release=`, which numbers by the publish trail, so
   # a historical run is pinned with `?as_run=`: the channel resolves that run's
   # own snapshot, which works for draft and test runs that were never released.
   defp maybe_add_snapshot_version(params, snapshot_version, workflow_version) do
