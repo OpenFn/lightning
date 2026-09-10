@@ -16,7 +16,7 @@
 
 import type React from 'react';
 import { act } from 'react';
-import { vi } from 'vitest';
+import { onTestFinished, vi } from 'vitest';
 
 import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
@@ -129,6 +129,12 @@ export async function createTriggerTestHarness(
     { id: 'user-1', name: 'Test', email: 'test@example.com', color: '#000' },
     { connect: true }
   );
+
+  // PhoenixChannelProvider registers a process 'exit' handler that only
+  // destroy() removes, so an undestroyed session leaks one per test.
+  onTestFinished(() => {
+    sessionStore.destroy();
+  });
 
   // 2. Allow the mock PhoenixChannelProvider to create its channel.
   await new Promise(resolve => setTimeout(resolve, 50));

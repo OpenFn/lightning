@@ -15,7 +15,6 @@ import { SessionContext } from '../../../../js/collaborative-editor/contexts/Ses
 import { LiveViewActionsProvider } from '../../../../js/collaborative-editor/contexts/LiveViewActionsContext';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
-import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import { createAdaptorStore } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import type { AwarenessStoreInstance } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
@@ -31,7 +30,10 @@ import {
   createMockPhoenixChannelProvider,
 } from '../../__helpers__/channelMocks';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
-import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
+import {
+  createMockSocket,
+  createTestSessionStore,
+} from '../../__helpers__/sessionStoreHelpers';
 
 /**
  * Helper to create and connect a workflow store with Y.Doc
@@ -70,7 +72,7 @@ function createWrapper(
     navigate: vi.fn(),
   };
 
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const mockSocket = createMockSocket();
   sessionStore.initializeSession(
     mockSocket,

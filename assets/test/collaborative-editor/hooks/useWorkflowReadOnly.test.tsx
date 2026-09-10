@@ -16,7 +16,6 @@ import { StoreContext } from '../../../js/collaborative-editor/contexts/StorePro
 import { useWorkflowReadOnly } from '../../../js/collaborative-editor/hooks/useWorkflow';
 import type { SessionContextStoreInstance } from '../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import type { WorkflowStoreInstance } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../js/collaborative-editor/types/session';
@@ -24,6 +23,7 @@ import {
   createSessionContext,
   mockPermissions,
 } from '../__helpers__/sessionContextFactory';
+import { createTestSessionStore } from '../__helpers__/sessionStoreHelpers';
 import {
   createMockURLState,
   getURLStateMockValue,
@@ -70,7 +70,7 @@ function createWrapper(options: WrapperOptions = {}): [
   } = options;
 
   // Create stores
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const sessionContextStore = createSessionContextStore();
   const workflowStore = createWorkflowStore();
 
@@ -376,7 +376,7 @@ describe('useWorkflowReadOnly - Valid Editing', () => {
 
 describe('useWorkflowReadOnly - Edge Cases', () => {
   test('handles null workflow gracefully', async () => {
-    const sessionStore = createSessionStore();
+    const sessionStore = createTestSessionStore();
     const sessionContextStore = createSessionContextStore();
     const workflowStore = createWorkflowStore();
 
@@ -452,7 +452,7 @@ describe('useWorkflowReadOnly - Edge Cases', () => {
   });
 
   test('handles null permissions gracefully (loading state - not read-only)', async () => {
-    const sessionStore = createSessionStore();
+    const sessionStore = createTestSessionStore();
     const sessionContextStore = createSessionContextStore();
     const workflowStore = createWorkflowStore();
 
@@ -626,7 +626,7 @@ describe('useWorkflowReadOnly - Priority Order', () => {
 
 describe('useWorkflowReadOnly - Unsaved New Workflow', () => {
   test('returns read-only true for new workflow with content (from template or AI)', async () => {
-    const sessionStore = createSessionStore();
+    const sessionStore = createTestSessionStore();
     // Pass isNewWorkflow: true when creating the store
     const sessionContextStore = createSessionContextStore(true);
     const workflowStore = createWorkflowStore();
@@ -705,7 +705,7 @@ describe('useWorkflowReadOnly - Unsaved New Workflow', () => {
   });
 
   test('returns not read-only for new workflow without content (empty canvas)', async () => {
-    const sessionStore = createSessionStore();
+    const sessionStore = createTestSessionStore();
     // Pass isNewWorkflow: true when creating the store
     const sessionContextStore = createSessionContextStore(true);
     const workflowStore = createWorkflowStore();

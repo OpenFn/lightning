@@ -21,7 +21,6 @@ import { SessionContext } from '../../../../js/collaborative-editor/contexts/Ses
 import { KeyboardProvider } from '../../../../js/collaborative-editor/keyboard';
 import type { StoreContextValue } from '../../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../../js/collaborative-editor/contexts/StoreProvider';
-import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { AdaptorStoreInstance } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import { createAdaptorStore } from '../../../../js/collaborative-editor/stores/createAdaptorStore';
 import type { AwarenessStoreInstance } from '../../../../js/collaborative-editor/stores/createAwarenessStore';
@@ -39,7 +38,10 @@ import {
   getURLStateMockValue,
 } from '../../__helpers__';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
-import { createMockSocket } from '../../__helpers__/sessionStoreHelpers';
+import {
+  createMockSocket,
+  createTestSessionStore,
+} from '../../__helpers__/sessionStoreHelpers';
 
 // Mock useURLState hook
 const urlState = createMockURLState();
@@ -85,7 +87,7 @@ function createWrapper(
     navigate: vi.fn(),
   };
 
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   // Initialize session with proper mock socket so isSynced works
   const mockSocket = createMockSocket();
   sessionStore.initializeSession(
