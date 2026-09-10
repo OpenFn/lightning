@@ -777,6 +777,21 @@ defmodule Lightning.Workflows.StatsTest do
       end
     end
 
+    # Keyed without the change marker — a settle must not mint a new key.
+    test "serves the same answer after a work order settles", ctx do
+      %{workflow: workflow, trigger: trigger} = ctx
+
+      run_at(workflow, trigger, :success, DateTime.utc_now())
+      first = Stats.runs(workflow, 1)
+
+      run_at(workflow, trigger, :failed, DateTime.utc_now())
+
+      assert Stats.runs(workflow, 1) == first
+
+      assert {:ok, true} =
+               Cachex.exists?(:workflow_stats, {:runs, workflow.id, 1})
+    end
+
     test "skips runs outside the window, in flight, or on another workflow",
          ctx do
       %{workflow: workflow, trigger: trigger} = ctx

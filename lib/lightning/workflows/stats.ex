@@ -32,6 +32,10 @@ defmodule Lightning.Workflows.Stats do
   # and stops keys piling up.
   @ttl :timer.minutes(5)
 
+  # Shorter than `@ttl` because this is the one slice with no marker to fall
+  # back on: the TTL is the only thing that refreshes it.
+  @runs_ttl :timer.minutes(2)
+
   @final_states WorkOrder.final_states()
   @zero_counts Map.new(@final_states, &{&1, 0})
 
@@ -134,15 +138,23 @@ defmodule Lightning.Workflows.Stats do
         }
   def runs(%Workflow{id: workflow_id}, days_back \\ @default_days_back)
       when is_map_key(@buckets, days_back) do
-    cached({:runs, workflow_id, days_back}, fn ->
-      {seconds, count} = Map.fetch!(@buckets, days_back)
-      window = bucket_window(seconds, count)
+    # No change marker in this key — a busy workflow moves the marker faster
+    # than the page polls, so every poll would miss (211 ms and 1.4 GiB of
+    # buffer traffic per recompute at 44k work orders). Costs up to
+    # `@runs_ttl` of staleness on a chart whose finest bar is two hours wide.
+    cached_until_ttl(
+      {:runs, workflow_id, days_back},
+      fn ->
+        {seconds, count} = Map.fetch!(@buckets, days_back)
+        window = bucket_window(seconds, count)
 
-      %{
-        window: window,
-        buckets: bucket_runs(workflow_id, window.from, seconds, count)
-      }
-    end)
+        %{
+          window: window,
+          buckets: bucket_runs(workflow_id, window.from, seconds, count)
+        }
+      end,
+      @runs_ttl
+    )
   end
 
   # Anchored on the bucket `now` is in, not on `now` itself: a window that ends
@@ -217,7 +229,8 @@ defmodule Lightning.Workflows.Stats do
   # something settles: a poll that finds nothing has moved is a hit on every
   # pod, because the answer is read from Postgres and not from one node's ETS.
   # The trade is that a workflow settling work orders faster than the poll
-  # recomputes on every poll.
+  # recomputes on every poll, which is why `runs/2` opts out and takes
+  # `@ttl`-bounded staleness instead.
   #
   # The marker only moves when a work order settles, so a stat counting unsettled
   # work orders — a queue depth, a running count — needs its own marker.
@@ -226,13 +239,17 @@ defmodule Lightning.Workflows.Stats do
   # flight by key alone and ignores the fallback closure
   # (`deps/cachex/lib/cachex/services/courier.ex:60-62`), so a second caller
   # with a different closure for the same key never runs its own and is handed
-  # the first one's answer. `outcomes/2` and `error_signatures/2` are safe
-  # because their key prefixes differ.
+  # the first one's answer. `outcomes/2`, `error_signatures/2` and `runs/2` are
+  # safe because their key prefixes differ.
   defp cached({_slice, workflow_id, _days} = key, fun) do
-    key = Tuple.insert_at(key, 3, change_marker(workflow_id))
+    key
+    |> Tuple.insert_at(3, change_marker(workflow_id))
+    |> cached_until_ttl(fun)
+  end
 
+  defp cached_until_ttl(key, fun, ttl \\ @ttl) do
     case Cachex.fetch(:workflow_stats, key, fn ->
-           {:commit, fun.(), expire: @ttl}
+           {:commit, fun.(), expire: ttl}
          end) do
       {tag, value} when tag in [:ok, :commit] ->
         value
