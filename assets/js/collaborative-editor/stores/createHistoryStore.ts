@@ -589,6 +589,32 @@ export const createHistoryStore = (
 
   let _channelProvider: PhoenixChannelProvider | null = null;
 
+  // Which attempt at viewing a run is the current one, and the channel it
+  // opened before it finished.
+  //
+  // These exist because `activeRunChannel` is only set once a fetch has come
+  // back, so it cannot answer "is an attempt already running?". Two calls for
+  // the same run both passed the idempotency guard, both opened a channel, and
+  // the abandoned one's request stayed pending. When it eventually timed out it
+  // wrote "Failed to load run" over the view the second attempt had already
+  // loaded, because the run id it compared against was still the current one.
+  //
+  // Identity is the attempt, not the run: the same run can be opened twice.
+  let _runAttempt = 0;
+  let _pendingRunChannel: Channel | null = null;
+
+  // Ends whatever attempt is in flight: its channel goes, and the bumped token
+  // makes any reply already on its way land as stale.
+  const _abandonPendingRun = () => {
+    if (_pendingRunChannel) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      (_pendingRunChannel as any).leave();
+      _pendingRunChannel = null;
+    }
+
+    _runAttempt += 1;
+  };
+
   /**
    * Connect to Phoenix channel provider for real-time updates
    */
@@ -885,8 +911,12 @@ export const createHistoryStore = (
    * CRITICAL: Includes race condition prevention guards
    */
   const _viewRun = (runId: string): void => {
-    // GUARD 1: Idempotency - don't reconnect to same run
-    if (state.activeRunId === runId && state.activeRunChannel) {
+    // GUARD 1: Idempotency, whether the previous call finished or is still
+    // running. Asking for a run that is already loading is not a new request.
+    if (
+      state.activeRunId === runId &&
+      (state.activeRunChannel || _pendingRunChannel)
+    ) {
       logger.debug('Already connected to run', runId);
       return;
     }
@@ -896,14 +926,18 @@ export const createHistoryStore = (
       _switchingFromRun();
     }
 
+    // GUARD 3: any attempt still in flight is superseded by this one.
+    _abandonPendingRun();
+
     if (!_channelProvider?.socket) {
       logger.warn('Cannot view run - no channel provider');
       setActiveRunError('No connection available');
       return;
     }
 
-    // Capture runId in closure to detect stale responses
-    const requestedRunId = runId;
+    // This attempt's identity. Every callback below checks it, rather than the
+    // run id, so a superseded attempt at the same run is still recognised.
+    const attempt = _runAttempt;
 
     state = produce(state, draft => {
       draft.activeRunId = runId;
@@ -934,14 +968,15 @@ export const createHistoryStore = (
 
     // Join channel and fetch initial data
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    _pendingRunChannel = channel;
+
     const channelJoin = (channel as any).join();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     channelJoin.receive('ok', () => {
-      // GUARD 3: Ignore stale responses from previous requests
-      if (state.activeRunId !== requestedRunId) {
+      // Ignore a response this attempt is no longer the owner of.
+      if (attempt !== _runAttempt) {
         logger.debug('Ignoring stale run response', {
-          received: requestedRunId,
-          current: state.activeRunId,
+          runId,
         });
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
         (channel as any).leave(); // Clean up the stale channel
@@ -953,9 +988,11 @@ export const createHistoryStore = (
       // Fetch initial run data
       void channelRequest<{ run: unknown }>(channel, 'fetch:run', {})
         .then(response => {
-          // Double-check we're still viewing this run
-          if (state.activeRunId === requestedRunId) {
+          // Double-check this attempt is still the current one
+          if (attempt === _runAttempt) {
             handleRunReceived(response.run);
+
+            _pendingRunChannel = null;
 
             // Only set channel after successful fetch
             state = produce(state, draft => {
@@ -970,8 +1007,10 @@ export const createHistoryStore = (
           return undefined;
         })
         .catch(error => {
-          // Only update error if still waiting for this run
-          if (state.activeRunId === requestedRunId) {
+          // Only report a failure this attempt still owns. A superseded one
+          // whose request times out later must not overwrite a loaded view.
+          if (attempt === _runAttempt) {
+            _pendingRunChannel = null;
             logger.error('Failed to fetch run', error);
             setActiveRunError(
               `Failed to load run: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -982,8 +1021,9 @@ export const createHistoryStore = (
     });
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     channelJoin.receive('error', (error: any) => {
-      // Only update error if still waiting for this run
-      if (state.activeRunId === requestedRunId) {
+      // Only report a failure this attempt still owns.
+      if (attempt === _runAttempt) {
+        _pendingRunChannel = null;
         logger.error('Failed to join run channel', error);
         setActiveRunError(
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -995,6 +1035,8 @@ export const createHistoryStore = (
   };
 
   const _switchingFromRun = () => {
+    _abandonPendingRun();
+
     // Leave the curren run channel before switch happens
     if (state.activeRunChannel) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
@@ -1014,6 +1056,8 @@ export const createHistoryStore = (
    * Disconnect from active run and clean up channel
    */
   const _closeRunViewer = (): void => {
+    _abandonPendingRun();
+
     // Leave channel before updating state (can't call methods on draft)
     if (state.activeRunChannel) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
