@@ -285,6 +285,11 @@ export interface CreateSessionContextOptions {
   project?: Partial<ProjectContext> | null;
   config?: Partial<AppConfig>;
   permissions?: Partial<Permissions>;
+  /**
+   * The lifecycle lock. Omit to stand in for an older node that does not send
+   * it, which the schema then defaults to false.
+   */
+  content_locked?: boolean;
   latest_snapshot_lock_version?: number;
   project_repo_connection?: Partial<ProjectRepoConnection> | null;
   webhook_auth_methods?: WebhookAuthMethod[];
@@ -409,6 +414,12 @@ export function createSessionContext(
   // Only add limits if provided
   if (limits !== undefined) {
     response.limits = limits;
+  }
+
+  // Only add the lifecycle lock if provided, so omitting it reproduces an older
+  // node that does not send the field at all.
+  if (options.content_locked !== undefined) {
+    response.content_locked = options.content_locked;
   }
 
   return response;

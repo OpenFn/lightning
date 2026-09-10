@@ -6,8 +6,8 @@ import {
   removeGhostEdges,
 } from '../utils/workflowGraph';
 
-import { usePermissions } from './useSessionContext';
-import { useWorkflowState } from './useWorkflow';
+import { useContentLocked, usePermissions } from './useSessionContext';
+import { CONTENT_LOCKED_MESSAGE, useWorkflowState } from './useWorkflow';
 
 interface DeleteValidation {
   canDelete: boolean;
@@ -25,6 +25,7 @@ interface DeleteValidation {
  */
 export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
   const permissions = usePermissions();
+  const contentLocked = useContentLocked();
 
   const edges = useWorkflowState(state => state.edges, []);
   const jobs = useWorkflowState(state => state.jobs, []);
@@ -45,6 +46,10 @@ export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
     if (!canEdit) {
       canDelete = false;
       disableReason = "You don't have permission to edit this workflow";
+    } else if (contentLocked) {
+      // Deleting a step changes the content, which a live workflow refuses.
+      canDelete = false;
+      disableReason = CONTENT_LOCKED_MESSAGE;
     } else if (hasChildEdges) {
       canDelete = false;
       disableReason = 'Cannot delete: other jobs depend on this step';
@@ -59,5 +64,5 @@ export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
       hasChildEdges,
       isFirstJob,
     };
-  }, [permissions, hasChildEdges, isFirstJob]);
+  }, [permissions, contentLocked, hasChildEdges, isFirstJob]);
 };

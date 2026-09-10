@@ -103,6 +103,22 @@ import { wrapStoreWithDevTools } from './devtools';
 const logger = _logger.ns('SessionContextStore').seal();
 
 /**
+ * Whether this person may change the workflow's content right now.
+ *
+ * Both halves are needed and neither implies the other: the role says whether
+ * they may edit at all, and the lifecycle lock says whether the content may
+ * change. Answering it in one place keeps the callers from each remembering to
+ * ask twice, which is how a live workflow's local document ended up accepting
+ * writes the server then refused.
+ *
+ * This is not the same question as "is the editor read-only" — that also covers
+ * reading the past and an unsaved new workflow, and lives in
+ * `useWorkflowReadOnly`.
+ */
+export const selectCanEditContent = (state: SessionContextState): boolean =>
+  (state.permissions?.can_edit_workflow ?? false) && !state.contentLocked;
+
+/**
  * Creates a session context store instance with useSyncExternalStore + Immer pattern
  */
 export const createSessionContextStore = (
@@ -115,6 +131,7 @@ export const createSessionContextStore = (
       project: null,
       config: null,
       permissions: null,
+      contentLocked: false,
       latestSnapshotLockVersion: null,
       latestSnapshotId: null,
       projectRepoConnection: null,
@@ -186,6 +203,7 @@ export const createSessionContextStore = (
         draft.workflow = sessionContext.workflow ?? null;
         draft.config = sessionContext.config;
         draft.permissions = sessionContext.permissions;
+        draft.contentLocked = sessionContext.content_locked;
         draft.latestSnapshotLockVersion =
           sessionContext.latest_snapshot_lock_version;
         draft.latestSnapshotId = sessionContext.latest_snapshot_id ?? null;

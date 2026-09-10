@@ -122,6 +122,17 @@ export const SessionContextResponseSchema = z.object({
   project: ProjectContextSchema.nullable(),
   config: AppConfigSchema,
   permissions: PermissionsSchema,
+  /**
+   * Whether the workflow's content is frozen by its lifecycle, which a live
+   * workflow outside a sandbox is. Separate from `permissions` because it says
+   * nothing about the person: an editor reading a live workflow is still an
+   * editor, and the two facts want two different things said on screen.
+   *
+   * Defaults false for an older node during a rolling deploy. That node folds
+   * the lock into `can_edit_workflow` instead, so the view still comes out
+   * read-only; only the wording is less specific.
+   */
+  content_locked: z.boolean().optional().default(false),
   latest_snapshot_lock_version: z.number().int().nullable(),
   /**
    * The snapshot holding the content that is live right now. Compared against a
@@ -148,6 +159,7 @@ export interface SessionContextState {
   workflow: BaseWorkflow | null;
   config: AppConfig | null;
   permissions: Permissions | null;
+  contentLocked: boolean;
   latestSnapshotLockVersion: number | null;
   latestSnapshotId: string | null;
   projectRepoConnection: ProjectRepoConnection | null;

@@ -82,7 +82,7 @@ defmodule LightningWeb.WorkflowChannel do
 
       project_user = Lightning.Projects.get_project_user(project, user)
 
-      permissions = user_permissions(user, project_user, project, workflow)
+      permissions = user_permissions(user, project_user, project)
 
       # Subscribe to work order events for this workflow's project
       WorkOrders.subscribe(project.id)
@@ -100,7 +100,8 @@ defmodule LightningWeb.WorkflowChannel do
          project: project,
          session_pid: session_pid,
          project_user: project_user,
-         workflow_kind: workflow_kind
+         workflow_kind: workflow_kind,
+         content_locked: content_locked?(workflow, project)
        )
        |> assign(permissions)}
     else
@@ -1204,8 +1205,7 @@ defmodule LightningWeb.WorkflowChannel do
       when event in [ProjectUserAdded, ProjectUserRoleChanged] do
     project_user = Lightning.Projects.get_project_user(project, user)
 
-    permissions =
-      user_permissions(user, project_user, project, socket.assigns.workflow)
+    permissions = user_permissions(user, project_user, project)
 
     socket =
       socket
@@ -1274,7 +1274,7 @@ defmodule LightningWeb.WorkflowChannel do
          %{workflow: %{state: now} = workflow}
        )
        when was != now do
-    socket = refresh_lifecycle_permissions(socket, workflow)
+    socket = refresh_lifecycle_lock(socket, workflow)
     push(socket, "session_context_updated", build_session_context(socket))
 
     # Only the sockets that did not act reach this clause, so this needs no
@@ -1433,6 +1433,7 @@ defmodule LightningWeb.WorkflowChannel do
       project: render_project_context(project),
       config: render_config_context(),
       permissions: permissions,
+      content_locked: socket.assigns.content_locked,
       latest_snapshot_lock_version: latest_lock_version,
       latest_snapshot_id: Snapshot.current_id_for(workflow.id),
       project_repo_connection: render_repo_connection(project_repo_connection),
@@ -1587,22 +1588,30 @@ defmodule LightningWeb.WorkflowChannel do
     ])
   end
 
+  # Whether the workflow's content is frozen by its lifecycle: a live workflow
+  # is read-only on its own project, and stays editable inside a sandbox.
+  #
+  # Kept apart from `can_edit_workflow` on purpose. This is a fact about the
+  # workflow, not about the person, and an editor looking at a live workflow is
+  # still an editor. Folding the two together answered "you cannot edit" to both
+  # a viewer and an editor and left the client guessing which it meant, which it
+  # did by reading `can_provision_sandbox` as a stand-in for "is an editor".
+  #
+  # This assign gates the inbound yjs writes as well as the client's UI, so the
+  # lock is enforced on the server rather than advised to the client.
+  defp content_locked?(workflow, project) do
+    not Lightning.Workflows.editable_state?(workflow, project)
+  end
+
   # Without a membership row the policy needs the project itself to weigh up
   # support access. Resolve the standing once and decide all three questions
   # against it — three `Permissions.can?/4` calls would resolve three Scopes for
   # one unchanging answer.
-  #
-  # Editing also depends on the workflow's lifecycle: a live workflow is
-  # read-only on its own project, and stays editable inside a sandbox. This
-  # assign gates the inbound yjs writes as well as the client's UI, so the
-  # lifecycle lock is enforced on the server rather than advised to the client.
-  defp user_permissions(user, project_user, project, workflow) do
+  defp user_permissions(user, project_user, project) do
     case Scope.fetch(user, project_user || project) do
       {:ok, scope} ->
         %{
-          can_edit_workflow:
-            ProjectUsers.permitted?(:edit_workflow, scope) and
-              Lightning.Workflows.editable_state?(workflow, project),
+          can_edit_workflow: ProjectUsers.permitted?(:edit_workflow, scope),
           can_run_workflow: ProjectUsers.permitted?(:run_workflow, scope),
           can_write_webhook_auth_method:
             ProjectUsers.permitted?(:write_webhook_auth_method, scope),
@@ -1867,11 +1876,15 @@ defmodule LightningWeb.WorkflowChannel do
   # document update.
   @read_only_frame_types [:sync_step1, :awareness, :query_awareness]
 
-  # Decides whether an inbound Yjs frame may reach the shared document. A user
-  # who can edit the workflow may send anything; a user with view-only access
-  # may send only the read-safe frames above, so they cannot change the
-  # workflow that every collaborator in the room shares.
-  defp forward_yjs_message?(_chunk, %{assigns: %{can_edit_workflow: true}}) do
+  # Decides whether an inbound Yjs frame may reach the shared document. Both
+  # conditions are named here rather than folded into one assign, because
+  # dropping either would let writes into the document every collaborator in the
+  # room shares: the role says whether this person may edit at all, and the lock
+  # says whether the workflow's content may change right now. A user who fails
+  # either may send only the read-safe frames above.
+  defp forward_yjs_message?(_chunk, %{
+         assigns: %{can_edit_workflow: true, content_locked: false}
+       }) do
     true
   end
 
@@ -1911,7 +1924,7 @@ defmodule LightningWeb.WorkflowChannel do
 
       # Editability folds in the lifecycle lock and is resolved at join, so going
       # live makes it stale on every socket in the room.
-      socket = refresh_lifecycle_permissions(socket, workflow)
+      socket = refresh_lifecycle_lock(socket, workflow)
       push(socket, "session_context_updated", build_session_context(socket))
 
       {:reply, {:ok, %{lock_version: workflow.lock_version, workflow: workflow}},
@@ -1921,14 +1934,13 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Re-assigns the workflow too, so later authorization reads the new state.
-  defp refresh_lifecycle_permissions(socket, workflow) do
-    %{current_user: user, project_user: project_user, project: project} =
-      socket.assigns
-
+  # Re-assigns the workflow too, so later authorization reads the new state. The
+  # role is untouched: a lifecycle transition moves the lock, never the person's
+  # standing in the project.
+  defp refresh_lifecycle_lock(socket, workflow) do
     socket
     |> assign(:workflow, workflow)
-    |> assign(user_permissions(user, project_user, project, workflow))
+    |> assign(:content_locked, content_locked?(workflow, socket.assigns.project))
   end
 
   # Content edits (save, save-and-sync, reset) are gated on top of the role

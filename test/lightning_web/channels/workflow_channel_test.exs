@@ -77,25 +77,29 @@ defmodule LightningWeb.WorkflowChannelTest do
       await_channel_processed(colleague)
       assert workflow_name(session_pid) == "Edited while draft"
 
-      original_name = workflow_name(session_pid)
-
       ref = push(author, "go_live", %{})
       assert_reply ref, :ok, _reply
       await_channel_processed(colleague)
 
-      # Editability folds in the lifecycle lock and was resolved at join, so
-      # only the socket that acted learned about it. The colleague's gate stayed
-      # open: their frames kept reaching the document while the save they
-      # eventually pressed was refused against the row, with nothing on screen
-      # to say why. The gate lives in the other channel's own state, which is
-      # the only honest place to read it.
-      assert %{assigns: %{can_edit_workflow: false}} =
+      # The lock was resolved at join, so only the socket that acted learned
+      # about it. The colleague's gate stayed open: their frames kept reaching
+      # the document while the save they eventually pressed was refused against
+      # the row, with nothing on screen to say why. The gate lives in the other
+      # channel's own state, which is the only honest place to read it.
+      #
+      # The role is untouched by the transition. Reading the gate off
+      # can_edit_workflow alone would now let these frames through.
+      assert %{assigns: %{can_edit_workflow: true, content_locked: true}} =
                channel_socket(colleague)
 
-      # The document is shared, so going live published whatever the colleague
-      # had typed. Their gate closing is what tells them, through a fresh
-      # session context, rather than leaving them to discover it on save.
-      _ = {session_pid, original_name}
+      # Negative control, which is the part that matters: the same frame that
+      # landed a moment ago must not land now.
+      blocked =
+        build_name_mutation(session_pid, :sync_update, "Edited while live")
+
+      push(colleague, "yjs", {:binary, blocked})
+      await_channel_processed(colleague)
+      refute workflow_name(session_pid) == "Edited while live"
     end
 
     test "tells the other sockets, rather than letting them find out on save", %{
@@ -125,16 +129,45 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert "workflow_saved" in LightningWeb.WorkflowChannel.__intercepts__()
     end
 
-    test "go_live pushes a session context whose permissions reflect the new state",
+    test "go_live pushes a session context carrying the new lifecycle lock",
          %{socket: socket} do
-      # can_edit_workflow folds in the lifecycle lock and is resolved at join, so
-      # without a refresh the client keeps Save/Run until a reload.
+      # The lock is resolved at join, so without a refresh the client keeps
+      # Save/Run until a reload.
       ref = push(socket, "go_live", %{})
       assert_reply ref, :ok, _
 
+      # Going live locks the content and leaves the role alone. An editor is
+      # still an editor, which is what lets the client say "this workflow is
+      # live, here is the way out" rather than "you lack permission".
       assert_push "session_context_updated", %{
-        permissions: %{can_edit_workflow: false}
+        content_locked: true,
+        permissions: %{can_edit_workflow: true}
       }
+    end
+
+    test "a viewer is told they cannot edit, whatever the lifecycle says" do
+      viewer = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: viewer, role: :viewer}])
+
+      workflow = insert(:workflow, project: project, state: :draft)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      # A draft, so nothing is locked. The role is the only reason this person
+      # cannot edit, and it is reported as such rather than as a lock.
+      refute socket.assigns.can_edit_workflow
+      refute socket.assigns.content_locked
     end
 
     test "go_live is rejected for a user without edit access" do

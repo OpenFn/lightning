@@ -157,6 +157,24 @@ export const usePermissions = (): Permissions | null => {
 };
 
 /**
+ * Whether the workflow's content is frozen by its lifecycle. A live workflow
+ * outside a sandbox is locked for everyone, whatever their role, so this is a
+ * separate question from `usePermissions`.
+ */
+export const useContentLocked = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectContentLocked = sessionContextStore.withSelector(
+    state => state.contentLocked
+  );
+
+  return useSyncExternalStore(
+    sessionContextStore.subscribe,
+    selectContentLocked
+  );
+};
+
+/**
  * Hook to get the session-context workflow, which carries the lifecycle
  * `state` (`draft` | `live`). Returns null if not loaded yet.
  */

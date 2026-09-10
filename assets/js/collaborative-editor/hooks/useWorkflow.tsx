@@ -55,11 +55,11 @@ import {
   useSession,
 } from './useSession';
 import {
+  useContentLocked,
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useLimits,
   usePermissions,
-  useSessionWorkflow,
   useUser,
   useWorkflowTemplate,
 } from './useSessionContext';
@@ -73,6 +73,14 @@ const logger = _logger.ns('useWorkflow').seal();
 const SAVE_WORKFLOW_ERROR_TOAST_ID = 'save-workflow-error';
 
 export type SaveNotifyLevel = 'all' | 'error-only' | 'none';
+
+/**
+ * What we say when the lifecycle is the only thing in the way. Shared, because
+ * the same sentence answers "why can't I save", "why is this read-only" and
+ * "why can't I delete this step", and three copies of it would drift.
+ */
+export const CONTENT_LOCKED_MESSAGE =
+  'This workflow is live. Switch to draft or edit in a sandbox to make changes.';
 
 export interface SaveWorkflowOptions {
   /**
@@ -869,6 +877,7 @@ const useWorkflowConditions = () => {
 
   const hasEditPermission = permissions?.can_edit_workflow ?? false;
   const hasRunPermission = permissions?.can_run_workflow ?? false;
+  const contentLocked = useContentLocked();
   const isConnected = isSynced;
   const isDeleted = workflow !== null && workflow.deleted_at !== null;
 
@@ -882,6 +891,7 @@ const useWorkflowConditions = () => {
     isConnected,
     isDeleted,
     isPinnedView,
+    contentLocked,
   };
 };
 
@@ -899,8 +909,13 @@ const useWorkflowConditions = () => {
  * 4. Workflow deletion state (deleted_at)
  */
 export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
-  const { hasEditPermission, isConnected, isDeleted, isPinnedView } =
-    useWorkflowConditions();
+  const {
+    hasEditPermission,
+    isConnected,
+    isDeleted,
+    isPinnedView,
+    contentLocked,
+  } = useWorkflowConditions();
 
   // Check if any apply operation in progress
   const isApplyingJobCode = useWorkflowState(state => state.isApplyingJobCode);
@@ -921,6 +936,9 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canSave = false;
     tooltipMessage = 'Workflow has been deleted';
+  } else if (contentLocked) {
+    canSave = false;
+    tooltipMessage = CONTENT_LOCKED_MESSAGE;
   } else if (isPinnedView) {
     canSave = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
@@ -1011,10 +1029,10 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
  *
  * Checks (in priority order):
  * 1. Workflow deletion state (deleted_at)
- * 2. Live workflow lock (state === 'live', which the server surfaces as
- *    can_edit_workflow: false on the main project)
- * 3. User permissions (can_edit_workflow)
- * 4. Version pinning (any ?v parameter in URL)
+ * 2. User permissions (can_edit_workflow), asked before the lock so a viewer is
+ *    never pointed at actions only an editor can take
+ * 3. The lifecycle lock (content_locked), which is an editor's way out
+ * 4. Reading the past (a pinned release, a pinned snapshot, or a run's view)
  * 5. Template preview (new workflow with selected template)
  *
  * Note: Connection state does not affect read-only status. Offline editing
@@ -1041,11 +1059,9 @@ export const useWorkflowReadOnly = (): {
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
 
-  // The session-context workflow carries the lifecycle state. A live workflow
-  // on the main project is locked read-only, which the server expresses as
-  // can_edit_workflow: false; reading the state lets us explain *why*.
-  const sessionWorkflow = useSessionWorkflow();
-  const isLive = sessionWorkflow?.state === 'live';
+  // The lifecycle lock, told to us as its own fact rather than inferred from a
+  // permission. The server owns the rule (live, and not inside a sandbox).
+  const contentLocked = useContentLocked();
 
   const { isPinnedVersion, isViewingAsExecuted } = usePinnedView();
 
@@ -1073,25 +1089,22 @@ export const useWorkflowReadOnly = (): {
       reason: 'deleted',
     };
   }
+  // A viewer is a viewer whatever the lifecycle is doing, so the role is
+  // answered first. Pointing someone at "switch to draft or edit in a sandbox"
+  // when they could not edit a draft either would send them nowhere.
   if (!hasPermission) {
-    // A live workflow is read-only for everyone on the main project. Show the
-    // actionable "switch to draft or edit in a sandbox" message only to users
-    // who can actually take those actions (editor+, surfaced as
-    // can_provision_sandbox). A plain viewer, who has no edit capability at all,
-    // gets the generic permission message instead of being pointed at actions
-    // they cannot perform.
-    if (isLive && permissions.can_provision_sandbox) {
-      return {
-        isReadOnly: true,
-        tooltipMessage:
-          'This workflow is live. Switch to draft or edit in a sandbox to make changes.',
-        reason: 'live',
-      };
-    }
     return {
       isReadOnly: true,
       tooltipMessage: 'You do not have permission to edit this workflow',
       reason: 'no_permission',
+    };
+  }
+  // An editor stopped only by the lifecycle, who therefore has somewhere to go.
+  if (contentLocked) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: CONTENT_LOCKED_MESSAGE,
+      reason: 'live',
     };
   }
   if (isViewingAsExecuted) {

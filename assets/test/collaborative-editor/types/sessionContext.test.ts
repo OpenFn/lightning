@@ -363,8 +363,44 @@ describe.concurrent('SessionContextResponseSchema', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual(validResponse);
+      // The lifecycle lock defaults in, so the parsed object carries it even
+      // when the node did not send it.
+      expect(result.data).toEqual({ ...validResponse, content_locked: false });
     }
+  });
+
+  test('reads the lifecycle lock, and defaults it to unlocked when absent', () => {
+    // A live workflow is locked for everyone. The field is separate from
+    // `permissions` because it says nothing about the person, and it defaults
+    // to false so an older node that does not send it still parses: that node
+    // folds the lock into can_edit_workflow, so the view stays read-only.
+    const base = {
+      user: null,
+      project: null,
+      config: { require_email_verification: false },
+      permissions: {
+        can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
+      },
+      latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
+      workflow_template: null,
+    };
+
+    const locked = SessionContextResponseSchema.safeParse({
+      ...base,
+      content_locked: true,
+    });
+    expect(locked.success).toBe(true);
+    if (locked.success) expect(locked.data.content_locked).toBe(true);
+
+    const absent = SessionContextResponseSchema.safeParse(base);
+    expect(absent.success).toBe(true);
+    if (absent.success) expect(absent.data.content_locked).toBe(false);
   });
 
   test('defaults suppress_enable_trigger_warning to false when omitted and honors a true value', () => {
