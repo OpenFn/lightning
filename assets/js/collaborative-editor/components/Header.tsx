@@ -14,7 +14,7 @@ import {
   usePermissions,
   useProjectRepoConnection,
   useSessionWorkflow,
-  useVersions,
+  useReleases,
 } from '../hooks/useSessionContext';
 import { useUICommands } from '../hooks/useUI';
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
@@ -295,9 +295,9 @@ export function Header({
   // button does not say so, because retrying always means that, but the
   // confirmation names the version so the record of what just ran is clear.
   const latestSnapshotId = useLatestSnapshotId();
-  const versions = useVersions();
+  const releases = useReleases();
   const liveVersionNumber =
-    versions.find(
+    releases.find(
       version =>
         version.snapshot_id != null && version.snapshot_id === latestSnapshotId
     )?.version_number ?? null;

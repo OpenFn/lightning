@@ -5,10 +5,10 @@
  *
  * Test Coverage:
  * - Renders with loading state initially
- * - Fetches versions when dropdown opens
- * - Displays versions after successful fetch
- * - Does not refetch if versions already loaded
- * - Shows error toast when versionsError is set
+ * - Fetches releases when dropdown opens
+ * - Displays releases after successful fetch
+ * - Does not refetch if releases already loaded
+ * - Shows error toast when releasesError is set
  * - Handles version selection correctly
  * - Newest release returns to live (clears the pin); older releases pin by version_number
  * - Renders the "Version history" list: v-pill, initials avatar, kind sentence, absolute date
@@ -23,30 +23,30 @@ import { VersionDropdown } from '../../../js/collaborative-editor/components/Ver
 import * as useHistoryModule from '../../../js/collaborative-editor/hooks/useHistory';
 import * as useSessionContextModule from '../../../js/collaborative-editor/hooks/useSessionContext';
 import * as notificationsModule from '../../../js/collaborative-editor/lib/notifications';
-import type { Version } from '../../../js/collaborative-editor/types/sessionContext';
+import type { Release } from '../../../js/collaborative-editor/types/sessionContext';
 
 // Mock the hooks
-const mockUseVersions = vi.spyOn(useSessionContextModule, 'useVersions');
+const mockUseReleases = vi.spyOn(useSessionContextModule, 'useReleases');
 const mockUseRunSummary = vi.spyOn(useHistoryModule, 'useRunSummary');
 const mockUseLatestSnapshotId = vi.spyOn(
   useSessionContextModule,
   'useLatestSnapshotId'
 );
-const mockUseVersionsLoaded = vi.spyOn(
+const mockUseReleasesLoaded = vi.spyOn(
   useSessionContextModule,
-  'useVersionsLoaded'
+  'useReleasesLoaded'
 );
-const mockUseVersionsLoading = vi.spyOn(
+const mockUseReleasesLoading = vi.spyOn(
   useSessionContextModule,
-  'useVersionsLoading'
+  'useReleasesLoading'
 );
-const mockUseVersionsError = vi.spyOn(
+const mockUseReleasesError = vi.spyOn(
   useSessionContextModule,
-  'useVersionsError'
+  'useReleasesError'
 );
-const mockUseRequestVersions = vi.spyOn(
+const mockUseRequestReleases = vi.spyOn(
   useSessionContextModule,
-  'useRequestVersions'
+  'useRequestReleases'
 );
 
 // Mock notifications
@@ -77,7 +77,7 @@ const baseRunSummary = () => ({
 });
 
 // Mock version data factory matching the release payload shape
-const createMockVersion = (overrides?: Partial<Version>): Version => ({
+const createMockVersion = (overrides?: Partial<Release>): Release => ({
   version_number: 1,
   kind: 'go_live',
   inserted_at: '2024-01-13T10:30:00Z',
@@ -106,13 +106,13 @@ describe('VersionDropdown', () => {
     vi.clearAllMocks();
 
     // Default mock implementations
-    mockUseVersions.mockReturnValue([]);
+    mockUseReleases.mockReturnValue([]);
     mockUseRunSummary.mockReturnValue(undefined);
     mockUseLatestSnapshotId.mockReturnValue(null);
-    mockUseVersionsLoaded.mockReturnValue(false);
-    mockUseVersionsLoading.mockReturnValue(false);
-    mockUseVersionsError.mockReturnValue(null);
-    mockUseRequestVersions.mockReturnValue(mockRequestVersions);
+    mockUseReleasesLoaded.mockReturnValue(false);
+    mockUseReleasesLoading.mockReturnValue(false);
+    mockUseReleasesError.mockReturnValue(null);
+    mockUseRequestReleases.mockReturnValue(mockRequestVersions);
   });
 
   afterEach(() => {
@@ -357,12 +357,12 @@ describe('VersionDropdown', () => {
     });
   });
 
-  describe('fetching versions', () => {
-    test('fetches versions when dropdown opens for the first time', async () => {
+  describe('fetching releases', () => {
+    test('fetches releases when dropdown opens for the first time', async () => {
       const user = userEvent.setup();
 
-      mockUseVersions.mockReturnValue([]);
-      mockUseVersionsLoading.mockReturnValue(false);
+      mockUseReleases.mockReturnValue([]);
+      mockUseReleasesLoading.mockReturnValue(false);
 
       render(
         <VersionDropdown
@@ -377,7 +377,7 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Should call requestVersions
+      // Should call requestReleases
       expect(mockRequestVersions).toHaveBeenCalledOnce();
     });
 
@@ -386,9 +386,9 @@ describe('VersionDropdown', () => {
 
       let loaded = false;
       let loading = false;
-      mockUseVersions.mockReturnValue([]);
-      mockUseVersionsLoaded.mockImplementation(() => loaded);
-      mockUseVersionsLoading.mockImplementation(() => loading);
+      mockUseReleases.mockReturnValue([]);
+      mockUseReleasesLoaded.mockImplementation(() => loaded);
+      mockUseReleasesLoading.mockImplementation(() => loading);
       mockRequestVersions.mockImplementation(() => {
         loading = true;
         return Promise.resolve();
@@ -421,10 +421,10 @@ describe('VersionDropdown', () => {
       expect(screen.getByText('No published versions')).toBeInTheDocument();
     });
 
-    test('does not refetch if versions already loaded', async () => {
+    test('does not refetch if releases already loaded', async () => {
       const user = userEvent.setup();
 
-      const mockVersions: Version[] = [
+      const mockVersions: Release[] = [
         createMockVersion({
           lock_version: 5,
           restored_from_version_number: null,
@@ -439,9 +439,9 @@ describe('VersionDropdown', () => {
         }),
       ];
 
-      mockUseVersions.mockReturnValue(mockVersions);
-      mockUseVersionsLoaded.mockReturnValue(true);
-      mockUseVersionsLoading.mockReturnValue(false);
+      mockUseReleases.mockReturnValue(mockVersions);
+      mockUseReleasesLoaded.mockReturnValue(true);
+      mockUseReleasesLoading.mockReturnValue(false);
 
       render(
         <VersionDropdown
@@ -456,15 +456,15 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Should NOT call requestVersions (versions already loaded)
+      // Should NOT call requestReleases (releases already loaded)
       expect(mockRequestVersions).not.toHaveBeenCalled();
     });
 
     test('does not fetch if already loading', async () => {
       const user = userEvent.setup();
 
-      mockUseVersions.mockReturnValue([]);
-      mockUseVersionsLoading.mockReturnValue(true);
+      mockUseReleases.mockReturnValue([]);
+      mockUseReleasesLoading.mockReturnValue(true);
 
       render(
         <VersionDropdown
@@ -479,15 +479,15 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Should NOT call requestVersions (already loading)
+      // Should NOT call requestReleases (already loading)
       expect(mockRequestVersions).not.toHaveBeenCalled();
     });
 
     test('shows loading message while fetching', async () => {
       const user = userEvent.setup();
 
-      mockUseVersions.mockReturnValue([]);
-      mockUseVersionsLoading.mockReturnValue(true);
+      mockUseReleases.mockReturnValue([]);
+      mockUseReleasesLoading.mockReturnValue(true);
 
       render(
         <VersionDropdown
@@ -507,11 +507,11 @@ describe('VersionDropdown', () => {
     });
   });
 
-  describe('displaying versions', () => {
-    test('displays versions after successful fetch', async () => {
+  describe('displaying releases', () => {
+    test('displays releases after successful fetch', async () => {
       const user = userEvent.setup();
 
-      const mockVersions: Version[] = [
+      const mockVersions: Release[] = [
         createMockVersion({
           version_number: 3,
           lock_version: 30,
@@ -535,7 +535,7 @@ describe('VersionDropdown', () => {
         }),
       ];
 
-      mockUseVersions.mockReturnValue(mockVersions);
+      mockUseReleases.mockReturnValue(mockVersions);
 
       render(
         <VersionDropdown
@@ -563,7 +563,7 @@ describe('VersionDropdown', () => {
     test('renders eyebrow title, action line, author, and promote source', async () => {
       const user = userEvent.setup();
 
-      const mockVersions: Version[] = [
+      const mockVersions: Release[] = [
         createMockVersion({
           version_number: 2,
           kind: 'promote',
@@ -586,7 +586,7 @@ describe('VersionDropdown', () => {
         }),
       ];
 
-      mockUseVersions.mockReturnValue(mockVersions);
+      mockUseReleases.mockReturnValue(mockVersions);
 
       render(
         <VersionDropdown
@@ -626,7 +626,7 @@ describe('VersionDropdown', () => {
     test('later go-live reads "Published from draft" rather than "Initial go-live"', async () => {
       const user = userEvent.setup();
 
-      mockUseVersions.mockReturnValue([
+      mockUseReleases.mockReturnValue([
         createMockVersion({
           version_number: 3,
           kind: 'go_live',
@@ -657,7 +657,7 @@ describe('VersionDropdown', () => {
     test('omits the author line when published_by is null, keeping the date', async () => {
       const user = userEvent.setup();
 
-      mockUseVersions.mockReturnValue([
+      mockUseReleases.mockReturnValue([
         createMockVersion({
           version_number: 1,
           kind: 'go_live',
@@ -688,8 +688,8 @@ describe('VersionDropdown', () => {
     test('shows "No published versions" when nothing has been published', async () => {
       const user = userEvent.setup();
 
-      mockUseVersions.mockReturnValue([]);
-      mockUseVersionsLoading.mockReturnValue(false);
+      mockUseReleases.mockReturnValue([]);
+      mockUseReleasesLoading.mockReturnValue(false);
 
       render(
         <VersionDropdown
@@ -713,7 +713,7 @@ describe('VersionDropdown', () => {
     test('shows the absolute date for each release', async () => {
       const user = userEvent.setup();
 
-      const mockVersions: Version[] = [
+      const mockVersions: Release[] = [
         createMockVersion({
           version_number: 1,
           lock_version: 20,
@@ -723,7 +723,7 @@ describe('VersionDropdown', () => {
         }),
       ];
 
-      mockUseVersions.mockReturnValue(mockVersions);
+      mockUseReleases.mockReturnValue(mockVersions);
 
       render(
         <VersionDropdown
@@ -748,7 +748,7 @@ describe('VersionDropdown', () => {
 
       // v1's snapshot lock_version (22) deliberately differs from its
       // version_number (1) to prove the checkmark keys on version_number.
-      const mockVersions: Version[] = [
+      const mockVersions: Release[] = [
         createMockVersion({
           version_number: 3,
           lock_version: 30,
@@ -767,7 +767,7 @@ describe('VersionDropdown', () => {
         }),
       ];
 
-      mockUseVersions.mockReturnValue(mockVersions);
+      mockUseReleases.mockReturnValue(mockVersions);
 
       // Pinned to version_number 1 via ?release=1
       pinVersion(1);
@@ -810,7 +810,7 @@ describe('VersionDropdown', () => {
     test('marks the row holding the live content', async () => {
       const user = userEvent.setup();
 
-      const mockVersions: Version[] = [
+      const mockVersions: Release[] = [
         createMockVersion({
           version_number: 3,
           lock_version: 30,
@@ -829,7 +829,7 @@ describe('VersionDropdown', () => {
         }),
       ];
 
-      mockUseVersions.mockReturnValue(mockVersions);
+      mockUseReleases.mockReturnValue(mockVersions);
       // The live document is still the content v3 published.
       mockUseLatestSnapshotId.mockReturnValue('snapshot-v3');
 
@@ -860,7 +860,7 @@ describe('VersionDropdown', () => {
     test('marks nothing when the live content has moved past the last publish', async () => {
       const user = userEvent.setup();
 
-      mockUseVersions.mockReturnValue([
+      mockUseReleases.mockReturnValue([
         createMockVersion({
           version_number: 3,
           lock_version: 30,
@@ -898,7 +898,7 @@ describe('VersionDropdown', () => {
         '/?as_run=abcdef12-3456-7890-abcd-ef1234567890'
       );
 
-      mockUseVersions.mockReturnValue([
+      mockUseReleases.mockReturnValue([
         createMockVersion({
           version_number: 3,
           lock_version: 30,
@@ -945,7 +945,7 @@ describe('VersionDropdown', () => {
     test('newest release is the first row with a green v-pill and no "latest" text', async () => {
       const user = userEvent.setup();
 
-      const mockVersions: Version[] = [
+      const mockVersions: Release[] = [
         createMockVersion({
           version_number: 5,
           lock_version: 50,
@@ -962,7 +962,7 @@ describe('VersionDropdown', () => {
         }),
       ];
 
-      mockUseVersions.mockReturnValue(mockVersions);
+      mockUseReleases.mockReturnValue(mockVersions);
 
       render(
         <VersionDropdown
@@ -995,7 +995,7 @@ describe('VersionDropdown', () => {
     test('calls onVersionSelect with "latest" when latest version clicked', async () => {
       const user = userEvent.setup();
 
-      const mockVersions: Version[] = [
+      const mockVersions: Release[] = [
         createMockVersion({
           lock_version: 5,
           restored_from_version_number: null,
@@ -1004,7 +1004,7 @@ describe('VersionDropdown', () => {
         }),
       ];
 
-      mockUseVersions.mockReturnValue(mockVersions);
+      mockUseReleases.mockReturnValue(mockVersions);
 
       render(
         <VersionDropdown
@@ -1031,7 +1031,7 @@ describe('VersionDropdown', () => {
     test('calls onVersionSelect with version_number when old version clicked', async () => {
       const user = userEvent.setup();
 
-      const mockVersions: Version[] = [
+      const mockVersions: Release[] = [
         createMockVersion({
           version_number: 2,
           lock_version: 50,
@@ -1048,7 +1048,7 @@ describe('VersionDropdown', () => {
         }),
       ];
 
-      mockUseVersions.mockReturnValue(mockVersions);
+      mockUseReleases.mockReturnValue(mockVersions);
 
       render(
         <VersionDropdown
@@ -1076,7 +1076,7 @@ describe('VersionDropdown', () => {
     test('closes dropdown after version selection', async () => {
       const user = userEvent.setup();
 
-      const mockVersions: Version[] = [
+      const mockVersions: Release[] = [
         createMockVersion({
           lock_version: 5,
           restored_from_version_number: null,
@@ -1085,7 +1085,7 @@ describe('VersionDropdown', () => {
         }),
       ];
 
-      mockUseVersions.mockReturnValue(mockVersions);
+      mockUseReleases.mockReturnValue(mockVersions);
 
       render(
         <VersionDropdown
@@ -1113,8 +1113,8 @@ describe('VersionDropdown', () => {
   });
 
   describe('error handling', () => {
-    test('shows error toast when versionsError is set', async () => {
-      mockUseVersionsError.mockReturnValue('Failed to load versions');
+    test('shows error toast when releasesError is set', async () => {
+      mockUseReleasesError.mockReturnValue('Failed to load versions');
 
       render(
         <VersionDropdown
@@ -1133,12 +1133,12 @@ describe('VersionDropdown', () => {
       });
     });
 
-    test('shows error message in dropdown when versionsError is set', async () => {
+    test('shows error message in dropdown when releasesError is set', async () => {
       const user = userEvent.setup();
 
-      mockUseVersions.mockReturnValue([]);
-      mockUseVersionsLoading.mockReturnValue(false);
-      mockUseVersionsError.mockReturnValue('Connection failed');
+      mockUseReleases.mockReturnValue([]);
+      mockUseReleasesLoading.mockReturnValue(false);
+      mockUseReleasesError.mockReturnValue('Connection failed');
 
       render(
         <VersionDropdown
@@ -1160,9 +1160,9 @@ describe('VersionDropdown', () => {
     test('error message has correct styling', async () => {
       const user = userEvent.setup();
 
-      mockUseVersions.mockReturnValue([]);
-      mockUseVersionsLoading.mockReturnValue(false);
-      mockUseVersionsError.mockReturnValue('Error message');
+      mockUseReleases.mockReturnValue([]);
+      mockUseReleasesLoading.mockReturnValue(false);
+      mockUseReleasesError.mockReturnValue('Error message');
 
       render(
         <VersionDropdown
@@ -1185,7 +1185,7 @@ describe('VersionDropdown', () => {
   describe('restoring a version', () => {
     // Three releases, newest first, matching what the channel sends.
     const threeVersions = () => {
-      mockUseVersions.mockReturnValue([
+      mockUseReleases.mockReturnValue([
         createMockVersion({
           version_number: 3,
           is_latest: true,
@@ -1299,7 +1299,7 @@ describe('VersionDropdown', () => {
     test('dropdown menu has correct role attributes', async () => {
       const user = userEvent.setup();
 
-      mockUseVersions.mockReturnValue([
+      mockUseReleases.mockReturnValue([
         createMockVersion({
           lock_version: 1,
           restored_from_version_number: null,
@@ -1329,7 +1329,7 @@ describe('VersionDropdown', () => {
     test('version items have menuitem role', async () => {
       const user = userEvent.setup();
 
-      mockUseVersions.mockReturnValue([
+      mockUseReleases.mockReturnValue([
         createMockVersion({
           lock_version: 2,
           restored_from_version_number: null,

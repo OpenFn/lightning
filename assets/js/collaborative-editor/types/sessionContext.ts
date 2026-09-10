@@ -62,7 +62,7 @@ export type WebhookAuthMethod = z.infer<typeof WebhookAuthMethodSchema>;
  * `version_number` (what the UI shows as vN); `lock_version` is retained as the
  * snapshot identifier the backend maps that version_number to.
  */
-export const VersionSchema = z.object({
+export const ReleaseSchema = z.object({
   version_number: z.number().int(),
   kind: z.string(),
   inserted_at: z.string(),
@@ -78,7 +78,7 @@ export const VersionSchema = z.object({
   is_latest: z.boolean(),
 });
 
-export type Version = z.infer<typeof VersionSchema>;
+export type Release = z.infer<typeof ReleaseSchema>;
 
 export const WorkflowTemplateSchema = z.object({
   id: uuidSchema,
@@ -152,15 +152,15 @@ export interface SessionContextState {
   latestSnapshotId: string | null;
   projectRepoConnection: ProjectRepoConnection | null;
   webhookAuthMethods: WebhookAuthMethod[];
-  versions: Version[];
+  releases: Release[];
   /**
-   * Whether a versions request has completed, successfully or not. Separate
+   * Whether a releases request has completed, successfully or not. Separate
    * from the list being empty: a workflow that has never been published has no
-   * versions, and reading "empty" as "not fetched yet" asks again forever.
+   * releases, and reading "empty" as "not fetched yet" asks again forever.
    */
-  versionsLoaded: boolean;
-  versionsLoading: boolean;
-  versionsError: string | null;
+  releasesLoaded: boolean;
+  releasesLoading: boolean;
+  releasesError: string | null;
   workflow_template: WorkflowTemplate | null;
   suppressEnableTriggerWarning: boolean;
   limits: Limits;
@@ -172,8 +172,8 @@ export interface SessionContextState {
 
 interface SessionContextCommands {
   requestSessionContext: () => Promise<void>;
-  requestVersions: () => Promise<void>;
-  clearVersions: () => void;
+  requestReleases: () => Promise<void>;
+  clearReleases: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;

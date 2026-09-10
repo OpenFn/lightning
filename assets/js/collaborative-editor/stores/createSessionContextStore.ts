@@ -91,7 +91,7 @@ import {
   type SessionContextState,
   type SessionContextStore,
   SessionContextResponseSchema,
-  VersionSchema,
+  ReleaseSchema,
   WebhookAuthMethodSchema,
   WorkflowTemplateSchema,
 } from '../types/sessionContext';
@@ -119,10 +119,10 @@ export const createSessionContextStore = (
       latestSnapshotId: null,
       projectRepoConnection: null,
       webhookAuthMethods: [],
-      versions: [],
-      versionsLoaded: false,
-      versionsLoading: false,
-      versionsError: null,
+      releases: [],
+      releasesLoaded: false,
+      releasesLoading: false,
+      releasesError: null,
       workflow_template: null,
       suppressEnableTriggerWarning: false,
       limits: {},
@@ -284,16 +284,16 @@ export const createSessionContextStore = (
   /**
    * Update latest snapshot lock version
    * Called when workflow is saved and backend returns new lock version
-   * Clears versions cache when lock version changes (not on initial set)
+   * Clears releases cache when lock version changes (not on initial set)
    */
   const setLatestSnapshotLockVersion = (lockVersion: number) => {
     state = produce(state, draft => {
       const previousLockVersion = draft.latestSnapshotLockVersion;
 
-      // Clear versions if lock version changed (not on initial set)
+      // Clear releases if lock version changed (not on initial set)
       if (previousLockVersion !== null && previousLockVersion !== lockVersion) {
-        draft.versions = [];
-        draft.versionsLoaded = false;
+        draft.releases = [];
+        draft.releasesLoaded = false;
       }
 
       draft.latestSnapshotLockVersion = lockVersion;
@@ -358,76 +358,76 @@ export const createSessionContextStore = (
   };
 
   /**
-   * Request workflow versions from server via channel
+   * Request workflow releases from server via channel
    */
-  const requestVersions = async (): Promise<void> => {
+  const requestReleases = async (): Promise<void> => {
     // Early return if already loading or no channel
-    if (state.versionsLoading || !_channelProvider?.channel) {
+    if (state.releasesLoading || !_channelProvider?.channel) {
       if (!_channelProvider?.channel) {
-        logger.warn('Cannot request versions - no channel connected');
+        logger.warn('Cannot request releases - no channel connected');
       }
       return;
     }
 
     state = produce(state, draft => {
-      draft.versionsLoading = true;
-      draft.versionsError = null;
+      draft.releasesLoading = true;
+      draft.releasesError = null;
     });
-    notify('requestVersions:start');
+    notify('requestReleases:start');
 
     try {
-      logger.debug('Requesting workflow versions');
-      const response = await channelRequest<{ versions: unknown[] }>(
+      logger.debug('Requesting workflow releases');
+      const response = await channelRequest<{ releases: unknown[] }>(
         _channelProvider.channel,
-        'request_versions',
+        'request_releases',
         {}
       );
 
-      // Validate versions array with Zod
-      const result = z.array(VersionSchema).safeParse(response.versions);
+      // Validate releases array with Zod
+      const result = z.array(ReleaseSchema).safeParse(response.releases);
 
       if (result.success) {
         state = produce(state, draft => {
-          draft.versions = result.data;
-          draft.versionsLoaded = true;
-          draft.versionsLoading = false;
-          draft.versionsError = null;
+          draft.releases = result.data;
+          draft.releasesLoaded = true;
+          draft.releasesLoading = false;
+          draft.releasesError = null;
         });
-        notify('requestVersions:success');
+        notify('requestReleases:success');
       } else {
         const errorMessage = `Invalid versions data: ${result.error.message}`;
-        logger.error('Failed to parse versions data', {
+        logger.error('Failed to parse releases data', {
           error: result.error,
           response,
         });
 
         state = produce(state, draft => {
-          draft.versionsError = errorMessage;
-          draft.versionsLoaded = true;
-          draft.versionsLoading = false;
+          draft.releasesError = errorMessage;
+          draft.releasesLoaded = true;
+          draft.releasesLoading = false;
         });
-        notify('requestVersions:error');
+        notify('requestReleases:error');
       }
     } catch (error) {
       logger.error('Versions request failed', error);
       state = produce(state, draft => {
-        draft.versionsError = 'Failed to load versions';
-        draft.versionsLoaded = true;
-        draft.versionsLoading = false;
+        draft.releasesError = 'Failed to load versions';
+        draft.releasesLoaded = true;
+        draft.releasesLoading = false;
       });
-      notify('requestVersions:error');
+      notify('requestReleases:error');
     }
   };
 
   /**
-   * Clear versions cache
+   * Clear releases cache
    */
-  const clearVersions = () => {
+  const clearReleases = () => {
     state = produce(state, draft => {
-      draft.versions = [];
-      draft.versionsLoaded = false;
+      draft.releases = [];
+      draft.releasesLoaded = false;
     });
-    notify('clearVersions');
+    notify('clearReleases');
   };
 
   // =============================================================================
@@ -674,8 +674,8 @@ export const createSessionContextStore = (
 
     // Commands (CQS pattern)
     requestSessionContext,
-    requestVersions,
-    clearVersions,
+    requestReleases,
+    clearReleases,
     setLoading,
     setError,
     clearError,

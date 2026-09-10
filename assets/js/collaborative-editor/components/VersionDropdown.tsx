@@ -6,15 +6,15 @@ import { cn } from '../../utils/cn';
 import { useRunSummary } from '../hooks/useHistory';
 import {
   useLatestSnapshotId,
-  useRequestVersions,
-  useVersions,
-  useVersionsError,
-  useVersionsLoaded,
-  useVersionsLoading,
+  useRequestReleases,
+  useReleases,
+  useReleasesError,
+  useReleasesLoaded,
+  useReleasesLoading,
 } from '../hooks/useSessionContext';
 import { notifications } from '../lib/notifications';
 import { usePinnedView } from '../lib/pinnedView';
-import type { Version } from '../types/sessionContext';
+import type { Release } from '../types/sessionContext';
 import { releaseActionLabel } from '../utils/releaseLabel';
 
 interface VersionDropdownProps {
@@ -37,13 +37,13 @@ export function VersionDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Get versions state from SessionContextStore
-  const versions = useVersions();
+  // Get releases state from SessionContextStore
+  const releases = useReleases();
   const latestSnapshotId = useLatestSnapshotId();
-  const isLoaded = useVersionsLoaded();
-  const isLoading = useVersionsLoading();
-  const versionsError = useVersionsError();
-  const requestVersions = useRequestVersions();
+  const isLoaded = useReleasesLoaded();
+  const isLoading = useReleasesLoading();
+  const releasesError = useReleasesError();
+  const requestReleases = useRequestReleases();
 
   // `?release=` carries a release version_number, not a snapshot lock_version.
   const {
@@ -76,7 +76,7 @@ export function VersionDropdown({
   // version that published it and ticks nothing when no version did, so the
   // chip and the tick are two readings of one value and cannot disagree.
   const viewedSnapshotId = isPinnedRelease
-    ? (versions.find(version => version.version_number === pinnedVersionNumber)
+    ? (releases.find(version => version.version_number === pinnedVersionNumber)
         ?.snapshot_id ?? null)
     : isAsRun
       ? (asRun?.snapshot_id ?? null)
@@ -129,28 +129,28 @@ export function VersionDropdown({
     }
   }, [isOpen]);
 
-  // Fetch versions when the dropdown opens, once. Asking because the list is
+  // Fetch releases when the dropdown opens, once. Asking because the list is
   // empty asks forever on a workflow that has never been published, since the
   // answer to that question is an empty list.
   useEffect(() => {
     if (isOpen && !isLoaded && !isLoading) {
-      void requestVersions();
+      void requestReleases();
     }
-  }, [isOpen, isLoaded, isLoading, requestVersions]);
+  }, [isOpen, isLoaded, isLoading, requestReleases]);
 
-  // Show error notification when versionsError is set
+  // Show error notification when releasesError is set
   useEffect(() => {
-    if (versionsError) {
+    if (releasesError) {
       notifications.alert({
         title: 'Failed to load versions',
         description: 'Please try again',
       });
     }
-  }, [versionsError]);
+  }, [releasesError]);
 
   // The newest release means "follow live", so it clears the pin rather than
   // pinning to itself.
-  const handleVersionClick = (version: Version) => {
+  const handleVersionClick = (version: Release) => {
     if (version.is_latest) {
       onVersionSelect('latest');
     } else {
@@ -192,11 +192,11 @@ export function VersionDropdown({
               <div className="px-4 py-2 text-sm text-gray-500">
                 Loading versions...
               </div>
-            ) : versionsError ? (
+            ) : releasesError ? (
               <div className="px-4 py-2 text-sm text-red-600">
-                {versionsError}
+                {releasesError}
               </div>
-            ) : versions.length === 0 ? (
+            ) : releases.length === 0 ? (
               <div className="px-4 py-2 text-sm text-gray-500">
                 No published versions
               </div>
@@ -206,7 +206,7 @@ export function VersionDropdown({
                   Version history
                 </p>
 
-                {versions.map(version => {
+                {releases.map(version => {
                   // Ticked when this version published the content on screen.
                   // Reading it as "nothing pinned, so it must be the newest"
                   // ticked a version you were not looking at: in a run view, and

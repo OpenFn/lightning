@@ -216,10 +216,10 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useAppConfig: () => ({
     require_email_verification: false,
   }),
-  useVersions: () => [],
-  useVersionsLoading: () => false,
-  useVersionsError: () => null,
-  useRequestVersions: () => vi.fn(),
+  useReleases: () => [],
+  useReleasesLoading: () => false,
+  useReleasesError: () => null,
+  useRequestReleases: () => vi.fn(),
 }));
 
 // Mock UI commands

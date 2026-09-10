@@ -9,10 +9,10 @@
  * - any later go-live → "Published from draft"
  */
 
-import type { Version } from '../types/sessionContext';
+import type { Release } from '../types/sessionContext';
 
 type ReleaseLike = Pick<
-  Version,
+  Release,
   'kind' | 'source_project' | 'version_number' | 'restored_from_version_number'
 >;
 

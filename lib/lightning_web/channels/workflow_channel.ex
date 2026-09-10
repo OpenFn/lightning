@@ -742,11 +742,6 @@ defmodule LightningWeb.WorkflowChannel do
     {:reply, {:ok, %{workflow: validated_params}}, socket}
   end
 
-  # Returns the workflow's published versions (releases recorded at each go-live
-  # and promote), newest first. This is deliberately NOT every save: a save
-  # captures a snapshot, but only a deliberate publish records a release. The
-  # client pins a version via `?release=<version_number>`; each entry also
-  # carries the snapshot's lock_version as informational metadata.
   @impl true
   def handle_in(
         "check_custom_path",
@@ -763,19 +758,29 @@ defmodule LightningWeb.WorkflowChannel do
     {:reply, {:ok, %{taken: taken}}, socket}
   end
 
+  # Returns the workflow's published versions (releases recorded at each go-live
+  # and promote), newest first. This is deliberately NOT every save: a save
+  # captures a snapshot, but only a deliberate publish records a release. The
+  # client pins one via `?release=<version_number>`; each entry also carries the
+  # snapshot's lock_version as informational metadata.
+  #
+  # A separate request from `request_versions` below, rather than a redefinition
+  # of it, because the two answer different questions with differently shaped
+  # rows. One event returning either shape depending on what the server believes
+  # would leave a client unable to read its own reply.
   @impl true
-  def handle_in("request_versions", _payload, socket) do
+  def handle_in("request_releases", _payload, socket) do
     workflow = socket.assigns.workflow
     workflow_kind = socket.assigns.workflow_kind
 
-    async_task(socket, "request_versions", fn ->
+    async_task(socket, "request_releases", fn ->
       # A genuinely-new workflow has no DB row and thus no releases, so
       # short-circuit to an empty list rather than reloading a nil row.
       if workflow_kind == :new do
-        %{versions: []}
+        %{releases: []}
       else
         # Ordered newest-first, so the head is the current published version.
-        versions =
+        releases =
           case Lightning.Workflows.WorkflowReleases.list_for_workflow(
                  workflow.id
                ) do
@@ -788,6 +793,45 @@ defmodule LightningWeb.WorkflowChannel do
                 | Enum.map(rest, &render_release(&1, false))
               ]
           end
+
+        %{releases: releases}
+      end
+    end)
+  end
+
+  # Returns every saved snapshot of the workflow, each numbered by its own
+  # lock_version. This is the list for a client with no publish trail to read,
+  # and it is what `?v=<lock_version>` pins. Nothing in the release experience
+  # asks for it, because `request_releases` above is that list.
+  @impl true
+  def handle_in("request_versions", _payload, socket) do
+    workflow = socket.assigns.workflow
+    workflow_kind = socket.assigns.workflow_kind
+
+    async_task(socket, "request_versions", fn ->
+      # A genuinely-new workflow has no DB row and thus no snapshots, so
+      # short-circuit to an empty list rather than reloading a nil row.
+      if workflow_kind == :new do
+        %{versions: []}
+      else
+        # On a pinned view the socket's workflow carries the pinned
+        # lock_version, so "which one is current" has to come from the row.
+        latest_lock_version =
+          Lightning.Workflows.get_workflow(workflow.id).lock_version
+
+        versions =
+          workflow
+          |> Snapshot.get_all_for()
+          |> Enum.map(fn snapshot ->
+            %{
+              lock_version: snapshot.lock_version,
+              inserted_at: snapshot.inserted_at,
+              is_latest: snapshot.lock_version == latest_lock_version
+            }
+          end)
+          |> Enum.sort_by(fn version ->
+            {if(version.is_latest, do: 0, else: 1), -version.lock_version}
+          end)
 
         %{versions: versions}
       end
@@ -1284,6 +1328,7 @@ defmodule LightningWeb.WorkflowChannel do
               "request_current_user",
               "get_context",
               "request_history",
+              "request_releases",
               "request_versions",
               "request_promote_check",
               "request_restore_check",

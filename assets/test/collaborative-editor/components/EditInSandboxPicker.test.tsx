@@ -94,7 +94,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
   useHistory: () => runHistory,
 }));
 
-let versions: {
+let releases: {
   version_number: number;
   lock_version: number;
   is_latest: boolean;
@@ -104,8 +104,8 @@ const requestVersionsMock = vi.fn();
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useLimits: () => limits,
   useProject: () => ({ id: 'project-1' }),
-  useVersions: () => versions,
-  useRequestVersions: () => requestVersionsMock,
+  useReleases: () => releases,
+  useRequestReleases: () => requestVersionsMock,
 }));
 
 const searchDataclipsMock = vi.fn();
@@ -199,7 +199,7 @@ describe('EditInSandboxPicker', () => {
     getDataclipBodyMock.mockResolvedValue('{}');
     activeRun = null;
     jobs = [{ id: 'job-1' }];
-    versions = [];
+    releases = [];
     requestVersionsMock.mockReset();
     requestVersionsMock.mockResolvedValue(undefined);
     limits = {};
@@ -683,7 +683,7 @@ describe('EditInSandboxPicker', () => {
       ];
       // Deliberately not newest-first, so the note has to read is_latest rather
       // than trust the order.
-      versions = [
+      releases = [
         { version_number: 3, lock_version: 4, is_latest: false },
         { version_number: 7, lock_version: 9, is_latest: true },
       ];
@@ -705,7 +705,7 @@ describe('EditInSandboxPicker', () => {
       runHistory = [
         { id: 'wo-1', runs: [{ id: 'abcdef123456', version_number: 7 }] },
       ];
-      versions = [{ version_number: 7, lock_version: 9, is_latest: true }];
+      releases = [{ version_number: 7, lock_version: 9, is_latest: true }];
 
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
       await user.click(screen.getByLabelText(/this run's input/i));
@@ -724,7 +724,7 @@ describe('EditInSandboxPicker', () => {
       runHistory = [
         { id: 'wo-1', runs: [{ id: 'abcdef123456', version_number: 3 }] },
       ];
-      versions = [
+      releases = [
         { version_number: 3, lock_version: 4, is_latest: false },
         { version_number: 7, lock_version: 9, is_latest: true },
       ];

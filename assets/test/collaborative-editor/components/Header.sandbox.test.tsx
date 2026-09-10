@@ -51,7 +51,7 @@ let activeRun: {
   steps: { id: string; input_dataclip_id?: string }[];
 } | null = null;
 let latestSnapshotId: string | null = null;
-let versions: {
+let releases: {
   version_number: number;
   snapshot_id: string | null;
 }[] = [];
@@ -77,7 +77,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   }),
   useProjectRepoConnection: () => null,
   useLatestSnapshotId: () => latestSnapshotId,
-  useVersions: () => versions,
+  useReleases: () => releases,
   useSessionWorkflow: () => ({ state: lifecycleState }),
 }));
 
@@ -218,7 +218,7 @@ describe('Header - Edit in sandbox button gating', () => {
     urlParams = {};
     activeRun = null;
     latestSnapshotId = null;
-    versions = [];
+    releases = [];
     updateSearchParams.mockClear();
   });
 
@@ -1145,7 +1145,7 @@ describe('Header - retry from a run view', () => {
     urlParams = { run: 'run-1', as_run: 'run-1' };
     activeRun = { id: 'run-1', state: 'failed', steps: [{ id: 'step-1' }] };
     latestSnapshotId = 'snapshot-live';
-    versions = [{ version_number: 4, snapshot_id: 'snapshot-live' }];
+    releases = [{ version_number: 4, snapshot_id: 'snapshot-live' }];
   });
 
   afterEach(() => {

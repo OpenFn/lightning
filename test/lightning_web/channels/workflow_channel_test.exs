@@ -3224,7 +3224,7 @@ defmodule LightningWeb.WorkflowChannelTest do
            user: user,
            project: project
          } do
-      # Companion to the request_versions regression below: get_context reads
+      # Companion to the request_releases regression below: get_context reads
       # the same workflow_kind assign, so a channel left frozen at :new after
       # its first save starves the header of the latest version too.
       workflow_id = Ecto.UUID.generate()
@@ -6321,7 +6321,7 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
-  describe "request_versions" do
+  describe "request_releases" do
     test "returns published releases newest-first with author, kind, source and lock_version",
          %{
            socket: socket,
@@ -6348,9 +6348,9 @@ defmodule LightningWeb.WorkflowChannelTest do
           source_project_id: source.id
         })
 
-      ref = push(socket, "request_versions", %{})
+      ref = push(socket, "request_releases", %{})
 
-      assert_reply ref, :ok, %{versions: versions}
+      assert_reply ref, :ok, %{releases: releases}
 
       assert [
                %{
@@ -6369,14 +6369,14 @@ defmodule LightningWeb.WorkflowChannelTest do
                  lock_version: 7,
                  is_latest: false
                }
-             ] = versions
+             ] = releases
 
       assert is_binary(published_by) and published_by =~ "anna"
 
       # The client ticks the row holding the content on screen, so each version
       # names its own content rather than leaving the client to infer it from a
       # number.
-      assert Enum.all?(versions, &(&1.snapshot_id == snapshot.id))
+      assert Enum.all?(releases, &(&1.snapshot_id == snapshot.id))
     end
 
     test "does not include ordinary saves, only releases", %{
@@ -6392,12 +6392,12 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       {:ok, _saved} = Lightning.Workflows.save_workflow(workflow_changeset, user)
 
-      ref = push(socket, "request_versions", %{})
+      ref = push(socket, "request_releases", %{})
 
-      assert_reply ref, :ok, %{versions: []}
+      assert_reply ref, :ok, %{releases: []}
     end
 
-    test "returns empty versions list for unsaved workflow", %{
+    test "returns empty releases list for unsaved workflow", %{
       user: user,
       project: project
     } do
@@ -6418,18 +6418,18 @@ defmodule LightningWeb.WorkflowChannelTest do
         ensure_doc_supervisor_stopped(workflow_id)
       end)
 
-      # A genuinely-new struct is seeded with lock_version 0. The empty-versions
+      # A genuinely-new struct is seeded with lock_version 0. The empty-releases
       # short-circuit keys on workflow_kind, not on lock_version.
       assert socket.assigns.workflow.lock_version == 0
 
-      ref = push(socket, "request_versions", %{})
+      ref = push(socket, "request_releases", %{})
 
-      assert_reply ref, :ok, %{versions: versions}
+      assert_reply ref, :ok, %{releases: releases}
 
-      assert versions == []
+      assert releases == []
     end
 
-    test "returns versions after the first save of a from-scratch workflow " <>
+    test "returns releases after the first save of a from-scratch workflow " <>
            "without a rejoin",
          %{
            user: user,
@@ -6437,7 +6437,7 @@ defmodule LightningWeb.WorkflowChannelTest do
          } do
       # A from-scratch workflow joins with action="new" (kind :new) and never
       # rejoins after its first save, so the channel must self-promote out of
-      # :new on save. Before the fix, request_versions on the same socket kept
+      # :new on save. Before the fix, request_releases on the same socket kept
       # short-circuiting to [] until a full page refresh.
       workflow_id = Ecto.UUID.generate()
 
@@ -6455,7 +6455,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       end)
 
       # Sanity check: the channel starts out believing this is a brand-new
-      # workflow, which is exactly the state that used to wedge request_versions.
+      # workflow, which is exactly the state that used to wedge request_releases.
       assert socket.assigns.workflow_kind == :new
 
       # Seed a minimal, valid, saveable workflow into the Y.Doc: a name plus a
@@ -6478,18 +6478,18 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply save_ref, :ok, %{lock_version: _lv}
 
       # A save is not a published version, so the list is still empty here.
-      versions_ref = push(socket, "request_versions", %{})
-      assert_reply versions_ref, :ok, %{versions: []}
+      releases_ref = push(socket, "request_releases", %{})
+      assert_reply releases_ref, :ok, %{releases: []}
 
       # Going live publishes v1. Same socket, no rejoin: the channel must have
       # self-promoted out of :new on save, or this keeps short-circuiting to [].
       live_ref = push(socket, "go_live", %{})
       assert_reply live_ref, :ok, _
 
-      versions_ref = push(socket, "request_versions", %{})
-      assert_reply versions_ref, :ok, %{versions: versions}
+      releases_ref = push(socket, "request_releases", %{})
+      assert_reply releases_ref, :ok, %{releases: releases}
 
-      assert [%{version_number: 1, is_latest: true}] = versions
+      assert [%{version_number: 1, is_latest: true}] = releases
     end
 
     test "does not short-circuit for a version-view socket", %{
@@ -6510,7 +6510,7 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       # Join pinning the release (version_number 1). The resolver hydrates a
       # :built struct with lock_version == 0, BUT this is a version-view, not a
-      # genuinely-new workflow, so request_versions must NOT short-circuit to [].
+      # genuinely-new workflow, so request_releases must NOT short-circuit to [].
       topic_with_version =
         "workflow:collaborate:#{workflow.id}:release#{release.version_number}"
 
@@ -6523,11 +6523,11 @@ defmodule LightningWeb.WorkflowChannelTest do
           %{project_id: project.id, action: "edit"}
         )
 
-      ref = push(snapshot_socket, "request_versions", %{})
+      ref = push(snapshot_socket, "request_releases", %{})
 
-      assert_reply ref, :ok, %{versions: versions}
+      assert_reply ref, :ok, %{releases: releases}
 
-      assert length(versions) >= 1
+      assert length(releases) >= 1
     end
 
     test "marks only the newest release as latest", %{
@@ -6547,12 +6547,88 @@ defmodule LightningWeb.WorkflowChannelTest do
           })
       end
 
-      ref = push(socket, "request_versions", %{})
+      ref = push(socket, "request_releases", %{})
 
+      assert_reply ref, :ok, %{releases: releases}
+
+      assert [%{version_number: 3, is_latest: true} | rest] = releases
+      assert Enum.all?(rest, &(&1.is_latest == false))
+    end
+  end
+
+  describe "request_versions" do
+    test "returns every save, numbered by lock_version, publish or not", %{
+      socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # Two ordinary saves. A save captures a snapshot but records no release,
+      # so this workflow has content history and no publish trail at all.
+      for name <- ["First save", "Second save"] do
+        {:ok, _saved} =
+          workflow
+          |> Lightning.Repo.reload()
+          |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+          |> Lightning.Workflows.Workflow.changeset(%{name: name})
+          |> Lightning.Workflows.save_workflow(user)
+      end
+
+      ref = push(socket, "request_versions", %{})
       assert_reply ref, :ok, %{versions: versions}
 
-      assert [%{version_number: 3, is_latest: true} | rest] = versions
+      # The current one first, the rest newest-first by lock_version.
+      assert [%{is_latest: true, lock_version: latest} | rest] = versions
+      assert latest == Lightning.Repo.reload(workflow).lock_version
+      assert rest != []
       assert Enum.all?(rest, &(&1.is_latest == false))
+      assert Enum.all?(versions, &match?(%DateTime{}, &1.inserted_at))
+
+      assert Enum.map(versions, & &1.lock_version) ==
+               versions |> Enum.map(& &1.lock_version) |> Enum.sort(:desc)
+
+      # The same workflow, asked the other question, answers nothing: it has
+      # published no versions. One event returning either list depending on what
+      # the server believed would make these two answers indistinguishable.
+      releases_ref = push(socket, "request_releases", %{})
+      assert_reply releases_ref, :ok, %{releases: []}
+    end
+
+    test "reads is_latest from the workflow row, not from a pinned socket", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      {:ok, _saved} =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Moved on"})
+        |> Lightning.Workflows.save_workflow(user)
+
+      current = Lightning.Repo.reload(workflow).lock_version
+      pinned = insert(:snapshot, workflow: workflow, lock_version: current + 5)
+
+      # A snapshot-pinned socket carries the pinned lock_version as its own, so
+      # comparing against the socket's workflow would crown the pinned snapshot.
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{pinned.lock_version}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      on_exit(fn ->
+        Lightning.Collaborate.stop_document(
+          "workflow:#{workflow.id}:v#{pinned.lock_version}"
+        )
+      end)
+
+      ref = push(pinned_socket, "request_versions", %{})
+      assert_reply ref, :ok, %{versions: versions}
+
+      latest = Enum.filter(versions, & &1.is_latest)
+      assert [%{lock_version: ^current}] = latest
     end
   end
 

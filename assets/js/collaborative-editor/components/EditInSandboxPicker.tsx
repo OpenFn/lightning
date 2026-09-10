@@ -24,8 +24,8 @@ import { useActiveRun, useHistory } from '../hooks/useHistory';
 import {
   useLimits,
   useProject,
-  useRequestVersions,
-  useVersions,
+  useRequestReleases,
+  useReleases,
 } from '../hooks/useSessionContext';
 import { useWorkflowActions, useWorkflowState } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
@@ -472,8 +472,8 @@ export function EditInSandboxPicker({
   const history = useHistory();
   const project = useProject();
   const jobs = useWorkflowState(state => state.jobs);
-  const versions = useVersions();
-  const requestVersions = useRequestVersions();
+  const releases = useReleases();
+  const requestReleases = useRequestReleases();
 
   // Any job in the project resolves the same set of named dataclips, so the
   // first one is enough to ask for them.
@@ -595,10 +595,10 @@ export function EditInSandboxPicker({
   }, [isOpen, startWith, project?.id, anyJobId]);
 
   useEffect(() => {
-    if (!isOpen || versions.length > 0) return;
+    if (!isOpen || releases.length > 0) return;
 
-    void requestVersions();
-  }, [isOpen, versions.length, requestVersions]);
+    void requestReleases();
+  }, [isOpen, releases.length, requestReleases]);
 
   // A sandbox always forks the version live now, because promote rebuilds the
   // parent from the sandbox and an older fork would delete the newer work.
@@ -611,7 +611,7 @@ export function EditInSandboxPicker({
       .flatMap(workOrder => workOrder.runs)
       .find(run => run.id === activeRun?.id)?.version_number ?? null;
   const latestVersionNumber =
-    versions.find(version => version.is_latest)?.version_number ?? null;
+    releases.find(version => version.is_latest)?.version_number ?? null;
   const startsFromNewerVersion =
     startWith === 'run' &&
     runVersionNumber !== null &&

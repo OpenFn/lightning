@@ -234,32 +234,32 @@ export const useSessionContext = () => {
 };
 
 /**
- * Hook to get workflow versions list from session context
- * Returns array of versions, empty array if not loaded yet
+ * Hook to get workflow releases list from session context
+ * Returns array of releases, empty array if not loaded yet
  */
-export const useVersions = () => {
+export const useReleases = () => {
   const sessionContextStore = useSessionContextStore();
 
   const selectVersions = sessionContextStore.withSelector(
-    state => state.versions
+    state => state.releases
   );
 
   return useSyncExternalStore(sessionContextStore.subscribe, selectVersions);
 };
 
 /**
- * Hook to get versions loading state
- * Returns true when versions are being loaded
+ * Hook to get releases loading state
+ * Returns true when releases are being loaded
  */
 /**
- * Whether the versions have been fetched, whatever came back. Callers use this
+ * Whether the releases have been fetched, whatever came back. Callers use this
  * rather than an empty list to decide whether to ask.
  */
-export const useVersionsLoaded = (): boolean => {
+export const useReleasesLoaded = (): boolean => {
   const sessionContextStore = useSessionContextStore();
 
   const selectVersionsLoaded = sessionContextStore.withSelector(
-    state => state.versionsLoaded
+    state => state.releasesLoaded
   );
 
   return useSyncExternalStore(
@@ -268,11 +268,11 @@ export const useVersionsLoaded = (): boolean => {
   );
 };
 
-export const useVersionsLoading = (): boolean => {
+export const useReleasesLoading = (): boolean => {
   const sessionContextStore = useSessionContextStore();
 
   const selectVersionsLoading = sessionContextStore.withSelector(
-    state => state.versionsLoading
+    state => state.releasesLoading
   );
 
   return useSyncExternalStore(
@@ -282,14 +282,14 @@ export const useVersionsLoading = (): boolean => {
 };
 
 /**
- * Hook to get versions error state
+ * Hook to get releases error state
  * Returns error message if loading failed, null otherwise
  */
-export const useVersionsError = (): string | null => {
+export const useReleasesError = (): string | null => {
   const sessionContextStore = useSessionContextStore();
 
   const selectVersionsError = sessionContextStore.withSelector(
-    state => state.versionsError
+    state => state.releasesError
   );
 
   return useSyncExternalStore(
@@ -299,13 +299,13 @@ export const useVersionsError = (): string | null => {
 };
 
 /**
- * Hook to get requestVersions action
- * Returns function to request versions from server
+ * Hook to get requestReleases action
+ * Returns function to request releases from server
  */
-export const useRequestVersions = () => {
+export const useRequestReleases = () => {
   const sessionContextStore = useSessionContextStore();
 
-  return sessionContextStore.requestVersions;
+  return sessionContextStore.requestReleases;
 };
 
 /**
