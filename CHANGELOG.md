@@ -158,6 +158,17 @@ and this project adheres to
 
 ### Fixed
 
+- A failed run can be retried from its own view, on a live workflow, with the
+  button naming the version it will run. Retrying re-runs the content that is
+  live now with that run's input, in the same work order, which is what turns a
+  red work order green once the fix is in. Reading a run left no way to do that,
+  because the read-only lock blocked every run action.
+
+- A run in the URL is always shown against the content it executed, however the
+  URL got that way: a shared link, a reload or the back button. The check
+  happened only when you clicked a run in the list, so the address bar could
+  still land you on the live workflow with an old run's results painted over it.
+
 - Leaving a run's view for the latest version now clears the run. It only
   watched the version parameter, and going from a run view back to latest never
   changes that parameter, so the run was restored onto the live workflow with

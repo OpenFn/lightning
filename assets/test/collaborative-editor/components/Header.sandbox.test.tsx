@@ -24,6 +24,7 @@ let readOnly: {
     | 'live'
     | 'no_permission'
     | 'pinned_version'
+    | 'as_run'
     | 'unsaved_new'
     | null;
 } = { isReadOnly: false, reason: null };
@@ -43,13 +44,23 @@ const checkPromote =
   vi.fn<() => Promise<{ diverged: boolean; parent_name: string | null }>>();
 
 let urlParams: Record<string, string> = {};
+let activeRun: {
+  id: string;
+  state: string;
+  steps: { id: string }[];
+} | null = null;
+let latestSnapshotId: string | null = null;
+let versions: {
+  version_number: number;
+  snapshot_id: string | null;
+}[] = [];
 
 vi.mock('../../../js/react/lib/use-url-state', () => ({
   useURLState: () => ({ params: urlParams, updateSearchParams: vi.fn() }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
-  useActiveRun: () => null,
+  useActiveRun: () => activeRun,
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
@@ -64,6 +75,8 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
     can_archive_sandbox: canArchiveSandbox,
   }),
   useProjectRepoConnection: () => null,
+  useLatestSnapshotId: () => latestSnapshotId,
+  useVersions: () => versions,
   useSessionWorkflow: () => ({ state: lifecycleState }),
 }));
 
@@ -201,6 +214,10 @@ describe('Header - Edit in sandbox button gating', () => {
     canArchiveSandbox = true;
     limits = {};
     readOnly = { isReadOnly: false, reason: null };
+    urlParams = {};
+    activeRun = null;
+    latestSnapshotId = null;
+    versions = [];
   });
 
   afterEach(() => {
@@ -1041,5 +1058,69 @@ describe('Header - long workflow name', () => {
 
     // The primary action remains rendered alongside the long name.
     expect(screen.getByTestId('save-workflow-button')).toBeInTheDocument();
+  });
+});
+
+describe('Header - retry from a run view', () => {
+  beforeEach(() => {
+    lifecycleState = 'live';
+    isNewWorkflow = false;
+    limits = {};
+    // Reading a run as it executed, which is read-only.
+    readOnly = { isReadOnly: true, reason: 'as_run' };
+    urlParams = { run: 'run-1', as_run: 'run-1' };
+    activeRun = { id: 'run-1', state: 'failed', steps: [{ id: 'step-1' }] };
+    latestSnapshotId = 'snapshot-live';
+    versions = [{ version_number: 4, snapshot_id: 'snapshot-live' }];
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test('names the version the retry will run, not the one on screen', () => {
+    renderHeader({ isSandbox: false });
+
+    // The canvas shows the run's own snapshot. A retry runs what is live, so
+    // the button says which that is rather than leaving the user to assume it
+    // reruns what they are looking at.
+    expect(screen.getByTestId('retry-on-latest-button')).toHaveTextContent(
+      'Retry on v4'
+    );
+  });
+
+  test('says "latest" when the live content was never published', () => {
+    versions = [{ version_number: 4, snapshot_id: 'snapshot-older' }];
+
+    renderHeader({ isSandbox: false });
+
+    expect(screen.getByTestId('retry-on-latest-button')).toHaveTextContent(
+      'Retry on latest'
+    );
+  });
+
+  test('offers the retry even though the view is read-only', () => {
+    renderHeader({ isSandbox: false });
+
+    // Retrying is an execution, not an edit. Blocking it with the read-only
+    // lock took away the only way to clear a failed work order from here.
+    expect(screen.getByTestId('retry-on-latest-button')).toBeEnabled();
+  });
+
+  test('does not offer it while the run is still going', () => {
+    activeRun = { id: 'run-1', state: 'started', steps: [{ id: 'step-1' }] };
+
+    renderHeader({ isSandbox: false });
+
+    expect(screen.queryByTestId('retry-on-latest-button')).toBeNull();
+  });
+
+  test('does not offer it on the live document', () => {
+    urlParams = {};
+    readOnly = { isReadOnly: false, reason: null };
+
+    renderHeader({ isSandbox: false });
+
+    expect(screen.queryByTestId('retry-on-latest-button')).toBeNull();
   });
 });

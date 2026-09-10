@@ -13,7 +13,7 @@
  * onto it, which reported step timings against steps the run never touched.
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as storage from 'lib0/storage';
 import type React from 'react';
@@ -257,6 +257,45 @@ describe('selecting a run', () => {
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(
       expect.objectContaining({ as_run: null, run: 'run-live', v: null })
     );
+  });
+
+  test('keeps a retry on the live document when it drops the run view', async () => {
+    const user = userEvent.setup();
+
+    // Standing in a run's own view.
+    urlState.setParams({ run: 'run-old-a', as_run: 'run-old-a' });
+
+    const { rerender } = render(<CollaborativeWorkflowDiagram />, {
+      wrapper: createWrapper(),
+    });
+
+    // A retry drops the run view and selects the run it just created, which
+    // executed the live content. Reading that as "left the run view" cleared
+    // the new run and left the canvas blank, with the retry sitting unselected
+    // in the history list.
+    urlState.deleteParam('as_run');
+    urlState.setParams({ run: 'run-live' });
+    urlState.mockFns.updateSearchParams.mockClear();
+    rerender(<CollaborativeWorkflowDiagram />);
+
+    expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith(
+      expect.objectContaining({ run: null })
+    );
+  });
+
+  test('shows a run as executed even when the URL only says ?run=', async () => {
+    // A shared link, a reload, or the back button. The decision used to happen
+    // only on click, so the address bar could still reach the old behaviour:
+    // an old run's results painted on the live document.
+    urlState.setParams({ run: 'run-old-a' });
+
+    render(<CollaborativeWorkflowDiagram />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(
+        expect.objectContaining({ as_run: 'run-old-a' })
+      );
+    });
   });
 
   test('shows a run as executed when its snapshot is unknown', async () => {

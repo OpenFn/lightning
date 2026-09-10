@@ -9,10 +9,12 @@ import { StoreContext } from '../contexts/StoreProvider';
 import { useActiveRun } from '../hooks/useHistory';
 import {
   useIsNewWorkflow,
+  useLatestSnapshotId,
   useLimits,
   usePermissions,
   useProjectRepoConnection,
   useSessionWorkflow,
+  useVersions,
 } from '../hooks/useSessionContext';
 import { useUICommands } from '../hooks/useUI';
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
@@ -286,6 +288,21 @@ export function Header({
   // screen: Switch to draft would take production offline while you read history.
   const isViewingNonCurrentVersion = isPinnedVersion || isViewingAsExecuted;
 
+  // A retry runs the content that is live now, whatever is on screen, so the
+  // button names it. Named by version when that content was published, and
+  // "latest" when it was not, because then there is no number to give.
+  const latestSnapshotId = useLatestSnapshotId();
+  const versions = useVersions();
+  const liveVersionNumber =
+    versions.find(
+      version =>
+        version.snapshot_id != null && version.snapshot_id === latestSnapshotId
+    )?.version_number ?? null;
+  const retryLabel =
+    liveVersionNumber === null
+      ? 'Retry on latest'
+      : `Retry on v${liveVersionNumber}`;
+
   // Determine AI button disabled message based on priority
   const aiButtonDisabledMessage = !aiAssistantEnabled
     ? 'Your instance does not have build-time AI enabled. Contact your administrator or support@openfn.org to configure it.'
@@ -326,6 +343,68 @@ export function Header({
     projectId,
     workflowId,
     saveWorkflow,
+    getLimits,
+    updateSearchParams,
+  ]);
+
+  // Retrying from a run's own view. The view is read-only, so there is nothing
+  // to save first, and the retry runs the content that is live rather than the
+  // snapshot on screen, which is why the button names the version it will run.
+  // It lands on the new run, since the old canvas is no longer the subject.
+  const handleRetryOnLatest = useCallback(async () => {
+    const firstStep = activeRun?.steps?.[0];
+    if (!followedRunId || !firstStep || !projectId) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(
+        `/projects/${projectId}/runs/${followedRunId}/retry`,
+        {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken() || '',
+          },
+          body: JSON.stringify({ step_id: firstStep.id }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error || 'Failed to retry run');
+      }
+
+      const result = (await response.json()) as { data: { run_id: string } };
+
+      notifications.success({
+        title: 'Retry started',
+        description: `Running this input on ${
+          liveVersionNumber === null
+            ? 'the latest version'
+            : `v${liveVersionNumber}`
+        }.`,
+      });
+
+      if (getLimits) void getLimits('new_run');
+      updateSearchParams({
+        as_run: null,
+        run: result.data.run_id,
+        step: null,
+      });
+    } catch (error) {
+      notifications.alert({
+        title: 'Retry failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    activeRun,
+    followedRunId,
+    projectId,
+    liveVersionNumber,
     getLimits,
     updateSearchParams,
   ]);
@@ -763,6 +842,22 @@ export function Header({
                       </Button>
                     </span>
                   </Tooltip>
+                )}
+              {lifecycleState === 'live' &&
+                !isSandbox &&
+                !isNewWorkflow &&
+                isViewingAsExecuted &&
+                isRetryable && (
+                  <Button
+                    data-testid="retry-on-latest-button"
+                    className="inline-flex items-center"
+                    disabled={isSubmitting || runIsProcessing}
+                    onClick={() => {
+                      void handleRetryOnLatest();
+                    }}
+                  >
+                    {retryLabel}
+                  </Button>
                 )}
               {projectId && workflowId && firstTriggerId && !isReadOnly && (
                 <NewRunButton

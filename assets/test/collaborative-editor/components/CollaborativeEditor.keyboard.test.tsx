@@ -215,6 +215,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
     name: 'Test Project',
   }),
   useVersions: () => [],
+  useLatestSnapshotId: () => null,
   useVersionsLoading: () => false,
   useVersionsError: () => null,
   useRequestVersions: () => vi.fn(),

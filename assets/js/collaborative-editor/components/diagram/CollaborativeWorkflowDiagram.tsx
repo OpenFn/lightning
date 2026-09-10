@@ -19,6 +19,7 @@ import {
   useHistoryError,
   useHistoryLoading,
   useRunSteps,
+  useRunSummary,
   useSelectedRunId,
 } from '../../hooks/useHistory';
 import {
@@ -92,10 +93,16 @@ export function CollaborativeWorkflowDiagram({
   // on the live document with its timings over steps it never touched.
   const viewKey = `${versionParam ?? ''}|${asRunParam ?? ''}`;
   const previousViewRef = useRef<string>(viewKey);
-  // A view change means two different things: a dropdown switch, which must
-  // clear the selected run, or selecting a run of another version, which must
-  // not. Set on run-select, consumed by the reconcile effect below.
-  const runSelectInProgressRef = useRef(false);
+
+  // Does the run in the URL belong on the document in the URL? It does when
+  // the view is that run's own, or when the run executed the content that is
+  // live. Undefined snapshot means the history has not arrived, and nothing is
+  // decided until it has.
+  const urlRun = useRunSummary(runParam);
+  const runBelongsHere =
+    runParam !== null &&
+    (asRunParam === runParam ||
+      (urlRun?.snapshot_id != null && urlRun.snapshot_id === latestSnapshotId));
 
   const { clearRun } = useFollowRun(selectedRunId);
 
@@ -104,12 +111,15 @@ export function CollaborativeWorkflowDiagram({
   // limits the restore to once per run to avoid a loop.
   useEffect(() => {
     const viewChanged = previousViewRef.current !== viewKey;
-    const wasRunSelect = runSelectInProgressRef.current;
-    runSelectInProgressRef.current = false;
 
     if (viewChanged) {
       previousViewRef.current = viewKey;
-      if (!wasRunSelect) {
+
+      // Left one document for another and the run does not belong on the new
+      // one, so it goes. A run that does belong stays: selecting a run of older
+      // content moves to that run's own view, and a retry lands its new run on
+      // the live document.
+      if (!runBelongsHere) {
         restoredRunRef.current = null;
         if (activeRunId) {
           clearRun();
@@ -121,6 +131,20 @@ export function CollaborativeWorkflowDiagram({
       }
     }
 
+    // A run in the URL that executed something other than the live content is
+    // shown as it executed, however the URL got that way: a click, a shared
+    // link, a reload, the back button. Deciding this only on click left the old
+    // behaviour reachable through the address bar.
+    if (
+      runParam &&
+      !asRunParam &&
+      urlRun?.snapshot_id != null &&
+      !runBelongsHere
+    ) {
+      updateSearchParams({ as_run: runParam });
+      return;
+    }
+
     if (!runParam && activeRunId && restoredRunRef.current !== activeRunId) {
       restoredRunRef.current = activeRunId;
       updateSearchParams({ run: activeRunId });
@@ -128,7 +152,16 @@ export function CollaborativeWorkflowDiagram({
     if (runParam) {
       restoredRunRef.current = null;
     }
-  }, [viewKey, runParam, activeRunId, clearRun, updateSearchParams]);
+  }, [
+    viewKey,
+    runParam,
+    asRunParam,
+    runBelongsHere,
+    urlRun,
+    activeRunId,
+    clearRun,
+    updateSearchParams,
+  ]);
 
   const currentRunSteps = useRunSteps(selectedRunId);
 
@@ -148,38 +181,13 @@ export function CollaborativeWorkflowDiagram({
         run.snapshot_id !== undefined &&
         run.snapshot_id === latestSnapshotId;
 
-      // Set the flag only where the URL is really about to change. The
-      // reconcile effect is what consumes it, and it only runs when a param
-      // moves, so a flag set over an unchanged URL stands until the next
-      // version change and makes that one skip clearing the run. Two ways to
-      // get there: the unsaved-changes prompt blocks the switch, or the run
-      // picked is the one already pinned.
-      const alreadyThere =
-        runParam === run.id && versionParam === null && asRunParam === run.id;
-
       if (!ranTheLiveContent) {
-        viewAsExecuted(run.id, () => {
-          if (!alreadyThere) runSelectInProgressRef.current = true;
-        });
+        viewAsExecuted(run.id);
       } else {
-        if (
-          runParam !== run.id ||
-          versionParam !== null ||
-          asRunParam !== null
-        ) {
-          runSelectInProgressRef.current = true;
-        }
         updateSearchParams({ v: null, as_run: null, run: run.id });
       }
     },
-    [
-      latestSnapshotId,
-      updateSearchParams,
-      viewAsExecuted,
-      runParam,
-      versionParam,
-      asRunParam,
-    ]
+    [latestSnapshotId, updateSearchParams, viewAsExecuted]
   );
 
   // Closes the run viewer in the store too, or the restore effect re-adds the
