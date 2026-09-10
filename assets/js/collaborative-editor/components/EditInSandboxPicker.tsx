@@ -463,6 +463,7 @@ export function EditInSandboxPicker({
   // A reply lands after a render, so what the person now wants has to be read
   // live rather than out of the closure that started the request.
   const startWithRef = useRef<StartChoice>('nothing');
+  const canStartFromRunRef = useRef(false);
   const activeRunIdRef = useRef<string | null>(null);
   const reviewRef = useRef<RunReview>({ status: 'idle' });
   const [savedDataclipId, setSavedDataclipId] = useState<string | null>(null);
@@ -514,13 +515,20 @@ export function EditInSandboxPicker({
     Boolean(project?.id);
   const runLabel = activeRun ? activeRun.id.slice(0, 6) : null;
 
+  // Read when the dialog opens, so a run arriving later cannot change a choice
+  // the person may already have made.
+  canStartFromRunRef.current = canStartFromRun;
+
   useEffect(() => {
     if (!isOpen) return;
 
     let cancelled = false;
     setIsLoadingList(true);
     setSandboxes([]);
-    setStartWith('nothing');
+    // Opened with a run in hand, which is what happens when someone is looking
+    // at a failure and reaches for a sandbox to fix it. That run's input is
+    // what they came to reuse, so it is the choice already made.
+    setStartWith(canStartFromRunRef.current ? 'run' : 'nothing');
     setStep('choose');
     setReviewError(null);
     setReview({ status: 'idle' });

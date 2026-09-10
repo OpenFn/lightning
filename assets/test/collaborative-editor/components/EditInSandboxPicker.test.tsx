@@ -224,6 +224,26 @@ describe('EditInSandboxPicker', () => {
       expect(screen.queryByLabelText(/this run's input/i)).toBeNull();
     });
 
+    test("starts on the run's input when opened with a run in hand", async () => {
+      activeRun = {
+        id: 'abcdef123456',
+        steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
+      };
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      // Someone reading a failure and reaching for a sandbox came to reuse
+      // that run's input, so the choice is already made for them.
+      expect(screen.getByLabelText(/this run's input/i)).toBeChecked();
+      expect(screen.getByLabelText(/an empty sandbox/i)).not.toBeChecked();
+    });
+
+    test('starts on nothing with no run open', async () => {
+      renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
+
+      expect(screen.getByLabelText(/an empty sandbox/i)).toBeChecked();
+    });
+
     test("does not offer the run's input when its step has no job", async () => {
       activeRun = {
         id: 'abcdef123456',

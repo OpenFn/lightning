@@ -158,6 +158,10 @@ and this project adheres to
 
 ### Fixed
 
+- Edit in sandbox opens on that run's input when you reach it from a run. It is
+  what you came to reuse, so it is the choice already made rather than one to
+  find.
+
 - Edit in sandbox and Switch to draft stay available while reading a run. They
   were hidden on any view of the past, which left the place people go to fix a
   failure with no way out: leaving the run first loses the run, and its input
