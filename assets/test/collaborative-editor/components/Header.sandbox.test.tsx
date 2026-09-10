@@ -347,12 +347,26 @@ describe('Header - lifecycle actions', () => {
     expect(screen.queryByTestId('go-live-button')).not.toBeInTheDocument();
   });
 
-  test('hides the lifecycle and sandbox actions in an as-executed run view', () => {
+  test('keeps the two ways to edit while reading a run', () => {
     lifecycleState = 'live';
-    urlParams = { as_run: 'run-123' };
+    urlParams = { as_run: 'run-123', run: 'run-123' };
 
     renderHeader();
 
+    // Reading a failed run is where the fix starts, and these are the only two
+    // ways to edit a live workflow. Hiding them left the journey with no exit,
+    // since leaving the run first loses the run and its input with it.
+    expect(screen.getByTestId('switch-to-draft-button')).toBeInTheDocument();
+    expect(screen.getByTestId('edit-in-sandbox-button')).toBeInTheDocument();
+  });
+
+  test('still hides them on a pinned version', () => {
+    lifecycleState = 'live';
+    urlParams = { v: '2' };
+
+    renderHeader();
+
+    // No run here to carry into a fix, so this stays a reading view.
     expect(
       screen.queryByTestId('switch-to-draft-button')
     ).not.toBeInTheDocument();

@@ -158,6 +158,12 @@ and this project adheres to
 
 ### Fixed
 
+- Edit in sandbox and Switch to draft stay available while reading a run. They
+  were hidden on any view of the past, which left the place people go to fix a
+  failure with no way out: leaving the run first loses the run, and its input
+  with it. A pinned version has no run to carry into a fix, so it stays a
+  reading view.
+
 - A run loaded on a live workflow can be retried. Retrying re-runs the content
   that is live now with that run's input, in the same work order, which is what
   turns a red work order green once the fix is in. There was no way to do that

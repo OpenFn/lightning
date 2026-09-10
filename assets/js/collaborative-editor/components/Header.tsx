@@ -288,6 +288,12 @@ export function Header({
   // screen: Switch to draft would take production offline while you read history.
   const isViewingNonCurrentVersion = isPinnedVersion || isViewingAsExecuted;
 
+  // Reading a run is where a person goes to fix a failure, and the two ways to
+  // edit a live workflow are the way out of it. Hiding them here left the
+  // journey with no exit: leaving the run first loses the run, and its input
+  // with it. A pinned version has no run to carry, so it stays as it was.
+  const isReadingHistoryWithoutRun = isPinnedVersion;
+
   // A retry runs the content that is live now, whatever is on screen. The
   // button does not say so, because retrying always means that, but the
   // confirmation names the version so the record of what just ran is clear.
@@ -744,7 +750,7 @@ export function Header({
                 )}
               {!isNewWorkflow &&
                 !isSandbox &&
-                !isViewingNonCurrentVersion &&
+                !isReadingHistoryWithoutRun &&
                 lifecycleState === 'live' && (
                   <Button
                     variant="secondary"
@@ -815,7 +821,7 @@ export function Header({
               {lifecycleState === 'live' &&
                 !isSandbox &&
                 !isNewWorkflow &&
-                !isViewingNonCurrentVersion && (
+                !isReadingHistoryWithoutRun && (
                   <Tooltip
                     content={
                       canProvisionSandbox
