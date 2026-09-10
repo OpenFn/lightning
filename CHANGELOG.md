@@ -158,11 +158,11 @@ and this project adheres to
 
 ### Fixed
 
-- A failed run can be retried from its own view, on a live workflow, with the
-  button naming the version it will run. Retrying re-runs the content that is
-  live now with that run's input, in the same work order, which is what turns a
-  red work order green once the fix is in. Reading a run left no way to do that,
-  because the read-only lock blocked every run action.
+- A run loaded on a live workflow can be retried. Retrying re-runs the content
+  that is live now with that run's input, in the same work order, which is what
+  turns a red work order green once the fix is in. There was no way to do that
+  before: a live workflow is read-only, and the read-only lock hid every run
+  action, including on a run that had just failed.
 
 - A run in the URL is always shown against the content it executed, however the
   URL got that way: a shared link, a reload or the back button. The check

@@ -288,9 +288,9 @@ export function Header({
   // screen: Switch to draft would take production offline while you read history.
   const isViewingNonCurrentVersion = isPinnedVersion || isViewingAsExecuted;
 
-  // A retry runs the content that is live now, whatever is on screen, so the
-  // button names it. Named by version when that content was published, and
-  // "latest" when it was not, because then there is no number to give.
+  // A retry runs the content that is live now, whatever is on screen. The
+  // button does not say so, because retrying always means that, but the
+  // confirmation names the version so the record of what just ran is clear.
   const latestSnapshotId = useLatestSnapshotId();
   const versions = useVersions();
   const liveVersionNumber =
@@ -298,10 +298,6 @@ export function Header({
       version =>
         version.snapshot_id != null && version.snapshot_id === latestSnapshotId
     )?.version_number ?? null;
-  const retryLabel =
-    liveVersionNumber === null
-      ? 'Retry on latest'
-      : `Retry on v${liveVersionNumber}`;
 
   // Determine AI button disabled message based on priority
   const aiButtonDisabledMessage = !aiAssistantEnabled
@@ -843,10 +839,13 @@ export function Header({
                     </span>
                   </Tooltip>
                 )}
+              {/* Whenever a run is loaded, whichever document it is being read
+                  against. A live workflow is read-only, which hides the normal
+                  Run button, so without this there is no way to retry the one
+                  thing a person came to a failed run to do. */}
               {lifecycleState === 'live' &&
                 !isSandbox &&
                 !isNewWorkflow &&
-                isViewingAsExecuted &&
                 isRetryable && (
                   <Button
                     data-testid="retry-on-latest-button"
@@ -856,7 +855,7 @@ export function Header({
                       void handleRetryOnLatest();
                     }}
                   >
-                    {retryLabel}
+                    Retry
                   </Button>
                 )}
               {projectId && workflowId && firstTriggerId && !isReadOnly && (

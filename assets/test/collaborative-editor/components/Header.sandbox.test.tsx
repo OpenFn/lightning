@@ -1078,25 +1078,24 @@ describe('Header - retry from a run view', () => {
     vi.clearAllMocks();
   });
 
-  test('names the version the retry will run, not the one on screen', () => {
+  test('offers a retry while reading a run as it executed', () => {
     renderHeader({ isSandbox: false });
 
-    // The canvas shows the run's own snapshot. A retry runs what is live, so
-    // the button says which that is rather than leaving the user to assume it
-    // reruns what they are looking at.
     expect(screen.getByTestId('retry-on-latest-button')).toHaveTextContent(
-      'Retry on v4'
+      'Retry'
     );
   });
 
-  test('says "latest" when the live content was never published', () => {
-    versions = [{ version_number: 4, snapshot_id: 'snapshot-older' }];
+  test('offers it for a run of the live content too', () => {
+    // No as_run: this run executed what is live, so it overlays on the live
+    // document. A live workflow is read-only, which hides the normal Run
+    // button, so without this there is no retry here at all.
+    urlParams = { run: 'run-1' };
+    readOnly = { isReadOnly: true, reason: 'live' };
 
     renderHeader({ isSandbox: false });
 
-    expect(screen.getByTestId('retry-on-latest-button')).toHaveTextContent(
-      'Retry on latest'
-    );
+    expect(screen.getByTestId('retry-on-latest-button')).toBeEnabled();
   });
 
   test('offers the retry even though the view is read-only', () => {
@@ -1115,8 +1114,9 @@ describe('Header - retry from a run view', () => {
     expect(screen.queryByTestId('retry-on-latest-button')).toBeNull();
   });
 
-  test('does not offer it on the live document', () => {
+  test('does not offer it with no run loaded', () => {
     urlParams = {};
+    activeRun = null;
     readOnly = { isReadOnly: false, reason: null };
 
     renderHeader({ isSandbox: false });
