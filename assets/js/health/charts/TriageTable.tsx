@@ -179,9 +179,14 @@ const historyUrl = (
   from: string,
   signature: ErrorSignature
 ) => {
+  // History only applies its own defaults to a visit that names no filters at
+  // all, and this link names several. Without `log`, arriving here drops the
+  // one search field a normal history visit starts with, and the first search
+  // term typed into the box matches nothing with every toggle visibly off.
   const params = new URLSearchParams({
     'filters[workflow_id]': workflowId,
     'filters[date_after]': from,
+    'filters[log]': 'true',
   });
 
   if (signature.exit_reason === 'rejected') {
