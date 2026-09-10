@@ -292,6 +292,12 @@ describe('ChatInput', () => {
       render(<ChatInput />);
       await type('x'.repeat(9600));
 
+      // The comma grouping comes from the locale vitest.config.ts pins for the
+      // run, not from the component: ChatInput formats with the viewer's own
+      // locale, so a real en-ZA or de-DE user sees "9 600" / "9.600". If this
+      // assertion fails on your machine, the locale pin is not in effect —
+      // don't pass a fixed locale to `toLocaleString()` in the component to
+      // make it pass.
       expect(screen.getByTestId('chat-input-length')).toHaveTextContent(
         '9,600 / 10,000'
       );
