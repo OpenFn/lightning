@@ -1230,6 +1230,12 @@ defmodule LightningWeb.WorkflowChannel do
        when was != now do
     socket = refresh_lifecycle_permissions(socket, workflow)
     push(socket, "session_context_updated", build_session_context(socket))
+
+    # Only the sockets that did not act reach this clause, so this needs no
+    # actor to compare against: whoever is told, someone else did it. Their
+    # editor is about to change under them and the change deserves saying.
+    push(socket, "lifecycle_changed", %{state: now})
+
     socket
   end
 

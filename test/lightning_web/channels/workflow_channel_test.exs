@@ -98,6 +98,25 @@ defmodule LightningWeb.WorkflowChannelTest do
       _ = {session_pid, original_name}
     end
 
+    test "tells the other sockets, rather than letting them find out on save", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      other = insert(:user)
+      insert(:project_user, project: project, user: other, role: :editor)
+
+      author = join_as(user, project, workflow)
+      _colleague = join_as(other, project, workflow)
+
+      ref = push(author, "go_live", %{})
+      assert_reply ref, :ok, _reply
+
+      # Sent only to the sockets that did not act, so it needs no actor to
+      # compare against. Their editor is about to turn read-only under them.
+      assert_push "lifecycle_changed", %{state: :live}
+    end
+
     test "intercepts the save broadcast, or the gate above never closes in production" do
       # Phoenix hands a broadcast the channel does not intercept straight to the
       # transport, so handle_out never runs. A channel test has no transport and

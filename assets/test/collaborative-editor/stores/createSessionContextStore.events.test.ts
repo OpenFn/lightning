@@ -8,8 +8,9 @@
  * - Selector performance and referential stability
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { notifications } from '../../../js/collaborative-editor/lib/notifications';
 
 import {
   createMockSessionContext,
@@ -28,6 +29,68 @@ import {
 } from '../mocks/phoenixChannel';
 
 describe('createSessionContextStore - Event Handling & Performance', () => {
+  describe('lifecycle_changed', () => {
+    const connect = () => {
+      const store = createSessionContextStore();
+      const mockChannel = createMockPhoenixChannel();
+      const cleanup = store._connectChannel(
+        createMockPhoenixChannelProvider(mockChannel)
+      );
+
+      return {
+        cleanup,
+        emit: (
+          mockChannel as MockPhoenixChannel & {
+            _test: { emit: (event: string, message: unknown) => void };
+          }
+        )._test.emit,
+      };
+    };
+
+    test('says so when someone else publishes the workflow', () => {
+      const info = vi.spyOn(notifications, 'info').mockReturnValue(1);
+      const { cleanup, emit } = connect();
+
+      emit('lifecycle_changed', { state: 'live' });
+
+      // The server sends this only to the sockets that did not act, so the
+      // editor turning read-only under someone is announced rather than left
+      // for them to discover when their save is refused.
+      expect(info).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'This workflow just went live' })
+      );
+
+      info.mockRestore();
+      cleanup();
+    });
+
+    test('says so when someone else takes it out of production', () => {
+      const info = vi.spyOn(notifications, 'info').mockReturnValue(1);
+      const { cleanup, emit } = connect();
+
+      emit('lifecycle_changed', { state: 'draft' });
+
+      expect(info).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'This workflow is a draft again' })
+      );
+
+      info.mockRestore();
+      cleanup();
+    });
+
+    test('stays quiet on anything else', () => {
+      const info = vi.spyOn(notifications, 'info').mockReturnValue(1);
+      const { cleanup, emit } = connect();
+
+      emit('lifecycle_changed', {});
+
+      expect(info).not.toHaveBeenCalled();
+
+      info.mockRestore();
+      cleanup();
+    });
+  });
+
   describe('event handling', () => {
     test('channel session_context events are processed correctly', async () => {
       const store = createSessionContextStore();

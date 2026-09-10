@@ -172,6 +172,10 @@ and this project adheres to
   with it. A pinned version has no run to carry into a fix, so it stays a
   reading view.
 
+- A workflow going live or back to draft under you now says so. Your editor
+  changes as it happens, and until now the only way to find out was to hover a
+  tooltip or have a save refused.
+
 - Going live now closes the write gate for everyone else in the workflow. It
   only refreshed the person who clicked, so their colleagues kept typing into a
   workflow that had just gone live, their edits kept reaching the document, and

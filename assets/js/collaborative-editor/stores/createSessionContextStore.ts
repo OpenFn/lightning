@@ -86,6 +86,7 @@ import { z } from 'zod';
 import _logger from '#/utils/logger';
 
 import { channelRequest } from '../hooks/useChannel';
+import { notifications } from '../lib/notifications';
 import {
   type SessionContextState,
   type SessionContextStore,
@@ -453,6 +454,31 @@ export const createSessionContextStore = (
       handleSessionContextUpdated(message);
     };
 
+    // Sent only to the sockets that did not act, so it always means someone
+    // else moved the workflow. Their editor changes under them, which is worth
+    // a word rather than leaving them to notice on save.
+    const lifecycleChangedHandler = (message: unknown) => {
+      const state =
+        typeof message === 'object' &&
+        message !== null &&
+        'state' in message &&
+        (message as { state: unknown }).state;
+
+      if (state === 'live') {
+        notifications.info({
+          title: 'This workflow just went live',
+          description:
+            'Someone else published it, so it is read-only here now. Switch it to draft or edit it in a sandbox to make changes.',
+        });
+      } else if (state === 'draft') {
+        notifications.info({
+          title: 'This workflow is a draft again',
+          description:
+            'Someone else took it out of production, so you can edit it here.',
+        });
+      }
+    };
+
     const workflowSavedHandler = (message: unknown) => {
       logger.debug('Received workflow_saved message', message);
       // Type guard for workflow saved message
@@ -552,6 +578,7 @@ export const createSessionContextStore = (
       channel.on('session_context', sessionContextHandler);
       channel.on('session_context_updated', sessionContextUpdatedHandler);
       channel.on('workflow_saved', workflowSavedHandler);
+      channel.on('lifecycle_changed', lifecycleChangedHandler);
       channel.on(
         'webhook_auth_methods_updated',
         webhookAuthMethodsUpdatedHandler
@@ -570,6 +597,7 @@ export const createSessionContextStore = (
         channel.off('session_context', sessionContextHandler);
         channel.off('session_context_updated', sessionContextUpdatedHandler);
         channel.off('workflow_saved', workflowSavedHandler);
+        channel.off('lifecycle_changed', lifecycleChangedHandler);
         channel.off(
           'webhook_auth_methods_updated',
           webhookAuthMethodsUpdatedHandler
