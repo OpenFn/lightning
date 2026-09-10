@@ -25,7 +25,6 @@ import type { CredentialStoreInstance } from '../../../../js/collaborative-edito
 import { createCredentialStore } from '../../../../js/collaborative-editor/stores/createCredentialStore';
 import type { SessionContextStoreInstance } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
 import { createSessionContextStore } from '../../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createSessionStore } from '../../../../js/collaborative-editor/stores/createSessionStore';
 import type { WorkflowStoreInstance } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import { createWorkflowStore } from '../../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../../js/collaborative-editor/types/session';
@@ -33,6 +32,7 @@ import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
 } from '../../__helpers__/channelMocks';
+import { createTestSessionStore } from '../../__helpers__/sessionStoreHelpers';
 import { createMockSocket } from '../../mocks/phoenixSocket';
 import { createWorkflowYDoc } from '../../__helpers__/workflowFactory';
 
@@ -61,7 +61,7 @@ function createWrapper(
   awarenessStore: AwarenessStoreInstance
 ): React.ComponentType<{ children: React.ReactNode }> {
   // Create session store and initialize with mock socket
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const mockSocket = createMockSocket();
   sessionStore.initializeSession(mockSocket as any, 'test:room', null, {
     connect: true, // Ensure connected state

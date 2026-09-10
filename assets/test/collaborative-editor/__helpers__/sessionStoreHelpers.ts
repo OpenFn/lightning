@@ -15,8 +15,9 @@
 
 import { Doc as YDoc, applyUpdate, encodeStateAsUpdate } from 'yjs';
 import type { PhoenixChannelProvider } from 'y-phoenix-channel';
-import { expect } from 'vitest';
+import { expect, onTestFinished } from 'vitest';
 
+import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import type { SessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import type { SessionState } from '../../../js/collaborative-editor/stores/createSessionStore';
 
@@ -28,6 +29,23 @@ import {
 
 // Re-export commonly used utilities
 export { waitForAsync };
+
+/**
+ * A session store that tears itself down when the test ends.
+ *
+ * PhoenixChannelProvider registers a `process.on('exit')` handler that only
+ * `destroy()` removes, so a store left initialised leaks one listener — plus a
+ * Y.Doc, awareness and channel — per test.
+ */
+export function createTestSessionStore(): SessionStore {
+  const store = createSessionStore();
+
+  onTestFinished(() => {
+    store.destroy();
+  });
+
+  return store;
+}
 
 /**
  * Creates a mock Phoenix socket for session store tests

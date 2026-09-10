@@ -24,7 +24,6 @@ import { createAdaptorStore } from '../../../js/collaborative-editor/stores/crea
 import { createAwarenessStore } from '../../../js/collaborative-editor/stores/createAwarenessStore';
 import { createCredentialStore } from '../../../js/collaborative-editor/stores/createCredentialStore';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
-import { createSessionStore } from '../../../js/collaborative-editor/stores/createSessionStore';
 import { createUIStore } from '../../../js/collaborative-editor/stores/createUIStore';
 import { createWorkflowStore } from '../../../js/collaborative-editor/stores/createWorkflowStore';
 import type { Session } from '../../../js/collaborative-editor/types/session';
@@ -32,6 +31,7 @@ import {
   createGithubConnectedContext,
   createSessionContext,
 } from '../__helpers__/sessionContextFactory';
+import { createTestSessionStore } from '../__helpers__/sessionStoreHelpers';
 import {
   createMockPhoenixChannel,
   createMockPhoenixChannelProvider,
@@ -58,7 +58,7 @@ function createTestSetup(options: WrapperOptions = {}) {
   } = options;
 
   // Create all stores
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const sessionContextStore = createSessionContextStore(false);
   const workflowStore = createWorkflowStore();
   const adaptorStore = createAdaptorStore();

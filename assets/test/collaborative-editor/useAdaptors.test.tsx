@@ -17,7 +17,6 @@ import {
   useAdaptorsInUse,
   useAdaptorsLoading,
 } from '../../js/collaborative-editor/hooks/useAdaptors';
-import { createSessionStore } from '../../js/collaborative-editor/stores/createSessionStore';
 
 import { SessionContext } from '../../js/collaborative-editor/contexts/SessionProvider';
 import { StoreContext } from '../../js/collaborative-editor/contexts/StoreProvider';
@@ -26,6 +25,7 @@ import { createAwarenessStore } from '../../js/collaborative-editor/stores/creat
 import { createCredentialStore } from '../../js/collaborative-editor/stores/createCredentialStore';
 import { createSessionContextStore } from '../../js/collaborative-editor/stores/createSessionContextStore';
 import { createWorkflowStore } from '../../js/collaborative-editor/stores/createWorkflowStore';
+import { createTestSessionStore } from './__helpers__/sessionStoreHelpers';
 import {
   mockAdaptorsList,
   mockAdaptor,
@@ -39,7 +39,7 @@ import { createMockSocket } from './mocks/phoenixSocket';
 // =============================================================================
 
 function createWrapper() {
-  const sessionStore = createSessionStore();
+  const sessionStore = createTestSessionStore();
   const adaptorStore = createAdaptorStore();
   const credentialStore = createCredentialStore();
   const awarenessStore = createAwarenessStore();
