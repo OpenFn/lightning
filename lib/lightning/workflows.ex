@@ -1218,10 +1218,14 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-    Checks if a workflow exists in the given project
+  Checks if a workflow exists in the given project
   """
   def workflow_exists_in_project?(project_id, workflow_id) do
-    get_workflow_for_project(%Project{id: project_id}, workflow_id) != nil
+    Lightning.Validators.valid_uuid?(workflow_id) &&
+      from(w in Query.workflows_for(%Project{id: project_id}),
+        where: w.id == ^workflow_id
+      )
+      |> Repo.exists?()
   end
 
   @doc """
