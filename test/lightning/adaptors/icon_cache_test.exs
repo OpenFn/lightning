@@ -198,6 +198,20 @@ defmodule Lightning.Adaptors.IconCacheTest do
     end
   end
 
+  describe "path/5 name validation" do
+    test "refuses names that would escape the cache root", %{root: root} do
+      for name <- ["..", "../..", "@openfn/..", ".hidden", "@../evil"] do
+        assert_raise ArgumentError, ~r/unsafe adaptor name/, fn ->
+          IconCache.path(:npm, name, :square, "png", <<0::256>>)
+        end
+
+        assert_raise ArgumentError, fn -> write(name, "bytes") end
+      end
+
+      assert File.ls!(root) == []
+    end
+  end
+
   defp write(name, bytes, shape \\ :square) do
     IconCache.write!(
       :npm,

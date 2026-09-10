@@ -32,6 +32,7 @@ defmodule Lightning.Adaptors.IconCache do
   """
 
   alias Lightning.Adaptors.Config
+  alias Lightning.Adaptors.PackageName
 
   @type source :: :npm | :local
   @type name :: String.t()
@@ -39,14 +40,25 @@ defmodule Lightning.Adaptors.IconCache do
   @type ext :: String.t()
 
   @doc """
-  Disk path for an icon. Pure — nothing is checked or created.
+  Disk path for an icon. Nothing is created.
 
   `name` may contain a `/` (scoped npm packages like
   `@openfn/language-foo`); `Path.join/1` preserves the slash so the
   scope becomes a real subdirectory.
+
+  Raises `ArgumentError` on a name `PackageName` would reject. Icons are
+  written straight from a strategy's response, before the row reaches
+  `CatalogueAdaptor.changeset/2` and its name validation, so this is the
+  only thing standing between a hostile registry entry and a write
+  outside the cache root.
   """
   @spec path(source(), name(), shape(), ext(), binary()) :: Path.t()
   def path(source, name, shape, ext, sha256) do
+    unless Regex.match?(PackageName.name_format(), name) do
+      raise ArgumentError,
+            "unsafe adaptor name for an icon path: #{inspect(name)}"
+    end
+
     Path.join([
       Config.icon_path(),
       to_string(source),
@@ -73,6 +85,9 @@ defmodule Lightning.Adaptors.IconCache do
   pre-sha naming, is removed first, so a rename never lands on a
   directory left empty by its own sweep.
   """
+  # Every path here comes from `path/5`, which rejects a name that is not
+  # a safe path segment, so nothing escapes `Config.icon_path/0`.
+  # sobelow_skip ["Traversal.FileModule"]
   @spec write!(source(), name(), shape(), ext(), binary(), binary()) ::
           Path.t()
   def write!(source, name, shape, ext, bytes, sha256) when is_binary(bytes) do
@@ -96,6 +111,7 @@ defmodule Lightning.Adaptors.IconCache do
     final_path
   end
 
+  # sobelow_skip ["Traversal.FileModule"]
   defp remove_superseded(dir, shape, final_path) do
     dir
     |> Path.join("#{shape}.*")
