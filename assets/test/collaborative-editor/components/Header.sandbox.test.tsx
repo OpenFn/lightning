@@ -44,10 +44,11 @@ const checkPromote =
   vi.fn<() => Promise<{ diverged: boolean; parent_name: string | null }>>();
 
 let urlParams: Record<string, string> = {};
+const updateSearchParams = vi.fn();
 let activeRun: {
   id: string;
   state: string;
-  steps: { id: string }[];
+  steps: { id: string; input_dataclip_id?: string }[];
 } | null = null;
 let latestSnapshotId: string | null = null;
 let versions: {
@@ -56,7 +57,7 @@ let versions: {
 }[] = [];
 
 vi.mock('../../../js/react/lib/use-url-state', () => ({
-  useURLState: () => ({ params: urlParams, updateSearchParams: vi.fn() }),
+  useURLState: () => ({ params: urlParams, updateSearchParams }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
@@ -218,6 +219,7 @@ describe('Header - Edit in sandbox button gating', () => {
     activeRun = null;
     latestSnapshotId = null;
     versions = [];
+    updateSearchParams.mockClear();
   });
 
   afterEach(() => {
@@ -439,6 +441,64 @@ describe('Header - lifecycle actions', () => {
 
     await waitFor(() => {
       expect(switchToDraft).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test("switching to draft from a run carries that run's input", async () => {
+    const user = userEvent.setup();
+    lifecycleState = 'live';
+    urlParams = { run: 'run-1', as_run: 'run-1' };
+    activeRun = {
+      id: 'run-1',
+      state: 'failed',
+      steps: [{ id: 'step-1', input_dataclip_id: 'dc-7' }],
+    };
+
+    renderHeader();
+
+    await user.click(screen.getByTestId('switch-to-draft-button'));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Switch to draft',
+      })
+    );
+
+    // Without sandboxes this is the only route to a fix, and the input is what
+    // the fix gets tested against. The draft opens on the run panel with it
+    // already selected, rather than sending the person back to the history to
+    // find it again.
+    await waitFor(() => {
+      expect(updateSearchParams).toHaveBeenCalledWith({
+        as_run: null,
+        run: null,
+        step: null,
+        panel: 'run',
+        dataclip: 'dc-7',
+      });
+    });
+  });
+
+  test('switching to draft with no run loaded carries nothing', async () => {
+    const user = userEvent.setup();
+    lifecycleState = 'live';
+    urlParams = {};
+    activeRun = null;
+
+    renderHeader();
+
+    await user.click(screen.getByTestId('switch-to-draft-button'));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Switch to draft',
+      })
+    );
+
+    await waitFor(() => {
+      expect(updateSearchParams).toHaveBeenCalledWith({
+        as_run: null,
+        run: null,
+        step: null,
+      });
     });
   });
 

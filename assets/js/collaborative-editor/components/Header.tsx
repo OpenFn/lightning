@@ -907,7 +907,22 @@ export function Header({
             onConfirm={() => {
               setShowSwitchToDraftDialog(false);
               setIsTransitioning(true);
+              // Coming from a failed run, the input is what the fix will be
+              // tested against, so it comes along: the draft opens with the run
+              // panel on that input, ready to run. Without sandboxes this is
+              // the only route to a fix, and losing the input at the door made
+              // it a fetch through the history.
+              const runInput = activeRun?.steps?.[0]?.input_dataclip_id ?? null;
               void switchToDraft()
+                .then(() => {
+                  updateSearchParams({
+                    as_run: null,
+                    run: null,
+                    step: null,
+                    ...(runInput ? { panel: 'run', dataclip: runInput } : {}),
+                  });
+                  return null;
+                })
                 .catch(() =>
                   notifications.alert({
                     title: 'Could not switch to draft',

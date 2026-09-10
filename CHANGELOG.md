@@ -158,6 +158,10 @@ and this project adheres to
 
 ### Fixed
 
+- Switching to draft from a run lands on the run panel with that run's input
+  selected. For anyone without sandboxes this is the only way to fix a failing
+  workflow, and the input was left behind at the door.
+
 - Edit in sandbox opens on that run's input when you reach it from a run. It is
   what you came to reuse, so it is the choice already made rather than one to
   find.
