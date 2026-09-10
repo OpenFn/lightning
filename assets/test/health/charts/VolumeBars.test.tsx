@@ -91,15 +91,17 @@ describe('bucketMeta', () => {
       ),
     ];
 
-    expect(bucketMeta(hourly(2))).toBe('2-hour buckets');
-    expect(bucketMeta(hourly(12))).toBe('12-hour buckets');
-    expect(bucketMeta(hourly(24))).toBe('daily buckets');
+    expect(bucketMeta(hourly(2))).toBe('2-hour buckets · UTC');
+    expect(bucketMeta(hourly(12))).toBe('12-hour buckets · UTC');
+    expect(bucketMeta(hourly(24))).toBe('daily buckets · UTC');
   });
 
   // One bucket has no width to disagree with, so a coarser label is the worst
   // this can cost.
   test('falls back to daily when there is nothing to measure', () => {
-    expect(bucketMeta([bucket('2026-09-09T00:00:00Z')])).toBe('daily buckets');
+    expect(bucketMeta([bucket('2026-09-09T00:00:00Z')])).toBe(
+      'daily buckets · UTC'
+    );
   });
 });
 

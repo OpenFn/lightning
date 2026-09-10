@@ -194,11 +194,17 @@ const bucketHours = (buckets: RunBucket[]) => {
     : 24;
 };
 
-/** The card's meta line, measured off the same buckets the chart draws. */
+/**
+ * The card's meta line, measured off the same buckets the chart draws.
+ *
+ * Names the zone as well as the width: the axis and the tooltip are in UTC,
+ * while the page's freshness stamp is in the reader's own clock, so a bar can
+ * sit hours behind a "Last Updated" that looks current.
+ */
 export const bucketMeta = (buckets: RunBucket[]) => {
   const hours = bucketHours(buckets);
 
-  return hours >= 24 ? 'daily buckets' : `${hours}-hour buckets`;
+  return `${hours >= 24 ? 'daily' : `${hours}-hour`} buckets · UTC`;
 };
 
 const TICK_FILL = '#6b7280';
