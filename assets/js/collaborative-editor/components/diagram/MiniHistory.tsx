@@ -78,8 +78,11 @@ const STATUS_DOT: Record<string, string> = {
 // replaced by it: without experimental features the history is the one that
 // ships today, down to how a run's state is drawn.
 const CHIP_STYLES: Record<string, string> = {
+  // only workorder states...
+  rejected: 'bg-red-300 text-gray-800',
   pending: 'bg-gray-200 text-gray-800',
   running: 'bg-blue-200 text-blue-800',
+  //  run and workorder states...
   available: 'bg-gray-200 text-gray-800',
   claimed: 'bg-blue-200 text-blue-800',
   started: 'bg-blue-200 text-blue-800',

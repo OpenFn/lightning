@@ -3,8 +3,9 @@
  *
  * Switching version updates the pin parameter. With experimental features on it
  * also clears the selected run (?run), so a run selected on one version never
- * leaks into another. Without them it writes the one parameter the editor
- * writes today and leaves the rest alone.
+ * leaks into another. Without them it writes the snapshot parameter the editor
+ * writes today, clears the two pins it could not have made itself, and leaves
+ * the open run alone.
  *
  * Which parameter it writes depends on the picker the user has: `?release=` for
  * the publish trail with experimental features on, `?v=` for a snapshot's own
@@ -93,17 +94,37 @@ describe('useVersionSelect', () => {
     result.current.handleVersionSelect(3);
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      release: null,
+      as_run: null,
       v: '3',
     });
   });
 
-  test('returning to latest without the flag clears only ?v', () => {
+  test('clears a pin it could not have made itself', () => {
+    // A flag-off user cannot produce ?as_run= or ?release=, but a link from
+    // someone who can carries them in, and the room name resolves those before
+    // the snapshot. Leaving them would let this picker change the URL and
+    // nothing else.
+    experimentalFeatures = false;
+    urlState.setParam('as_run', 'a-run-from-a-shared-link');
+
+    const { result } = renderHook(() => useVersionSelect());
+    result.current.handleVersionSelect(3);
+
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(
+      expect.objectContaining({ as_run: null, release: null })
+    );
+  });
+
+  test('returning to latest without the flag clears only the pins', () => {
     experimentalFeatures = false;
 
     const { result } = renderHook(() => useVersionSelect());
     result.current.handleVersionSelect('latest');
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      release: null,
+      as_run: null,
       v: null,
     });
   });
@@ -137,9 +158,9 @@ describe('useVersionSelect', () => {
     });
 
     expect(result.current.prompt.isAsking).toBe(false);
-    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
-      v: '3',
-    });
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(
+      expect.objectContaining({ v: '3' })
+    );
   });
 
   test('asks first when there are unsaved changes, and switches nothing yet', () => {

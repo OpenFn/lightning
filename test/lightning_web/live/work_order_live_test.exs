@@ -217,9 +217,10 @@ defmodule LightningWeb.WorkOrderLiveTest do
           can_edit_data_retention: true
         )
 
-      assert classic =~
-               "?run=#{run.id}&amp;v=#{work_order.snapshot.lock_version}"
-
+      # Matched a parameter at a time: the link builds its query string from a
+      # map, so the order is whatever the encoder iterates, not source order.
+      assert classic =~ "run=#{run.id}"
+      assert classic =~ "v=#{work_order.snapshot.lock_version}"
       refute classic =~ "as_run="
 
       experimental =
@@ -232,7 +233,8 @@ defmodule LightningWeb.WorkOrderLiveTest do
           experimental_features: true
         )
 
-      assert experimental =~ "?run=#{run.id}&amp;as_run=#{run.id}"
+      assert experimental =~ "run=#{run.id}"
+      assert experimental =~ "as_run=#{run.id}"
     end
 
     test "WorkOrderComponent renders steps when details are toggled", %{

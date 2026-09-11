@@ -23,6 +23,7 @@ import { useCallback } from 'react';
 import { useURLState } from '#/react/lib/use-url-state';
 
 import {
+  AS_RUN_PARAM,
   CLEAR_PINNED_VIEW,
   RELEASE_PARAM,
   SNAPSHOT_PARAM,
@@ -66,7 +67,18 @@ export function useVersionSelect() {
             });
           }
         : () => {
-            updateSearchParams({ [SNAPSHOT_PARAM]: value });
+            // The other two pins are cleared even here. A flag-off user cannot
+            // create them, but a link from someone who can carries them in, and
+            // `collaborationRoomName` resolves as_run before release before the
+            // snapshot, so leaving them would let the picker change the URL and
+            // nothing else. `run` and `step` stay: the mismatch banner's offer
+            // takes you to the version the open run ran against, and the run has
+            // to survive the trip.
+            updateSearchParams({
+              [RELEASE_PARAM]: null,
+              [AS_RUN_PARAM]: null,
+              [SNAPSHOT_PARAM]: value,
+            });
           };
 
       // Switching destroys the document, so with experimental features on we

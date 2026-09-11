@@ -172,6 +172,24 @@ describe('MiniHistory', () => {
       expect(document.querySelectorAll('button.link-uuid').length).toBe(4);
     });
 
+    test('keeps the rejected pill red without the flag', () => {
+      // A work order the usage limiter turned away. It is the one state that
+      // only a work order has, and the classic pill has always drawn it red.
+      experimentalFeatures = false;
+
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={[createMockWorkOrder({ state: 'rejected' })]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+        />
+      );
+
+      const pill = screen.getByText('Rejected');
+      expect(pill.className).toContain('bg-red-300');
+    });
+
     test('draws state as a dot with the flag on', () => {
       experimentalFeatures = true;
 
