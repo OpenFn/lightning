@@ -388,11 +388,13 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       # Find the workflow link - should include version param
       # Note: & is HTML-escaped as &amp; in rendered output
-      # Matched a parameter at a time: the link builds its query string from a
-      # map, so the order is whatever the encoder iterates, not source order.
+      # Matched a parameter at a time, and anchored on the separator: the link
+      # builds its query string from a map, so the order is whatever the encoder
+      # iterates rather than source order, and a bare `run=` would also match
+      # inside `as_run=`.
       assert html =~ ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?/
-      assert html =~ "run=#{run_id}"
-      assert html =~ "v=#{snapshot.lock_version}"
+      assert html =~ ~r/[?;]run=#{run_id}/
+      assert html =~ ~r/[?;]v=#{snapshot.lock_version}/
       refute html =~ "as_run="
     end
 
@@ -431,8 +433,8 @@ defmodule LightningWeb.RunLive.ShowTest do
       html = view |> element("#run-detail-#{run_id}") |> render_async()
 
       assert html =~ ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?/
-      assert html =~ "run=#{run_id}"
-      assert html =~ "as_run=#{run_id}"
+      assert html =~ ~r/[?;]run=#{run_id}/
+      assert html =~ ~r/[?;]as_run=#{run_id}/
     end
   end
 

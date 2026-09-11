@@ -454,6 +454,72 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              |> Enum.all?(& &1.enabled)
     end
 
+    test "the limiter can refuse an enable, and is not asked for a no-op one", %{
+      conn: conn,
+      project: project
+    } do
+      # Enabling asks the limiter; flipping a workflow that is already on does
+      # not, which is how this read before a lifecycle transition replaced the
+      # plain save. Both halves matter: the first is the limit doing its job,
+      # the second is a project at its limit still being able to click a toggle
+      # that changes nothing.
+      off_trigger = build(:trigger, type: :webhook, enabled: false)
+      off_job = build(:job)
+
+      off_workflow =
+        build(:workflow, project: project)
+        |> with_job(off_job)
+        |> with_trigger(off_trigger)
+        |> with_edge({off_trigger, off_job})
+        |> insert()
+
+      on_trigger = build(:trigger, type: :webhook, enabled: true)
+      on_job = build(:job)
+
+      on_workflow =
+        build(:workflow, project: project, state: :live)
+        |> with_job(on_job)
+        |> with_trigger(on_trigger)
+        |> with_edge({on_trigger, on_job})
+        |> insert()
+
+      asked = :counters.new(1, [:atomics])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :activate_workflow}, _context ->
+          :counters.add(asked, 1, 1)
+          {:error, :too_many_workflows, %{text: "No more workflows"}}
+        end
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "true",
+               "value_key" => off_workflow.id
+             }) =~ "Failed to update workflow"
+
+      assert :counters.get(asked, 1) == 1
+
+      refute Lightning.Workflows.get_workflow!(off_workflow.id,
+               include: [:triggers]
+             ).triggers
+             |> Enum.any?(& &1.enabled)
+
+      # Already on. The limiter is never consulted, so the refusal above cannot
+      # reach it and the toggle succeeds.
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "true",
+               "value_key" => on_workflow.id
+             }) =~ "Workflow updated"
+
+      assert :counters.get(asked, 1) == 1
+    end
+
     @tag role: :viewer
     test "viewers cannot toggle a workflow's state", %{
       conn: conn,

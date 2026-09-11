@@ -17,26 +17,6 @@ defmodule LightningWeb.RunLive.Show do
   on_mount {LightningWeb.Hooks, :ensure_run_belongs_to_project}
   on_mount {LightningWeb.Hooks, :check_limits}
 
-  # Opening the workflow at the content this run executed. A run of the current
-  # version needs no pin at all.
-  #
-  # With experimental features that pin is `?as_run=`, which the channel resolves
-  # through the run's own snapshot, so it works for content that was never
-  # released. Without them it is `?v=` and the snapshot's lock_version, which is
-  # what the editor's own picker reads and what this link has always sent.
-  defp run_link_params(run, workflow_version, experimental_features) do
-    cond do
-      run.snapshot.lock_version == workflow_version ->
-        %{run: run.id}
-
-      experimental_features ->
-        %{run: run.id, as_run: run.id}
-
-      true ->
-        %{run: run.id, v: run.snapshot.lock_version}
-    end
-  end
-
   attr :run, :map, required: true
   attr :workflow, :map, required: true
 
@@ -130,7 +110,7 @@ defmodule LightningWeb.RunLive.Show do
                   <:value>
                     <.link
                       navigate={
-                        ~p"/projects/#{@project}/w/#{@workflow.id}?#{run_link_params(run, @workflow.lock_version, @experimental_features)}"
+                        ~p"/projects/#{@project}/w/#{@workflow.id}?#{maybe_add_snapshot_version(%{run: run.id}, run.snapshot.lock_version, @workflow.lock_version, @experimental_features)}"
                       }
                       class="link text-ellipsis"
                     >
