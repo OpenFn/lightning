@@ -356,27 +356,6 @@ describe('WorkflowHealth', () => {
     ).toBeVisible();
   });
 
-  // The rows count a work order once per failed branch, so they can sum past
-  // the failure total the donut draws. Say so only when it happened.
-  test('footnotes the triage rows only when they outrun the failures', async () => {
-    const { unmount } = mount(both);
-
-    expect(
-      await screen.findByRole('heading', { name: 'Triage' })
-    ).toBeVisible();
-    expect(screen.queryByText(/more than one branch/)).toBeNull();
-    unmount();
-
-    const doubled = {
-      ...errorSignatures,
-      signatures: [{ ...errorSignatures.signatures[0], count: 200 }],
-    };
-
-    mount({ ...both, failures: doubled });
-
-    expect(await screen.findByText(/more than one branch/)).toBeVisible();
-  });
-
   test('reports a refused request without echoing the server', async () => {
     mount({ outcomes: 404, failures: 404, runs: 404 });
 

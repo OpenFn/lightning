@@ -10,7 +10,7 @@ import { TriageTable } from './charts/TriageTable';
 import type { RunVolume } from './charts/VolumeBars';
 import { bucketMeta, VolumeBars } from './charts/VolumeBars';
 import { DEFAULT_DAYS, RangePicker } from './RangePicker';
-import type { ErrorSignature, ErrorSignatures, Outcomes } from './types';
+import type { ErrorSignatures, Outcomes } from './types';
 import { failureTotal } from './types';
 import { healthBase, useHealthQuery } from './useHealthQuery';
 
@@ -101,22 +101,13 @@ export const WorkflowHealth = ({
         <Card title="Triage" className="lg:col-span-2">
           <Panel data={signatures.data} error={signatures.error}>
             {({ signatures, window }) => (
-              <>
-                <TriageTable
-                  signatures={signatures}
-                  emptyMessage={emptyMessage(window, 'failures')}
-                  projectId={projectId}
-                  workflowId={workflowId}
-                  from={window.from}
-                />
-                {outcomes.data &&
-                  overCounts(signatures, outcomes.data.counts) && (
-                    <p className="mt-3 text-xs text-gray-500">
-                      Some work orders failed on more than one branch, so they
-                      appear in more than one row.
-                    </p>
-                  )}
-              </>
+              <TriageTable
+                signatures={signatures}
+                emptyMessage={emptyMessage(window, 'failures')}
+                projectId={projectId}
+                workflowId={workflowId}
+                from={window.from}
+              />
             )}
           </Panel>
         </Card>
@@ -228,11 +219,6 @@ const workOrders = (counts: Outcomes['counts']) =>
 // than the drawn slices, which drop the states that never happened.
 const failures = (counts: Outcomes['counts']) =>
   count(failureTotal(counts), 'failed work order');
-
-// Rows count failed branches, so they can sum past the failure total.
-const overCounts = (signatures: ErrorSignature[], counts: Outcomes['counts']) =>
-  signatures.reduce((sum, signature) => sum + signature.count, 0) >
-  failureTotal(counts);
 
 const emptyMessage = (
   window: Outcomes['window'],
