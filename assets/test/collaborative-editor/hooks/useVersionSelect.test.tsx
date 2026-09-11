@@ -1,9 +1,10 @@
 /**
  * useVersionSelect Hook Tests
  *
- * Switching version updates the pin parameter AND clears the selected run
- * (?run), so a run selected on one version never leaks into another (the Recent
- * History widget is version-scoped).
+ * Switching version updates the pin parameter. With experimental features on it
+ * also clears the selected run (?run), so a run selected on one version never
+ * leaks into another. Without them it writes the one parameter the editor
+ * writes today and leaves the rest alone.
  *
  * Which parameter it writes depends on the picker the user has: `?release=` for
  * the publish trail with experimental features on, `?v=` for a snapshot's own
@@ -75,22 +76,35 @@ describe('useVersionSelect', () => {
     });
   });
 
-  test('pins a snapshot with ?v when experimental features are off', () => {
+  test('pins a snapshot with ?v, and touches nothing else, without the flag', () => {
     // Without the flag the picker lists saves, numbered by lock_version, and
     // those go in `?v=`. Writing them into `?release=` would ask the server for
     // release 3 and get whichever content that published, which is a different
     // snapshot.
+    //
+    // It clears no other parameter either. The open run survives the switch,
+    // which is what the mismatch banner's offer depends on: it takes you to the
+    // version the run ran against, and the run has to still be there when you
+    // arrive.
     experimentalFeatures = false;
+    urlState.setParam('run', 'the-run-being-looked-at');
 
     const { result } = renderHook(() => useVersionSelect());
     result.current.handleVersionSelect(3);
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
-      release: null,
       v: '3',
-      run: null,
-      as_run: null,
-      step: null,
+    });
+  });
+
+  test('returning to latest without the flag clears only ?v', () => {
+    experimentalFeatures = false;
+
+    const { result } = renderHook(() => useVersionSelect());
+    result.current.handleVersionSelect('latest');
+
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      v: null,
     });
   });
 
@@ -123,9 +137,9 @@ describe('useVersionSelect', () => {
     });
 
     expect(result.current.prompt.isAsking).toBe(false);
-    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(
-      expect.objectContaining({ v: '3' })
-    );
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      v: '3',
+    });
   });
 
   test('asks first when there are unsaved changes, and switches nothing yet', () => {

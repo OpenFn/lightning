@@ -48,18 +48,26 @@ export function useVersionSelect() {
 
   const handleVersionSelect = useCallback(
     (version: number | 'latest') => {
-      const param = experimentalFeatures ? RELEASE_PARAM : SNAPSHOT_PARAM;
+      const value = version === 'latest' ? null : String(version);
 
-      const switchTo = () => {
-        updateSearchParams({
-          ...CLEAR_PINNED_VIEW,
-          [param]: version === 'latest' ? null : String(version),
-          run: null,
-          // The step belongs to the run being cleared, and a step id means
-          // nothing in another version.
-          step: null,
-        });
-      };
+      // Without the flag this touches the one parameter it has always touched.
+      // A run stays open across the switch, which is how the mismatch banner's
+      // offer works today: it takes you to the version the open run ran
+      // against, and the run has to survive the trip.
+      const switchTo = experimentalFeatures
+        ? () => {
+            updateSearchParams({
+              ...CLEAR_PINNED_VIEW,
+              [RELEASE_PARAM]: value,
+              run: null,
+              // The step belongs to the run being cleared, and a step id means
+              // nothing in another version.
+              step: null,
+            });
+          }
+        : () => {
+            updateSearchParams({ [SNAPSHOT_PARAM]: value });
+          };
 
       // Switching destroys the document, so with experimental features on we
       // ask first when that would take uncommitted edits with it.

@@ -888,10 +888,12 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
   // undo/redo keyboard shortcuts
   useEffect(() => {
     const keyHandler = (e: KeyboardEvent) => {
-      // A read-only workflow (live on main, pinned, deleted, no edit
-      // permission) must not be mutated. Guard the keyboard shortcuts just like
-      // the toolbar buttons, otherwise Cmd/Ctrl+Z / Cmd/Ctrl+Y would still push
-      // changes into the Y.Doc.
+      // A read-only workflow (deleted, pinned to an old version, no edit
+      // permission, or locked by its lifecycle) must not be mutated. Guard the
+      // keyboard shortcuts just like the toolbar buttons, otherwise
+      // Cmd/Ctrl+Z / Cmd/Ctrl+Y still push changes into the Y.Doc -- and on a
+      // pinned version the user does have edit permission, so the server
+      // accepts them and writes them into the snapshot's own document.
       if (isReadOnly) return;
 
       const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'z';
@@ -978,7 +980,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
               onClick={() => undo()}
               data-tooltip={
                 isReadOnly
-                  ? 'This workflow is read-only'
+                  ? readOnlyTooltip
                   : canUndo
                     ? 'Undo'
                     : 'Nothing to undo'
@@ -992,7 +994,7 @@ export default function WorkflowDiagram(props: WorkflowDiagramProps) {
               onClick={() => redo()}
               data-tooltip={
                 isReadOnly
-                  ? 'This workflow is read-only'
+                  ? readOnlyTooltip
                   : canRedo
                     ? 'Redo'
                     : 'Nothing to redo'
