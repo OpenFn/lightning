@@ -157,6 +157,32 @@ describe('MiniHistory', () => {
       });
     });
 
+    test('draws state as the filled pill it has always been, without the flag', () => {
+      // The redesigned row leads with a coloured dot and the state in words,
+      // and pushes the id to the right. That is the experimental history.
+      // Without the flag the row is the one that ships today: id first, then
+      // when it ran, with a filled pill on the right.
+      experimentalFeatures = false;
+
+      renderExpanded();
+
+      const pills = document.querySelectorAll('span.bg-green-200');
+      expect(pills.length).toBeGreaterThan(0);
+      expect(document.querySelectorAll('span.h-1\\.5')).toHaveLength(0);
+      expect(document.querySelectorAll('button.link-uuid').length).toBe(4);
+    });
+
+    test('draws state as a dot with the flag on', () => {
+      experimentalFeatures = true;
+
+      renderExpanded();
+
+      expect(document.querySelectorAll('span.h-1\\.5').length).toBeGreaterThan(
+        0
+      );
+      expect(document.querySelectorAll('span.bg-green-200')).toHaveLength(0);
+    });
+
     test('offers the run its own version when the canvas shows another', async () => {
       // The flag-off answer to a run of older content: the run is painted onto
       // the document already open, and this says the shape on screen is not the

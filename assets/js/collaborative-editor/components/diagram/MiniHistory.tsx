@@ -74,9 +74,44 @@ const STATUS_DOT: Record<string, string> = {
   lost: 'bg-gray-700',
 };
 
+// The pill this list has always used. Kept alongside the dot below rather than
+// replaced by it: without experimental features the history is the one that
+// ships today, down to how a run's state is drawn.
+const CHIP_STYLES: Record<string, string> = {
+  pending: 'bg-gray-200 text-gray-800',
+  running: 'bg-blue-200 text-blue-800',
+  available: 'bg-gray-200 text-gray-800',
+  claimed: 'bg-blue-200 text-blue-800',
+  started: 'bg-blue-200 text-blue-800',
+  success: 'bg-green-200 text-green-800',
+  failed: 'bg-red-200 text-red-800',
+  crashed: 'bg-orange-200 text-orange-800',
+  cancelled: 'bg-gray-500 text-gray-800',
+  killed: 'bg-yellow-200 text-yellow-800',
+  exception: 'bg-gray-800 text-white',
+  lost: 'bg-gray-800 text-white',
+};
+
 const displayTextFromState = (state: string): string => {
   if (state.length === 0) return '';
   return state.charAt(0).toUpperCase() + state.substring(1);
+};
+
+const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
+  state,
+  mini = false,
+}) => {
+  const classes = CHIP_STYLES[state] || CHIP_STYLES['pending'];
+  const text = displayTextFromState(state);
+
+  const baseClasses =
+    'my-auto whitespace-nowrap rounded-full text-center ' +
+    'align-baseline font-medium leading-none';
+  const sizeClasses = mini ? 'py-1 px-2 text-[10px]' : 'py-2 px-4 text-xs';
+
+  return (
+    <span className={`${baseClasses} ${sizeClasses} ${classes}`}>{text}</span>
+  );
 };
 
 const StatusIndicator: React.FC<{ state: string }> = ({ state }) => {
@@ -131,7 +166,102 @@ interface RunItemProps {
   onNavigateToRun: (e: React.MouseEvent, runId: string) => void;
 }
 
-const RunItem: React.FC<RunItemProps> = ({
+const RunItem: React.FC<RunItemProps> = props => {
+  const experimentalFeatures = useExperimentalFeatures();
+
+  return experimentalFeatures ? (
+    <ExperimentalRunItem {...props} />
+  ) : (
+    <ClassicRunItem {...props} />
+  );
+};
+
+// The run row as it has always been: the id first, then when it ran, with a
+// filled state pill on the right.
+const ClassicRunItem: React.FC<RunItemProps> = ({
+  run,
+  now,
+  onSelect,
+  onDeselect,
+  onNavigateToRun,
+}) => (
+  /*
+    Mouse-only clickable area - keyboard users can navigate to
+    the run detail page using the UUID link button below.
+  */
+  // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+  <div
+    className={[
+      'px-3 py-1.5 text-xs hover:bg-gray-50 ' +
+        'transition-colors cursor-pointer border-l-2 ' +
+        'w-full text-left',
+      run.selected
+        ? 'bg-indigo-50 border-l-indigo-500'
+        : ' border-l-transparent',
+    ].join(' ')}
+    onClick={e => {
+      e.stopPropagation();
+      if (run.selected) {
+        onDeselect?.();
+      } else {
+        onSelect(run);
+      }
+    }}
+  >
+    <div className="flex items-center justify-between w-full mr-2">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        {run.selected && (
+          <button
+            type="button"
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDeselect?.();
+            }}
+            className="flex items-center text-gray-400
+              hover:text-gray-600 transition-colors"
+            aria-label="Deselect run"
+          >
+            <span className="hero-x-mark w-4 h-4" />
+          </button>
+        )}
+        {!run.selected && <span className="w-4 h-4 invisible" />}
+        <button
+          type="button"
+          onClick={e => onNavigateToRun(e, run.id)}
+          className="link-uuid"
+          title={run.id}
+          aria-label={`View full details for run ${truncateUid(run.id)}`}
+        >
+          {truncateUid(run.id)}
+        </button>
+        {(run.started_at || run.finished_at) && (
+          <>
+            <span className="text-xs text-gray-800">&bull;</span>
+            {formatRelative(
+              new Date((run.started_at || run.finished_at) as string),
+              now,
+              { locale: relativeLocale }
+            )}
+          </>
+        )}
+        {run.started_at && run.finished_at && (
+          <>
+            <span className="text-xs text-gray-800">&bull;</span>
+            <span className="text-gray-400 text-xs">
+              {duration(run.started_at, run.finished_at)}
+            </span>
+          </>
+        )}
+      </div>
+      <div className="flex items-center gap-1">
+        <StatePill state={run.state} mini={true} />
+      </div>
+    </div>
+  </div>
+);
+
+const ExperimentalRunItem: React.FC<RunItemProps> = ({
   run,
   now,
   onSelect,
@@ -224,7 +354,99 @@ interface WorkOrderItemProps {
   onNavigateToRun: (e: React.MouseEvent, runId: string) => void;
 }
 
-const WorkOrderItem: React.FC<WorkOrderItemProps> = ({
+const WorkOrderItem: React.FC<WorkOrderItemProps> = props => {
+  const experimentalFeatures = useExperimentalFeatures();
+
+  return experimentalFeatures ? (
+    <ExperimentalWorkOrderItem {...props} />
+  ) : (
+    <ClassicWorkOrderItem {...props} />
+  );
+};
+
+// The work order row as it has always been: the id first, then when it last
+// ran, with a filled state pill on the right.
+const ClassicWorkOrderItem: React.FC<WorkOrderItemProps> = ({
+  workorder,
+  isExpanded,
+  now,
+  onExpand,
+  onSelectRun,
+  onDeselectRun,
+  onNavigateToWorkorder,
+  onNavigateToRun,
+}) => (
+  <div>
+    <div className="px-3 py-2 hover:bg-gray-50 transition-colors">
+      {/*
+        Mouse-only clickable area for convenience - keyboard users
+        can use the chevron button and UUID link below for full accessibility.
+        This matches the LiveView implementation's keyboard navigation pattern.
+      */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+      <div
+        data-testid={`work-order-${workorder.id}`}
+        className="flex items-center justify-between cursor-pointer w-full text-left"
+        onClick={e => {
+          e.stopPropagation();
+          onExpand(workorder);
+        }}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+          <button
+            type="button"
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onExpand(workorder);
+            }}
+            className="flex items-center text-gray-400
+              hover:text-gray-600 transition-colors"
+            aria-label={`${isExpanded ? 'Collapse' : 'Expand'} work order details`}
+          >
+            {workorder.selected ? (
+              <span className="hero-chevron-down w-4 h-4 font-bold text-indigo-600" />
+            ) : isExpanded ? (
+              <span className="hero-chevron-down w-4 h-4" />
+            ) : (
+              <span className="hero-chevron-right w-4 h-4" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={e => onNavigateToWorkorder(e, workorder.id)}
+            className="link-uuid"
+            title={workorder.id}
+            aria-label={`View full details for work order ${truncateUid(workorder.id)}`}
+          >
+            {truncateUid(workorder.id)}
+          </button>
+          <span className="text-xs text-gray-800">&bull;</span>
+          <span className="text-xs text-gray-500">
+            {formatRelative(new Date(workorder.last_activity), now, {
+              locale: relativeLocale,
+            })}
+          </span>
+        </div>
+        <StatePill state={workorder.state} mini={true} />
+      </div>
+    </div>
+
+    {(isExpanded || workorder.selected) &&
+      workorder.runs.map(run => (
+        <RunItem
+          key={run.id}
+          run={run}
+          now={now}
+          onSelect={onSelectRun}
+          onDeselect={onDeselectRun}
+          onNavigateToRun={onNavigateToRun}
+        />
+      ))}
+  </div>
+);
+
+const ExperimentalWorkOrderItem: React.FC<WorkOrderItemProps> = ({
   workorder,
   isExpanded,
   now,
@@ -502,9 +724,8 @@ export default function MiniHistory({
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="mt-3 rounded-md bg-primary-600 px-3 py-1 text-xs
-                    font-medium text-white transition-colors
-                    hover:bg-primary-500"
+                  className="mt-3 px-3 py-1 text-xs bg-blue-500
+                    text-white rounded hover:bg-blue-600"
                 >
                   Retry
                 </button>
@@ -597,6 +818,16 @@ export default function MiniHistory({
         </div>
       )}
 
+      {/* Version mismatch banner when collapsed */}
+      {collapsed && versionMismatch && (
+        <VersionMismatchBanner
+          runVersion={versionMismatch.runVersion}
+          currentVersion={versionMismatch.currentVersion}
+          onGoToVersion={onGoToVersion ?? (() => undefined)}
+          compact={true}
+        />
+      )}
+
       <div
         className={`overflow-y-auto no-scrollbar max-h-82
           transition-opacity duration-200 ${
@@ -631,9 +862,8 @@ export default function MiniHistory({
               <button
                 type="button"
                 onClick={onRetry}
-                className="mt-3 rounded-md bg-primary-600 px-3 py-1 text-xs
-                  font-medium text-white transition-colors
-                  hover:bg-primary-500"
+                className="mt-3 px-3 py-1 text-xs bg-blue-500
+                  text-white rounded hover:bg-blue-600"
               >
                 Retry
               </button>
@@ -658,16 +888,7 @@ export default function MiniHistory({
         )}
       </div>
 
-      {/* Collapsed, there is no room for the sentence, only the offer. */}
-      {collapsed && versionMismatch && (
-        <VersionMismatchBanner
-          runVersion={versionMismatch.runVersion}
-          currentVersion={versionMismatch.currentVersion}
-          onGoToVersion={onGoToVersion ?? (() => undefined)}
-          compact={true}
-        />
-      )}
-
+      {/* Version mismatch banner at bottom of panel */}
       {!collapsed && versionMismatch && (
         <VersionMismatchBanner
           runVersion={versionMismatch.runVersion}
