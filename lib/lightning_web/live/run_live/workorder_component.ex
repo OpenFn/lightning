@@ -8,6 +8,31 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   alias Lightning.WorkOrder
   alias Phoenix.LiveView.JS
 
+  # Opening the workflow at the content this run executed. A run of the current
+  # version needs no pin at all.
+  #
+  # With experimental features that pin is `?as_run=`, which the channel resolves
+  # through the run's own snapshot, so it works for content that was never
+  # released. Without them it is `?v=` and the snapshot's lock_version, which is
+  # what the editor's own picker reads and what this link has always sent.
+  defp run_link_params(
+         run,
+         snapshot_version,
+         workflow_version,
+         experimental_features
+       ) do
+    cond do
+      snapshot_version == workflow_version ->
+        %{run: run.id}
+
+      experimental_features ->
+        %{run: run.id, as_run: run.id}
+
+      true ->
+        %{run: run.id, v: snapshot_version}
+    end
+  end
+
   defp default_experimental_features(socket) do
     assign_new(socket, :experimental_features, fn -> false end)
   end
@@ -190,13 +215,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           <%= if @last_run do %>
             <.link
               navigate={
-                # Only include version param if snapshot differs from current workflow version
-                if @work_order.workflow.lock_version ==
-                     @work_order.snapshot.lock_version do
-                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?run=#{@last_run.id}"
-                else
-                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?run=#{@last_run.id}&as_run=#{@last_run.id}"
-                end
+                ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?#{run_link_params(@last_run, @work_order.snapshot.lock_version, @work_order.workflow.lock_version, @experimental_features)}"
               }
               class="inline-block"
             >

@@ -316,7 +316,10 @@ defmodule Lightning.InvocationTest do
       # A curated input belongs to the project, so it is selectable on a job
       # that has never consumed it.
       assert [%{id: id}] =
-               Invocation.list_dataclips_for_job(job, %{}, limit: 5)
+               Invocation.list_dataclips_for_job(job, %{},
+                 limit: 5,
+                 named_dataclips: true
+               )
 
       assert id == named.id
     end
@@ -333,10 +336,18 @@ defmodule Lightning.InvocationTest do
         )
       end
 
-      first = Invocation.list_dataclips_for_job(job, %{}, limit: 1)
+      first =
+        Invocation.list_dataclips_for_job(job, %{},
+          limit: 1,
+          named_dataclips: true
+        )
 
       second =
-        Invocation.list_dataclips_for_job(job, %{}, limit: 1, offset: 1)
+        Invocation.list_dataclips_for_job(job, %{},
+          limit: 1,
+          offset: 1,
+          named_dataclips: true
+        )
 
       assert [%{id: first_id}] = first
       assert [%{id: second_id}] = second
@@ -363,7 +374,10 @@ defmodule Lightning.InvocationTest do
       end
 
       assert [%{id: first_id} | _] =
-               Invocation.list_dataclips_for_job(job, %{}, limit: 2)
+               Invocation.list_dataclips_for_job(job, %{},
+                 limit: 2,
+                 named_dataclips: true
+               )
 
       assert first_id == consumed.id
     end
@@ -373,7 +387,32 @@ defmodule Lightning.InvocationTest do
 
       insert(:dataclip, project: project, name: nil, type: :saved_input)
 
-      assert [] = Invocation.list_dataclips_for_job(job, %{}, limit: 5)
+      assert [] =
+               Invocation.list_dataclips_for_job(job, %{},
+                 limit: 5,
+                 named_dataclips: true
+               )
+    end
+
+    test "offers only the job's own inputs by default" do
+      # Named project dataclips are a new kind of input to offer, so the picker
+      # lists them only for someone with experimental features. Everyone else
+      # gets the list this has always returned.
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      insert(:dataclip,
+        project: project,
+        name: "known good input",
+        type: :saved_input,
+        body: %{"a" => 1}
+      )
+
+      consumed = insert(:dataclip, project: project, type: :http_request)
+      insert(:step, input_dataclip: consumed, job: job)
+
+      assert [%{id: id}] = Invocation.list_dataclips_for_job(job, %{}, limit: 5)
+
+      assert id == consumed.id
     end
 
     test "returns dataclips without the body" do

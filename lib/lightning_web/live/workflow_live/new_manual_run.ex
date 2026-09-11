@@ -14,7 +14,8 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
           project :: Project.t(),
           search_text :: String.t(),
           limit :: integer(),
-          offset :: integer()
+          offset :: integer(),
+          opts :: Keyword.t()
         ) ::
           {:ok,
            %{
@@ -22,7 +23,14 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
              next_cron_run_dataclip_id: Ecto.UUID.t() | nil
            }}
           | {:error, Ecto.Changeset.t()}
-  def search_selectable_dataclips(job_id, project, search_text, limit, offset) do
+  def search_selectable_dataclips(
+        job_id,
+        project,
+        search_text,
+        limit,
+        offset,
+        opts \\ []
+      ) do
     # A job outside the caller's project (or missing/malformed) yields an empty
     # result, never another project's dataclips and never an error the client
     # can distinguish from "no dataclips".
@@ -34,7 +42,8 @@ defmodule LightningWeb.WorkflowLive.NewManualRun do
             filters,
             limit: limit,
             offset: offset,
-            project_id: project.id
+            project_id: project.id,
+            named_dataclips: Keyword.get(opts, :named_dataclips, false)
           )
 
         {:ok,

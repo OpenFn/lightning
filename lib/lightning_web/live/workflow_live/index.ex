@@ -304,8 +304,16 @@ defmodule LightningWeb.WorkflowLive.Index do
 
   defp transition_workflow_state(workflow, enable?, actor)
        when enable? in [true, "true"] do
+    # Only an enable that actually turns a trigger on counts against the limit.
+    # Flipping a workflow that is already on asks the limiter nothing, which is
+    # how this read before a lifecycle transition replaced the plain save: the
+    # limiter was reached through the changeset, and a changeset with no trigger
+    # change short-circuits.
+    activating? =
+      Enum.any?(workflow.triggers, fn trigger -> !trigger.enabled end)
+
     case WorkflowUsageLimiter.limit_workflow_activation(
-           true,
+           activating?,
            workflow.project_id
          ) do
       :ok -> Workflows.go_live(workflow, actor)

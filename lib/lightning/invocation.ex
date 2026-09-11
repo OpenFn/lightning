@@ -88,7 +88,18 @@ defmodule Lightning.Invocation do
     limit = Keyword.fetch!(opts, :limit)
     offset = Keyword.get(opts, :offset)
 
-    Query.selectable_for_job(job_id, project_id_for_job(job_id, opts), limit)
+    # Named dataclips from anywhere in the project are a new kind of input to
+    # offer, so the picker lists them only for someone with experimental
+    # features. Everyone else gets the job's own inputs, which is the list this
+    # has always returned.
+    base =
+      if Keyword.get(opts, :named_dataclips, false) do
+        Query.selectable_for_job(job_id, project_id_for_job(job_id, opts), limit)
+      else
+        Query.last_n_for_job(job_id, limit)
+      end
+
+    base
     |> where([d], is_nil(d.wiped_at))
     |> where([d], ^dataclip_where_filter(user_filters))
     |> then(fn query -> if offset, do: offset(query, ^offset), else: query end)

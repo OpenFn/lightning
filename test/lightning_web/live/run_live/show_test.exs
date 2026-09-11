@@ -360,6 +360,9 @@ defmodule LightningWeb.RunLive.ShowTest do
            conn: conn,
            project: project
          } do
+      # No experimental features here, so this is the link the editor has always
+      # sent: the snapshot's own lock_version in `?v=`, which is the parameter
+      # the snapshot picker reads.
       # Create workflow with initial snapshot
       workflow =
         insert(:simple_workflow, project: project, lock_version: 1)
@@ -385,6 +388,46 @@ defmodule LightningWeb.RunLive.ShowTest do
 
       # Find the workflow link - should include version param
       # Note: & is HTML-escaped as &amp; in rendered output
+      assert html =~
+               ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?run=#{run_id}&amp;v=#{snapshot.lock_version}"/
+
+      refute html =~ "as_run="
+    end
+
+    test "pins the run itself when the user has experimental features", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      # `?as_run=` is resolved through the run's own snapshot, so it reaches
+      # content that was never released. It names a release-era concept, so it
+      # is only sent to someone who opted in.
+      Lightning.Accounts.update_user_preference(
+        user,
+        "experimental_features",
+        true
+      )
+
+      workflow =
+        insert(:simple_workflow, project: project, lock_version: 1)
+        |> with_snapshot()
+
+      %{triggers: [%{id: webhook_trigger_id}]} = workflow
+
+      assert %{"work_order_id" => wo_id} =
+               post(conn, "/i/#{webhook_trigger_id}", %{"x" => 1})
+               |> json_response(200)
+
+      %{runs: [%{id: run_id}]} =
+        WorkOrders.get(wo_id, include: [:runs, :snapshot])
+
+      workflow =
+        Lightning.Repo.update!(Ecto.Changeset.change(workflow, lock_version: 2))
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/runs/#{run_id}")
+
+      html = view |> element("#run-detail-#{run_id}") |> render_async()
+
       assert html =~
                ~r/href="\/projects\/#{project.id}\/w\/#{workflow.id}\?run=#{run_id}&amp;as_run=#{run_id}"/
     end
