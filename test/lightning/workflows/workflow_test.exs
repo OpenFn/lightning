@@ -22,6 +22,16 @@ defmodule Lightning.Workflows.WorkflowTest do
     end
   end
 
+  describe "lifecycle state" do
+    test "defaults to :draft and round-trips :live" do
+      draft = insert(:workflow)
+      assert draft.state == :draft
+
+      live = insert(:workflow, state: :live)
+      assert Repo.reload!(live).state == :live
+    end
+  end
+
   describe "changeset/2 basic validations" do
     test "requires name and valid concurrency" do
       p = insert(:project)

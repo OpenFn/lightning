@@ -8,8 +8,14 @@ import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
 import { useActiveRun } from '../hooks/useHistory';
 import {
+  useExperimentalFeatures,
+  useIsNewWorkflow,
+  useLatestSnapshotId,
   useLimits,
+  usePermissions,
   useProjectRepoConnection,
+  useSessionWorkflow,
+  useReleases,
 } from '../hooks/useSessionContext';
 import { useUICommands } from '../hooks/useUI';
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
@@ -25,16 +31,26 @@ import {
 } from '../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../keyboard';
 import { getCsrfToken } from '../lib/csrf';
+import {
+  formatChannelErrorMessage,
+  isChannelRequestError,
+} from '../lib/errors';
 import { notifications } from '../lib/notifications';
+import { clearPromoted, markPromoted } from '../lib/promoteHandoff';
+import { usePinnedView } from '../lib/pinnedView';
+import { Switch } from './inputs/Switch';
 import { isFinalState } from '../types/history';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
 import { AIButton } from './AIButton';
+import { AlertDialog } from './AlertDialog';
 import { Breadcrumbs } from './Breadcrumbs';
+import { Button } from './Button';
+import { EditInSandboxPicker } from './EditInSandboxPicker';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
-import { Switch } from './inputs/Switch';
 import { NewRunButton } from './NewRunButton';
+import { PromoteDialog } from './PromoteDialog';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
 import { ShortcutKeys } from './ShortcutKeys';
 
@@ -76,21 +92,17 @@ export function SaveButton({
             }
             side="bottom"
           >
-            <button
-              type="button"
-              data-testid="save-workflow-button"
-              className="rounded-md text-sm font-semibold shadow-xs
-            phx-submit-loading:opacity-75 cursor-pointer
-            disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
-            bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-300 text-white
-            focus-visible:outline-2 focus-visible:outline-offset-2
-            focus-visible:outline-primary-600 focus:ring-transparent"
-              onClick={onClick}
-              disabled={!canSave}
-            >
-              {label}
-            </button>
+            <span className="inline-block">
+              <Button
+                data-testid="save-workflow-button"
+                className="phx-submit-loading:opacity-75 cursor-pointer
+                  focus:ring-transparent"
+                onClick={onClick}
+                disabled={!canSave}
+              >
+                {label}
+              </Button>
+            </span>
           </Tooltip>
         </div>
         {hasChanges ? (
@@ -112,21 +124,17 @@ export function SaveButton({
           }
           side="bottom"
         >
-          <button
-            type="button"
-            data-testid="save-workflow-button"
-            className="rounded-l-md text-sm font-semibold shadow-xs
-            phx-submit-loading:opacity-75 cursor-pointer
-            disabled:cursor-not-allowed disabled:bg-primary-300 px-3 py-2
-            bg-primary-600 hover:bg-primary-500
-            disabled:hover:bg-primary-300 text-white
-            focus-visible:outline-2 focus-visible:outline-offset-2
-            focus-visible:outline-primary-600 focus:ring-transparent"
-            onClick={onClick}
-            disabled={!canSave}
-          >
-            {label}
-          </button>
+          <span className="inline-block">
+            <Button
+              data-testid="save-workflow-button"
+              className="rounded-r-none phx-submit-loading:opacity-75
+                cursor-pointer focus:ring-transparent"
+              onClick={onClick}
+              disabled={!canSave}
+            >
+              {label}
+            </Button>
+          </span>
         </Tooltip>
         <Menu as="div" className="relative -ml-px block">
           <MenuButton
@@ -188,10 +196,25 @@ export function SaveButton({
 }
 SaveButton.displayName = 'SaveButton';
 
+// Turn a refused lifecycle transition into something actionable. The activation
+// limit, a permission change and a deleted workflow all reply with real text;
+// only a genuinely unexpected failure earns "try again".
+function describeLifecycleError(error: unknown): string {
+  if (isChannelRequestError(error)) {
+    return formatChannelErrorMessage({
+      errors: error.errors as { base?: string[] } & Record<string, string[]>,
+      type: error.type,
+    });
+  }
+
+  return error instanceof Error ? error.message : 'Please try again.';
+}
+
 export function Header({
   children,
   projectId,
   workflowId,
+  isSandbox = false,
   isRunPanelOpen = false,
   isIDEOpen = false,
   aiAssistantEnabled = false,
@@ -199,6 +222,7 @@ export function Header({
   children: React.ReactNode[];
   projectId?: string;
   workflowId?: string;
+  isSandbox?: boolean;
   isRunPanelOpen?: boolean;
   isIDEOpen?: boolean;
   aiAssistantEnabled?: boolean;
@@ -206,20 +230,48 @@ export function Header({
   // IMPORTANT: All hooks must be called unconditionally before any early returns or conditional logic
   const { params, updateSearchParams } = useURLState();
   const { selectNode } = useNodeSelection();
-  const { enabled, setEnabled } = useWorkflowEnabled();
-  const { saveWorkflow } = useWorkflowActions();
+  const {
+    saveWorkflow,
+    goLive,
+    switchToDraft,
+    promote,
+    checkPromote,
+    archiveSandbox,
+  } = useWorkflowActions();
   const { canSave, tooltipMessage } = useCanSave();
+  const { enabled, setEnabled } = useWorkflowEnabled();
   const triggers = useWorkflowState(state => state.triggers);
   const { canRun } = useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
   const { hasErrors: hasSettingsErrors } = useWorkflowSettingsErrors();
   const limits = useLimits();
-  const { isReadOnly } = useWorkflowReadOnly();
+  const { isReadOnly, reason: readOnlyReason } = useWorkflowReadOnly();
   const { hasChanges } = useUnsavedChanges();
   const storeContext = useContext(StoreContext);
   const getLimits = storeContext?.sessionContextStore.getLimits;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const sessionWorkflow = useSessionWorkflow();
+
+  // The whole sandboxes-and-releases experience hangs off this one flag. Every
+  // action it added is already guarded by the lifecycle state or by being inside
+  // a sandbox, so reading both as absent when the flag is off leaves the header
+  // exactly the shape it had before any of this existed. One gate, rather than a
+  // condition bolted onto each button, so a new action cannot be added and
+  // forget to check.
+  const experimentalFeatures = useExperimentalFeatures();
+  const lifecycleState = experimentalFeatures
+    ? sessionWorkflow?.state
+    : undefined;
+  const inSandbox = experimentalFeatures && isSandbox;
+  const permissions = usePermissions();
+  const canProvisionSandbox = permissions?.can_provision_sandbox ?? false;
+  const canArchiveSandbox = permissions?.can_archive_sandbox ?? false;
+  const isNewWorkflow = useIsNewWorkflow();
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
+  const [showEditInSandboxPicker, setShowEditInSandboxPicker] = useState(false);
+  const [showPromoteDialog, setShowPromoteDialog] = useState(false);
   const activeRun = useActiveRun();
   const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
   const followedRunId = params.run ?? null;
@@ -238,9 +290,33 @@ export function Header({
   // Derived values after all hooks are called
   const firstTriggerId = triggers[0]?.id;
 
-  // Check if viewing a pinned version via URL parameter
-  // When ?v= is present, user is viewing a specific version (even if latest)
-  const isPinnedVersion = params['v'] !== undefined && params['v'] !== null;
+  // Which view of the past, if any, the URL is asking for.
+  const { isPinnedVersion, isViewingAsExecuted } = usePinnedView();
+
+  // The Live badge describes the workflow's current state, which would be a lie
+  // on these views, so it is suppressed and the version badge carries the
+  // context instead.
+  // A view of the past is for reading. The lifecycle and sandbox actions all act
+  // on the current workflow, so offering them here reaches past what is on
+  // screen: Switch to draft would take production offline while you read history.
+  const isViewingNonCurrentVersion = isPinnedVersion || isViewingAsExecuted;
+
+  // Reading a run is where a person goes to fix a failure, and the two ways to
+  // edit a live workflow are the way out of it. Hiding them here left the
+  // journey with no exit: leaving the run first loses the run, and its input
+  // with it. A pinned version has no run to carry, so it stays as it was.
+  const isReadingHistoryWithoutRun = isPinnedVersion;
+
+  // A retry runs the content that is live now, whatever is on screen. The
+  // button does not say so, because retrying always means that, but the
+  // confirmation names the version so the record of what just ran is clear.
+  const latestSnapshotId = useLatestSnapshotId();
+  const releases = useReleases();
+  const liveVersionNumber =
+    releases.find(
+      version =>
+        version.snapshot_id != null && version.snapshot_id === latestSnapshotId
+    )?.version_number ?? null;
 
   // Determine AI button disabled message based on priority
   const aiButtonDisabledMessage = !aiAssistantEnabled
@@ -250,6 +326,16 @@ export function Header({
       : undefined;
 
   const showChangeIndicator = hasChanges && canSave;
+
+  // Whether Run and Save vanish on a read-only view, or stay put and disabled
+  // with a tooltip saying why.
+  //
+  // The releases experience hides them, which reads fine there: the lifecycle
+  // badge and Switch to draft are alongside to explain the state and offer a
+  // way out. Without the flag none of that is on screen, so hiding them would
+  // leave a header with no controls and no reason, where today it shows both
+  // greyed out. `canRun` and `canSave` already carry the reason.
+  const hideOnReadOnly = experimentalFeatures && isReadOnly;
 
   const handleRunClick = useCallback(async () => {
     if (!firstTriggerId || !projectId || !workflowId) return;
@@ -282,6 +368,68 @@ export function Header({
     projectId,
     workflowId,
     saveWorkflow,
+    getLimits,
+    updateSearchParams,
+  ]);
+
+  // Retrying from a run's own view. The view is read-only, so there is nothing
+  // to save first, and the retry runs the content that is live rather than the
+  // snapshot on screen, which is why the button names the version it will run.
+  // It lands on the new run, since the old canvas is no longer the subject.
+  const handleRetryOnLatest = useCallback(async () => {
+    const firstStep = activeRun?.steps?.[0];
+    if (!followedRunId || !firstStep || !projectId) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(
+        `/projects/${projectId}/runs/${followedRunId}/retry`,
+        {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken() || '',
+          },
+          body: JSON.stringify({ step_id: firstStep.id }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error || 'Failed to retry run');
+      }
+
+      const result = (await response.json()) as { data: { run_id: string } };
+
+      notifications.success({
+        title: 'Retry started',
+        description: `Running this input on ${
+          liveVersionNumber === null
+            ? 'the latest version'
+            : `v${liveVersionNumber}`
+        }.`,
+      });
+
+      if (getLimits) void getLimits('new_run');
+      updateSearchParams({
+        as_run: null,
+        run: result.data.run_id,
+        step: null,
+      });
+    } catch (error) {
+      notifications.alert({
+        title: 'Retry failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    activeRun,
+    followedRunId,
+    projectId,
+    liveVersionNumber,
     getLimits,
     updateSearchParams,
   ]);
@@ -348,6 +496,115 @@ export function Header({
     }
   }, [firstTriggerId, openRunPanel, selectNode, updateSearchParams]);
 
+  // Phase one of the promote flow. Promote always reflects the current editor
+  // state, so we save first (silently) and only merge once that succeeds; a
+  // failed save aborts without promoting. Promote now MERGES ONLY: it does not
+  // archive the sandbox, so on success we do NOT navigate. Instead we stash the
+  // parent + workflow ids and resolve true, letting the dialog advance to its
+  // success step where archiving is offered as an optional second action.
+  // Failures (save or merge) are surfaced inline and resolve false so the dialog
+  // stays on its confirm step.
+  const handleConfirmPromote = useCallback(async (): Promise<boolean> => {
+    try {
+      // The dialog owns every outcome here, so the save underneath it must not
+      // toast on its own.
+      await saveWorkflow({ notify: 'none' });
+    } catch (error) {
+      const description = isChannelRequestError(error)
+        ? formatChannelErrorMessage({
+            errors: error.errors as { base?: string[] } & Record<
+              string,
+              string[]
+            >,
+            type: error.type,
+          })
+        : error instanceof Error
+          ? error.message
+          : 'Please try again.';
+      notifications.alert({
+        title: 'Could not save before promoting',
+        description,
+      });
+      return false;
+    }
+
+    try {
+      await promote();
+      return true;
+    } catch (error) {
+      const description = isChannelRequestError(error)
+        ? formatChannelErrorMessage({
+            errors: error.errors as { base?: string[] } & Record<
+              string,
+              string[]
+            >,
+            type: error.type,
+          })
+        : 'Please try again.';
+      notifications.alert({
+        title: 'Could not promote',
+        description,
+      });
+      return false;
+    }
+  }, [promote, saveWorkflow]);
+
+  // Phase two, archive path. Retires the sandbox and lets the server carry the
+  // socket into the parent, which is a different Y.Doc session. No toast is
+  // raised here: the reload would destroy it. The promote is confirmed across
+  // the navigation instead (see promoteHandoff), because the flash the server
+  // sends speaks only of the archive. Errors, which don't navigate, are
+  // surfaced inline and resolve false so the dialog stays on its success step.
+  const handleArchiveSandbox = useCallback(async (): Promise<boolean> => {
+    // Marked before the call, because the server's redirect can land before
+    // this promise resolves. Cleared again if the archive refuses, so a sandbox
+    // we are still sitting in never claims to have been retired.
+    markPromoted();
+
+    try {
+      await archiveSandbox();
+
+      // Navigation is the server's: archiving schedules the sandbox for
+      // deletion, and the LiveView's teardown hook redirects every socket on it
+      // to the parent, landing on the parent's copy of this workflow. Racing it
+      // from here only produced a second navigation to the same place.
+      return true;
+    } catch (error) {
+      clearPromoted();
+
+      const description = isChannelRequestError(error)
+        ? formatChannelErrorMessage({
+            errors: error.errors as { base?: string[] } & Record<
+              string,
+              string[]
+            >,
+            type: error.type,
+          })
+        : 'Please try again.';
+      notifications.alert({
+        title: 'Could not archive sandbox',
+        description,
+      });
+      return false;
+    }
+  }, [archiveSandbox]);
+
+  // Phase two, keep path. Close the dialog and stay in the sandbox (no
+  // navigation) so the user can switch to another workflow and promote it too.
+  // The toast is shown inline here since we are not reloading.
+  const handleKeepSandbox = useCallback(() => {
+    setShowPromoteDialog(false);
+    notifications.success({
+      title: 'Workflow promoted',
+      description:
+        'You can keep editing or promote another workflow from this sandbox.',
+    });
+  }, []);
+
+  const handleCancelPromote = useCallback(() => {
+    setShowPromoteDialog(false);
+  }, []);
+
   useKeyboardShortcut(
     'Control+Enter, Meta+Enter',
     () => {
@@ -412,14 +669,57 @@ export function Header({
 
       <div className="flex-none bg-white shadow-xs border-b border-gray-200 relative z-50">
         <div className="mx-auto sm:px-4 lg:px-4 py-6 flex items-center h-20 text-sm gap-2">
-          <Breadcrumbs>{children}</Breadcrumbs>
-          <ReadOnlyWarning className="ml-3" />
+          <div className="flex min-w-0 items-center">
+            <Breadcrumbs>{children}</Breadcrumbs>
+          </div>
+          {/* The Live badge already implies read-only, so suppress the
+              redundant "Read-only" pill whenever the Live badge is shown for
+              the current live version. Still show it for a pinned/deleted
+              read-only view, where "Live" (the current state) doesn't explain
+              why this view is read-only. */}
+          {!(
+            lifecycleState === 'live' &&
+            !isNewWorkflow &&
+            !inSandbox &&
+            readOnlyReason !== 'pinned_version' &&
+            readOnlyReason !== 'as_run' &&
+            readOnlyReason !== 'deleted'
+          ) && <ReadOnlyWarning className="ml-3" />}
+          {lifecycleState &&
+            !isNewWorkflow &&
+            !inSandbox &&
+            !isViewingNonCurrentVersion && (
+              <Tooltip
+                content={
+                  lifecycleState === 'live'
+                    ? "This is the live version. It's running in production with its triggers on, and it's read-only here, so switch it to draft or edit it in a sandbox to make changes."
+                    : 'This is the editable working version, not the one live in production. Go live to promote it, or enable a trigger to test it against real events first.'
+                }
+                side="bottom"
+              >
+                <span
+                  data-testid="workflow-lifecycle-badge"
+                  className={
+                    'self-center rounded-md px-2 py-1 text-xs font-medium ' +
+                    (lifecycleState === 'live'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-700')
+                  }
+                >
+                  {lifecycleState === 'live' ? 'Live' : 'Draft'}
+                </span>
+              </Tooltip>
+            )}
           <ActiveCollaborators className="ml-2" />
           <div className="grow ml-2"></div>
 
           <div className="flex flex-row gap-2 items-center">
             <div className="flex flex-row gap-2 items-center">
-              {!isPinnedVersion && (
+              {/* Turning the workflow on and off. Only without experimental
+                  features: with them, the lifecycle badge and Go live /
+                  Switch to draft answer the same question, and two controls
+                  for one thing would contradict each other. */}
+              {!experimentalFeatures && !isViewingNonCurrentVersion && (
                 <span className="inline-flex items-center">
                   <Switch
                     checked={enabled ?? false}
@@ -456,7 +756,157 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {projectId && workflowId && firstTriggerId && (
+              {!isNewWorkflow &&
+                !inSandbox &&
+                !isViewingNonCurrentVersion &&
+                lifecycleState === 'draft' && (
+                  <Tooltip
+                    content={
+                      isReadOnly ? 'You cannot go live on this version' : null
+                    }
+                    side="bottom"
+                  >
+                    <span className="inline-block">
+                      <Button
+                        data-testid="go-live-button"
+                        className="inline-flex items-center"
+                        disabled={isReadOnly || isTransitioning}
+                        onClick={() => {
+                          setIsTransitioning(true);
+                          void goLive()
+                            .catch(() =>
+                              notifications.alert({
+                                title: 'Could not go live',
+                                description: 'Please try again.',
+                              })
+                            )
+                            .finally(() => {
+                              setIsTransitioning(false);
+                            });
+                        }}
+                      >
+                        Go live
+                      </Button>
+                    </span>
+                  </Tooltip>
+                )}
+              {!isNewWorkflow &&
+                !inSandbox &&
+                !isReadingHistoryWithoutRun &&
+                lifecycleState === 'live' && (
+                  <Button
+                    variant="secondary"
+                    data-testid="switch-to-draft-button"
+                    className="inline-flex items-center hover:bg-gray-50
+                      disabled:hover:inset-ring-gray-300"
+                    disabled={isTransitioning}
+                    onClick={() => {
+                      setShowSwitchToDraftDialog(true);
+                    }}
+                  >
+                    Switch to draft
+                  </Button>
+                )}
+              {!isNewWorkflow && inSandbox && !isViewingNonCurrentVersion && (
+                <Tooltip
+                  content={
+                    lifecycleState === 'live'
+                      ? 'Turn the sandbox off and its triggers stop answering.'
+                      : "Turn the sandbox on and its own webhook URL answers, and its cron triggers fire. The parent's live workflow is untouched."
+                  }
+                  side="bottom"
+                >
+                  <span className="inline-block">
+                    <Button
+                      variant="secondary"
+                      data-testid="toggle-sandbox-button"
+                      className="inline-flex items-center hover:bg-gray-50
+                        disabled:hover:inset-ring-gray-300"
+                      disabled={isReadOnly || isTransitioning}
+                      onClick={() => {
+                        const turningOn = lifecycleState !== 'live';
+                        setIsTransitioning(true);
+                        void (turningOn ? goLive() : switchToDraft())
+                          .catch((error: unknown) => {
+                            // The refusals this button can hit all carry
+                            // actionable text: the activation limit, a
+                            // permission change, a deleted workflow. "Try
+                            // again" would be wrong for every one of them.
+                            notifications.alert({
+                              title: turningOn
+                                ? 'Could not turn the sandbox on'
+                                : 'Could not turn the sandbox off',
+                              description: describeLifecycleError(error),
+                            });
+                          })
+                          .finally(() => {
+                            setIsTransitioning(false);
+                          });
+                      }}
+                    >
+                      {lifecycleState === 'live' ? 'Turn off' : 'Turn on'}
+                    </Button>
+                  </span>
+                </Tooltip>
+              )}
+              {!isNewWorkflow && inSandbox && !isViewingNonCurrentVersion && (
+                <Button
+                  data-testid="promote-sandbox-button"
+                  className="inline-flex items-center gap-1"
+                  onClick={() => {
+                    setShowPromoteDialog(true);
+                  }}
+                >
+                  Promote
+                </Button>
+              )}
+              {lifecycleState === 'live' &&
+                !inSandbox &&
+                !isNewWorkflow &&
+                !isReadingHistoryWithoutRun && (
+                  <Tooltip
+                    content={
+                      canProvisionSandbox
+                        ? null
+                        : 'You do not have permission to create a sandbox in this project.'
+                    }
+                    side="bottom"
+                  >
+                    <span className="inline-block">
+                      <Button
+                        data-testid="edit-in-sandbox-button"
+                        className="inline-flex items-center"
+                        disabled={!canProvisionSandbox}
+                        onClick={() => {
+                          if (!canProvisionSandbox) return;
+                          setShowEditInSandboxPicker(true);
+                        }}
+                      >
+                        Edit in sandbox
+                      </Button>
+                    </span>
+                  </Tooltip>
+                )}
+              {/* Whenever a run is loaded, whichever document it is being read
+                  against. A live workflow is read-only, which hides the normal
+                  Run button, so without this there is no way to retry the one
+                  thing a person came to a failed run to do. */}
+              {lifecycleState === 'live' &&
+                !inSandbox &&
+                !isNewWorkflow &&
+                isRetryable && (
+                  <Button
+                    data-testid="retry-on-latest-button"
+                    className="inline-flex items-center"
+                    disabled={isSubmitting || runIsProcessing}
+                    onClick={() => {
+                      void handleRetryOnLatest();
+                    }}
+                  >
+                    Retry
+                  </Button>
+                )}
+              {projectId && workflowId && firstTriggerId && !hideOnReadOnly && (
                 <NewRunButton
                   onClick={() => {
                     void (isRetryable ? handleRetryClick() : handleRunClick());
@@ -467,17 +917,19 @@ export function Header({
                   text={isRetryable ? 'Run (Retry)' : 'Run'}
                 />
               )}
-              <SaveButton
-                canSave={canSave && !hasSettingsErrors}
-                tooltipMessage={tooltipMessage}
-                onClick={() => void saveWorkflow()}
-                repoConnection={repoConnection}
-                onSyncClick={openGitHubSyncModal}
-                label="Save"
-                canSync={githubSyncLimit.allowed}
-                syncTooltipMessage={githubSyncLimit.message}
-                hasChanges={showChangeIndicator}
-              />
+              {(!hideOnReadOnly || readOnlyReason === 'unsaved_new') && (
+                <SaveButton
+                  canSave={canSave && !hasSettingsErrors}
+                  tooltipMessage={tooltipMessage}
+                  onClick={() => void saveWorkflow()}
+                  repoConnection={repoConnection}
+                  onSyncClick={openGitHubSyncModal}
+                  label={isNewWorkflow ? 'Create' : 'Save'}
+                  canSync={githubSyncLimit.allowed}
+                  syncTooltipMessage={githubSyncLimit.message}
+                  hasChanges={showChangeIndicator}
+                />
+              )}
             </div>
           </div>
 
@@ -488,6 +940,63 @@ export function Header({
           />
 
           <GitHubSyncModal />
+
+          <AlertDialog
+            isOpen={showSwitchToDraftDialog}
+            onClose={() => {
+              setShowSwitchToDraftDialog(false);
+            }}
+            onConfirm={() => {
+              setShowSwitchToDraftDialog(false);
+              setIsTransitioning(true);
+              // Coming from a failed run, the input is what the fix will be
+              // tested against, so it comes along: the draft opens with the run
+              // panel on that input, ready to run. Without sandboxes this is
+              // the only route to a fix, and losing the input at the door made
+              // it a fetch through the history.
+              const runInput = activeRun?.steps?.[0]?.input_dataclip_id ?? null;
+              void switchToDraft()
+                .then(() => {
+                  updateSearchParams({
+                    as_run: null,
+                    run: null,
+                    step: null,
+                    ...(runInput ? { panel: 'run', dataclip: runInput } : {}),
+                  });
+                  return null;
+                })
+                .catch(() =>
+                  notifications.alert({
+                    title: 'Could not switch to draft',
+                    description: 'Please try again.',
+                  })
+                )
+                .finally(() => {
+                  setIsTransitioning(false);
+                });
+            }}
+            title="Switch to draft"
+            description="This takes the workflow out of production. Its triggers will be turned off and it will stop processing data until you go live again."
+            confirmLabel="Switch to draft"
+            variant="primary"
+          />
+
+          <PromoteDialog
+            isOpen={showPromoteDialog}
+            canArchiveSandbox={canArchiveSandbox}
+            onConfirmPromote={handleConfirmPromote}
+            onArchive={handleArchiveSandbox}
+            onKeep={handleKeepSandbox}
+            onCancel={handleCancelPromote}
+            onCheckDivergence={checkPromote}
+          />
+
+          <EditInSandboxPicker
+            isOpen={showEditInSandboxPicker}
+            onClose={() => {
+              setShowEditInSandboxPicker(false);
+            }}
+          />
         </div>
       </div>
     </>

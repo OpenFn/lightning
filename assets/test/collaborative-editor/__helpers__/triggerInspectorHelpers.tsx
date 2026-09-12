@@ -19,6 +19,7 @@ import { act } from 'react';
 import { vi } from 'vitest';
 
 import { LiveViewActionsProvider } from '../../../js/collaborative-editor/contexts/LiveViewActionsContext';
+import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard/KeyboardProvider';
 import { SessionContext } from '../../../js/collaborative-editor/contexts/SessionProvider';
 import type { StoreContextValue } from '../../../js/collaborative-editor/contexts/StoreProvider';
 import { StoreContext } from '../../../js/collaborative-editor/contexts/StoreProvider';
@@ -168,6 +169,7 @@ export async function createTriggerTestHarness(
         can_edit_workflow: canEdit,
         can_run_workflow: canEdit,
         can_write_webhook_auth_method: canWriteWebhookAuthMethod,
+        can_provision_sandbox: canEdit,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
@@ -184,18 +186,24 @@ export async function createTriggerTestHarness(
   } as unknown as StoreContextValue;
 
   // 7. Wrapper component.
-  const resolvedLiveViewActions = liveViewActions ?? {
+  // Merged rather than replaced, so a caller overriding one action does not
+  // have to restate the rest.
+  const resolvedLiveViewActions = {
     pushEvent: vi.fn(),
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
+    ...liveViewActions,
   };
 
+  // AlertDialog registers an Escape shortcut, so anything that can render a
+  // confirm dialog needs the keyboard context the real app always provides.
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
       <LiveViewActionsProvider actions={resolvedLiveViewActions}>
         <StoreContext.Provider value={storeValue}>
-          {children}
+          <KeyboardProvider>{children}</KeyboardProvider>
         </StoreContext.Provider>
       </LiveViewActionsProvider>
     </SessionContext.Provider>

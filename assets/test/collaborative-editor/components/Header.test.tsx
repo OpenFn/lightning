@@ -72,6 +72,8 @@ interface WrapperOptions {
   repoName?: string;
   branchName?: string;
   triggerSync?: boolean;
+  /** Whether this user has opted into experimental features. */
+  experimentalFeatures?: boolean;
 }
 
 /**
@@ -88,6 +90,7 @@ async function createTestSetup(options: WrapperOptions = {}) {
     hasGithubConnection = false,
     repoName = 'openfn/demo',
     branchName = 'main',
+    experimentalFeatures = false,
   } = options;
 
   // Create Y.Doc with workflow metadata
@@ -111,6 +114,7 @@ async function createTestSetup(options: WrapperOptions = {}) {
   // Build session context options including workflow data
   const sessionContextOptions: CreateSessionContextOptions = {
     permissions,
+    experimental_features_enabled: experimentalFeatures,
     latest_snapshot_lock_version: latestSnapshotLockVersion,
     workflow: {
       id: 'test-workflow-123',
@@ -177,6 +181,7 @@ async function createTestSetup(options: WrapperOptions = {}) {
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
   // Create wrapper (still needed for React context)
@@ -1238,9 +1243,12 @@ describe('Header - Keyboard Shortcuts', () => {
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
   });
 
-  test('save button is disabled when user lacks permissions', async () => {
+  test('save button stays put and disabled when the user cannot edit', async () => {
+    // Without experimental features there is no lifecycle badge and no Switch
+    // to draft alongside to explain a bare header, so Save stays where it is,
+    // greyed out, carrying the reason. That is what ships today.
     const { wrapper, emitSessionContext } = await createTestSetup({
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
     });
 
     render(
@@ -1255,9 +1263,34 @@ describe('Header - Keyboard Shortcuts', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    // Save button should be disabled
-    const saveButton = screen.getByRole('button', { name: /save/i });
-    expect(saveButton).toBeDisabled();
+    const save = screen.getByRole('button', { name: /save/i });
+    expect(save).toBeInTheDocument();
+    expect(save).toBeDisabled();
+  });
+
+  test('save button is hidden on a read-only view with experimental features', async () => {
+    // With the flag on, the lifecycle actions are there to say why the view is
+    // read-only and to offer a way out, so the empty controls go.
+    const { wrapper, emitSessionContext } = await createTestSetup({
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
+      experimentalFeatures: true,
+    });
+
+    render(
+      <Header projectId="project-1" workflowId="workflow-1">
+        {[<span key="breadcrumb-1">Breadcrumb</span>]}
+      </Header>,
+      { wrapper }
+    );
+
+    await act(async () => {
+      emitSessionContext();
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+
+    expect(
+      screen.queryByRole('button', { name: /save/i })
+    ).not.toBeInTheDocument();
   });
 
   test('Header renders with GitHub connection and sync options available', async () => {
@@ -1308,10 +1341,10 @@ describe('Header - Keyboard Shortcuts', () => {
     expect(dropdownButton).not.toBeInTheDocument();
   });
 
-  test('split button dropdown is disabled when user lacks permissions', async () => {
+  test('save and sync stay put and disabled when the user cannot edit', async () => {
     const { wrapper, emitSessionContext } = await createTestSetup({
       hasGithubConnection: true,
-      permissions: { can_edit_workflow: false },
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
     });
 
     render(
@@ -1326,14 +1359,10 @@ describe('Header - Keyboard Shortcuts', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    // Both save and dropdown buttons should be disabled
-    const saveButton = screen.getByRole('button', { name: /save/i });
-    expect(saveButton).toBeDisabled();
-
-    const dropdownButton = screen.getByRole('button', {
-      name: /open sync options/i,
-    });
-    expect(dropdownButton).toBeDisabled();
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /open sync options/i })
+    ).toBeInTheDocument();
   });
 
   test('Header renders correctly with all navigation elements', async () => {

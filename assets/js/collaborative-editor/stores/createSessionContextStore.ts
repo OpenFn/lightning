@@ -86,10 +86,12 @@ import { z } from 'zod';
 import _logger from '#/utils/logger';
 
 import { channelRequest } from '../hooks/useChannel';
+import { notifications } from '../lib/notifications';
 import {
   type SessionContextState,
   type SessionContextStore,
   SessionContextResponseSchema,
+  ReleaseSchema,
   VersionSchema,
   WebhookAuthMethodSchema,
   WorkflowTemplateSchema,
@@ -100,6 +102,22 @@ import { createWithSelector } from './common';
 import { wrapStoreWithDevTools } from './devtools';
 
 const logger = _logger.ns('SessionContextStore').seal();
+
+/**
+ * Whether this person may change the workflow's content right now.
+ *
+ * Both halves are needed and neither implies the other: the role says whether
+ * they may edit at all, and the lifecycle lock says whether the content may
+ * change. Answering it in one place keeps the callers from each remembering to
+ * ask twice, which is how a live workflow's local document ended up accepting
+ * writes the server then refused.
+ *
+ * This is not the same question as "is the editor read-only" — that also covers
+ * reading the past and an unsaved new workflow, and lives in
+ * `useWorkflowReadOnly`.
+ */
+export const selectCanEditContent = (state: SessionContextState): boolean =>
+  (state.permissions?.can_edit_workflow ?? false) && !state.contentLocked;
 
 /**
  * Creates a session context store instance with useSyncExternalStore + Immer pattern
@@ -114,13 +132,22 @@ export const createSessionContextStore = (
       project: null,
       config: null,
       permissions: null,
+      contentLocked: false,
+      experimentalFeaturesEnabled: false,
       latestSnapshotLockVersion: null,
+      latestSnapshotId: null,
       projectRepoConnection: null,
       webhookAuthMethods: [],
+      releases: [],
+      releasesLoaded: false,
+      releasesLoading: false,
+      releasesError: null,
       versions: [],
+      versionsLoaded: false,
       versionsLoading: false,
       versionsError: null,
       workflow_template: null,
+      suppressEnableTriggerWarning: false,
       limits: {},
       isNewWorkflow,
       isLoading: false,
@@ -182,11 +209,17 @@ export const createSessionContextStore = (
         draft.workflow = sessionContext.workflow ?? null;
         draft.config = sessionContext.config;
         draft.permissions = sessionContext.permissions;
+        draft.contentLocked = sessionContext.content_locked;
+        draft.experimentalFeaturesEnabled =
+          sessionContext.experimental_features_enabled;
         draft.latestSnapshotLockVersion =
           sessionContext.latest_snapshot_lock_version;
+        draft.latestSnapshotId = sessionContext.latest_snapshot_id ?? null;
         draft.projectRepoConnection = sessionContext.project_repo_connection;
         draft.webhookAuthMethods = sessionContext.webhook_auth_methods;
         draft.workflow_template = sessionContext.workflow_template;
+        draft.suppressEnableTriggerWarning =
+          sessionContext.suppress_enable_trigger_warning;
         draft.limits = sessionContext.limits;
         draft.isLoading = false;
         draft.error = null;
@@ -277,15 +310,16 @@ export const createSessionContextStore = (
   /**
    * Update latest snapshot lock version
    * Called when workflow is saved and backend returns new lock version
-   * Clears versions cache when lock version changes (not on initial set)
+   * Clears releases cache when lock version changes (not on initial set)
    */
   const setLatestSnapshotLockVersion = (lockVersion: number) => {
     state = produce(state, draft => {
       const previousLockVersion = draft.latestSnapshotLockVersion;
 
-      // Clear versions if lock version changed (not on initial set)
+      // Clear releases if lock version changed (not on initial set)
       if (previousLockVersion !== null && previousLockVersion !== lockVersion) {
-        draft.versions = [];
+        draft.releases = [];
+        draft.releasesLoaded = false;
       }
 
       draft.latestSnapshotLockVersion = lockVersion;
@@ -313,10 +347,112 @@ export const createSessionContextStore = (
   };
 
   /**
-   * Request workflow versions from server via channel
+   * Set the "suppress enable-trigger warning" preference (local state only)
+   */
+  const setSuppressEnableTriggerWarning = (suppress: boolean) => {
+    state = produce(state, draft => {
+      draft.suppressEnableTriggerWarning = suppress;
+    });
+    notify('setSuppressEnableTriggerWarning');
+  };
+
+  /**
+   * Persist the "don't show the enable-trigger warning again" preference to the
+   * backend and optimistically flip the local flag so it sticks this session.
+   */
+  const markEnableTriggerWarningSuppressed = async (): Promise<void> => {
+    if (!_channelProvider?.channel) {
+      logger.warn(
+        'Cannot suppress enable-trigger warning - no channel connected'
+      );
+      return;
+    }
+
+    // Optimistically update so the warning is skipped immediately, even before
+    // the server acknowledges.
+    setSuppressEnableTriggerWarning(true);
+
+    try {
+      await channelRequest(
+        _channelProvider.channel,
+        'set_suppress_enable_trigger_warning',
+        { suppress: true }
+      );
+    } catch (error) {
+      logger.error('Failed to suppress enable-trigger warning', error);
+    }
+  };
+
+  /**
+   * Request workflow releases from server via channel
+   */
+  const requestReleases = async (): Promise<void> => {
+    // Early return if already loading or no channel
+    if (state.releasesLoading || !_channelProvider?.channel) {
+      if (!_channelProvider?.channel) {
+        logger.warn('Cannot request releases - no channel connected');
+      }
+      return;
+    }
+
+    state = produce(state, draft => {
+      draft.releasesLoading = true;
+      draft.releasesError = null;
+    });
+    notify('requestReleases:start');
+
+    try {
+      logger.debug('Requesting workflow releases');
+      const response = await channelRequest<{ releases: unknown[] }>(
+        _channelProvider.channel,
+        'request_releases',
+        {}
+      );
+
+      // Validate releases array with Zod
+      const result = z.array(ReleaseSchema).safeParse(response.releases);
+
+      if (result.success) {
+        state = produce(state, draft => {
+          draft.releases = result.data;
+          draft.releasesLoaded = true;
+          draft.releasesLoading = false;
+          draft.releasesError = null;
+        });
+        notify('requestReleases:success');
+      } else {
+        const errorMessage = `Invalid versions data: ${result.error.message}`;
+        logger.error('Failed to parse releases data', {
+          error: result.error,
+          response,
+        });
+
+        state = produce(state, draft => {
+          draft.releasesError = errorMessage;
+          draft.releasesLoaded = true;
+          draft.releasesLoading = false;
+        });
+        notify('requestReleases:error');
+      }
+    } catch (error) {
+      logger.error('Versions request failed', error);
+      state = produce(state, draft => {
+        draft.releasesError = 'Failed to load versions';
+        draft.releasesLoaded = true;
+        draft.releasesLoading = false;
+      });
+      notify('requestReleases:error');
+    }
+  };
+
+  /**
+   * Request the workflow's saved snapshots, numbered by lock_version.
+   *
+   * A different question from `requestReleases`, with differently shaped rows,
+   * which is why it is a different event. This is the list for a user without
+   * experimental features.
    */
   const requestVersions = async (): Promise<void> => {
-    // Early return if already loading or no channel
     if (state.versionsLoading || !_channelProvider?.channel) {
       if (!_channelProvider?.channel) {
         logger.warn('Cannot request versions - no channel connected');
@@ -338,12 +474,12 @@ export const createSessionContextStore = (
         {}
       );
 
-      // Validate versions array with Zod
       const result = z.array(VersionSchema).safeParse(response.versions);
 
       if (result.success) {
         state = produce(state, draft => {
           draft.versions = result.data;
+          draft.versionsLoaded = true;
           draft.versionsLoading = false;
           draft.versionsError = null;
         });
@@ -357,6 +493,7 @@ export const createSessionContextStore = (
 
         state = produce(state, draft => {
           draft.versionsError = errorMessage;
+          draft.versionsLoaded = true;
           draft.versionsLoading = false;
         });
         notify('requestVersions:error');
@@ -365,20 +502,30 @@ export const createSessionContextStore = (
       logger.error('Versions request failed', error);
       state = produce(state, draft => {
         draft.versionsError = 'Failed to load versions';
+        draft.versionsLoaded = true;
         draft.versionsLoading = false;
       });
       notify('requestVersions:error');
     }
   };
 
-  /**
-   * Clear versions cache
-   */
   const clearVersions = () => {
     state = produce(state, draft => {
       draft.versions = [];
+      draft.versionsLoaded = false;
     });
     notify('clearVersions');
+  };
+
+  /**
+   * Clear releases cache
+   */
+  const clearReleases = () => {
+    state = produce(state, draft => {
+      draft.releases = [];
+      draft.releasesLoaded = false;
+    });
+    notify('clearReleases');
   };
 
   // =============================================================================
@@ -403,6 +550,39 @@ export const createSessionContextStore = (
     const sessionContextUpdatedHandler = (message: unknown) => {
       logger.debug('Received session_context_updated message', message);
       handleSessionContextUpdated(message);
+    };
+
+    // Sent only to the sockets that did not act, so it always means someone
+    // else moved the workflow. Their editor changes under them, which is worth
+    // a word rather than leaving them to notice on save.
+    //
+    // Not to a user without experimental features, though. A colleague with the
+    // flag can publish a shared workflow, and both of these sentences name
+    // actions that user has no buttons for. Their editor does go read-only, and
+    // the read-only tooltip is what explains that; announcing a lifecycle they
+    // do not have would be the feature leaking out of the flag.
+    const lifecycleChangedHandler = (message: unknown) => {
+      if (!state.experimentalFeaturesEnabled) return;
+
+      const nextState =
+        typeof message === 'object' &&
+        message !== null &&
+        'state' in message &&
+        (message as { state: unknown }).state;
+
+      if (nextState === 'live') {
+        notifications.info({
+          title: 'This workflow just went live',
+          description:
+            'Someone else published it, so it is read-only here now. Switch it to draft or edit it in a sandbox to make changes.',
+        });
+      } else if (nextState === 'draft') {
+        notifications.info({
+          title: 'This workflow is a draft again',
+          description:
+            'Someone else took it out of production, so you can edit it here.',
+        });
+      }
     };
 
     const workflowSavedHandler = (message: unknown) => {
@@ -504,6 +684,7 @@ export const createSessionContextStore = (
       channel.on('session_context', sessionContextHandler);
       channel.on('session_context_updated', sessionContextUpdatedHandler);
       channel.on('workflow_saved', workflowSavedHandler);
+      channel.on('lifecycle_changed', lifecycleChangedHandler);
       channel.on(
         'webhook_auth_methods_updated',
         webhookAuthMethodsUpdatedHandler
@@ -522,6 +703,7 @@ export const createSessionContextStore = (
         channel.off('session_context', sessionContextHandler);
         channel.off('session_context_updated', sessionContextUpdatedHandler);
         channel.off('workflow_saved', workflowSavedHandler);
+        channel.off('lifecycle_changed', lifecycleChangedHandler);
         channel.off(
           'webhook_auth_methods_updated',
           webhookAuthMethodsUpdatedHandler
@@ -598,6 +780,8 @@ export const createSessionContextStore = (
 
     // Commands (CQS pattern)
     requestSessionContext,
+    requestReleases,
+    clearReleases,
     requestVersions,
     clearVersions,
     setLoading,
@@ -605,6 +789,8 @@ export const createSessionContextStore = (
     clearError,
     setLatestSnapshotLockVersion,
     clearIsNewWorkflow,
+    setSuppressEnableTriggerWarning,
+    markEnableTriggerWarningSuppressed,
     getLimits,
     setBaseWorkflow,
 

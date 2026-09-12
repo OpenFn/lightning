@@ -907,6 +907,62 @@ defmodule Lightning.SessionTest do
       drain_document(instance, document_name)
     end
 
+    test "set_workflow_state/3 transitions :live then back to :draft", %{
+      session: session,
+      user: user,
+      workflow: workflow
+    } do
+      assert {:ok, live} = Session.set_workflow_state(session, user, :live)
+      assert live.state == :live
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :live
+
+      assert {:ok, draft} = Session.set_workflow_state(session, user, :draft)
+      assert draft.state == :draft
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+
+      # Going live records a single go-live release authored by the actor;
+      # switching back to draft records none.
+      assert [
+               %Lightning.Workflows.WorkflowRelease{
+                 version_number: 1,
+                 kind: :go_live,
+                 published_by_id: published_by_id
+               }
+             ] =
+               Lightning.Workflows.WorkflowReleases.list_for_workflow(
+                 workflow.id
+               )
+
+      assert published_by_id == user.id
+    end
+
+    test "set_workflow_state returns an internal error with no shared doc", %{
+      session: session,
+      user: user
+    } do
+      GenServer.call(session, :stop_shared_doc)
+
+      assert {:error, :internal_error} =
+               Session.set_workflow_state(session, user, :live)
+    end
+
+    test "surfaces interpolated changeset errors", %{
+      session: session,
+      user: user
+    } do
+      doc = Session.get_doc(session)
+      workflow_map = Yex.Doc.get_map(doc, "workflow")
+
+      # concurrency < 1 fails validate_number, whose message interpolates
+      # "%{number}", exercising the error-formatting path.
+      Yex.Doc.transaction(doc, "test_update", fn ->
+        Yex.Map.set(workflow_map, "concurrency", 0)
+      end)
+
+      assert {:error, changeset} = Session.save_workflow(session, user)
+      assert changeset.errors[:concurrency]
+    end
+
     test "handles validation errors", %{
       session: session,
       user: user,

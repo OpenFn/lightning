@@ -27,7 +27,10 @@ defmodule LightningWeb.ProjectLive.DeletionTeardownTest do
       & &1
     )
 
-    owner = insert(:user)
+    # Landing in the parent after an archive is part of the promote flow, so it
+    # only happens for someone who opted in. Without the flag they get what
+    # ships today: "Project deleted." and the projects list.
+    owner = insert(:user, preferences: %{"experimental_features" => true})
 
     project =
       insert(:project, project_users: [%{user: owner, role: :owner}])
@@ -68,6 +71,99 @@ defmodule LightningWeb.ProjectLive.DeletionTeardownTest do
 
         assert flash["info"] == "Project deleted."
       end
+    end
+
+    test "an archived sandbox lands on the parent's copy of the open workflow",
+         %{
+           conn: conn,
+           owner: owner
+         } do
+      parent = insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      # Promote matches workflows by name, so the same name is what identifies
+      # the parent's copy of the workflow being edited in the sandbox.
+      parent_workflow = insert(:workflow, project: parent, name: "Cat Facts")
+      sandbox_workflow = insert(:workflow, project: sandbox, name: "Cat Facts")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/w/#{sandbox_workflow}",
+          on_error: :raise
+        )
+
+      {:ok, _project} = Projects.schedule_project_deletion(sandbox)
+
+      # Landing in the editor carries the marker instead of a flash: that page
+      # is React and says this in a toast, so a flash would be a second
+      # notification from another system over the same canvas.
+      flash =
+        assert_redirect(
+          view,
+          ~p"/projects/#{parent.id}/w/#{parent_workflow.id}?archived=1",
+          @teardown_timeout
+        )
+
+      assert flash == %{}
+    end
+
+    test "without the flag, an archived sandbox reads as a deleted project", %{
+      conn: conn
+    } do
+      # Sandboxes ship already, so this is reachable without any of this work.
+      # They get what they have today: the projects list, and wording that does
+      # not mention a promote they cannot do.
+      plain = insert(:user)
+      parent = insert(:project, project_users: [%{user: plain, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: plain, role: :owner}]
+        )
+
+      conn = log_in_user(conn, plain)
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{sandbox.id}/w")
+
+      {:ok, _} = Lightning.Projects.schedule_project_deletion(sandbox)
+
+      assert_redirect(view, ~p"/projects")
+    end
+
+    test "an archived sandbox falls back to the parent's workflow list", %{
+      conn: conn,
+      owner: owner
+    } do
+      parent = insert(:project, project_users: [%{user: owner, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      # The parent holds no workflow of this name, so there is nothing specific
+      # to land on.
+      sandbox_workflow =
+        insert(:workflow, project: sandbox, name: "Only in the sandbox")
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{sandbox}/w/#{sandbox_workflow}",
+          on_error: :raise
+        )
+
+      {:ok, _project} = Projects.schedule_project_deletion(sandbox)
+
+      # The workflow list is a LiveView with no toaster, so it still flashes.
+      flash =
+        assert_redirect(view, ~p"/projects/#{parent.id}/w", @teardown_timeout)
+
+      assert flash["info"] == "Sandbox archived."
     end
 
     test "leaves a view on another project mounted", %{

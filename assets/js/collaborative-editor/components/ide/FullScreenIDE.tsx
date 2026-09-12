@@ -20,6 +20,7 @@ import { useURLState } from '#/react/lib/use-url-state';
 import { cn } from '#/utils/cn';
 
 import Docs from '../../../adaptor-docs/Docs';
+import { Tooltip } from '../../../components/Tooltip';
 import Metadata from '../../../metadata-explorer/Explorer';
 import type { Dataclip } from '../../api/dataclips';
 import * as dataclipApi from '../../api/dataclips';
@@ -40,11 +41,14 @@ import {
   useHistoryLoading,
   useJobMatchesRun,
 } from '../../hooks/useHistory';
-import { useRunRetry } from '../../hooks/useRunRetry';
 import { useMetadata } from '../../hooks/useMetadata';
+import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
-import { useProject } from '../../hooks/useSessionContext';
+import {
+  useExperimentalFeatures,
+  useProject,
+} from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
 import { useVersionSelect } from '../../hooks/useVersionSelect';
 import {
@@ -74,7 +78,6 @@ import { RunRetryButton } from '../RunRetryButton';
 import { SandboxIndicatorBanner } from '../SandboxIndicatorBanner';
 import { ShortcutKeys } from '../ShortcutKeys';
 import { Tabs } from '../Tabs';
-import { Tooltip } from '../../../components/Tooltip';
 
 /**
  * Resolves an adaptor specifier into its package name and version
@@ -570,7 +573,7 @@ export function FullScreenIDE({
     }
   }, [jobIdFromURL, currentRun, runIdFromURL, updateSearchParams]);
 
-  // Request history when entering history state
+  // Request history (top-20, all versions) when entering history state.
   useEffect(() => {
     if (rightPanelSubState === 'history') {
       void requestHistory();
@@ -731,16 +734,24 @@ export function FullScreenIDE({
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
 
-  // Detect version mismatch between run and current workflow
-  const run = useActiveRun();
-  const versionMismatch = useVersionMismatch(run?.id ?? null);
-  const handleVersionSelect = useVersionSelect();
+  // With experimental features a read-only view drops the run controls, because
+  // the header's lifecycle badge is there to explain it. Without them the
+  // controls stay and go grey, carrying the reason themselves.
+  const experimentalFeatures = useExperimentalFeatures();
+  const hideOnReadOnly = experimentalFeatures && isReadOnly;
+
+  // The run being read executed content other than what is on screen. Only ever
+  // set without experimental features; with them a run of older content opens
+  // that content instead.
+  const activeRun = useActiveRun();
+  const versionMismatch = useVersionMismatch(activeRun?.id ?? null);
+  const { handleVersionSelect } = useVersionSelect();
 
   const handleGoToVersion = useCallback(() => {
     if (versionMismatch) {
       handleVersionSelect(versionMismatch.runVersion);
     }
-  }, [versionMismatch, handleVersionSelect]);
+  }, [handleVersionSelect, versionMismatch]);
 
   // Check loading state but don't use early return (violates rules of hooks)
   // Only check for job existence, not ytext/awareness
@@ -903,46 +914,57 @@ export function FullScreenIDE({
               </button>
             </Tooltip>
 
-            {/* New Run button - shown when no panel or viewing history */}
-            {(panelState === undefined || panelState === 'history') && (
-              <NewRunButton onClick={handleNavigateToCreateRun} />
-            )}
+            {/* New Run button - shown when no panel or viewing history.
+                With experimental features it goes on a read-only workflow,
+                where the header's lifecycle badge explains why. Without them it
+                stays and goes grey, carrying the reason, as it does today. */}
+            {!hideOnReadOnly &&
+              (panelState === undefined || panelState === 'history') && (
+                <NewRunButton
+                  onClick={handleNavigateToCreateRun}
+                  disabled={isReadOnly}
+                />
+              )}
 
-            {/* Run/Retry button - shown when creating new run or viewing existing run */}
-            {(panelState === 'run-viewer' || panelState === 'create-run') && (
-              <RunRetryButton
-                isRetryable={isRetryable}
-                isDisabled={
-                  !(
-                    canRunSnapshot &&
-                    canRunFromHook &&
-                    !isSubmitting &&
-                    !runIsProcessing &&
-                    jobMatchesRun
-                  )
-                }
-                isSubmitting={isSubmitting || runIsProcessing}
-                onRun={() => {
-                  void handleRun();
-                }}
-                onRetry={() => {
-                  void handleRetry();
-                }}
-                buttonText={{
-                  run: 'Run',
-                  retry: 'Run (Retry)',
-                  processing: 'Processing',
-                }}
-                variant="primary"
-                dropdownPosition="down"
-                showKeyboardShortcuts={true}
-                disabledTooltip={
-                  !jobMatchesRun
-                    ? 'Selected job was not part of this run'
-                    : runTooltipMessage
-                }
-              />
-            )}
+            {/* Run/Retry button - shown when creating a new run or viewing an
+                existing run. Both create runs, so a read-only workflow refuses
+                them; with experimental features the button goes, without them it
+                stays disabled. The run viewer itself is always available. */}
+            {!hideOnReadOnly &&
+              (panelState === 'run-viewer' || panelState === 'create-run') && (
+                <RunRetryButton
+                  isRetryable={isRetryable}
+                  isDisabled={
+                    !(
+                      canRunSnapshot &&
+                      canRunFromHook &&
+                      !isSubmitting &&
+                      !runIsProcessing &&
+                      jobMatchesRun
+                    )
+                  }
+                  isSubmitting={isSubmitting || runIsProcessing}
+                  onRun={() => {
+                    void handleRun();
+                  }}
+                  onRetry={() => {
+                    void handleRetry();
+                  }}
+                  buttonText={{
+                    run: 'Run',
+                    retry: 'Run (Retry)',
+                    processing: 'Processing',
+                  }}
+                  variant="primary"
+                  dropdownPosition="down"
+                  showKeyboardShortcuts={true}
+                  disabledTooltip={
+                    !jobMatchesRun
+                      ? 'Selected job was not part of this run'
+                      : runTooltipMessage
+                  }
+                />
+              )}
 
             {/* Close button */}
             <Tooltip content={<ShortcutKeys keys={['esc']} />} side="bottom">
@@ -1044,9 +1066,7 @@ export function FullScreenIDE({
                             <div className="flex-1">
                               <Tabs
                                 value={selectedDocsTab}
-                                onChange={tab =>
-                                  setSelectedDocsTab(tab as 'docs' | 'metadata')
-                                }
+                                onChange={tab => setSelectedDocsTab(tab)}
                                 variant="pills"
                                 options={[
                                   {
@@ -1194,7 +1214,11 @@ export function FullScreenIDE({
                 </div>
               ) : (
                 <div className="h-full flex flex-col">
-                  {/* Version mismatch banner - shown when viewing a run from different version */}
+                  {/* The run on screen executed different content, so the
+                      shape being read is not the shape that ran. Only ever set
+                      without experimental features: with them, opening a run of
+                      older content loads that content instead of painting the
+                      run onto a document it never touched. */}
                   {panelState === 'run-viewer' && versionMismatch && (
                     <VersionMismatchBanner
                       runVersion={versionMismatch.runVersion}

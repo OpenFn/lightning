@@ -29,6 +29,16 @@ import {
 } from '../__helpers__/urlStateMocks';
 
 // Mock Socket
+// The discard guard asks these before anything destroys the document; neither
+// has a provider in this test.
+vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
+  useSession: () => ({ isSynced: true }),
+}));
+
+vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
+  useUnsavedChanges: () => ({ hasChanges: false }),
+}));
+
 vi.mock('phoenix', () => ({
   Socket: vi.fn(() => ({
     connect: vi.fn(),
@@ -198,16 +208,25 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 // Mock session context hooks
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useIsNewWorkflow: () => false,
+  useSessionWorkflow: () => null,
+  useExperimentalFeatures: () => true,
   useProjectRepoConnection: () => undefined,
   useProject: () => ({
     id: 'project-1',
     name: 'Test Project',
   }),
-  useVersions: () => [],
-  useVersionsLoading: () => false,
-  useVersionsError: () => null,
-  useRequestVersions: () => vi.fn(),
+  useReleases: () => [],
+  useLatestSnapshotId: () => null,
+  useReleasesLoading: () => false,
+  useReleasesError: () => null,
+  useRequestReleases: () => vi.fn(),
   useLatestSnapshotLockVersion: () => 1,
+  usePermissions: () => ({
+    can_edit_workflow: true,
+    can_run_workflow: true,
+    can_write_webhook_auth_method: true,
+    can_provision_sandbox: true,
+  }),
   useUser: () => ({
     id: 'user-1',
     email: 'test@example.com',
@@ -304,6 +323,7 @@ const mockWorkflow: Workflow = {
 };
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
+  useWorkflowEnabled: () => ({ enabled: true, setEnabled: vi.fn() }),
   // Not exercised by this suite (landing-screen build-from-scratch flow is
   // covered by CollaborativeEditor.build-from-scratch.test.tsx) — stubbed
   // only because LandingScreenWrapper calls it unconditionally.
@@ -334,10 +354,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useCanRun: () => ({
     canRun: true,
     tooltipMessage: '',
-  }),
-  useWorkflowEnabled: () => ({
-    enabled: true,
-    setEnabled: vi.fn(),
   }),
   useCanSave: () => ({
     canSave: true,
@@ -413,7 +429,15 @@ vi.mock('../../../js/collaborative-editor/hooks/useAIAssistantChannel', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
-  useVersionSelect: () => vi.fn(),
+  useVersionSelect: () => ({
+    handleVersionSelect: vi.fn(),
+    prompt: {
+      isAsking: false,
+      cancel: vi.fn(),
+      runPending: vi.fn(),
+      saveAndRunPending: vi.fn().mockResolvedValue(true),
+    },
+  }),
 }));
 
 describe('CollaborativeEditor IDE keyboard shortcuts', () => {

@@ -40,7 +40,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 // doc, awareness, channel, destroy) and record the params of every
 // construction so the test can assert what was sent on connect vs reconnect.
 
-const providerConstructions: { params: Record<string, unknown> }[] = [];
+const providerConstructions: {
+  params: Record<string, unknown>;
+  roomname: string;
+}[] = [];
 
 vi.mock('y-phoenix-channel', () => {
   class FakePhoenixChannelProvider {
@@ -52,14 +55,14 @@ vi.mock('y-phoenix-channel', () => {
 
     constructor(
       _socket: unknown,
-      _roomname: string,
+      roomname: string,
       ydoc: unknown,
       options: { awareness?: unknown; params?: Record<string, unknown> } = {}
     ) {
       this.doc = ydoc;
       this.awareness = options.awareness ?? { destroy: () => {} };
       this.channel = { on: () => {}, off: () => {}, push: () => {} };
-      providerConstructions.push({ params: options.params ?? {} });
+      providerConstructions.push({ params: options.params ?? {}, roomname });
     }
 
     on(event: string, handler: (...args: unknown[]) => void) {
@@ -286,5 +289,40 @@ describe('SessionProvider/StoreProvider join-action bridge (#4830)', () => {
     );
     const lastIndex = providerConstructions.length - 1;
     expect(actionOfConstruction(lastIndex)).toBe('edit');
+  });
+
+  test('joins the run-scoped read-only room when ?as_run is present', () => {
+    const socket = createMockSocket();
+
+    // "View as executed" sets ?as_run=<run_id>; SessionProvider must join the
+    // run-scoped room (not the base or :v<N> snapshot room).
+    window.history.pushState({}, '', '/?as_run=run-9');
+
+    try {
+      const tree = (
+        <ConnectedSocket socket={socket}>
+          <SessionProvider
+            workflowId="wf-1"
+            projectId="proj-1"
+            isNewWorkflow={false}
+          >
+            <StoreProvider>
+              <div data-testid="child" />
+            </StoreProvider>
+          </SessionProvider>
+        </ConnectedSocket>
+      );
+
+      act(() => {
+        render(tree);
+      });
+
+      expect(providerConstructions.length).toBeGreaterThanOrEqual(1);
+      expect(providerConstructions[0]?.roomname).toBe(
+        'workflow:collaborate:wf-1:run:run-9'
+      );
+    } finally {
+      window.history.pushState({}, '', '/');
+    }
   });
 });

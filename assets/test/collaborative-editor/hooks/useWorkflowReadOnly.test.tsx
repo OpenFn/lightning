@@ -46,10 +46,20 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 // =============================================================================
 
 interface WrapperOptions {
-  permissions?: { can_edit_workflow: boolean; can_run_workflow: boolean };
+  permissions?: {
+    can_edit_workflow: boolean;
+    can_run_workflow: boolean;
+    can_provision_sandbox?: boolean;
+  };
   latestSnapshotLockVersion?: number;
   workflowLockVersion?: number | null;
   workflowDeletedAt?: string | null;
+  workflowState?: 'draft' | 'live';
+  /**
+   * The lifecycle lock, as the server sends it. Left undefined to stand in for
+   * an older node that does not send it at all.
+   */
+  contentLocked?: boolean;
 }
 
 function createWrapper(options: WrapperOptions = {}): [
@@ -67,6 +77,8 @@ function createWrapper(options: WrapperOptions = {}): [
     latestSnapshotLockVersion = 1,
     workflowLockVersion = 1,
     workflowDeletedAt = null,
+    workflowState,
+    contentLocked,
   } = options;
 
   // Create stores
@@ -116,7 +128,23 @@ function createWrapper(options: WrapperOptions = {}): [
       'session_context',
       createSessionContext({
         permissions,
+        ...(contentLocked === undefined
+          ? {}
+          : { content_locked: contentLocked }),
         latest_snapshot_lock_version: latestSnapshotLockVersion,
+        ...(workflowState
+          ? {
+              workflow: {
+                jobs: [],
+                triggers: [],
+                edges: [],
+                positions: {},
+                name: 'Test Workflow',
+                enable_job_logs: false,
+                state: workflowState,
+              },
+            }
+          : {}),
       })
     );
   };
@@ -272,6 +300,107 @@ describe('useWorkflowReadOnly - Permissions', () => {
     });
   });
 
+  test('reports a live-specific reason and message when a live workflow is locked for an editor', async () => {
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      // An editor: the role says yes, and only the lifecycle says no. So the
+      // message names the lifecycle and the two ways out of it, both of which
+      // this person can take.
+      permissions: {
+        can_edit_workflow: true,
+        can_run_workflow: true,
+        can_provision_sandbox: true,
+      },
+      workflowState: 'live',
+      contentLocked: true,
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('live');
+      expect(result.current.tooltipMessage).toBe(
+        'This workflow is live. Switch to draft or edit in a sandbox to make changes.'
+      );
+    });
+  });
+
+  test('stays read-only against a node that sends no lifecycle lock', async () => {
+    // A rolling deploy: the old node folds the lock into can_edit_workflow and
+    // sends no content_locked at all, which the schema defaults to false. The
+    // view must still come out read-only. Only the wording is less specific.
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      permissions: {
+        can_edit_workflow: false,
+        can_run_workflow: true,
+        can_provision_sandbox: true,
+      },
+      workflowState: 'live',
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('no_permission');
+    });
+  });
+
+  test('reports no_permission (not live) for a plain viewer on a live workflow', async () => {
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      // A viewer, on a workflow that is also locked. The role is answered
+      // first: someone who could not edit a draft either has nowhere to be sent
+      // by "switch to draft or edit in a sandbox".
+      permissions: {
+        can_edit_workflow: false,
+        can_run_workflow: false,
+        can_provision_sandbox: false,
+      },
+      workflowState: 'live',
+      contentLocked: true,
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('no_permission');
+      expect(result.current.tooltipMessage).toBe(
+        'You do not have permission to edit this workflow'
+      );
+    });
+  });
+
+  test('keeps the no_permission reason for a draft workflow the user cannot edit', async () => {
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      permissions: { can_edit_workflow: false, can_run_workflow: false },
+      workflowState: 'draft',
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('no_permission');
+    });
+  });
+
   test('permission restriction takes priority over pinned version', async () => {
     // Set pinned version in URL
     urlState.setParam('v', '1');
@@ -340,6 +469,30 @@ describe('useWorkflowReadOnly - Version Pinning', () => {
     await waitFor(() => {
       expect(result.current.isReadOnly).toBe(false);
       expect(result.current.tooltipMessage).toBe('');
+    });
+  });
+
+  test('returns read-only with an as-executed reason when ?as_run is present', async () => {
+    // "View as executed" loads the workflow exactly as a run ran it.
+    urlState.setParam('as_run', 'run-123');
+
+    const [wrapper, { emitSessionContext }] = createWrapper({
+      permissions: { can_edit_workflow: true, can_run_workflow: true },
+      workflowDeletedAt: null,
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      emitSessionContext();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReadOnly).toBe(true);
+      expect(result.current.reason).toBe('as_run');
+      expect(result.current.tooltipMessage).toBe(
+        'You are viewing this workflow as a past run executed it'
+      );
     });
   });
 });

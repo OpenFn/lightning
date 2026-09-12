@@ -4,6 +4,9 @@ import {
   DialogPanel,
   DialogTitle,
 } from '@headlessui/react';
+import type React from 'react';
+
+import { useKeyboardShortcut } from '../keyboard';
 
 interface AlertDialogProps {
   isOpen: boolean;
@@ -14,6 +17,11 @@ interface AlertDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'danger' | 'primary';
+  /**
+   * Optional extra content rendered below the description (e.g. a
+   * "don't show again" checkbox). Left-aligned so form controls read naturally.
+   */
+  children?: React.ReactNode;
 }
 
 /**
@@ -42,11 +50,25 @@ export function AlertDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   variant = 'primary',
+  children,
 }: AlertDialogProps) {
   const confirmButtonClass =
     variant === 'danger'
       ? 'bg-red-600 hover:bg-red-500 focus-visible:outline-red-600'
       : 'bg-primary-600 hover:bg-primary-500 focus-visible:outline-primary-600';
+
+  // High-priority Escape handler to prevent closing the parent IDE/inspector.
+  // Priority 100 (MODAL) ensures this runs before the IDE handler (priority 50);
+  // Headless UI's own Escape handling never fires while those intercept it. Only
+  // cancels (onClose) the dialog, so it never triggers the confirm action.
+  useKeyboardShortcut(
+    'Escape',
+    () => {
+      onClose();
+    },
+    100,
+    { enabled: isOpen }
+  );
 
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-[60]">
@@ -58,8 +80,8 @@ export function AlertDialog({
 
       <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
         <div
-          className="flex min-h-full items-end justify-center p-4
-        text-center sm:items-center sm:p-0"
+          className="flex min-h-full items-end justify-center p-4 text-center
+            sm:items-center sm:p-0"
         >
           <DialogPanel
             transition
@@ -83,6 +105,14 @@ export function AlertDialog({
                 </div>
               </div>
             </div>
+
+            {/* Left-aligned, because the things that go here are form controls
+                rather than prose. Nothing passes it on the paths that existed
+                before this work, so those dialogs are unchanged. */}
+            {children != null && (
+              <div className="mt-4 text-left">{children}</div>
+            )}
+
             <div
               className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense
             sm:grid-cols-2 sm:gap-3"

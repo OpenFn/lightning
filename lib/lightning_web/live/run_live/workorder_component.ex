@@ -8,6 +8,10 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   alias Lightning.WorkOrder
   alias Phoenix.LiveView.JS
 
+  defp default_experimental_features(socket) do
+    assign_new(socket, :experimental_features, fn -> false end)
+  end
+
   @impl true
   def update(
         %{
@@ -22,11 +26,16 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
      socket
      |> assign(assigns)
      |> assign(project: project, can_run_workflow: can_run_workflow)
+     |> default_experimental_features()
      |> set_details(work_order)}
   end
 
   def update(%{work_order: work_order} = assigns, socket) do
-    {:ok, socket |> assign(assigns) |> set_details(work_order)}
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> default_experimental_features()
+     |> set_details(work_order)}
   end
 
   def update(assigns, socket) do
@@ -181,13 +190,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           <%= if @last_run do %>
             <.link
               navigate={
-                # Only include version param if snapshot differs from current workflow version
-                if @work_order.workflow.lock_version ==
-                     @work_order.snapshot.lock_version do
-                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?run=#{@last_run.id}"
-                else
-                  ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?run=#{@last_run.id}&v=#{@work_order.snapshot.lock_version}"
-                end
+                ~p"/projects/#{@project}/w/#{@work_order.workflow.id}?#{maybe_add_snapshot_version(%{run: @last_run.id}, @work_order.snapshot.lock_version, @work_order.workflow.lock_version, @experimental_features)}"
               }
               class="inline-block"
             >
@@ -428,6 +431,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                       can_run_workflow={@can_run_workflow}
                       run={run}
                       workflow_version={@work_order.workflow.lock_version}
+                      experimental_features={@experimental_features}
                       project={@project}
                     />
                   </div>

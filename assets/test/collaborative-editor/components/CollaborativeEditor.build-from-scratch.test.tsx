@@ -153,10 +153,11 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   useIsNewWorkflow: () => false,
   useProjectRepoConnection: () => undefined,
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),
-  useVersions: () => [],
-  useVersionsLoading: () => false,
-  useVersionsError: () => null,
-  useRequestVersions: () => vi.fn(),
+  useReleases: () => [],
+  useLatestSnapshotId: () => null,
+  useReleasesLoading: () => false,
+  useReleasesError: () => null,
+  useRequestReleases: () => vi.fn(),
   useLatestSnapshotLockVersion: () => 1,
   useUser: () => ({
     id: 'user-1',
@@ -171,6 +172,19 @@ vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
   }),
   useSessionContext: () => ({
     workflow: { jobs: [], triggers: [], edges: [], name: 'wf', positions: {} },
+  }),
+  // The header reads this for the lifecycle badge and the Go live / Switch to
+  // draft buttons. These tests are about the build-from-scratch import flow, so
+  // leave it absent and keep the lifecycle controls out of the tree.
+  useSessionWorkflow: () => undefined,
+  useExperimentalFeatures: () => true,
+  // The header gates Edit in sandbox on can_provision_sandbox. Grant the full
+  // set so the import flow under test is not blocked by permissions.
+  usePermissions: () => ({
+    can_edit_workflow: true,
+    can_run_workflow: true,
+    can_write_webhook_auth_method: true,
+    can_provision_sandbox: true,
   }),
 }));
 

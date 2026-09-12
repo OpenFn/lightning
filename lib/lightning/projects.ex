@@ -2131,6 +2131,57 @@ defmodule Lightning.Projects do
   end
 
   @doc """
+  Lists a parent project's active sandboxes for the "Edit in sandbox" picker.
+
+  Returns only the direct children of `parent_id` that are not scheduled for
+  deletion, sorted by `inserted_at` descending to match the "Created {relative}"
+  label the picker renders for each sandbox. Each sandbox preloads only its
+  owner `project_user` (and their user) for owner display, and resolves the
+  clone of the workflow named `workflow_name` so the caller can offer a direct
+  "join" target. The resolved workflow id is returned as `:joinable_workflow_id`,
+  or `nil` when the sandbox has no workflow with that name.
+  """
+  @spec list_active_sandboxes_for_editing(Ecto.UUID.t(), String.t()) :: [
+          {Project.t(), Ecto.UUID.t() | nil}
+        ]
+  def list_active_sandboxes_for_editing(parent_id, workflow_name)
+      when is_binary(parent_id) and is_binary(workflow_name) do
+    owner_preload =
+      from(pu in ProjectUser, where: pu.role == :owner, preload: :user)
+
+    sandboxes =
+      from(p in Project,
+        where: p.parent_id == ^parent_id and is_nil(p.scheduled_deletion),
+        order_by: [desc: p.inserted_at],
+        preload: [project_users: ^owner_preload]
+      )
+      |> Repo.all()
+
+    joinable_workflow_ids = joinable_workflow_ids(sandboxes, workflow_name)
+
+    Enum.map(sandboxes, fn sandbox ->
+      {sandbox, Map.get(joinable_workflow_ids, sandbox.id)}
+    end)
+  end
+
+  # Maps each sandbox id to the id of its clone of `workflow_name`. Skips the
+  # query entirely when there are no sandboxes to look up.
+  defp joinable_workflow_ids([], _workflow_name), do: %{}
+
+  defp joinable_workflow_ids(sandboxes, workflow_name) do
+    sandbox_ids = Enum.map(sandboxes, & &1.id)
+
+    from(w in Workflow,
+      where:
+        w.project_id in ^sandbox_ids and w.name == ^workflow_name and
+          is_nil(w.deleted_at),
+      select: {w.project_id, w.id}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   Checks if a sandbox with the given name exists under the parent project.
 
   Returns `true` if a sandbox exists, `false` otherwise.
@@ -2292,6 +2343,124 @@ defmodule Lightning.Projects do
   defdelegate provision_sandbox(parent, actor, attrs),
     to: Sandboxes,
     as: :provision
+
+  @doc """
+  Provisions a sandbox from `parent` and returns the sandbox together with its
+  clone of `workflow_name`, so the "Edit in sandbox" flow lands the user on the
+  edited workflow.
+
+  The edited clone comes in disabled and `:draft`, exactly like every other
+  cloned workflow: the clone is deliberately NOT promoted to live. Taking it
+  live in the sandbox is what turns its triggers on, so a user can test
+  connections against dev systems.
+  """
+  @spec provision_editing_sandbox(Project.t(), User.t(), String.t(), map()) ::
+          {:ok,
+           %{
+             sandbox: Project.t(),
+             workflow: Workflow.t(),
+             starting_dataclip_id: Ecto.UUID.t() | nil
+           }}
+          | {:error, term()}
+  def provision_editing_sandbox(parent, actor, workflow_name, attrs) do
+    with {:ok, sandbox} <- provision_sandbox(parent, actor, attrs) do
+      case Lightning.Workflows.get_workflow_by_name(sandbox.id, workflow_name) do
+        %Workflow{} = workflow ->
+          {:ok,
+           %{
+             sandbox: sandbox,
+             workflow: workflow,
+             starting_dataclip_id: sandbox.starting_dataclip_id
+           }}
+
+        nil ->
+          # The clone of `workflow_name` is expected to exist after a
+          # successful provision; its absence is an invariant violation. Delete
+          # the just-created sandbox so it cannot linger and consume the
+          # parent's sandbox quota.
+          Logger.error(
+            "Cloned workflow #{inspect(workflow_name)} not found in " <>
+              "provisioned sandbox ##{sandbox.id}; deleting the orphaned sandbox."
+          )
+
+          case delete_project(sandbox) do
+            {:ok, _} ->
+              :ok
+
+            {:error, reason} ->
+              Logger.warning(
+                "Failed to delete orphaned sandbox ##{sandbox.id} after a " <>
+                  "missing cloned workflow; it may linger and consume the " <>
+                  "parent's sandbox quota: #{inspect(reason)}"
+              )
+          end
+
+          {:error, :internal_error}
+      end
+    end
+  end
+
+  @doc """
+  Promotes a workflow edited inside a sandbox back to the sandbox's parent
+  project by merging only that workflow.
+
+  The merge reuses `Sandboxes.merge/4` scoped to the single source workflow via
+  `selected_workflow_ids`, so sibling workflows on the parent pass through
+  untouched (including their live/enabled trigger state). Authorization is the
+  caller's responsibility, mirroring `Sandboxes.merge/4`.
+
+  Promoting does not archive the sandbox: archiving is a separate, explicit
+  action so a user can promote several related workflows from the same sandbox
+  before retiring it. See `Lightning.Projects.Sandboxes.schedule_sandbox_deletion/2`.
+
+  ## Returns
+  * `{:ok, %{parent_project_id: id, workflow_id: id | nil}}`
+  * `{:error, :not_a_sandbox}` - the workflow's project has no parent
+  * `{:error, reason}` - the merge failed (`:merge_failed` or a usage-limit
+    `Lightning.Extensions.Message`)
+  """
+  @spec promote_workflow(Workflow.t(), User.t()) ::
+          {:ok,
+           %{
+             parent_project_id: Ecto.UUID.t(),
+             workflow_id: Ecto.UUID.t() | nil
+           }}
+          | {:error, :not_a_sandbox | term()}
+  def promote_workflow(%Workflow{} = sandbox_workflow, %User{} = actor) do
+    sandbox = get_project(sandbox_workflow.project_id)
+
+    case sandbox && sandbox.parent_id do
+      nil ->
+        {:error, :not_a_sandbox}
+
+      parent_id ->
+        parent = get_project(parent_id)
+
+        with {:ok, _updated_parent} <-
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [sandbox_workflow.id],
+                 record_release: :promote
+               }) do
+          # Reloaded because the caller's struct is captured at channel join and
+          # the client saves before promoting, so a rename in the same session
+          # would look this up under the old name.
+          parent_workflow_id =
+            with %Workflow{name: name} <- Repo.reload(sandbox_workflow),
+                 %Workflow{id: id} <-
+                   Lightning.Workflows.get_workflow_by_name(parent.id, name) do
+              id
+            else
+              _ -> nil
+            end
+
+          {:ok,
+           %{
+             parent_project_id: parent.id,
+             workflow_id: parent_workflow_id
+           }}
+        end
+    end
+  end
 
   @doc """
   Updates a sandbox project's basic attributes (name, color, env).

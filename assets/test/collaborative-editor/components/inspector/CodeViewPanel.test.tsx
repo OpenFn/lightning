@@ -133,6 +133,7 @@ const resetSessionContextMocks = () => {
 
 // Mock useSessionContext hooks
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useExperimentalFeatures: () => true,
   useUser: vi.fn(() => mockUser),
   useWorkflowTemplate: vi.fn(() => mockWorkflowTemplate),
   useLatestSnapshotLockVersion: vi.fn(() => mockLatestSnapshotLockVersion),

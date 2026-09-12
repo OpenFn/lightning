@@ -37,6 +37,16 @@ export const PermissionsSchema = z.object({
   can_edit_workflow: z.boolean(),
   can_run_workflow: z.boolean(),
   can_write_webhook_auth_method: z.boolean(),
+  // Optional for the same reason as its neighbour below: an older node during a
+  // rolling deploy does not send it, and a required field would fail the whole
+  // parse and leave the client with no permissions at all rather than one
+  // missing answer.
+  can_provision_sandbox: z.boolean().optional().default(false),
+  // Whether this user may archive (retire) this sandbox. Defaults to false so a
+  // payload that omits it degrades safely to "cannot archive" rather than
+  // offering an action the server would refuse, mirroring the other optional
+  // booleans in this schema.
+  can_archive_sandbox: z.boolean().optional().default(false),
 });
 
 export type Permissions = z.infer<typeof PermissionsSchema>;
@@ -49,6 +59,38 @@ export const WebhookAuthMethodSchema = z.object({
 
 export type WebhookAuthMethod = z.infer<typeof WebhookAuthMethodSchema>;
 
+/**
+ * A published release of a workflow: either a go-live (draft published to live)
+ * or a promote (a sandbox version promoted up). The backend returns releases
+ * rather than every save. Version pinning via the `?v=` param uses the
+ * `version_number` (what the UI shows as vN); `lock_version` is retained as the
+ * snapshot identifier the backend maps that version_number to.
+ */
+export const ReleaseSchema = z.object({
+  version_number: z.number().int(),
+  kind: z.string(),
+  inserted_at: z.string(),
+  published_by: z.string().nullable(),
+  source_project: z.string().nullable(),
+  lock_version: z.number().int(),
+  // The content this version published. The list ticks the row whose content is
+  // on screen, which is a question of identity rather than of numbers.
+  snapshot_id: z.string().nullish().default(null),
+  // nullish with a default so a new asset bundle served against an older node
+  // during a rolling deploy does not fail the parse and blank the dropdown.
+  restored_from_version_number: z.number().int().nullish().default(null),
+  is_latest: z.boolean(),
+});
+
+export type Release = z.infer<typeof ReleaseSchema>;
+
+/**
+ * One saved snapshot of a workflow, numbered by its own `lock_version`.
+ *
+ * The other numbering. Every save captures a snapshot; only a deliberate
+ * publish records a [Release]. This is the list a user without experimental
+ * features sees, and what `?v=` pins.
+ */
 export const VersionSchema = z.object({
   lock_version: z.number().int(),
   inserted_at: z.string(),
@@ -89,6 +131,7 @@ export const LimitsSchema = z.object({
   workflow_activation: LimitInfoSchema.optional(),
   github_sync: LimitInfoSchema.optional(),
   ai_assistant: LimitInfoSchema.optional(),
+  new_sandbox: LimitInfoSchema.optional(),
 });
 
 export type Limits = z.infer<typeof LimitsSchema>;
@@ -98,10 +141,37 @@ export const SessionContextResponseSchema = z.object({
   project: ProjectContextSchema.nullable(),
   config: AppConfigSchema,
   permissions: PermissionsSchema,
+  /**
+   * Whether the workflow's content is frozen by its lifecycle, which a live
+   * workflow outside a sandbox is. Separate from `permissions` because it says
+   * nothing about the person: an editor reading a live workflow is still an
+   * editor, and the two facts want two different things said on screen.
+   *
+   * Defaults false for an older node during a rolling deploy. That node folds
+   * the lock into `can_edit_workflow` instead, so the view still comes out
+   * read-only; only the wording is less specific.
+   */
+  content_locked: z.boolean().optional().default(false),
   latest_snapshot_lock_version: z.number().int().nullable(),
+  /**
+   * The snapshot holding the content that is live right now. Compared against a
+   * run's own snapshot to tell a run of the live content from a run of
+   * anything else; lock versions are a proxy and not unique per workflow.
+   */
+  latest_snapshot_id: z.string().nullable().optional(),
   project_repo_connection: ProjectRepoConnectionSchema.nullable(),
   webhook_auth_methods: z.array(WebhookAuthMethodSchema),
   workflow_template: WorkflowTemplateSchema.nullable(),
+  suppress_enable_trigger_warning: z.boolean().optional().default(false),
+  /**
+   * Whether this user has turned experimental features on. The sandboxes and
+   * releases experience is gated on it, so a user without it sees the editor
+   * they had before.
+   *
+   * Defaults false, which is the safe direction: an older node that does not
+   * send it shows the old editor rather than half of a new one.
+   */
+  experimental_features_enabled: z.boolean().optional().default(false),
   limits: LimitsSchema.optional(),
   workflow: BaseWorkflowSchema.optional(),
 });
@@ -117,13 +187,28 @@ export interface SessionContextState {
   workflow: BaseWorkflow | null;
   config: AppConfig | null;
   permissions: Permissions | null;
+  contentLocked: boolean;
+  experimentalFeaturesEnabled: boolean;
   latestSnapshotLockVersion: number | null;
+  latestSnapshotId: string | null;
   projectRepoConnection: ProjectRepoConnection | null;
   webhookAuthMethods: WebhookAuthMethod[];
+  releases: Release[];
+  /**
+   * Whether a releases request has completed, successfully or not. Separate
+   * from the list being empty: a workflow that has never been published has no
+   * releases, and reading "empty" as "not fetched yet" asks again forever.
+   */
+  releasesLoaded: boolean;
+  releasesLoading: boolean;
+  releasesError: string | null;
+  /** Saved snapshots, numbered by lock_version. The flag-off list. */
   versions: Version[];
+  versionsLoaded: boolean;
   versionsLoading: boolean;
   versionsError: string | null;
   workflow_template: WorkflowTemplate | null;
+  suppressEnableTriggerWarning: boolean;
   limits: Limits;
   isNewWorkflow: boolean;
   isLoading: boolean;
@@ -133,6 +218,8 @@ export interface SessionContextState {
 
 interface SessionContextCommands {
   requestSessionContext: () => Promise<void>;
+  requestReleases: () => Promise<void>;
+  clearReleases: () => void;
   requestVersions: () => Promise<void>;
   clearVersions: () => void;
   setLoading: (loading: boolean) => void;
@@ -141,6 +228,8 @@ interface SessionContextCommands {
   setLatestSnapshotLockVersion: (lockVersion: number) => void;
   clearIsNewWorkflow: () => void;
   setBaseWorkflow: (workflow: BaseWorkflow) => void;
+  setSuppressEnableTriggerWarning: (suppress: boolean) => void;
+  markEnableTriggerWarningSuppressed: () => Promise<void>;
   getLimits: (
     actionType: 'new_run' | 'activate_workflow' | 'github_sync'
   ) => Promise<void>;

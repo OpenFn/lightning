@@ -1,110 +1,120 @@
-import type { ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { forwardRef } from 'react';
 
-interface ButtonProps {
+interface ButtonProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type'> {
   children?: ReactNode;
   variant?: 'primary' | 'danger' | 'secondary' | 'ghost' | 'nakedClose';
   disabled?: boolean;
   loading?: boolean;
-  onClick?: () => void;
   type?: 'button' | 'submit';
   className?: string;
-  'aria-label'?: string;
 }
 
 /**
  * Reusable button component with consistent styling
  * across the collaborative editor.
  *
+ * Forwards its ref and any remaining props to the element, so it can be used
+ * as a Radix trigger. Without that, a wrapper's `data-state` and handlers are
+ * silently dropped and the tooltip never wires up.
+ *
  * @example
  * <Button variant="danger" onClick={handleDelete}>
  *   Delete
  * </Button>
  */
-export function Button({
-  children,
-  variant = 'primary',
-  disabled = false,
-  loading = false,
-  onClick,
-  type = 'button',
-  className = '',
-  'aria-label': ariaLabel,
-}: ButtonProps) {
-  const isDisabled = disabled || loading;
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  function Button(
+    {
+      children,
+      variant = 'primary',
+      disabled = false,
+      loading = false,
+      type = 'button',
+      className = '',
+      ...rest
+    },
+    ref
+  ) {
+    const isDisabled = disabled || loading;
 
-  // Base classes for standard buttons (not nakedClose). Shadow is opt-in per
-  // variant so the flat `ghost` button has no raised/outlined appearance.
-  const baseClasses = `
+    // Base classes for standard buttons (not nakedClose). Shadow is opt-in per
+    // variant so the flat `ghost` button has no raised/outlined appearance.
+    const baseClasses = `
     rounded-md px-3 py-2 text-sm font-semibold
     focus-visible:outline-2 focus-visible:outline-offset-2
     disabled:cursor-not-allowed
   `;
 
-  // nakedClose button has different base classes (no padding/shadow)
-  const nakedCloseBaseClasses = `
+    // nakedClose button has different base classes (no padding/shadow)
+    const nakedCloseBaseClasses = `
     relative rounded-md
     focus-visible:outline-2 focus-visible:outline-offset-2
     focus-visible:outline-indigo-600
     disabled:opacity-50 disabled:cursor-not-allowed
   `;
 
-  // Variant-specific classes
-  const variantClasses = {
-    primary: `
+    // Variant-specific classes
+    const variantClasses = {
+      primary: `
       bg-primary-600 hover:bg-primary-500 text-white shadow-xs
       focus-visible:outline-primary-600
       disabled:bg-primary-300 disabled:hover:bg-primary-300
     `,
-    danger: `
+      danger: `
       bg-red-600 hover:bg-red-500 text-white shadow-xs
       focus-visible:outline-red-600
       disabled:bg-red-300 disabled:hover:bg-red-300
     `,
-    secondary: `
+      secondary: `
       bg-white text-gray-900 shadow-xs
       inset-ring inset-ring-gray-300
       hover:inset-ring-gray-400
       disabled:bg-gray-50 disabled:text-gray-400
     `,
-    ghost: `
+      ghost: `
       bg-transparent text-gray-700
       hover:bg-gray-100 hover:text-gray-900
       focus-visible:outline-gray-400
       disabled:bg-transparent disabled:text-gray-400
       disabled:hover:bg-transparent disabled:hover:text-gray-400
     `,
-    nakedClose: `
+      nakedClose: `
       text-gray-400 hover:text-gray-500
       disabled:opacity-50
     `,
-  };
+    };
 
-  const buttonClasses =
-    variant === 'nakedClose' ? nakedCloseBaseClasses : baseClasses;
+    const buttonClasses =
+      variant === 'nakedClose' ? nakedCloseBaseClasses : baseClasses;
 
-  return (
-    <button
-      type={type}
-      onClick={onClick}
-      disabled={isDisabled}
-      aria-label={ariaLabel}
-      className={`
+    return (
+      <button
+        {...rest}
+        ref={ref}
+        type={type}
+        disabled={isDisabled}
+        className={`
         ${buttonClasses}
         ${variantClasses[variant]}
         ${className}
       `
-        .replace(/\s+/g, ' ')
-        .trim()}
-    >
-      {variant === 'nakedClose' ? (
-        <>
-          <span className="absolute -inset-2.5" />
-          <span className="sr-only">{ariaLabel || 'Close panel'}</span>
-          <div className="hero-x-mark size-6" />
-        </>
-      ) : (
-        children
-      )}
-    </button>
-  );
-}
+          .replace(/\s+/g, ' ')
+          .trim()}
+      >
+        {variant === 'nakedClose' ? (
+          <>
+            <span className="absolute -inset-2.5" />
+            <span className="sr-only">
+              {rest['aria-label'] || 'Close panel'}
+            </span>
+            <div className="hero-x-mark size-6" />
+          </>
+        ) : (
+          children
+        )}
+      </button>
+    );
+  }
+);

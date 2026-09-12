@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
 
+import { Tooltip } from '../../../components/Tooltip';
+import { useExperimentalFeatures } from '../../hooks/useSessionContext';
 import {
   useWorkflowActions,
   useWorkflowReadOnly,
@@ -7,7 +9,6 @@ import {
 import type { Workflow } from '../../types/workflow';
 import { Button } from '../Button';
 import { Toggle } from '../Toggle';
-import { Tooltip } from '../../../components/Tooltip';
 
 import { EdgeForm } from './EdgeForm';
 import { InspectorFooter } from './InspectorFooter';
@@ -25,6 +26,7 @@ interface EdgeInspectorProps {
 export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
   const { removeEdge, clearSelection, updateEdge } = useWorkflowActions();
   const { isReadOnly, tooltipMessage } = useWorkflowReadOnly();
+  const experimentalFeatures = useExperimentalFeatures();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = useCallback(() => {
@@ -52,43 +54,51 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
     [edge.id, updateEdge]
   );
 
-  // Determine tooltip messages for disabled states
+  // The footer holds the edit-only actions: enable or disable the path, and
+  // delete it. Trigger edges never show one.
+  //
+  // With experimental features the whole footer collapses on a read-only view,
+  // matching the canvas. Without them it stays, both actions disabled, each
+  // tooltip carrying the reason — which is what ships today, and the only
+  // explanation on offer when there is no lifecycle badge alongside.
+  const hideOnReadOnly = experimentalFeatures && isReadOnly;
+
   const toggleTooltip = isReadOnly
     ? tooltipMessage
     : 'Enable or disable this path';
   const deleteTooltip = isReadOnly ? tooltipMessage : 'Delete this path';
 
-  // Only show footer for job edges (not trigger edges)
-  const footer = !edge.source_trigger_id ? (
-    <InspectorFooter
-      leftButtons={
-        <Tooltip content={toggleTooltip} side="top">
-          <span className="inline-block">
-            <Toggle
-              id={`edge-enabled-${edge.id}`}
-              checked={edge.enabled ?? true}
-              onChange={handleEnabledChange}
-              label="Enabled"
-              disabled={isReadOnly}
-            />
-          </span>
-        </Tooltip>
-      }
-      rightButtons={
-        <Tooltip content={deleteTooltip} side="top">
-          <span className="inline-block">
-            <Button
-              variant="danger"
-              onClick={handleDelete}
-              disabled={isDeleting || isReadOnly}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </span>
-        </Tooltip>
-      }
-    />
-  ) : undefined;
+  const footer =
+    !edge.source_trigger_id && !hideOnReadOnly ? (
+      <InspectorFooter
+        leftButtons={
+          <Tooltip content={toggleTooltip} side="top">
+            <span className="inline-block">
+              <Toggle
+                id={`edge-enabled-${edge.id}`}
+                checked={edge.enabled ?? true}
+                onChange={handleEnabledChange}
+                label="Enabled"
+                disabled={isReadOnly}
+              />
+            </span>
+          </Tooltip>
+        }
+        rightButtons={
+          <Tooltip content={deleteTooltip} side="top">
+            <span className="inline-block">
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                disabled={isDeleting || isReadOnly}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </Button>
+            </span>
+          </Tooltip>
+        }
+      />
+    ) : undefined;
 
   return (
     <InspectorLayout title="Path" onClose={onClose} footer={footer}>

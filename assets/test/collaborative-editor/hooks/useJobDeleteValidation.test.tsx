@@ -42,7 +42,11 @@ function createWrapper(
 /**
  * Helper to set permissions in session context store via channel mock
  */
-function setPermissions(channelMock: any, can_edit_workflow: boolean) {
+function setPermissions(
+  channelMock: any,
+  can_edit_workflow: boolean,
+  content_locked = false
+) {
   act(() => {
     channelMock._test.emit('session_context', {
       user: null,
@@ -51,6 +55,7 @@ function setPermissions(channelMock: any, can_edit_workflow: boolean) {
         require_email_verification: false,
       },
       permissions: { ...mockPermissions, can_edit_workflow },
+      content_locked,
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
       webhook_auth_methods: [],
@@ -116,6 +121,22 @@ describe('useJobDeleteValidation - Permission Validation', () => {
     expect(result.current.canDelete).toBe(false);
     expect(result.current.disableReason).toBe(
       "You don't have permission to edit this workflow"
+    );
+  });
+
+  test('blocks deletion on a live workflow, even for an editor', () => {
+    // Deleting a step changes the content, and a live workflow's content is
+    // frozen. The role says yes here, so reading the role alone would offer a
+    // delete the server refuses.
+    setPermissions(channelMock, true, true);
+
+    const { result } = renderHook(() => useJobDeleteValidation('job-a'), {
+      wrapper: createWrapper(workflowStore, sessionContextStore),
+    });
+
+    expect(result.current.canDelete).toBe(false);
+    expect(result.current.disableReason).toBe(
+      'This workflow is live. Switch to draft or edit in a sandbox to make changes.'
     );
   });
 

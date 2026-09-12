@@ -49,13 +49,30 @@ defmodule Mix.Tasks.Lightning.GenWorkflowHash do
 
       true ->
         [workflow_id] = positional
-        start_repo()
-        print_hash(workflow_id, opts)
+        quietly(fn -> print_hash_from_repo(workflow_id, opts) end)
+    end
+  end
+
+  defp print_hash_from_repo(workflow_id, opts) do
+    start_repo()
+    print_hash(workflow_id, opts)
+  end
+
+  # The logger level is one setting for the whole VM, and this task also runs
+  # inside the test suite, where leaving it raised silences every later
+  # assertion on a log line.
+  defp quietly(fun) do
+    previous_level = Logger.level()
+    Logger.configure(level: :error)
+
+    try do
+      fun.()
+    after
+      Logger.configure(level: previous_level)
     end
   end
 
   defp start_repo do
-    Logger.configure(level: :error)
     Mix.Task.run("app.config")
     {:ok, _} = Application.ensure_all_started(:ecto_sql)
 

@@ -26,11 +26,16 @@
 import { formatRelative } from 'date-fns';
 import React, { useState } from 'react';
 
+import { cn } from '#/utils/cn';
+
+import { Tooltip } from '../../../components/Tooltip';
 import { relativeLocale } from '../../../hooks';
 import { duration } from '../../../utils/duration';
 import truncateUid from '../../../utils/truncateUID';
-import { useProject } from '../../hooks/useSessionContext';
-import { useVersionSelect } from '../../hooks/useVersionSelect';
+import {
+  useExperimentalFeatures,
+  useProject,
+} from '../../hooks/useSessionContext';
 import { useWorkflowState } from '../../hooks/useWorkflow';
 import type { RunSummary, WorkOrder } from '../../types/history';
 import {
@@ -40,7 +45,6 @@ import {
 } from '../../utils/navigation';
 import { RunBadge } from '../common/RunBadge';
 import { ShortcutKeys } from '../ShortcutKeys';
-import { Tooltip } from '../../../components/Tooltip';
 
 import { VersionMismatchBanner } from './VersionMismatchBanner';
 
@@ -51,6 +55,28 @@ type WorkOrderWithSelection = Omit<WorkOrder, 'runs'> & {
   selected?: boolean;
 };
 
+// A dot rather than a filled pill, so a screenful of runs reads as calm text.
+const STATUS_DOT: Record<string, string> = {
+  // only workorder states...
+  rejected: 'bg-red-500',
+  pending: 'bg-gray-300',
+  running: 'bg-blue-500',
+  //  run and workorder states...
+  available: 'bg-gray-300',
+  claimed: 'bg-blue-500',
+  started: 'bg-blue-500',
+  success: 'bg-green-500',
+  failed: 'bg-red-500',
+  crashed: 'bg-orange-500',
+  cancelled: 'bg-gray-400',
+  killed: 'bg-yellow-500',
+  exception: 'bg-gray-700',
+  lost: 'bg-gray-700',
+};
+
+// The pill this list has always used. Kept alongside the dot below rather than
+// replaced by it: without experimental features the history is the one that
+// ships today, down to how a run's state is drawn.
 const CHIP_STYLES: Record<string, string> = {
   // only workorder states...
   rejected: 'bg-red-300 text-gray-800',
@@ -91,6 +117,49 @@ const StatePill: React.FC<{ state: string; mini?: boolean }> = ({
   );
 };
 
+const StatusIndicator: React.FC<{ state: string }> = ({ state }) => {
+  const dot = STATUS_DOT[state] || STATUS_DOT['pending'];
+  const text = displayTextFromState(state);
+
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+      <span
+        className={cn('h-1.5 w-1.5 shrink-0 rounded-full', dot)}
+        aria-hidden="true"
+      />
+      <span className="text-xs font-medium text-gray-600">{text}</span>
+    </span>
+  );
+};
+
+// A run of content that was never published has no version to name it by. The
+// same word as the version chip, and deliberately not "Draft", which is the
+// lifecycle badge's word for a workflow that is not live.
+//
+// It names a release, so it belongs only to the experimental experience. It
+// reads the flag here rather than being threaded down through RunItem, which is
+// otherwise a pure component.
+const VersionTag: React.FC<{ versionNumber: number | null | undefined }> = ({
+  versionNumber,
+}) => {
+  const experimentalFeatures = useExperimentalFeatures();
+
+  if (!experimentalFeatures) return null;
+
+  return (
+    <>
+      <span className="whitespace-nowrap font-medium text-gray-400">
+        {versionNumber == null ? 'unpublished' : `v${versionNumber}`}
+      </span>
+      {/* Owned by the tag, so it cannot strand itself in front of the run id
+          when the tag is hidden. */}
+      <span className="text-gray-300" aria-hidden="true">
+        &middot;
+      </span>
+    </>
+  );
+};
+
 // Extracted RunItem component for displaying individual runs
 interface RunItemProps {
   run: RunWithSelection;
@@ -100,7 +169,19 @@ interface RunItemProps {
   onNavigateToRun: (e: React.MouseEvent, runId: string) => void;
 }
 
-const RunItem: React.FC<RunItemProps> = ({
+const RunItem: React.FC<RunItemProps> = props => {
+  const experimentalFeatures = useExperimentalFeatures();
+
+  return experimentalFeatures ? (
+    <ExperimentalRunItem {...props} />
+  ) : (
+    <ClassicRunItem {...props} />
+  );
+};
+
+// The run row as it has always been: the id first, then when it ran, with a
+// filled state pill on the right.
+const ClassicRunItem: React.FC<RunItemProps> = ({
   run,
   now,
   onSelect,
@@ -183,6 +264,87 @@ const RunItem: React.FC<RunItemProps> = ({
   </div>
 );
 
+const ExperimentalRunItem: React.FC<RunItemProps> = ({
+  run,
+  now,
+  onSelect,
+  onDeselect,
+  onNavigateToRun,
+}) => (
+  /*
+    Mouse-only clickable area - keyboard users can navigate to
+    the run detail page using the UUID link button below.
+  */
+  // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+  <div
+    className={cn(
+      `flex w-full cursor-pointer items-center gap-2 border-l-2 px-3 py-2 pl-9
+        text-xs text-left transition-colors`,
+      run.selected
+        ? 'bg-indigo-50 border-l-indigo-500'
+        : 'border-l-transparent hover:bg-gray-50'
+    )}
+    onClick={e => {
+      e.stopPropagation();
+      if (run.selected) {
+        onDeselect?.();
+      } else {
+        onSelect(run);
+      }
+    }}
+  >
+    {run.selected && (
+      <button
+        type="button"
+        onClick={e => {
+          e.preventDefault();
+          e.stopPropagation();
+          onDeselect?.();
+        }}
+        className="flex items-center text-gray-400 transition-colors
+          hover:text-gray-600"
+        aria-label="Deselect run"
+      >
+        <span className="hero-x-mark h-4 w-4" />
+      </button>
+    )}
+
+    {/* Primary line: status + when it ran. */}
+    <StatusIndicator state={run.state} />
+    {(run.started_at || run.finished_at) && (
+      <span className="whitespace-nowrap text-gray-400">
+        {formatRelative(
+          new Date((run.started_at || run.finished_at) as string),
+          now,
+          { locale: relativeLocale }
+        )}
+      </span>
+    )}
+    {run.started_at && run.finished_at && (
+      <span className="whitespace-nowrap text-gray-400">
+        {duration(run.started_at, run.finished_at)}
+      </span>
+    )}
+
+    <div className="flex-1" />
+
+    {/* Secondary, de-emphasised: one light identifier (version + run id). */}
+    <div className="flex items-center gap-1.5 whitespace-nowrap text-[11px]">
+      <VersionTag versionNumber={run.version_number} />
+      <button
+        type="button"
+        onClick={e => onNavigateToRun(e, run.id)}
+        className="font-mono text-gray-400 underline-offset-2
+          transition-colors hover:text-gray-600 hover:underline"
+        title={run.id}
+        aria-label={`View full details for run ${truncateUid(run.id)}`}
+      >
+        {truncateUid(run.id)}
+      </button>
+    </div>
+  </div>
+);
+
 // Extracted WorkOrderItem component for displaying work orders with their runs
 interface WorkOrderItemProps {
   workorder: WorkOrderWithSelection;
@@ -195,7 +357,19 @@ interface WorkOrderItemProps {
   onNavigateToRun: (e: React.MouseEvent, runId: string) => void;
 }
 
-const WorkOrderItem: React.FC<WorkOrderItemProps> = ({
+const WorkOrderItem: React.FC<WorkOrderItemProps> = props => {
+  const experimentalFeatures = useExperimentalFeatures();
+
+  return experimentalFeatures ? (
+    <ExperimentalWorkOrderItem {...props} />
+  ) : (
+    <ClassicWorkOrderItem {...props} />
+  );
+};
+
+// The work order row as it has always been: the id first, then when it last
+// ran, with a filled state pill on the right.
+const ClassicWorkOrderItem: React.FC<WorkOrderItemProps> = ({
   workorder,
   isExpanded,
   now,
@@ -214,6 +388,7 @@ const WorkOrderItem: React.FC<WorkOrderItemProps> = ({
       */}
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
+        data-testid={`work-order-${workorder.id}`}
         className="flex items-center justify-between cursor-pointer w-full text-left"
         onClick={e => {
           e.stopPropagation();
@@ -274,6 +449,94 @@ const WorkOrderItem: React.FC<WorkOrderItemProps> = ({
   </div>
 );
 
+const ExperimentalWorkOrderItem: React.FC<WorkOrderItemProps> = ({
+  workorder,
+  isExpanded,
+  now,
+  onExpand,
+  onSelectRun,
+  onDeselectRun,
+  onNavigateToWorkorder,
+  onNavigateToRun,
+}) => (
+  <div>
+    {/*
+      Mouse-only clickable area for convenience - keyboard users
+      can use the chevron button and UUID link below for full accessibility.
+      This matches the LiveView implementation's keyboard navigation pattern.
+    */}
+    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+    <div
+      data-testid={`work-order-${workorder.id}`}
+      className="flex w-full cursor-pointer items-center gap-2 px-3 py-2
+        text-left transition-colors hover:bg-gray-50"
+      onClick={e => {
+        e.stopPropagation();
+        onExpand(workorder);
+      }}
+    >
+      {workorder.runs.length > 0 && (
+        <button
+          type="button"
+          onClick={e => {
+            e.preventDefault();
+            e.stopPropagation();
+            onExpand(workorder);
+          }}
+          className={cn(
+            'flex shrink-0 items-center transition-colors',
+            workorder.selected
+              ? 'text-indigo-600'
+              : 'text-gray-500 hover:text-gray-700'
+          )}
+          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} work order details`}
+        >
+          {isExpanded || workorder.selected ? (
+            <span className="hero-chevron-down h-4 w-4" />
+          ) : (
+            <span className="hero-chevron-right h-4 w-4" />
+          )}
+        </button>
+      )}
+
+      {/* Primary line: status + when it last ran. */}
+      <StatusIndicator state={workorder.state} />
+      <span className="whitespace-nowrap text-xs text-gray-400">
+        {formatRelative(new Date(workorder.last_activity), now, {
+          locale: relativeLocale,
+        })}
+      </span>
+
+      <div className="flex-1" />
+
+      {/* Secondary, de-emphasised: the work order id. */}
+      <button
+        type="button"
+        onClick={e => onNavigateToWorkorder(e, workorder.id)}
+        className="whitespace-nowrap font-mono text-[11px] text-gray-400
+          underline-offset-2 transition-colors hover:text-gray-600
+          hover:underline"
+        title={workorder.id}
+        aria-label={`View full details for work order ${truncateUid(workorder.id)}`}
+      >
+        {truncateUid(workorder.id)}
+      </button>
+    </div>
+
+    {(isExpanded || workorder.selected) &&
+      workorder.runs.map(run => (
+        <RunItem
+          key={run.id}
+          run={run}
+          now={now}
+          onSelect={onSelectRun}
+          onDeselect={onDeselectRun}
+          onNavigateToRun={onNavigateToRun}
+        />
+      ))}
+  </div>
+);
+
 interface MiniHistoryProps {
   collapsed: boolean;
   history: WorkOrderWithSelection[];
@@ -287,11 +550,26 @@ interface MiniHistoryProps {
   // New props for panel variant
   variant?: 'floating' | 'panel';
   onBack?: () => void;
-  // Version mismatch detection
+  /**
+   * Set when the selected run executed against content other than what is on
+   * the canvas, so the shape being looked at is not the shape that ran. Only
+   * ever set without experimental features: with the flag on, a run of older
+   * content opens that content read-only instead of being painted onto a
+   * document it never ran against, so there is nothing to warn about.
+   */
   versionMismatch?: {
     runVersion: number;
     currentVersion: number;
   } | null;
+  /**
+   * Switches to the version the run executed against. Owned by the caller,
+   * which is where the unsaved-changes prompt for that switch is rendered, so
+   * this panel stays presentational.
+   *
+   * Without it the mismatch banner is not drawn at all. Its whole content is
+   * an offer, and a button that cannot act on it is worse than no banner.
+   */
+  onGoToVersion?: () => void;
 }
 
 export default function MiniHistory({
@@ -307,6 +585,7 @@ export default function MiniHistory({
   variant = 'floating',
   onBack,
   versionMismatch,
+  onGoToVersion,
 }: MiniHistoryProps) {
   const [expandedWorder, setExpandedWorder] = useState('');
   const now = new Date();
@@ -314,14 +593,6 @@ export default function MiniHistory({
   // Get project and workflow IDs from state for navigation
   const project = useProject();
   const workflow = useWorkflowState(state => state.workflow);
-  const handleVersionSelect = useVersionSelect();
-
-  // Handler to navigate to the run's version
-  const handleGoToVersion = () => {
-    if (versionMismatch) {
-      handleVersionSelect(versionMismatch.runVersion);
-    }
-  };
 
   // Clear expanded work order when panel collapses
   React.useEffect(() => {
@@ -378,6 +649,24 @@ export default function MiniHistory({
       navigateToRun(project.id, runId);
     }
   };
+
+  const timelineList = (
+    <div className="divide-y divide-gray-100">
+      {history.map(workorder => (
+        <WorkOrderItem
+          key={workorder.id}
+          workorder={workorder}
+          isExpanded={expandedWorder === workorder.id}
+          now={now}
+          onExpand={expandWorkorderHandler}
+          onSelectRun={selectRunHandler}
+          onDeselectRun={onDeselectRun}
+          onNavigateToWorkorder={handleNavigateToWorkorderHistory}
+          onNavigateToRun={handleNavigateToRunView}
+        />
+      ))}
+    </div>
+  );
 
   // Panel variant header with back button
   const PanelHeader = () => (
@@ -441,8 +730,11 @@ export default function MiniHistory({
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="mt-3 px-3 py-1 text-xs bg-blue-500
-                    text-white rounded hover:bg-blue-600"
+                  className="mt-3 rounded-md bg-primary-600 px-3 py-1 text-xs
+                    font-medium text-white shadow-xs transition-colors
+                    hover:bg-primary-500 focus-visible:outline-2
+                    focus-visible:outline-offset-2
+                    focus-visible:outline-primary-600"
                 >
                   Retry
                 </button>
@@ -463,21 +755,7 @@ export default function MiniHistory({
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
-              {history.map(workorder => (
-                <WorkOrderItem
-                  key={workorder.id}
-                  workorder={workorder}
-                  isExpanded={expandedWorder === workorder.id}
-                  now={now}
-                  onExpand={expandWorkorderHandler}
-                  onSelectRun={selectRunHandler}
-                  onDeselectRun={onDeselectRun}
-                  onNavigateToWorkorder={handleNavigateToWorkorderHistory}
-                  onNavigateToRun={handleNavigateToRunView}
-                />
-              ))}
-            </div>
+            timelineList
           )}
         </div>
       </div>
@@ -550,11 +828,11 @@ export default function MiniHistory({
       )}
 
       {/* Version mismatch banner when collapsed */}
-      {collapsed && versionMismatch && (
+      {collapsed && versionMismatch && onGoToVersion && (
         <VersionMismatchBanner
           runVersion={versionMismatch.runVersion}
           currentVersion={versionMismatch.currentVersion}
-          onGoToVersion={handleGoToVersion}
+          onGoToVersion={onGoToVersion}
           compact={true}
         />
       )}
@@ -593,8 +871,11 @@ export default function MiniHistory({
               <button
                 type="button"
                 onClick={onRetry}
-                className="mt-3 px-3 py-1 text-xs bg-blue-500
-                  text-white rounded hover:bg-blue-600"
+                className="mt-3 rounded-md bg-primary-600 px-3 py-1 text-xs
+                  font-medium text-white shadow-xs transition-colors
+                  hover:bg-primary-500 focus-visible:outline-2
+                  focus-visible:outline-offset-2
+                  focus-visible:outline-primary-600"
               >
                 Retry
               </button>
@@ -615,30 +896,16 @@ export default function MiniHistory({
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {history.map(workorder => (
-              <WorkOrderItem
-                key={workorder.id}
-                workorder={workorder}
-                isExpanded={expandedWorder === workorder.id}
-                now={now}
-                onExpand={expandWorkorderHandler}
-                onSelectRun={selectRunHandler}
-                onDeselectRun={onDeselectRun}
-                onNavigateToWorkorder={handleNavigateToWorkorderHistory}
-                onNavigateToRun={handleNavigateToRunView}
-              />
-            ))}
-          </div>
+          timelineList
         )}
       </div>
 
       {/* Version mismatch banner at bottom of panel */}
-      {!collapsed && versionMismatch && (
+      {!collapsed && versionMismatch && onGoToVersion && (
         <VersionMismatchBanner
           runVersion={versionMismatch.runVersion}
           currentVersion={versionMismatch.currentVersion}
-          onGoToVersion={handleGoToVersion}
+          onGoToVersion={onGoToVersion}
         />
       )}
     </div>

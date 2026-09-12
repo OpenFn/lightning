@@ -46,6 +46,7 @@ export interface ChannelError {
    * - validation_error: Ecto changeset validation failed
    * - optimistic_lock_error: Concurrent modification conflict (stale lock_version)
    * - limit_error: Usage limit exceeded (AI assistant, runs, etc.)
+   * - nesting_too_deep: Sandbox nesting depth limit exceeded
    *
    * Optional for the same reason as `errors`.
    */
@@ -57,6 +58,7 @@ export interface ChannelError {
     | 'validation_error'
     | 'optimistic_lock_error'
     | 'limit_error'
+    | 'nesting_too_deep'
     | undefined;
 
   /**

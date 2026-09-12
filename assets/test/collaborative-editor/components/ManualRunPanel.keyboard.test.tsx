@@ -96,6 +96,7 @@ function createTestWrapper() {
     pushEventTo: vi.fn(),
     handleEvent: vi.fn(() => vi.fn()),
     navigate: vi.fn(),
+    redirect: vi.fn(),
   };
 
   return function Wrapper({ children }: { children: React.ReactNode }) {
@@ -331,6 +332,7 @@ describe('ManualRunPanel Keyboard Shortcuts', () => {
           can_edit_workflow: true,
           can_run_workflow: true,
           can_write_webhook_auth_method: true,
+          can_provision_sandbox: true,
         },
         latest_snapshot_lock_version: 1,
         project_repo_connection: null,

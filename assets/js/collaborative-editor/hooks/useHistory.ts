@@ -23,6 +23,7 @@ import type {
   WorkflowRunHistory,
   RunStepsData,
   RunDetail,
+  RunSummary,
   StepDetail,
 } from '../types/history';
 import { transformToRunInfo } from '../utils/runStepsTransformer';
@@ -58,6 +59,26 @@ export const useHistory = (): WorkflowRunHistory => {
   const historyStore = useHistoryStore();
   const selectHistory = historyStore.withSelector(state => state.history);
   return useSyncExternalStore(historyStore.subscribe, selectHistory);
+};
+
+/**
+ * The history's summary of one run, or `undefined` while the history has not
+ * arrived.
+ *
+ * Callers ask this for the two things only the run knows: the content it
+ * executed, and the version that content was published as, if it ever was.
+ */
+export const useRunSummary = (runId: string | null): RunSummary | undefined => {
+  const history = useHistory();
+
+  if (runId === null) return undefined;
+
+  for (const workOrder of history) {
+    const run = workOrder.runs.find(candidate => candidate.id === runId);
+    if (run) return run;
+  }
+
+  return undefined;
 };
 
 /**

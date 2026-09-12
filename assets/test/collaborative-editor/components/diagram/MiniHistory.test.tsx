@@ -15,10 +15,12 @@
  * - Use descriptive test names that explain the behavior being tested
  */
 
-import { describe, expect, test, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import MiniHistory from '../../../../js/collaborative-editor/components/diagram/MiniHistory';
 import {
+  createMockRun,
   createMockWorkOrder,
   mockHistoryList,
   mockMultiRunWorkOrder,
@@ -41,15 +43,18 @@ vi.mock('../../../../js/hooks', () => ({
 }));
 
 // Mock session context hooks to provide project ID
+let experimentalFeatures = true;
+
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useExperimentalFeatures: () => experimentalFeatures,
   useProject: () => ({
     id: 'test-project-id',
     name: 'Test Project',
   }),
-  useVersions: () => [],
-  useVersionsLoading: () => false,
-  useVersionsError: () => null,
-  useRequestVersions: () => vi.fn(),
+  useReleases: () => [],
+  useReleasesLoading: () => false,
+  useReleasesError: () => null,
+  useRequestReleases: () => vi.fn(),
 }));
 
 // Mock workflow hooks to provide workflow ID
@@ -87,6 +92,174 @@ describe('MiniHistory', () => {
       'http://localhost/projects/test-project-id/w/test-workflow-id';
     mockLocation.pathname = '/projects/test-project-id/w/test-workflow-id';
     mockLocationAssign.mockClear();
+  });
+
+  // ==========================================================================
+  // THE EXPERIMENTAL FLAG
+  // ==========================================================================
+
+  describe('what the experimental flag changes', () => {
+    afterEach(() => {
+      experimentalFeatures = true;
+    });
+
+    // The version tag sits on the runs, which only appear once a work order is
+    // expanded.
+    const renderExpanded = () => {
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={[mockMultiRunWorkOrder]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+        />
+      );
+
+      fireEvent.click(
+        screen.getByRole('button', { name: /Expand work order details/i })
+      );
+    };
+
+    test('names the release a run published against, with the flag on', () => {
+      renderExpanded();
+
+      expect(
+        screen.getAllByText(/^(v\d+|unpublished)$/).length
+      ).toBeGreaterThan(0);
+    });
+
+    test('names no version at all without the flag', () => {
+      // The tag numbers by the publish trail, which is the experimental
+      // numbering. Without the flag there is no publish trail to read, so
+      // showing "unpublished" beside every run would be a statement about a
+      // concept the user does not have.
+      experimentalFeatures = false;
+
+      renderExpanded();
+
+      expect(screen.queryAllByText(/^(v\d+|unpublished)$/)).toHaveLength(0);
+    });
+
+    test('leaves no stray separator where the version tag was', () => {
+      // The separator sat between the version tag and the run id. With the tag
+      // hidden it stranded itself in front of the id, so a flag-off user saw a
+      // leading dot on every run.
+      experimentalFeatures = false;
+
+      renderExpanded();
+
+      const rows = screen.getAllByText(/^[0-9a-f]{8}$/i);
+      expect(rows.length).toBeGreaterThan(0);
+
+      rows.forEach(id => {
+        const row = id.closest("div[class*='px-3']");
+        expect(row?.textContent ?? '').not.toContain('\u00b7');
+      });
+    });
+
+    test('draws state as the filled pill it has always been, without the flag', () => {
+      // The redesigned row leads with a coloured dot and the state in words,
+      // and pushes the id to the right. That is the experimental history.
+      // Without the flag the row is the one that ships today: id first, then
+      // when it ran, with a filled pill on the right.
+      experimentalFeatures = false;
+
+      renderExpanded();
+
+      const pills = document.querySelectorAll('span.bg-green-200');
+      expect(pills.length).toBeGreaterThan(0);
+      expect(document.querySelectorAll('span.h-1\\.5')).toHaveLength(0);
+      expect(document.querySelectorAll('button.link-uuid').length).toBe(4);
+    });
+
+    test('keeps the rejected pill red without the flag', () => {
+      // A work order the usage limiter turned away. It is the one state that
+      // only a work order has, and the classic pill has always drawn it red.
+      experimentalFeatures = false;
+
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={[createMockWorkOrder({ state: 'rejected' })]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+        />
+      );
+
+      const pill = screen.getByText('Rejected');
+      expect(pill.className).toContain('bg-red-300');
+    });
+
+    test('draws no mismatch banner when nothing can act on its offer', () => {
+      // The banner is one sentence and one button, and the button is the
+      // point. Rendered without a handler it is a control that does nothing.
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={mockHistoryList}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          versionMismatch={{ runVersion: 2, currentVersion: 5 }}
+        />
+      );
+
+      expect(
+        screen.queryByRole('button', { name: /view as executed/i })
+      ).not.toBeInTheDocument();
+    });
+
+    test('draws state as a dot with the flag on', () => {
+      experimentalFeatures = true;
+
+      renderExpanded();
+
+      expect(document.querySelectorAll('span.h-1\\.5').length).toBeGreaterThan(
+        0
+      );
+      expect(document.querySelectorAll('span.bg-green-200')).toHaveLength(0);
+    });
+
+    test('offers the run its own version when the canvas shows another', async () => {
+      // The flag-off answer to a run of older content: the run is painted onto
+      // the document already open, and this says the shape on screen is not the
+      // shape that ran. The caller owns the switch, so this only has to offer.
+      const user = userEvent.setup();
+      const onGoToVersion = vi.fn();
+
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={mockHistoryList}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          versionMismatch={{ runVersion: 3, currentVersion: 7 }}
+          onGoToVersion={onGoToVersion}
+        />
+      );
+
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'This run took place on version 3.'
+      );
+
+      await user.click(
+        screen.getByRole('button', { name: /View as executed/i })
+      );
+      expect(onGoToVersion).toHaveBeenCalledTimes(1);
+    });
+
+    test('says nothing when the canvas shows what the run ran', () => {
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={mockHistoryList}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          versionMismatch={null}
+        />
+      );
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
   });
 
   // ==========================================================================
@@ -415,9 +588,10 @@ describe('MiniHistory', () => {
       expect(allText).toContain('s'); // Duration should be present
     });
 
-    test('run selection highlights selected run and displays X icon', () => {
+    test('the selected run is highlighted and offers a way out', () => {
       const onCollapseHistory = vi.fn();
       const selectRunHandler = vi.fn();
+      const onDeselectRun = vi.fn();
 
       render(
         <MiniHistory
@@ -425,6 +599,7 @@ describe('MiniHistory', () => {
           history={[mockSelectedWorkOrder]}
           onCollapseHistory={onCollapseHistory}
           selectRunHandler={selectRunHandler}
+          onDeselectRun={onDeselectRun}
         />
       );
 
@@ -432,14 +607,17 @@ describe('MiniHistory', () => {
       const selectedRun = screen.getByText(/d1f87a82/);
       expect(selectedRun).toBeInTheDocument();
 
-      // Selected run should have special styling - find the run container (px-3 py-1.5)
       const runElement = selectedRun.closest("div[class*='px-3']");
       expect(runElement?.className).toContain('bg-indigo-50');
       expect(runElement?.className).toContain('border-l-indigo-500');
 
-      // X icon should be visible for selected run
-      const xIcon = runElement?.querySelector('span.hero-x-mark');
-      expect(xIcon).toBeInTheDocument();
+      // Clicking the row again also deselects, but that is not something a
+      // reader can see. The button leads the row, so it does not disturb the
+      // right-aligned run id.
+      const deselect = screen.getByRole('button', { name: /deselect run/i });
+      fireEvent.click(deselect);
+      expect(onDeselectRun).toHaveBeenCalledTimes(1);
+      expect(selectRunHandler).not.toHaveBeenCalled();
     });
 
     test('clicking run calls selectRunHandler', () => {
@@ -506,92 +684,54 @@ describe('MiniHistory', () => {
   // STATUS PILLS
   // ==========================================================================
 
-  describe('status pills show correct colors for each state', () => {
+  describe('status indicator shows correct dot color for each state', () => {
     test.each([
-      {
-        state: 'success',
-        expectedColor: 'bg-green-200',
-        textColor: 'text-green-800',
-      },
-      {
-        state: 'failed',
-        expectedColor: 'bg-red-200',
-        textColor: 'text-red-800',
-      },
-      {
-        state: 'crashed',
-        expectedColor: 'bg-orange-200',
-        textColor: 'text-orange-800',
-      },
-      {
-        state: 'started',
-        expectedColor: 'bg-blue-200',
-        textColor: 'text-blue-800',
-      },
-      {
-        state: 'available',
-        expectedColor: 'bg-gray-200',
-        textColor: 'text-gray-800',
-      },
-      {
-        state: 'claimed',
-        expectedColor: 'bg-blue-200',
-        textColor: 'text-blue-800',
-      },
-      {
-        state: 'cancelled',
-        expectedColor: 'bg-gray-500',
-        textColor: 'text-gray-800',
-      },
-      {
-        state: 'killed',
-        expectedColor: 'bg-yellow-200',
-        textColor: 'text-yellow-800',
-      },
-      {
-        state: 'exception',
-        expectedColor: 'bg-gray-800',
-        textColor: 'text-white',
-      },
-      { state: 'lost', expectedColor: 'bg-gray-800', textColor: 'text-white' },
-    ])(
-      '$state state has correct colors',
-      ({ state, expectedColor, textColor }) => {
-        const onCollapseHistory = vi.fn();
-        const selectRunHandler = vi.fn();
-        const workOrder = createMockWorkOrder({
-          id: `test-wo-${state}`,
-          state: state as any,
-          runs: [
-            {
-              id: `test-run-${state}`,
-              state: state as any,
-              started_at: '2025-10-23T20:00:00Z',
-              finished_at: '2025-10-23T20:00:01Z',
-              error_type: null,
-              selected: false,
-            },
-          ],
-        });
+      { state: 'success', dotColor: 'bg-green-500' },
+      { state: 'failed', dotColor: 'bg-red-500' },
+      { state: 'crashed', dotColor: 'bg-orange-500' },
+      { state: 'started', dotColor: 'bg-blue-500' },
+      { state: 'available', dotColor: 'bg-gray-300' },
+      { state: 'claimed', dotColor: 'bg-blue-500' },
+      { state: 'cancelled', dotColor: 'bg-gray-400' },
+      { state: 'killed', dotColor: 'bg-yellow-500' },
+      { state: 'exception', dotColor: 'bg-gray-700' },
+      { state: 'lost', dotColor: 'bg-gray-700' },
+    ])('$state state has correct dot color', ({ state, dotColor }) => {
+      const onCollapseHistory = vi.fn();
+      const selectRunHandler = vi.fn();
+      const workOrder = createMockWorkOrder({
+        id: `test-wo-${state}`,
+        state: state as any,
+        runs: [
+          {
+            id: `test-run-${state}`,
+            state: state as any,
+            started_at: '2025-10-23T20:00:00Z',
+            finished_at: '2025-10-23T20:00:01Z',
+            error_type: null,
+            selected: false,
+          },
+        ],
+      });
 
-        render(
-          <MiniHistory
-            collapsed={false}
-            history={[workOrder]}
-            onCollapseHistory={onCollapseHistory}
-            selectRunHandler={selectRunHandler}
-          />
-        );
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={[workOrder]}
+          onCollapseHistory={onCollapseHistory}
+          selectRunHandler={selectRunHandler}
+        />
+      );
 
-        // Find the status pill by text (capitalize first letter)
-        const pillText = state.charAt(0).toUpperCase() + state.slice(1);
-        const pill = screen.getByText(pillText);
-
-        // Check that the pill has the correct color classes
-        expect(pill.className).toContain(expectedColor);
-        expect(pill.className).toContain(textColor);
-      }
-    );
+      // The muted label carries the state text; the colour lives on the
+      // adjacent dot (its previous sibling within the status indicator).
+      const label = screen.getByText(
+        state.charAt(0).toUpperCase() + state.slice(1)
+      );
+      const dot = label.previousElementSibling;
+      expect(dot?.className).toContain(dotColor);
+      expect(dot?.className).toContain('rounded-full');
+    });
 
     test('all possible states render with appropriate colors', () => {
       const onCollapseHistory = vi.fn();
@@ -1271,6 +1411,42 @@ describe('MiniHistory', () => {
         .getByText('Recent History')
         .closest('div.absolute');
       expect(container).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // VERSION-AWARE HISTORY (cross-version model)
+  // ==========================================================================
+
+  describe('version-aware history', () => {
+    test('renders a per-run version tag (vN / unpublished) prefixing the run id', () => {
+      const workOrder = createMockWorkOrder({
+        id: 'wo-tags',
+        runs: [
+          createMockRun({ id: 'run-released', version_number: 2 }),
+          createMockRun({
+            id: 'run-draft',
+            state: 'failed',
+            version_number: null,
+          }),
+        ],
+      });
+
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={[workOrder]}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+        />
+      );
+
+      fireEvent.click(
+        screen.getByRole('button', { name: /Expand work order details/i })
+      );
+
+      expect(screen.getByText('v2')).toBeInTheDocument();
+      expect(screen.getByText('unpublished')).toBeInTheDocument();
     });
   });
 });

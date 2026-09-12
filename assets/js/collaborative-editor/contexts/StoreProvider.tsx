@@ -72,6 +72,7 @@ import {
 } from '../stores/createMetadataStore';
 import {
   createSessionContextStore,
+  selectCanEditContent,
   type SessionContextStoreInstance,
 } from '../stores/createSessionContextStore';
 import { createUIStore, type UIStoreInstance } from '../stores/createUIStore';
@@ -129,7 +130,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
     }
 
     // Create the SessionContextStore first so the WorkflowStore can read the
-    // current user's `can_edit_workflow` permission lazily.
+    // current user's edit permission and the workflow's lifecycle lock lazily.
     const sessionContextStore = createSessionContextStore(isNewWorkflow);
 
     return {
@@ -139,8 +140,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
       awarenessStore: createAwarenessStore(),
       workflowStore: createWorkflowStore({
         getCanEdit: () =>
-          sessionContextStore.getSnapshot().permissions?.can_edit_workflow ??
-          false,
+          selectCanEditContent(sessionContextStore.getSnapshot()),
       }),
       sessionContextStore,
       historyStore: createHistoryStore({

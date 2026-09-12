@@ -8,11 +8,13 @@
  * - Selector performance and referential stability
  */
 
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { createSessionContextStore } from '../../../js/collaborative-editor/stores/createSessionContextStore';
+import { notifications } from '../../../js/collaborative-editor/lib/notifications';
 
 import {
   createMockSessionContext,
+  createSessionContext,
   mockAppConfig,
   mockProjectContext,
   mockSessionContextResponse,
@@ -28,6 +30,93 @@ import {
 } from '../mocks/phoenixChannel';
 
 describe('createSessionContextStore - Event Handling & Performance', () => {
+  describe('lifecycle_changed', () => {
+    const connect = (experimentalFeatures = true) => {
+      const store = createSessionContextStore();
+      const mockChannel = createMockPhoenixChannel();
+      const cleanup = store._connectChannel(
+        createMockPhoenixChannelProvider(mockChannel)
+      );
+
+      const emit = (
+        mockChannel as MockPhoenixChannel & {
+          _test: { emit: (event: string, message: unknown) => void };
+        }
+      )._test.emit;
+
+      // The lifecycle is part of the experimental experience, so the store has
+      // to know whether this user has it before it will say anything about it.
+      emit(
+        'session_context',
+        createSessionContext({
+          experimental_features_enabled: experimentalFeatures,
+        })
+      );
+
+      return { cleanup, emit };
+    };
+
+    test('says so when someone else publishes the workflow', () => {
+      const info = vi.spyOn(notifications, 'info').mockReturnValue(1);
+      const { cleanup, emit } = connect();
+
+      emit('lifecycle_changed', { state: 'live' });
+
+      // The server sends this only to the sockets that did not act, so the
+      // editor turning read-only under someone is announced rather than left
+      // for them to discover when their save is refused.
+      expect(info).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'This workflow just went live' })
+      );
+
+      info.mockRestore();
+      cleanup();
+    });
+
+    test('says nothing to a user without experimental features', () => {
+      // A colleague with the flag can publish a shared workflow. Both of these
+      // sentences name actions this user has no buttons for, so announcing them
+      // would be the feature leaking out of the flag. Their editor still goes
+      // read-only; the read-only tooltip is what explains that.
+      const info = vi.spyOn(notifications, 'info').mockReturnValue(1);
+      const { cleanup, emit } = connect(false);
+
+      emit('lifecycle_changed', { state: 'live' });
+      emit('lifecycle_changed', { state: 'draft' });
+
+      expect(info).not.toHaveBeenCalled();
+
+      info.mockRestore();
+      cleanup();
+    });
+
+    test('says so when someone else takes it out of production', () => {
+      const info = vi.spyOn(notifications, 'info').mockReturnValue(1);
+      const { cleanup, emit } = connect();
+
+      emit('lifecycle_changed', { state: 'draft' });
+
+      expect(info).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'This workflow is a draft again' })
+      );
+
+      info.mockRestore();
+      cleanup();
+    });
+
+    test('stays quiet on anything else', () => {
+      const info = vi.spyOn(notifications, 'info').mockReturnValue(1);
+      const { cleanup, emit } = connect();
+
+      emit('lifecycle_changed', {});
+
+      expect(info).not.toHaveBeenCalled();
+
+      info.mockRestore();
+      cleanup();
+    });
+  });
+
   describe('event handling', () => {
     test('channel session_context events are processed correctly', async () => {
       const store = createSessionContextStore();

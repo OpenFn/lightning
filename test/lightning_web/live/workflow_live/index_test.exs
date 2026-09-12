@@ -343,6 +343,84 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       refute view |> has_element?("#new-workflow-button[type=button][disabled]")
     end
 
+    test "the toggle, its tooltip and its sort all read the triggers", %{
+      conn: conn,
+      project: project
+    } do
+      # The lifecycle column is backfilled `live` for a workflow with ANY
+      # enabled trigger, while the tooltip and the Enabled sort both ask whether
+      # they are ALL enabled. A workflow with one of each is where those two
+      # readings part company, and the toggle used to side with the lifecycle
+      # while the tooltip beside it said the opposite.
+      #
+      # Nothing a user does here creates that state: go-live enables every
+      # trigger and switch-to-draft disables every one. It arrives with
+      # migrated data and with provisioning.
+      on_trigger = build(:trigger, type: :webhook, enabled: true)
+      off_trigger = build(:trigger, type: :cron, enabled: false)
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project, state: :live)
+        |> with_job(job)
+        |> with_trigger(on_trigger)
+        |> with_trigger(off_trigger)
+        |> with_edge({on_trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      refute view |> has_element?("##{workflow.id}[checked]")
+    end
+
+    test "toggling a workflow keeps state and triggers coherent", %{
+      conn: conn,
+      project: project
+    } do
+      trigger = build(:trigger, type: :webhook, enabled: false)
+      job = build(:job)
+
+      workflow =
+        build(:workflow, project: project, state: :draft)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      # Draft workflow: toggle is off.
+      refute view |> has_element?("##{workflow.id}[checked]")
+
+      # Enabling routes through go_live: state becomes :live and triggers enabled.
+      assert view
+             |> element("#toggle-control-#{workflow.id}")
+             |> render_click() =~ "Workflow updated"
+
+      assert %Lightning.Workflows.Workflow{
+               state: :live,
+               triggers: [%{enabled: true}]
+             } =
+               Lightning.Repo.get!(Lightning.Workflows.Workflow, workflow.id)
+               |> Lightning.Repo.preload(:triggers)
+
+      assert view |> has_element?("##{workflow.id}[checked]")
+
+      # Disabling routes through switch_to_draft: back to :draft, triggers off.
+      assert view
+             |> element("#toggle-control-#{workflow.id}")
+             |> render_click() =~ "Workflow updated"
+
+      assert %Lightning.Workflows.Workflow{
+               state: :draft,
+               triggers: [%{enabled: false}]
+             } =
+               Lightning.Repo.get!(Lightning.Workflows.Workflow, workflow.id)
+               |> Lightning.Repo.preload(:triggers)
+
+      refute view |> has_element?("##{workflow.id}[checked]")
+    end
+
     @tag role: :editor
     test "does not toggle a workflow outside the project", %{
       conn: conn,
@@ -380,6 +458,76 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                include: [:triggers]
              ).triggers
              |> Enum.all?(& &1.enabled)
+    end
+
+    test "the limiter can refuse an enable, and is not asked for a no-op one", %{
+      conn: conn,
+      project: project
+    } do
+      # Enabling asks the limiter; flipping a workflow that is already on does
+      # not, which is how this read before a lifecycle transition replaced the
+      # plain save. Both halves matter: the first is the limit doing its job,
+      # the second is a project at its limit still being able to click a toggle
+      # that changes nothing.
+      off_trigger = build(:trigger, type: :webhook, enabled: false)
+      off_job = build(:job)
+
+      off_workflow =
+        build(:workflow, project: project)
+        |> with_job(off_job)
+        |> with_trigger(off_trigger)
+        |> with_edge({off_trigger, off_job})
+        |> insert()
+
+      on_trigger = build(:trigger, type: :webhook, enabled: true)
+      on_job = build(:job)
+
+      on_workflow =
+        build(:workflow, project: project, state: :live)
+        |> with_job(on_job)
+        |> with_trigger(on_trigger)
+        |> with_edge({on_trigger, on_job})
+        |> insert()
+
+      asked = :counters.new(1, [:atomics])
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn %{type: :activate_workflow}, _context ->
+          :counters.add(asked, 1, 1)
+
+          {:error, :too_many_workflows,
+           %Lightning.Extensions.Message{text: "No more workflows"}}
+        end
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      # The limiter's own sentence, not a generic "try again": being at the
+      # limit is the one refusal here that retrying cannot fix.
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "true",
+               "value_key" => off_workflow.id
+             }) =~ "No more workflows"
+
+      assert :counters.get(asked, 1) == 1
+
+      refute Lightning.Workflows.get_workflow!(off_workflow.id,
+               include: [:triggers]
+             ).triggers
+             |> Enum.any?(& &1.enabled)
+
+      # Already on. The limiter is never consulted, so the refusal above cannot
+      # reach it and the toggle succeeds.
+      assert view
+             |> render_click("toggle_workflow_state", %{
+               "workflow_state" => "true",
+               "value_key" => on_workflow.id
+             }) =~ "Workflow updated"
+
+      assert :counters.get(asked, 1) == 1
     end
 
     @tag role: :viewer

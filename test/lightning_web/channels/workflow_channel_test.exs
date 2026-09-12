@@ -40,6 +40,1260 @@ defmodule LightningWeb.WorkflowChannelTest do
     %{socket: socket, user: user, project: project, workflow: workflow}
   end
 
+  describe "go_live and switch_to_draft" do
+    setup :with_experimental_user
+
+    test "go_live sets the workflow live; switch_to_draft returns it to draft",
+         %{socket: socket, workflow: workflow} do
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :ok, %{workflow: live_workflow}
+      assert live_workflow.state == :live
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :live
+
+      ref = push(socket, "switch_to_draft", %{})
+      assert_reply ref, :ok, %{workflow: draft_workflow}
+      assert draft_workflow.state == :draft
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+    end
+
+    test "closes the write gate on every other socket in the room", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      other = insert(:user, preferences: %{"experimental_features" => true})
+      insert(:project_user, project: project, user: other, role: :editor)
+
+      author = join_as(user, project, workflow)
+      colleague = join_as(other, project, workflow)
+      assert colleague.assigns.can_edit_workflow
+
+      session_pid = colleague.assigns.session_pid
+
+      # Positive control: this socket's frames reach the document before the
+      # lifecycle moves.
+      probe =
+        build_name_mutation(session_pid, :sync_update, "Edited while draft")
+
+      push(colleague, "yjs", {:binary, probe})
+      await_channel_processed(colleague)
+      assert workflow_name(session_pid) == "Edited while draft"
+
+      ref = push(author, "go_live", %{})
+      assert_reply ref, :ok, _reply
+      await_channel_processed(colleague)
+
+      # The lock was resolved at join, so only the socket that acted learned
+      # about it. The colleague's gate stayed open: their frames kept reaching
+      # the document while the save they eventually pressed was refused against
+      # the row, with nothing on screen to say why. The gate lives in the other
+      # channel's own state, which is the only honest place to read it.
+      #
+      # The role is untouched by the transition. Reading the gate off
+      # can_edit_workflow alone would now let these frames through.
+      assert %{assigns: %{can_edit_workflow: true, content_locked: true}} =
+               channel_socket(colleague)
+
+      # Negative control, which is the part that matters: the same frame that
+      # landed a moment ago must not land now.
+      blocked =
+        build_name_mutation(session_pid, :sync_update, "Edited while live")
+
+      push(colleague, "yjs", {:binary, blocked})
+      await_channel_processed(colleague)
+      refute workflow_name(session_pid) == "Edited while live"
+    end
+
+    test "tells the other sockets, rather than letting them find out on save", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      other = insert(:user, preferences: %{"experimental_features" => true})
+      insert(:project_user, project: project, user: other, role: :editor)
+
+      author = join_as(user, project, workflow)
+      _colleague = join_as(other, project, workflow)
+
+      ref = push(author, "go_live", %{})
+      assert_reply ref, :ok, _reply
+
+      # Sent only to the sockets that did not act, so it needs no actor to
+      # compare against. Their editor is about to turn read-only under them.
+      assert_push "lifecycle_changed", %{state: :live}
+    end
+
+    test "intercepts the save broadcast, or the gate above never closes in production" do
+      # Phoenix hands a broadcast the channel does not intercept straight to the
+      # transport, so handle_out never runs. A channel test has no transport and
+      # runs it either way, which makes the test above pass with or without the
+      # intercept. This is the only honest way to pin the line.
+      assert "workflow_saved" in LightningWeb.WorkflowChannel.__intercepts__()
+    end
+
+    test "go_live pushes a session context carrying the new lifecycle lock",
+         %{socket: socket} do
+      # The lock is resolved at join, so without a refresh the client keeps
+      # Save/Run until a reload.
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :ok, _
+
+      # Going live locks the content and leaves the role alone. An editor is
+      # still an editor, which is what lets the client say "this workflow is
+      # live, here is the way out" rather than "you lack permission".
+      assert_push "session_context_updated", %{
+        content_locked: true,
+        permissions: %{can_edit_workflow: true}
+      }
+    end
+
+    test "a viewer is told they cannot edit, whatever the lifecycle says" do
+      viewer = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: viewer, role: :viewer}])
+
+      workflow = insert(:workflow, project: project, state: :draft)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      # A draft, so nothing is locked. The role is the only reason this person
+      # cannot edit, and it is reported as such rather than as a lock.
+      refute socket.assigns.can_edit_workflow
+      refute socket.assigns.content_locked
+    end
+
+    test "go_live is rejected for a user without edit access" do
+      viewer = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: viewer, role: :viewer}])
+
+      workflow = insert(:workflow, project: project)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+    end
+  end
+
+  describe "set_suppress_enable_trigger_warning" do
+    test "persists the preference and surfaces it in get_context", %{
+      socket: socket,
+      user: user
+    } do
+      ref = push(socket, "get_context", %{})
+      assert_reply ref, :ok, %{suppress_enable_trigger_warning: false}
+
+      ref =
+        push(socket, "set_suppress_enable_trigger_warning", %{"suppress" => true})
+
+      assert_reply ref, :ok, %{}
+
+      assert Lightning.Accounts.get_preference(
+               user,
+               "suppress_enable_trigger_warning"
+             ) == true
+
+      ref = push(socket, "get_context", %{})
+      assert_reply ref, :ok, %{suppress_enable_trigger_warning: true}
+    end
+  end
+
+  describe "a live workflow, for someone without experimental features" do
+    # The lifecycle lock cannot apply to them, and this is the reason.
+    #
+    # `state` is a new column, and its migration backfills `live` for every
+    # workflow that has an enabled trigger, which is every workflow anyone is
+    # actually running. Applying the lock to everyone would make all of those
+    # read-only the moment this deploys, for people who never asked for a
+    # lifecycle and have no button to release it. So without the flag there is
+    # no lock, and the editor behaves exactly as it does today.
+    # Live first, then join. `content_locked` is resolved at join and the yjs
+    # gate reads that assign, so a socket joined while the workflow was still a
+    # draft carries a stale `false` and would pass whatever the gate decides.
+    setup %{project: project, user: user} do
+      workflow = insert(:workflow, project: project)
+      {:ok, live} = Lightning.Workflows.go_live(workflow, user)
+
+      socket = join_as(user, project, live)
+      on_exit(fn -> ensure_doc_supervisor_stopped(live.id) end)
+
+      refute Lightning.Accounts.experimental_features_enabled?(user)
+
+      %{socket: socket, workflow: live}
+    end
+
+    test "is not reported as locked", %{socket: socket} do
+      ref = push(socket, "get_context", %{})
+      assert_reply ref, :ok, %{content_locked: false}
+    end
+
+    test "still saves", %{socket: socket, workflow: workflow} do
+      ref = push(socket, "save_workflow", %{})
+      assert_reply ref, :ok, _reply
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :live
+    end
+
+    test "still accepts document writes", %{socket: socket} do
+      session_pid = socket.assigns.session_pid
+
+      chunk =
+        build_name_mutation(session_pid, :sync_update, "Edited while live")
+
+      push(socket, "yjs", {:binary, chunk})
+      await_channel_processed(socket)
+
+      assert workflow_name(session_pid) == "Edited while live"
+    end
+
+    test "still attaches webhook auth methods", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method, project: project, auth_type: :basic)
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => [auth_method.id]
+        })
+
+      assert_reply ref, :ok, _reply
+    end
+  end
+
+  describe "content edits on a live workflow" do
+    setup :with_experimental_user
+
+    setup %{socket: socket} do
+      # Take the workflow live so content edits should be refused server-side.
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :ok, %{workflow: %{state: :live}}
+      :ok
+    end
+
+    test "save_workflow is refused while the workflow is live outside a sandbox",
+         %{socket: socket, workflow: workflow} do
+      ref = push(socket, "save_workflow", %{})
+
+      assert_reply ref, :error, %{
+        type: "unauthorized",
+        errors: %{base: [message]}
+      }
+
+      assert message =~ "live"
+      # The gate runs before any write, so the live workflow is untouched.
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :live
+    end
+
+    test "reset_workflow is refused while the workflow is live outside a sandbox",
+         %{socket: socket} do
+      ref = push(socket, "reset_workflow", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+    end
+
+    test "switch_to_draft is still allowed on a live workflow", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      ref = push(socket, "switch_to_draft", %{})
+      assert_reply ref, :ok, %{workflow: %{state: :draft}}
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+    end
+
+    test "update_trigger_auth_methods is refused while the workflow is live outside a sandbox",
+         %{socket: socket, workflow: workflow, project: project} do
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Method",
+          auth_type: :api
+        )
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => [auth_method.id]
+        })
+
+      assert_reply ref, :error, %{reason: reason}
+      assert reason =~ "live"
+
+      # The gate runs before any write, so no association is created.
+      assert Lightning.WebhookAuthMethods.list_for_trigger(trigger) == []
+    end
+
+    test "update_trigger_auth_methods is allowed once switched back to draft", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      ref = push(socket, "switch_to_draft", %{})
+      assert_reply ref, :ok, %{workflow: %{state: :draft}}
+
+      trigger = insert(:trigger, workflow: workflow, type: :webhook)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          name: "Method",
+          auth_type: :api
+        )
+
+      ref =
+        push(socket, "update_trigger_auth_methods", %{
+          "trigger_id" => trigger.id,
+          "auth_method_ids" => [auth_method.id]
+        })
+
+      assert_reply ref, :ok, %{success: true}
+    end
+  end
+
+  describe "list_sandboxes" do
+    test "returns joinable sandboxes sorted by created time with owner",
+         %{socket: socket, project: project, workflow: workflow} do
+      owner =
+        insert(:user, first_name: "Ada", last_name: "Lovelace")
+
+      # Older sandbox with a matching workflow clone, owned by Ada.
+      older =
+        insert(:project,
+          parent: project,
+          color: "#111111",
+          project_users: [%{user: owner, role: :owner}]
+        )
+
+      older_workflow =
+        insert(:workflow, project: older, name: workflow.name)
+
+      # Newer owner-less sandbox, also with a matching workflow clone.
+      newer = insert(:project, parent: project, color: "#222222")
+      newer_workflow = insert(:workflow, project: newer, name: workflow.name)
+
+      # Bump newer's inserted_at so it sorts first.
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(newer, inserted_at: ~U[2030-01-01 00:00:00Z])
+      )
+
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(older, inserted_at: ~U[2020-01-01 00:00:00Z])
+      )
+
+      ref = push(socket, "list_sandboxes", %{})
+      assert_reply ref, :ok, %{sandboxes: sandboxes}
+
+      assert [first, second] = sandboxes
+      assert first.id == newer.id
+      assert first.workflow_id == newer_workflow.id
+      assert second.id == older.id
+      assert second.workflow_id == older_workflow.id
+
+      # The owner-less newer sandbox has no owner to attribute.
+      assert first.owner == nil
+
+      assert %{
+               owner: %{name: "Ada Lovelace", email: owner_email},
+               inserted_at: %DateTime{}
+             } = second
+
+      assert owner_email == owner.email
+    end
+
+    test "excludes sandboxes that don't contain this workflow", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      joinable = insert(:project, parent: project)
+      insert(:workflow, project: joinable, name: workflow.name)
+
+      # Sandbox without a clone of this workflow: nothing to join, so omitted.
+      non_joinable = insert(:project, parent: project)
+      insert(:workflow, project: non_joinable, name: "something-else")
+
+      ref = push(socket, "list_sandboxes", %{})
+      assert_reply ref, :ok, %{sandboxes: sandboxes}
+
+      ids = Enum.map(sandboxes, & &1.id)
+      assert joinable.id in ids
+      refute non_joinable.id in ids
+    end
+
+    test "attributes the owner to the sandbox owner, not other members", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      owner = insert(:user, first_name: "Grace", last_name: "Hopper")
+      editor = insert(:user, first_name: "Someone", last_name: "Else")
+
+      sandbox =
+        insert(:project,
+          parent: project,
+          project_users: [
+            %{user: owner, role: :owner},
+            %{user: editor, role: :editor}
+          ]
+        )
+
+      insert(:workflow, project: sandbox, name: workflow.name)
+
+      ref = push(socket, "list_sandboxes", %{})
+      assert_reply ref, :ok, %{sandboxes: [sandbox_row]}
+
+      assert %{owner: %{id: owner_id, name: "Grace Hopper", email: email}} =
+               sandbox_row
+
+      assert owner_id == owner.id
+      assert email == owner.email
+    end
+
+    test "excludes sandboxes scheduled for deletion", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      active = insert(:project, parent: project)
+      insert(:workflow, project: active, name: workflow.name)
+
+      scheduled =
+        insert(:project,
+          parent: project,
+          scheduled_deletion: ~U[2030-01-01 00:00:00Z]
+        )
+
+      insert(:workflow, project: scheduled, name: workflow.name)
+
+      ref = push(socket, "list_sandboxes", %{})
+      assert_reply ref, :ok, %{sandboxes: sandboxes}
+
+      ids = Enum.map(sandboxes, & &1.id)
+      assert active.id in ids
+      refute scheduled.id in ids
+    end
+
+    test "rejects users without provision permission", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer = insert(:user)
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref = push(viewer_socket, "list_sandboxes", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+    end
+  end
+
+  describe "edit_in_sandbox" do
+    setup %{project: project, workflow: workflow} do
+      Mox.stub_with(
+        Lightning.Extensions.MockProjectHook,
+        Lightning.Extensions.ProjectHook
+      )
+
+      # Give the workflow a real trigger so the clone carries one too.
+      trigger =
+        insert(:trigger, workflow: workflow, type: :webhook, enabled: true)
+
+      job = insert(:job, workflow: workflow)
+
+      insert(:edge,
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job,
+        condition_type: :always
+      )
+
+      # A second, unrelated workflow in the same project: its clone must stay
+      # a draft with disabled triggers.
+      other_workflow = insert(:workflow, project: project, name: "other-wf")
+      insert(:trigger, workflow: other_workflow, type: :webhook, enabled: true)
+
+      %{trigger: trigger, other_workflow: other_workflow}
+    end
+
+    test "starts the sandbox holding the reviewed body and says where it landed",
+         %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{
+            "body" => ~s({"email":"redacted"}),
+            "name" => "from run 42"
+          }
+        })
+
+      assert_reply ref, :ok, %{
+        project_id: sandbox_id,
+        dataclip_id: dataclip_id
+      }
+
+      assert is_binary(dataclip_id)
+
+      dataclip = Lightning.Repo.get!(Lightning.Invocation.Dataclip, dataclip_id)
+      assert dataclip.project_id == sandbox_id
+      assert dataclip.name == "from run 42"
+      assert dataclip.type == :saved_input
+    end
+
+    test "copies a chosen saved dataclip instead when one is named", %{
+      socket: socket,
+      project: project
+    } do
+      saved =
+        insert(:dataclip,
+          project: project,
+          name: "known good",
+          type: :saved_input,
+          body: %{"ok" => true}
+        )
+
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => saved.id})
+      assert_reply ref, :ok, %{project_id: sandbox_id, dataclip_id: copied_id}
+
+      # The copy is a new row, and the sandbox opens with it selected just as
+      # the reviewed path does.
+      assert is_binary(copied_id)
+      refute copied_id == saved.id
+
+      assert ["known good"] =
+               Lightning.Invocation.Dataclip
+               |> Lightning.Repo.all()
+               |> Enum.filter(&(&1.project_id == sandbox_id))
+               |> Enum.map(& &1.name)
+    end
+
+    test "refuses a saved dataclip this project cannot copy", %{
+      socket: socket
+    } do
+      elsewhere = insert(:project)
+
+      foreign =
+        insert(:dataclip,
+          project: elsewhere,
+          name: "not yours",
+          type: :saved_input,
+          body: %{"a" => 1}
+        )
+
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => foreign.id})
+      assert_reply ref, :error, %{type: "validation_error"}
+
+      # Refused outright, so no sandbox exists to have copied it into.
+      assert [] =
+               Lightning.Invocation.Dataclip
+               |> Lightning.Repo.all()
+               |> Enum.filter(&(&1.name == "not yours"))
+               |> Enum.reject(&(&1.id == foreign.id))
+    end
+
+    test "refuses an unnamed dataclip, which retention would wipe", %{
+      socket: socket,
+      project: project
+    } do
+      unnamed =
+        insert(:dataclip, project: project, name: nil, type: :saved_input)
+
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => unnamed.id})
+      assert_reply ref, :error, %{type: "validation_error"}
+    end
+
+    test "refuses a dataclip id that is not a uuid", %{socket: socket} do
+      ref = push(socket, "edit_in_sandbox", %{"dataclip_id" => "not-a-uuid"})
+      assert_reply ref, :error, %{type: "validation_error"}
+    end
+
+    test "names a reviewed body that arrives without one", %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => ~s({"a":1}), "name" => nil}
+        })
+
+      assert_reply ref, :ok, %{dataclip_id: dataclip_id}
+
+      # Retention wipes unnamed dataclips, and the picker only offers named ones,
+      # so an unnamed one would vanish and never be selectable.
+      dataclip = Lightning.Repo.get!(Lightning.Invocation.Dataclip, dataclip_id)
+      assert dataclip.name == "Reviewed input"
+    end
+
+    test "says what is wrong when the reviewed body is not an object", %{
+      socket: socket
+    } do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => "[1,2]", "name" => nil}
+        })
+
+      assert_reply ref, :error, %{
+        type: "validation_error",
+        errors: %{base: [message]}
+      }
+
+      assert message =~ "JSON object"
+    end
+
+    test "refuses a reviewed body that is not a string", %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => %{"a" => 1}}
+        })
+
+      assert_reply ref, :error, %{type: "validation_error"}
+    end
+
+    test "refuses a reviewed body that is not valid JSON", %{socket: socket} do
+      ref =
+        push(socket, "edit_in_sandbox", %{
+          "starting_dataclip" => %{"body" => "{nope", "name" => nil}
+        })
+
+      assert_reply ref, :error, _reason
+    end
+
+    test "provisions a sandbox with the edited clone as a disabled draft, like the others",
+         %{
+           socket: socket,
+           project: project,
+           workflow: workflow,
+           other_workflow: other_workflow
+         } do
+      ref = push(socket, "edit_in_sandbox", %{})
+      assert_reply ref, :ok, %{project_id: sandbox_id, workflow_id: cloned_id}
+
+      sandbox = Lightning.Projects.get_project!(sandbox_id)
+      assert sandbox.parent_id == project.id
+
+      # Edited clone is NOT auto-enabled: it comes in as a disabled draft.
+      cloned =
+        Lightning.Workflows.get_workflow!(cloned_id, include: [:triggers])
+
+      assert cloned.name == workflow.name
+      assert cloned.state == :draft
+      refute Enum.any?(cloned.triggers, & &1.enabled)
+
+      # The other clone stays a draft with disabled triggers.
+      other_clone =
+        Lightning.Workflows.Workflow
+        |> Lightning.Repo.get_by(
+          project_id: sandbox_id,
+          name: other_workflow.name
+        )
+        |> Lightning.Repo.preload(:triggers)
+
+      assert other_clone.state == :draft
+      refute Enum.any?(other_clone.triggers, & &1.enabled)
+
+      # Parent workflow is untouched.
+      parent_workflow =
+        Lightning.Workflows.get_workflow!(workflow.id, include: [:triggers])
+
+      assert parent_workflow.state == workflow.state
+    end
+
+    test "replies with an error instead of crashing when nesting is too deep",
+         %{socket: socket} do
+      Mox.stub(Lightning.MockConfig, :max_sandbox_nesting_depth, fn -> 0 end)
+
+      ref = push(socket, "edit_in_sandbox", %{})
+      assert_reply ref, :error, %{type: "nesting_too_deep"}
+    end
+
+    test "uses a provided name", %{socket: socket} do
+      ref = push(socket, "edit_in_sandbox", %{"name" => "My Custom Name"})
+      assert_reply ref, :ok, %{project_id: sandbox_id}
+
+      sandbox = Lightning.Projects.get_project!(sandbox_id)
+      assert sandbox.name == "my-custom-name"
+    end
+
+    test "respects the new-sandbox usage limit", %{socket: socket} do
+      message = %Lightning.Extensions.Message{text: "Sandbox limit reached"}
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :new_sandbox}, _ctx -> {:error, :too_many_sandboxes, message}
+          _action, _ctx -> :ok
+        end
+      )
+
+      ref = push(socket, "edit_in_sandbox", %{})
+
+      assert_reply ref, :error, %{
+        type: "limit_error",
+        errors: %{base: ["Sandbox limit reached"]}
+      }
+    end
+
+    test "rejects users without provision permission", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer = insert(:user)
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref = push(viewer_socket, "edit_in_sandbox", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+    end
+  end
+
+  describe "promote" do
+    setup %{user: user} do
+      Mox.stub_with(
+        Lightning.Extensions.MockProjectHook,
+        Lightning.Extensions.ProjectHook
+      )
+
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      # Alpha is the workflow we edit in the sandbox and promote back.
+      alpha = insert(:workflow, project: parent, name: "alpha")
+      alpha_trigger = insert(:trigger, workflow: alpha, type: :webhook)
+
+      alpha_job =
+        insert(:job, workflow: alpha, name: "A1", body: "console.log('alpha');")
+
+      insert(:edge,
+        workflow: alpha,
+        source_trigger: alpha_trigger,
+        target_job: alpha_job,
+        condition_type: :always
+      )
+
+      # Beta is a sibling that must pass through the merge untouched. It is made
+      # live with an enabled trigger so we can assert that state is preserved.
+      beta = insert(:workflow, project: parent, name: "beta")
+      beta_trigger = insert(:trigger, workflow: beta, type: :webhook)
+
+      beta_job =
+        insert(:job, workflow: beta, name: "B1", body: "console.log('beta');")
+
+      insert(:edge,
+        workflow: beta,
+        source_trigger: beta_trigger,
+        target_job: beta_job,
+        condition_type: :always
+      )
+
+      {:ok, live_beta} = Lightning.Workflows.go_live(beta, user)
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, user, %{name: "sb"})
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      {:ok, _, sandbox_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
+
+      %{
+        parent: parent,
+        sandbox: sandbox,
+        sandbox_socket: sandbox_socket,
+        sandbox_alpha: sandbox_alpha,
+        parent_alpha: alpha,
+        parent_beta: live_beta
+      }
+    end
+
+    test "promotes the edited workflow into the parent and leaves the sandbox alive",
+         %{
+           sandbox_socket: socket,
+           sandbox: sandbox,
+           sandbox_alpha: sandbox_alpha,
+           parent: parent,
+           parent_alpha: parent_alpha
+         } do
+      # A distinctive edit in the sandbox that must land on the parent.
+      edit_single_job_body!(sandbox_alpha.id, "console.log('promoted');")
+
+      ref = push(socket, "promote", %{})
+
+      assert_reply ref,
+                   :ok,
+                   %{
+                     parent_project_id: parent_project_id,
+                     workflow_id: workflow_id
+                   } = reply
+
+      # Promote merges only; archiving is a separate "archive_sandbox" step.
+      refute Map.has_key?(reply, :archived)
+      assert parent_project_id == parent.id
+      assert workflow_id == parent_alpha.id
+
+      # The sandbox edit landed on the parent's alpha workflow.
+      parent_alpha_jobs =
+        Lightning.Workflows.get_workflow(parent_alpha.id, include: [:jobs]).jobs
+
+      assert Enum.any?(
+               parent_alpha_jobs,
+               &(&1.body == "console.log('promoted');")
+             )
+
+      # The sandbox stays alive: promote no longer archives it.
+      assert Lightning.Repo.reload!(sandbox).scheduled_deletion == nil
+    end
+
+    test "promotes only the current workflow, preserving sibling live workflows",
+         %{sandbox_socket: socket, parent_beta: parent_beta} do
+      ref = push(socket, "promote", %{})
+      assert_reply ref, :ok, %{parent_project_id: _}
+
+      reloaded_beta =
+        Lightning.Workflows.get_workflow(parent_beta.id, include: [:triggers])
+
+      # Beta was never in the merge selection: its live/enabled trigger state and
+      # its content are untouched.
+      assert reloaded_beta.state == :live
+      assert Enum.all?(reloaded_beta.triggers, & &1.enabled)
+      assert reloaded_beta.lock_version == parent_beta.lock_version
+    end
+
+    test "merges for an actor who can merge but cannot delete the sandbox",
+         %{
+           parent: parent,
+           sandbox: sandbox,
+           sandbox_alpha: sandbox_alpha,
+           parent_alpha: parent_alpha
+         } do
+      # An editor on the parent can merge, but is not owner/admin on the
+      # sandbox (nor its root). Promote merges regardless and never archives.
+      editor = insert(:user)
+      insert(:project_user, project: parent, user: editor, role: :editor)
+      insert(:project_user, project: sandbox, user: editor, role: :editor)
+
+      edit_single_job_body!(sandbox_alpha.id, "console.log('editor promoted');")
+
+      {:ok, _, editor_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor.id}", %{current_user: editor})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
+
+      ref = push(editor_socket, "promote", %{})
+
+      assert_reply ref,
+                   :ok,
+                   %{parent_project_id: parent_project_id} = reply
+
+      refute Map.has_key?(reply, :archived)
+      assert parent_project_id == parent.id
+
+      # Sandbox stays active: promote never archives.
+      assert Lightning.Repo.reload!(sandbox).scheduled_deletion == nil
+
+      # Parent still received the merge.
+      parent_alpha_jobs =
+        Lightning.Workflows.get_workflow(parent_alpha.id, include: [:jobs]).jobs
+
+      assert Enum.any?(
+               parent_alpha_jobs,
+               &(&1.body == "console.log('editor promoted');")
+             )
+    end
+
+    test "rejects users without merge permission on the parent", %{
+      sandbox: sandbox,
+      sandbox_alpha: sandbox_alpha
+    } do
+      viewer = insert(:user)
+      insert(:project_user, project: sandbox, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
+
+      ref = push(viewer_socket, "promote", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+    end
+
+    test "replies with an error instead of crashing when the merge fails", %{
+      sandbox_socket: socket,
+      sandbox_alpha: sandbox_alpha
+    } do
+      # Corrupt the sandbox job name so the parent import rejects it, forcing a
+      # :merge_failed from the merge without touching the merge internals. Names
+      # may hold special characters, so length is what is left to break: the
+      # import validates at 100 and the column takes more.
+      [job] =
+        Lightning.Workflows.get_workflow(sandbox_alpha.id, include: [:jobs]).jobs
+
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(job, name: String.duplicate("a", 101))
+      )
+
+      ref = push(socket, "promote", %{})
+      assert_reply ref, :error, %{type: "merge_error"}
+    end
+
+    test "replies with an error instead of crashing when not in a sandbox", %{
+      socket: socket
+    } do
+      # The default socket is joined to a root-project workflow, which has no
+      # parent to promote into.
+      ref = push(socket, "promote", %{})
+      assert_reply ref, :error, %{type: "invalid_state"}
+    end
+  end
+
+  describe "request_promote_check" do
+    setup %{user: user} do
+      Mox.stub_with(
+        Lightning.Extensions.MockProjectHook,
+        Lightning.Extensions.ProjectHook
+      )
+
+      parent =
+        insert(:project,
+          name: "parent-project",
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      alpha = insert(:workflow, project: parent, name: "alpha")
+      trigger = insert(:trigger, workflow: alpha, type: :webhook)
+      job = insert(:job, workflow: alpha, name: "A1")
+
+      insert(:edge,
+        workflow: alpha,
+        source_trigger: trigger,
+        target_job: job,
+        condition_type: :always
+      )
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(alpha, "aaa111aaa111", "app")
+
+      # Beta is a sibling carried into the sandbox by the fork, so it can be
+      # made to diverge independently of alpha.
+      beta = insert(:workflow, project: parent, name: "beta")
+      beta_trigger = insert(:trigger, workflow: beta, type: :webhook)
+      beta_job = insert(:job, workflow: beta, name: "B1")
+
+      insert(:edge,
+        workflow: beta,
+        source_trigger: beta_trigger,
+        target_job: beta_job,
+        condition_type: :always
+      )
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(beta, "bbb000bbb000", "app")
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, user, %{name: "sb"})
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      {:ok, _, sandbox_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
+
+      %{
+        parent: parent,
+        parent_alpha: alpha,
+        parent_beta: beta,
+        sandbox: sandbox,
+        sandbox_alpha_id: sandbox_alpha.id,
+        sandbox_socket: sandbox_socket
+      }
+    end
+
+    test "reports no divergence while the parent has not moved on", %{
+      sandbox_socket: socket
+    } do
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: "parent-project"}
+    end
+
+    test "reports divergence once the parent gains a version the sandbox never saw",
+         %{sandbox_socket: socket, parent_alpha: parent_alpha} do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_alpha,
+          "bbb222bbb222",
+          "app"
+        )
+
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: true, parent_name: "parent-project"}
+    end
+
+    test "reports no divergence when a sibling workflow is the one that moved on",
+         %{sandbox_socket: socket, parent_beta: parent_beta} do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_beta,
+          "ccc333ccc333",
+          "app"
+        )
+
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false}
+    end
+
+    test "warns when the working name lands on a workflow the parent gained", %{
+      sandbox_socket: socket,
+      sandbox: sandbox,
+      parent: parent,
+      user: user
+    } do
+      gamma = insert(:workflow, project: parent, name: "gamma")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(gamma, "ddd111ddd111", "app")
+
+      ref = push(socket, "request_promote_check", %{"workflow_name" => "gamma"})
+      assert_reply ref, :ok, %{diverged: true}
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      Lightning.Repo.update!(Ecto.Changeset.change(sandbox_alpha, name: "gamma"))
+
+      {:ok, _} =
+        Lightning.Projects.promote_workflow(
+          Lightning.Repo.reload!(sandbox_alpha),
+          user
+        )
+
+      ref = push(socket, "request_promote_check", %{"workflow_name" => "gamma"})
+      assert_reply ref, :ok, %{diverged: false}
+    end
+
+    test "stays quiet when the working name is one the parent does not hold", %{
+      sandbox_socket: socket
+    } do
+      ref = push(socket, "request_promote_check", %{"workflow_name" => "delta"})
+      assert_reply ref, :ok, %{diverged: false}
+    end
+
+    test "answers for a workflow that has not been saved yet", %{
+      sandbox: sandbox,
+      user: user
+    } do
+      new_workflow_id = Ecto.UUID.generate()
+
+      {:ok, _, new_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{new_workflow_id}",
+          %{"project_id" => sandbox.id, "action" => "new"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(new_workflow_id) end)
+
+      ref = push(new_socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: "parent-project"}
+    end
+
+    test "stays quiet for a user who cannot merge into the parent", %{
+      sandbox: sandbox,
+      parent_alpha: parent_alpha,
+      sandbox_alpha_id: sandbox_alpha_id
+    } do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_alpha,
+          "bbb222bbb222",
+          "app"
+        )
+
+      viewer = insert(:user)
+      insert(:project_user, project: sandbox, user: viewer, role: :viewer)
+
+      {:ok, _, viewer_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha_id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      ref = push(viewer_socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: nil}
+    end
+
+    test "does not warn about this sandbox's own promote", %{
+      sandbox_socket: socket,
+      sandbox: sandbox,
+      user: user
+    } do
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      edit_single_job_body!(sandbox_alpha.id, "console.log('promoted');")
+
+      {:ok, _} = Lightning.Projects.promote_workflow(sandbox_alpha, user)
+
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: "parent-project"}
+    end
+
+    test "reports no divergence outside a sandbox", %{socket: socket} do
+      ref = push(socket, "request_promote_check", %{})
+      assert_reply ref, :ok, %{diverged: false, parent_name: nil}
+    end
+  end
+
+  describe "archive_sandbox" do
+    setup %{user: user} do
+      Mox.stub_with(
+        Lightning.Extensions.MockProjectHook,
+        Lightning.Extensions.ProjectHook
+      )
+
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+      insert(:workflow, project: parent, name: "alpha")
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, user, %{name: "sb"})
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      %{parent: parent, sandbox: sandbox, sandbox_alpha: sandbox_alpha}
+    end
+
+    defp join_sandbox_socket(user, sandbox, workflow) do
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => sandbox.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      socket
+    end
+
+    test "archives the sandbox and returns the parent to navigate to", %{
+      user: user,
+      parent: parent,
+      sandbox: sandbox,
+      sandbox_alpha: sandbox_alpha
+    } do
+      socket = join_sandbox_socket(user, sandbox, sandbox_alpha)
+
+      ref = push(socket, "archive_sandbox", %{})
+
+      assert_reply ref, :ok, %{parent_project_id: parent_project_id}
+      assert parent_project_id == parent.id
+
+      # The sandbox was soft-deleted (scheduled for deletion).
+      assert Lightning.Repo.reload!(sandbox).scheduled_deletion != nil
+    end
+
+    test "refuses to archive a project that is not a sandbox", %{socket: socket} do
+      # The default socket is joined to a root-project workflow, which has no
+      # parent and so is not a sandbox.
+      ref = push(socket, "archive_sandbox", %{})
+      assert_reply ref, :error, %{type: "invalid_state"}
+    end
+
+    test "refuses an actor who cannot delete the sandbox", %{
+      sandbox: sandbox,
+      sandbox_alpha: sandbox_alpha
+    } do
+      # An editor can edit and even promote, but archiving requires
+      # :delete_sandbox (owner/admin), which an editor lacks.
+      editor = insert(:user)
+      insert(:project_user, project: sandbox, user: editor, role: :editor)
+
+      socket = join_sandbox_socket(editor, sandbox, sandbox_alpha)
+
+      ref = push(socket, "archive_sandbox", %{})
+      assert_reply ref, :error, %{type: "unauthorized"}
+
+      # The sandbox stays alive.
+      assert Lightning.Repo.reload!(sandbox).scheduled_deletion == nil
+    end
+  end
+
   describe "join authorization" do
     test "rejects unauthorized users", %{workflow: workflow, project: project} do
       unauthorized_user = insert(:user)
@@ -862,6 +2116,589 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  describe "session context on a pinned version" do
+    test "sends the snapshot as the baseline, not the current workflow", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      snapshot =
+        insert(:snapshot,
+          workflow: workflow,
+          lock_version: 7,
+          name: "As it was"
+        )
+
+      {:ok, release} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :go_live,
+          snapshot_id: snapshot.id,
+          published_by_id: user.id
+        })
+
+      # The workflow moves on after the release, and goes live.
+      {:ok, _} =
+        workflow
+        |> Ecto.Changeset.change(name: "As it is now", state: :live)
+        |> Lightning.Repo.update()
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:release#{release.version_number}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      ref = push(pinned_socket, "get_context", %{})
+      assert_reply ref, :ok, response
+
+      # The client compares its document against this. The document is the
+      # snapshot, so handing it the current workflow makes every pinned view
+      # look unsaved the moment it opens.
+      assert response.workflow.name == "As it was"
+      assert response.latest_snapshot_lock_version == workflow.lock_version
+
+      # A snapshot carries no lifecycle state, so the baseline built from one
+      # would report :draft. The client reads state off this to decide which
+      # lifecycle actions to offer, so it has to be the workflow's real one.
+      assert response.workflow.state == :live
+
+      # The client compares this against each run's snapshot to tell a run of the
+      # live content from a run of anything else.
+      assert response.latest_snapshot_id ==
+               Lightning.Workflows.Snapshot.current_id_for(workflow.id)
+
+      # The reply reaches the client as JSON, which a test's assert_reply never
+      # exercises. A snapshot's job carries association keys it never loads, and
+      # encoding one of those raised and took the channel down, so the client
+      # sat waiting for a reply that never came.
+      assert is_binary(Jason.encode!(response))
+    end
+  end
+
+  describe "restore_version" do
+    setup %{user: user, project: project} do
+      workflow = insert(:simple_workflow, project: project)
+      {:ok, live} = Lightning.Workflows.go_live(workflow, user)
+      [v1] = Lightning.Workflows.WorkflowReleases.list_for_workflow(live)
+
+      [job] = Lightning.Repo.preload(live, :jobs).jobs
+
+      {:ok, changed} =
+        live
+        |> Lightning.Workflows.change_workflow(%{
+          jobs: [%{id: job.id, body: "// broken by a bad go-live"}]
+        })
+        |> Lightning.Workflows.save_workflow(user)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{changed.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(changed.id) end)
+
+      %{
+        restore_socket: socket,
+        workflow: changed,
+        v1: v1,
+        original_body: job.body
+      }
+    end
+
+    test "puts the version's content back and leaves the workflow live", %{
+      restore_socket: socket,
+      workflow: workflow,
+      original_body: original_body
+    } do
+      ref = push(socket, "restore_version", %{"version_number" => 1})
+
+      assert_reply ref, :ok, %{lock_version: _}
+
+      reloaded = Lightning.Repo.reload!(workflow)
+      assert reloaded.state == :live
+
+      assert [%{body: ^original_body}] =
+               Lightning.Repo.preload(reloaded, :jobs, force: true).jobs
+    end
+
+    test "records the restore as the next version, naming the one it restored",
+         %{restore_socket: socket, workflow: workflow} do
+      ref = push(socket, "restore_version", %{"version_number" => 1})
+      assert_reply ref, :ok, _reply
+
+      releases =
+        Lightning.Workflows.WorkflowReleases.list_for_workflow(workflow.id)
+
+      assert %{kind: :restore, restored_from_version_number: 1} = hd(releases)
+    end
+
+    test "tells the restoring client the workflow moved on", %{
+      restore_socket: socket
+    } do
+      ref = push(socket, "restore_version", %{"version_number" => 1})
+      assert_reply ref, :ok, _reply
+
+      # The broadcast excludes the sender, so without this push the restoring
+      # client's idea of the latest version stays behind: the version chip
+      # would read as an old version straight after a rollback, and the
+      # dropdown would still offer Restore on the version now live.
+      assert_push "session_context_updated", %{
+        latest_snapshot_lock_version: lock_version
+      }
+
+      assert lock_version ==
+               Lightning.Repo.reload!(socket.assigns.workflow).lock_version
+    end
+
+    test "refuses a version that does not exist", %{restore_socket: socket} do
+      ref = push(socket, "restore_version", %{"version_number" => 99})
+
+      assert_reply ref, :error, %{type: "version_not_found"}
+    end
+
+    test "refuses someone who cannot edit the workflow", %{
+      project: project,
+      workflow: workflow
+    } do
+      viewer = insert(:user)
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      ref = push(socket, "restore_version", %{"version_number" => 1})
+
+      assert_reply ref, :error, %{errors: %{base: [message]}}
+      assert message =~ "permission"
+    end
+
+    test "deletes a trigger added after this socket joined", %{
+      restore_socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # Added after the join, so it is absent from socket.assigns.workflow. A
+      # restore computed against that stale struct would leave it behind.
+      {:ok, with_cron} =
+        workflow
+        |> Lightning.Repo.preload([:triggers, :jobs, :edges])
+        |> Lightning.Workflows.change_workflow(%{
+          triggers: [
+            %{
+              type: :cron,
+              cron_expression: "0 * * * *",
+              custom_path: "added-after-join"
+            }
+          ]
+        })
+        |> Lightning.Workflows.save_workflow(user)
+
+      added =
+        Lightning.Repo.preload(with_cron, :triggers, force: true).triggers
+        |> Enum.find(&(&1.type == :cron))
+
+      assert added
+
+      ref = push(socket, "restore_version", %{"version_number" => 1})
+      assert_reply ref, :ok, _reply
+
+      refute Lightning.Repo.reload(added)
+    end
+
+    test "the check names the triggers a restore would delete", %{
+      restore_socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      {:ok, with_cron} =
+        workflow
+        |> Lightning.Repo.preload([:triggers, :jobs, :edges])
+        |> Lightning.Workflows.change_workflow(%{
+          triggers: [
+            %{
+              type: :cron,
+              cron_expression: "0 * * * *",
+              custom_path: "added-after-v1"
+            }
+          ]
+        })
+        |> Lightning.Workflows.save_workflow(user)
+
+      added =
+        Lightning.Repo.preload(with_cron, :triggers, force: true).triggers
+        |> Enum.find(&(&1.type == :cron))
+
+      ref = push(socket, "request_restore_check", %{"version_number" => 1})
+
+      assert_reply ref, :ok, %{losing_triggers: losing, version_number: 1}
+
+      # The URL built from this trigger stops answering, so the confirmation has
+      # to be able to say which one.
+      assert Enum.any?(losing, &(&1.id == added.id))
+    end
+
+    test "the check names the triggers a restore will bring back off", %{
+      restore_socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      [original] = Lightning.Repo.preload(workflow, :triggers).triggers
+
+      {:ok, _replaced} =
+        workflow
+        |> Lightning.Repo.preload([:triggers, :jobs, :edges])
+        |> Lightning.Workflows.change_workflow(%{
+          triggers: [%{type: :cron, cron_expression: "0 * * * *"}]
+        })
+        |> Lightning.Workflows.save_workflow(user)
+
+      ref = push(socket, "request_restore_check", %{"version_number" => 1})
+
+      assert_reply ref, :ok, %{returning_triggers: returning}
+
+      # It comes back off and without its auth methods, which a snapshot never
+      # recorded, so the confirmation has to say so.
+      assert Enum.any?(returning, &(&1.id == original.id))
+    end
+
+    test "a concurrent save is refused, not a dropped channel", %{
+      restore_socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # Someone else saves between the join and the restore, so the socket's
+      # lock_version is behind. Unrescued this killed the channel and the client
+      # waited out its timeout for a reply that never came.
+      Mimic.copy(Lightning.Workflows)
+
+      Mimic.stub(Lightning.Workflows, :restore_version, fn _wf, _rel, _actor ->
+        raise Ecto.StaleEntryError, action: :update, changeset: %Ecto.Changeset{}
+      end)
+
+      ref = push(socket, "restore_version", %{"version_number" => 1})
+
+      assert_reply ref, :error, %{type: "workflow_moved_on"}
+      assert Process.alive?(socket.channel_pid)
+
+      _ = {workflow, user}
+    end
+
+    test "the check reports nothing to lose when the triggers are unchanged", %{
+      restore_socket: socket
+    } do
+      ref = push(socket, "request_restore_check", %{"version_number" => 1})
+
+      assert_reply ref, :ok, %{losing_triggers: [], returning_triggers: []}
+    end
+  end
+
+  describe "release-pinned join (?release=version_number)" do
+    test "loads the snapshot belonging to the release with that version_number",
+         %{project: project, workflow: workflow, user: user} do
+      # A published snapshot whose lock_version deliberately differs from the
+      # release's version_number, so a pass genuinely proves resolution keys on
+      # version_number and not on lock_version.
+      snapshot =
+        insert(:snapshot,
+          workflow: workflow,
+          lock_version: 7,
+          name: "Pinned content"
+        )
+
+      {:ok, release} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :go_live,
+          snapshot_id: snapshot.id,
+          published_by_id: user.id
+        })
+
+      assert release.version_number == 1
+      assert snapshot.lock_version == 7
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:release#{release.version_number}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      # The pinned view carries the release's snapshot content, addressed by
+      # version_number (1) but resolved to lock_version 7.
+      loaded = pinned_socket.assigns.workflow
+      assert loaded.lock_version == snapshot.lock_version
+      assert loaded.name == snapshot.name
+
+      assert Enum.map(loaded.jobs, & &1.name) |> Enum.sort() ==
+               Enum.map(snapshot.jobs, & &1.name) |> Enum.sort()
+    end
+
+    test "returns not-found for an unknown version_number", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      # No release with version_number 99 (hand-typed, or an old lock_version
+      # that was never published) resolves to the same not-found as a missing
+      # snapshot.
+      assert {:error, %{reason: "snapshot version 99 not found"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}:release99",
+                 %{project_id: project.id, action: "edit"}
+               )
+    end
+
+    test "returns invalid-version-format for a non-integer version", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      assert {:error, %{reason: "invalid version format"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}:releaseabc",
+                 %{project_id: project.id, action: "edit"}
+               )
+    end
+  end
+
+  describe "release and snapshot rooms are separate namespaces" do
+    setup %{workflow: workflow, user: user} do
+      # A snapshot sitting at lock_version 3, and a release numbered 3 whose
+      # content sits at lock_version 7. Two different pieces of content that a
+      # single `:v3` room could not tell apart.
+      at_lock_version_3 =
+        insert(:snapshot,
+          workflow: workflow,
+          lock_version: 3,
+          name: "the save numbered 3"
+        )
+
+      releases =
+        for lock_version <- [5, 6, 7] do
+          snapshot =
+            insert(:snapshot,
+              workflow: workflow,
+              lock_version: lock_version,
+              name: "the publish at lock_version #{lock_version}"
+            )
+
+          {:ok, release} =
+            Lightning.Workflows.WorkflowReleases.insert_release(
+              Lightning.Repo,
+              %{
+                workflow_id: workflow.id,
+                kind: :go_live,
+                snapshot_id: snapshot.id,
+                published_by_id: user.id
+              }
+            )
+
+          release
+        end
+
+      release_3 = Enum.find(releases, &(&1.version_number == 3))
+      assert release_3.snapshot_id
+
+      on_exit(fn ->
+        Lightning.Collaborate.stop_document("workflow:#{workflow.id}:release3")
+        Lightning.Collaborate.stop_document("workflow:#{workflow.id}:v3")
+      end)
+
+      %{at_lock_version_3: at_lock_version_3, release_3: release_3}
+    end
+
+    test "the number 3 means the publish in `:release3` and the save in `:v3`",
+         %{
+           project: project,
+           workflow: workflow,
+           user: user,
+           at_lock_version_3: at_lock_version_3
+         } do
+      join = fn suffix ->
+        {:ok, _, socket} =
+          LightningWeb.UserSocket
+          |> socket("user_#{user.id}", %{current_user: user})
+          |> subscribe_and_join(
+            LightningWeb.WorkflowChannel,
+            "workflow:collaborate:#{workflow.id}:#{suffix}",
+            %{project_id: project.id, action: "edit"}
+          )
+
+        socket.assigns.workflow
+      end
+
+      release_view = join.("release3")
+      snapshot_view = join.("v3")
+
+      # The publish trail numbers by release; a save numbers by lock_version.
+      assert release_view.lock_version == 7
+      assert release_view.name == "the publish at lock_version 7"
+
+      assert snapshot_view.lock_version == 3
+      assert snapshot_view.name == at_lock_version_3.name
+    end
+
+    test "the two views occupy two collaborative documents", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      # This is the reason the suffixes differ. A document is identified by its
+      # name alone, and `Lightning.Collaborate.start/2` hands a document that is
+      # already running to the next joiner exactly as it stands, discarding the
+      # workflow it was passed. Under one name the second view would be served
+      # the first one's content.
+      for suffix <- ["release3", "v3"] do
+        {:ok, _, _socket} =
+          LightningWeb.UserSocket
+          |> socket("user_#{user.id}", %{current_user: user})
+          |> subscribe_and_join(
+            LightningWeb.WorkflowChannel,
+            "workflow:collaborate:#{workflow.id}:#{suffix}",
+            %{project_id: project.id, action: "edit"}
+          )
+      end
+
+      release_doc =
+        Lightning.Collaboration.Registry.whereis(
+          {:doc_supervisor, "workflow:#{workflow.id}:release3"}
+        )
+
+      snapshot_doc =
+        Lightning.Collaboration.Registry.whereis(
+          {:doc_supervisor, "workflow:#{workflow.id}:v3"}
+        )
+
+      assert is_pid(release_doc)
+      assert is_pid(snapshot_doc)
+      assert release_doc != snapshot_doc
+    end
+  end
+
+  describe "view-as-executed join (:run:<run_id>)" do
+    test "loads the exact snapshot a run executed against, including drafts", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      # A draft/test snapshot that was never released, so this genuinely proves
+      # as-executed works off the run's own snapshot, not the release table.
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 4)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      {_wo, run} = history_workorder_with_run(workflow, trigger, snapshot)
+
+      {:ok, _, executed_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:run:#{run.id}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      loaded = executed_socket.assigns.workflow
+      assert loaded.lock_version == snapshot.lock_version
+      assert loaded.name == snapshot.name
+
+      assert Enum.map(loaded.jobs, & &1.name) |> Enum.sort() ==
+               Enum.map(snapshot.jobs, & &1.name) |> Enum.sort()
+
+      # Resolved via the same read-only version-view path as ?release=.
+      assert executed_socket.assigns.workflow_kind == :version
+    end
+
+    test "returns not-found for a run from a different workflow", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      other_workflow = insert(:workflow, project: project)
+
+      other_snapshot =
+        insert(:snapshot, workflow: other_workflow, lock_version: 1)
+
+      other_trigger = insert(:trigger, type: :webhook, workflow: other_workflow)
+
+      {_wo, other_run} =
+        history_workorder_with_run(other_workflow, other_trigger, other_snapshot)
+
+      assert {:error, %{reason: "run not found"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}:run:#{other_run.id}",
+                 %{project_id: project.id, action: "edit"}
+               )
+    end
+
+    test "returns not-found for a malformed run id", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      assert {:error, %{reason: "run not found"}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}:run:not-a-uuid",
+                 %{project_id: project.id, action: "edit"}
+               )
+    end
+
+    test "a release ?release= join still resolves by version_number, not run id",
+         %{
+           project: project,
+           workflow: workflow,
+           user: user
+         } do
+      # The release's snapshot lock_version deliberately differs from its
+      # version_number, proving the release contract is untouched by the run path.
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 8)
+      {:ok, release} = publish_release(workflow, snapshot, user)
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:release#{release.version_number}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      assert pinned_socket.assigns.workflow.lock_version == 8
+    end
+  end
+
   describe "request_adaptors and request_credentials" do
     test "handles multiple concurrent requests independently", %{
       socket: socket
@@ -1105,6 +2942,11 @@ defmodule LightningWeb.WorkflowChannelTest do
       # Permissions data
       assert %{permissions: permissions_data} = response
       assert permissions_data.can_edit_workflow == true
+      # Owner role can provision a sandbox.
+      assert permissions_data.can_provision_sandbox == true
+
+      # A root project is not a sandbox, so it can't be archived even by an owner.
+      assert permissions_data.can_archive_sandbox == false
 
       # Latest snapshot lock version
       assert %{latest_snapshot_lock_version: lock_version} = response
@@ -1154,6 +2996,59 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_reply ref, :ok, response
       assert %{permissions: permissions_data} = response
       assert permissions_data.can_edit_workflow == false
+      # Viewer role cannot provision a sandbox either.
+      assert permissions_data.can_provision_sandbox == false
+    end
+
+    test "reports can_archive_sandbox per :delete_sandbox on a sandbox", %{
+      user: owner,
+      project: parent
+    } do
+      Mox.stub_with(
+        Lightning.Extensions.MockProjectHook,
+        Lightning.Extensions.ProjectHook
+      )
+
+      insert(:workflow, project: parent, name: "alpha")
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, owner, %{name: "sb"})
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(sandbox_alpha.id) end)
+
+      # Owner of the sandbox can archive it.
+      {:ok, _, owner_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{owner.id}", %{current_user: owner})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{project_id: sandbox.id, action: "edit"}
+        )
+
+      ref = push(owner_socket, "get_context", %{})
+      assert_reply ref, :ok, %{permissions: owner_permissions}
+      assert owner_permissions.can_archive_sandbox == true
+
+      # An editor on the sandbox cannot archive it.
+      editor = insert(:user)
+      insert(:project_user, project: sandbox, user: editor, role: :editor)
+
+      {:ok, _, editor_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor.id}", %{current_user: editor})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{sandbox_alpha.id}",
+          %{project_id: sandbox.id, action: "edit"}
+        )
+
+      ref = push(editor_socket, "get_context", %{})
+      assert_reply ref, :ok, %{permissions: editor_permissions}
+      assert editor_permissions.can_archive_sandbox == false
     end
 
     test "returns actual latest lock_version when viewing old snapshot", %{
@@ -1161,8 +3056,17 @@ defmodule LightningWeb.WorkflowChannelTest do
       workflow: workflow,
       user: user
     } do
-      # Create initial snapshot so v0 is available for viewing
-      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+      # Create initial snapshot (lock_version 0) and publish it as a release so
+      # it is pinnable by version_number.
+      {:ok, snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+
+      {:ok, release_v1} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :go_live,
+          snapshot_id: snapshot_v0.id,
+          published_by_id: user.id
+        })
 
       # Update workflow to create v1
       workflow_changeset =
@@ -1183,8 +3087,13 @@ defmodule LightningWeb.WorkflowChannelTest do
       {:ok, updated_workflow_v2} =
         Lightning.Workflows.save_workflow(v2_changeset, user)
 
-      # Join viewing old snapshot (v0 - the original workflow)
-      topic_with_version = "workflow:collaborate:#{workflow.id}:v0"
+      # Join pinning the release (version_number 1), which resolves to the old
+      # snapshot (lock_version 0). version_number != lock_version here.
+      assert release_v1.version_number == 1
+      assert snapshot_v0.lock_version == 0
+
+      topic_with_version =
+        "workflow:collaborate:#{workflow.id}:release#{release_v1.version_number}"
 
       {:ok, _, snapshot_socket} =
         LightningWeb.UserSocket
@@ -1243,7 +3152,7 @@ defmodule LightningWeb.WorkflowChannelTest do
            user: user,
            project: project
          } do
-      # Companion to the request_versions regression below: get_context reads
+      # Companion to the request_releases regression below: get_context reads
       # the same workflow_kind assign, so a channel left frozen at :new after
       # its first save starves the header of the latest version too.
       workflow_id = Ecto.UUID.generate()
@@ -2773,6 +4682,32 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Map.has_key?(first_run, :version)
     end
 
+    test "names the snapshot each run executed", %{
+      socket: socket,
+      workflow: workflow,
+      project: project
+    } do
+      workflow = with_snapshot(workflow)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+
+      {:ok, work_order} =
+        Lightning.WorkOrders.create_for(trigger,
+          dataclip: insert(:dataclip, project: project),
+          workflow: workflow
+        )
+
+      [run] = Lightning.Repo.preload(work_order, :runs).runs
+
+      ref = push(socket, "request_history", %{})
+      assert_reply ref, :ok, %{history: [work_order_payload]}
+
+      # Identity, so the client can tell a run of the live content from a run of
+      # something else without comparing lock versions, which are a proxy and
+      # not unique per workflow.
+      assert [%{snapshot_id: snapshot_id}] = work_order_payload.runs
+      assert snapshot_id == run.snapshot_id
+    end
+
     test "returns empty list when workflow has no work orders", %{socket: socket} do
       ref = push(socket, "request_history", %{})
 
@@ -2820,38 +4755,92 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert old_work_order.id in work_order_ids
     end
 
-    test "does not surface a work order from another project via a foreign run_id",
-         %{socket: socket, workflow: workflow, project: project} do
+    test "attributes each run to its release version_number, null when unreleased",
+         %{socket: socket, workflow: workflow, user: user} do
       workflow = with_snapshot(workflow)
       trigger = insert(:trigger, type: :webhook, workflow: workflow)
-      own_dataclip = insert(:dataclip, project: project)
 
-      {:ok, own_work_order} =
-        Lightning.WorkOrders.create_for(trigger,
-          dataclip: own_dataclip,
-          workflow: workflow
-        )
+      released_snapshot = insert(:snapshot, workflow: workflow, lock_version: 5)
+      draft_snapshot = insert(:snapshot, workflow: workflow, lock_version: 6)
 
-      # A run belonging to a DIFFERENT project the socket has no access to.
-      other_project = insert(:project)
-      other_workflow = insert(:workflow, project: other_project)
-      job = insert(:job, workflow: other_workflow)
-      dataclip = insert(:dataclip, project: other_project)
-      foreign_work_order = insert(:workorder, workflow: other_workflow)
+      {:ok, release} = publish_release(workflow, released_snapshot, user)
 
-      foreign_run =
-        insert(:run,
-          work_order: foreign_work_order,
-          starting_job: job,
-          dataclip: dataclip
-        )
+      {_wo, released_run} =
+        history_workorder_with_run(workflow, trigger, released_snapshot)
 
-      ref = push(socket, "request_history", %{"run_id" => foreign_run.id})
+      {_wo, draft_run} =
+        history_workorder_with_run(workflow, trigger, draft_snapshot)
+
+      ref = push(socket, "request_history", %{})
+      assert_reply ref, :ok, %{history: history}
+
+      runs = Enum.flat_map(history, & &1.runs)
+
+      assert %{version: 5, version_number: version_number} =
+               Enum.find(runs, &(&1.id == released_run.id))
+
+      assert version_number == release.version_number
+
+      # An unreleased (draft/test) snapshot carries its lock_version but no
+      # version_number, so the client renders "Draft".
+      assert %{version: 6, version_number: nil} =
+               Enum.find(runs, &(&1.id == draft_run.id))
+    end
+  end
+
+  describe "request_history version filter" do
+    setup %{workflow: workflow, user: user} do
+      workflow = with_snapshot(workflow)
+      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+
+      snapshot_v1 = insert(:snapshot, workflow: workflow, lock_version: 1)
+      snapshot_v2 = insert(:snapshot, workflow: workflow, lock_version: 2)
+      draft_snapshot = insert(:snapshot, workflow: workflow, lock_version: 3)
+
+      {:ok, release_v1} = publish_release(workflow, snapshot_v1, user)
+      {:ok, release_v2} = publish_release(workflow, snapshot_v2, user)
+
+      {wo_v1, _} = history_workorder_with_run(workflow, trigger, snapshot_v1)
+      {wo_v2, _} = history_workorder_with_run(workflow, trigger, snapshot_v2)
+
+      {wo_draft, _} =
+        history_workorder_with_run(workflow, trigger, draft_snapshot)
+
+      %{
+        release_v1: release_v1,
+        release_v2: release_v2,
+        wo_v1: wo_v1,
+        wo_v2: wo_v2,
+        wo_draft: wo_draft
+      }
+    end
+
+    test "an integer version_number returns only that release's work orders", %{
+      socket: socket,
+      release_v1: release_v1,
+      wo_v1: wo_v1
+    } do
+      ref =
+        push(socket, "request_history", %{
+          "version_number" => release_v1.version_number
+        })
 
       assert_reply ref, :ok, %{history: history}
-      work_order_ids = Enum.map(history, & &1.id)
-      refute foreign_work_order.id in work_order_ids
-      assert own_work_order.id in work_order_ids
+
+      assert [%{id: id, runs: [%{version: 1, version_number: 1}]}] = history
+      assert id == wo_v1.id
+    end
+
+    test "the \"draft\" filter returns only the unreleased work orders", %{
+      socket: socket,
+      wo_draft: wo_draft
+    } do
+      ref = push(socket, "request_history", %{"version_number" => "draft"})
+
+      assert_reply ref, :ok, %{history: history}
+
+      assert [%{id: id, runs: [%{version: 3, version_number: nil}]}] = history
+      assert id == wo_draft.id
     end
   end
 
@@ -4111,9 +6100,36 @@ defmodule LightningWeb.WorkflowChannelTest do
                limits: %{
                  runs: %{allowed: true, message: nil},
                  workflow_activation: %{allowed: true, message: nil},
-                 github_sync: %{allowed: true, message: nil}
+                 github_sync: %{allowed: true, message: nil},
+                 new_sandbox: %{allowed: true, message: nil}
                }
              } = response
+    end
+
+    test "reports the plan's sandbox upsell when sandboxes are not available", %{
+      socket: socket,
+      project: %{id: project_id}
+    } do
+      upsell = "Upgrade to unlock sandboxes"
+
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :new_sandbox}, %{project_id: ^project_id} ->
+            {:error, :exceeds_limit, %Lightning.Extensions.Message{text: upsell}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      ref = push(socket, "get_context", %{})
+
+      assert_reply ref, :ok, response
+
+      assert %{limits: %{new_sandbox: %{allowed: false, message: ^upsell}}} =
+               response
     end
 
     test "includes limit error when run limit exceeded", %{
@@ -4264,39 +6280,83 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
-  describe "request_versions" do
-    test "returns versions for saved workflow", %{
+  describe "request_releases" do
+    test "returns published releases newest-first with author, kind, source and lock_version",
+         %{
+           socket: socket,
+           workflow: workflow,
+           user: user
+         } do
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 7)
+      source = insert(:project, name: "the-sandbox")
+
+      {:ok, _v1} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :go_live,
+          snapshot_id: snapshot.id,
+          published_by_id: user.id
+        })
+
+      {:ok, _v2} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :promote,
+          snapshot_id: snapshot.id,
+          published_by_id: user.id,
+          source_project_id: source.id
+        })
+
+      ref = push(socket, "request_releases", %{})
+
+      assert_reply ref, :ok, %{releases: releases}
+
+      assert [
+               %{
+                 version_number: 2,
+                 kind: :promote,
+                 published_by: published_by,
+                 source_project: "the-sandbox",
+                 lock_version: 7,
+                 is_latest: true,
+                 inserted_at: %DateTime{}
+               },
+               %{
+                 version_number: 1,
+                 kind: :go_live,
+                 source_project: nil,
+                 lock_version: 7,
+                 is_latest: false
+               }
+             ] = releases
+
+      assert is_binary(published_by) and published_by =~ "anna"
+
+      # The client ticks the row holding the content on screen, so each version
+      # names its own content rather than leaving the client to infer it from a
+      # number.
+      assert Enum.all?(releases, &(&1.snapshot_id == snapshot.id))
+    end
+
+    test "does not include ordinary saves, only releases", %{
       socket: socket,
       workflow: workflow,
       user: user
     } do
-      # Create some snapshots
-      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
-
-      # Update workflow to create v1
+      # An ordinary save captures a snapshot but records no release.
       workflow_changeset =
         workflow
         |> Lightning.Repo.preload([:jobs, :edges, :triggers])
-        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Just a save"})
 
-      {:ok, _updated_workflow_v1} =
-        Lightning.Workflows.save_workflow(workflow_changeset, user)
+      {:ok, _saved} = Lightning.Workflows.save_workflow(workflow_changeset, user)
 
-      ref = push(socket, "request_versions", %{})
+      ref = push(socket, "request_releases", %{})
 
-      assert_reply ref, :ok, %{versions: versions}
-
-      assert is_list(versions)
-      assert length(versions) >= 1
-
-      # Verify version structure
-      [first_version | _] = versions
-      assert Map.has_key?(first_version, :lock_version)
-      assert Map.has_key?(first_version, :inserted_at)
-      assert Map.has_key?(first_version, :is_latest)
+      assert_reply ref, :ok, %{releases: []}
     end
 
-    test "returns empty versions list for unsaved workflow", %{
+    test "returns empty releases list for unsaved workflow", %{
       user: user,
       project: project
     } do
@@ -4317,18 +6377,18 @@ defmodule LightningWeb.WorkflowChannelTest do
         ensure_doc_supervisor_stopped(workflow_id)
       end)
 
-      # A genuinely-new struct is seeded with lock_version 0. The empty-versions
+      # A genuinely-new struct is seeded with lock_version 0. The empty-releases
       # short-circuit keys on workflow_kind, not on lock_version.
       assert socket.assigns.workflow.lock_version == 0
 
-      ref = push(socket, "request_versions", %{})
+      ref = push(socket, "request_releases", %{})
 
-      assert_reply ref, :ok, %{versions: versions}
+      assert_reply ref, :ok, %{releases: releases}
 
-      assert versions == []
+      assert releases == []
     end
 
-    test "returns versions after the first save of a from-scratch workflow " <>
+    test "returns releases after the first save of a from-scratch workflow " <>
            "without a rejoin",
          %{
            user: user,
@@ -4336,7 +6396,7 @@ defmodule LightningWeb.WorkflowChannelTest do
          } do
       # A from-scratch workflow joins with action="new" (kind :new) and never
       # rejoins after its first save, so the channel must self-promote out of
-      # :new on save. Before the fix, request_versions on the same socket kept
+      # :new on save. Before the fix, request_releases on the same socket kept
       # short-circuiting to [] until a full page refresh.
       workflow_id = Ecto.UUID.generate()
 
@@ -4354,7 +6414,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       end)
 
       # Sanity check: the channel starts out believing this is a brand-new
-      # workflow, which is exactly the state that used to wedge request_versions.
+      # workflow, which is exactly the state that used to wedge request_releases.
       assert socket.assigns.workflow_kind == :new
 
       # Seed a minimal, valid, saveable workflow into the Y.Doc: a name plus a
@@ -4374,14 +6434,21 @@ defmodule LightningWeb.WorkflowChannelTest do
       })
 
       save_ref = push(socket, "save_workflow", %{})
-      assert_reply save_ref, :ok, %{lock_version: lv}
+      assert_reply save_ref, :ok, %{lock_version: _lv}
 
-      # Same socket, no rejoin: the first save produces exactly one version,
-      # and it is the latest.
-      versions_ref = push(socket, "request_versions", %{})
-      assert_reply versions_ref, :ok, %{versions: versions}
+      # A save is not a published version, so the list is still empty here.
+      releases_ref = push(socket, "request_releases", %{})
+      assert_reply releases_ref, :ok, %{releases: []}
 
-      assert [%{lock_version: ^lv, is_latest: true}] = versions
+      # Going live publishes v1. Same socket, no rejoin: the channel must have
+      # self-promoted out of :new on save, or this keeps short-circuiting to [].
+      live_ref = push(socket, "go_live", %{})
+      assert_reply live_ref, :ok, _
+
+      releases_ref = push(socket, "request_releases", %{})
+      assert_reply releases_ref, :ok, %{releases: releases}
+
+      assert [%{version_number: 1, is_latest: true}] = releases
     end
 
     test "does not short-circuit for a version-view socket", %{
@@ -4389,21 +6456,22 @@ defmodule LightningWeb.WorkflowChannelTest do
       user: user,
       project: project
     } do
-      # Snapshot v0, then bump to v1 so there is genuine version history.
-      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+      # Snapshot v0 with a release, so there is genuine published history.
+      {:ok, snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
 
-      workflow_changeset =
-        workflow
-        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
-        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+      {:ok, release} =
+        Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+          workflow_id: workflow.id,
+          kind: :go_live,
+          snapshot_id: snapshot_v0.id,
+          published_by_id: user.id
+        })
 
-      {:ok, _updated} =
-        Lightning.Workflows.save_workflow(workflow_changeset, user)
-
-      # Join viewing the old snapshot (v0). The resolver hydrates a :built struct
-      # with lock_version == 0, BUT this is a version-view, not a genuinely-new
-      # workflow, so request_versions must NOT short-circuit to [].
-      topic_with_version = "workflow:collaborate:#{workflow.id}:v0"
+      # Join pinning the release (version_number 1). The resolver hydrates a
+      # :built struct with lock_version == 0, BUT this is a version-view, not a
+      # genuinely-new workflow, so request_releases must NOT short-circuit to [].
+      topic_with_version =
+        "workflow:collaborate:#{workflow.id}:release#{release.version_number}"
 
       {:ok, _, snapshot_socket} =
         LightningWeb.UserSocket
@@ -4414,49 +6482,112 @@ defmodule LightningWeb.WorkflowChannelTest do
           %{project_id: project.id, action: "edit"}
         )
 
-      ref = push(snapshot_socket, "request_versions", %{})
+      ref = push(snapshot_socket, "request_releases", %{})
 
-      assert_reply ref, :ok, %{versions: versions}
+      assert_reply ref, :ok, %{releases: releases}
 
-      assert length(versions) >= 1
+      assert length(releases) >= 1
     end
 
-    test "marks latest version correctly", %{
+    test "marks only the newest release as latest", %{
       socket: socket,
       workflow: workflow,
       user: user
     } do
-      # Create initial snapshot
-      {:ok, _snapshot_v0} = Lightning.Workflows.Snapshot.create(workflow)
+      snapshot = insert(:snapshot, workflow: workflow, lock_version: 1)
 
-      # Update workflow multiple times to create more snapshots
-      workflow_v1 =
-        workflow
-        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
-        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 1"})
+      for _ <- 1..3 do
+        {:ok, _} =
+          Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+            workflow_id: workflow.id,
+            kind: :go_live,
+            snapshot_id: snapshot.id,
+            published_by_id: user.id
+          })
+      end
 
-      {:ok, updated_v1} = Lightning.Workflows.save_workflow(workflow_v1, user)
+      ref = push(socket, "request_releases", %{})
 
-      workflow_v2 =
-        updated_v1
-        |> Lightning.Repo.reload!()
-        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
-        |> Lightning.Workflows.Workflow.changeset(%{name: "Version 2"})
+      assert_reply ref, :ok, %{releases: releases}
 
-      {:ok, _updated_v2} = Lightning.Workflows.save_workflow(workflow_v2, user)
+      assert [%{version_number: 3, is_latest: true} | rest] = releases
+      assert Enum.all?(rest, &(&1.is_latest == false))
+    end
+  end
+
+  describe "request_versions" do
+    test "returns every save, numbered by lock_version, publish or not", %{
+      socket: socket,
+      workflow: workflow,
+      user: user
+    } do
+      # Two ordinary saves. A save captures a snapshot but records no release,
+      # so this workflow has content history and no publish trail at all.
+      for name <- ["First save", "Second save"] do
+        {:ok, _saved} =
+          workflow
+          |> Lightning.Repo.reload()
+          |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+          |> Lightning.Workflows.Workflow.changeset(%{name: name})
+          |> Lightning.Workflows.save_workflow(user)
+      end
 
       ref = push(socket, "request_versions", %{})
-
       assert_reply ref, :ok, %{versions: versions}
 
-      # Find the version marked as latest
-      latest_versions = Enum.filter(versions, & &1.is_latest)
-      assert length(latest_versions) == 1
+      # The current one first, the rest newest-first by lock_version.
+      assert [%{is_latest: true, lock_version: latest} | rest] = versions
+      assert latest == Lightning.Repo.reload(workflow).lock_version
+      assert rest != []
+      assert Enum.all?(rest, &(&1.is_latest == false))
+      assert Enum.all?(versions, &match?(%DateTime{}, &1.inserted_at))
 
-      # The latest should have the highest lock_version
-      latest = hd(latest_versions)
-      max_lock_version = versions |> Enum.map(& &1.lock_version) |> Enum.max()
-      assert latest.lock_version == max_lock_version
+      assert Enum.map(versions, & &1.lock_version) ==
+               versions |> Enum.map(& &1.lock_version) |> Enum.sort(:desc)
+
+      # The same workflow, asked the other question, answers nothing: it has
+      # published no versions. One event returning either list depending on what
+      # the server believed would make these two answers indistinguishable.
+      releases_ref = push(socket, "request_releases", %{})
+      assert_reply releases_ref, :ok, %{releases: []}
+    end
+
+    test "reads is_latest from the workflow row, not from a pinned socket", %{
+      project: project,
+      workflow: workflow,
+      user: user
+    } do
+      {:ok, _saved} =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Moved on"})
+        |> Lightning.Workflows.save_workflow(user)
+
+      current = Lightning.Repo.reload(workflow).lock_version
+      pinned = insert(:snapshot, workflow: workflow, lock_version: current + 5)
+
+      # A snapshot-pinned socket carries the pinned lock_version as its own, so
+      # comparing against the socket's workflow would crown the pinned snapshot.
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{pinned.lock_version}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      on_exit(fn ->
+        Lightning.Collaborate.stop_document(
+          "workflow:#{workflow.id}:v#{pinned.lock_version}"
+        )
+      end)
+
+      ref = push(pinned_socket, "request_versions", %{})
+      assert_reply ref, :ok, %{versions: versions}
+
+      latest = Enum.filter(versions, & &1.is_latest)
+      assert [%{lock_version: ^current}] = latest
     end
   end
 
@@ -4757,6 +6888,67 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
+  defp add_member(project, user, role) do
+    project
+    |> membership_params(%{}, [%{user_id: user.id, role: role}])
+    |> submit_membership()
+  end
+
+  defp await_channel_processed(socket) do
+    :sys.get_state(socket.channel_pid)
+  end
+
+  # The write gate is an assign on the channel process, so a second
+  # participant's gate can only be read from that process's own state.
+  defp channel_socket(socket) do
+    :sys.get_state(socket.channel_pid)
+  end
+
+  defp change_role(project, project_user, role) do
+    project
+    |> membership_params(%{project_user => role})
+    |> submit_membership()
+  end
+
+  # A user who has opted into experimental features, with their own socket.
+  #
+  # The lifecycle lock only applies to such a user, and it is resolved at join
+  # (`content_locked`) and read off the user struct the socket captured
+  # (`ensure_editable_state`), so the preference has to be on before joining.
+  defp with_experimental_user(_context) do
+    user = insert(:user, preferences: %{"experimental_features" => true})
+    project = insert(:project, project_users: [%{user: user, role: :owner}])
+    workflow = insert(:workflow, project: project)
+    socket = join_as(user, project, workflow)
+
+    on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+    %{socket: socket, user: user, project: project, workflow: workflow}
+  end
+
+  defp join_as(user, project, workflow) do
+    {:ok, _reply, socket} =
+      LightningWeb.UserSocket
+      |> socket("user_#{user.id}", %{current_user: user})
+      |> subscribe_and_join(
+        LightningWeb.WorkflowChannel,
+        "workflow:collaborate:#{workflow.id}",
+        %{"project_id" => project.id, "action" => "edit"}
+      )
+
+    socket
+  end
+
+  defp submit_membership({project, params}) do
+    {:ok, _project} =
+      Lightning.Projects.update_project_with_users(
+        project,
+        params,
+        insert(:user),
+        false
+      )
+  end
+
   defp workflow_name(session_pid) do
     Yex.Map.fetch!(
       Yex.Doc.get_map(
@@ -4794,42 +6986,47 @@ defmodule LightningWeb.WorkflowChannelTest do
     Yex.Sync.message_encode!({:sync, sync_message})
   end
 
-  defp await_channel_processed(socket) do
-    :sys.get_state(socket.channel_pid)
+  defp edit_single_job_body!(workflow_id, body) do
+    [job] =
+      Lightning.Workflows.get_workflow(workflow_id, include: [:jobs]).jobs
+
+    Lightning.Repo.update!(Ecto.Changeset.change(job, body: body))
   end
 
-  defp join_as(user, project, workflow) do
-    {:ok, _reply, socket} =
-      LightningWeb.UserSocket
-      |> socket("user_#{user.id}", %{current_user: user})
-      |> subscribe_and_join(
-        LightningWeb.WorkflowChannel,
-        "workflow:collaborate:#{workflow.id}",
-        %{"project_id" => project.id, "action" => "edit"}
+  defp publish_release(workflow, snapshot, user) do
+    Lightning.Workflows.WorkflowReleases.insert_release(Lightning.Repo, %{
+      workflow_id: workflow.id,
+      kind: :go_live,
+      snapshot_id: snapshot.id,
+      published_by_id: user.id
+    })
+  end
+
+  defp history_workorder_with_run(
+         workflow,
+         trigger,
+         snapshot,
+         state \\ :success
+       ) do
+    dataclip = insert(:dataclip)
+
+    work_order =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        snapshot: snapshot
       )
 
-    socket
-  end
-
-  defp change_role(project, project_user, role) do
-    project
-    |> membership_params(%{project_user => role})
-    |> submit_membership()
-  end
-
-  defp add_member(project, user, role) do
-    project
-    |> membership_params(%{}, [%{user_id: user.id, role: role}])
-    |> submit_membership()
-  end
-
-  defp submit_membership({project, params}) do
-    {:ok, _project} =
-      Lightning.Projects.update_project_with_users(
-        project,
-        params,
-        insert(:user),
-        false
+    run =
+      insert(:run,
+        work_order: work_order,
+        dataclip: dataclip,
+        starting_trigger: trigger,
+        snapshot: snapshot,
+        state: state
       )
+
+    {work_order, run}
   end
 end

@@ -16,6 +16,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Channels.Audit, as: ChannelAudit
   alias Lightning.Channels.Channel
   alias Lightning.Channels.ChannelAuthMethod
+  alias Lightning.Collaboration.WorkflowReconciler
   alias Lightning.Collections.Collection
   alias Lightning.Credentials.Scoping
   alias Lightning.Extensions.UsageLimiting.Action
@@ -38,6 +39,7 @@ defmodule Lightning.Projects.Provisioner do
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Triggers.WebhookResponseConfig
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowReleases
   alias Lightning.Workflows.WorkflowUsageLimiter
   alias Lightning.WorkflowVersions
 
@@ -57,6 +59,15 @@ defmodule Lightning.Projects.Provisioner do
   ## Options
     * `:allow_stale` - If true, allows stale operations during import (useful for
       merge operations where concurrent modifications are expected). Defaults to false.
+    * `:reconcile_collaboration` - If true, broadcasts a collaboration reconcile
+      request for each affected workflow AFTER the import transaction commits,
+      so any live collaborative document re-syncs from the database.
+
+      Defaults to FALSE, which is what a deploy did before this work: an editor
+      that was open stayed as it was. Rebuilding someone's document under them
+      mid-edit is a visible change, and it would reach every collaborator in the
+      room whether or not they asked for any of this. Callers that need it ask
+      for it, and none of them is a plain import.
   """
   @spec import_document(
           Project.t() | nil,
@@ -77,57 +88,101 @@ defmodule Lightning.Projects.Provisioner do
   def import_document(project, user_or_repo_connection, data, opts) do
     allow_stale = Keyword.get(opts, :allow_stale, false)
 
-    Repo.transact(fn ->
-      with :ok <- maybe_limit_provisioning(project.id, user_or_repo_connection),
-           project_changeset <-
-             build_import_changeset(project, user_or_repo_connection, data),
-           edges_to_cleanup <-
-             edges_referencing_deleted_jobs(project_changeset),
-           # Before the insert, or a workflow being dropped in this same
-           # document still holds the name the incoming one wants.
-           :ok <- release_paths_of_soft_deleted_workflows(project_changeset),
-           {:ok, %{workflows: workflows} = project} <-
-             Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
-           :ok <- check_credential_scoping(project, project_changeset),
-           :ok <- cleanup_orphaned_edges(edges_to_cleanup),
-           :ok <-
-             disable_triggers_for_soft_deleted_workflows(project_changeset),
-           :ok <- release_paths_of_hidden_workflows(project),
-           :ok <- handle_collection_deletion(project_changeset),
-           updated_project <- preload_dependencies(project),
-           {:ok, _changes} <-
-             audit_workflows(project_changeset, user_or_repo_connection),
-           {:ok, _changes} <-
-             audit_channels(project_changeset, user_or_repo_connection),
-           {:ok, _changes} <-
-             update_workflows_version(
-               project_changeset,
-               updated_project.workflows
-             ),
-           {:ok, _changes} <-
-             create_snapshots(
-               project_changeset,
-               updated_project.workflows,
-               user_or_repo_connection
-             ) do
-        Enum.each(workflows, &Workflows.Events.workflow_updated/1)
+    reconcile_collaboration =
+      Keyword.get(opts, :reconcile_collaboration, false)
 
-        # A provisioning document can soft-delete a workflow, which is the same
-        # disappearance as a delete driven from the UI and has to reach the same
-        # sessions. On the project's topic, not this one — see
-        # `Lightning.Projects.Events`.
-        workflows
-        |> Enum.filter(& &1.deleted_at)
-        |> Enum.each(&Lightning.Projects.Events.workflow_deleted/1)
+    release = Keyword.get(opts, :release)
 
-        Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
-          Lightning.Projects.Project.sandbox?(updated_project)
-        )
+    result =
+      Repo.transact(fn ->
+        with :ok <-
+               maybe_limit_provisioning(project.id, user_or_repo_connection),
+             project_changeset <-
+               build_import_changeset(project, user_or_repo_connection, data),
+             edges_to_cleanup <-
+               edges_referencing_deleted_jobs(project_changeset),
+             # Before the insert, or a workflow being dropped in this same
+             # document still holds the name the incoming one wants.
+             :ok <- release_paths_of_soft_deleted_workflows(project_changeset),
+             {:ok, %{workflows: workflows} = project} <-
+               Repo.insert_or_update(project_changeset, allow_stale: allow_stale),
+             :ok <- check_credential_scoping(project, project_changeset),
+             :ok <- cleanup_orphaned_edges(edges_to_cleanup),
+             :ok <-
+               disable_triggers_for_soft_deleted_workflows(project_changeset),
+             :ok <- release_paths_of_hidden_workflows(project),
+             :ok <- handle_collection_deletion(project_changeset),
+             updated_project <- preload_dependencies(project),
+             {:ok, _changes} <-
+               audit_workflows(project_changeset, user_or_repo_connection),
+             {:ok, _changes} <-
+               audit_channels(project_changeset, user_or_repo_connection),
+             {:ok, _changes} <-
+               update_workflows_version(
+                 project_changeset,
+                 updated_project.workflows
+               ),
+             {:ok, _changes} <-
+               create_snapshots(
+                 project_changeset,
+                 updated_project.workflows,
+                 user_or_repo_connection,
+                 release
+               ) do
+          Enum.each(workflows, &Workflows.Events.workflow_updated/1)
+
+          # A provisioning document can soft-delete a workflow, which is the same
+          # disappearance as a delete driven from the UI and has to reach the same
+          # sessions. On the project's topic, not this one — see
+          # `Lightning.Projects.Events`.
+          workflows
+          |> Enum.filter(& &1.deleted_at)
+          |> Enum.each(&Lightning.Projects.Events.workflow_deleted/1)
+
+          Lightning.Projects.SandboxPromExPlugin.fire_provisioner_import_event(
+            Lightning.Projects.Project.sandbox?(updated_project)
+          )
+
+          {:ok, updated_project}
+        end
+      end)
+
+    case result do
+      {:ok, updated_project} ->
+        if reconcile_collaboration do
+          data
+          |> reconcilable_workflow_ids()
+          |> WorkflowReconciler.request_reconciliation()
+        end
 
         {:ok, updated_project}
-      end
-    end)
+
+      error ->
+        error
+    end
   end
+
+  @doc """
+  Extracts the workflow ids carried by an import/merge document that a live
+  collaborative document should reconcile against, excluding workflows the
+  document marks for deletion. Only workflows present in the document are
+  returned, so sibling workflows on the target are never touched.
+  """
+  @spec reconcilable_workflow_ids(map()) :: [Ecto.UUID.t()]
+  def reconcilable_workflow_ids(data) when is_map(data) do
+    data
+    |> Map.get("workflows", [])
+    |> List.wrap()
+    |> Enum.reject(&workflow_entry_marked_deleted?/1)
+    |> Enum.map(fn entry -> entry["id"] end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp workflow_entry_marked_deleted?(entry) when is_map(entry) do
+    entry["delete"] == true or not is_nil(entry["deleted_at"])
+  end
+
+  defp workflow_entry_marked_deleted?(_entry), do: false
 
   # Read-your-writes: every one of the project's just-written jobs (including
   # those on soft-deleted workflows, so a document that soft-deletes a workflow
@@ -419,7 +474,8 @@ defmodule Lightning.Projects.Provisioner do
   defp create_snapshots(
          project_changeset,
          inserted_workflows,
-         user_or_repo_connection
+         user_or_repo_connection,
+         release
        ) do
     project_changeset
     |> get_assoc(:workflows)
@@ -447,6 +503,12 @@ defmodule Lightning.Projects.Provisioner do
           )
         end
       )
+      |> maybe_record_promote_release(
+        workflow,
+        snapshot_operation,
+        user_or_repo_connection,
+        release
+      )
     end)
     |> Repo.transaction()
     |> case do
@@ -454,6 +516,41 @@ defmodule Lightning.Projects.Provisioner do
       {:error, _failed_key, changeset, _changes} -> {:error, changeset}
     end
   end
+
+  # Records a promote release in the same transaction as the snapshot, but only
+  # for the workflows a promote actually targeted (`release.workflow_ids`) — the
+  # provisioner is a generic pipeline, so ordinary imports/deploys/merges pass no
+  # release and record nothing, and sibling parent workflows carried along by a
+  # promote are excluded here.
+  defp maybe_record_promote_release(multi, _workflow, _snapshot_op, _actor, nil),
+    do: multi
+
+  defp maybe_record_promote_release(
+         multi,
+         workflow,
+         snapshot_operation,
+         actor,
+         %{workflow_ids: workflow_ids} = release
+       ) do
+    if MapSet.member?(workflow_ids, workflow.id) do
+      Multi.run(multi, "workflow_release_#{workflow.id}", fn repo, changes ->
+        %{^snapshot_operation => snapshot} = changes
+
+        WorkflowReleases.insert_release(repo, %{
+          workflow_id: workflow.id,
+          kind: release.kind,
+          snapshot_id: snapshot.id,
+          published_by_id: promote_actor_id(actor),
+          source_project_id: release.source_project_id
+        })
+      end)
+    else
+      multi
+    end
+  end
+
+  defp promote_actor_id(%User{id: id}), do: id
+  defp promote_actor_id(_actor), do: nil
 
   @spec parse_document(
           Project.t(),
@@ -728,7 +825,7 @@ defmodule Lightning.Projects.Provisioner do
 
   defp workflow_changeset(workflow, attrs) do
     workflow
-    |> cast(attrs, [:id, :name, :delete, :deleted_at])
+    |> cast(attrs, [:id, :name, :state, :delete, :deleted_at])
     |> optimistic_lock(:lock_version)
     |> validate_required([:id])
     |> maybe_soft_delete_workflow()
@@ -736,7 +833,44 @@ defmodule Lightning.Projects.Provisioner do
     |> cast_assoc(:jobs, with: &job_changeset/2)
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
     |> cast_assoc(:edges, with: &edge_changeset/2)
+    |> maybe_infer_workflow_state(attrs)
     |> Workflow.validate()
+  end
+
+  # Decide the workflow `:state` on import:
+  #
+  #   1. Explicit `state` in the attrs wins.
+  #   2. An already-persisted workflow (`__meta__.state == :loaded`) keeps its
+  #      current DB state untouched. We deliberately do NOT infer here: a
+  #      round-trip must not silently flip a draft with an in-app-enabled
+  #      trigger to live.
+  #   3. A brand-new workflow (`:built`, no explicit state) is inferred from its
+  #      triggers: `:live` if any trigger is enabled, otherwise `:draft`.
+  defp maybe_infer_workflow_state(changeset, attrs) do
+    cond do
+      state_present_in_attrs?(attrs) ->
+        changeset
+
+      changeset.data.__meta__.state == :loaded ->
+        changeset
+
+      true ->
+        inferred = if any_trigger_enabled?(changeset), do: :live, else: :draft
+        put_change(changeset, :state, inferred)
+    end
+  end
+
+  defp any_trigger_enabled?(changeset) do
+    changeset
+    |> get_assoc(:triggers)
+    |> Enum.reject(&(&1.action == :delete))
+    |> Enum.any?(fn trigger_changeset ->
+      get_field(trigger_changeset, :enabled) == true
+    end)
+  end
+
+  defp state_present_in_attrs?(attrs) do
+    Map.has_key?(attrs, "state") or Map.has_key?(attrs, :state)
   end
 
   defp job_changeset(job, attrs) do

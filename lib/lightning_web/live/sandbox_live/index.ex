@@ -215,12 +215,16 @@ defmodule LightningWeb.SandboxLive.Index do
 
       sandbox ->
         if sandbox.can_merge do
-          target_options = get_merge_target_options(socket, sandbox)
+          subtree = Projects.list_descendants(sandbox.id)
+          descendant_ids = MapSet.new(subtree, & &1.id)
+
+          target_options =
+            get_merge_target_options(socket, sandbox, descendant_ids)
 
           default_target =
             Enum.find(target_options, &(&1.value == sandbox.parent_id))
 
-          descendants = active_descendants(sandbox.id)
+          descendants = Enum.filter(subtree, &is_nil(&1.scheduled_deletion))
 
           merge_changeset =
             merge_changeset(%{
@@ -230,9 +234,11 @@ defmodule LightningWeb.SandboxLive.Index do
           target_id = default_target && default_target.value
 
           target_project =
-            Enum.find(
+            find_target_project(
               socket.assigns.workspace_projects,
-              fn project -> project.id == target_id end
+              target_id,
+              sandbox,
+              descendant_ids
             )
 
           {sandbox, target_project} =
@@ -263,6 +269,7 @@ defmodule LightningWeb.SandboxLive.Index do
            |> assign(:merge_modal_open?, true)
            |> assign(:merge_source_sandbox, sandbox)
            |> assign(:merge_target_options, target_options)
+           |> assign(:merge_descendant_ids, descendant_ids)
            |> assign(:merge_changeset, merge_changeset)
            |> assign(:merge_descendants, descendants)
            |> assign(:merge_diverged_workflows, diverged_workflows)
@@ -357,12 +364,16 @@ defmodule LightningWeb.SandboxLive.Index do
         %{"merge" => %{"target_id" => target_id}},
         socket
       ) do
-    merge_changeset = merge_changeset(%{target_id: target_id})
-
     target_project =
-      Enum.find(socket.assigns.workspace_projects, fn project ->
-        project.id == target_id
-      end)
+      find_target_project(
+        socket.assigns.workspace_projects,
+        target_id,
+        socket.assigns.merge_source_sandbox,
+        socket.assigns.merge_descendant_ids
+      )
+
+    merge_changeset =
+      merge_changeset(%{target_id: target_project && target_project.id})
 
     {sandbox, target_project} =
       preload_merge_projects(socket.assigns.merge_source_sandbox, target_project)
@@ -488,7 +499,11 @@ defmodule LightningWeb.SandboxLive.Index do
 
       true ->
         socket.assigns.workspace_projects
-        |> find_target_project(target_id)
+        |> find_target_project(
+          target_id,
+          source,
+          socket.assigns.merge_descendant_ids
+        )
         |> case do
           nil ->
             socket
@@ -742,6 +757,7 @@ defmodule LightningWeb.SandboxLive.Index do
     |> assign(:merge_source_sandbox, nil)
     |> assign(:merge_changeset, merge_changeset())
     |> assign(:merge_target_options, [])
+    |> assign(:merge_descendant_ids, nil)
     |> assign(:merge_descendants, [])
     |> assign(:merge_diverged_workflows, [])
     |> assign(:merge_source_workflows, [])
@@ -812,15 +828,13 @@ defmodule LightningWeb.SandboxLive.Index do
   defp handle_sandbox_delete_result(
          {:ok, _project},
          deleted_sandbox,
-         %{assigns: %{project: current_project, root_project: root_project}} =
-           socket
+         %{assigns: %{project: current_project}} = socket
        ) do
     should_redirect =
       current_project.id == deleted_sandbox.id or
-        Projects.descendant_of?(
-          current_project,
-          deleted_sandbox,
-          root_project
+        MapSet.member?(
+          sandbox_descendant_ids(deleted_sandbox),
+          current_project.id
         )
 
     socket_to_return =
@@ -890,18 +904,13 @@ defmodule LightningWeb.SandboxLive.Index do
     put_flash(socket, :error, text)
   end
 
-  defp get_merge_target_options(socket, source_sandbox) do
+  defp get_merge_target_options(socket, source_sandbox, descendant_ids) do
     current_user = socket.assigns.current_user
-    root_project = socket.assigns.root_project
 
     socket.assigns.workspace_projects
-    |> Enum.reject(fn potential_target ->
-      not is_nil(potential_target.scheduled_deletion) or
-        potential_target.id == source_sandbox.id or
-        Projects.descendant_of?(potential_target, source_sandbox, root_project)
-    end)
     |> Enum.filter(fn project ->
-      user_role_on_project(project, current_user) in [:owner, :admin, :editor]
+      mergeable_target?(project, source_sandbox, descendant_ids) and
+        user_role_on_project(project, current_user) in [:owner, :admin, :editor]
     end)
     |> Enum.map(fn project ->
       %{
@@ -918,8 +927,30 @@ defmodule LightningWeb.SandboxLive.Index do
     end
   end
 
-  defp find_target_project(workspace_projects, target_id) do
-    Enum.find(workspace_projects, fn project -> project.id == target_id end)
+  defp find_target_project(_workspace_projects, _target_id, nil, _descendants),
+    do: nil
+
+  # `descendant_ids` is read once when the dialog opens and carried on the
+  # socket, because the form re-runs this on every change inside it.
+  defp find_target_project(workspace_projects, target_id, source, descendant_ids) do
+    Enum.find(workspace_projects, fn project ->
+      project.id == target_id and
+        mergeable_target?(project, source, descendant_ids)
+    end)
+  end
+
+  # Merging into the sandbox or into anything under it retires what it just
+  # wrote, since archiving the source schedules its whole subtree for deletion.
+  # Nothing downstream refuses that. Role is the caller's question.
+  defp mergeable_target?(project, source_sandbox, descendant_ids) do
+    is_nil(project.scheduled_deletion) and project.id != source_sandbox.id and
+      not MapSet.member?(descendant_ids, project.id)
+  end
+
+  # Read rather than walked: `Projects.descendant_of?/3` needs the whole parent
+  # chain preloaded, and the workspace list only loads one level.
+  defp sandbox_descendant_ids(sandbox) do
+    MapSet.new(Projects.descendant_ids([sandbox.id]))
   end
 
   defp build_merge_workflow_list(

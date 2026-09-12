@@ -23,6 +23,8 @@ defmodule Lightning.Workflows do
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.WorkflowRelease
+  alias Lightning.Workflows.WorkflowReleases
   alias Lightning.WorkflowVersions
   alias Lightning.WorkOrder
 
@@ -153,6 +155,35 @@ defmodule Lightning.Workflows do
     end
   end
 
+  @doc """
+  Returns true when a workflow's lifecycle state permits editing in the given
+  project. A `:live` workflow is read-only on its own project; inside a sandbox
+  the clone stays editable, and drafts are always editable. Anything that is not
+  a live workflow (a draft, or a snapshot view) is editable as far as this rule
+  is concerned.
+  """
+  @spec editable_state?(struct() | nil, Project.t()) :: boolean()
+  def editable_state?(%Workflow{state: :live}, %Project{} = project),
+    do: Project.sandbox?(project)
+
+  def editable_state?(_workflow, _project), do: true
+
+  @doc """
+  Fetches the single active (non-deleted) workflow with `name` in a project, or
+  `nil`. Workflow names are unique per project, so at most one row matches.
+  """
+  @spec get_workflow_by_name(Ecto.UUID.t(), String.t()) :: Workflow.t() | nil
+  def get_workflow_by_name(project_id, name)
+      when is_binary(project_id) and is_binary(name) do
+    from(w in Workflow,
+      where:
+        w.project_id == ^project_id and w.name == ^name and
+          is_nil(w.deleted_at),
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
   @spec save_workflow(
           Ecto.Changeset.t(Workflow.t()) | map(),
           struct(),
@@ -178,7 +209,7 @@ defmodule Lightning.Workflows do
     transaction_result =
       try do
         changeset
-        |> build_save_multi(actor)
+        |> build_save_multi(actor, opts)
         |> Repo.transaction()
 
         # NOTE: Ecto.StaleEntryError is deliberately NOT caught — optimistic
@@ -292,7 +323,7 @@ defmodule Lightning.Workflows do
   # Builds the Ecto.Multi pipeline for save_workflow. Does NOT call
   # Repo.transaction — that stays in the try/rescue block of the caller so
   # rescue wraps only the transaction, not this builder.
-  defp build_save_multi(changeset, actor) do
+  defp build_save_multi(changeset, actor, opts) do
     Multi.new()
     |> Multi.put(:actor, actor)
     |> Multi.run(:validate, fn _repo, _changes ->
@@ -315,11 +346,84 @@ defmodule Lightning.Workflows do
     end)
     |> maybe_capture_snapshot(changeset)
     |> maybe_audit_workflow_state_changes(changeset)
-    |> Multi.run(:workflow_version, fn _repo, %{workflow: workflow} ->
-      hash = WorkflowVersions.generate_hash(workflow)
-      WorkflowVersions.record_version(workflow, hash)
+    |> maybe_record_version(changeset)
+    |> maybe_record_go_live_release(opts)
+  end
+
+  # The version trail exists so two projects can tell whether one holds content
+  # the other does not. A merge decides what "content" means, and it never
+  # carries a trigger's enabled flag or a workflow's lifecycle state. So a save
+  # that changes only those has nothing a promote could carry, and recording a
+  # hash for it makes a sandbox report changes it cannot promote.
+  defp maybe_record_version(multi, changeset) do
+    if unmergeable_change_only?(changeset) do
+      Multi.put(multi, :workflow_version, nil)
+    else
+      Multi.run(multi, :workflow_version, fn _repo, %{workflow: workflow} ->
+        hash = WorkflowVersions.generate_hash(workflow)
+        WorkflowVersions.record_version(workflow, hash)
+      end)
+    end
+  end
+
+  # `:lock_version` and `:snapshot` ride along on every save and say nothing
+  # about content. Anything else, on the workflow or on a trigger, does.
+  @unmergeable_workflow_changes [:state, :triggers, :lock_version, :snapshot]
+
+  defp unmergeable_change_only?(%Ecto.Changeset{changes: changes}) do
+    changes |> Map.keys() |> Enum.all?(&(&1 in @unmergeable_workflow_changes)) and
+      changes |> Map.get(:triggers, []) |> Enum.all?(&enabled_only_change?/1)
+  end
+
+  defp enabled_only_change?(%Ecto.Changeset{changes: changes}) do
+    changes |> Map.keys() |> Enum.all?(&(&1 == :enabled))
+  end
+
+  # Records a go-live release in the same transaction as the snapshot, when the
+  # caller (go_live/2 or the collaborative go-live path) asks for it. The release
+  # points at the snapshot this save just captured.
+  #
+  # No snapshot means the save changed nothing, so nothing was published and
+  # there is no new version to record. Going live on a workflow that is already
+  # live is the case that reaches here, and a workflow predating the snapshot
+  # system reaches it too. Promote answers the same question the same way: a
+  # merge with no changes records nothing.
+  #
+  # Tying the release to a captured snapshot also keeps version allocation
+  # behind the workflow's optimistic lock. A save that captures a snapshot has
+  # updated the workflow row, so two concurrent publishes cannot read the same
+  # max(version_number).
+  defp maybe_record_go_live_release(multi, opts) do
+    case Keyword.get(opts, :record_release) do
+      nil -> multi
+      :go_live -> record_release(multi, :go_live, nil)
+      {:restore, from} -> record_release(multi, :restore, from)
+    end
+  end
+
+  defp record_release(multi, kind, restored_from) do
+    Multi.run(multi, :workflow_release, fn repo, changes ->
+      %{workflow: workflow, actor: actor} = changes
+
+      case changes[:snapshot] do
+        nil ->
+          {:ok, nil}
+
+        snapshot ->
+          WorkflowReleases.insert_release(repo, %{
+            workflow_id: workflow.id,
+            kind: kind,
+            snapshot_id: snapshot.id,
+            published_by_id: actor_id(actor),
+            source_project_id: nil,
+            restored_from_version_number: restored_from
+          })
+      end
     end)
   end
+
+  defp actor_id(%Lightning.Accounts.User{id: id}), do: id
+  defp actor_id(_actor), do: nil
 
   defp validate_not_deleted(%{data: %{deleted_at: nil}}), do: {:ok, true}
   defp validate_not_deleted(_changeset), do: {:error, :workflow_deleted}
@@ -1319,6 +1423,72 @@ defmodule Lightning.Workflows do
     workflow
     |> change_workflow()
     |> Ecto.Changeset.put_assoc(:triggers, updated_triggers)
+  end
+
+  @doc """
+  Publishes a draft workflow: sets its state to `:live`, enables its triggers,
+  and saves in one transaction (capturing a snapshot and recording a version).
+  """
+  @spec go_live(Workflow.t(), struct()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def go_live(%Workflow{} = workflow, actor) do
+    workflow
+    |> Repo.preload(:triggers)
+    |> update_triggers_enabled_state(true)
+    |> Ecto.Changeset.put_change(:state, :live)
+    |> save_workflow(actor, record_release: :go_live)
+  end
+
+  @doc """
+  Puts an earlier version's content back, without taking the workflow offline.
+
+  A restore is a publish, not an edit. It writes the chosen release's snapshot
+  in as the workflow's content, leaves the lifecycle state and every surviving
+  trigger's enabled flag alone, and records the result as the next version
+  labelled with the version it came from. The bad version stays in the history
+  rather than being erased, so the trail reads forward.
+
+  Anything the snapshot does not hold is deleted, which is what makes this a
+  revert rather than a merge. A trigger added since that version goes, and the
+  URL built from it stops answering.
+
+  The caller must authorise this and must reconcile any open editor afterwards,
+  the way a promote does. `save_workflow/3` is asked to skip its own reconcile
+  because a wholesale replacement produces changes the incremental reconciler
+  cannot express.
+  """
+  @spec restore_version(Workflow.t(), WorkflowRelease.t(), struct()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def restore_version(
+        %Workflow{} = workflow,
+        %WorkflowRelease{snapshot: %Snapshot{} = snapshot} = release,
+        actor
+      ) do
+    # Read the row again rather than trusting the caller's struct, which is
+    # usually the one a channel joined on. The replacement is computed against
+    # these children, so stale ones leave rows behind that the snapshot does not
+    # hold, and a stale lock_version turns the write into a StaleEntryError.
+    workflow.id
+    |> get_workflow(include: [:triggers, :jobs, :edges])
+    |> change_workflow(Snapshot.to_workflow_attrs(snapshot))
+    |> save_workflow(actor,
+      skip_reconcile: true,
+      record_release: {:restore, release.version_number}
+    )
+  end
+
+  @doc """
+  Takes a live workflow offline for editing: sets its state to `:draft` and
+  disables its triggers, saved in one transaction.
+  """
+  @spec switch_to_draft(Workflow.t(), struct()) ::
+          {:ok, Workflow.t()} | {:error, Ecto.Changeset.t(Workflow.t())}
+  def switch_to_draft(%Workflow{} = workflow, actor) do
+    workflow
+    |> Repo.preload(:triggers)
+    |> update_triggers_enabled_state(false)
+    |> Ecto.Changeset.put_change(:state, :draft)
+    |> save_workflow(actor)
   end
 
   defp update_triggers(triggers, enabled?) do

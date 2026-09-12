@@ -17,9 +17,23 @@ and this project adheres to
 
 ### Added
 
-### Changed
+- A workflow is now a draft or it is live, and you drive that from the editor. A live workflow processes production data and is read-only, so to change one you edit it in a sandbox: the workflow is cloned in as a draft, you turn it on there to test against its own webhook URL and schedules, and you promote it back when it is right. Every go-live, promote and restore is recorded as a version, with who published it and where it came from, and any version can be restored while production keeps running. Behind the experimental features setting. [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
+- The editor asks before it throws away unsaved changes. Switching version, opening a run that pins one, and leaving for a sandbox each destroyed the collaborative document and took uncommitted edits with it, silently. [#5134](https://github.com/OpenFn/lightning/issues/5134)
 
 ### Fixed
+
+- Opening the merge dialog, and deleting a sandbox, no longer crash in a workspace with a branch more than one level deep. A sandbox can no longer be merged into one of its own descendants either, which used to schedule the source for deletion. [#5141](https://github.com/OpenFn/lightning/issues/5141)
+
+- Merging a sandbox no longer reports its own merge as the parent having moved on. A merge now records where it left the parent, so the next one compares against that rather than warning about work it did itself. [#5167](https://github.com/OpenFn/lightning/issues/5167)
+
+- Merging into a project someone has open now updates their editor instead of leaving it stale. A stale document overwrote the merge on its next save. [#5168](https://github.com/OpenFn/lightning/issues/5168)
+
+- Undo and redo are disabled while reading an older version of a workflow. They were writing into that version's own document. [#5169](https://github.com/OpenFn/lightning/issues/5169)
+
+### Security
+
+- A project's environment can no longer be changed once the project exists. It decides which of a credential's value sets the project reads, so an admin who could retype it could read any set of any credential the project holds.
 
 ## [2.19.0-pre] - 2026-09-10
 

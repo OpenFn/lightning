@@ -19,16 +19,27 @@ import {
   useHistoryError,
   useHistoryLoading,
   useRunSteps,
+  useRunSummary,
   useSelectedRunId,
 } from '../../hooks/useHistory';
 import {
   useIsNewWorkflow,
+  useLatestSnapshotId,
   useLatestSnapshotLockVersion,
+  useExperimentalFeatures,
 } from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
+import { useVersionSelect } from '../../hooks/useVersionSelect';
+import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
 import { useNodeSelection } from '../../hooks/useWorkflow';
 import { useKeyboardShortcut } from '../../keyboard';
+import {
+  CLEAR_PINNED_VIEW,
+  SNAPSHOT_PARAM,
+  usePinnedView,
+} from '../../lib/pinnedView';
 import type { RunSummary } from '../../types/history';
+import { DiscardChangesDialog } from '../DiscardChangesDialog';
 
 import MiniHistory from './MiniHistory';
 import CollaborativeWorkflowDiagramImpl from './WorkflowDiagram';
@@ -46,20 +57,25 @@ export function CollaborativeWorkflowDiagram({
   const isNewWorkflow = useIsNewWorkflow();
   const isHistoryChannelConnected = useHistoryChannelConnected();
   const { params, updateSearchParams } = useURLState();
+  const latestSnapshotId = useLatestSnapshotId();
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
 
-  // Get history data and commands
   const history = useHistory();
   const historyLoading = useHistoryLoading();
   const historyError = useHistoryError();
   const historyCommands = useHistoryCommands();
 
-  // Use EditorPreferencesStore for history panel collapsed state
+  const { viewAsExecuted, prompt: runPinPrompt } = useViewAsExecuted();
+
+  // Switching to the version a run executed against destroys the document, so
+  // it is guarded like every other switch. Offered by the mini history's
+  // banner; owned here, because this is where the prompt can be rendered.
+  const { handleVersionSelect, prompt: versionPrompt } = useVersionSelect();
+
   const historyCollapsed = useHistoryPanelCollapsed();
   const { setHistoryPanelCollapsed } = useEditorPreferencesCommands();
 
-  // Read selected run ID from URL, falling back to the history store's active run.
-  // The fallback prevents losing the run when LiveView push_patch strips
+  // Falls back to the store's active run because LiveView push_patch strips
   // client-only URL params.
   const activeRunId = useSelectedRunId();
   const selectedRunId = params['run'] ?? activeRunId;
@@ -79,13 +95,81 @@ export function CollaborativeWorkflowDiagram({
     { enabled: !isNewWorkflow }
   );
 
-  // Restore the URL run param if it was stripped (e.g. by LiveView push_patch)
-  // but the history store still has an active run.
-  // The ref ensures we only attempt one restore per activeRunId to avoid loops
-  // if LiveView repeatedly strips the param.
   const runParam = params['run'] ?? null;
+  const { release: releaseParam, asRun: asRunParam } = usePinnedView();
+
+  // Opening a run on its own snapshot is the experimental experience. Without
+  // the flag a run is only ever selected on the document already open, so none
+  // of the view-switching below applies.
+  const experimentalFeatures = useExperimentalFeatures();
   const restoredRunRef = useRef<string | null>(null);
+
+  // Which document is on screen: a pinned release, a run's own snapshot, or the
+  // live one. Leaving any of those for another is what has to drop the selected
+  // run, and watching the release param alone missed the commonest way out of a
+  // run view. Picking "latest" from a run view clears `as_run` while the release
+  // param stays null, so nothing counted as a change, and the restore below put
+  // the run straight back on the live document with its timings over steps it
+  // never touched.
+  const viewKey = `${releaseParam ?? ''}|${asRunParam ?? ''}`;
+  const previousViewRef = useRef<string>(viewKey);
+
+  // Does the run in the URL belong on the document in the URL? It does when
+  // the view is that run's own, or when the run executed the content that is
+  // live. Undefined snapshot means the history has not arrived, and nothing is
+  // decided until it has.
+  //
+  // Without experimental features it always does, because there is no other
+  // document to move it to: a run is selected where the user already is. That
+  // makes the as-executed switch below inert, which is the whole gate.
+  const urlRun = useRunSummary(runParam);
+  const runBelongsHere =
+    runParam !== null &&
+    (!experimentalFeatures ||
+      asRunParam === runParam ||
+      (urlRun?.snapshot_id != null && urlRun.snapshot_id === latestSnapshotId));
+
+  const { clearRun } = useFollowRun(selectedRunId);
+
+  // Both jobs live in one effect so their order is deterministic: split apart,
+  // the restore would race to re-add the run the switch is dropping. The ref
+  // limits the restore to once per run to avoid a loop.
   useEffect(() => {
+    const viewChanged = previousViewRef.current !== viewKey;
+
+    if (viewChanged) {
+      previousViewRef.current = viewKey;
+
+      // Left one document for another and the run does not belong on the new
+      // one, so it goes. A run that does belong stays: selecting a run of older
+      // content moves to that run's own view, and a retry lands its new run on
+      // the live document.
+      if (!runBelongsHere) {
+        restoredRunRef.current = null;
+        if (activeRunId) {
+          clearRun();
+        }
+        if (runParam) {
+          updateSearchParams({ run: null, step: null });
+        }
+        return;
+      }
+    }
+
+    // A run in the URL that executed something other than the live content is
+    // shown as it executed, however the URL got that way: a click, a shared
+    // link, a reload, the back button. Deciding this only on click left the old
+    // behaviour reachable through the address bar.
+    if (
+      runParam &&
+      !asRunParam &&
+      urlRun?.snapshot_id != null &&
+      !runBelongsHere
+    ) {
+      updateSearchParams({ as_run: runParam });
+      return;
+    }
+
     if (!runParam && activeRunId && restoredRunRef.current !== activeRunId) {
       restoredRunRef.current = activeRunId;
       updateSearchParams({ run: activeRunId });
@@ -93,53 +177,93 @@ export function CollaborativeWorkflowDiagram({
     if (runParam) {
       restoredRunRef.current = null;
     }
-  }, [runParam, activeRunId, updateSearchParams]);
+  }, [
+    experimentalFeatures,
+    viewKey,
+    runParam,
+    asRunParam,
+    runBelongsHere,
+    urlRun,
+    activeRunId,
+    clearRun,
+    updateSearchParams,
+  ]);
 
-  // Follow the run to receive real-time step updates via run:${runId} channel
-  // This is essential for highlighting steps as they execute in real-time
-  const { clearRun } = useFollowRun(selectedRunId);
-
-  // Use hook to get run steps with automatic subscription management
   const currentRunSteps = useRunSteps(selectedRunId);
 
-  // Detect version mismatch for warning banner
+  // Only ever set without experimental features. With the flag on, a run of
+  // older content opens that content read-only, so the shape on screen is the
+  // shape that ran and there is nothing to warn about.
   const versionMismatch = useVersionMismatch(selectedRunId);
 
-  // Update URL when run selection changes
-  // URLStore notifies subscribers synchronously, triggering immediate re-render
+  const handleGoToVersion = useCallback(() => {
+    if (versionMismatch) {
+      handleVersionSelect(versionMismatch.runVersion);
+    }
+  }, [handleVersionSelect, versionMismatch]);
+
+  // A run is shown as it executed, on its own snapshot. The exception is a run
+  // of the content that is live now: that one overlays on the live document so
+  // the edit, run, edit loop keeps working.
+  //
+  // The comparison is against the live workflow, never against the document on
+  // screen. A run view *is* a past document, so comparing against what is
+  // displayed made the answer depend on where you happened to be standing, and
+  // clicking two runs of the same content alternated between the two views.
   const handleRunSelect = useCallback(
     (run: RunSummary) => {
-      // Only include version parameter if the run's version differs from latest
-      // This prevents pinning to read-only mode when viewing latest version runs
-      const runVersion = run.version;
-      const shouldPinVersion =
-        runVersion !== null &&
-        runVersion !== undefined &&
-        runVersion !== latestSnapshotLockVersion;
+      // Without experimental features, selecting a run pins the snapshot that
+      // run executed against, unless it executed the current one — in which
+      // case the pin is cleared so the document stays editable. That is the
+      // editor's existing behaviour, and the version-mismatch banner covers the
+      // case where the pin cannot be resolved.
+      if (!experimentalFeatures) {
+        const ranAnotherVersion =
+          run.version !== null &&
+          run.version !== undefined &&
+          run.version !== latestSnapshotLockVersion;
 
-      // Single atomic update - both version and run in one call
-      // This prevents race conditions between two separate updateSearchParams calls
-      updateSearchParams({
-        v: shouldPinVersion ? String(runVersion) : null,
-        run: run.id,
-      });
+        updateSearchParams({
+          [SNAPSHOT_PARAM]: ranAnotherVersion ? String(run.version) : null,
+          run: run.id,
+        });
+        return;
+      }
+
+      const ranTheLiveContent =
+        latestSnapshotId !== null &&
+        run.snapshot_id !== null &&
+        run.snapshot_id !== undefined &&
+        run.snapshot_id === latestSnapshotId;
+
+      if (!ranTheLiveContent) {
+        viewAsExecuted(run.id);
+      } else {
+        updateSearchParams({ ...CLEAR_PINNED_VIEW, run: run.id });
+      }
     },
-    [latestSnapshotLockVersion, updateSearchParams]
+    [
+      experimentalFeatures,
+      latestSnapshotId,
+      latestSnapshotLockVersion,
+      updateSearchParams,
+      viewAsExecuted,
+    ]
   );
 
-  // Clear URL parameter when deselecting run
-  // Also close the run viewer in the history store so the restore effect
-  // (which watches activeRunId) does not immediately re-add the URL param.
+  // Closes the run viewer in the store too, or the restore effect re-adds the
+  // URL param immediately.
   const handleDeselectRun = useCallback(() => {
     clearRun();
-    updateSearchParams({ run: null });
+    // The step belongs to the run. Left behind, it is re-applied to whichever
+    // run is picked next, selecting a step from a different execution.
+    updateSearchParams({ run: null, as_run: null, step: null });
   }, [clearRun, updateSearchParams]);
 
-  // Request history when panel is first expanded OR when there's a run ID selected
-  // Wait for channel to be connected before making request
+  // The run_id ensures that run's work order is included even if it is older
+  // than the top 20.
   const hasRequestedHistory = useRef(false);
   useEffect(() => {
-    // Request if: channel connected AND (panel expanded OR run ID selected) AND not already requested AND not new workflow
     const shouldRequest =
       isHistoryChannelConnected &&
       !hasRequestedHistory.current &&
@@ -147,7 +271,10 @@ export function CollaborativeWorkflowDiagram({
       (!historyCollapsed || selectedRunId);
 
     if (shouldRequest) {
-      void historyCommands.requestHistory(selectedRunId || undefined);
+      void historyCommands.requestHistory(
+        selectedRunId || undefined,
+        releaseParam || undefined
+      );
       hasRequestedHistory.current = true;
     }
   }, [
@@ -156,7 +283,17 @@ export function CollaborativeWorkflowDiagram({
     isHistoryChannelConnected,
     historyCommands,
     selectedRunId,
+    releaseParam,
   ]);
+
+  // A pinned release is a different feed, so allow one more request.
+  const lastReleaseParam = useRef(releaseParam);
+  useEffect(() => {
+    if (lastReleaseParam.current !== releaseParam) {
+      lastReleaseParam.current = releaseParam;
+      hasRequestedHistory.current = false;
+    }
+  }, [releaseParam]);
 
   // Find the selected run object in history
   const selectedRun = useMemo(() => {
@@ -202,6 +339,8 @@ export function CollaborativeWorkflowDiagram({
         {/* Only show history panel when NOT creating a new workflow */}
         {!isNewWorkflow && (
           <MiniHistory
+            versionMismatch={versionMismatch}
+            onGoToVersion={handleGoToVersion}
             collapsed={historyCollapsed}
             history={historyWithSelection}
             onCollapseHistory={handleToggleHistory}
@@ -214,10 +353,23 @@ export function CollaborativeWorkflowDiagram({
               historyCommands.clearError();
               void historyCommands.requestHistory();
             }}
-            versionMismatch={versionMismatch}
           />
         )}
       </ReactFlowProvider>
+      <DiscardChangesDialog
+        isOpen={versionPrompt.isAsking}
+        onSaveAndContinue={versionPrompt.saveAndRunPending}
+        onDiscardAndContinue={versionPrompt.runPending}
+        onCancel={versionPrompt.cancel}
+        description="Switching to the version this run executed against loads that version, and your unsaved changes cannot come with it. Switch without saving and they are gone."
+      />
+      <DiscardChangesDialog
+        isOpen={runPinPrompt.isAsking}
+        onSaveAndContinue={runPinPrompt.saveAndRunPending}
+        onDiscardAndContinue={runPinPrompt.runPending}
+        onCancel={runPinPrompt.cancel}
+        description="Opening this run loads the version it executed against, and your unsaved changes cannot come with it. Switch without saving and they are gone."
+      />
     </div>
   );
 }

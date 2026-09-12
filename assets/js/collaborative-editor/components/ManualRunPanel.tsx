@@ -108,6 +108,7 @@ export function ManualRunPanel({
   const [manuallyUnselected, setManuallyUnselected] = useState(false);
 
   // Ref to avoid stale closure in async fetch callback
+  const honouredDataclipRef = useRef(false);
   const selectedDataclipRef = useRef(selectedDataclip);
   selectedDataclipRef.current = selectedDataclip;
 
@@ -292,6 +293,8 @@ export function ManualRunPanel({
   useEffect(() => {
     if (!dataclipJobId) return;
 
+    let cancelled = false;
+
     const fetchDataclips = async () => {
       try {
         const response = await dataclipApi.searchDataclips(
@@ -300,9 +303,47 @@ export function ManualRunPanel({
           '',
           {}
         );
+        if (cancelled) return;
+
         setDataclips(response.data);
         setNextCronRunDataclipId(response.next_cron_run_dataclip_id);
         setCanEditDataclip(response.can_edit_dataclip);
+
+        // A sandbox started from a run's data arrives with that dataclip named
+        // in the URL, so it opens ready to run rather than merely holding it.
+        //
+        // Honoured once per mount, then dropped from the URL so reopening the
+        // panel on another job cannot silently select it again. Clearing costs
+        // one history entry, which is the lesser of the two.
+        const requestedId = params['dataclip'];
+
+        if (
+          requestedId &&
+          !honouredDataclipRef.current &&
+          !disableAutoSelection &&
+          !selectedDataclipRef.current &&
+          !manuallyUnselected
+        ) {
+          // Spent on the attempt, not on the hit. Retrying on a later fetch
+          // would yank the panel onto this dataclip after the person had moved
+          // to a custom body, mid-run.
+          honouredDataclipRef.current = true;
+
+          // Dropped on the attempt, not the hit: left in place after a miss,
+          // a later mount on another job would try again and, now that every
+          // named dataclip is selectable everywhere, succeed.
+          updateSearchParams({ dataclip: null });
+
+          const requested = response.data.find(d => d.id === requestedId);
+
+          if (requested) {
+            setSelectedDataclip(requested);
+            setSelectedTab('existing');
+            // Returned before the cron block below, which reads a ref that is
+            // only refreshed on render and would still see nothing selected.
+            return;
+          }
+        }
 
         // Auto-select next cron run dataclip only if:
         // - Auto-selection is not disabled by parent
@@ -331,7 +372,12 @@ export function ManualRunPanel({
     };
 
     void fetchDataclips();
-  }, [projectId, dataclipJobId, followedRunId]);
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, dataclipJobId, followedRunId, params['dataclip']]);
 
   const buildFilters = useCallback(() => {
     const filters: Record<string, string> = {};

@@ -4,6 +4,7 @@ import {
   UserContextSchema,
   ProjectContextSchema,
   AppConfigSchema,
+  PermissionsSchema,
   SessionContextResponseSchema,
 } from '../../../js/collaborative-editor/types/sessionContext';
 
@@ -349,6 +350,62 @@ describe.concurrent('SessionContextResponseSchema', () => {
         can_edit_workflow: true,
         can_run_workflow: true,
         can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
+      },
+      latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
+      workflow_template: null,
+      suppress_enable_trigger_warning: false,
+    };
+
+    const result = SessionContextResponseSchema.safeParse(validResponse);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // The lifecycle lock and the experimental-features flag both default in,
+      // so the parsed object carries them even when the node sent neither.
+      expect(result.data).toEqual({
+        ...validResponse,
+        content_locked: false,
+        experimental_features_enabled: false,
+      });
+    }
+  });
+
+  test('survives a payload with no sandbox permissions', () => {
+    // An older node during a rolling deploy sends neither sandbox permission.
+    // Both are optional so the parse still succeeds: one missing answer must
+    // not cost the client every permission it has.
+    const parsed = PermissionsSchema.safeParse({
+      can_edit_workflow: true,
+      can_run_workflow: true,
+      can_write_webhook_auth_method: true,
+    });
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.can_provision_sandbox).toBe(false);
+      expect(parsed.data.can_archive_sandbox).toBe(false);
+    }
+  });
+
+  test('reads the lifecycle lock, and defaults it to unlocked when absent', () => {
+    // A live workflow is locked for everyone. The field is separate from
+    // `permissions` because it says nothing about the person, and it defaults
+    // to false so an older node that does not send it still parses: that node
+    // folds the lock into can_edit_workflow, so the view stays read-only.
+    const base = {
+      user: null,
+      project: null,
+      config: { require_email_verification: false },
+      permissions: {
+        can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
@@ -356,11 +413,53 @@ describe.concurrent('SessionContextResponseSchema', () => {
       workflow_template: null,
     };
 
-    const result = SessionContextResponseSchema.safeParse(validResponse);
+    const locked = SessionContextResponseSchema.safeParse({
+      ...base,
+      content_locked: true,
+    });
+    expect(locked.success).toBe(true);
+    if (locked.success) expect(locked.data.content_locked).toBe(true);
 
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toEqual(validResponse);
+    const absent = SessionContextResponseSchema.safeParse(base);
+    expect(absent.success).toBe(true);
+    if (absent.success) expect(absent.data.content_locked).toBe(false);
+  });
+
+  test('defaults suppress_enable_trigger_warning to false when omitted and honors a true value', () => {
+    const base = {
+      user: null,
+      project: null,
+      config: {
+        require_email_verification: false,
+        kafka_triggers_enabled: false,
+      },
+      permissions: {
+        can_edit_workflow: true,
+        can_run_workflow: true,
+        can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
+      },
+      latest_snapshot_lock_version: 1,
+      project_repo_connection: null,
+      webhook_auth_methods: [],
+      workflow_template: null,
+      has_read_ai_disclaimer: true,
+    };
+
+    const omitted = SessionContextResponseSchema.safeParse(base);
+    expect(omitted.success).toBe(true);
+    if (omitted.success) {
+      expect(omitted.data.suppress_enable_trigger_warning).toBe(false);
+    }
+
+    const suppressed = SessionContextResponseSchema.safeParse({
+      ...base,
+      suppress_enable_trigger_warning: true,
+    });
+    expect(suppressed.success).toBe(true);
+    if (suppressed.success) {
+      expect(suppressed.data.suppress_enable_trigger_warning).toBe(true);
     }
   });
 
@@ -378,6 +477,8 @@ describe.concurrent('SessionContextResponseSchema', () => {
         can_edit_workflow: true,
         can_run_workflow: true,
         can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
@@ -412,6 +513,8 @@ describe.concurrent('SessionContextResponseSchema', () => {
         can_edit_workflow: true,
         can_run_workflow: true,
         can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
@@ -438,6 +541,8 @@ describe.concurrent('SessionContextResponseSchema', () => {
         can_edit_workflow: true,
         can_run_workflow: true,
         can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
@@ -463,6 +568,8 @@ describe.concurrent('SessionContextResponseSchema', () => {
         can_edit_workflow: true,
         can_run_workflow: true,
         can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
@@ -497,6 +604,8 @@ describe.concurrent('SessionContextResponseSchema', () => {
         can_edit_workflow: true,
         can_run_workflow: true,
         can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
@@ -526,6 +635,8 @@ describe.concurrent('SessionContextResponseSchema', () => {
         can_edit_workflow: true,
         can_run_workflow: true,
         can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
@@ -552,6 +663,8 @@ describe.concurrent('SessionContextResponseSchema', () => {
         can_edit_workflow: true,
         can_run_workflow: true,
         can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
@@ -573,6 +686,8 @@ describe.concurrent('SessionContextResponseSchema', () => {
         can_edit_workflow: true,
         can_run_workflow: true,
         can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,
@@ -596,6 +711,8 @@ describe.concurrent('SessionContextResponseSchema', () => {
         can_edit_workflow: true,
         can_run_workflow: true,
         can_write_webhook_auth_method: true,
+        can_provision_sandbox: true,
+        can_archive_sandbox: true,
       },
       latest_snapshot_lock_version: 1,
       project_repo_connection: null,

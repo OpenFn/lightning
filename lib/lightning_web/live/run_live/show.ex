@@ -110,12 +110,7 @@ defmodule LightningWeb.RunLive.Show do
                   <:value>
                     <.link
                       navigate={
-                        # Only include version param if snapshot differs from current workflow version
-                        if run.snapshot.lock_version == @workflow.lock_version do
-                          ~p"/projects/#{@project}/w/#{@workflow.id}?run=#{run.id}"
-                        else
-                          ~p"/projects/#{@project}/w/#{@workflow.id}?run=#{run.id}&v=#{run.snapshot.lock_version}"
-                        end
+                        ~p"/projects/#{@project}/w/#{@workflow.id}?#{maybe_add_snapshot_version(%{run: run.id}, run.snapshot.lock_version, @workflow.lock_version, @experimental_features)}"
                       }
                       class="link text-ellipsis"
                     >
@@ -218,6 +213,7 @@ defmodule LightningWeb.RunLive.Show do
                   <.step_item
                     step={step}
                     workflow_version={@workflow.lock_version}
+                    experimental_features={@experimental_features}
                     is_clone={
                       DateTime.compare(step.inserted_at, run.inserted_at) == :lt
                     }
@@ -327,7 +323,9 @@ defmodule LightningWeb.RunLive.Show do
        page_title: "Run",
        id: id,
        selected_step_id: nil,
-       steps: []
+       steps: [],
+       experimental_features:
+         Lightning.Accounts.experimental_features_enabled?(user)
      )
      |> assign(:input_dataclip, nil)
      |> assign(:output_dataclip, nil)

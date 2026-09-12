@@ -64,6 +64,8 @@ export const mockPermissions: Permissions = {
   can_edit_workflow: true,
   can_run_workflow: true,
   can_write_webhook_auth_method: true,
+  can_provision_sandbox: true,
+  can_archive_sandbox: true,
 };
 
 /**
@@ -125,6 +127,7 @@ export interface SessionContextResponse {
   project_repo_connection: ProjectRepoConnection | null;
   webhook_auth_methods: WebhookAuthMethod[];
   workflow_template: any | null;
+  suppress_enable_trigger_warning?: boolean;
   limits?: Limits;
 }
 
@@ -141,6 +144,7 @@ export const mockSessionContextResponse: SessionContextResponse = {
   project_repo_connection: null,
   webhook_auth_methods: [],
   workflow_template: null,
+  suppress_enable_trigger_warning: false,
 };
 
 /**
@@ -281,10 +285,21 @@ export interface CreateSessionContextOptions {
   project?: Partial<ProjectContext> | null;
   config?: Partial<AppConfig>;
   permissions?: Partial<Permissions>;
+  /**
+   * The lifecycle lock. Omit to stand in for an older node that does not send
+   * it, which the schema then defaults to false.
+   */
+  content_locked?: boolean;
+  /**
+   * Whether this user has experimental features on. Omit to stand in for an
+   * older node that does not send it, which the schema defaults to false.
+   */
+  experimental_features_enabled?: boolean;
   latest_snapshot_lock_version?: number;
   project_repo_connection?: Partial<ProjectRepoConnection> | null;
   webhook_auth_methods?: WebhookAuthMethod[];
   workflow_template?: WorkflowTemplate | null;
+  suppress_enable_trigger_warning?: boolean;
   limits?: Partial<Limits>;
   workflow?: any | null;
 }
@@ -359,6 +374,8 @@ export function createSessionContext(
     can_edit_workflow: true,
     can_run_workflow: true,
     can_write_webhook_auth_method: true,
+    can_provision_sandbox: true,
+    can_archive_sandbox: true,
     ...options.permissions,
   };
 
@@ -394,12 +411,25 @@ export function createSessionContext(
     project_repo_connection,
     webhook_auth_methods: options.webhook_auth_methods ?? [],
     workflow_template: options.workflow_template ?? null,
+    suppress_enable_trigger_warning:
+      options.suppress_enable_trigger_warning ?? false,
     workflow: options.workflow,
   };
 
   // Only add limits if provided
   if (limits !== undefined) {
     response.limits = limits;
+  }
+
+  // Only add the lifecycle lock if provided, so omitting it reproduces an older
+  // node that does not send the field at all.
+  if (options.content_locked !== undefined) {
+    response.content_locked = options.content_locked;
+  }
+
+  if (options.experimental_features_enabled !== undefined) {
+    response.experimental_features_enabled =
+      options.experimental_features_enabled;
   }
 
   return response;

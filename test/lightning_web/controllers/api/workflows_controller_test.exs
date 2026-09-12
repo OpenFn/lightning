@@ -20,6 +20,29 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
   describe "index" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 
+    test "does not publish the workflow lifecycle", %{
+      conn: conn,
+      project: project
+    } do
+      # `state` names a lifecycle we have not shipped. Whatever the row says,
+      # the API answers the way it answers today.
+      workflow = insert(:workflow, project: project, state: :live)
+      insert(:trigger, workflow: workflow)
+
+      index = get(conn, ~p"/api/workflows") |> json_response(200)
+
+      for rendered <- index["workflows"] do
+        refute Map.has_key?(rendered, "state")
+        assert Map.has_key?(rendered, "name")
+      end
+
+      show =
+        get(conn, ~p"/api/workflows/#{workflow.id}") |> json_response(200)
+
+      refute Map.has_key?(show["workflow"], "state")
+      assert Map.has_key?(show["workflow"], "name")
+    end
+
     test "lists workflows for projects I have access to", %{
       conn: conn,
       project: project
@@ -1905,11 +1928,20 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     end
   end
 
+  # The shape the API answers with. `state` encodes on the struct because the
+  # collaboration channel needs it, but the API leaves it out, so anything
+  # compared against a response has to leave it out too.
   defp encode_decode(item) do
     item
     |> Jason.encode!()
     |> Jason.decode!()
+    |> drop_workflow_state()
   end
+
+  defp drop_workflow_state(%{"state" => _} = workflow),
+    do: Map.delete(workflow, "state")
+
+  defp drop_workflow_state(other), do: other
 
   defp remove_timestamps([%{"edges" => _el} | _workflows] = list)
        when is_list(list) do

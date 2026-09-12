@@ -291,11 +291,40 @@ defmodule LightningWeb.Hooks do
   # it for good — so there is nothing to re-mount into. Leave the project
   # rather than bouncing through a mount that would only redirect again with a
   # less useful message.
-  defp handle_project_user_event(%ProjectDeletionScheduled{}, socket) do
-    {:halt,
-     socket
-     |> put_flash(:info, "Project deleted.")
-     |> redirect(to: ~p"/projects")}
+  # A sandbox is wound down by archiving it, which is the last step of a
+  # promote. Its parent is where the promoted work now lives and is somewhere
+  # the user still has standing, so send them there rather than all the way out
+  # to the projects list. If they had a workflow open, land on the parent's copy
+  # of it: promote matches workflows by name, so the same name identifies it.
+  #
+  # Only for someone who opted into experimental features. Sandboxes ship
+  # already, so a user without the flag can archive one today and be told
+  # "Project deleted." on the way back to the projects list. That is what they
+  # have, and the new wording talks about a promote they cannot do.
+  defp handle_project_user_event(%ProjectDeletionScheduled{} = event, socket) do
+    destination =
+      if Lightning.Accounts.experimental_features_enabled?(
+           socket.assigns.current_user
+         ) do
+        archived_sandbox_destination(event, socket)
+      end
+
+    case destination do
+      nil ->
+        {:halt,
+         socket
+         |> put_flash(:info, "Project deleted.")
+         |> redirect(to: ~p"/projects")}
+
+      {:editor, path} ->
+        {:halt, redirect(socket, to: path)}
+
+      {:flash, path} ->
+        {:halt,
+         socket
+         |> put_flash(:info, "Sandbox archived.")
+         |> redirect(to: path)}
+    end
   end
 
   # The workflow this socket is holding open is gone. Nobody resolves it again,
@@ -355,6 +384,45 @@ defmodule LightningWeb.Hooks do
   end
 
   defp handle_project_user_event(_message, socket), do: {:cont, socket}
+
+  # Archiving a sandbox is the last step of a promote, and its parent is where
+  # the promoted work now lives, so send the user there rather than all the way
+  # out to the projects list. If they had a workflow open, land on the parent's
+  # copy of it: promote matches workflows by name, so the same name identifies
+  # it.
+  #
+  # Returns nil, meaning "fall back to the projects list", when this is not a
+  # sandbox, when the event is about an ancestor rather than this project, or
+  # when the parent is being wound down too — a cascade leaves nothing above to
+  # land on.
+  defp archived_sandbox_destination(
+         %ProjectDeletionScheduled{project_id: deleted_id},
+         %{assigns: %{project: %{id: project_id, parent_id: parent_id}}} = socket
+       )
+       when deleted_id == project_id and not is_nil(parent_id) do
+    case Lightning.Projects.get_project(parent_id) do
+      %{scheduled_deletion: nil} -> parent_destination(socket, parent_id)
+      _ -> nil
+    end
+  end
+
+  defp archived_sandbox_destination(_event, _socket), do: nil
+
+  # Landing in the editor carries `?archived=1` instead of a flash. The editor is
+  # React and speaks in toasts; a flash there paints a second notification over
+  # the canvas from a different system. The marker reaches everyone the redirect
+  # moves, not just whoever archived, and the editor strips it on read.
+  defp parent_destination(socket, parent_id) do
+    with %{current_workflow_id: workflow_id} when is_binary(workflow_id) <-
+           socket.assigns,
+         %{name: name} <- Lightning.Workflows.get_workflow(workflow_id),
+         %{id: parent_workflow_id} <-
+           Lightning.Workflows.get_workflow_by_name(parent_id, name) do
+      {:editor, ~p"/projects/#{parent_id}/w/#{parent_workflow_id}?archived=1"}
+    else
+      _ -> {:flash, ~p"/projects/#{parent_id}/w"}
+    end
+  end
 
   # `:current_uri` is assigned by `LightningWeb.InitAssigns`, but only from
   # `handle_params` — fall back to the project's workflow index, which re-runs

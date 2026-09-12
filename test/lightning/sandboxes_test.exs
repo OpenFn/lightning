@@ -396,6 +396,10 @@ defmodule Lightning.Projects.SandboxesTest do
       assert s_triggers != []
       assert Enum.all?(s_triggers, &match?(false, &1.enabled))
 
+      # Cloned workflows must start as drafts so their :state stays coherent with
+      # their disabled triggers.
+      assert Enum.all?(s_wfs, &(&1.state == :draft))
+
       # `custom_path` is namespaced per project, so a sandbox carries the
       # parent's name onto its own URL rather than colliding with it. Covered
       # end to end in `Lightning.Workflows.WebhookTriggerPathTest`.
@@ -491,6 +495,166 @@ defmodule Lightning.Projects.SandboxesTest do
                  {"g1", :global, %{"k" => "v"}},
                  {"req1", :http_request, %{"headers" => %{}}}
                ])
+    end
+
+    test "carries an http request's metadata onto the copy" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      original =
+        insert(:dataclip,
+          project: parent,
+          name: "a webhook call",
+          type: :http_request,
+          body: %{"a" => 1},
+          request: %{"headers" => %{"x-thing" => "1"}}
+        )
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{
+          name: "sb-req",
+          dataclip_ids: [original.id]
+        })
+
+      # Without the request, a job reading state.request sees a different input
+      # in the sandbox than the one that ran in production.
+      assert [%{"headers" => %{"x-thing" => "1"}}] =
+               from(d in Dataclip,
+                 where: d.project_id == ^sandbox.id,
+                 select: d.request
+               )
+               |> Repo.all()
+    end
+
+    test "leaves a request off a type that must not carry one" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      # A row like this cannot be written through the app today, but legacy data
+      # can look like it, and the changeset refuses a request on this type.
+      {1, _} =
+        Repo.insert_all(Dataclip, [
+          %{
+            id: Ecto.UUID.generate(),
+            project_id: parent.id,
+            name: "legacy",
+            type: :saved_input,
+            body: %{"a" => 1},
+            request: %{"headers" => %{}},
+            inserted_at: DateTime.utc_now(),
+            updated_at: DateTime.utc_now()
+          }
+        ])
+
+      legacy = Repo.get_by!(Dataclip, name: "legacy")
+
+      assert {:ok, sandbox} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-legacy",
+                 dataclip_ids: [legacy.id]
+               })
+
+      assert [nil] =
+               from(d in Dataclip,
+                 where: d.project_id == ^sandbox.id,
+                 select: d.request
+               )
+               |> Repo.all()
+    end
+
+    test "creates the reviewed body in the sandbox rather than copying a row" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      {:ok, sandbox} =
+        Sandboxes.provision(parent, actor, %{
+          name: "sb-start",
+          starting_dataclip: %{
+            body: ~s({"name":"redacted","id":7}),
+            name: "from run 1234"
+          }
+        })
+
+      assert [
+               {"from run 1234", :saved_input,
+                %{"name" => "redacted", "id" => 7}}
+             ] =
+               from(d in Dataclip,
+                 where: d.project_id == ^sandbox.id,
+                 select: {d.name, d.type, d.body}
+               )
+               |> Repo.all()
+
+      # The parent keeps whatever it had; nothing moved.
+      assert from(d in Dataclip, where: d.project_id == ^parent.id)
+             |> Repo.aggregate(:count) > 0
+    end
+
+    test "leaves no sandbox behind when the reviewed body is not valid JSON" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      assert {:error, :starting_dataclip_invalid_json} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-bad",
+                 starting_dataclip: %{body: "{not json", name: nil}
+               })
+
+      refute Repo.get_by(Project, name: "sb-bad")
+    end
+
+    test "refuses a dataclip name carrying a NUL byte" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      assert {:error, :invalid_starting_dataclip} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-nul-name",
+                 starting_dataclip: %{
+                   body: ~s({"a":1}),
+                   name: <<"x", 0, "y">>
+                 }
+               })
+
+      refute Repo.get_by(Project, name: "sb-nul-name")
+    end
+
+    test "refuses a reviewed body carrying a NUL byte" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      # Valid JSON, an object, under the limit, and Postgres will not take it.
+      # Left to the insert this raises and kills the channel.
+      assert {:error, :starting_dataclip_invalid_json} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-nul",
+                 starting_dataclip: %{body: ~S({"a":"\u0000"}), name: nil}
+               })
+
+      refute Repo.get_by(Project, name: "sb-nul")
+    end
+
+    test "refuses a reviewed body that is not an object" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      assert {:error, :starting_dataclip_not_an_object} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-array",
+                 starting_dataclip: %{body: "[1,2,3]", name: nil}
+               })
+
+      refute Repo.get_by(Project, name: "sb-array")
+    end
+
+    test "refuses a reviewed body over the dataclip size limit" do
+      %{actor: actor, parent: parent} = build_parent_fixture!(:admin)
+
+      Mox.stub(Lightning.MockConfig, :max_dataclip_size_bytes, fn -> 10 end)
+
+      assert {:error, :starting_dataclip_too_large} =
+               Sandboxes.provision(parent, actor, %{
+                 name: "sb-big",
+                 starting_dataclip: %{
+                   body: ~s({"padding":"aaaaaaaaaaaaaaaaaaaa"}),
+                   name: nil
+                 }
+               })
+
+      refute Repo.get_by(Project, name: "sb-big")
     end
 
     test "copies trigger webhook auth methods when present" do
@@ -1018,6 +1182,175 @@ defmodule Lightning.Projects.SandboxesTest do
   # project-level Local or Inherited fields from sandbox to parent. They
   # guard against future changes to MergeProjects or Provisioner that
   # could accidentally start syncing these fields.
+  describe "merge/4 divergence sync points" do
+    setup do
+      actor = insert(:user)
+      parent = insert(:project, project_users: [%{user: actor, role: :owner}])
+
+      alpha = insert(:simple_workflow, project: parent, name: "alpha")
+      beta = insert(:simple_workflow, project: parent, name: "beta")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(alpha, "aaa111aaa111", "app")
+
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(beta, "bbb111bbb111", "app")
+
+      {:ok, sandbox} =
+        Lightning.Projects.provision_sandbox(parent, actor, %{name: "sb"})
+
+      %{
+        actor: actor,
+        parent: parent,
+        parent_alpha: alpha,
+        parent_beta: beta,
+        sandbox: sandbox
+      }
+    end
+
+    test "leaves the source in step with the target it just wrote", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      [job | _] =
+        Lightning.Workflows.get_workflow(sandbox_alpha.id, include: [:jobs]).jobs
+
+      Repo.update!(Ecto.Changeset.change(job, body: "console.log('merged');"))
+
+      assert {:ok, _} = Sandboxes.merge(sandbox, parent, actor)
+
+      assert [] =
+               Lightning.Projects.MergeProjects.diverged_workflows(
+                 sandbox,
+                 parent
+               )
+    end
+
+    test "does not silence a real divergence when only a deletion is merged", %{
+      actor: actor,
+      parent: parent,
+      parent_alpha: parent_alpha,
+      sandbox: sandbox
+    } do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_alpha,
+          "ccc111ccc111",
+          "app"
+        )
+
+      assert "alpha" in Lightning.Projects.MergeProjects.diverged_workflows(
+               sandbox,
+               parent
+             )
+
+      sandbox_beta = Lightning.Workflows.get_workflow_by_name(sandbox.id, "beta")
+
+      parent_beta_id =
+        Lightning.Workflows.get_workflow_by_name(parent.id, "beta").id
+
+      Repo.update!(
+        Ecto.Changeset.change(sandbox_beta,
+          deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      )
+
+      assert {:ok, _} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [],
+                 deleted_target_workflow_ids: [parent_beta_id]
+               })
+
+      assert "alpha" in Lightning.Projects.MergeProjects.diverged_workflows(
+               sandbox,
+               parent
+             )
+    end
+
+    test "brings a workflow the merge created on the target into step", %{
+      actor: actor,
+      parent: parent,
+      sandbox: sandbox
+    } do
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      Repo.update!(Ecto.Changeset.change(sandbox_alpha, name: "gamma"))
+
+      assert {:ok, _} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [sandbox_alpha.id],
+                 record_release: :promote
+               })
+
+      refute Lightning.Projects.MergeProjects.workflow_diverged?(
+               sandbox,
+               parent,
+               "gamma"
+             )
+    end
+
+    test "ignores a selected id that belongs to another project", %{
+      actor: actor,
+      parent: parent,
+      parent_alpha: parent_alpha,
+      sandbox: sandbox
+    } do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_alpha,
+          "ccc111ccc111",
+          "app"
+        )
+
+      elsewhere = insert(:project)
+      foreign_alpha = insert(:simple_workflow, project: elsewhere, name: "alpha")
+
+      assert {:ok, _} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [foreign_alpha.id]
+               })
+
+      assert "alpha" in Lightning.Projects.MergeProjects.diverged_workflows(
+               sandbox,
+               parent
+             )
+    end
+
+    test "does not silence a divergence outside the workflows a promote selected",
+         %{
+           actor: actor,
+           parent: parent,
+           parent_beta: parent_beta,
+           sandbox: sandbox
+         } do
+      {:ok, _} =
+        Lightning.WorkflowVersions.record_version(
+          parent_beta,
+          "ccc111ccc111",
+          "app"
+        )
+
+      sandbox_alpha =
+        Lightning.Workflows.get_workflow_by_name(sandbox.id, "alpha")
+
+      assert {:ok, _} =
+               Sandboxes.merge(sandbox, parent, actor, %{
+                 selected_workflow_ids: [sandbox_alpha.id],
+                 record_release: :promote
+               })
+
+      assert "beta" in Lightning.Projects.MergeProjects.diverged_workflows(
+               sandbox,
+               parent
+             )
+    end
+  end
+
   describe "merge/4 does not propagate Local/Inherited fields" do
     setup do
       actor = insert(:user)
@@ -1996,6 +2329,21 @@ defmodule Lightning.Projects.SandboxesTest do
         Sandboxes.update_sandbox(sb, actor, %{name: "updated"})
 
       assert updated.name == "updated"
+    end
+
+    test "ignores env, whoever asks", %{actor: actor, sandbox: sb} do
+      ensure_member!(sb, actor, :owner)
+      original_env = sb.env
+
+      {:ok, updated} =
+        Sandboxes.update_sandbox(sb, actor, %{name: "updated", env: "main"})
+
+      # The environment decides which of a credential's value sets this project
+      # reads. A sandbox holds a reference to every credential its parent holds,
+      # so an owner who could name it after the parent's would read the parent's
+      # production values.
+      assert updated.name == "updated"
+      assert updated.env == original_env
     end
 
     test "uuid not found returns not_found", %{actor: actor} do

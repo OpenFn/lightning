@@ -138,7 +138,33 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     refute html
            |> Floki.find(
+             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, as_run: run.id}}"}#log']}
+           )
+           |> Enum.any?()
+
+    # Without experimental features, a run of older content is pinned the way
+    # this page has always pinned it: `?v=` and the snapshot's own lock_version.
+    # `?as_run=` belongs to the run views, which that user does not have.
+    html =
+      render_component(&Components.step_list_item/1,
+        step: first_step,
+        run: run,
+        workflow_version: workflow.lock_version + 1,
+        project_id: project_id,
+        can_run_workflow: true,
+        can_edit_data_retention: true
+      )
+      |> Floki.parse_fragment!()
+
+    assert html
+           |> Floki.find(
              ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, v: snapshot.lock_version}}"}#log']}
+           )
+           |> Enum.any?()
+
+    refute html
+           |> Floki.find(
+             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, as_run: run.id}}"}#log']}
            )
            |> Enum.any?()
 
@@ -149,6 +175,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         step: first_step,
         run: run,
         workflow_version: workflow.lock_version + 1,
+        experimental_features: true,
         project_id: project_id,
         can_run_workflow: true,
         can_edit_data_retention: true
@@ -163,7 +190,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert html
            |> Floki.find(
-             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, v: snapshot.lock_version}}"}#log']}
+             ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, as_run: run.id}}"}#log']}
            )
            |> Enum.any?()
 
@@ -324,7 +351,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
       refute html
              |> Floki.find(
-               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, v: snapshot.lock_version}}"}#log']}
+               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, as_run: run.id}}"}#log']}
              )
              |> Enum.any?()
 
@@ -334,6 +361,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
           step: first_step,
           run_id: run.id,
           workflow_version: workflow.lock_version + 1,
+          experimental_features: true,
           project_id: project_id
         )
         |> Floki.parse_fragment!()
@@ -346,7 +374,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
       assert html
              |> Floki.find(
-               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, v: snapshot.lock_version}}"}#log']}
+               ~s{a[href='#{~p"/projects/#{workflow.project}/w/#{workflow}?#{%{run: run.id, panel: "editor", job: job_1.id, as_run: run.id}}"}#log']}
              )
              |> Enum.any?()
     end

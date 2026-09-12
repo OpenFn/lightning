@@ -302,6 +302,119 @@ defmodule Lightning.InvocationTest do
                )
     end
 
+    test "offers a named project dataclip the job has never run against" do
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      named =
+        insert(:dataclip,
+          project: project,
+          name: "known good input",
+          type: :saved_input,
+          body: %{"a" => 1}
+        )
+
+      # A curated input belongs to the project, so it is selectable on a job
+      # that has never consumed it.
+      assert [%{id: id}] =
+               Invocation.list_dataclips_for_job(job, %{},
+                 limit: 5,
+                 named_dataclips: true
+               )
+
+      assert id == named.id
+    end
+
+    test "honours an offset" do
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      for n <- 1..3 do
+        insert(:dataclip,
+          project: project,
+          name: "named #{n}",
+          type: :saved_input,
+          inserted_at: DateTime.utc_now() |> DateTime.add(n, :second)
+        )
+      end
+
+      first =
+        Invocation.list_dataclips_for_job(job, %{},
+          limit: 1,
+          named_dataclips: true
+        )
+
+      second =
+        Invocation.list_dataclips_for_job(job, %{},
+          limit: 1,
+          offset: 1,
+          named_dataclips: true
+        )
+
+      assert [%{id: first_id}] = first
+      assert [%{id: second_id}] = second
+      refute first_id == second_id
+    end
+
+    test "keeps the job's own inputs ahead of the project's named ones" do
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      consumed =
+        insert(:dataclip, project: project, name: nil, type: :http_request)
+
+      insert(:step, input_dataclip: consumed, job: job)
+
+      # Plenty of named inputs, all newer, so a plain date sort would bury the
+      # one the job actually ran against.
+      for n <- 1..3 do
+        insert(:dataclip,
+          project: project,
+          name: "named #{n}",
+          type: :saved_input,
+          inserted_at: DateTime.utc_now() |> DateTime.add(n, :second)
+        )
+      end
+
+      assert [%{id: first_id} | _] =
+               Invocation.list_dataclips_for_job(job, %{},
+                 limit: 2,
+                 named_dataclips: true
+               )
+
+      assert first_id == consumed.id
+    end
+
+    test "leaves an unnamed dataclip out unless the job has consumed it" do
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      insert(:dataclip, project: project, name: nil, type: :saved_input)
+
+      assert [] =
+               Invocation.list_dataclips_for_job(job, %{},
+                 limit: 5,
+                 named_dataclips: true
+               )
+    end
+
+    test "offers only the job's own inputs by default" do
+      # Named project dataclips are a new kind of input to offer, so the picker
+      # lists them only for someone with experimental features. Everyone else
+      # gets the list this has always returned.
+      %{project: project, jobs: [job | _]} = insert(:complex_workflow)
+
+      insert(:dataclip,
+        project: project,
+        name: "known good input",
+        type: :saved_input,
+        body: %{"a" => 1}
+      )
+
+      consumed = insert(:dataclip, project: project, type: :http_request)
+      insert(:step, input_dataclip: consumed, job: job)
+
+      assert [%{id: id}] = Invocation.list_dataclips_for_job(job, %{}, limit: 5)
+
+      assert id == consumed.id
+    end
+
     test "returns dataclips without the body" do
       %{jobs: [job1, job2 | _rest]} = insert(:complex_workflow)
 

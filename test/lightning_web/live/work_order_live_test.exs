@@ -186,6 +186,59 @@ defmodule LightningWeb.WorkOrderLiveTest do
       assert rendered =~ "toggle_details_for_#{work_order.id}"
     end
 
+    test "workflow name links to the version the run executed", %{
+      project: project
+    } do
+      # Without experimental features this is the link the History page has
+      # always sent: the run's own snapshot pinned with `?v=`, which is the
+      # parameter the editor's snapshot picker reads. With them it is
+      # `?as_run=`, resolved through the run itself, which also reaches content
+      # that was never released.
+      {work_order, _dataclip} = setup_work_order(project)
+
+      work_order =
+        Lightning.Repo.preload(work_order, [:workflow, :snapshot, :runs])
+
+      Lightning.Repo.update!(
+        Ecto.Changeset.change(work_order.workflow, lock_version: 99)
+      )
+
+      work_order =
+        put_in(work_order.workflow.lock_version, 99)
+
+      [run] = work_order.runs
+
+      classic =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order,
+          project: project,
+          can_run_workflow: true,
+          can_edit_data_retention: true
+        )
+
+      # Matched a parameter at a time, and anchored on the separator: the link
+      # builds its query string from a map, so the order is whatever the encoder
+      # iterates rather than source order, and a bare `run=` would also match
+      # inside `as_run=`.
+      assert classic =~ ~r/[?;]run=#{run.id}/
+      assert classic =~ ~r/[?;]v=#{work_order.snapshot.lock_version}/
+      refute classic =~ "as_run="
+
+      experimental =
+        render_component(LightningWeb.RunLive.WorkOrderComponent,
+          id: work_order.id,
+          work_order: work_order,
+          project: project,
+          can_run_workflow: true,
+          can_edit_data_retention: true,
+          experimental_features: true
+        )
+
+      assert experimental =~ ~r/[?;]run=#{run.id}/
+      assert experimental =~ ~r/[?;]as_run=#{run.id}/
+    end
+
     test "WorkOrderComponent renders steps when details are toggled", %{
       project: project
     } do

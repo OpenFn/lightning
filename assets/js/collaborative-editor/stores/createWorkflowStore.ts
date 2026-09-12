@@ -144,7 +144,7 @@ import { notifications } from '../lib/notifications';
 import { EdgeSchema } from '../types/edge';
 import { JobSchema } from '../types/job';
 import type { Session } from '../types/session';
-import type { BaseWorkflow, Workflow } from '../types/workflow';
+import type { BaseWorkflow, Sandbox, Workflow } from '../types/workflow';
 import { getIncomingEdgeIndices } from '../utils/workflowGraph';
 
 import { createWithSelector } from './common';
@@ -157,7 +157,8 @@ const EdgeShape = EdgeSchema.shape;
 
 // Helper to update derived state (defined first to avoid hoisting issues)
 function updateDerivedState(draft: Workflow.State) {
-  // Compute enabled from triggers
+  // Whether the workflow is on, computed from its triggers. The lifecycle
+  // column answers a different question and only exists behind the flag.
   draft.enabled =
     draft.triggers.length > 0 ? draft.triggers.some(t => t.enabled) : null;
 
@@ -239,6 +240,35 @@ export interface CreateWorkflowStoreOptions {
    * those that do pass their own.
    */
   getCanEdit?: () => boolean;
+}
+
+export interface EditInSandboxStart {
+  /** A reviewed body, sent by value so what was checked is what lands. */
+  body?: string;
+  /** The name to give that reviewed body in the sandbox. */
+  bodyName?: string | null;
+  /** An existing named dataclip in the parent, copied by id instead. */
+  dataclipId?: string;
+}
+
+export interface EditInSandboxResult {
+  project_id: string;
+  workflow_id: string;
+  dataclip_id: string | null;
+}
+
+function startingDataPayload(start?: EditInSandboxStart) {
+  if (start?.body !== undefined) {
+    return {
+      starting_dataclip: { body: start.body, name: start.bodyName ?? null },
+    };
+  }
+
+  if (start?.dataclipId) {
+    return { dataclip_id: start.dataclipId };
+  }
+
+  return {};
 }
 
 export const createWorkflowStore = (
@@ -1553,6 +1583,178 @@ export const createWorkflowStore = (
     }
   };
 
+  // Lifecycle transitions. The server reads the live document, sets the
+  // lifecycle state, and flips trigger enablement in a single save, then
+  // reconciles the result back into this Y.Doc.
+  const setLifecycleState = async (
+    event: 'go_live' | 'switch_to_draft'
+  ): Promise<{ lock_version?: number; workflow?: BaseWorkflow }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{
+        lock_version: number;
+        workflow: BaseWorkflow;
+      }>(provider.channel, event, {});
+    } catch (error) {
+      logger.error(`Failed to ${event}`, error);
+      throw error;
+    }
+  };
+
+  const goLive = async () => setLifecycleState('go_live');
+  const switchToDraft = async () => setLifecycleState('switch_to_draft');
+
+  // Sandbox editing. From a live workflow on a non-sandbox project, a user can
+  // either branch the current live version into a freshly provisioned sandbox
+  // or join an existing sandbox. The server owns provisioning and cloning; the
+  // client only lists candidates and requests creation, then hard-navigates
+  // into the resulting sandbox project (a new project = a new Y.Doc session).
+  const listSandboxes = async (): Promise<Sandbox[]> => {
+    const { provider } = ensureConnected();
+
+    try {
+      const response = await channelRequest<{ sandboxes: Sandbox[] }>(
+        provider.channel,
+        'list_sandboxes',
+        {}
+      );
+      return response.sandboxes;
+    } catch (error) {
+      logger.error('Failed to list sandboxes', error);
+      throw error;
+    }
+  };
+
+  const editInSandbox = async (
+    name?: string,
+    start?: EditInSandboxStart
+  ): Promise<EditInSandboxResult> => {
+    const { provider } = ensureConnected();
+
+    const payload = {
+      ...(name ? { name } : {}),
+      ...startingDataPayload(start),
+    };
+
+    try {
+      return await channelRequest<EditInSandboxResult>(
+        provider.channel,
+        'edit_in_sandbox',
+        payload
+      );
+    } catch (error) {
+      logger.error('Failed to edit in sandbox', error);
+      throw error;
+    }
+  };
+
+  // Promote a sandbox workflow back into its parent project's live workflow.
+  // The server merges the sandbox changes and keeps the parent live. Promote
+  // MERGES ONLY: it no longer archives the sandbox, so several workflows can be
+  // promoted from the same sandbox before it is retired. Archiving is a separate,
+  // explicit step (archiveSandbox). Navigation into the parent (a different Y.Doc
+  // session) is the caller's job, consistent with editInSandbox.
+  const promote = async (): Promise<{
+    parent_project_id: string;
+    workflow_id: string | null;
+  }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{
+        parent_project_id: string;
+        workflow_id: string | null;
+      }>(provider.channel, 'promote', {});
+    } catch (error) {
+      logger.error('Failed to promote workflow', error);
+      throw error;
+    }
+  };
+
+  const checkPromote = async (): Promise<{
+    diverged: boolean;
+    parent_name: string | null;
+  }> => {
+    const { ydoc, provider } = ensureConnected();
+
+    // Promote saves before merging, so the name it acts on is the working one.
+    const { name } = ydoc.getMap('workflow').toJSON() as { name?: string };
+
+    return await channelRequest<{
+      diverged: boolean;
+      parent_name: string | null;
+    }>(provider.channel, 'request_promote_check', { workflow_name: name });
+  };
+
+  // A restore is a publish, not an edit: the server writes the chosen version's
+  // content into the live workflow and leaves it live. It reconciles every open
+  // editor itself, so there is nothing to reload here.
+  const restoreVersion = async (
+    versionNumber: number
+  ): Promise<{ lock_version: number }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{ lock_version: number }>(
+        provider.channel,
+        'restore_version',
+        { version_number: versionNumber }
+      );
+    } catch (error) {
+      logger.error('Failed to restore version', error);
+      throw error;
+    }
+  };
+
+  // Advisory, so the confirmation can name what the restore will destroy before
+  // anyone agrees to it.
+  const checkRestore = async (
+    versionNumber: number
+  ): Promise<{
+    losing_triggers: {
+      id: string;
+      type: string;
+      custom_path: string | null;
+      enabled: boolean;
+    }[];
+    returning_triggers: {
+      id: string;
+      type: string;
+      custom_path: string | null;
+    }[];
+    version_number: number;
+  }> => {
+    const { provider } = ensureConnected();
+
+    return await channelRequest(provider.channel, 'request_restore_check', {
+      version_number: versionNumber,
+    });
+  };
+
+  // Archive this sandbox after promoting. Archiving turns off the sandbox's
+  // triggers and schedules it for deletion (reversible during a grace window);
+  // it is not an instant hard delete. Kept separate from promote so a user can
+  // merge several workflows first, then explicitly retire the sandbox ("merge,
+  // then optionally delete the branch"). The server replies with the parent
+  // project id; navigation into the parent is the caller's job, like promote.
+  const archiveSandbox = async (): Promise<{
+    parent_project_id: string;
+  }> => {
+    const { provider } = ensureConnected();
+
+    try {
+      return await channelRequest<{ parent_project_id: string }>(
+        provider.channel,
+        'archive_sandbox',
+        {}
+      );
+    } catch (error) {
+      logger.error('Failed to archive sandbox', error);
+      throw error;
+    }
+  };
+
   const saveAndSyncWorkflow = async (
     commitMessage: string
   ): Promise<{
@@ -2053,6 +2255,15 @@ export const createWorkflowStore = (
     selectEdge,
     clearSelection,
     saveWorkflow,
+    goLive,
+    switchToDraft,
+    listSandboxes,
+    editInSandbox,
+    promote,
+    archiveSandbox,
+    checkPromote,
+    restoreVersion,
+    checkRestore,
     saveAndSyncWorkflow,
     resetWorkflow,
     validateWorkflowName,
