@@ -94,6 +94,41 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
       assert Process.alive?(context.persistence_writer)
     end
 
+    test "a reconcile that raises leaves the document standing", context do
+      # The reconcile looks the document up first and only then reads the
+      # workflow, so a stub has to be in place for it to get as far as the
+      # database. It is denied the test's connection, so that read raises, which
+      # is how a database failure reaches us: an exception, not an exit.
+      {:ok, stub} = Agent.start(fn -> :ok end)
+      document_name = "workflow:#{context.workflow_id}"
+      :pg.join(:workflow_collaboration, document_name, stub)
+
+      on_exit(fn ->
+        if Process.alive?(stub) do
+          :pg.leave(:workflow_collaboration, document_name, stub)
+          Agent.stop(stub)
+        end
+      end)
+
+      log =
+        capture_log(fn ->
+          send(
+            context.doc_supervisor,
+            %Lightning.Collaboration.WorkflowReconciler.ReconcileRequested{
+              workflow_id: context.workflow_id
+            }
+          )
+
+          Process.sleep(200)
+        end)
+
+      assert log =~ "Reconcile failed"
+
+      assert Process.alive?(context.doc_supervisor)
+      assert Process.alive?(context.shared_doc)
+      assert Process.alive?(context.persistence_writer)
+    end
+
     test "a reconcile that exits leaves the document standing", context do
       # The reconcile ends in SharedDoc.update_doc/2, a GenServer.call, so a
       # failure inside the document process reaches us as an exit rather than an
