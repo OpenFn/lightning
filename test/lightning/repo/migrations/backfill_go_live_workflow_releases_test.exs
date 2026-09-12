@@ -11,7 +11,7 @@ defmodule Lightning.Repo.Migrations.BackfillGoLiveWorkflowReleasesTest do
   # Migrations under priv/repo/migrations are not on the compile path for
   # `mix test`, so load the module before referencing its SQL helpers.
   Code.require_file(
-    "priv/repo/migrations/20260721184703_backfill_go_live_workflow_releases.exs"
+    "priv/repo/migrations/20260912180200_backfill_go_live_workflow_releases.exs"
   )
 
   alias Lightning.Repo.Migrations.BackfillGoLiveWorkflowReleases, as: Backfill
