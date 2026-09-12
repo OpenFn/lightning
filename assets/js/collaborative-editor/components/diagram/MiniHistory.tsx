@@ -727,8 +727,11 @@ export default function MiniHistory({
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="mt-3 px-3 py-1 text-xs bg-blue-500
-                    text-white rounded hover:bg-blue-600"
+                  className="mt-3 rounded-md bg-primary-600 px-3 py-1 text-xs
+                    font-medium text-white shadow-xs transition-colors
+                    hover:bg-primary-500 focus-visible:outline-2
+                    focus-visible:outline-offset-2
+                    focus-visible:outline-primary-600"
                 >
                   Retry
                 </button>
@@ -865,8 +868,11 @@ export default function MiniHistory({
               <button
                 type="button"
                 onClick={onRetry}
-                className="mt-3 px-3 py-1 text-xs bg-blue-500
-                  text-white rounded hover:bg-blue-600"
+                className="mt-3 rounded-md bg-primary-600 px-3 py-1 text-xs
+                  font-medium text-white shadow-xs transition-colors
+                  hover:bg-primary-500 focus-visible:outline-2
+                  focus-visible:outline-offset-2
+                  focus-visible:outline-primary-600"
               >
                 Retry
               </button>
