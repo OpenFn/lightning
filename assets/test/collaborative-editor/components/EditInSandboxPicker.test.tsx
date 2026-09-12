@@ -909,9 +909,7 @@ describe('EditInSandboxPicker', () => {
         screen.queryByTestId('sandbox-list-loading')
       ).not.toBeInTheDocument();
     });
-    expect(
-      screen.queryByText('Join an active sandbox')
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Continue in a sandbox')).not.toBeInTheDocument();
   });
 
   test('does not fetch when closed', () => {
@@ -1030,9 +1028,7 @@ describe('EditInSandboxPicker', () => {
         screen.queryByTestId('sandbox-list-loading')
       ).not.toBeInTheDocument();
     });
-    expect(
-      screen.queryByText('Join an active sandbox')
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Continue in a sandbox')).not.toBeInTheDocument();
     expect(screen.queryByTestId('sandbox-list')).not.toBeInTheDocument();
   });
 

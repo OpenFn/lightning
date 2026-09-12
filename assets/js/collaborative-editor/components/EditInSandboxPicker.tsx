@@ -1143,7 +1143,7 @@ export function EditInSandboxPicker({
                     </form>
                   </div>
 
-                  {/* Join an existing sandbox. The server returns only sandboxes that
+                  {/* Continue in a sandbox someone already has open. The server returns only sandboxes that
                 hold a clone of this workflow; hidden entirely when there are
                 none. */}
                   {(isLoadingList || sandboxes.length > 0) && (
@@ -1152,7 +1152,7 @@ export function EditInSandboxPicker({
                         className="text-xs font-semibold uppercase tracking-wide
                     text-gray-500"
                       >
-                        Join an active sandbox
+                        Continue in a sandbox
                       </p>
                       <p className="mt-1 text-xs text-gray-500">
                         Pick up where someone left off, in a sandbox already
