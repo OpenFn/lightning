@@ -316,7 +316,10 @@ defmodule LightningWeb.Hooks do
          |> put_flash(:info, "Project deleted.")
          |> redirect(to: ~p"/projects")}
 
-      path ->
+      {:editor, path} ->
+        {:halt, redirect(socket, to: path)}
+
+      {:flash, path} ->
         {:halt,
          socket
          |> put_flash(:info, "Sandbox archived.")
@@ -405,15 +408,19 @@ defmodule LightningWeb.Hooks do
 
   defp archived_sandbox_destination(_event, _socket), do: nil
 
+  # Landing in the editor carries `?archived=1` instead of a flash. The editor is
+  # React and speaks in toasts; a flash there paints a second notification over
+  # the canvas from a different system. The marker reaches everyone the redirect
+  # moves, not just whoever archived, and the editor strips it on read.
   defp parent_destination(socket, parent_id) do
     with %{current_workflow_id: workflow_id} when is_binary(workflow_id) <-
            socket.assigns,
          %{name: name} <- Lightning.Workflows.get_workflow(workflow_id),
          %{id: parent_workflow_id} <-
            Lightning.Workflows.get_workflow_by_name(parent_id, name) do
-      ~p"/projects/#{parent_id}/w/#{parent_workflow_id}"
+      {:editor, ~p"/projects/#{parent_id}/w/#{parent_workflow_id}?archived=1"}
     else
-      _ -> ~p"/projects/#{parent_id}/w"
+      _ -> {:flash, ~p"/projects/#{parent_id}/w"}
     end
   end
 

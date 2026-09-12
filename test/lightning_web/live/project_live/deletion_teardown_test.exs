@@ -98,14 +98,17 @@ defmodule LightningWeb.ProjectLive.DeletionTeardownTest do
 
       {:ok, _project} = Projects.schedule_project_deletion(sandbox)
 
+      # Landing in the editor carries the marker instead of a flash: that page
+      # is React and says this in a toast, so a flash would be a second
+      # notification from another system over the same canvas.
       flash =
         assert_redirect(
           view,
-          ~p"/projects/#{parent.id}/w/#{parent_workflow.id}",
+          ~p"/projects/#{parent.id}/w/#{parent_workflow.id}?archived=1",
           @teardown_timeout
         )
 
-      assert flash["info"] == "Sandbox archived."
+      assert flash == %{}
     end
 
     test "without the flag, an archived sandbox reads as a deleted project", %{
@@ -156,6 +159,7 @@ defmodule LightningWeb.ProjectLive.DeletionTeardownTest do
 
       {:ok, _project} = Projects.schedule_project_deletion(sandbox)
 
+      # The workflow list is a LiveView with no toaster, so it still flashes.
       flash =
         assert_redirect(view, ~p"/projects/#{parent.id}/w", @teardown_timeout)
 
