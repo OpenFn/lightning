@@ -565,6 +565,9 @@ interface MiniHistoryProps {
    * Switches to the version the run executed against. Owned by the caller,
    * which is where the unsaved-changes prompt for that switch is rendered, so
    * this panel stays presentational.
+   *
+   * Without it the mismatch banner is not drawn at all. Its whole content is
+   * an offer, and a button that cannot act on it is worse than no banner.
    */
   onGoToVersion?: () => void;
 }
@@ -825,11 +828,11 @@ export default function MiniHistory({
       )}
 
       {/* Version mismatch banner when collapsed */}
-      {collapsed && versionMismatch && (
+      {collapsed && versionMismatch && onGoToVersion && (
         <VersionMismatchBanner
           runVersion={versionMismatch.runVersion}
           currentVersion={versionMismatch.currentVersion}
-          onGoToVersion={onGoToVersion ?? (() => undefined)}
+          onGoToVersion={onGoToVersion}
           compact={true}
         />
       )}
@@ -898,11 +901,11 @@ export default function MiniHistory({
       </div>
 
       {/* Version mismatch banner at bottom of panel */}
-      {!collapsed && versionMismatch && (
+      {!collapsed && versionMismatch && onGoToVersion && (
         <VersionMismatchBanner
           runVersion={versionMismatch.runVersion}
           currentVersion={versionMismatch.currentVersion}
-          onGoToVersion={onGoToVersion ?? (() => undefined)}
+          onGoToVersion={onGoToVersion}
         />
       )}
     </div>

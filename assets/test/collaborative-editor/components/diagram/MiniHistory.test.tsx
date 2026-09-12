@@ -190,6 +190,24 @@ describe('MiniHistory', () => {
       expect(pill.className).toContain('bg-red-300');
     });
 
+    test('draws no mismatch banner when nothing can act on its offer', () => {
+      // The banner is one sentence and one button, and the button is the
+      // point. Rendered without a handler it is a control that does nothing.
+      render(
+        <MiniHistory
+          collapsed={false}
+          history={mockHistoryList}
+          onCollapseHistory={vi.fn()}
+          selectRunHandler={vi.fn()}
+          versionMismatch={{ runVersion: 2, currentVersion: 5 }}
+        />
+      );
+
+      expect(
+        screen.queryByRole('button', { name: /view as executed/i })
+      ).not.toBeInTheDocument();
+    });
+
     test('draws state as a dot with the flag on', () => {
       experimentalFeatures = true;
 

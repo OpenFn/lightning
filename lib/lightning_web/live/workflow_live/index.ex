@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.Index do
   use LightningWeb, :live_view
 
   alias Lightning.DashboardStats
+  alias Lightning.Extensions.Message
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
@@ -239,6 +240,14 @@ defmodule LightningWeb.WorkflowLive.Index do
           {:noreply,
            socket
            |> put_flash(:info, "Workflow updated")
+           |> push_patch(to: redirect)}
+
+        # The limiter writes the sentence it wants the user to read, and it is
+        # the one refusal here that retrying cannot fix.
+        {:error, %Message{text: text}} when is_binary(text) ->
+          {:noreply,
+           socket
+           |> put_flash(:error, text)
            |> push_patch(to: redirect)}
 
         {:error, _reason} ->

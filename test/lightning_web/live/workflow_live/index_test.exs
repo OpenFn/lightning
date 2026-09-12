@@ -490,17 +490,21 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         :limit_action,
         fn %{type: :activate_workflow}, _context ->
           :counters.add(asked, 1, 1)
-          {:error, :too_many_workflows, %{text: "No more workflows"}}
+
+          {:error, :too_many_workflows,
+           %Lightning.Extensions.Message{text: "No more workflows"}}
         end
       )
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
 
+      # The limiter's own sentence, not a generic "try again": being at the
+      # limit is the one refusal here that retrying cannot fix.
       assert view
              |> render_click("toggle_workflow_state", %{
                "workflow_state" => "true",
                "value_key" => off_workflow.id
-             }) =~ "Failed to update workflow"
+             }) =~ "No more workflows"
 
       assert :counters.get(asked, 1) == 1
 
