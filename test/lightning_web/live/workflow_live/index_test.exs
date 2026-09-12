@@ -8,6 +8,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   import Lightning.WorkflowsFixtures
   import Lightning.WorkflowLive.Helpers
 
+  alias Lightning.DashboardStats
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
   setup :create_workflow
@@ -134,14 +136,16 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # 10 total runs (4 pending)
       # 2 successful runs out of 4 completed
       # 2 work orders failed out of 10
-      assert Regex.match?(~r/Work Orders.*?<div>\s*10.*\(6 pending\)/s, html)
+      assert Regex.match?(
+               ~r|Work Orders\s*</h2>\s*<div[^>]*>\s*10\s*</div>.*?6 pending|s,
+               html
+             )
 
       pending_and_date_filter =
-        Timex.now()
-        |> Timex.shift(months: -1)
+        DashboardStats.window_start()
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]=#{date}"
+          "filters[date_after]=#{date}.*&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[pending]=true&amp;filters[running]=true&amp;filters[wo_date_after]="
         end)
 
       assert html
@@ -151,20 +155,23 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                "6 pending"
              )
 
-      assert Regex.match?(~r/Runs.*?<div>\s*10.*">\s*\(6 pending\)/s, html)
-
       assert Regex.match?(
-               ~r/Successful Runs.*<div>\s*2.*">\s*\(50.0%\)/s,
+               ~r|Runs\s*</h2>\s*<div[^>]*>\s*10\s*</div>.*?6 pending|s,
                html
              )
 
       assert Regex.match?(
-               ~r/Work Orders in failed state.*<div>\s*2.*">\s*\(20.0%\)/s,
+               ~r|Successful Runs\s*</h2>\s*<div[^>]*>\s*2\s*</div>.*?50\.0%|s,
+               html
+             )
+
+      assert Regex.match?(
+               ~r|Work Orders in failed state\s*</h2>\s*<div[^>]*>\s*2\s*</div>.*?20\.0%|s,
                html
              )
 
       failed_filter_pattern =
-        "filters[cancelled]=true.*filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true"
+        "filters[crashed]=true.*filters[exception]=true.*filters[failed]=true.*filters[killed]=true.*filters[lost]=true.*filters[rejected]=true"
 
       assert html
              |> has_history_link_pattern?(
@@ -210,11 +217,10 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       # work order date filter without status filter
       date_filter =
-        Timex.now()
-        |> Timex.shift(months: -1)
+        DashboardStats.window_start()
         |> Date.to_string()
         |> then(fn date ->
-          "filters[date_after]=&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[wo_date_after]=#{date}"
+          "filters[date_after]=#{date}.*&amp;filters[date_before]=&amp;filters[id]=true&amp;filters[log]=true&amp;filters[wo_date_after]="
         end)
 
       assert html
@@ -548,6 +554,20 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       # The click has no effect; the trigger stays disabled.
       refute Lightning.Workflows.get_workflow!(workflow.id, include: [:triggers]).triggers
              |> Enum.any?(& &1.enabled)
+    end
+
+    test "each workflow row links to its health page", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert view
+             |> has_element?(
+               ~s{tr#workflow-#{workflow.id} a#health-#{workflow.id}[href="/projects/#{project.id}/w/#{workflow.id}/health"]},
+               "Health"
+             )
     end
   end
 

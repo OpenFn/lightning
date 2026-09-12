@@ -494,7 +494,7 @@ const RevertReplyButton = ({
         undone ? 'hero-arrow-uturn-right' : 'hero-arrow-uturn-left'
       )}
     />
-    <span>{undone ? 'Restore this reply' : 'Revert this reply'}</span>
+    <span>{undone ? 'Restore changes' : 'Revert changes'}</span>
   </button>
 );
 
@@ -763,7 +763,7 @@ interface MessageListProps {
   onUndoChanges?: (
     messageId: string,
     yaml: string,
-    options?: { fromModel?: boolean }
+    options?: { restoring?: boolean }
   ) => void;
   /** Reply whose changes are currently undone, so its control offers Redo */
   undoneMessageId?: string | null;
@@ -868,8 +868,8 @@ export function MessageList({
   const lastMessage = messages.at(-1);
   const viewerJustSent = Boolean(
     lastMessage?.role === 'user' &&
-    currentUserId &&
-    lastMessage.user?.id === currentUserId
+      currentUserId &&
+      lastMessage.user?.id === currentUserId
   );
 
   useEffect(() => {
@@ -1013,12 +1013,12 @@ export function MessageList({
       ? isGlobalAssistantActive
       : Boolean(
           message.from_global &&
-          // Only a successful reply was auto-applied. An errored or
-          // cancelled one can still carry code, and rendering its blocks
-          // would present changes that never reached the canvas as a
-          // record of what happened.
-          message.status === 'success' &&
-          (message.code || snapshotsByMessageId[message.id]?.length)
+            // Only a successful reply was auto-applied. An errored or
+            // cancelled one can still carry code, and rendering its blocks
+            // would present changes that never reached the canvas as a
+            // record of what happened.
+            message.status === 'success' &&
+            (message.code || snapshotsByMessageId[message.id]?.length)
         );
 
   /**
@@ -1029,18 +1029,18 @@ export function MessageList({
   const canUndoChanges = (message: Message): boolean =>
     Boolean(
       onUndoChanges &&
-      !isApplyInFlight &&
-      !isWriteDisabled &&
-      !isStreaming(message) &&
-      displayMessages.at(-1)?.id === message.id &&
-      message.from_global &&
-      // Only a successful reply was auto-applied; an error or cancelled one
-      // can still carry code, and undoing it would offer to "redo" changes
-      // that never landed.
-      message.status === 'success' &&
-      message.code &&
-      !failedApplyMessageIds?.has(message.id) &&
-      beforeYamlByMessageId.get(message.id)
+        !isApplyInFlight &&
+        !isWriteDisabled &&
+        !isStreaming(message) &&
+        displayMessages.at(-1)?.id === message.id &&
+        message.from_global &&
+        // Only a successful reply was auto-applied; an error or cancelled one
+        // can still carry code, and undoing it would offer to "redo" changes
+        // that never landed.
+        message.status === 'success' &&
+        message.code &&
+        !failedApplyMessageIds?.has(message.id) &&
+        beforeYamlByMessageId.get(message.id)
     );
 
   const snapshotsFor = (message: Message): WorkflowSnapshot[] =>
@@ -1160,6 +1160,21 @@ export function MessageList({
         // no reply claimed it.
         const promptCarriesNotice =
           message.status === 'error' && !failedPairs.claimed.has(message.id);
+
+        // Last message only: a retry appends a reply and leaves this one
+        // flagged for good, so anything looser leaves a live button behind.
+        const editedPrompt =
+          message.code_change_failed &&
+          displayMessages.at(-1)?.id === message.id
+            ? displayMessages.slice(0, index).findLast(m => m.role === 'user')
+            : undefined;
+
+        const retryEditedPrompt =
+          onRetryMessage && editedPrompt
+            ? () => {
+                onRetryMessage(editedPrompt.id);
+              }
+            : undefined;
 
         const showMessageAddButtons =
           !isStreaming(message) &&
@@ -1378,6 +1393,17 @@ export function MessageList({
                       />
                     )}
 
+                    {/* The reply itself succeeded; the edit inside it did not,
+                        so there is nothing to apply and nothing saying why. */}
+                    {!isStreaming(message) &&
+                      message.status !== 'error' &&
+                      message.code_change_failed && (
+                        <FailureNotice
+                          reason="I tried to update the code but couldn't apply the change."
+                          onRetry={retryEditedPrompt}
+                        />
+                      )}
+
                     {!isStreaming(message) &&
                       message.status === 'processing' && (
                         <div className="flex items-center gap-2 text-gray-600">
@@ -1444,10 +1470,7 @@ export function MessageList({
                                 redoing
                                   ? message.code!
                                   : beforeYamlByMessageId.get(message.id)!,
-                                // Redo restores the reply's own YAML, which
-                                // the model wrote; undo restores our own
-                                // serializer's.
-                                { fromModel: redoing }
+                                { restoring: redoing }
                               );
                             }}
                           />

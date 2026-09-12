@@ -56,6 +56,12 @@ type AttachmentKey = (typeof ATTACHMENTS)[number]['key'];
 const MIN_TEXTAREA_HEIGHT = 52;
 const MAX_TEXTAREA_HEIGHT = 200;
 
+// Mirrors ChatMessage.max_content_length/0.
+const MAX_MESSAGE_LENGTH = 10_000;
+
+// An always-on counter reads as a warning about a limit almost nobody meets.
+const COUNT_FROM = MAX_MESSAGE_LENGTH - 500;
+
 export function ChatInput({
   onSendMessage,
   isLoading = false,
@@ -68,6 +74,8 @@ export function ChatInput({
   selectedRunId,
 }: ChatInputProps) {
   const [input, setInput] = useState('');
+  const tooLong = input.length > MAX_MESSAGE_LENGTH;
+  const showCount = input.length >= COUNT_FROM;
 
   const [attachLogs, setAttachLogs] = useState(() => {
     if (!storageKey) {
@@ -196,7 +204,7 @@ export function ChatInput({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || isDisabled) return;
+    if (!input.trim() || isLoading || isDisabled || tooLong) return;
 
     const options: MessageOptions = {};
     // The run rides along so what we promise to attach and what the backend
@@ -302,19 +310,36 @@ export function ChatInput({
 
                 <div className="flex items-center justify-between gap-3 px-3 pb-2">
                   <div className="min-w-0">
-                    <AIDisclaimerFooter />
+                    <div className="flex items-center gap-3 min-w-0">
+                      <AIDisclaimerFooter />
+                      {showCount && (
+                        <span
+                          data-testid="chat-input-length"
+                          className={cn(
+                            'text-xs whitespace-nowrap',
+                            tooLong ? 'text-red-600' : 'text-gray-400'
+                          )}
+                        >
+                          {input.length.toLocaleString()} /{' '}
+                          {MAX_MESSAGE_LENGTH.toLocaleString()}
+                          {tooLong ? ' — too long to send' : null}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <button
                     type="submit"
                     data-testid="send-message-button"
-                    disabled={!input.trim() || isLoading || isDisabled}
+                    disabled={
+                      !input.trim() || isLoading || isDisabled || tooLong
+                    }
                     className={cn(
                       'inline-flex items-center justify-center',
                       'h-7 w-7 rounded-lg',
                       'transition-all duration-200',
                       'focus:outline-none focus:ring-2 focus:ring-offset-2',
-                      input.trim() && !isLoading && !isDisabled
+                      input.trim() && !isLoading && !isDisabled && !tooLong
                         ? 'bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     )}

@@ -325,6 +325,177 @@ and this project adheres to
   are reachable from a response rather than from a request into Lightning, and
   the exposure is the outbound calls Lightning makes.
 
+## [2.19.0-pre] - 2026-09-10
+
+### Changed
+
+- "A failed work order" now means the same thing on the workflows list, its
+  history links, the health page and the digest email: cancelled no longer
+  counts, and rejected now does. Each 30-day window is measured from a work
+  order's last activity rather than when it was created, so one retried today
+  counts as recent everywhere.
+- The AI assistant's reply footer now reads "Revert changes" and "Restore
+  changes" rather than "Revert this reply", and its confirmation matches.
+  [#5161](https://github.com/OpenFn/lightning/pull/5161)
+- The AI assistant is the global assistant for everyone. It was behind the
+  experimental features setting and an opt-in tickbox on the chat input, and
+  both are gone: every message goes to it, and the badge naming which assistant
+  answered goes with them. Existing workflow conversations still open and read
+  as they always did, and replying in one moves it to the global assistant from
+  that message on. [#5042](https://github.com/OpenFn/lightning/issues/5042)
+- The AI assistant's attachment tickboxes are now about the run you are looking
+  at, and they appear wherever you are. "Send run logs" and "Send run data" sit
+  above the message box on the canvas and in the run history as well as in the
+  step editor, and appear once a run is loaded rather than sitting greyed out.
+  "Send run data" now covers every step in the run rather than the one that
+  happened to be highlighted, and still sends the shape of the data with the
+  values removed. The "Press Enter to send" hint below the box is gone, since
+  the notice and the send button now share that row.
+  [#5037](https://github.com/OpenFn/lightning/issues/5037)
+- Runs on Erlang/OTP 28 and Elixir 1.18.4. OTP 27 only finishes normalising the
+  first character of a string, which breaks names in many languages. Lightning
+  does not normalise anything today, but #4577 adds it on every name, so the
+  runtime moves first.
+
+### Removed
+
+- The AI assistant's "Send code" tickbox. The assistant reads your workflow to
+  answer anything about it, so the box did nothing except in one case, where it
+  looked like a choice and was not one.
+  [#5037](https://github.com/OpenFn/lightning/issues/5037)
+
+### Added
+
+- The assistant's change summary now reports a webhook trigger's settings. A
+  custom path being set, changed or cleared shows as its own row, as do the
+  reply timing and the response codes, all of which used to land with nothing
+  said about them. [#5149](https://github.com/OpenFn/lightning/issues/5149)
+- The AI assistant now shows what changed as a global reply edits your workflow.
+  Each change renders under the status that made it, while the reply is still
+  streaming, as a per-step code diff with syntax highlighting, old and new line
+  numbers and a link to open that step in the editor, alongside a compact
+  summary of structural changes like added or removed paths, trigger changes and
+  step renames. Each diff block copies the step's code, and the latest reply can
+  be undone, restoring the workflow to how it stood before that reply and
+  offering to redo it. Undo confirms first when the workflow has been edited
+  since, because it replaces the whole workflow.
+  [#5036](https://github.com/OpenFn/lightning/issues/5036)
+- Webhook triggers can be given a custom URL path, so an endpoint's URL is known
+  before it is deployed. A trigger with a path of `facility-001` answers at
+  `/i/<project-id>/facility-001`, where `<project-id>` is the project's UUID.
+  Set it in the trigger panel, in `project.yaml`, or through the workflows API.
+  Existing `/i/<trigger-id>` URLs are unchanged.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
+- A workflow health page at `/projects/:project_id/w/:workflow_id/health`,
+  reached from the "Health" link on each row of the workflows list. It covers
+  the last 24 hours, 7 days or 30 days: a donut of work order outcomes, a
+  breakdown of the failing ones, and a triage table grouping failures by error
+  signature, heaviest first. Each triage row links to history filtered to its
+  own work orders, where "retry all" can retry the group. The page re-reads its
+  numbers every 30 seconds while the tab is open.
+- Declarative, idempotent seeding of a dev/test instance from a YAML/JSON
+  scenario file (users, API tokens, credentials, projects, workflows) via
+  `mix lightning.kickstart` and `bin/e2e --scenario`, for local work and
+  external test harnesses. Workflows in a scenario are written in the existing
+  workflow-spec format — the same YAML the collaborative editor imports and
+  exports, validated against the same JSON Schema.
+  [#4974](https://github.com/OpenFn/lightning/issues/4974)
+
+### Changed
+
+- The webhook trigger panel now lists every URL a trigger answers on. The
+  default URL is always there and the custom one sits next to it, editable in
+  place, with add, edit, delete and copy on the row itself. A path already used
+  by another workflow in the project is reported while you type, not after you
+  save. A path the server would reject shows what is wrong and is left as you
+  typed it. [#4952](https://github.com/OpenFn/lightning/issues/4952)
+- **Breaking:** `APOLLO_TIMEOUT` is renamed `APOLLO_IDLE_TIMEOUT_MS` and joined
+  by `APOLLO_CONNECT_TIMEOUT_MS` and `APOLLO_REQUEST_TIMEOUT_MS`. The old name
+  is no longer read and logs a warning at boot if it is still set. On the wire
+  it only ever measured silence, so put its value on `APOLLO_IDLE_TIMEOUT_MS` if
+  you were setting it. All three have defaults, so a deployment need not set any
+  of them. The idle default is 30s, which assumes Apollo v3.1.1 or later and its
+  15s keepalive; on an older Apollo a working stream can go quiet for longer
+  than that, so raise it or upgrade Apollo.
+  [#4882](https://github.com/OpenFn/lightning/issues/4882)
+
+### Fixed
+
+- The assistant says when it tried to change your code and could not. Apollo
+  reports how many of its edits landed, and none landing used to arrive as a
+  reply with nothing to apply and no explanation, which read as the assistant
+  declining to help. There is now a line saying so, with a way to try again.
+  Needs Apollo v3.1.2 or later, which reports that on the direct single-step
+  route as well as through the planner.
+  [#5133](https://github.com/OpenFn/lightning/issues/5133)
+- Starting an AI chat with a message over the 10,000 character limit no longer
+  kills the connection. The reply carried a raw changeset, which cannot be
+  encoded, so the socket died before answering and the assistant appeared to do
+  nothing. The limit is also shown in the box now, once you are near it.
+  [#4883](https://github.com/OpenFn/lightning/issues/4883)
+- AI chat messages no longer sit in "processing" forever when the job running
+  them is interrupted. Oban's job-stop event now has a handler, the shutdown
+  grace period is longer than the longest an AI job can run, and a cron sweep
+  clears anything still stranded. A deploy can still sever a running answer,
+  because the platform's own kill deadline is shorter than the grace period; the
+  sweep is what recovers the message when that happens.
+  [#4260](https://github.com/OpenFn/lightning/issues/4260)
+  [#5124](https://github.com/OpenFn/lightning/issues/5124)
+- Why an AI chat failed is now recorded on the message and shown on the reply it
+  belongs to, rather than as one generic banner: a hung Apollo, a lost
+  connection and a rate limit each read differently. A failed reply keeps its
+  text as an answer, with the reason and a Try again beneath it, and the
+  question you asked is no longer marked "Failed to send" when it was sent and
+  half answered. [#5125](https://github.com/OpenFn/lightning/issues/5125)
+- An AI answer that is cut off partway through is kept rather than discarded.
+  The text and any workflow YAML the user already watched appear are saved,
+  along with the status updates, in the order they were shown.
+  [#5126](https://github.com/OpenFn/lightning/issues/5126)
+  [#5127](https://github.com/OpenFn/lightning/issues/5127)
+- A failed AI stream now says which way it failed. A hung Apollo, a severed
+  connection and a genuinely short answer all read as "Stream ended without
+  complete response"; they now read as three different things.
+  [#4882](https://github.com/OpenFn/lightning/issues/4882)
+- The global assistant no longer offers to paste a reply's code block into
+  whichever job you have open. It applies its own changes and shows them as
+  diffs, so those blocks are data it quoted back or work it has already done.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- AI assistant code blocks share the surface the workflow diffs use, so a reply
+  and the diff below it no longer read as two different products.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- A global assistant reply whose changes could not be applied now says so on the
+  reply itself, beside the diffs that did not land, and offers to try again. It
+  used to fall back to a raw YAML panel.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- A failed apply is now remembered, so reloading no longer turns it back into a
+  success. The reply kept its diff blocks and offered to undo changes that had
+  never landed. A retry that works clears the record.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- Editing an open step with the global assistant no longer puts a diff in the
+  code editor. The change is already applied, so the diff read as a proposal to
+  accept or reject when the only control was a close button, and reloading
+  revealed the change had been written all along.
+  [#5118](https://github.com/OpenFn/lightning/issues/5118)
+- Changing a webhook trigger's custom path now marks the workflow as unsaved, so
+  the Save button offers to save it. The unsaved-changes check did not look at
+  the field, so the edit could be lost by navigating away.
+  [#4952](https://github.com/OpenFn/lightning/issues/4952)
+- `eligible_for_claim/0` now breaks ties with `id` after `priority` and
+  `inserted_at`, so two runs inserted in the same microsecond no longer get
+  claimed in a nondeterministic order.
+- Dataclip retention wiping now runs in batches instead of one unbatched update,
+  so projects with a large backlog of eligible dataclips no longer time out the
+  retention job.
+
+### Security
+
+- Bumped `mint` to 1.10.0, clearing
+  [EEF-CVE-2026-82728](https://osv.dev/vulnerability/EEF-CVE-2026-82728) and
+  [EEF-CVE-2026-82729](https://osv.dev/vulnerability/EEF-CVE-2026-82729), both
+  denial of service in Mint's HTTP/1 parser. Mint is our HTTP client, so they
+  are reachable from a response rather than from a request into Lightning, and
+  the exposure is the outbound calls Lightning makes.
+
 ## [2.18.2] - 2026-09-02
 
 ## [2.18.2-pre] - 2026-08-28
@@ -353,6 +524,20 @@ and this project adheres to
 
 ### Changed
 
+> If one project holds two names that become the same key once spaces turn into
+> hyphens, like `My Flow` and `My-Flow`, sync and export now fail and name both,
+> where they used to silently drop one. Rename one of them before upgrading.
+
+- Job and workflow names may now hold any character except a control one. Names
+  were restricted to letters, digits, spaces, underscores and hyphens, so a team
+  working in French, Spanish, Arabic or Japanese could not name a step in their
+  own language. Any script, punctuation, symbol or emoji is accepted now, and
+  names are composed to NFC on save so two spellings of the same accented word
+  are one name. Control characters are refused rather than stripped, because a
+  null byte in a name cannot be written to the workflow snapshot and used to
+  fail the save with a 500. The same rule now covers credential names, workflow
+  template names and edge condition labels.
+  [#4577](https://github.com/OpenFn/lightning/issues/4577)
 - Remove the unreachable, non-streaming code in the AI assistant
   [#5046](https://github.com/OpenFn/lightning/issues/5046)
 - The global chat now starts streaming Apollo's response earlier, so users wait
@@ -415,6 +600,12 @@ and this project adheres to
 
 ### Fixed
 
+- Merging a sandbox no longer deletes the parent project's collections, ever.
+  Collections that exist only in the sandbox are created empty in the target and
+  are individually selectable in the merge screen, like workflows and
+  credentials; collections that exist only in the target are always kept.
+  Deleting a collection remains available in the project's settings.
+  [#5054](https://github.com/OpenFn/lightning/pull/5054)
 - The global AI chat now honours its "Send logs" and "Send scrubbed I/O"
   checkboxes. Run logs and scrubbed step input and output are forwarded to
   Apollo as attachments, with each log line carrying its job, step and level;
@@ -513,6 +704,42 @@ and this project adheres to
 - Fixed an issue where project emails (failure alerts, digests, retention
   notices, export links) could reach recipients who could no longer open the
   project themselves.
+- A workflow name longer than the 255 characters the column holds now comes back
+  as an ordinary validation error instead of a 500, including when the `_del`
+  suffix added on delete is what pushes it over.
+- The provisioning API validated workflow names differently from every other
+  write path, so a control character in a workflow name reached the database and
+  returned a 500 on `POST /api/provision`.
+  [#4893](https://github.com/OpenFn/lightning/issues/4893)
+- A workflow name is no longer rendered as HTML in the dashboard and history
+  tooltips, where markup in a name became live elements for anyone viewing the
+  project. [#4577](https://github.com/OpenFn/lightning/issues/4577)
+- The workflow YAML download in the editor no longer produces a file called
+  `.yaml` when the workflow's name has no ASCII in it.
+  [#4577](https://github.com/OpenFn/lightning/issues/4577)
+- Project YAML export now quotes and escapes names properly. A name containing
+  an apostrophe, such as a credential called `MailChimp June'24`, produced a
+  spec no YAML parser could read; a name of `null` or `42` came back as nil or a
+  number, and a job key of `007` came back as `7`; and a name containing a
+  newline or a control character corrupted the spec around it. What gets quoted
+  is measured against the two parsers we ship against rather than taken from the
+  YAML spec, so a name of `off` or `2026-08-27` is still written plainly. Names
+  that already exported correctly are byte for byte unchanged, so a synced
+  project repo sees no diff.
+  [#2808](https://github.com/OpenFn/lightning/issues/2808)
+  [#4577](https://github.com/OpenFn/lightning/issues/4577)
+- Job bodies, project descriptions and edge condition expressions are now
+  written as block scalars safely. A body whose first line started with a space
+  lost that indentation on the way back, a body containing a carriage return
+  lost it silently or produced a spec that would not parse, and two or more
+  trailing blank lines collapsed to one.
+  [#2966](https://github.com/OpenFn/lightning/issues/2966)
+- Exporting a project where two workflows, credentials, collections or channels
+  share a spec key (`a b` and `a-b` both become `a-b`) now fails with a message
+  naming both, instead of silently dropping one of the pair. A GitHub sync
+  checks the export before firing the Action, so that message reaches the user
+  in Lightning rather than dying in an Actions log.
+  [#4577](https://github.com/OpenFn/lightning/issues/4577)
 
 ## [2.18.1] - 2026-08-28
 
@@ -888,24 +1115,6 @@ Migrations in this release, all in `priv/repo/migrations/`:
 
 ### Added
 
-- Edit in sandbox: from a live (read-only) workflow, the editor header gains an
-  "Edit in sandbox" action that opens a picker to either branch a new sandbox
-  from the current live version or join an active one, landing you in the
-  sandbox editor with the workflow's trigger live and its own endpoint. The
-  parent project stays untouched until changes are promoted back.
-  [#4901](https://github.com/OpenFn/lightning/pull/4901)
-- Promote from the editor: inside a sandbox, promote the workflow you are
-  editing back into the parent project's live workflow, then choose whether to
-  archive the sandbox or keep it to promote more related workflows first. A
-  non-live workflow can have a trigger turned on for testing behind a warning,
-  and live (read-only) workflows no longer show run or edit actions that cannot
-  be used there. [#5005](https://github.com/OpenFn/lightning/pull/5005)
-- Record a version each time a workflow goes live or is promoted. Every publish
-  now writes a release row carrying a sequential version number, the snapshot it
-  published, who published it and, for a promote, the sandbox it came from.
-  Workflows that are already live are backfilled with a v1. Nothing reads these
-  yet, so the editor's version list is unchanged for now.
-  [#5122](https://github.com/OpenFn/lightning/pull/5122)
 - The job code AI assistant now shows the progress statuses (e.g. "Writing
   code...") that Apollo streams _after_ the text answer while it generates code,
   displayed below the answer in the same style as the initial "Thinking..."

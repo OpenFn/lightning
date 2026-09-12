@@ -623,6 +623,7 @@ export function AIAssistantPanelWrapper({
     undoneMessageId,
     requestUndoChanges,
     isConfirmOpen,
+    isRestoring,
     confirmUndoChanges,
     cancelUndoChanges,
   } = useAIWorkflowUndo({
@@ -880,13 +881,22 @@ export function AIAssistantPanelWrapper({
         isOpen={isConfirmOpen}
         onClose={cancelUndoChanges}
         onConfirm={confirmUndoChanges}
-        title="Undo replaces the whole workflow"
-        // States what undo does rather than claiming edits exist. The check
-        // behind this dialog also fires when it simply cannot tell, after a
-        // reload has lost the record of how the canvas was left, so copy that
-        // asserts the workflow has changed is wrong about half the time.
-        description="It goes back to how it was before this reply, so anything changed since will be lost."
-        confirmLabel="Undo anyway"
+        title={
+          isRestoring
+            ? 'Restoring replaces the whole workflow'
+            : 'Reverting replaces the whole workflow'
+        }
+        // States what the action does rather than claiming edits exist. The
+        // check behind this dialog also fires when it simply cannot tell,
+        // after a reload has lost the record of how the canvas was left, so
+        // copy that asserts the workflow has changed is wrong about half the
+        // time.
+        description={
+          isRestoring
+            ? "It goes back to how it was with these changes applied, so anything you've edited since will be lost."
+            : "It goes back to how it was before these changes, so anything you've edited since will be lost."
+        }
+        confirmLabel={isRestoring ? 'Restore anyway' : 'Revert anyway'}
         variant="danger"
       />
     </div>

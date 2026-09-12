@@ -10,6 +10,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 
 import {
   assignStepDiffsToStatuses,
+  clearWorkflowDiffCaches,
   deriveSnapshotChanges,
   deriveWorkflowChanges,
 } from '../../../js/collaborative-editor/utils/workflowDiff';
@@ -28,6 +29,9 @@ interface YamlTrigger {
   type?: 'webhook' | 'cron';
   enabled?: boolean;
   cron_expression?: string;
+  custom_path?: string | null;
+  webhook_reply?: 'before_start' | 'after_completion';
+  webhook_response_config?: { success_code?: number; error_code?: number };
 }
 
 interface YamlEdge {
@@ -75,6 +79,24 @@ const buildYaml = ({
       `    type: ${type}`,
       `    enabled: ${trigger.enabled ?? true}`
     );
+    if (trigger.custom_path !== undefined) {
+      // Quoted, so an empty path stays an empty string. Bare `custom_path:`
+      // is read back as null, which is a different case entirely.
+      const path =
+        trigger.custom_path === null ? 'null' : `'${trigger.custom_path}'`;
+      lines.push(`    custom_path: ${path}`);
+    }
+    if (trigger.webhook_reply) {
+      lines.push(`    webhook_reply: ${trigger.webhook_reply}`);
+    }
+    if (trigger.webhook_response_config) {
+      lines.push('    webhook_response_config:');
+      for (const [key, value] of Object.entries(
+        trigger.webhook_response_config
+      )) {
+        lines.push(`      ${key}: ${value}`);
+      }
+    }
     if (trigger.cron_expression) {
       lines.push(`    cron_expression: '${trigger.cron_expression}'`);
     }
@@ -122,6 +144,9 @@ const baseWorkflow = (body: string) =>
 
 afterEach(() => {
   vi.restoreAllMocks();
+  // The parse and pair caches are module state, so a test that reuses a
+  // document another test already diffed would otherwise read its answer.
+  clearWorkflowDiffCaches();
 });
 
 describe('deriveWorkflowChanges', () => {
@@ -404,6 +429,208 @@ describe('deriveWorkflowChanges', () => {
       );
       expect(triggerRow?.change).toBe('modify');
       expect(triggerRow?.detail).toContain('type: webhook → cron');
+    });
+
+    const webhookWorkflow = (trigger: YamlTrigger) =>
+      buildYaml({
+        jobs: [transformJob('fn(state => state);')],
+        triggers: [trigger],
+        edges: [webhookToTransformEdge],
+      });
+
+    const triggerDetail = (before: string, after: string) =>
+      deriveWorkflowChanges(before, after)!.structure.find(
+        row => row.kind === 'trigger'
+      )?.detail;
+
+    it('reports a custom path that was set, changed and cleared', () => {
+      const none = webhookWorkflow(webhookTrigger);
+      const intake = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const staff = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'staff-intake',
+      });
+      const cleared = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: null,
+      });
+
+      expect(triggerDetail(none, intake)).toBe('path: intake-form');
+      expect(triggerDetail(intake, staff)).toBe(
+        'path: intake-form → staff-intake'
+      );
+      expect(triggerDetail(intake, cleared)).toBe('path removed');
+    });
+
+    it('says nothing when the answer never mentions the path', () => {
+      const intake = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const silent = webhookWorkflow({ ...webhookTrigger, enabled: false });
+
+      expect(triggerDetail(intake, silent)).toBe('disabled');
+    });
+
+    it('treats a blank path the way the server does, as no path', () => {
+      const intake = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const blank = webhookWorkflow({ ...webhookTrigger, custom_path: '' });
+      const blankToNamed = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'staff-intake',
+      });
+
+      expect(triggerDetail(intake, blank)).toBe('path removed');
+      expect(triggerDetail(blank, blankToNamed)).toBe('path: staff-intake');
+    });
+
+    it('does not call a whitespace path a removal, since the panel rejects it', () => {
+      const intake = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const spaces = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: '   ',
+      });
+
+      // The answer set a path the panel will flag as invalid. Saying it was
+      // removed would send the reader looking for a change that never happened.
+      expect(triggerDetail(intake, spaces)).toBe(
+        "path: intake-form \u2192 '   '"
+      );
+    });
+
+    it('reports the path on a webhook trigger that has just appeared', () => {
+      const none = buildYaml({
+        jobs: [transformJob('fn(state => state);')],
+        triggers: [],
+        edges: [],
+      });
+      const named = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+
+      const row = deriveWorkflowChanges(none, named)!.structure.find(
+        entry => entry.kind === 'trigger'
+      );
+      expect(row?.change).toBe('add');
+      expect(row?.detail).toBe('path: intake-form');
+    });
+
+    it('names the path of a webhook trigger that was removed', () => {
+      const named = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const none = buildYaml({
+        jobs: [transformJob('fn(state => state);')],
+        triggers: [],
+        edges: [],
+      });
+
+      const row = deriveWorkflowChanges(named, none)!.structure.find(
+        entry => entry.kind === 'trigger'
+      );
+      expect(row?.change).toBe('remove');
+      expect(row?.detail).toBe('path: intake-form');
+    });
+
+    it("states a new trigger's settings rather than implying a previous value", () => {
+      const none = buildYaml({
+        jobs: [transformJob('fn(state => state);')],
+        triggers: [],
+        edges: [],
+      });
+      const configured = webhookWorkflow({
+        ...webhookTrigger,
+        webhook_reply: 'after_completion',
+        webhook_response_config: { success_code: 202 },
+      });
+
+      const row = deriveWorkflowChanges(none, configured)!.structure.find(
+        entry => entry.kind === 'trigger'
+      );
+      expect(row?.detail).toBe('reply: On Complete; success code: 202');
+    });
+
+    it('reports the settings when a cron trigger becomes a webhook', () => {
+      const cron = buildYaml({
+        jobs: [transformJob('fn(state => state);')],
+        triggers: [
+          { id: 'trigger-1', type: 'cron', cron_expression: '0 * * * *' },
+        ],
+        edges: [
+          {
+            ...webhookToTransformEdge,
+            key: 'cron->transform-data',
+            source_trigger: 'cron',
+          },
+        ],
+      });
+      const named = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+
+      const detail = triggerDetail(cron, named);
+      expect(detail).toContain('type: cron → webhook');
+      expect(detail).toContain('path: intake-form');
+    });
+
+    it('says nothing about a path that did not move', () => {
+      const intake = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+      });
+      const disabled = webhookWorkflow({
+        ...webhookTrigger,
+        custom_path: 'intake-form',
+        enabled: false,
+      });
+
+      expect(triggerDetail(intake, disabled)).toBe('disabled');
+    });
+
+    it('reports a reply change in the words the trigger panel uses', () => {
+      const immediately = webhookWorkflow(webhookTrigger);
+      const onComplete = webhookWorkflow({
+        ...webhookTrigger,
+        webhook_reply: 'after_completion',
+      });
+
+      expect(triggerDetail(immediately, onComplete)).toBe(
+        'reply: Immediately → On Complete'
+      );
+    });
+
+    it('treats an absent reply as the default rather than a change', () => {
+      const absent = webhookWorkflow(webhookTrigger);
+      const explicit = webhookWorkflow({
+        ...webhookTrigger,
+        webhook_reply: 'before_start',
+      });
+
+      expect(deriveWorkflowChanges(absent, explicit)).toBeNull();
+    });
+
+    it('reports response codes, naming an absent one as the default', () => {
+      const none = webhookWorkflow(webhookTrigger);
+      const configured = webhookWorkflow({
+        ...webhookTrigger,
+        webhook_response_config: { success_code: 202, error_code: 500 },
+      });
+
+      expect(triggerDetail(none, configured)).toBe(
+        'success code: default → 202; error code: default → 500'
+      );
     });
   });
 
@@ -740,6 +967,213 @@ describe('deriveSnapshotChanges', () => {
     // whole point: a cumulative diff would report 1 then 2.
     expect(result[0]!.changes.steps[0]!.addedLines).toBe(1);
     expect(result[1]!.changes.steps[0]!.addedLines).toBe(1);
+  });
+
+  it('carries a webhook path a snapshot left unstated, so a later clear is reported', () => {
+    const withPath = (path: string | null | undefined, body: string) =>
+      buildYaml({
+        jobs: [transformJob(body)],
+        triggers: [
+          {
+            ...webhookTrigger,
+            ...(path !== undefined && { custom_path: path }),
+          },
+        ],
+        edges: [webhookToTransformEdge],
+      });
+
+    const result = deriveSnapshotChanges(
+      withPath('intake-form', 'fn(s => s);'),
+      [
+        snapshot(withPath(undefined, 'fn(s => ({ ...s }));'), 0),
+        snapshot(withPath(null, 'fn(s => ({ ...s }));'), 1),
+      ]
+    );
+
+    const rows = result.flatMap(entry =>
+      entry.changes.structure.filter(row => row.kind === 'trigger')
+    );
+    expect(rows.map(row => row.detail)).toEqual(['path removed']);
+  });
+
+  it('reports a replacement against the carried path, not as a first set', () => {
+    const withPath = (path: string | undefined, body: string) =>
+      buildYaml({
+        jobs: [transformJob(body)],
+        triggers: [
+          {
+            ...webhookTrigger,
+            ...(path !== undefined && { custom_path: path }),
+          },
+        ],
+        edges: [webhookToTransformEdge],
+      });
+
+    const result = deriveSnapshotChanges(
+      withPath('intake-form', 'fn(s => s);'),
+      [
+        snapshot(withPath(undefined, 'fn(s => ({ ...s }));'), 0),
+        snapshot(withPath('staff-intake', 'fn(s => ({ ...s }));'), 1),
+      ]
+    );
+
+    const rows = result.flatMap(entry =>
+      entry.changes.structure.filter(row => row.kind === 'trigger')
+    );
+    expect(rows.map(row => row.detail)).toEqual([
+      'path: intake-form → staff-intake',
+    ]);
+  });
+
+  it("does not let one reply's carried path answer another reply's identical pair", () => {
+    // The carried path is in neither document, so the pair alone cannot key
+    // the cache. Both chains share the same two snapshots on purpose.
+    const withPath = (path: string | null | undefined, body: string) =>
+      buildYaml({
+        jobs: [transformJob(body)],
+        triggers: [
+          {
+            ...webhookTrigger,
+            ...(path !== undefined && { custom_path: path }),
+          },
+        ],
+        edges: [webhookToTransformEdge],
+      });
+
+    const unstated = snapshot(withPath(undefined, 'fn(s => ({ ...s }));'), 0);
+    const cleared = snapshot(withPath(null, 'fn(s => ({ ...s }));'), 1);
+
+    const hadPath = deriveSnapshotChanges(
+      withPath('intake-form', 'fn(s => s);'),
+      [unstated, cleared]
+    );
+    const neverHadPath = deriveSnapshotChanges(
+      withPath(undefined, 'fn(s => s);'),
+      [unstated, cleared]
+    );
+
+    const rows = (result: ReturnType<typeof deriveSnapshotChanges>) =>
+      result.flatMap(entry =>
+        entry.changes.structure.filter(row => row.kind === 'trigger')
+      );
+
+    expect(rows(hadPath).map(row => row.detail)).toEqual(['path removed']);
+    expect(rows(neverHadPath)).toEqual([]);
+  });
+
+  it('carries the path even when the snapshots omit trigger ids', () => {
+    // Apollo drops trigger ids on some replies, and parsing mints a fresh one
+    // per trigger, so carrying by raw id would carry nothing on those replies.
+    const idless = (path: string | null | undefined, body: string) => {
+      const yaml = buildYaml({
+        jobs: [transformJob(body)],
+        triggers: [
+          {
+            ...webhookTrigger,
+            ...(path !== undefined && { custom_path: path }),
+          },
+        ],
+        edges: [webhookToTransformEdge],
+      });
+      return yaml.replace(/^ {4}id: trigger-1\n/m, '');
+    };
+
+    const result = deriveSnapshotChanges(idless('intake-form', 'fn(s => s);'), [
+      snapshot(idless(undefined, 'fn(s => ({ ...s }));'), 0),
+      snapshot(idless(null, 'fn(s => ({ ...s }));'), 1),
+    ]);
+
+    const rows = result.flatMap(entry =>
+      entry.changes.structure.filter(row => row.kind === 'trigger')
+    );
+    expect(rows.map(row => row.detail)).toEqual(['path removed']);
+  });
+
+  it('pairs two id-less webhooks in document order, not in reverse', () => {
+    // Both sides are identical apart from a job body. Pairing the leftovers
+    // from the end crossed the two triggers and invented a path move on each.
+    const twoHooks = (body: string) => `id: wf-1
+name: Test Workflow
+jobs:
+  transform-data:
+    id: job-1
+    name: Transform data
+    adaptor: '@openfn/language-common@latest'
+    body: |
+      ${body}
+triggers:
+  hook-a:
+    type: webhook
+    enabled: true
+    custom_path: 'alpha'
+  hook-b:
+    type: webhook
+    enabled: true
+    custom_path: 'beta'
+edges: {}
+`;
+
+    const changes = deriveWorkflowChanges(
+      twoHooks('fn(s => s);'),
+      twoHooks('fn(s => ({ ...s }));')
+    )!;
+
+    expect(changes.structure.filter(row => row.kind === 'trigger')).toEqual([]);
+  });
+
+  it('keeps two webhooks apart in the cache salt', () => {
+    // buildYaml keys triggers by type, so this one is written out: the spec
+    // allows any key, and two webhooks are what make a type-keyed salt
+    // ambiguous. Both chains stream the same two snapshots on purpose.
+    const twoHooks = (a: string, b: string, body: string) => `id: wf-1
+name: Test Workflow
+jobs:
+  transform-data:
+    id: job-1
+    name: Transform data
+    adaptor: '@openfn/language-common@latest'
+    body: |
+      ${body}
+triggers:
+  hook-a:
+    id: trigger-a
+    type: webhook
+    enabled: true
+${a}  hook-b:
+    id: trigger-b
+    type: webhook
+    enabled: true
+${b}edges: {}
+`;
+    const path = (value: string) => `    custom_path: '${value}'\n`;
+    const unstated = '';
+
+    const first = snapshot(
+      twoHooks(unstated, unstated, 'fn(s => ({ ...s }));'),
+      0
+    );
+    const second = snapshot(
+      twoHooks(path('alpha'), unstated, 'fn(s => ({ ...s }));'),
+      1
+    );
+
+    const rows = (baselineA: string, baselineB: string) =>
+      deriveSnapshotChanges(twoHooks(baselineA, baselineB, 'fn(s => s);'), [
+        first,
+        second,
+      ]).flatMap(entry =>
+        entry.changes.structure
+          .filter(row => row.kind === 'trigger')
+          .map(row => row.detail)
+      );
+
+    // hook-a already held alpha, so the second snapshot changes nothing.
+    expect(rows(path('alpha'), path('beta'))).toEqual([]);
+    // Swapped, hook-a moves from beta to alpha. A salt that only counted the
+    // paths would read the answer above instead.
+    expect(rows(path('beta'), path('alpha'))).toEqual([
+      'path: beta \u2192 alpha',
+    ]);
   });
 
   it('pins each change set to the segment index its snapshot carried', () => {

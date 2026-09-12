@@ -2,6 +2,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   @moduledoc false
   use LightningWeb, :component
 
+  alias Lightning.DashboardStats
   alias Lightning.DashboardStats.ProjectMetrics
   alias Lightning.Projects.Project
   alias Lightning.WorkOrder
@@ -11,7 +12,6 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
   alias Phoenix.LiveView.JS
 
   attr :period, :string, default: "last 30 days"
-  attr :can_create_workflow, :boolean
   attr :can_delete_workflow, :boolean
   attr :workflows_stats, :list
   attr :project, :map
@@ -21,17 +21,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   def workflow_list(assigns) do
     ~H"""
-    <div class="w-full">
-      <div class="mt-14 flex justify-between mb-3">
-        <.table_title count={length(@workflows_stats)} />
-        <div class="flex gap-2 items-start">
-          <.search_workflows_input search_term={@search_term} />
-          <.create_workflow_card
-            project_id={@project.id}
-            can_create_workflow={@can_create_workflow}
-          />
-        </div>
-      </div>
+    <div class="w-full mt-8">
       <.workflows_table
         id="workflows-table"
         period={@period}
@@ -66,6 +56,38 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     """
   end
 
+  @doc """
+  Page title, search and create controls, sitting above the project metric cards.
+  """
+  attr :count, :integer, required: true
+  attr :can_create_workflow, :boolean, required: true
+  attr :project, :map, required: true
+  attr :search_term, :string, default: ""
+
+  def workflows_header(assigns) do
+    ~H"""
+    <div class="flex justify-between items-center mb-6">
+      <.table_title count={@count} />
+      <div class="flex gap-2 items-stretch">
+        <.search_workflows_input search_term={@search_term} />
+        <.create_workflow_card
+          project_id={@project.id}
+          can_create_workflow={@can_create_workflow}
+        />
+      </div>
+    </div>
+    """
+  end
+
+  # One definition of "the failed work orders behind this number", so every
+  # link opens the same window and the same states its count was taken from.
+  defp failed_wo_filters do
+    WorkOrder.failure_states()
+    |> Map.new(&{to_string(&1), "true"})
+    |> Map.put("date_after", DashboardStats.window_start())
+    |> SearchParams.to_uri_params()
+  end
+
   defp table_title(assigns) do
     ~H"""
     <h3 class="text-3xl font-bold">
@@ -93,18 +115,9 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       |> assign(
         wo_filters:
           SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1)
+            "date_after" => DashboardStats.window_start()
           }),
-        failed_wo_filters:
-          SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
-            "failed" => "true",
-            "crashed" => "true",
-            "killed" => "true",
-            "cancelled" => "true",
-            "lost" => "true",
-            "exception" => "true"
-          }),
+        failed_wo_filters: failed_wo_filters(),
         workflows: Enum.map(workflows_stats, &Map.merge(&1, &1.workflow)),
         empty?: Enum.empty?(workflows_stats)
       )
@@ -157,9 +170,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
               >
                 Enabled
               </.th>
-              <.th>
-                <span class="sr-only">Actions</span>
-              </.th>
+              <.th>Actions</.th>
             </.tr>
           </:header>
           <:body>
@@ -258,9 +269,18 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                     value_key={workflow.id}
                   />
                 </.td>
-                <.td class="text-right">
-                  <%= if @can_delete_workflow do %>
+                <.td>
+                  <div class="flex items-center gap-4">
                     <.link
+                      id={"health-#{workflow.id}"}
+                      class="table-action"
+                      navigate={~p"/projects/#{@project.id}/w/#{workflow.id}/health"}
+                      onclick="event.stopPropagation()"
+                    >
+                      Health
+                    </.link>
+                    <.link
+                      :if={@can_delete_workflow}
                       href="#"
                       class="table-action"
                       phx-click="delete_workflow"
@@ -269,7 +289,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
                     >
                       Delete
                     </.link>
-                  <% end %>
+                  </div>
                 </.td>
               </.tr>
             <% end %>
@@ -348,23 +368,21 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
       end)
 
     ~H"""
-    <div>
-      <.button
-        disabled={@disabled}
-        tooltip={@tooltip}
-        phx-click={
-          if !@disabled do
-            JS.navigate(~p"/projects/#{@project_id}/w/new")
-          end
-        }
-        class="col-span-1 w-full"
-        role="button"
-        id="new-workflow-button"
-        theme="primary"
-      >
-        Create new workflow
-      </.button>
-    </div>
+    <.button
+      disabled={@disabled}
+      tooltip={@tooltip}
+      phx-click={
+        if !@disabled do
+          JS.navigate(~p"/projects/#{@project_id}/w/new")
+        end
+      }
+      class="whitespace-nowrap"
+      role="button"
+      id="new-workflow-button"
+      theme="primary"
+    >
+      Create new workflow
+    </.button>
     """
   end
 
@@ -372,7 +390,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   def search_workflows_input(assigns) do
     ~H"""
-    <div class="relative rounded-md shadow-xs flex h-full">
+    <div class="relative rounded-md shadow-xs w-96">
       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
         <Heroicons.magnifying_glass class="h-5 w-5 text-gray-400" />
       </div>
@@ -381,7 +399,7 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
         name="search_workflows"
         value={@search_term}
         placeholder="Search"
-        class="block w-full rounded-md py-1.5 pl-10 pr-20 text-gray-900 placeholder:text-gray-400 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+        class="block w-full rounded-md py-2 pl-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
         phx-keyup="search_workflows"
         phx-debounce="300"
       />
@@ -482,26 +500,17 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
     assigns =
       assigns
       |> assign(
-        failed_filters:
-          SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
-            "failed" => "true",
-            "crashed" => "true",
-            "killed" => "true",
-            "cancelled" => "true",
-            "lost" => "true",
-            "exception" => "true"
-          }),
+        failed_filters: failed_wo_filters(),
         pending_filters:
           SearchParams.to_uri_params(%{
-            "wo_date_after" => Timex.now() |> Timex.shift(months: -1),
+            "date_after" => DashboardStats.window_start(),
             "pending" => "true",
             "running" => "true"
           })
       )
 
     ~H"""
-    <div class="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
       <.metric_card title="Work Orders">
         <:value>{@metrics.work_order_metrics.total}</:value>
         <:suffix>
@@ -509,28 +518,28 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
             navigate={
               ~p"/projects/#{@project}/history?#{%{filters: @pending_filters}}"
             }
-            class="link"
+            class="hover:underline"
           >
-            ({@metrics.work_order_metrics.pending} pending)
+            {@metrics.work_order_metrics.pending} pending
           </.link>
         </:suffix>
       </.metric_card>
       <.metric_card title="Runs">
         <:value>{@metrics.run_metrics.total}</:value>
         <:suffix>
-          ({@metrics.run_metrics.pending} pending)
+          {@metrics.run_metrics.pending} pending
         </:suffix>
       </.metric_card>
       <.metric_card title="Successful Runs">
         <:value>{@metrics.run_metrics.success}</:value>
         <:suffix>
-          ({@metrics.run_metrics.success_rate}%)
+          {@metrics.run_metrics.success_rate}%
         </:suffix>
       </.metric_card>
       <.metric_card title="Work Orders in failed state">
         <:value>{@metrics.work_order_metrics.failed}</:value>
         <:suffix>
-          ({@metrics.work_order_metrics.failed_percentage}%)
+          {@metrics.work_order_metrics.failed_percentage}%
         </:suffix>
         <:link>
           <.link
@@ -555,21 +564,14 @@ defmodule LightningWeb.WorkflowLive.DashboardComponents do
 
   def metric_card(assigns) do
     ~H"""
-    <div class="bg-white shadow rounded-lg py-2 px-6">
-      <h2
-        class="text-sm text-gray-500"
-        style="font-weight: 500; font-size: 13px; margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-      >
-        {@title}
-      </h2>
-      <div class="flex space-x-1 items-baseline text-3xl font-bold text-gray-800">
-        <div>{render_slot(@value)}</div>
-        <div class="text-xs font-normal grow">
-          {render_slot(@suffix)}
-        </div>
-        <div class="text-xs font-normal">
-          {render_slot(@link)}
-        </div>
+    <div class="bg-white rounded-lg ring-1 ring-gray-200 shadow-xs py-4 px-5">
+      <h2 class="text-[13px] font-medium text-gray-500 truncate">{@title}</h2>
+      <div class="mt-2 text-3xl font-bold text-gray-800">
+        {render_slot(@value)}
+      </div>
+      <div class="mt-1 flex items-baseline justify-between gap-2 text-xs">
+        <div class="text-gray-500">{render_slot(@suffix)}</div>
+        <div>{render_slot(@link)}</div>
       </div>
     </div>
     """

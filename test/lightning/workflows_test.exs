@@ -13,11 +13,63 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
+  alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowRelease
   alias Lightning.Workflows.WorkflowReleases
   alias Lightning.WorkOrder
+
+  describe "soft delete with a name at the column width" do
+    test "a 255 character name is deleted without raising 22001" do
+      # The _del suffix is appended after every validation has run, so a name
+      # already at the column width used to raise a bare Postgrex error out of
+      # the dashboard delete button (#4577).
+      project = insert(:project)
+      user = insert(:user)
+      name = String.duplicate("a", 255)
+
+      workflow = insert(:workflow, name: name, project: project)
+
+      assert {:ok, _} = Workflows.mark_for_deletion(workflow, user)
+
+      deleted = Repo.get!(Workflow, workflow.id)
+
+      assert String.ends_with?(deleted.name, "_del")
+      assert deleted.name |> String.codepoints() |> length() <= 255
+      assert deleted.deleted_at
+    end
+
+    test "a second deletion of the same long name still fits" do
+      project = insert(:project)
+      user = insert(:user)
+      name = String.duplicate("b", 255)
+
+      first = insert(:workflow, name: name, project: project)
+      assert {:ok, _} = Workflows.mark_for_deletion(first, user)
+
+      second = insert(:workflow, name: name, project: project)
+      assert {:ok, _} = Workflows.mark_for_deletion(second, user)
+
+      first_deleted = Repo.get!(Workflow, first.id)
+      second_deleted = Repo.get!(Workflow, second.id)
+
+      refute first_deleted.name == second_deleted.name
+
+      for deleted <- [first_deleted, second_deleted] do
+        assert deleted.name |> String.codepoints() |> length() <= 255
+      end
+    end
+
+    test "a short name is untouched by the fitting" do
+      project = insert(:project)
+      user = insert(:user)
+      workflow = insert(:workflow, name: "my workflow", project: project)
+
+      assert {:ok, _} = Workflows.mark_for_deletion(workflow, user)
+      assert Repo.get!(Workflow, workflow.id).name == "my workflow_del"
+    end
+  end
 
   describe "restore_version/3" do
     setup do
@@ -498,6 +550,18 @@ defmodule Lightning.WorkflowsTest do
       # malformed uuid returns nil instead of raising
       assert Workflows.get_workflow_for_project(project, "not-a-uuid") == nil
       assert Workflows.get_workflow_for_project(project, nil) == nil
+    end
+
+    # Built on `Query.workflows_for/1`, so every caller — the health API, the
+    # index's trigger toggle and its delete handler — refuses a workflow on its
+    # way out without checking for itself.
+    test "get_workflow_for_project/3 skips a workflow marked for deletion" do
+      project = insert(:project)
+
+      workflow =
+        insert(:workflow, project: project, deleted_at: DateTime.utc_now())
+
+      assert Workflows.get_workflow_for_project(project, workflow.id) == nil
     end
 
     test "get_workflow_for_project/3 preloads the requested associations" do

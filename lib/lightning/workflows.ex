@@ -32,6 +32,9 @@ defmodule Lightning.Workflows do
 
   require Logger
 
+  # Matches Lightning.Validators, which enforces the same width on write.
+  @name_column_limit 255
+
   @doc """
   Returns the list of workflows.
 
@@ -140,14 +143,14 @@ defmodule Lightning.Workflows do
   @doc """
   Gets a workflow by id, scoped to the given project.
 
-  Returns `nil` when the id is malformed, missing, or belongs to another
-  project, so it can't be used to read or mutate a workflow across projects.
+  Returns `nil` when the id is malformed, missing, belongs to another project,
+  or is marked for deletion, so it can't be used to read or mutate a workflow
+  across projects or one on its way out.
   """
   def get_workflow_for_project(%Project{} = project, id, opts \\ []) do
     if Lightning.Validators.valid_uuid?(id) do
-      id
-      |> get_workflow_query(opts)
-      |> where([w], w.project_id == ^project.id)
+      from(w in Query.workflows_for(project), where: w.id == ^id)
+      |> preload(^Keyword.get(opts, :include, []))
       |> Repo.one()
     end
   end
@@ -978,7 +981,7 @@ defmodule Lightning.Workflows do
         name: name,
         project_id: project_id
       }) do
-    base_name = "#{name}_del"
+    base_name = "#{trim_to_fit_suffix(name)}_del"
 
     existing_names =
       from(w in Workflow,
@@ -999,6 +1002,23 @@ defmodule Lightning.Workflows do
     if MapSet.member?(existing_names, candidate),
       do: find_available_name(base_name, existing_names, n + 1),
       else: candidate
+  end
+
+  # workflows.name is varchar(255) and Postgres counts those in codepoints. The
+  # `_del` suffix goes on after every validation has run, so a workflow already
+  # at the column width would raise a bare Postgrex 22001 out of the delete
+  # button, in a LiveView handler with nothing to rescue it.
+  @suffix_headroom String.length("_del") + 4
+
+  defp trim_to_fit_suffix(name) do
+    limit = @name_column_limit - @suffix_headroom
+    codepoints = String.codepoints(name)
+
+    if length(codepoints) > limit do
+      codepoints |> Enum.take(limit) |> Enum.join()
+    else
+      name
+    end
   end
 
   @doc """
@@ -1302,14 +1322,14 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
-    Checks if a workflow exists in the given project
+  Checks if a workflow exists in the given project
   """
   def workflow_exists_in_project?(project_id, workflow_id) do
-    query =
-      from q in Query.workflows_for(%Project{id: project_id}),
-        where: q.id == ^workflow_id
-
-    Repo.exists?(query)
+    Lightning.Validators.valid_uuid?(workflow_id) &&
+      from(w in Query.workflows_for(%Project{id: project_id}),
+        where: w.id == ^workflow_id
+      )
+      |> Repo.exists?()
   end
 
   @doc """

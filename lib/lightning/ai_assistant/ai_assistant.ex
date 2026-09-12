@@ -1698,11 +1698,18 @@ defmodule Lightning.AiAssistant do
   defp build_global_message(body) do
     code = extract_global_workflow_yaml(body["attachments"])
 
+    # The planner can call the job agent more than once, so one failed edit
+    # beside one that landed must not mark a reply that carries the change.
+    meta =
+      if is_nil(code) and code_change_failed?(body),
+        do: %{"from_global" => true, "code_change_failed" => true},
+        else: %{"from_global" => true}
+
     message_attrs =
       %{
         role: :assistant,
         content: body["response"],
-        meta: %{"from_global" => true}
+        meta: meta
       }
       |> put_response_segments(
         normalize_response_segments(body["response_segments"])
@@ -1710,6 +1717,27 @@ defmodule Lightning.AiAssistant do
 
     opts = [usage: body["usage"] || %{}, meta: body["meta"], code: code]
     {message_attrs, opts}
+  end
+
+  # Zero means the subagent tried to edit and could not. Its `warning` is built
+  # partly from `str(e)`, so that stays in the log.
+  defp code_change_failed?(body) do
+    failed =
+      body
+      |> get_in(["meta", "subagent_calls"])
+      |> List.wrap()
+      |> Enum.filter(&match?(%{"diff" => %{"patches_applied" => 0}}, &1))
+
+    Enum.each(failed, fn call ->
+      if warning = get_in(call, ["diff", "warning"]) do
+        Logger.warning(
+          "[AI Assistant] Apollo applied no code edits: " <>
+            inspect(warning, printable_limit: 128)
+        )
+      end
+    end)
+
+    failed != []
   end
 
   # Flat replies omit the key entirely: casting nil into embeds_many is an
