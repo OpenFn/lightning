@@ -1605,31 +1605,6 @@ export const createWorkflowStore = (
   const goLive = async () => setLifecycleState('go_live');
   const switchToDraft = async () => setLifecycleState('switch_to_draft');
 
-  // Enable or disable a single trigger on a non-live (draft or sandbox)
-  // workflow. Mirrors the lifecycle transitions: the server flips the trigger,
-  // saves a new snapshot, and reconciles the result back into this Y.Doc. The
-  // server refuses this on a live non-sandbox workflow. The reply carries the
-  // new lock version and base workflow, same shape as go_live/switch_to_draft.
-  const setTriggerEnabled = async (
-    triggerId: string,
-    enabled: boolean
-  ): Promise<{ lock_version: number; workflow: BaseWorkflow }> => {
-    const { provider } = ensureConnected();
-
-    try {
-      return await channelRequest<{
-        lock_version: number;
-        workflow: BaseWorkflow;
-      }>(provider.channel, 'set_trigger_enabled', {
-        trigger_id: triggerId,
-        enabled,
-      });
-    } catch (error) {
-      logger.error('Failed to set trigger enabled', error);
-      throw error;
-    }
-  };
-
   // Sandbox editing. From a live workflow on a non-sandbox project, a user can
   // either branch the current live version into a freshly provisioned sandbox
   // or join an existing sandbox. The server owns provisioning and cloning; the
@@ -2282,7 +2257,6 @@ export const createWorkflowStore = (
     saveWorkflow,
     goLive,
     switchToDraft,
-    setTriggerEnabled,
     listSandboxes,
     editInSandbox,
     promote,

@@ -611,22 +611,6 @@ export const useWorkflowActions = () => {
       return response;
     },
 
-    // Enable/disable a single trigger on a non-live workflow. Unlike go live /
-    // switch to draft this does not change lifecycle state or permissions, so a
-    // full session-context refetch is unnecessary. The server bumps the lock
-    // version and returns the reconciled base workflow, so keep the session
-    // context's snapshot bookkeeping in sync just like a save.
-    setTriggerEnabled: async (triggerId: string, enabled: boolean) => {
-      const response = await store.setTriggerEnabled(triggerId, enabled);
-      if (response.lock_version !== undefined) {
-        sessionContextStore.setLatestSnapshotLockVersion(response.lock_version);
-      }
-      if (response.workflow) {
-        sessionContextStore.setBaseWorkflow(response.workflow);
-      }
-      return response;
-    },
-
     // GitHub save and sync action - wrapped to handle lock version updates and errors
     saveAndSyncWorkflow: (commitMessage: string) => {
       // Helper: Handle successful save and sync operations

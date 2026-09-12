@@ -307,19 +307,6 @@ defmodule Lightning.WorkflowsTest do
       assert Lightning.WorkflowVersions.history_for(back) == before
     end
 
-    test "turning a single trigger on records no version either", %{user: user} do
-      workflow = insert(:simple_workflow)
-      [trigger] = Repo.preload(workflow, :triggers).triggers
-
-      before = Lightning.WorkflowVersions.history_for(workflow)
-
-      {:ok, _} = Workflows.set_trigger_enabled(workflow, trigger.id, false, user)
-
-      # Same reason as the lifecycle transition: a merge does not carry a
-      # trigger's enabled flag, so there is nothing here to promote.
-      assert Lightning.WorkflowVersions.history_for(workflow) == before
-    end
-
     test "a trigger change beyond enabled in the same save does record", %{
       user: user
     } do
@@ -457,44 +444,6 @@ defmodule Lightning.WorkflowsTest do
       assert {:ok, live} = Workflows.go_live(workflow, user)
       assert live.state == :live
       assert WorkflowReleases.list_for_workflow(workflow.id) == []
-    end
-  end
-
-  describe "set_trigger_enabled/4" do
-    setup do
-      %{user: insert(:user)}
-    end
-
-    test "enables and disables a trigger without changing the workflow state",
-         %{user: user} do
-      workflow = insert(:simple_workflow, state: :draft)
-      [trigger] = workflow.triggers
-
-      assert {:ok, disabled} =
-               Workflows.set_trigger_enabled(workflow, trigger.id, false, user)
-
-      assert disabled.state == :draft
-      assert %Trigger{enabled: false} = Repo.reload!(trigger)
-
-      assert {:ok, enabled} =
-               Workflows.set_trigger_enabled(disabled, trigger.id, true, user)
-
-      assert enabled.state == :draft
-      assert %Trigger{enabled: true} = Repo.reload!(trigger)
-    end
-
-    test "returns {:error, :trigger_not_found} for an unknown trigger", %{
-      user: user
-    } do
-      workflow = insert(:simple_workflow, state: :draft)
-
-      assert {:error, :trigger_not_found} =
-               Workflows.set_trigger_enabled(
-                 workflow,
-                 Ecto.UUID.generate(),
-                 true,
-                 user
-               )
     end
   end
 

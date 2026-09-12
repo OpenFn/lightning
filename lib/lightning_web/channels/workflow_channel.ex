@@ -387,53 +387,6 @@ defmodule LightningWeb.WorkflowChannel do
     transition_lifecycle_state(socket, :draft)
   end
 
-  # Enables or disables a single trigger on a NON-LIVE workflow, decoupled from
-  # the lifecycle state: a draft (or a sandbox clone) can carry an enabled
-  # trigger so users can test real connections against dev systems before going
-  # live. authorize_content_edit gates on the edit-workflow role AND a non-live
-  # state (draft or sandbox), so a live workflow outside a sandbox is refused
-  # here — its triggers stay lifecycle-managed via go_live/switch_to_draft.
-  @impl true
-  def handle_in(
-        "set_trigger_enabled",
-        %{"trigger_id" => trigger_id, "enabled" => enabled},
-        socket
-      )
-      when is_boolean(enabled) do
-    user = socket.assigns.current_user
-
-    # Load fresh rather than trusting the join-time assign: another client may
-    # have bumped lock_version (optimistic lock) or added the trigger since this
-    # socket joined. Preload jobs and edges alongside triggers so the workflow we
-    # save (and therefore reply/broadcast) is fully loaded: the reply and
-    # `workflow_saved` broadcast serialize the Workflow via Jason, and the schema
-    # derives Jason.Encoder over :jobs and :edges — an unloaded association has no
-    # encoder and would crash the channel. set_trigger_enabled only rewrites
-    # :triggers, so the saved struct it returns keeps these preloads.
-    with :ok <- authorize_content_edit(socket),
-         %_{} = current <-
-           Workflows.get_workflow(socket.assigns.workflow.id,
-             include: [:triggers, :jobs, :edges]
-           ),
-         {:ok, workflow} <-
-           Workflows.set_trigger_enabled(current, trigger_id, enabled, user) do
-      broadcast_from!(socket, "workflow_saved", %{
-        latest_snapshot_lock_version: workflow.lock_version,
-        workflow: workflow
-      })
-
-      {:reply, {:ok, %{lock_version: workflow.lock_version, workflow: workflow}},
-       socket}
-    else
-      result when result in [nil, {:error, :trigger_not_found}] ->
-        {:reply, {:error, %{reason: "trigger does not belong to this workflow"}},
-         socket}
-
-      error ->
-        workflow_error_reply(socket, error)
-    end
-  end
-
   # Persists the per-user "don't show again" choice for the enable-trigger
   # warning modal. Rides back to the editor in get_context as
   # `suppress_enable_trigger_warning`.

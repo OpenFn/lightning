@@ -548,14 +548,12 @@ export function Header({
     }
   }, [promote, saveWorkflow]);
 
-  // Phase two, archive path. Retires the sandbox, then hard-navigates into the
-  // parent (a different Y.Doc session), matching the picker's post-create
-  // navigation. The success toast is handed off through the URL (?promoted=1)
-  // rather than shown here: firing it before the reload would destroy it. The
-  // parent editor reads the marker on load (see PromotedNotice). The parent
-  // workflow may be missing, so fall back to the project's workflow index when
-  // promote returned a null workflow_id. Errors, which don't navigate, are
-  // surfaced inline and resolve false so the dialog stays on its success step.
+  // Phase two, archive path. Retires the sandbox and lets the server carry the
+  // socket into the parent, which is a different Y.Doc session. No toast is
+  // raised here: the dialog's success step already said the changes were
+  // promoted, and the server flashes "Sandbox archived." on arrival. Errors,
+  // which don't navigate, are surfaced inline and resolve false so the dialog
+  // stays on its success step.
   const handleArchiveSandbox = useCallback(async (): Promise<boolean> => {
     try {
       await archiveSandbox();

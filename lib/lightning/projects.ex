@@ -2346,9 +2346,9 @@ defmodule Lightning.Projects do
   edited workflow.
 
   The edited clone comes in disabled and `:draft`, exactly like every other
-  cloned workflow: the clone is deliberately NOT promoted to live. Users enable
-  its triggers explicitly (see `Workflows.set_trigger_enabled/4`) once they want
-  to test connections against dev systems.
+  cloned workflow: the clone is deliberately NOT promoted to live. Taking it
+  live in the sandbox is what turns its triggers on, so a user can test
+  connections against dev systems.
   """
   @spec provision_editing_sandbox(Project.t(), User.t(), String.t(), map()) ::
           {:ok,

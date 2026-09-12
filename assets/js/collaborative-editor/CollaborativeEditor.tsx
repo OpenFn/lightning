@@ -14,7 +14,6 @@ import { DiscardChangesDialog } from './components/DiscardChangesDialog';
 import { Header } from './components/Header';
 import { LandingScreen } from './components/LandingScreen';
 import { LoadingBoundary } from './components/LoadingBoundary';
-import { PromotedNotice } from './components/PromotedNotice';
 import { RestoreVersionDialog } from './components/RestoreVersionDialog';
 import type { RestoreCost } from './components/RestoreVersionDialog';
 import { SnapshotVersionDropdown } from './components/SnapshotVersionDropdown';
@@ -434,7 +433,6 @@ export const CollaborativeEditor: WithActionProps<
                   <MonacoRefProvider monacoRef={monacoRef}>
                     <VersionDebugLogger />
                     <Toaster />
-                    <PromotedNotice />
                     <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
                       <BreadcrumbContent
                         workflowId={workflowId}
