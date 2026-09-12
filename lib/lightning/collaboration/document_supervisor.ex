@@ -212,7 +212,22 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     # We own the SharedDoc, so reconciling here means the Y.Doc mutation is
     # serialised through SharedDoc.update_doc/2 without holding a transaction
     # across a process boundary.
-    WorkflowReconciler.reconcile_workflow_document(workflow_id)
+    #
+    # It reads the database and rewrites the document, so it can raise. This
+    # process owns the SharedDoc and the PersistenceWriter, so letting it raise
+    # takes the live document down and drops everyone in the room. A failed
+    # reconcile leaves a stale document, which is what happened before any of
+    # this existed; losing the document loses unflushed work as well.
+    try do
+      WorkflowReconciler.reconcile_workflow_document(workflow_id)
+    rescue
+      error ->
+        Logger.error(
+          "Reconcile failed for workflow " <>
+            "#{workflow_id}: #{Exception.format(:error, error, __STACKTRACE__)}"
+        )
+    end
+
     {:noreply, state}
   end
 
@@ -229,6 +244,15 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
     # We're not going to stop the children here, we handle that in terminate.
 
     {:stop, :normal, state |> Map.put(key, nil)}
+  end
+
+  # This process is subscribed to PubSub, so it can be sent anything published
+  # on that topic. Without this clause an unrecognised message kills the owner
+  # of the live document and every client in the room with it.
+  def handle_info(message, state) do
+    Logger.warning("DocumentSupervisor: unexpected message #{inspect(message)}")
+
+    {:noreply, state}
   end
 
   defp register_shared_doc_with_pg(pg_scope, document_name, shared_doc_pid) do

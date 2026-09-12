@@ -73,6 +73,32 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
     })
   end
 
+  describe "messages it does not recognise" do
+    setup [:setup_document_supervisor]
+
+    test "an unexpected message leaves the document standing", context do
+      # It subscribes to PubSub, so anything published on that topic arrives
+      # here. Without a catch-all this process dies, and it owns the SharedDoc
+      # and the PersistenceWriter, so the live document and everyone in the
+      # room go with it.
+      log =
+        capture_log(fn ->
+          send(context.doc_supervisor, {:something, :unexpected})
+          Process.sleep(50)
+        end)
+
+      assert log =~ "unexpected message"
+
+      assert Process.alive?(context.doc_supervisor)
+      assert Process.alive?(context.shared_doc)
+      assert Process.alive?(context.persistence_writer)
+    end
+
+    # The reconcile itself is wrapped in a rescue for the same reason, and has
+    # no test of its own: reaching a raising path needs a live SharedDoc in the
+    # global registry, which this instance-scoped setup deliberately avoids.
+  end
+
   # Setup for tests that need a test supervisor (like restart strategy test)
   defp setup_test_supervisor(context) do
     {:ok, test_supervisor} = DynamicSupervisor.start_link(strategy: :one_for_one)
