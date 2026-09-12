@@ -11,6 +11,7 @@ import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink } from './components/Breadcrumbs';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { DiscardChangesDialog } from './components/DiscardChangesDialog';
+import { PromotedNotice } from './components/PromotedNotice';
 import { Header } from './components/Header';
 import { LandingScreen } from './components/LandingScreen';
 import { LoadingBoundary } from './components/LoadingBoundary';
@@ -318,6 +319,7 @@ export function BreadcrumbContent({
       {/* Outside the memo above, which does not depend on either dialog's
           state, and outside Header, whose Breadcrumbs treat their last child as
           the title. */}
+      <PromotedNotice />
       <DiscardChangesDialog
         isOpen={versionPrompt.isAsking}
         onSaveAndContinue={versionPrompt.saveAndRunPending}

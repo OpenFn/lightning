@@ -36,6 +36,7 @@ import {
   isChannelRequestError,
 } from '../lib/errors';
 import { notifications } from '../lib/notifications';
+import { clearPromoted, markPromoted } from '../lib/promoteHandoff';
 import { usePinnedView } from '../lib/pinnedView';
 import { Switch } from './inputs/Switch';
 import { isFinalState } from '../types/history';
@@ -550,11 +551,16 @@ export function Header({
 
   // Phase two, archive path. Retires the sandbox and lets the server carry the
   // socket into the parent, which is a different Y.Doc session. No toast is
-  // raised here: the dialog's success step already said the changes were
-  // promoted, and the server flashes "Sandbox archived." on arrival. Errors,
-  // which don't navigate, are surfaced inline and resolve false so the dialog
-  // stays on its success step.
+  // raised here: the reload would destroy it. The promote is confirmed across
+  // the navigation instead (see promoteHandoff), because the flash the server
+  // sends speaks only of the archive. Errors, which don't navigate, are
+  // surfaced inline and resolve false so the dialog stays on its success step.
   const handleArchiveSandbox = useCallback(async (): Promise<boolean> => {
+    // Marked before the call, because the server's redirect can land before
+    // this promise resolves. Cleared again if the archive refuses, so a sandbox
+    // we are still sitting in never claims to have been retired.
+    markPromoted();
+
     try {
       await archiveSandbox();
 
@@ -564,6 +570,8 @@ export function Header({
       // from here only produced a second navigation to the same place.
       return true;
     } catch (error) {
+      clearPromoted();
+
       const description = isChannelRequestError(error)
         ? formatChannelErrorMessage({
             errors: error.errors as { base?: string[] } & Record<

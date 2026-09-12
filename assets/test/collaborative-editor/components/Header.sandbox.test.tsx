@@ -956,8 +956,51 @@ describe('Header - lifecycle actions', () => {
       // workflow. Navigating from here as well only raced that redirect.
       expect(nav.hrefSetter).not.toHaveBeenCalled();
       expect(notifySuccess).not.toHaveBeenCalled();
+
+      // The reload would destroy a toast raised here, and the flash the server
+      // sends on arrival speaks only of the archive. The promote is handed
+      // across instead, for the parent's editor to confirm.
+      expect(window.sessionStorage.getItem('openfn:promoted')).toBe('1');
     } finally {
       nav.restore();
+      window.sessionStorage.removeItem('openfn:promoted');
+    }
+  });
+
+  test('a refused archive claims no promote across the reload', async () => {
+    // Nothing navigates, so the marker would sit there and announce a promote
+    // to the next page this tab happens to load.
+    const user = userEvent.setup();
+    promote.mockResolvedValue({
+      parent_project_id: 'parent-1',
+      workflow_id: 'wf-parent',
+    });
+    archiveSandbox.mockRejectedValue(new Error('nope'));
+
+    const nav = stubNavigation();
+    try {
+      renderHeader({ isSandbox: true });
+
+      await confirmPromote(user);
+      const dialog = screen.getByRole('dialog');
+      await waitFor(() => {
+        expect(
+          within(dialog).getByText('Changes promoted')
+        ).toBeInTheDocument();
+      });
+
+      await user.click(
+        within(dialog).getByRole('button', { name: 'Archive sandbox' })
+      );
+
+      await waitFor(() => {
+        expect(archiveSandbox).toHaveBeenCalledTimes(1);
+      });
+
+      expect(window.sessionStorage.getItem('openfn:promoted')).toBeNull();
+    } finally {
+      nav.restore();
+      window.sessionStorage.removeItem('openfn:promoted');
     }
   });
 
