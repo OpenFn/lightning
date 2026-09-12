@@ -25,11 +25,11 @@ and this project adheres to
 
 - Opening the merge dialog, and deleting a sandbox, no longer crash in a workspace with a branch more than one level deep. A sandbox can no longer be merged into one of its own descendants either, which used to schedule the source for deletion. [#5141](https://github.com/OpenFn/lightning/issues/5141)
 
-- Merging a sandbox no longer reports its own merge as the parent having moved on. A merge now records where it left the parent, so the next one compares against that rather than warning about work it did itself.
+- Merging a sandbox no longer reports its own merge as the parent having moved on. A merge now records where it left the parent, so the next one compares against that rather than warning about work it did itself. [#5167](https://github.com/OpenFn/lightning/issues/5167)
 
-- Merging into a project someone has open now updates their editor instead of leaving it stale. A stale document overwrote the merge on its next save.
+- Merging into a project someone has open now updates their editor instead of leaving it stale. A stale document overwrote the merge on its next save. [#5168](https://github.com/OpenFn/lightning/issues/5168)
 
-- Undo and redo are disabled while reading an older version of a workflow. They were writing into that version's own document.
+- Undo and redo are disabled while reading an older version of a workflow. They were writing into that version's own document. [#5169](https://github.com/OpenFn/lightning/issues/5169)
 
 ### Security
 
