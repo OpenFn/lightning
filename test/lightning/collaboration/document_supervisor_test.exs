@@ -94,9 +94,61 @@ defmodule Lightning.Collaboration.DocumentSupervisorTest do
       assert Process.alive?(context.persistence_writer)
     end
 
-    # The reconcile itself is wrapped in a rescue for the same reason, and has
-    # no test of its own: reaching a raising path needs a live SharedDoc in the
-    # global registry, which this instance-scoped setup deliberately avoids.
+    test "a reconcile that exits leaves the document standing", context do
+      # The reconcile ends in SharedDoc.update_doc/2, a GenServer.call, so a
+      # failure inside the document process reaches us as an exit rather than an
+      # exception. `rescue` alone would not catch it, and this process owns the
+      # SharedDoc and the PersistenceWriter, so dying here drops the room.
+      #
+      # `lookup_shared_doc/2` reads the default :pg scope, so joining a stub
+      # under this workflow's document name is enough to be found. The name
+      # carries the workflow's own id, so nothing else can collide with it.
+      # The supervisor runs the reconcile in its own process, so it needs the
+      # test's connection to get as far as reading the workflow. Without this it
+      # dies on ownership before it ever reaches the document.
+      Ecto.Adapters.SQL.Sandbox.allow(
+        Lightning.Repo,
+        self(),
+        context.doc_supervisor
+      )
+
+      # Stands in for the live SharedDoc and answers `update_doc` with a crash,
+      # which is what a raise inside the serialiser looks like from here.
+      # Unlinked, so its death is this test's business and nobody else's.
+      {:ok, stub} = Agent.start(fn -> :ok end)
+
+      document_name = "workflow:#{context.workflow_id}"
+
+      # `lookup_shared_doc/2` reads the default scope, so the stub has to join
+      # the real one. The name carries this workflow's id, so no other test can
+      # see it, and the membership is dropped again on the way out.
+      :pg.join(:workflow_collaboration, document_name, stub)
+
+      on_exit(fn ->
+        if Process.alive?(stub) do
+          :pg.leave(:workflow_collaboration, document_name, stub)
+          Agent.stop(stub)
+        end
+      end)
+
+      log =
+        capture_log(fn ->
+          send(
+            context.doc_supervisor,
+            %Lightning.Collaboration.WorkflowReconciler.ReconcileRequested{
+              workflow_id: context.workflow_id
+            }
+          )
+
+          Process.sleep(200)
+        end)
+
+      assert log =~ "Reconcile exited"
+
+      assert Process.alive?(context.doc_supervisor)
+      assert Process.alive?(context.shared_doc)
+      assert Process.alive?(context.persistence_writer)
+    end
   end
 
   # Setup for tests that need a test supervisor (like restart strategy test)

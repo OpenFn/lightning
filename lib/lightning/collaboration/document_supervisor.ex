@@ -226,6 +226,17 @@ defmodule Lightning.Collaboration.DocumentSupervisor do
           "Reconcile failed for workflow " <>
             "#{workflow_id}: #{Exception.format(:error, error, __STACKTRACE__)}"
         )
+    catch
+      # The reconcile ends in SharedDoc.update_doc/2, which is a GenServer.call
+      # with a five second timeout, so both realistic failures arrive as exits
+      # rather than exceptions: a raise inside the serialiser kills SharedDoc
+      # and exits the caller, and a workflow large enough to serialise slowly
+      # times out while SharedDoc is perfectly healthy. `rescue` catches
+      # neither.
+      :exit, reason ->
+        Logger.error(
+          "Reconcile exited for workflow #{workflow_id}: #{inspect(reason)}"
+        )
     end
 
     {:noreply, state}

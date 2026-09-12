@@ -13,7 +13,6 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
-  alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.WorkflowRelease
