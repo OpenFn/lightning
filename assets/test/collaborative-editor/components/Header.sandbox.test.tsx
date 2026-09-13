@@ -104,7 +104,13 @@ vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowEnabled: () => ({ enabled: workflowEnabled, setEnabled }),
   useCanRun: () => ({ canRun: true }),
-  useCanSave: () => ({ canSave: true, tooltipMessage: '' }),
+  // Saving follows the read-only state in the app, so the stub follows it here
+  // too. Leaving it permanently true would let a test assert a Save button that
+  // could not exist.
+  useCanSave: () => ({
+    canSave: !readOnly.isReadOnly,
+    tooltipMessage: readOnly.reason ?? '',
+  }),
   useNodeSelection: () => ({ selectNode: vi.fn() }),
   useWorkflowActions: () => ({
     saveWorkflow,
@@ -406,29 +412,28 @@ describe('Header - lifecycle actions', () => {
     ).not.toBeInTheDocument();
   });
 
-  test('hides the lifecycle and sandbox actions on a pinned older version', () => {
-    // They all act on the current workflow, so offering them here would reach
-    // past what is on screen.
+  test('refuses the lifecycle and sandbox actions on a pinned older version', () => {
+    // They all act on the current workflow, so pressing one here would reach
+    // past what is on screen. They stay put and say so: hiding them left a
+    // header with nothing in it and nothing to explain the view.
     lifecycleState = 'live';
     urlParams = { v: '2' };
 
     renderHeader();
 
-    expect(
-      screen.queryByTestId('switch-to-draft-button')
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByTestId('edit-in-sandbox-button')
-    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('switch-to-draft-button')).toBeDisabled();
+    expect(screen.getByTestId('edit-in-sandbox-button')).toBeDisabled();
   });
 
-  test('hides Go live on a pinned older version of a draft workflow', () => {
+  test('refuses Go live on a pinned older version of a draft workflow', () => {
+    // It acts on the current workflow, not the version being read, so it stays
+    // on screen and says so rather than vanishing.
     lifecycleState = 'draft';
-    urlParams = { v: '1' };
+    urlParams = { v: '2' };
 
-    renderHeader();
+    renderHeader({ isSandbox: false });
 
-    expect(screen.queryByTestId('go-live-button')).not.toBeInTheDocument();
+    expect(screen.getByTestId('go-live-button')).toBeDisabled();
   });
 
   test('keeps the two ways to edit while reading a run', () => {
@@ -444,19 +449,16 @@ describe('Header - lifecycle actions', () => {
     expect(screen.getByTestId('edit-in-sandbox-button')).toBeInTheDocument();
   });
 
-  test('still hides them on a pinned version', () => {
+  test('refuses them on a pinned version, rather than hiding them', () => {
     lifecycleState = 'live';
     urlParams = { v: '2' };
 
     renderHeader();
 
-    // No run here to carry into a fix, so this stays a reading view.
-    expect(
-      screen.queryByTestId('switch-to-draft-button')
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByTestId('edit-in-sandbox-button')
-    ).not.toBeInTheDocument();
+    // No run here to carry into a fix, so this stays a reading view. The
+    // controls stay put and say why, because a header with nothing in it
+    // explains nothing.
+    expect(screen.getByTestId('switch-to-draft-button')).toBeDisabled();
   });
 
   test('offers the actions again on the current version', () => {
@@ -674,14 +676,15 @@ describe('Header - lifecycle actions', () => {
       ).not.toBeInTheDocument();
     });
 
-    test('is not offered on a pinned version of a sandbox', () => {
+    test('is refused on a pinned version of a sandbox', () => {
+      // It turns the sandbox on, which is about the workflow now, not the
+      // version being read. It stays on screen and says so.
       lifecycleState = 'draft';
       urlParams = { v: '2' };
+
       renderHeader({ isSandbox: true });
 
-      expect(
-        screen.queryByTestId('toggle-sandbox-button')
-      ).not.toBeInTheDocument();
+      expect(screen.getByTestId('toggle-sandbox-button')).toBeDisabled();
     });
   });
 
@@ -1197,15 +1200,15 @@ describe('Header - read-only reason variations', () => {
     expect(saveButton).toHaveTextContent('Create');
   });
 
-  test('hides the Save button on a live read-only workflow', () => {
-    // A true lock reason ('live') hides the primary action entirely.
+  test('keeps Save on screen, disabled, on a live read-only workflow', () => {
+    // Hiding it leaves a header with nothing in it and no explanation. The
+    // button stays and carries its own reason, which is what the editor does
+    // everywhere else a view is read-only.
     readOnly = { isReadOnly: true, reason: 'live' };
 
     renderHeader({ isSandbox: false });
 
-    expect(
-      screen.queryByTestId('save-workflow-button')
-    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('save-workflow-button')).toBeDisabled();
   });
 
   test('keeps the Read-only cue on a pinned old version of a live workflow', () => {

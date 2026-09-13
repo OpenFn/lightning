@@ -1268,9 +1268,10 @@ describe('Header - Keyboard Shortcuts', () => {
     expect(save).toBeDisabled();
   });
 
-  test('save button is hidden on a read-only view with experimental features', async () => {
-    // With the flag on, the lifecycle actions are there to say why the view is
-    // read-only and to offer a way out, so the empty controls go.
+  test('save button stays, disabled, on a read-only view with the flag on', async () => {
+    // It used to be hidden, on the grounds that the lifecycle actions explain
+    // the view. They are themselves hidden on a version view, so that left a
+    // header with nothing in it. It stays and carries its own reason.
     const { wrapper, emitSessionContext } = await createTestSetup({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
       experimentalFeatures: true,
@@ -1288,9 +1289,7 @@ describe('Header - Keyboard Shortcuts', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    expect(
-      screen.queryByRole('button', { name: /save/i })
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
   });
 
   test('Header renders with GitHub connection and sync options available', async () => {

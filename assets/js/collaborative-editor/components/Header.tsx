@@ -301,11 +301,17 @@ export function Header({
   // screen: Switch to draft would take production offline while you read history.
   const isViewingNonCurrentVersion = isPinnedVersion || isViewingAsExecuted;
 
-  // Reading a run is where a person goes to fix a failure, and the two ways to
-  // edit a live workflow are the way out of it. Hiding them here left the
-  // journey with no exit: leaving the run first loses the run, and its input
-  // with it. A pinned version has no run to carry, so it stays as it was.
-  const isReadingHistoryWithoutRun = isPinnedVersion;
+  // These act on the current workflow rather than on what is being read, so a
+  // pinned version refuses them and says why. They used to be hidden, which
+  // left a header with nothing in it and nothing to explain the view.
+  //
+  // A run view is deliberately not included. Reading a failed run is where
+  // fixing one starts, and these are the way out of it: Switch to draft and
+  // Edit in sandbox both carry the run's input into the fix. A pinned version
+  // has no run to carry, so there is nothing to preserve by allowing them.
+  const versionViewReason = isPinnedVersion
+    ? 'You are reading an older version. This acts on the current workflow.'
+    : null;
 
   // A retry runs the content that is live now, whatever is on screen. The
   // button does not say so, because retrying always means that, but the
@@ -335,7 +341,6 @@ export function Header({
   // way out. Without the flag none of that is on screen, so hiding them would
   // leave a header with no controls and no reason, where today it shows both
   // greyed out. `canRun` and `canSave` already carry the reason.
-  const hideOnReadOnly = experimentalFeatures && isReadOnly;
 
   const handleRunClick = useCallback(async () => {
     if (!firstTriggerId || !projectId || !workflowId) return;
@@ -756,63 +761,65 @@ export function Header({
               </div>
             </div>
             <div className="relative flex gap-2">
-              {!isNewWorkflow &&
-                !inSandbox &&
-                !isViewingNonCurrentVersion &&
-                lifecycleState === 'draft' && (
-                  <Tooltip
-                    content={
-                      isReadOnly ? 'You cannot go live on this version' : null
-                    }
-                    side="bottom"
-                  >
-                    <span className="inline-block">
-                      <Button
-                        data-testid="go-live-button"
-                        className="inline-flex items-center"
-                        disabled={isReadOnly || isTransitioning}
-                        onClick={() => {
-                          setIsTransitioning(true);
-                          void goLive()
-                            .catch(() =>
-                              notifications.alert({
-                                title: 'Could not go live',
-                                description: 'Please try again.',
-                              })
-                            )
-                            .finally(() => {
-                              setIsTransitioning(false);
-                            });
-                        }}
-                      >
-                        Go live
-                      </Button>
-                    </span>
-                  </Tooltip>
-                )}
-              {!isNewWorkflow &&
-                !inSandbox &&
-                !isReadingHistoryWithoutRun &&
-                lifecycleState === 'live' && (
-                  <Button
-                    variant="secondary"
-                    data-testid="switch-to-draft-button"
-                    className="inline-flex items-center hover:bg-gray-50
-                      disabled:hover:inset-ring-gray-300"
-                    disabled={isTransitioning}
-                    onClick={() => {
-                      setShowSwitchToDraftDialog(true);
-                    }}
-                  >
-                    Switch to draft
-                  </Button>
-                )}
-              {!isNewWorkflow && inSandbox && !isViewingNonCurrentVersion && (
+              {!isNewWorkflow && !inSandbox && lifecycleState === 'draft' && (
                 <Tooltip
                   content={
-                    lifecycleState === 'live'
+                    versionViewReason ??
+                    (isReadOnly ? 'You cannot go live on this version' : null)
+                  }
+                  side="bottom"
+                >
+                  <span className="inline-block">
+                    <Button
+                      data-testid="go-live-button"
+                      className="inline-flex items-center"
+                      disabled={
+                        isReadOnly || isTransitioning || isPinnedVersion
+                      }
+                      onClick={() => {
+                        setIsTransitioning(true);
+                        void goLive()
+                          .catch(() =>
+                            notifications.alert({
+                              title: 'Could not go live',
+                              description: 'Please try again.',
+                            })
+                          )
+                          .finally(() => {
+                            setIsTransitioning(false);
+                          });
+                      }}
+                    >
+                      Go live
+                    </Button>
+                  </span>
+                </Tooltip>
+              )}
+              {!isNewWorkflow && !inSandbox && lifecycleState === 'live' && (
+                <Tooltip content={versionViewReason} side="bottom">
+                  <span className="inline-block">
+                    <Button
+                      variant="secondary"
+                      data-testid="switch-to-draft-button"
+                      className="inline-flex items-center hover:bg-gray-50
+                          disabled:hover:inset-ring-gray-300"
+                      disabled={isTransitioning || isPinnedVersion}
+                      onClick={() => {
+                        setShowSwitchToDraftDialog(true);
+                      }}
+                    >
+                      Switch to draft
+                    </Button>
+                  </span>
+                </Tooltip>
+              )}
+              {!isNewWorkflow && inSandbox && (
+                <Tooltip
+                  content={
+                    versionViewReason ??
+                    (lifecycleState === 'live'
                       ? 'Turn the sandbox off and its triggers stop answering.'
-                      : "Turn the sandbox on and its own webhook URL answers, and its cron triggers fire. The parent's live workflow is untouched."
+                      : "Turn the sandbox on and its own webhook URL answers, and its cron triggers fire. The parent's live workflow is untouched.")
                   }
                   side="bottom"
                 >
@@ -822,7 +829,9 @@ export function Header({
                       data-testid="toggle-sandbox-button"
                       className="inline-flex items-center hover:bg-gray-50
                         disabled:hover:inset-ring-gray-300"
-                      disabled={isReadOnly || isTransitioning}
+                      disabled={
+                        isReadOnly || isTransitioning || isPinnedVersion
+                      }
                       onClick={() => {
                         const turningOn = lifecycleState !== 'live';
                         setIsTransitioning(true);
@@ -849,44 +858,47 @@ export function Header({
                   </span>
                 </Tooltip>
               )}
-              {!isNewWorkflow && inSandbox && !isViewingNonCurrentVersion && (
-                <Button
-                  data-testid="promote-sandbox-button"
-                  className="inline-flex items-center gap-1"
-                  onClick={() => {
-                    setShowPromoteDialog(true);
-                  }}
-                >
-                  Promote
-                </Button>
+              {!isNewWorkflow && inSandbox && (
+                <Tooltip content={versionViewReason} side="bottom">
+                  <span className="inline-block">
+                    <Button
+                      data-testid="promote-sandbox-button"
+                      className="inline-flex items-center gap-1"
+                      disabled={isPinnedVersion}
+                      onClick={() => {
+                        setShowPromoteDialog(true);
+                      }}
+                    >
+                      Promote
+                    </Button>
+                  </span>
+                </Tooltip>
               )}
-              {lifecycleState === 'live' &&
-                !inSandbox &&
-                !isNewWorkflow &&
-                !isReadingHistoryWithoutRun && (
-                  <Tooltip
-                    content={
-                      canProvisionSandbox
-                        ? null
-                        : 'You do not have permission to create a sandbox in this project.'
-                    }
-                    side="bottom"
-                  >
-                    <span className="inline-block">
-                      <Button
-                        data-testid="edit-in-sandbox-button"
-                        className="inline-flex items-center"
-                        disabled={!canProvisionSandbox}
-                        onClick={() => {
-                          if (!canProvisionSandbox) return;
-                          setShowEditInSandboxPicker(true);
-                        }}
-                      >
-                        Edit in sandbox
-                      </Button>
-                    </span>
-                  </Tooltip>
-                )}
+              {lifecycleState === 'live' && !inSandbox && !isNewWorkflow && (
+                <Tooltip
+                  content={
+                    versionViewReason ??
+                    (canProvisionSandbox
+                      ? null
+                      : 'You do not have permission to create a sandbox in this project.')
+                  }
+                  side="bottom"
+                >
+                  <span className="inline-block">
+                    <Button
+                      data-testid="edit-in-sandbox-button"
+                      className="inline-flex items-center"
+                      disabled={!canProvisionSandbox || isPinnedVersion}
+                      onClick={() => {
+                        if (!canProvisionSandbox) return;
+                        setShowEditInSandboxPicker(true);
+                      }}
+                    >
+                      Edit in sandbox
+                    </Button>
+                  </span>
+                </Tooltip>
+              )}
               {/* Whenever a run is loaded, whichever document it is being read
                   against. A live workflow is read-only, which hides the normal
                   Run button, so without this there is no way to retry the one
@@ -906,7 +918,7 @@ export function Header({
                     Retry
                   </Button>
                 )}
-              {projectId && workflowId && firstTriggerId && !hideOnReadOnly && (
+              {projectId && workflowId && firstTriggerId && (
                 <NewRunButton
                   onClick={() => {
                     void (isRetryable ? handleRetryClick() : handleRunClick());
@@ -917,19 +929,17 @@ export function Header({
                   text={isRetryable ? 'Run (Retry)' : 'Run'}
                 />
               )}
-              {(!hideOnReadOnly || readOnlyReason === 'unsaved_new') && (
-                <SaveButton
-                  canSave={canSave && !hasSettingsErrors}
-                  tooltipMessage={tooltipMessage}
-                  onClick={() => void saveWorkflow()}
-                  repoConnection={repoConnection}
-                  onSyncClick={openGitHubSyncModal}
-                  label={isNewWorkflow ? 'Create' : 'Save'}
-                  canSync={githubSyncLimit.allowed}
-                  syncTooltipMessage={githubSyncLimit.message}
-                  hasChanges={showChangeIndicator}
-                />
-              )}
+              <SaveButton
+                canSave={canSave && !hasSettingsErrors}
+                tooltipMessage={tooltipMessage}
+                onClick={() => void saveWorkflow()}
+                repoConnection={repoConnection}
+                onSyncClick={openGitHubSyncModal}
+                label={isNewWorkflow ? 'Create' : 'Save'}
+                canSync={githubSyncLimit.allowed}
+                syncTooltipMessage={githubSyncLimit.message}
+                hasChanges={showChangeIndicator}
+              />
             </div>
           </div>
 
