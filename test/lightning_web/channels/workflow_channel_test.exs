@@ -2953,6 +2953,38 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert lock_version == workflow.lock_version
     end
 
+    test "says whether the project is a sandbox", %{socket: socket} do
+      # The editor uses it to decide which version list to show: nothing in a
+      # sandbox reaches production, so a sandbox browses its saves rather than a
+      # publish trail.
+      ref = push(socket, "get_context", %{})
+      assert_reply ref, :ok, %{project: %{is_sandbox: false}}
+    end
+
+    test "says so for a workflow inside a sandbox", %{user: user} do
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      workflow = insert(:simple_workflow, project: sandbox)
+
+      {:ok, _, socket} =
+        LightningWeb.UserSocket
+        |> socket("user_id", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}",
+          %{project_id: sandbox.id, action: "edit"}
+        )
+
+      ref = push(socket, "get_context", %{})
+      assert_reply ref, :ok, %{project: %{is_sandbox: true}}
+    end
+
     test "includes experimental_features_enabled field", %{socket: socket} do
       ref = push(socket, "get_context", %{})
 

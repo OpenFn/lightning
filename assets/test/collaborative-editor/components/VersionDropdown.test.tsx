@@ -418,7 +418,7 @@ describe('VersionDropdown', () => {
       rerender(<VersionDropdown {...props} />);
 
       expect(mockRequestVersions).toHaveBeenCalledOnce();
-      expect(screen.getByText('No published versions')).toBeInTheDocument();
+      expect(screen.getByText('No published versions yet')).toBeInTheDocument();
     });
 
     test('does not refetch if releases already loaded', async () => {
@@ -685,7 +685,28 @@ describe('VersionDropdown', () => {
       expect(row).toHaveTextContent('14 Jan 2024');
     });
 
-    test('shows "No published versions" when nothing has been published', async () => {
+    test('offers a way back to Latest when nothing has been published', async () => {
+      // The case that had no exit: a workflow with no publishes, read through a
+      // run, showed a menu with nothing in it to click.
+      const user = userEvent.setup();
+
+      mockUseReleases.mockReturnValue([]);
+
+      render(
+        <VersionDropdown
+          currentVersion={3}
+          latestVersion={7}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      await user.click(screen.getByRole('button'));
+      await user.click(screen.getByTestId('version-latest'));
+
+      expect(mockOnVersionSelect).toHaveBeenCalledWith('latest');
+    });
+
+    test('offers Latest, and says nothing is published yet', async () => {
       const user = userEvent.setup();
 
       mockUseReleases.mockReturnValue([]);
@@ -706,7 +727,9 @@ describe('VersionDropdown', () => {
 
       // Wait for loading to complete
       await waitFor(() => {
-        expect(screen.getByText('No published versions')).toBeInTheDocument();
+        expect(
+          screen.getByText('No published versions yet')
+        ).toBeInTheDocument();
       });
     });
 
@@ -942,7 +965,7 @@ describe('VersionDropdown', () => {
       expect(newest?.querySelector('.hero-check')).not.toBeInTheDocument();
     });
 
-    test('newest release is the first row with a green v-pill and no "latest" text', async () => {
+    test('Latest leads, then the publishes, newest with a green v-pill', async () => {
       const user = userEvent.setup();
 
       const mockVersions: Release[] = [
@@ -977,11 +1000,12 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // First menuitem is the newest release (v5), the second is the older (v4);
-      // there is no separate "latest" pseudo-row.
+      // Latest leads, because it is where you go to edit rather than a
+      // version that was published. The publishes follow, newest first.
       const versionButtons = screen.getAllByRole('menuitem');
-      expect(versionButtons[0]).toHaveTextContent('v5');
-      expect(versionButtons[1]).toHaveTextContent('v4');
+      expect(versionButtons[0]).toHaveTextContent('Latest');
+      expect(versionButtons[1]).toHaveTextContent('v5');
+      expect(versionButtons[2]).toHaveTextContent('v4');
 
       // Newest v-pill is green; older v-pill is neutral gray
       const newestPill = screen.getByText('v5');
@@ -1358,8 +1382,9 @@ describe('VersionDropdown', () => {
       await user.click(button);
 
       // Each release is one menuitem; there is no "latest" pseudo-row
+      // The two releases, plus Latest, which is a menu item in its own right.
       const menuItems = screen.getAllByRole('menuitem');
-      expect(menuItems).toHaveLength(2);
+      expect(menuItems).toHaveLength(3);
     });
   });
 });

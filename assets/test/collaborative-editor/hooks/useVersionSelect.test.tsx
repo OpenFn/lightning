@@ -45,17 +45,19 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({ saveWorkflow }),
 }));
 
-let experimentalFeatures = true;
+// Which picker is on screen decides which parameter a switch writes. The hook
+// under test only asks; what decides the answer is useVersionPicker's own test.
+let picker: 'releases' | 'snapshots' = 'releases';
 
-vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
-  useExperimentalFeatures: () => experimentalFeatures,
+vi.mock('../../../js/collaborative-editor/hooks/useVersionPicker', () => ({
+  useVersionPicker: () => picker,
 }));
 
 describe('useVersionSelect', () => {
   beforeEach(() => {
     urlState.reset();
     hasChanges = false;
-    experimentalFeatures = true;
+    picker = 'releases';
     saveWorkflow.mockReset();
     saveWorkflow.mockResolvedValue(undefined);
   });
@@ -77,7 +79,7 @@ describe('useVersionSelect', () => {
     });
   });
 
-  test('pins a snapshot with ?v, and touches nothing else, without the flag', () => {
+  test('pins a snapshot with ?v, and touches nothing else, on the snapshots picker', () => {
     // Without the flag the picker lists saves, numbered by lock_version, and
     // those go in `?v=`. Writing them into `?release=` would ask the server for
     // release 3 and get whichever content that published, which is a different
@@ -87,7 +89,7 @@ describe('useVersionSelect', () => {
     // which is what the mismatch banner's offer depends on: it takes you to the
     // version the run ran against, and the run has to still be there when you
     // arrive.
-    experimentalFeatures = false;
+    picker = 'snapshots';
     urlState.setParam('run', 'the-run-being-looked-at');
 
     const { result } = renderHook(() => useVersionSelect());
@@ -105,7 +107,7 @@ describe('useVersionSelect', () => {
     // someone who can carries them in, and the room name resolves those before
     // the snapshot. Leaving them would let this picker change the URL and
     // nothing else.
-    experimentalFeatures = false;
+    picker = 'snapshots';
     urlState.setParam('as_run', 'a-run-from-a-shared-link');
 
     const { result } = renderHook(() => useVersionSelect());
@@ -116,8 +118,8 @@ describe('useVersionSelect', () => {
     );
   });
 
-  test('returning to latest without the flag clears only the pins', () => {
-    experimentalFeatures = false;
+  test('returning to latest on the snapshots picker clears only the pins', () => {
+    picker = 'snapshots';
 
     const { result } = renderHook(() => useVersionSelect());
     result.current.handleVersionSelect('latest');
@@ -144,11 +146,11 @@ describe('useVersionSelect', () => {
     });
   });
 
-  test('switches straight away without experimental features', () => {
+  test('switches straight away on the snapshots picker', () => {
     // The prompt is part of what this work added. Today the editor discards
     // silently, so a user who did not opt in must not meet a dialog they have
     // never seen.
-    experimentalFeatures = false;
+    picker = 'snapshots';
     hasChanges = true;
 
     const { result } = renderHook(() => useVersionSelect());

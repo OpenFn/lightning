@@ -18,6 +18,7 @@ import { LoadingBoundary } from './components/LoadingBoundary';
 import { RestoreVersionDialog } from './components/RestoreVersionDialog';
 import type { RestoreCost } from './components/RestoreVersionDialog';
 import { SnapshotVersionDropdown } from './components/SnapshotVersionDropdown';
+import { useVersionPicker } from './hooks/useVersionPicker';
 import { TemplateBrowserModalWrapper } from './components/TemplateBrowserModalWrapper';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
@@ -224,6 +225,7 @@ export function BreadcrumbContent({
   const displayName = projectDisplayNameFallback ?? projectName;
   const projectColor = projectColorFallback ?? null;
   const isSandbox = projectIsSandboxFallback === 'true';
+  const versionPicker = useVersionPicker();
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
 
   const breadcrumbElements = useMemo(() => {
@@ -251,7 +253,7 @@ export function BreadcrumbContent({
               the editor did before this work. Which one is on screen decides
               which parameter pins a version and therefore which collaboration
               room the session joins. */}
-          {experimentalFeatures ? (
+          {versionPicker === 'releases' ? (
             <VersionDropdown
               currentVersion={workflowFromStore?.lock_version ?? null}
               latestVersion={latestSnapshotLockVersion}

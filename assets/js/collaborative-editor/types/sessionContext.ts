@@ -19,6 +19,10 @@ export const ProjectContextSchema = z.object({
   name: z.string(),
   concurrency: z.number().int().nullable().optional(),
   env: z.string().nullable().optional(),
+  // A sandbox is a project with a parent. Optional so an older server that does
+  // not send it leaves the rest of the context parsing rather than failing the
+  // lot; absent reads as "not a sandbox", which is the safe answer.
+  is_sandbox: z.boolean().optional(),
 });
 
 export const ProjectRepoConnectionSchema = z.object({

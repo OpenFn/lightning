@@ -188,6 +188,31 @@ export function VersionDropdown({
             aria-orientation="vertical"
             aria-labelledby="options-menu"
           >
+            {/* Always first, and always clickable when you are reading
+                something else. Without it a workflow that has published
+                nothing offers no way back to its editable content, which is
+                every draft and every workflow read through a run. */}
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="version-latest"
+              onClick={() => {
+                setIsOpen(false);
+                onVersionSelect('latest');
+              }}
+              className={cn(
+                'flex w-full items-center gap-2 px-4 py-2 text-left text-sm',
+                isLatestVersion
+                  ? 'bg-primary-50 text-primary-900'
+                  : 'text-gray-700 hover:bg-gray-50'
+              )}
+            >
+              <span className="flex-1 font-medium">Latest</span>
+              {isLatestVersion && (
+                <span className="hero-check-mini h-4 w-4 text-primary-600" />
+              )}
+            </button>
+
             {isLoading ? (
               <div className="px-4 py-2 text-sm text-gray-500">
                 Loading versions...
@@ -198,7 +223,7 @@ export function VersionDropdown({
               </div>
             ) : releases.length === 0 ? (
               <div className="px-4 py-2 text-sm text-gray-500">
-                No published versions
+                No published versions yet
               </div>
             ) : (
               <>

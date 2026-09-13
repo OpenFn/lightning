@@ -1422,7 +1422,12 @@ defmodule LightningWeb.WorkflowChannel do
     %{
       id: project.id,
       name: project.name,
-      concurrency: project.concurrency
+      concurrency: project.concurrency,
+      # A sandbox is a project with a parent. The editor needs it to decide
+      # which version list to show: publishing means production, and nothing in
+      # a sandbox reaches production, so a sandbox browses its saves the way the
+      # editor always has.
+      is_sandbox: not is_nil(project.parent_id)
     }
   end
 

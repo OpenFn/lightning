@@ -30,7 +30,7 @@ import {
 } from '../lib/pinnedView';
 
 import { useDiscardGuard } from './useDiscardGuard';
-import { useExperimentalFeatures } from './useSessionContext';
+import { useVersionPicker } from './useVersionPicker';
 
 /**
  * Hook that provides a version selection handler.
@@ -44,8 +44,10 @@ export function useVersionSelect() {
 
   // Which numbering the picker on screen is using. A release version_number and
   // a snapshot lock_version are different numbers for different content, so
-  // writing one into the other's parameter would open the wrong document.
-  const experimentalFeatures = useExperimentalFeatures();
+  // writing one into the other's parameter would open the wrong document. The
+  // picker decides, not the flag: a draft or a sandbox browses its saves even
+  // with experimental features on.
+  const picker = useVersionPicker();
 
   const handleVersionSelect = useCallback(
     (version: number | 'latest') => {
@@ -55,31 +57,32 @@ export function useVersionSelect() {
       // A run stays open across the switch, which is how the mismatch banner's
       // offer works today: it takes you to the version the open run ran
       // against, and the run has to survive the trip.
-      const switchTo = experimentalFeatures
-        ? () => {
-            updateSearchParams({
-              ...CLEAR_PINNED_VIEW,
-              [RELEASE_PARAM]: value,
-              run: null,
-              // The step belongs to the run being cleared, and a step id means
-              // nothing in another version.
-              step: null,
-            });
-          }
-        : () => {
-            // The other two pins are cleared even here. A flag-off user cannot
-            // create them, but a link from someone who can carries them in, and
-            // `collaborationRoomName` resolves as_run before release before the
-            // snapshot, so leaving them would let the picker change the URL and
-            // nothing else. `run` and `step` stay: the mismatch banner's offer
-            // takes you to the version the open run ran against, and the run has
-            // to survive the trip.
-            updateSearchParams({
-              [RELEASE_PARAM]: null,
-              [AS_RUN_PARAM]: null,
-              [SNAPSHOT_PARAM]: value,
-            });
-          };
+      const switchTo =
+        picker === 'releases'
+          ? () => {
+              updateSearchParams({
+                ...CLEAR_PINNED_VIEW,
+                [RELEASE_PARAM]: value,
+                run: null,
+                // The step belongs to the run being cleared, and a step id means
+                // nothing in another version.
+                step: null,
+              });
+            }
+          : () => {
+              // The other two pins are cleared even here. A flag-off user cannot
+              // create them, but a link from someone who can carries them in, and
+              // `collaborationRoomName` resolves as_run before release before the
+              // snapshot, so leaving them would let the picker change the URL and
+              // nothing else. `run` and `step` stay: the mismatch banner's offer
+              // takes you to the version the open run ran against, and the run has
+              // to survive the trip.
+              updateSearchParams({
+                [RELEASE_PARAM]: null,
+                [AS_RUN_PARAM]: null,
+                [SNAPSHOT_PARAM]: value,
+              });
+            };
 
       // Switching destroys the document, so with experimental features on we
       // ask first when that would take uncommitted edits with it.
@@ -88,14 +91,14 @@ export function useVersionSelect() {
       // the editor does today. The prompt is a good addition and it is still an
       // addition; a user who did not opt in should not meet a dialog they have
       // never seen.
-      if (!experimentalFeatures) {
+      if (picker !== 'releases') {
         switchTo();
         return;
       }
 
       guard(switchTo);
     },
-    [experimentalFeatures, guard, updateSearchParams]
+    [picker, guard, updateSearchParams]
   );
 
   return { handleVersionSelect, prompt };
