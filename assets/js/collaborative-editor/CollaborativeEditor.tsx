@@ -72,6 +72,9 @@ export interface CollaborativeEditorDataProps {
   // Whether this user has experimental features on, rendered into the page so
   // the first paint already knows rather than waiting for the session context.
   'data-experimental-features'?: string;
+  // The workflow's lifecycle state at render time, so the header knows before
+  // the session context arrives.
+  'data-workflow-state'?: string;
   // Initial run data from server to avoid client-side race conditions
   'data-initial-run-data'?: string; // JSON-encoded RunStepsData
 }
@@ -98,6 +101,12 @@ interface BreadcrumbContentProps {
   projectIsSandboxFallback?: string;
   projectColorFallback?: string | null;
   projectEnvFallback?: string;
+  /**
+   * The workflow's lifecycle state as the page was rendered. Used until the
+   * session context arrives, so the header does not draw itself one way and
+   * correct itself a moment later.
+   */
+  workflowStateFallback?: string;
   aiAssistantEnabled: boolean;
 }
 
@@ -110,6 +119,7 @@ export function BreadcrumbContent({
   projectIsSandboxFallback,
   projectColorFallback,
   projectEnvFallback,
+  workflowStateFallback,
   aiAssistantEnabled,
 }: BreadcrumbContentProps) {
   const isNewWorkflow = useIsNewWorkflow();
@@ -316,6 +326,9 @@ export function BreadcrumbContent({
         {...(projectId !== undefined && { projectId })}
         workflowId={workflowId}
         isSandbox={isSandbox}
+        {...(workflowStateFallback !== undefined && {
+          initialWorkflowState: workflowStateFallback,
+        })}
         isRunPanelOpen={isRunPanelOpen}
         isIDEOpen={isIDEOpen}
         aiAssistantEnabled={aiAssistantEnabled}
@@ -410,6 +423,7 @@ export const CollaborativeEditor: WithActionProps<
   const isNewWorkflow = props['data-is-new-workflow'] === 'true';
   const aiAssistantEnabled = props['data-ai-assistant-enabled'] === 'true';
   const experimentalFeatures = props['data-experimental-features'] === 'true';
+  const workflowState = props['data-workflow-state'];
   const initialRunData = props['data-initial-run-data'];
 
   const liveViewActions = {
@@ -463,6 +477,9 @@ export const CollaborativeEditor: WithActionProps<
                         })}
                         {...(projectEnv !== undefined && {
                           projectEnvFallback: projectEnv,
+                        })}
+                        {...(workflowState !== undefined && {
+                          workflowStateFallback: workflowState,
                         })}
                       />
                       <div className="flex-1 min-h-0 overflow-hidden relative">

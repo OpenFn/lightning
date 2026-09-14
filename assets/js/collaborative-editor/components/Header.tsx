@@ -221,6 +221,7 @@ export function Header({
   projectId,
   workflowId,
   isSandbox = false,
+  initialWorkflowState,
   isRunPanelOpen = false,
   isIDEOpen = false,
   aiAssistantEnabled = false,
@@ -229,6 +230,13 @@ export function Header({
   projectId?: string;
   workflowId?: string;
   isSandbox?: boolean;
+  /**
+   * The workflow's lifecycle state as the page was rendered, used until the
+   * session context arrives. Without it the header draws what a draft looks
+   * like and corrects itself a moment later, which on a live workflow means
+   * Save appearing and vanishing.
+   */
+  initialWorkflowState?: string;
   isRunPanelOpen?: boolean;
   isIDEOpen?: boolean;
   aiAssistantEnabled?: boolean;
@@ -276,7 +284,7 @@ export function Header({
   // forget to check.
   const experimentalFeatures = useExperimentalFeatures();
   const lifecycleState = experimentalFeatures
-    ? sessionWorkflow?.state
+    ? (sessionWorkflow?.state ?? initialWorkflowState)
     : undefined;
   const inSandbox = experimentalFeatures && isSandbox;
   const permissions = usePermissions();

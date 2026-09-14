@@ -1347,6 +1347,19 @@ describe('Header - read-only reason variations', () => {
     expect(screen.getByTestId('promote-sandbox-button')).toBeDisabled();
   });
 
+  test('knows a live workflow before the session context arrives', () => {
+    // The page renders the state with the editor. Waiting for the context
+    // meant drawing a draft's header first, so on a live workflow Save
+    // appeared and then vanished a moment later.
+    urlParams = {};
+    lifecycleState = undefined;
+    readOnly = { isReadOnly: true, reason: 'live' };
+
+    renderHeader({ isSandbox: false, initialWorkflowState: 'live' });
+
+    expect(screen.queryByTestId('save-workflow-button')).toBeNull();
+  });
+
   test('drops Save on a live workflow, where it could never work', () => {
     urlParams = {};
     // The Live badge and Switch to draft sit beside it and explain the state,
