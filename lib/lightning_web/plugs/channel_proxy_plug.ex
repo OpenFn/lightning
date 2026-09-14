@@ -14,6 +14,15 @@ defmodule LightningWeb.ChannelProxyPlug do
   `Plug.RequestId` requires it to be between 20 and 200 characters —
   shorter or longer values are discarded and a new ID is generated
   automatically.
+
+  ## Response security headers
+
+  This plug is mounted at the endpoint above the router
+  (`LightningWeb.Endpoint`) so that the raw request body survives for
+  proxying, and it halts once the response is sent. The `:browser` pipeline —
+  and with it `put_secure_browser_headers/2` — is therefore never reached, so
+  the headers it would have set are applied here instead. See
+  `secure_proxy_response/1`.
   """
   @behaviour Plug
 
@@ -22,9 +31,18 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   alias Lightning.Channels
   alias Lightning.Channels.PersistencePolicy
+  alias Lightning.Projects.Environment
   alias LightningWeb.Auth
 
   require Logger
+
+  @proxy_security_headers [
+    {"content-security-policy",
+     "default-src 'none'; sandbox; frame-ancestors 'none'"},
+    {"x-content-type-options", "nosniff"},
+    {"x-frame-options", "DENY"},
+    {"referrer-policy", "no-referrer"}
+  ]
 
   defmodule DestinationRequest do
     @moduledoc false
@@ -52,6 +70,8 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   @impl true
   def call(%Plug.Conn{path_info: ["channels", channel_id | rest]} = conn, _opts) do
+    conn = register_before_send(conn, &secure_proxy_response/1)
+
     :telemetry.span(
       [:lightning, :channel_proxy, :inbound],
       %{},
@@ -268,6 +288,25 @@ defmodule LightningWeb.ChannelProxyPlug do
     |> Enum.uniq()
   end
 
+  # Outbound mirror of the inbound `cookie` strip above, run as a
+  # `register_before_send/2` callback so it lands *after* Philter has copied the
+  # destination's response headers onto the conn (`Philter.apply_resp_headers/2`
+  # overwrites by key, so anything set before `Philter.proxy/2` would be lost).
+  #
+  # The destination is tenant-controlled but its response is served from
+  # Lightning's own origin, so without this a channel destination could return
+  # `text/html` that runs script in a victim's authenticated Lightning session,
+  # or set cookies scoped to the Lightning host. `sandbox` puts the response in
+  # a unique opaque origin and denies it script execution; `set-cookie` is
+  # dropped so the destination cannot write into Lightning's cookie jar.
+  defp secure_proxy_response(conn) do
+    Enum.reduce(
+      @proxy_security_headers,
+      delete_resp_header(conn, "set-cookie"),
+      fn {key, value}, acc -> put_resp_header(acc, key, value) end
+    )
+  end
+
   defp client_auth_strip_headers(client_auth_types) do
     Enum.flat_map(client_auth_types, fn
       :api -> ["x-api-key"]
@@ -301,10 +340,12 @@ defmodule LightningWeb.ChannelProxyPlug do
         {:ok, nil}
 
       %{project_credential: %{credential: credential}} ->
-        with {:ok, body} <-
+        # Hard-coding this handed a sandbox the parent's production secret.
+        with {:ok, environment} <- Environment.fetch(channel),
+             {:ok, body} <-
                Lightning.Credentials.resolve_credential_body(
                  credential,
-                 "main"
+                 environment
                ),
              {:ok, header} <-
                Channels.DestinationAuth.build_auth_header(
@@ -383,4 +424,12 @@ defmodule LightningWeb.ChannelProxyPlug do
 
   defp classify_credential_error(:reauthorization_required),
     do: "oauth_reauthorization_required"
+
+  # Deriving the environment rather than assuming one gave this path more ways
+  # to fail, and each still has to arrive as a recorded 502.
+  defp classify_credential_error(:environment_not_configured),
+    do: "credential_environment_not_configured"
+
+  defp classify_credential_error(:project_not_found),
+    do: "credential_project_not_found"
 end

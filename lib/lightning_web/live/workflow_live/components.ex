@@ -19,14 +19,24 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :class, :string, default: ""
   attr :return_to, :string
   slot :action, doc: "the slot for showing user actions in the last table column"
-  slot :linked_triggers, doc: "the slot for showing the linked triggers modal"
+
+  slot :linked_usage,
+    doc: """
+    the slot for showing what an auth method is used by. Receives a map with
+    `:auth_method`, `:summary` (e.g. "2 triggers, 1 channel") and `:in_use?`.
+    """
+
   slot :empty_state, doc: "the slot for showing an empty state"
 
   def webhook_auth_methods_table(assigns) do
     assigns =
       assign(assigns,
         auth_methods:
-          Lightning.Repo.preload(assigns.auth_methods, [:triggers, :project])
+          Lightning.Repo.preload(assigns.auth_methods, [
+            :triggers,
+            :project,
+            :channels
+          ])
       )
 
     ~H"""
@@ -46,7 +56,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               Type
             </.th>
             <.th class="min-w-[10rem] py-2.5 text-left text-sm font-normal text-gray-900">
-              Linked Triggers
+              Linked Triggers &amp; Channels
             </.th>
             <.th class="min-w-[4rem] py-2.5 text-right text-sm font-normal text-gray-900">
             </.th>
@@ -72,7 +82,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <span>{humanized_auth_method_type(auth_method)}</span>
               </.td>
               <.td class="whitespace-nowrap text-sm text-gray-900">
-                {render_slot(@linked_triggers, auth_method)}
+                {render_slot(@linked_usage, linked_usage(auth_method))}
               </.td>
               <.td
                 :if={@action != []}
@@ -93,18 +103,43 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
+  @spec linked_usage(Lightning.Workflows.WebhookAuthMethod.t()) :: %{
+          auth_method: Lightning.Workflows.WebhookAuthMethod.t(),
+          summary: String.t(),
+          in_use?: boolean()
+        }
+  defp linked_usage(auth_method) do
+    trigger_count = length(auth_method.triggers)
+    channel_count = length(auth_method.channels)
+
+    summary =
+      [{trigger_count, "trigger"}, {channel_count, "channel"}]
+      |> Enum.reject(fn {count, _noun} -> count == 0 end)
+      |> Enum.map_join(", ", fn
+        {1, noun} -> "1 #{noun}"
+        {count, noun} -> "#{count} #{noun}s"
+      end)
+
+    %{
+      auth_method: auth_method,
+      summary: summary,
+      in_use?: trigger_count + channel_count > 0
+    }
+  end
+
   attr :id, :any, required: true
   attr :on_close, JS, required: true
 
   attr :webhook_auth_method, Lightning.Workflows.WebhookAuthMethod,
     required: true
 
-  def linked_triggers_for_webhook_auth_method_modal(assigns) do
+  def linked_usage_for_webhook_auth_method_modal(assigns) do
     assigns =
       assign(assigns,
         webhook_auth_method:
           Lightning.Repo.preload(assigns.webhook_auth_method,
-            triggers: [:workflow]
+            triggers: [:workflow],
+            channels: []
           )
       )
 
@@ -112,7 +147,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     <.modal id={@id} show={true} on_close={@on_close}>
       <:title>
         <div class="flex justify-between">
-          <span>Associated Workflow Triggers</span>
+          <span>Associated Triggers &amp; Channels</span>
           <button
             phx-click={@on_close}
             type="button"
@@ -124,32 +159,59 @@ defmodule LightningWeb.WorkflowLive.Components do
           </button>
         </div>
       </:title>
-      <div class="space-y-4">
-        <p class="mb-4">
-          You have {length(@webhook_auth_method.triggers)}
-          <span class="font-semibold">Workflows</span>
-          associated with the "<span class="font-semibold">My Auth</span>" authentication method:
+      <div class="space-y-6">
+        <p>
+          The "<span class="font-semibold">{@webhook_auth_method.name}</span>"
+          authentication method is used by:
         </p>
-        <ul class="list-disc pl-5 mb-4">
-          <li :for={trigger <- @webhook_auth_method.triggers} class="mb-2">
-            <.link
-              navigate={
-                ~p"/projects/#{@webhook_auth_method.project_id}/w/#{trigger.workflow.id}?s=#{trigger.id}"
-              }
-              class="link"
-              role="button"
-              target="_blank"
-            >
-              {trigger.workflow.name}
-            </.link>
-          </li>
-        </ul>
+
+        <section :if={@webhook_auth_method.triggers != []}>
+          <h3 class="text-sm font-semibold text-gray-900">
+            Workflow triggers ({length(@webhook_auth_method.triggers)})
+          </h3>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li :for={trigger <- @webhook_auth_method.triggers}>
+              <.link
+                navigate={
+                  ~p"/projects/#{trigger.workflow.project_id}/w/#{trigger.workflow.id}?s=#{trigger.id}"
+                }
+                class="link"
+                role="button"
+                target="_blank"
+              >
+                {trigger.workflow.name}
+              </.link>
+            </li>
+          </ul>
+        </section>
+
+        <section :if={@webhook_auth_method.channels != []}>
+          <h3 class="text-sm font-semibold text-gray-900">
+            Channels ({length(@webhook_auth_method.channels)})
+          </h3>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li :for={
+              channel <- Enum.sort_by(@webhook_auth_method.channels, & &1.name)
+            }>
+              <.link
+                navigate={
+                  ~p"/projects/#{channel.project_id}/channels/#{channel.id}/edit"
+                }
+                class="link"
+                role="button"
+                target="_blank"
+              >
+                {channel.name}
+              </.link>
+            </li>
+          </ul>
+        </section>
       </div>
-      <:footer>
+      <.modal_footer>
         <.button type="button" phx-click={@on_close} theme="primary">
           Close
         </.button>
-      </:footer>
+      </.modal_footer>
     </.modal>
     """
   end

@@ -27,7 +27,8 @@ defmodule LightningWeb.RunWithOptions do
       "edges" => run.snapshot.edges |> Enum.map(&render/1),
       "starting_node_id" => run.starting_trigger_id || run.starting_job_id,
       "dataclip_id" => run.dataclip_id,
-      "options" => options_for_worker(run.options)
+      "options" => options_for_worker(run.options),
+      "meta" => render_meta(run)
     }
   end
 
@@ -68,6 +69,14 @@ defmodule LightningWeb.RunWithOptions do
       "condition" => condition,
       "enabled" => edge.enabled,
       "target_job_id" => edge.target_job_id
+    }
+  end
+
+  defp render_meta(run) do
+    %{
+      "work_order_id" => run.work_order_id,
+      "workflow_id" => run.snapshot.workflow_id,
+      "project_id" => run.snapshot.workflow.project_id
     }
   end
 

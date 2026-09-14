@@ -6,6 +6,8 @@ defmodule LightningWeb.UserLive.FormComponent do
 
   alias Lightning.Accounts
 
+  require Logger
+
   @impl true
   def update(%{user: user} = assigns, socket) do
     changeset = Accounts.change_user(user, %{})
@@ -69,16 +71,27 @@ defmodule LightningWeb.UserLive.FormComponent do
   defp save_user(socket, :new, user_params) do
     case Accounts.create_user(user_params) do
       {:ok, user} ->
-        {:ok, _} =
-          Accounts.deliver_user_confirmation_instructions(
-            socket.assigns.current_user,
-            user
-          )
+        {level, message} =
+          case Accounts.deliver_user_confirmation_instructions(
+                 socket.assigns.current_user,
+                 user
+               ) do
+            {:ok, _email} ->
+              {:info, "User created successfully"}
+
+            {:error, reason} ->
+              Logger.error(
+                "Failed to send confirmation email #{inspect(reason)}"
+              )
+
+              {:error,
+               "User created, but the confirmation email could not be sent"}
+          end
 
         {:noreply,
          socket
          |> assign(:is_support_user, user.support_user)
-         |> put_flash(:info, "User created successfully")
+         |> put_flash(level, message)
          |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->

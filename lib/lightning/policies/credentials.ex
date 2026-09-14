@@ -6,10 +6,8 @@ defmodule Lightning.Policies.Credentials do
 
   alias Lightning.Accounts.User
   alias Lightning.Credentials.KeychainCredential
-  alias Lightning.Policies.ProjectUsers
-  alias Lightning.Projects
   alias Lightning.Projects.Project
-  alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.Scope
   require Logger
 
   @type actions ::
@@ -28,90 +26,74 @@ defmodule Lightning.Policies.Credentials do
 
   @spec authorize(
           action :: actions(),
-          project_user :: ProjectUser.t(),
-          resource :: any()
+          user :: User.t(),
+          resource :: Project.t()
         ) :: boolean
-  def authorize(
-        :create_keychain_credential,
-        %User{} = user,
-        %{project: project, project_user: project_user}
-      ) do
-    (!!project_user and project_user.role in [:owner, :admin]) or
-      ProjectUsers.allow_as_support_user?(user, project)
-  end
-
-  # User with project - check project membership or support user access
   def authorize(
         :create_keychain_credential,
         %User{} = user,
         %Project{} = project
       ) do
-    case Projects.get_project_user(project, user) do
-      %ProjectUser{} = project_user ->
-        Bodyguard.permit?(
-          __MODULE__,
-          :create_keychain_credential,
-          user,
-          %{project_user: project_user, project: project}
-        )
-
-      nil ->
-        # No project membership - check if support user with project access
-        ProjectUsers.allow_as_support_user?(user, project)
-    end
+    admin_or_support?(user, project)
   end
 
   # KeychainCredential actions - require owner or admin role
+  #
+  # :create_keychain_credential is answerable from either shape. The context
+  # function holds an unsaved keychain rather than a project, and without this
+  # it would fall through to the deny-by-default clause and refuse every
+  # creation, including legitimate ones.
   @spec authorize(
           action :: actions(),
-          user_or_project_user :: User.t() | ProjectUser.t(),
+          user :: User.t(),
           resource :: KeychainCredential.t()
         ) :: boolean
   def authorize(
         action,
-        user_or_project_user,
+        %User{} = user,
         %KeychainCredential{} = keychain_credential
       )
       when action in [
+             :create_keychain_credential,
              :edit_keychain_credential,
              :delete_keychain_credential,
              :view_keychain_credential
            ] do
-    # Check if user is a support user first
-    case user_or_project_user do
-      %User{support_user: true} ->
-        true
-
-      _ ->
-        get_project_user(keychain_credential, user_or_project_user)
-        |> case do
-          %ProjectUser{} = project_user ->
-            project_user.role in [:owner, :admin]
-
-          _ ->
-            false
-        end
-    end
+    admin_or_support?(user, keychain_credential.project_id)
   end
 
-  # Commented out for now, to make it easier to see which callers are not
-  # using the correct arguments
-  # Fallback to deny access
-  # def authorize(action, user, params) do
-  #   Logger.debug(
-  #     "Unauthorized action: #{action} for user: #{user.id} with params: #{inspect(params, limit: 3)}"
-  #   )
+  # Deny by default: a call site passing the wrong shape fails closed rather
+  # than raising. Reaching this clause is a bug in the caller — but the debug
+  # line is filtered out at prod's :info level, so seeing none of these is not
+  # evidence that nobody is hitting it.
+  def authorize(action, actor, resource) do
+    Logger.debug(fn ->
+      "Refused #{inspect(action)} for #{inspect(actor, limit: 2)} " <>
+        "on #{inspect(resource, limit: 3)}: no matching policy clause"
+    end)
+
+    false
+  end
+
+  # Deliberately looser than ProjectUsers, where a support user with no
+  # membership row gets nothing at admin level. Keychain access on a consenting
+  # project is the pre-existing rule from allow_as_support_user?/2, kept rather
+  # than tightened — narrowing it is a support-workflow decision, not a fix.
   #
-  #   false
-  # end
+  # The project's MFA requirement binds both branches, support included: it means
+  # "no un-MFA'd human touches this project's data", and a support user is one.
+  # Read here because this function pattern-matches the Scope directly rather
+  # than going through ProjectUsers.permitted?/2 or Scope.role_in?/3.
+  defp admin_or_support?(%User{} = user, subject) do
+    case Scope.fetch(user, subject) do
+      {:ok, %Scope{role: nil, support?: support?, mfa_satisfied?: mfa}} ->
+        support? and mfa
 
-  defp get_project_user(keychain_credential, user_or_project_user) do
-    case user_or_project_user do
-      %User{} = user ->
-        Projects.get_project_user(keychain_credential.project_id, user)
+      {:ok, %Scope{role: role, mfa_satisfied?: mfa}} ->
+        role in [:owner, :admin] and mfa
 
-      %ProjectUser{} = project_user ->
-        project_user
+      {:error, _reason} ->
+        false
     end
   end
 end

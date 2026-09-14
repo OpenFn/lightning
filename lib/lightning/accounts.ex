@@ -45,15 +45,23 @@ defmodule Lightning.Accounts do
       # coveralls-ignore-stop
     end)
 
-    # Remove user from projects
-    Ecto.assoc(%User{id: id}, :project_users) |> Repo.delete_all()
+    Repo.transact(fn ->
+      # Remove user from projects
+      Ecto.assoc(%User{id: id}, :project_users) |> Repo.delete_all()
 
-    # Delete the credentials of the user.
-    # Note that there's a nilify constraint that set all project_credentials associated to this user to nil
-    Credentials.list_credentials(%User{id: id})
-    |> Enum.each(&Credentials.delete_credential/1)
+      # The user is on their way out, so they are the only person who could
+      # ever have been authorised for these, and the list is already theirs.
+      # The result is still matched: a refusal has to roll the purge back
+      # rather than leave credentials owned by a user who no longer exists.
+      owner = %User{id: id}
 
-    case Repo.get(User, id) |> delete_user() do
+      Enum.each(Credentials.list_credentials(owner), fn credential ->
+        {:ok, _} = Credentials.delete_credential(credential, owner)
+      end)
+
+      Repo.get(User, id) |> delete_user()
+    end)
+    |> case do
       {:ok, _user} ->
         Logger.debug(fn ->
           # coveralls-ignore-start
@@ -69,11 +77,29 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Perform, when called with %{"type" => "purge_deleted"} will find users that are ready for permanent deletion and purge them.
+  Perform, when called with %{"type" => "purge_deleted"} will find users that
+  are ready for permanent deletion and enqueue one job per user; when called
+  with %{"user_id" => id, "type" => "purge_deleted"} it purges that single user.
+
+  Fanning out one job per user means a user who can't be deleted — because of a
+  foreign key we haven't accounted for, say — fails and retries on its own
+  instead of aborting the whole nightly batch and stalling every user behind it.
+  `purge_user/1` is transactional, so a retry always starts from a clean slate.
   """
   @impl Oban.Worker
+  def perform(job)
+
+  def perform(%Oban.Job{
+        args: %{"user_id" => user_id, "type" => "purge_deleted"}
+      }) do
+    case Repo.get(User, user_id) do
+      nil -> :ok
+      _user -> purge_user(user_id)
+    end
+  end
+
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
-    users_to_delete =
+    jobs =
       from(u in User,
         as: :user,
         where: u.scheduled_deletion <= ago(0, "second"),
@@ -90,24 +116,23 @@ defmodule Lightning.Accounts do
               where: parent_as(:user).id == f.created_by_id,
               select: 1
             )
+          ),
+        where:
+          not exists(
+            from(k in Credentials.KeychainCredential,
+              where: parent_as(:user).id == k.created_by_id,
+              select: 1
+            )
           )
       )
       |> Repo.all()
-
-    :ok =
-      Enum.each(users_to_delete, fn u ->
-        case purge_user(u.id) do
-          :ok ->
-            :ok
-
-          {:error, changeset} ->
-            Logger.warning(fn ->
-              "Failed to purge user ##{u.id}: #{inspect(changeset.errors)}"
-            end)
-        end
+      |> Enum.map(fn user ->
+        new(%{user_id: user.id, type: "purge_deleted"}, max_attempts: 3)
       end)
 
-    {:ok, %{users_deleted: users_to_delete}}
+    Oban.insert_all(Lightning.Oban, jobs)
+
+    :ok
   end
 
   def create_user(attrs) do
@@ -442,17 +467,22 @@ defmodule Lightning.Accounts do
   def update_user_details(%User{} = user, attrs \\ %{}) do
     changeset = User.details_changeset(user, attrs)
 
-    # A superuser can disable an account or schedule it for deletion from this
-    # form. Scheduling deletion purges every token (the account is leaving); a
-    # plain disable revokes only the sessions (it is reversible, so the user's
-    # personal access tokens stay and are gated at request time instead). Either
-    # way we tear down live sockets; the request-time gate in
-    # get_user_by_session_token covers whatever is still open until it reconnects.
     revoke_contexts =
       cond do
-        not is_nil(Changeset.get_change(changeset, :scheduled_deletion)) -> :all
-        Changeset.get_change(changeset, :disabled) == true -> ["session"]
-        true -> nil
+        not is_nil(Changeset.get_change(changeset, :scheduled_deletion)) ->
+          :all
+
+        Changeset.get_change(changeset, :disabled) == true ->
+          ["session"]
+
+        Enum.any?(
+          [:hashed_password, :email, :role, :support_user],
+          &Changeset.changed?(changeset, &1)
+        ) ->
+          ["session"]
+
+        true ->
+          nil
       end
 
     Ecto.Multi.new()
@@ -625,6 +655,51 @@ defmodule Lightning.Accounts do
     end
   end
 
+  @confirmation_mail_limit 3
+  @confirmation_mail_window :timer.minutes(15)
+
+  # Buckets are separate so spending one route's allowance cannot close another.
+  defp confirmation_mail_allowed?(bucket, %User{id: id}) do
+    case Hammer.check_rate(
+           "#{bucket}::#{id}",
+           @confirmation_mail_window,
+           @confirmation_mail_limit
+         ) do
+      {:allow, _count} ->
+        true
+
+      {:deny, _limit} ->
+        false
+
+      {:error, reason} ->
+        Logger.warning(
+          "Confirmation mail rate limiter unavailable, allowing the send: " <>
+            inspect(reason)
+        )
+
+        true
+    end
+  end
+
+  @doc """
+  Sends confirmation instructions to a corrected address, rate limited per
+  account.
+
+  This is the correction path off `/users/confirm-required`, where an account
+  that cannot log in anywhere else can still send mail to an address it chooses.
+  `request_email_update/2` stays unmetered for `/profile`, which is reached only
+  by an account that is not blocked.
+  """
+  @spec request_email_correction(User.t(), String.t()) ::
+          {:ok, Swoosh.Email.t()} | {:error, :rate_limited} | {:error, term()}
+  def request_email_correction(%User{} = user, new_email) do
+    if confirmation_mail_allowed?("email_change", user) do
+      request_email_update(user, new_email)
+    else
+      {:error, :rate_limited}
+    end
+  end
+
   @doc """
   Validates the changes for updating a user's email address.
 
@@ -674,7 +749,7 @@ defmodule Lightning.Accounts do
   defp validate_current_password(changeset, user) do
     Changeset.validate_change(changeset, :current_password, fn :current_password,
                                                                password ->
-      if Bcrypt.verify_pass(password, user.hashed_password) do
+      if User.valid_password?(user, password) do
         []
       else
         [current_password: "does not match password"]
@@ -700,6 +775,14 @@ defmodule Lightning.Accounts do
     |> Ecto.Changeset.foreign_key_constraint(:runs,
       name: :runs_created_by_id_fkey,
       message: "user has associated runs and cannot be deleted"
+    )
+    |> Ecto.Changeset.foreign_key_constraint(:project_files,
+      name: :project_files_created_by_id_fkey,
+      message: "user has associated project files and cannot be deleted"
+    )
+    |> Ecto.Changeset.foreign_key_constraint(:keychain_credentials,
+      name: :keychain_credentials_created_by_id_fkey,
+      message: "user has associated keychain credentials and cannot be deleted"
     )
     |> Repo.delete()
   end
@@ -814,10 +897,8 @@ defmodule Lightning.Accounts do
     |> reject_blocked_user()
   end
 
-  # A disabled or scheduled-for-deletion user must not keep authenticating
-  # through a session or API bearer token minted before the block. The user
-  # socket resolves through get_user_by_session_token/1, so this also refuses
-  # socket (re)connects.
+  # The user socket resolves through get_user_by_session_token/1, so refusing
+  # here also refuses socket (re)connects.
   defp reject_blocked_user(nil), do: nil
 
   defp reject_blocked_user(%User{} = user) do
@@ -972,14 +1053,24 @@ defmodule Lightning.Accounts do
       {:error, :already_confirmed}
 
   """
+  @spec deliver_user_confirmation_instructions(User.t()) ::
+          {:ok, Swoosh.Email.t()}
+          | {:error, :already_confirmed}
+          | {:error, :rate_limited}
+          | {:error, term()}
   def deliver_user_confirmation_instructions(%User{} = user) do
-    if user.confirmed_at do
-      {:error, :already_confirmed}
-    else
-      UserNotifier.deliver_confirmation_instructions(
-        user,
-        build_email_token(user)
-      )
+    cond do
+      user.confirmed_at ->
+        {:error, :already_confirmed}
+
+      not confirmation_mail_allowed?("confirmation_request", user) ->
+        {:error, :rate_limited}
+
+      true ->
+        UserNotifier.deliver_confirmation_instructions(
+          user,
+          build_email_token(user)
+        )
     end
   end
 
@@ -998,11 +1089,20 @@ defmodule Lightning.Accounts do
     end
   end
 
+  @doc """
+  Sends the confirmation link again, rate limited per account.
+  """
+  @spec remind_account_confirmation(User.t()) ::
+          {:ok, Swoosh.Email.t()} | {:error, :rate_limited} | {:error, term()}
   def remind_account_confirmation(%User{} = user) do
-    UserNotifier.remind_account_confirmation(
-      user,
-      build_email_token(user)
-    )
+    if confirmation_mail_allowed?("confirmation_resend", user) do
+      UserNotifier.remind_account_confirmation(
+        user,
+        build_email_token(user)
+      )
+    else
+      {:error, :rate_limited}
+    end
   end
 
   @doc """
@@ -1155,12 +1255,19 @@ defmodule Lightning.Accounts do
     |> Repo.all()
   end
 
-  def confirmation_required?(%User{confirmed_at: nil, inserted_at: inserted_at}) do
+  @doc "Is this account shut out pending email confirmation?"
+  @spec locked_out?(User.t()) :: boolean()
+  def locked_out?(%User{} = user), do: confirmation_required?(user)
+
+  defp confirmation_required?(%User{
+         confirmed_at: nil,
+         inserted_at: inserted_at
+       }) do
     Lightning.Config.check_flag?(:require_email_verification) &&
       DateTime.diff(DateTime.utc_now(), inserted_at, :hour) >= 48
   end
 
-  def confirmation_required?(_user), do: false
+  defp confirmation_required?(_user), do: false
 
   @doc """
   Retrieves a specific preference value for a given user.

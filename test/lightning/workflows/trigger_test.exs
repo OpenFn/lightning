@@ -2,15 +2,101 @@ defmodule Lightning.Workflows.TriggerTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Workflows.Trigger
-  alias Lightning.Workflows.Triggers.KafkaConfiguration
+
+  describe "jsonb-bound trigger fields" do
+    test "a NUL in a comment is a changeset error" do
+      # Both are copied into the workflow_snapshots.triggers jsonb (#4893).
+      for {field, message} <- [
+            {:comment, "comment can't contain a null byte"}
+          ] do
+        changeset =
+          Trigger.changeset(
+            %Trigger{},
+            Map.put(%{type: :webhook}, field, "bad\u{0000}value")
+          )
+
+        assert errors_on(changeset)[field] == [message],
+               "expected #{field} to reject a null byte"
+      end
+    end
+
+    test "an over-long comment is a changeset error, not a 22001" do
+      # Both columns are varchar(255) and neither had a length guard, so a 300
+      # character comment gave valid? == true and then raised on insert.
+      for {field, message} <- [
+            {:comment, "comment is too long, please use a shorter one"}
+          ] do
+        changeset =
+          Trigger.changeset(
+            %Trigger{},
+            Map.put(%{type: :webhook}, field, String.duplicate("a", 300))
+          )
+
+        assert errors_on(changeset)[field] == [message],
+               "expected #{field} to reject an over-long value"
+      end
+    end
+
+    test "an over-long cron_expression is a changeset error, not a 22001" do
+      # The third field on the same cast/3, same varchar(255), and the only one
+      # that had no guard. Crontab parses this happily, so the changeset said
+      # valid? and the insert raised. Reachable through POST /api/provision.
+      expression = "*/1 " <> String.duplicate("1,", 130) <> "1 * * *"
+      assert String.length(expression) > 255
+
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :cron,
+          cron_expression: expression
+        })
+
+      assert errors_on(changeset)[:cron_expression] == [
+               "cron expression is too long, please use a shorter one"
+             ]
+    end
+
+    test "an ordinary cron_expression is untouched" do
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :cron,
+          cron_expression: "0 23 * * *"
+        })
+
+      refute errors_on(changeset)[:cron_expression]
+    end
+
+    test "a comment short in graphemes but too wide for the column is rejected" do
+      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :webhook,
+          comment: String.duplicate(family, 200)
+        })
+
+      assert errors_on(changeset)[:comment] == [
+               "comment is too long, please use a shorter one"
+             ]
+    end
+
+    test "a comment may hold newlines and tabs" do
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :webhook,
+          comment: "line one\nline\ttwo"
+        })
+
+      refute errors_on(changeset)[:comment]
+    end
+  end
 
   describe "synchronous?/1" do
     test "returns true for :after_completion" do
       assert Trigger.synchronous?(%Trigger{webhook_reply: :after_completion})
     end
 
-    test "returns true for :custom" do
-      assert Trigger.synchronous?(%Trigger{webhook_reply: :custom})
+    test "returns false for :custom, which has no response publisher" do
+      refute Trigger.synchronous?(%Trigger{webhook_reply: :custom})
     end
 
     test "returns false for :before_start" do
@@ -86,106 +172,6 @@ defmodule Lightning.Workflows.TriggerTest do
       assert get_field(changeset, :cron_expression) == nil
     end
 
-    test "allows creation of kafka trigger" do
-      changeset =
-        Trigger.changeset(%Trigger{}, %{
-          type: :kafka,
-          kafka_configuration: %{
-            group_id: "group_id",
-            hosts: [
-              ["host1", "9092"],
-              ["host2", "9093"]
-            ],
-            hosts_string: "host1:9092, host2:9093",
-            initial_offset_reset_policy: "earliest",
-            password: "password",
-            sasl: "plain",
-            ssl: true,
-            topics: ["foo", "bar"],
-            topics_string: "foo, bar",
-            username: "username"
-          }
-        })
-
-      assert %{valid?: true} = changeset
-    end
-
-    test "removes cron expression job when type is :kafka" do
-      changeset =
-        Trigger.changeset(%Trigger{}, %{
-          type: :kafka,
-          cron_expression: "* * * *"
-        })
-
-      assert get_field(changeset, :cron_expression) == nil
-
-      changeset =
-        Trigger.changeset(
-          %Trigger{type: :cron, cron_expression: "* * * *"},
-          %{
-            type: :kafka
-          }
-        )
-
-      assert get_field(changeset, :cron_expression) == nil
-    end
-
-    test "is invalid if type is :kafka but kafka_configuration is not set" do
-      errors =
-        Trigger.changeset(%Trigger{}, %{
-          type: :kafka
-        })
-        |> errors_on()
-
-      assert errors[:kafka_configuration] == ["can't be blank"]
-    end
-
-    test "removes kafka config when type is :webhook" do
-      changeset =
-        Trigger.changeset(%Trigger{}, %{
-          type: :webhook,
-          kafka_configuration: %{a: :b}
-        })
-
-      assert get_field(changeset, :kafka_configuration) == nil
-
-      changeset =
-        Trigger.changeset(
-          %Trigger{
-            type: :kafka,
-            kafka_configuration: %KafkaConfiguration{group_id: "foo"}
-          },
-          %{
-            type: :webhook
-          }
-        )
-
-      assert get_field(changeset, :kafka_configuration) == nil
-    end
-
-    test "removes kafka config when type is :cron" do
-      changeset =
-        Trigger.changeset(%Trigger{}, %{
-          type: :cron,
-          kafka_configuration: %{a: :b}
-        })
-
-      assert get_field(changeset, :kafka_configuration) == nil
-
-      changeset =
-        Trigger.changeset(
-          %Trigger{
-            type: :kafka,
-            kafka_configuration: %KafkaConfiguration{group_id: "foo"}
-          },
-          %{
-            type: :cron
-          }
-        )
-
-      assert get_field(changeset, :kafka_configuration) == nil
-    end
-
     test "sets webhook_reply to nil when type is :cron" do
       changeset =
         Trigger.changeset(%Trigger{}, %{
@@ -200,47 +186,6 @@ defmodule Lightning.Workflows.TriggerTest do
         Trigger.changeset(
           %Trigger{type: :webhook, webhook_reply: :after_completion},
           %{type: :cron}
-        )
-
-      assert get_field(changeset, :webhook_reply) == nil
-    end
-
-    test "sets webhook_reply to nil when type is :kafka" do
-      changeset =
-        Trigger.changeset(%Trigger{}, %{
-          type: :kafka,
-          webhook_reply: :custom,
-          kafka_configuration: %{
-            group_id: "group_id",
-            hosts: [["host1", "9092"]],
-            hosts_string: "host1:9092",
-            initial_offset_reset_policy: "earliest",
-            sasl: "plain",
-            ssl: true,
-            topics: ["foo"],
-            topics_string: "foo"
-          }
-        })
-
-      assert get_field(changeset, :webhook_reply) == nil
-
-      # Also when converting from webhook to kafka
-      changeset =
-        Trigger.changeset(
-          %Trigger{type: :webhook, webhook_reply: :before_start},
-          %{
-            type: :kafka,
-            kafka_configuration: %{
-              group_id: "group_id",
-              hosts: [["host1", "9092"]],
-              hosts_string: "host1:9092",
-              initial_offset_reset_policy: "earliest",
-              sasl: "plain",
-              ssl: true,
-              topics: ["foo"],
-              topics_string: "foo"
-            }
-          }
         )
 
       assert get_field(changeset, :webhook_reply) == nil
@@ -279,53 +224,6 @@ defmodule Lightning.Workflows.TriggerTest do
             cron_cursor_job_id: job_id
           },
           %{type: :webhook}
-        )
-
-      assert get_field(changeset, :cron_cursor_job_id) == nil
-    end
-
-    test "cron_cursor_job_id is cleared when type changes to :kafka" do
-      job_id = Ecto.UUID.generate()
-
-      changeset =
-        Trigger.changeset(%Trigger{}, %{
-          type: :kafka,
-          cron_cursor_job_id: job_id,
-          kafka_configuration: %{
-            group_id: "group_id",
-            hosts: [["host1", "9092"]],
-            hosts_string: "host1:9092",
-            initial_offset_reset_policy: "earliest",
-            sasl: "plain",
-            ssl: true,
-            topics: ["foo"],
-            topics_string: "foo"
-          }
-        })
-
-      assert get_field(changeset, :cron_cursor_job_id) == nil
-
-      # Also when converting from cron to kafka
-      changeset =
-        Trigger.changeset(
-          %Trigger{
-            type: :cron,
-            cron_expression: "* * * * *",
-            cron_cursor_job_id: job_id
-          },
-          %{
-            type: :kafka,
-            kafka_configuration: %{
-              group_id: "group_id",
-              hosts: [["host1", "9092"]],
-              hosts_string: "host1:9092",
-              initial_offset_reset_policy: "earliest",
-              sasl: "plain",
-              ssl: true,
-              topics: ["foo"],
-              topics_string: "foo"
-            }
-          }
         )
 
       assert get_field(changeset, :cron_cursor_job_id) == nil

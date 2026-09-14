@@ -68,6 +68,7 @@ export namespace Session {
     id: string;
     type: string;
     enabled: boolean;
+    custom_path: string | null;
     cron_expression: string | null;
     has_auth_method: boolean;
     webhook_reply: 'before_start' | 'after_completion' | null;

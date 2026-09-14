@@ -26,6 +26,7 @@ import type {
 } from './types';
 import {
   WorkflowError,
+  WorkflowErrorCode,
   YamlSyntaxError,
   JobNotFoundError,
   TriggerNotFoundError,
@@ -34,11 +35,19 @@ import {
   createWorkflowError,
 } from './workflow-errors';
 
+// One space, one hyphen. This has to match ExportUtils.hyphenate/1 on the
+// server exactly: the server replaces each single space and leaves every other
+// whitespace character alone, so `a  b` is `a--b`, not `a-b`.
+const hyphenate = (str: string): string => str.replace(/ /g, '-');
+
 export const convertWorkflowSpecToState = (
   workflowSpec: WorkflowSpec
 ): WorkflowState => {
   const positions: Record<string, Position> = {};
-  const stateJobs: Record<string, StateJob> = {};
+  // Null-prototype: a job keyed `__proto__` assigned onto a plain object runs
+  // the prototype setter instead of adding a key, so the job never lands. The
+  // edge lookups below would also resolve `toString` through the prototype.
+  const stateJobs = Object.create(null) as Record<string, StateJob>;
   Object.entries(workflowSpec.jobs).forEach(([key, specJob]) => {
     const uId = specJob.id || randomUUID();
     stateJobs[key] = {
@@ -50,13 +59,16 @@ export const convertWorkflowSpecToState = (
     if (specJob.pos) positions[uId] = specJob.pos;
   });
 
-  const stateTriggers: Record<string, StateTrigger> = {};
+  const stateTriggers = Object.create(null) as Record<string, StateTrigger>;
   Object.entries(workflowSpec.triggers).forEach(([key, specTrigger]) => {
     const uId = specTrigger.id || randomUUID();
     const enabled =
       specTrigger.enabled !== undefined ? specTrigger.enabled : true;
+    // Read before the branches below narrow specTrigger away: not every caller
+    // validates against the schema first.
+    const declaredType: string = specTrigger.type;
 
-    if (specTrigger.type !== 'kafka' && specTrigger.pos) {
+    if (specTrigger.pos) {
       positions[uId] = specTrigger.pos;
     }
 
@@ -77,26 +89,33 @@ export const convertWorkflowSpecToState = (
         id: uId,
         type: 'webhook',
         enabled,
+        // Spread, so an absent key stays absent and reads as "unchanged"
+        // rather than as a clear.
+        ...(specTrigger.custom_path !== undefined && {
+          custom_path: specTrigger.custom_path,
+        }),
         webhook_reply: specTrigger.webhook_reply,
         ...(specTrigger.webhook_response_config
           ? { webhook_response_config: specTrigger.webhook_response_config }
           : {}),
       };
     } else {
-      trigger = {
-        id: uId,
-        type: 'kafka',
-        enabled,
-        ...(specTrigger.kafka_configuration
-          ? { kafka_configuration: specTrigger.kafka_configuration }
-          : {}),
-      };
+      // Not every caller validates against the schema first, and quietly
+      // treating an unrecognised type as a webhook would mint a public ingest
+      // endpoint the source never asked for.
+      throw new WorkflowError({
+        code: WorkflowErrorCode.SCHEMA_INVALID_VALUE,
+        message: `Unsupported trigger type: ${declaredType}`,
+        path: `triggers/${key}`,
+        triggerKey: key,
+        allowedValues: ['webhook', 'cron'],
+      });
     }
 
     stateTriggers[key] = trigger;
   });
 
-  const stateEdges: Record<string, StateEdge> = {};
+  const stateEdges = Object.create(null) as Record<string, StateEdge>;
   Object.entries(workflowSpec.edges).forEach(([key, specEdge]) => {
     const targetJob = stateJobs[specEdge.target_job];
     if (!targetJob) {
@@ -220,13 +239,21 @@ export const parseWorkflow = (parsedMap: unknown): WorkflowSpec => {
 
   // Validate job names — at this point the schema has confirmed `jobs` is an
   // object keyed by string, so this cast is safe.
+  //
+  // A Set rather than an object: a job named `constructor` or `toString` used
+  // to hit an inherited property and raise a duplicate error for a name that
+  // appeared once. Compared hyphenated, which is what the export side
+  // compares — a spec holding both `a b` and `a-b` used to import cleanly and
+  // then throw on the way back out.
   const parsed = parsedMap as { jobs: Record<string, { name: string }> };
-  const seenNames: Record<string, boolean> = {};
+  const seenKeys = new Set<string>();
   Object.entries(parsed['jobs']).forEach(([key, specJob]) => {
-    if (seenNames[specJob.name]) {
-      throw new DuplicateJobNameError(specJob.name, key);
+    const name = String(specJob.name);
+    const nameKey = hyphenate(name);
+    if (seenKeys.has(nameKey)) {
+      throw new DuplicateJobNameError(name, key);
     }
-    seenNames[specJob.name] = true;
+    seenKeys.add(nameKey);
   });
 
   return parsedMap as WorkflowSpec;

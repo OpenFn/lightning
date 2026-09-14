@@ -18,7 +18,9 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
       case key do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
-        :timeout -> 5_000
+        :connect_timeout -> 1_000
+        :idle_timeout -> 5_000
+        :request_timeout -> 5_000
       end
     end)
 
@@ -61,6 +63,35 @@ defmodule LightningWeb.API.AiAssistantControllerTest do
         get(
           conn,
           ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=123"
+        )
+
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+  end
+
+  describe "list_sessions with an email-confirmation lockout" do
+    setup [:register_and_log_in_user]
+
+    test "returns 401 to a locked-out account", %{conn: conn, user: user} do
+      Mox.stub(Lightning.MockConfig, :check_flag?, fn
+        :require_email_verification -> true
+        flag -> Lightning.Config.API.check_flag?(flag)
+      end)
+
+      user
+      |> Ecto.Changeset.change(
+        confirmed_at: nil,
+        inserted_at:
+          DateTime.utc_now()
+          |> Timex.shift(hours: -50)
+          |> DateTime.truncate(:second)
+      )
+      |> Lightning.Repo.update!()
+
+      conn =
+        get(
+          conn,
+          ~p"/api/ai_assistant/sessions?session_type=job_code&job_id=#{Ecto.UUID.generate()}"
         )
 
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}

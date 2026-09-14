@@ -336,6 +336,11 @@ defmodule LightningWeb.Components.Common do
 
   attr :id, :string, required: true
   attr :tooltip, :string, default: nil
+
+  attr :subtitle, :string,
+    default: nil,
+    doc: "A second, smaller line under the tooltip text."
+
   slot :inner_block, required: true
 
   def wrapper_tooltip(%{tooltip: tooltip} = assigns)
@@ -345,9 +350,14 @@ defmodule LightningWeb.Components.Common do
       id={"#{@id}-tooltip"}
       phx-hook="Tooltip"
       aria-label={@tooltip}
-      data-allow-html="true"
       data-hide-on-click="false"
     >
+      <%!-- The hook clones this into tippy, so the browser does the escaping
+      and no caller has to decide whether their tooltip is markup. --%>
+      <template data-tooltip-content>
+        {@tooltip}
+        <span :if={@subtitle} class="block text-xs text-gray-500">{@subtitle}</span>
+      </template>
       {render_slot(@inner_block)}
     </span>
     """
@@ -404,7 +414,8 @@ defmodule LightningWeb.Components.Common do
       <%= if @show_tooltip do %>
         <Common.wrapper_tooltip
           id={@id}
-          tooltip={"#{@iso_timestamp}<br/><span class=\"text-xs text-gray-500\">Click to copy timestamp</span>"}
+          tooltip={@iso_timestamp}
+          subtitle="Click to copy timestamp"
         >
           <span
             id={"#{@id}-outer"}
@@ -585,6 +596,7 @@ defmodule LightningWeb.Components.Common do
           :http_request -> ~w[bg-green-500 text-green-900]
           :global -> ~w[bg-blue-500 text-blue-900]
           :saved_input -> ~w[bg-yellow-500 text-yellow-900]
+          :kafka -> ~w[bg-green-500 text-green-900]
           _other -> []
         end
 

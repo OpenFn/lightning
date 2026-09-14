@@ -76,7 +76,6 @@ describe('useAISession', () => {
     it('should update context when job changes', () => {
       const initialContext: JobCodeContext = {
         job_id: 'job-1',
-        attach_code: false,
         attach_logs: false,
       };
 
@@ -118,7 +117,6 @@ describe('useAISession', () => {
       // Set up initial subscription by first render with a session
       const initialContext: JobCodeContext = {
         job_id: 'job-1',
-        attach_code: false,
         attach_logs: false,
       };
 
@@ -153,7 +151,6 @@ describe('useAISession', () => {
     it('should re-initialize context when job changes', () => {
       const initialContext: JobCodeContext = {
         job_id: 'job-1',
-        attach_code: false,
         attach_logs: false,
       };
 
@@ -195,7 +192,6 @@ describe('useAISession', () => {
       // Start with job-1 in context
       mockStore._initializeContext('workflow_template', {
         job_id: 'job-old',
-        attach_code: false,
         attach_logs: false,
       });
 
@@ -208,7 +204,6 @@ describe('useAISession', () => {
               page: 'job_code',
               context: {
                 job_id: props.jobId,
-                attach_code: false,
                 attach_logs: false,
               },
             },
@@ -226,7 +221,6 @@ describe('useAISession', () => {
         'workflow_template',
         {
           job_id: 'job-new',
-          attach_code: false,
           attach_logs: false,
         }
       );
@@ -244,7 +238,7 @@ describe('useAISession', () => {
               page: props.page,
               context:
                 props.page === 'job_code'
-                  ? { job_id: 'job-1', attach_code: false, attach_logs: false }
+                  ? { job_id: 'job-1', attach_logs: false }
                   : { project_id: 'proj-1', workflow_id: 'wf-1' },
             },
             sessionIdFromURL: null,
@@ -281,7 +275,6 @@ describe('useAISession', () => {
               page: 'job_code',
               context: {
                 job_id: 'job-1',
-                attach_code: false,
                 attach_logs: false,
               },
             },
@@ -314,7 +307,6 @@ describe('useAISession', () => {
               page: 'job_code',
               context: {
                 job_id: 'job-1',
-                attach_code: false,
                 attach_logs: false,
               },
             },
@@ -339,7 +331,6 @@ describe('useAISession', () => {
               page: 'job_code',
               context: {
                 job_id: 'job-1',
-                attach_code: false,
                 attach_logs: false,
               },
             },

@@ -86,7 +86,6 @@ defmodule Lightning.Workflows.Job do
       :workflow_id
     ])
     |> validate()
-    |> update_change(:name, &String.trim/1)
     |> unique_constraint(:name,
       name: "jobs_name_workflow_id_index",
       message: "job name has already been taken"
@@ -96,8 +95,19 @@ defmodule Lightning.Workflows.Job do
 
   def validate(changeset) do
     changeset
+    # First, so the presence and length checks below see the normalised value.
+    |> Validators.validate_name(
+      :name,
+      "job name can't contain control characters"
+    )
     |> validate_required(:name, message: "job name can't be blank")
     |> validate_required(:body, message: "job body can't be blank")
+    # Only the NUL: a body is code and legitimately has newlines and tabs in it
+    # (#4893).
+    |> Validators.validate_no_null_bytes(
+      :body,
+      "job body can't contain a null byte"
+    )
     |> validate_required(:adaptor, message: "job adaptor can't be blank")
     |> Validators.validate_uuid([
       :id,
@@ -121,8 +131,9 @@ defmodule Lightning.Workflows.Job do
       max: 100,
       message: "job name should be at most %{count} character(s)"
     )
-    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/,
-      message: "job name has invalid format"
+    |> Validators.validate_name_fits_column(
+      :name,
+      "job name is too long, please use a shorter one"
     )
     |> validate_adaptor()
   end

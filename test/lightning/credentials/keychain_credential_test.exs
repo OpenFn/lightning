@@ -275,20 +275,24 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
       assert keychain.project == project
     end
 
-    test "create_keychain_credential/2 with valid params" do
+    test "create_keychain_credential/3 with valid params" do
       user = insert(:user)
-      project = insert(:project)
+      project = insert(:project, project_users: [%{user: user, role: :admin}])
       credential = insert(:credential, user: user)
       insert(:project_credential, project: project, credential: credential)
 
       new_keychain = Lightning.Credentials.new_keychain_credential(user, project)
 
       {:ok, keychain_credential} =
-        Lightning.Credentials.create_keychain_credential(new_keychain, %{
-          name: "Test Keychain",
-          path: "$.user_id",
-          default_credential_id: credential.id
-        })
+        Lightning.Credentials.create_keychain_credential(
+          new_keychain,
+          %{
+            name: "Test Keychain",
+            path: "$.user_id",
+            default_credential_id: credential.id
+          },
+          user
+        )
 
       assert keychain_credential.name == "Test Keychain"
       assert keychain_credential.path == "$.user_id"
@@ -297,35 +301,39 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
       assert keychain_credential.project_id == project.id
     end
 
-    test "create_keychain_credential/2 with validation errors" do
+    test "create_keychain_credential/3 with validation errors" do
       user = insert(:user)
-      project = insert(:project)
+      project = insert(:project, project_users: [%{user: user, role: :admin}])
 
       new_keychain = Lightning.Credentials.new_keychain_credential(user, project)
 
       {:error, changeset} =
-        Lightning.Credentials.create_keychain_credential(new_keychain, %{
-          name: "",
-          path: "invalid jsonpath",
-          default_credential_id: ""
-        })
+        Lightning.Credentials.create_keychain_credential(
+          new_keychain,
+          %{name: "", path: "invalid jsonpath", default_credential_id: ""},
+          user
+        )
 
       assert "can't be blank" in errors_on(changeset)[:name]
       assert "JSONPath must start with '$'" in errors_on(changeset)[:path]
     end
 
-    test "create_keychain_credential/2 with nil default credential" do
+    test "create_keychain_credential/3 with nil default credential" do
       user = insert(:user)
-      project = insert(:project)
+      project = insert(:project, project_users: [%{user: user, role: :admin}])
 
       new_keychain = Lightning.Credentials.new_keychain_credential(user, project)
 
       {:ok, keychain_credential} =
-        Lightning.Credentials.create_keychain_credential(new_keychain, %{
-          name: "Test Keychain No Default",
-          path: "$.org_id",
-          default_credential_id: nil
-        })
+        Lightning.Credentials.create_keychain_credential(
+          new_keychain,
+          %{
+            name: "Test Keychain No Default",
+            path: "$.org_id",
+            default_credential_id: nil
+          },
+          user
+        )
 
       assert keychain_credential.name == "Test Keychain No Default"
       assert keychain_credential.path == "$.org_id"
@@ -336,7 +344,7 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
 
     test "validates default credential belongs to same project in context" do
       user = insert(:user)
-      project = insert(:project)
+      project = insert(:project, project_users: [%{user: user, role: :admin}])
       other_project = insert(:project)
       other_credential = insert(:credential, user: user)
 
@@ -348,11 +356,15 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
       new_keychain = Lightning.Credentials.new_keychain_credential(user, project)
 
       {:error, changeset} =
-        Lightning.Credentials.create_keychain_credential(new_keychain, %{
-          name: "Test Keychain",
-          path: "$.user_id",
-          default_credential_id: other_credential.id
-        })
+        Lightning.Credentials.create_keychain_credential(
+          new_keychain,
+          %{
+            name: "Test Keychain",
+            path: "$.user_id",
+            default_credential_id: other_credential.id
+          },
+          user
+        )
 
       assert "must belong to the same project" in errors_on(changeset)[
                :default_credential_id
@@ -409,6 +421,184 @@ defmodule Lightning.Credentials.KeychainCredentialTest do
 
       loaded_keychain = Repo.preload(keychain_credential, :default_credential)
       assert loaded_keychain.default_credential.id == credential.id
+    end
+  end
+
+  describe "default credential must belong to the keychain's project" do
+    setup do
+      user = insert(:user)
+
+      project =
+        insert(:project, project_users: [%{user: user, role: :admin}])
+
+      other_project = insert(:project)
+      other_credential = insert(:credential, user: insert(:user))
+
+      insert(:project_credential,
+        project: other_project,
+        credential: other_credential
+      )
+
+      %{
+        user: user,
+        project: project,
+        other_credential: other_credential
+      }
+    end
+
+    test "is rejected when the keychain is built with a project id and no preload",
+         %{user: user, project: project, other_credential: other_credential} do
+      # This is how both live creation paths build the struct. The check used to
+      # read the :project association, which is not loaded here, so it passed
+      # silently on exactly the paths that needed it.
+      keychain = %KeychainCredential{
+        project_id: project.id,
+        created_by_id: user.id
+      }
+
+      {:error, changeset} =
+        Lightning.Credentials.create_keychain_credential(
+          keychain,
+          %{
+            name: "Borrowed",
+            path: "$.user_id",
+            default_credential_id: other_credential.id
+          },
+          user
+        )
+
+      assert "must belong to the same project" in errors_on(changeset)[
+               :default_credential_id
+             ]
+    end
+
+    test "is refused when the project cannot be determined at all", %{
+      other_credential: other_credential
+    } do
+      changeset =
+        KeychainCredential.changeset(%KeychainCredential{}, %{
+          name: "No project",
+          path: "$.user_id",
+          default_credential_id: other_credential.id
+        })
+
+      refute changeset.valid?
+
+      assert "cannot be checked without knowing the project" in errors_on(
+               changeset
+             )[:default_credential_id]
+    end
+
+    test "is allowed when the credential is shared with the project", %{
+      user: user,
+      project: project
+    } do
+      credential = insert(:credential, user: user)
+      insert(:project_credential, project: project, credential: credential)
+
+      keychain = %KeychainCredential{
+        project_id: project.id,
+        created_by_id: user.id
+      }
+
+      assert {:ok, saved} =
+               Lightning.Credentials.create_keychain_credential(
+                 keychain,
+                 %{
+                   name: "Ours",
+                   path: "$.user_id",
+                   default_credential_id: credential.id
+                 },
+                 user
+               )
+
+      assert saved.default_credential_id == credential.id
+    end
+  end
+
+  describe "keychain writes are authorised by the context" do
+    setup do
+      admin = insert(:user)
+      editor = insert(:user)
+
+      project =
+        insert(:project,
+          project_users: [
+            %{user: admin, role: :admin},
+            %{user: editor, role: :editor}
+          ]
+        )
+
+      keychain =
+        insert(:keychain_credential,
+          project: project,
+          created_by: admin
+        )
+
+      %{admin: admin, editor: editor, project: project, keychain: keychain}
+    end
+
+    test "creation is refused for someone without admin on the project", %{
+      editor: editor,
+      project: project
+    } do
+      new_keychain = %KeychainCredential{
+        project_id: project.id,
+        created_by_id: editor.id
+      }
+
+      assert {:error, :unauthorized} =
+               Lightning.Credentials.create_keychain_credential(
+                 new_keychain,
+                 %{name: "Sneaky", path: "$.user_id"},
+                 editor
+               )
+    end
+
+    test "update and delete are refused for the same person", %{
+      editor: editor,
+      keychain: keychain
+    } do
+      assert {:error, :unauthorized} =
+               Lightning.Credentials.update_keychain_credential(
+                 keychain,
+                 %{name: "Renamed"},
+                 editor
+               )
+
+      assert {:error, :unauthorized} =
+               Lightning.Credentials.delete_keychain_credential(
+                 keychain,
+                 editor
+               )
+
+      assert Repo.get(KeychainCredential, keychain.id)
+    end
+
+    test "an admin can still create, update and delete", %{
+      admin: admin,
+      project: project,
+      keychain: keychain
+    } do
+      assert {:ok, created} =
+               Lightning.Credentials.create_keychain_credential(
+                 %KeychainCredential{
+                   project_id: project.id,
+                   created_by_id: admin.id
+                 },
+                 %{name: "Fine", path: "$.user_id"},
+                 admin
+               )
+
+      assert {:ok, _} =
+               Lightning.Credentials.update_keychain_credential(
+                 created,
+                 %{name: "Renamed"},
+                 admin
+               )
+
+      assert {:ok, _} =
+               Lightning.Credentials.delete_keychain_credential(keychain, admin)
     end
   end
 end

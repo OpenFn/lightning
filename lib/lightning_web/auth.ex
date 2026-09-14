@@ -41,7 +41,11 @@ defmodule LightningWeb.Auth do
 
   defp key_matches?(
          conn,
-         %WebhookAuthMethod{auth_type: :api, api_key: key}
+         %WebhookAuthMethod{
+           auth_type: :api,
+           api_key: key,
+           scheduled_deletion: nil
+         }
        ) do
     get_req_header(conn, "x-api-key")
     |> Enum.any?(fn header_value ->
@@ -54,7 +58,8 @@ defmodule LightningWeb.Auth do
   defp user_matches?(conn, %WebhookAuthMethod{
          auth_type: :basic,
          username: expected_user,
-         password: expected_pass
+         password: expected_pass,
+         scheduled_deletion: nil
        }) do
     get_req_header(conn, "authorization")
     |> Enum.find_value(false, fn auth ->

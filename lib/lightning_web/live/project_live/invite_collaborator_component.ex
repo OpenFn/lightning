@@ -2,6 +2,7 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
   @moduledoc false
   use LightningWeb, :live_component
 
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects
   alias Lightning.Projects.ProjectLimiter
   alias LightningWeb.ProjectLive.InvitedCollaborators
@@ -42,7 +43,16 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
   end
 
   def handle_event("add_collaborators", %{"project" => params}, socket) do
-    with :ok <- limit_adding_users(socket, params),
+    %{current_user: current_user, project: project} = socket.assigns
+
+    with :ok <-
+           Permissions.can(
+             :project_users,
+             :add_project_user,
+             current_user,
+             project
+           ),
+         :ok <- limit_adding_users(socket, params),
          {:ok, collaborators} <-
            InvitedCollaborators.validate_collaborators(
              socket.assigns.collaborators,
@@ -50,9 +60,9 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
            ),
          {:ok, _result} <-
            Projects.invite_collaborators(
-             socket.assigns.project,
+             project,
              collaborators,
-             socket.assigns.current_user
+             current_user
            ) do
       {:noreply,
        socket
@@ -64,6 +74,9 @@ defmodule LightningWeb.ProjectLive.InviteCollaboratorComponent do
          to: ~p"/projects/#{socket.assigns.project}/settings#collaboration"
        )}
     else
+      {:error, :unauthorized} ->
+        {:noreply, deny_collaborator_change(socket)}
+
       {:error, changeset} ->
         {:noreply, socket |> assign(:changeset, changeset)}
 

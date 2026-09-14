@@ -148,7 +148,7 @@ defmodule Lightning.Runs do
   @doc """
   Returns a run's dataclip formatted for use as state.
 
-  Only `http_request` and kafka dataclips are changed,
+  Only `http_request` and stored kafka dataclips are changed,
   their `body` is nested inside a `"data"` key and `request` data
   is added as a `"request"` key.
 

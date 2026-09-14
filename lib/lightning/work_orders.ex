@@ -821,8 +821,25 @@ defmodule Lightning.WorkOrders do
   end
 
   defp determine_starting_job(%{runs: [run]}) do
-    run.starting_job || hd(run.starting_trigger.edges).target_job
+    run.starting_job || starting_job_after(run.starting_trigger)
   end
+
+  # Nothing to start from. Both starting columns end up empty, which the runs
+  # table's check constraint refuses, so the caller gets a changeset error
+  # rather than a raise.
+  defp determine_starting_job(_workorder), do: nil
+
+  defp starting_job_after(%{edges: [edge | _]}), do: edge.target_job
+
+  # A trigger that is genuinely gone is a fact about the data, so skip it. An
+  # unloaded association is a mistake in the caller, so let it raise: quietly
+  # skipping would turn a dropped preload into a bulk retry that does nothing
+  # and reports success.
+  defp starting_job_after(%Ecto.Association.NotLoaded{}) do
+    raise ArgumentError, "starting_trigger must be preloaded with its edges"
+  end
+
+  defp starting_job_after(_gone), do: nil
 
   defp fetch_retriable_workorders(workorder_ids) do
     workorder_ids

@@ -29,7 +29,9 @@ defmodule LightningWeb.AiAssistantChannelTest do
       case key do
         :endpoint -> "http://localhost:3000"
         :ai_assistant_api_key -> "test_api_key"
-        :timeout -> 5_000
+        :connect_timeout -> 1_000
+        :idle_timeout -> 5_000
+        :request_timeout -> 5_000
       end
     end)
 
@@ -207,6 +209,152 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
+  describe "apply_failed" do
+    setup %{socket: socket, job: job, user: user} do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _response, socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      %{joined: socket, session: session}
+    end
+
+    test "accepts a report of a failed apply", %{joined: socket} do
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => Ecto.UUID.generate(),
+          "stage" => "validate_ids",
+          "is_new_workflow" => false
+        })
+
+      assert_reply ref, :ok
+    end
+
+    test "accepts a stage it does not recognise without crashing", %{
+      joined: socket
+    } do
+      # The stage comes from the browser, so an unknown one is coerced rather
+      # than passed through into a Sentry tag or allowed to take the channel
+      # down with it.
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => Ecto.UUID.generate(),
+          "stage" => "something-else",
+          "is_new_workflow" => true
+        })
+
+      assert_reply ref, :ok
+    end
+
+    test "records the failure on the message, and clears it on a later success",
+         %{joined: socket, session: session} do
+      message = hd(session.messages)
+
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => message.id,
+          "stage" => "import",
+          "is_new_workflow" => false
+        })
+
+      assert_reply ref, :ok
+
+      # The apply happens in the browser, so without this a reload has no way
+      # to know the changes never landed.
+      assert %{"apply_failed" => true} = Repo.reload!(message).meta
+
+      ref = push(socket, "apply_applied", %{"message_id" => message.id})
+      assert_reply ref, :ok
+
+      # A retry that works has to leave nothing behind.
+      refute Map.has_key?(Repo.reload!(message).meta, "apply_failed")
+    end
+
+    test "survives the pseudo-id a streaming apply reports against", %{
+      joined: socket
+    } do
+      # A mid-stream apply has no saved message, so the client reports the
+      # failure against "__streaming__". Looking that up as a uuid took the
+      # channel down with it.
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => "__streaming__",
+          "stage" => "import",
+          "is_new_workflow" => false
+        })
+
+      assert_reply ref, :ok
+    end
+
+    test "will not mark a message belonging to another session", %{
+      joined: socket,
+      user: user,
+      job: job
+    } do
+      {:ok, other} = AiAssistant.create_session(job, user, "Elsewhere", [])
+      stranger = hd(other.messages)
+
+      ref =
+        push(socket, "apply_failed", %{
+          "message_id" => stranger.id,
+          "stage" => "import",
+          "is_new_workflow" => false
+        })
+
+      assert_reply ref, :ok
+      refute Map.has_key?(Repo.reload!(stranger).meta, "apply_failed")
+    end
+
+    test "accepts a report with fields missing", %{joined: socket} do
+      ref = push(socket, "apply_failed", %{})
+
+      assert_reply ref, :ok
+    end
+  end
+
+  describe "join with an invalid first message" do
+    test "returns a clean error rather than crashing the socket", %{
+      socket: socket,
+      project: project,
+      workflow: workflow
+    } do
+      too_long =
+        String.duplicate(
+          "x",
+          Lightning.AiAssistant.ChatMessage.max_content_length() + 1
+        )
+
+      params = %{
+        "project_id" => project.id,
+        "workflow_id" => workflow.id,
+        "content" => too_long
+      }
+
+      assert {:error, reply} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 params
+               )
+
+      assert {:ok, _json} = Jason.encode(reply)
+
+      assert %{reason: reason, errors: errors} = reply
+      assert %{"content" => [message]} = errors
+      assert message =~ "should be at most 10000 character(s)"
+
+      # Shown to the reader as it stands, so it cannot be a code.
+      assert reason =~ "should be at most 10000 character(s)"
+    end
+  end
+
   describe "message serialization" do
     test "serializes from_global marker with nil job_id", %{
       socket: socket,
@@ -251,6 +399,156 @@ defmodule LightningWeb.AiAssistantChannelTest do
                },
                %{from_global: false}
              ] = messages
+    end
+
+    test "serializes the flag for a reply whose code edit did not apply", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :assistant,
+              content: "Here is what I changed.",
+              status: :success,
+              meta: %{"from_global" => true, "code_change_failed" => true}
+            }
+          ]
+        )
+
+      assert {:ok, %{messages: [message]}, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      assert message.code_change_failed == true
+    end
+
+    # Everyone in the session sees a failure, not just whoever sent the message.
+    # The partial has to go out before the error, or the client clears its
+    # streaming buffer and the reply the user watched appear vanishes until
+    # they reload.
+    test "sends the partial before the error, and says why it failed", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :user,
+              content: "how?",
+              user: user,
+              status: :error,
+              failure_category: :upstream_error,
+              failure_message: "The connection to the assistant was lost."
+            },
+            %{
+              role: :assistant,
+              content: "half an answer",
+              status: :error,
+              failure_category: :incomplete_response,
+              failure_message: "The connection to the assistant was lost.",
+              inserted_at: DateTime.utc_now() |> DateTime.add(1)
+            }
+          ]
+        )
+
+      assert {:ok, _reply, socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      loaded = AiAssistant.get_session!(session.id)
+      user_message = Enum.find(loaded.messages, &(&1.role == :user))
+
+      send(
+        socket.channel_pid,
+        {:ai_assistant, :message_status_changed,
+         %{
+           status: {:error, loaded},
+           session_id: session.id,
+           message_id: user_message.id
+         }}
+      )
+
+      assert_broadcast "new_message", %{message: %{content: "half an answer"}}
+
+      assert_broadcast "message_error", %{
+        message_id: broadcast_id,
+        status: "error",
+        failure_category: "upstream_error",
+        failure_message: "The connection to the assistant was lost."
+      }
+
+      # The broadcaster named the message, so the reason lands on that one
+      # rather than on whichever happens to be newest.
+      assert broadcast_id == user_message.id
+    end
+
+    # The panel reads these two off the message to show why a reply failed, so
+    # a reconnecting client has to be told the same thing as one that was
+    # watching when it happened.
+    test "serializes the failure reason on a failed message", %{
+      socket: socket,
+      job: job,
+      user: user
+    } do
+      session =
+        insert(:chat_session,
+          job: job,
+          user: user,
+          session_type: "job_code",
+          messages: [
+            %{
+              role: :assistant,
+              content: "half an answer",
+              status: :error,
+              failure_category: :incomplete_response,
+              failure_message: "The connection to the assistant was lost."
+            },
+            %{
+              role: :assistant,
+              content: "a clean answer",
+              status: :success,
+              inserted_at: DateTime.utc_now() |> DateTime.add(1)
+            }
+          ]
+        )
+
+      assert {:ok, %{messages: messages}, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:job_code:#{session.id}",
+                 %{}
+               )
+
+      assert [failed, clean] = messages
+
+      assert failed.failure_category == "incomplete_response"
+
+      assert failed.failure_message ==
+               "The connection to the assistant was lost."
+
+      # Nothing failed, so nothing is said about failing.
+      refute Map.has_key?(clean, :failure_category)
+      refute Map.has_key?(clean, :failure_message)
     end
 
     test "serializes segments timeline when present", %{
@@ -635,32 +933,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert errors.base == ["Message cannot be empty"]
     end
 
-    test "includes code when attach_code is true", %{
-      socket: socket,
-      job: job,
-      user: user
-    } do
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
-
-      ref =
-        push(socket, "new_message", %{
-          "content" => "Explain this code",
-          "attach_code" => true
-        })
-
-      assert_reply ref, :ok, %{message: message}
-      assert message.content == "Explain this code"
-    end
-
     test "returns limit error when quota is exceeded", %{
       socket: socket,
       job: job,
@@ -778,7 +1050,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
           %{}
         )
 
-      # Simulate user selecting a run and checking "Send logs"
+      # Simulate user selecting a run and checking "Send run logs"
       ref =
         push(socket, "new_message", %{
           "content" => "Help me debug these logs",
@@ -871,6 +1143,390 @@ defmodule LightningWeb.AiAssistantChannelTest do
       updated_session = Repo.reload(session)
       assert updated_session.workflow_id == workflow.id
       assert is_nil(updated_session.meta["unsaved_workflow"])
+    end
+  end
+
+  describe "privileged frames re-authorise against the database" do
+    setup %{socket: socket, job: job, user: user} do
+      {:ok, session} =
+        AiAssistant.create_session(job, user, "Initial message", [])
+
+      {:ok, _, joined_socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      %{session: session, joined_socket: joined_socket}
+    end
+
+    # Access is revoked after the socket is already open, so a handler that
+    # trusted the join-time decision would let all four frames through.
+    for {event, params} <- [
+          {"new_message", %{"content" => "still here?"}},
+          {"retry_message", %{"message_id" => Ecto.UUID.generate()}},
+          {"update_context", %{"job_body" => "console.log('sneak');"}},
+          {"list_sessions", %{}}
+        ] do
+      test "#{event} is rejected once the user loses project access", %{
+        joined_socket: joined_socket,
+        project: project,
+        user: user
+      } do
+        project
+        |> Lightning.Projects.get_project_user(user)
+        |> Repo.delete!()
+
+        ref = push(joined_socket, unquote(event), unquote(Macro.escape(params)))
+
+        assert_reply ref,
+                     :error,
+                     %{type: "unauthorized", errors: %{base: ["unauthorized"]}}
+      end
+    end
+
+    # Broadcasts (assistant replies, streaming chunks) leave without passing
+    # through the inbound guard, so the channel has to drop itself when the
+    # user's standing on the project stops authorising the session.
+    test "the channel stops when the user's membership is revoked", %{
+      joined_socket: joined_socket,
+      project: project,
+      user: user
+    } do
+      Process.monitor(joined_socket.channel_pid)
+
+      project
+      |> Lightning.Projects.get_project_user(user)
+      |> Repo.delete!()
+
+      Lightning.Projects.Events.project_user_removed(project.id, user.id)
+
+      assert_receive {:DOWN, _ref, :process, _pid, :normal}
+    end
+
+    test "the channel survives a role change that still authorises reads", %{
+      joined_socket: joined_socket,
+      project: project,
+      user: user
+    } do
+      Process.monitor(joined_socket.channel_pid)
+
+      project
+      |> Lightning.Projects.get_project_user(user)
+      |> Ecto.Changeset.change(%{role: :viewer})
+      |> Repo.update!()
+
+      Lightning.Projects.Events.project_user_role_changed(project.id, user.id)
+
+      refute_receive {:DOWN, _ref, :process, _pid, _reason}
+
+      ref = push(joined_socket, "list_sessions", %{})
+      assert_reply ref, :ok, %{sessions: _}
+    end
+
+    # Support access is a support user's only standing on a project when they
+    # hold no membership row, so revoking it has to end their session. A member
+    # who also happens to be a support user is decided by their row instead, and
+    # is unaffected.
+    test "a support user's channel stops when support access is withdrawn", %{
+      project: project,
+      session: session
+    } do
+      # Rebind: `change/2` drops a value equal to the struct's, so writing
+      # `false` back onto the pre-update struct would be a silent no-op.
+      project =
+        project
+        |> Ecto.Changeset.change(%{allow_support_access: true})
+        |> Repo.update!()
+
+      support_user = insert(:user, support_user: true)
+
+      {:ok, _, support_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{support_user.id}", %{current_user: support_user})
+        |> subscribe_and_join(
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      Process.monitor(support_socket.channel_pid)
+
+      project
+      |> Ecto.Changeset.change(%{allow_support_access: false})
+      |> Repo.update!()
+
+      Lightning.Projects.Events.support_access_updated(project.id, false)
+
+      assert_receive {:DOWN, _ref, :process, _pid, :normal}
+    end
+
+    test "a support user who is also a member keeps their channel", %{
+      project: project,
+      session: session
+    } do
+      # Rebind: `change/2` drops a value equal to the struct's, so writing
+      # `false` back onto the pre-update struct would be a silent no-op.
+      project =
+        project
+        |> Ecto.Changeset.change(%{allow_support_access: true})
+        |> Repo.update!()
+
+      support_member = insert(:user, support_user: true)
+
+      insert(:project_user,
+        project: project,
+        user: support_member,
+        role: :editor
+      )
+
+      {:ok, _, support_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{support_member.id}", %{current_user: support_member})
+        |> subscribe_and_join(
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      Process.monitor(support_socket.channel_pid)
+
+      project
+      |> Ecto.Changeset.change(%{allow_support_access: false})
+      |> Repo.update!()
+
+      Lightning.Projects.Events.support_access_updated(project.id, false)
+
+      refute_receive {:DOWN, _ref, :process, _pid, _reason}
+
+      ref = push(support_socket, "list_sessions", %{})
+      assert_reply ref, :ok, %{sessions: _}
+    end
+
+    # Scheduling deletion broadcasts a project-wide event with no user on it, so
+    # a handler matching on `user_id` would miss it entirely and this panel would
+    # keep receiving replies for a project nobody may work in.
+    test "the channel stops when the project is scheduled for deletion", %{
+      joined_socket: joined_socket,
+      project: project
+    } do
+      Process.monitor(joined_socket.channel_pid)
+
+      {:ok, _project} = Lightning.Projects.schedule_project_deletion(project)
+
+      assert_receive {:DOWN, _ref, :process, _pid, :normal}
+    end
+
+    # A soft-deleted workflow still authorises — access is the project's to
+    # grant, and the project is untouched — so the inbound guard cannot end this
+    # session and the event has to.
+    test "the channel stops when the session's workflow is deleted", %{
+      joined_socket: joined_socket,
+      job: job
+    } do
+      Process.monitor(joined_socket.channel_pid)
+
+      {:ok, _} =
+        job.workflow_id
+        |> Lightning.Workflows.get_workflow!()
+        |> Lightning.Workflows.mark_for_deletion(insert(:user))
+
+      assert_receive {:DOWN, _ref, :process, _pid, :normal}
+    end
+
+    test "the channel survives another workflow in the project being deleted", %{
+      joined_socket: joined_socket,
+      project: project
+    } do
+      Process.monitor(joined_socket.channel_pid)
+
+      other_workflow = insert(:workflow, project: project)
+
+      {:ok, _} =
+        Lightning.Workflows.mark_for_deletion(other_workflow, insert(:user))
+
+      refute_receive {:DOWN, _ref, :process, _pid, _reason}
+
+      ref = push(joined_socket, "list_sessions", %{})
+      assert_reply ref, :ok, %{sessions: _}
+    end
+
+    # `save_message/3` writes `meta` back from the session struct it is handed.
+    # A second participant's socket never sees another socket's `update_context`,
+    # so writing from its join-time snapshot silently drops the context. The
+    # `job_id` matters: without it the merged meta is unchanged and Ecto skips
+    # the write, which hides the bug.
+    test "a message from a second participant keeps context another socket wrote",
+         %{socket: socket, job: job, project: project, session: session} do
+      topic = "ai_assistant:job_code:#{session.id}"
+
+      bystander = insert(:user)
+      insert(:project_user, project: project, user: bystander, role: :editor)
+
+      {:ok, _, bystander_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{bystander.id}", %{current_user: bystander})
+        |> subscribe_and_join(AiAssistantChannel, topic, %{})
+
+      {:ok, _, writer_socket} =
+        subscribe_and_join(socket, AiAssistantChannel, topic, %{})
+
+      write_ref =
+        push(writer_socket, "update_context", %{
+          "job_body" => "fn(state => state)"
+        })
+
+      assert_reply write_ref, :ok, %{success: true}
+
+      message_ref =
+        push(bystander_socket, "new_message", %{
+          "content" => "what does this do?",
+          "job_id" => job.id
+        })
+
+      assert_reply message_ref, :ok, %{}
+
+      assert %{"job_body" => "fn(state => state)"} =
+               AiAssistant.get_session!(session.id).meta["runtime_context"]
+    end
+
+    test "frames are rejected once the session row is gone", %{
+      joined_socket: joined_socket,
+      session: session
+    } do
+      Repo.delete!(session)
+
+      ref = push(joined_socket, "list_sessions", %{})
+
+      assert_reply ref,
+                   :error,
+                   %{type: "unauthorized", errors: %{base: ["unauthorized"]}}
+    end
+
+    test "a viewer keeps read frames but is denied update_context", %{
+      project: project,
+      session: session
+    } do
+      viewer = user_fixture()
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      viewer_socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+
+      {:ok, _, viewer_socket} =
+        subscribe_and_join(
+          viewer_socket,
+          AiAssistantChannel,
+          "ai_assistant:job_code:#{session.id}",
+          %{}
+        )
+
+      read_ref = push(viewer_socket, "list_sessions", %{})
+      assert_reply read_ref, :ok, %{sessions: _}
+
+      # Chat stays a read-level frame on purpose: viewers may ask the assistant,
+      # they just cannot write the answer back onto the job.
+      message_ref =
+        push(viewer_socket, "new_message", %{"content" => "What does this do?"})
+
+      assert_reply message_ref, :ok, %{message: %{role: "user"}}
+
+      write_ref =
+        push(viewer_socket, "update_context", %{
+          "job_body" => "console.log('viewer wrote this');"
+        })
+
+      assert_reply write_ref,
+                   :error,
+                   %{type: "unauthorized", errors: %{base: ["unauthorized"]}}
+
+      assert is_nil(AiAssistant.get_session!(session.id).meta["runtime_context"])
+    end
+
+    # The write has to come from the row the guard authorised, not from the
+    # join-time snapshot, or it clobbers meta persisted in between.
+    test "binding a workflow keeps meta written after join", %{
+      project: project,
+      workflow: workflow,
+      socket: socket
+    } do
+      {:ok, %{session_id: session_id}, joined_socket} =
+        subscribe_and_join(
+          socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:new",
+          %{
+            "project_id" => project.id,
+            "workflow_id" => Ecto.UUID.generate(),
+            "content" => "Help me create a workflow"
+          }
+        )
+
+      session = Repo.get!(ChatSession, session_id)
+
+      session
+      |> Ecto.Changeset.change(%{
+        meta:
+          Map.put(session.meta, "message_options", %{
+            "use_global_assistant" => true
+          })
+      })
+      |> Repo.update!()
+
+      ref =
+        push(joined_socket, "update_context", %{"workflow_id" => workflow.id})
+
+      assert_reply ref, :ok, %{success: true}
+
+      updated = Repo.reload(session)
+      assert updated.workflow_id == workflow.id
+      refute Map.has_key?(updated.meta, "unsaved_workflow")
+
+      assert updated.meta["message_options"] == %{
+               "use_global_assistant" => true
+             }
+    end
+
+    test "a viewer cannot bind a workflow to a workflow_template session", %{
+      project: project,
+      user: user,
+      workflow: workflow
+    } do
+      {:ok, session} =
+        AiAssistant.create_workflow_session(
+          project,
+          nil,
+          nil,
+          user,
+          "Create workflow"
+        )
+
+      viewer = user_fixture()
+      insert(:project_user, project: project, user: viewer, role: :viewer)
+
+      viewer_socket =
+        LightningWeb.UserSocket
+        |> socket("user_#{viewer.id}", %{current_user: viewer})
+
+      {:ok, _, viewer_socket} =
+        subscribe_and_join(
+          viewer_socket,
+          AiAssistantChannel,
+          "ai_assistant:workflow_template:#{session.id}",
+          %{}
+        )
+
+      ref =
+        push(viewer_socket, "update_context", %{"workflow_id" => workflow.id})
+
+      assert_reply ref,
+                   :error,
+                   %{type: "unauthorized", errors: %{base: ["unauthorized"]}}
+
+      assert is_nil(Repo.reload(session).workflow_id)
     end
   end
 
@@ -2511,65 +3167,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
     end
   end
 
-  describe "extract_message_options edge cases" do
-    test "handles attach_code and attach_logs for job_code", %{
-      socket: socket,
-      job: job,
-      user: user
-    } do
-      # Use manual mode to prevent AI response from being generated inline
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
-
-      # Test with both attach_code and attach_logs true
-      ref =
-        push(socket, "new_message", %{
-          "content" => "Help with logs",
-          "attach_code" => true,
-          "attach_logs" => true
-        })
-
-      assert_reply ref, :ok, %{message: message}
-      assert message.role == "user"
-    end
-
-    test "handles attach_code false for job_code", %{
-      socket: socket,
-      job: job,
-      user: user
-    } do
-      # Use manual mode to prevent AI response from being generated inline
-      {:ok, session} =
-        AiAssistant.create_session(job, user, "Initial message", [])
-
-      {:ok, _, socket} =
-        subscribe_and_join(
-          socket,
-          AiAssistantChannel,
-          "ai_assistant:job_code:#{session.id}",
-          %{}
-        )
-
-      # Test with attach_code explicitly false
-      ref =
-        push(socket, "new_message", %{
-          "content" => "Help without code",
-          "attach_code" => false
-        })
-
-      assert_reply ref, :ok, %{message: message}
-      assert message.role == "user"
-    end
-  end
-
   describe "extract_session_options edge cases" do
     test "creates workflow_template session without follow_run_id", %{
       socket: socket,
@@ -2657,7 +3254,7 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert message_options["step_id"] == step.id
     end
 
-    test "includes attach_code and attach_logs when creating new session", %{
+    test "includes attach_logs when creating new session", %{
       socket: socket,
       job: job,
       project: project
@@ -2666,7 +3263,6 @@ defmodule LightningWeb.AiAssistantChannelTest do
         "job_id" => job.id,
         "project_id" => project.id,
         "content" => "Help me with logs",
-        "attach_code" => true,
         "attach_logs" => true
       }
 
@@ -2681,8 +3277,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
       session = AiAssistant.get_session!(response.session_id)
       message_options = session.meta["message_options"]
 
-      assert message_options["code"] == true
       assert message_options["log"] == true
+      refute Map.has_key?(message_options, "code")
     end
 
     test "excludes message_options when not opted in", %{
@@ -3784,6 +4380,124 @@ defmodule LightningWeb.AiAssistantChannelTest do
 
       assert message_options["use_global_assistant"] == true
       assert message_options["page"] == "/projects/p1/workflows/w1"
+    end
+
+    test "attaches run logs to the first message's Apollo request", %{
+      socket: socket,
+      project: project,
+      workflow: workflow,
+      job: job
+    } do
+      run =
+        insert(:run,
+          work_order: insert(:workorder, workflow: workflow),
+          starting_job: job,
+          dataclip: insert(:dataclip, project: project)
+        )
+
+      step = insert(:step, job: job)
+      insert(:run_step, run: run, step: step)
+      insert(:log_line, run: run, step: step, message: "boom")
+
+      test_pid = self()
+
+      # Oban runs :inline inside the channel process, so the first message is
+      # already sent by the time the join returns.
+      Mox.stub(Lightning.Tesla.Mock, :call, fn env, opts ->
+        send(test_pid, {:apollo_body, Jason.decode!(env.body)})
+
+        Lightning.AiAssistantHelpers.streaming_or_sync_response(%{
+          "response" => "Global response"
+        }).(env, opts)
+      end)
+
+      assert {:ok, _response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 %{
+                   "project_id" => project.id,
+                   "workflow_id" => workflow.id,
+                   "job_id" => job.id,
+                   "content" => "why did this fail?",
+                   "code" => "workflow:\n  name: test",
+                   "use_global_assistant" => true,
+                   "follow_run_id" => run.id,
+                   "attach_logs" => true
+                 }
+               )
+
+      assert_receive {:apollo_body, body}
+
+      assert [%{"type" => "log", "content" => [line]}] = body["attachments"]
+      assert line["message"] == "boom"
+    end
+
+    test "stores follow_run_id in the new session's meta", %{
+      socket: socket,
+      project: project,
+      workflow: workflow,
+      job: job
+    } do
+      run =
+        insert(:run,
+          work_order: insert(:workorder, workflow: workflow),
+          starting_job: job,
+          dataclip: insert(:dataclip, project: project)
+        )
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 %{
+                   "project_id" => project.id,
+                   "content" => "why did this fail?",
+                   "use_global_assistant" => true,
+                   "follow_run_id" => run.id,
+                   "attach_logs" => true
+                 }
+               )
+
+      session = AiAssistant.get_session!(response.session_id)
+
+      assert session.meta["follow_run_id"] == run.id
+      assert session.meta["message_options"]["log"] == true
+    end
+
+    test "does not store a follow_run_id from another project", %{
+      socket: socket,
+      project: project
+    } do
+      foreign_project = insert(:project)
+      foreign_workflow = insert(:workflow, project: foreign_project)
+
+      foreign_run =
+        insert(:run,
+          work_order: insert(:workorder, workflow: foreign_workflow),
+          starting_job: insert(:job, workflow: foreign_workflow),
+          dataclip: insert(:dataclip, project: foreign_project)
+        )
+
+      assert {:ok, response, _socket} =
+               subscribe_and_join(
+                 socket,
+                 AiAssistantChannel,
+                 "ai_assistant:workflow_template:new",
+                 %{
+                   "project_id" => project.id,
+                   "content" => "why did this fail?",
+                   "use_global_assistant" => true,
+                   "follow_run_id" => foreign_run.id,
+                   "attach_logs" => true
+                 }
+               )
+
+      session = AiAssistant.get_session!(response.session_id)
+
+      refute Map.has_key?(session.meta, "follow_run_id")
     end
 
     test "new_message with use_global_assistant stores options and code",

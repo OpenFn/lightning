@@ -41,7 +41,7 @@ export const DataclipTypeNames: Record<string, string> = {
   global: 'global',
   step_result: 'step result',
   saved_input: 'saved input',
-  kafka: 'kafka message',
+  kafka: 'Kafka',
 };
 
 export enum FilterTypes {

@@ -103,11 +103,23 @@ defmodule LightningWeb.Router do
     resources "/log_lines", API.LogLinesController, only: [:index]
   end
 
-  ## AI Assistant JSON API (cookie-authenticated)
+  ## Cookie-authenticated JSON, for the app's own React components
   scope "/api", LightningWeb, as: :api do
     pipe_through [:authenticated_json, :require_authenticated_user]
 
     get "/ai_assistant/sessions", API.AiAssistantController, :list_sessions
+
+    get "/projects/:project_id/workflows/:workflow_id/health/outcomes",
+        API.WorkflowHealthController,
+        :outcomes
+
+    get "/projects/:project_id/workflows/:workflow_id/health/failures",
+        API.WorkflowHealthController,
+        :error_signatures
+
+    get "/projects/:project_id/workflows/:workflow_id/health/runs",
+        API.WorkflowHealthController,
+        :runs
   end
 
   ## Collections
@@ -194,6 +206,12 @@ defmodule LightningWeb.Router do
       live "/auth/confirm_access", ReAuthenticateLive.New, :new
     end
 
+    # No `on_mount`: this is where the lockout redirect sends people, so the
+    # hook that performs it would loop.
+    live_session :confirmation_required do
+      live "/users/confirm-required", UserConfirmationRequiredLive, :show
+    end
+
     scope "/" do
       pipe_through [
         :reauth_sudo_mode,
@@ -244,6 +262,7 @@ defmodule LightningWeb.Router do
         live "/w", WorkflowLive.Index, :index
         live "/w/new", WorkflowLive.Collaborate, :new
         live "/w/:id", WorkflowLive.Collaborate, :edit
+        live "/w/:id/health", WorkflowLive.Health, :show
 
         # Redirect retired legacy editor URLs to the collaborative editor,
         # preserving the query string. The collaborative editor uses different
@@ -302,7 +321,12 @@ defmodule LightningWeb.Router do
   scope "/" do
     pipe_through [:browser, :require_authenticated_user, :require_superuser]
 
-    live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
+    live_dashboard "/dashboard",
+      metrics: LightningWeb.Telemetry,
+      on_mount: [
+        {LightningWeb.InitAssigns, :default},
+        {LightningWeb.Hooks, :ensure_admin}
+      ]
   end
 
   do_in(:dev) do

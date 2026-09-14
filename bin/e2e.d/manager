@@ -9,7 +9,22 @@ export RTM=${RTM:-false}
 export DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@localhost/lightning_test_e2e}
 export LIVE_DEBUGGER=${LIVE_DEBUGGER:-false}
 export USAGE_TRACKING_ENABLED=false
+
+# Track whether the user explicitly set SNAPSHOT_FILE before we apply defaults,
+# so scenario resolution knows whether it may pick a scenario-specific snapshot.
+if [[ -n "${SNAPSHOT_FILE:-}" ]]; then
+  SNAPSHOT_FILE_OVERRIDDEN=true
+fi
 SNAPSHOT_FILE="${SNAPSHOT_FILE:-/tmp/demo_data_snapshot.sql}"
+
+# Optional declarative kickstart scenario (see bin/e2e.d/scenarios/README.md).
+# May be a scenario name (resolved under scenarios/) or a path to a file.
+# SCENARIOS_DIR must be absolute: it's consumed inside run_in_project_root,
+# which cd's to PROJECT_ROOT, while dirname "$0" is relative to the caller's
+# cwd. PROJECT_ROOT is exported (absolute) by bin/e2e; fall back to resolving
+# our own location for direct invocations of this script.
+SCENARIO="${SCENARIO:-}"
+SCENARIOS_DIR="${PROJECT_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}/bin/e2e.d/scenarios"
 
 # Helper functions
 run_in_project_root() {
@@ -41,6 +56,19 @@ Commands:
   enable-experimental-features  Enable experimental features for a user (default: editor@openfn.org)
   help            Show this help message (default)
 
+Kickstart Scenarios:
+  start, setup and reset accept --scenario <name|path> to boot into a custom,
+  declaratively-defined data set instead of the default demo data. A <name>
+  resolves to bin/e2e.d/scenarios/<name>.{yaml,yml,json}; a path is used as-is.
+  Each scenario keeps its own snapshot, so scenarios don't clobber each other.
+
+    bin/e2e start --scenario example       # boot into scenarios/example.yaml
+    bin/e2e setup --scenario example       # (re)build that scenario's snapshot
+    bin/e2e reset --scenario example       # fast reset to that scenario
+    SCENARIO=example bin/e2e start         # env var equivalent of the flag
+
+  See bin/e2e.d/scenarios/README.md for the scenario file format.
+
 Getting Started:
   For first-time setup or when you want everything ready, run 'start'. This will:
   - Run any pending migrations
@@ -65,7 +93,7 @@ CI Environments:
 
 Environment Variables:
   All settings can be overridden via environment variables:
-  DATABASE_URL, PORT, LOG_LEVEL, MIX_ENV, SNAPSHOT_FILE
+  DATABASE_URL, PORT, LOG_LEVEL, MIX_ENV, SNAPSHOT_FILE, SCENARIO
 EOF
 }
 
@@ -96,6 +124,66 @@ Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
   Lightning.SetupUtils.setup_demo(create_super: true)
 end)
 "'
+}
+
+# Resolve $SCENARIO (a name or a path) into $SCENARIO_FILE, and switch to a
+# scenario-specific snapshot unless the user overrode SNAPSHOT_FILE. Safe to
+# call repeatedly and a no-op when no scenario is set.
+resolve_scenario() {
+  [[ -z "$SCENARIO" ]] && return 0
+  # Already resolved (e.g. cmd_start delegating to cmd_server) - don't redo.
+  [[ -n "${SCENARIO_FILE:-}" ]] && return 0
+
+  if [[ -f "$SCENARIO" ]]; then
+    SCENARIO_FILE="$SCENARIO"
+  else
+    for ext in yaml yml json; do
+      if [[ -f "${SCENARIOS_DIR}/${SCENARIO}.${ext}" ]]; then
+        SCENARIO_FILE="${SCENARIOS_DIR}/${SCENARIO}.${ext}"
+        break
+      fi
+    done
+  fi
+
+  if [[ -z "${SCENARIO_FILE:-}" ]]; then
+    echo "❌ Scenario not found: $SCENARIO"
+    echo "Looked for '$SCENARIO' and ${SCENARIOS_DIR}/${SCENARIO}.{yaml,yml,json}"
+    exit 1
+  fi
+
+  # Make the path absolute - it's consumed inside run_in_project_root, which
+  # cd's away from the caller's cwd.
+  SCENARIO_FILE="$(realpath "$SCENARIO_FILE")"
+  export SCENARIO_FILE
+
+  if [[ "${SNAPSHOT_FILE_OVERRIDDEN:-false}" != "true" ]]; then
+    # Include a content hash in the slug so editing a scenario invalidates
+    # its snapshot instead of silently restoring stale data, and same-named
+    # scenarios in different directories don't share one.
+    local slug content_hash
+    slug="$(basename "$SCENARIO_FILE")"
+    slug="${slug%.*}"
+    if command -v shasum >/dev/null 2>&1; then
+      content_hash="$(shasum -a 256 "$SCENARIO_FILE" | cut -c1-12)"
+    else
+      content_hash="$(sha256sum "$SCENARIO_FILE" | cut -c1-12)"
+    fi
+    SNAPSHOT_FILE="/tmp/lightning_e2e_snapshot__${slug}-${content_hash}.sql"
+  fi
+
+  # stderr, so `cmd_reset --quiet` and harnesses parsing stdout stay clean.
+  echo "📋 Using scenario: $SCENARIO_FILE" >&2
+  echo "📸 Snapshot: $SNAPSHOT_FILE" >&2
+}
+
+# Seed either from a scenario (if resolved) or the default demo data.
+seed_data() {
+  if [[ -n "${SCENARIO_FILE:-}" ]]; then
+    echo "Seeding from scenario: $SCENARIO_FILE"
+    run_in_project_root "mix lightning.kickstart '${SCENARIO_FILE}'"
+  else
+    seed_demo_data
+  fi
 }
 
 create_snapshot() {
@@ -274,6 +362,18 @@ cmd_start() {
       force_restart=true
       shift
       ;;
+    --scenario)
+      if [[ -z "${2:-}" ]]; then
+        echo "❌ --scenario needs a scenario name or path"
+        exit 1
+      fi
+      SCENARIO="$2"
+      shift 2
+      ;;
+    --scenario=*)
+      SCENARIO="${1#*=}"
+      shift
+      ;;
     *)
       echo "Unknown flag: $1"
       echo "Use 'help' for usage information"
@@ -281,6 +381,8 @@ cmd_start() {
       ;;
     esac
   done
+
+  resolve_scenario
 
   # Check if server is already running first
   if [[ -f "$pid_file" ]]; then
@@ -317,15 +419,19 @@ cmd_start() {
 
   # Check if snapshot exists, create if missing
   if [ ! -f "$SNAPSHOT_FILE" ]; then
-    echo "📸 No snapshot found, creating demo data and snapshot..."
+    echo "📸 No snapshot found, creating seed data and snapshot..."
 
     # Truncate existing data
     echo "Truncating existing data..."
     truncate_data >/dev/null 2>&1
 
-    # Seed demo data
-    echo "Seeding demo data..."
-    seed_demo_data >/dev/null 2>&1
+    # Seed data (scenario or demo). A scenario file's own errors are the most
+    # likely failure here, so let them through instead of discarding them.
+    echo "Seeding data..."
+    if ! seed_data >/dev/null; then
+      echo "❌ Seeding failed. See the error above."
+      exit 1
+    fi
 
     # Create snapshot
     echo "Creating snapshot for fast resets..."
@@ -334,6 +440,15 @@ cmd_start() {
     echo "✅ Snapshot created successfully"
   else
     echo "✅ Snapshot found at: $SNAPSHOT_FILE"
+
+    # The snapshot has to be restored, not just found. There used to be one
+    # snapshot per database so whatever was already loaded matched it; with a
+    # snapshot per scenario, starting on scenario A after scenario B seeded the
+    # database would otherwise serve B's data under A's name.
+    echo "Restoring from snapshot..."
+    truncate_data >/dev/null 2>&1
+    restore_snapshot >/dev/null 2>&1
+    echo "✅ Snapshot restored"
   fi
 
   # Now start the server
@@ -343,6 +458,10 @@ cmd_start() {
 
 cmd_server() {
   local pid_file="/tmp/lightning_e2e_server"
+
+  # Honour a scenario set via SCENARIO env (cmd_start already resolves when
+  # invoked with --scenario) so snapshot checks look at the right file.
+  resolve_scenario
 
   # Check if server is already running
   if [[ -f "$pid_file" ]]; then
@@ -410,6 +529,18 @@ cmd_reset() {
       quiet=true
       shift
       ;;
+    --scenario)
+      if [[ -z "${2:-}" ]]; then
+        echo "❌ --scenario needs a scenario name or path"
+        exit 1
+      fi
+      SCENARIO="$2"
+      shift 2
+      ;;
+    --scenario=*)
+      SCENARIO="${1#*=}"
+      shift
+      ;;
     *)
       echo "Unknown flag: $1"
       echo "Use 'help' for usage information"
@@ -417,6 +548,8 @@ cmd_reset() {
       ;;
     esac
   done
+
+  resolve_scenario
 
   if [ "$full_reset" = true ]; then
     # Check if running in non-interactive mode (e.g., with yes |)
@@ -427,12 +560,12 @@ cmd_reset() {
     if [ "$quiet" = true ]; then
       echo "Performing full database reset..." >&2
       run_in_project_root "mix ecto.reset" >/dev/null 2>&1
-      seed_demo_data >/dev/null 2>&1
+      seed_data >/dev/null 2>&1
       create_snapshot >/dev/null 2>&1
     else
       echo "Performing full database reset (drop/create/migrate)..."
       run_in_project_root "mix ecto.reset"
-      seed_demo_data
+      seed_data
       create_snapshot
     fi
   else
@@ -456,6 +589,31 @@ cmd_reset() {
 }
 
 cmd_setup() {
+  # Parse flags
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --scenario)
+      if [[ -z "${2:-}" ]]; then
+        echo "❌ --scenario needs a scenario name or path"
+        exit 1
+      fi
+      SCENARIO="$2"
+      shift 2
+      ;;
+    --scenario=*)
+      SCENARIO="${1#*=}"
+      shift
+      ;;
+    *)
+      echo "Unknown flag: $1"
+      echo "Use 'help' for usage information"
+      exit 1
+      ;;
+    esac
+  done
+
+  resolve_scenario
+
   echo "Setting up e2e database..."
 
   if db_exists; then
@@ -467,7 +625,7 @@ cmd_setup() {
     run_in_project_root "mix ecto.migrate"
   fi
 
-  seed_demo_data
+  seed_data
   create_snapshot
   echo "Setup complete!"
 }

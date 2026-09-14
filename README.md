@@ -275,6 +275,26 @@ MIX_ENV=test mix test
 We also have `test.watch` installed which can be used to rerun the tests on file
 changes.
 
+##### Chasing flaky tests
+
+`bin/repeat_mix_test` runs the suite (or given files) repeatedly and records
+each run's first-pass result — unlike `bin/ci_tests`, it never retries, so a
+flake shows up instead of being papered over.
+
+```sh
+bin/repeat_mix_test 30 test/lightning/workflows_test.exs
+CI_TIMING=1 bin/repeat_mix_test 11   # cap schedulers and shorten assert_receive
+                                     # timeouts to match CircleCI
+```
+
+It uses its own test database (`MIX_TEST_PARTITION=flaky`) so a long loop can't
+collide with another checkout, and writes logs plus a `summary.tsv` to
+`.scratch/runs/<timestamp>/`.
+
+`bin/gather_ci_logs [N]` pulls the "Run Elixir tests" output from the last N
+`test_elixir` CircleCI jobs on `main` into `.scratch/ci-logs/`, flagging the
+builds that went green only because the retry pass saved them. Needs `jq`.
+
 ## Security and Standards
 
 We use a host of common Elixir static analysis tools to help us avoid common

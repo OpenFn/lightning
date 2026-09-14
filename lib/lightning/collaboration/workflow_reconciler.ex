@@ -182,7 +182,7 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
          _workflow
        ) do
     changes =
-      ~w(cron_expression enabled type)a |> pluck_fields(cs)
+      ~w(custom_path cron_expression enabled type)a |> pluck_fields(cs)
 
     item =
       Doc.get_array(doc, "triggers") |> find_in_array(cs.data.id)

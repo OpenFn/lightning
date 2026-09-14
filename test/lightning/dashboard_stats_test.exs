@@ -7,7 +7,7 @@ defmodule Lightning.DashboardStatsTest do
   alias Lightning.DashboardStats.WorkflowStats
   alias Lightning.DashboardStats.ProjectMetrics
 
-  describe "get_workflow_stats/1" do
+  describe "get_workflows_stats/1" do
     test "returns a WorkflowStats with all data bound to last 30 days" do
       dataclip = insert(:dataclip)
 
@@ -19,7 +19,8 @@ defmodule Lightning.DashboardStatsTest do
         trigger: trigger,
         dataclip: dataclip,
         state: :failed,
-        inserted_at: Timex.shift(Timex.now(), days: -30)
+        inserted_at: Timex.shift(Timex.now(), days: -30),
+        last_activity: Timex.shift(Timex.now(), days: -30)
       )
 
       assert %WorkflowStats{
@@ -29,7 +30,7 @@ defmodule Lightning.DashboardStatsTest do
                step_count: 0,
                step_success_rate: +0.0,
                workorders_count: 0
-             } = DashboardStats.get_workflow_stats(workflow)
+             } = stats(workflow)
     end
 
     test "returns a WorkflowStats with a failed last work order" do
@@ -49,7 +50,7 @@ defmodule Lightning.DashboardStatsTest do
                step_count: 8,
                step_success_rate: ^step_success_rate,
                workorders_count: 5
-             } = DashboardStats.get_workflow_stats(workflow)
+             } = stats(workflow)
 
       assert %{
                failed: 1,
@@ -80,7 +81,7 @@ defmodule Lightning.DashboardStatsTest do
                step_count: 8,
                step_success_rate: ^step_success_rate,
                workorders_count: 5
-             } = DashboardStats.get_workflow_stats(workflow)
+             } = stats(workflow)
 
       assert last_workorder != failed_last_workorder
       assert last_workorder.state == :success
@@ -97,6 +98,48 @@ defmodule Lightning.DashboardStatsTest do
                success: 1
              } = grouped_workorders_count
     end
+
+    test "windows on last_activity, not inserted_at, and does not count cancelled as failed" do
+      dataclip = insert(:dataclip)
+
+      %{id: workflow_id, triggers: [trigger]} =
+        workflow = insert(:simple_workflow)
+
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        state: :cancelled,
+        inserted_at: Timex.now(),
+        last_activity: Timex.now()
+      )
+
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        state: :failed,
+        inserted_at: Timex.shift(Timex.now(), hours: -2),
+        last_activity: Timex.shift(Timex.now(), hours: -2)
+      )
+
+      # Created outside the 30-day window, but active inside it: still counted.
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        state: :success,
+        inserted_at: Timex.shift(Timex.now(), days: -40),
+        last_activity: Timex.shift(Timex.now(), days: -1)
+      )
+
+      assert %WorkflowStats{
+               workflow: %{id: ^workflow_id},
+               last_failed_workorder: %{state: :failed},
+               failed_workorders_count: 1,
+               workorders_count: 3
+             } = stats(workflow)
+    end
   end
 
   describe "aggregate_project_metrics/1" do
@@ -104,10 +147,11 @@ defmodule Lightning.DashboardStatsTest do
       workflow1 = complex_workflow_with_runs(last_workorder_failed: false)
       workflow2 = complex_workflow_with_runs(last_workorder_failed: true)
 
-      workflow_stats1 = DashboardStats.get_workflow_stats(workflow1)
-      workflow_stats2 = DashboardStats.get_workflow_stats(workflow2)
+      workflow_stats1 = stats(workflow1)
+      workflow_stats2 = stats(workflow2)
 
-      success_rate = round(2 * 100 * 100 / 4) / 100
+      # 10 work orders and 10 runs each: 2 success, 2 failed, 6 pending.
+      success_rate = round(2 * 100 * 100 / (2 + 2)) / 100
       failed_percent = round(2 * 100 * 100 / 10) / 100
 
       assert %ProjectMetrics{
@@ -121,6 +165,7 @@ defmodule Lightning.DashboardStatsTest do
                work_order_metrics: %{
                  failed: 2,
                  pending: 6,
+                 success: 2,
                  failed_percentage: ^failed_percent,
                  total: 10
                }
@@ -139,17 +184,17 @@ defmodule Lightning.DashboardStatsTest do
       w3 = complex_workflow_with_runs(last_workorder_failed: false)
 
       stats1 = %{
-        DashboardStats.get_workflow_stats(w1)
+        stats(w1)
         | workflow: %{name: "A Workflow"}
       }
 
       stats2 = %{
-        DashboardStats.get_workflow_stats(w2)
+        stats(w2)
         | workflow: %{name: "B Workflow"}
       }
 
       stats3 = %{
-        DashboardStats.get_workflow_stats(w3)
+        stats(w3)
         | workflow: %{name: "C Workflow"}
       }
 
@@ -306,5 +351,10 @@ defmodule Lightning.DashboardStatsTest do
       assert Enum.map(desc, & &1.last_workorder.updated_at) ==
                [~U[1970-01-01 00:00:00Z], nil]
     end
+  end
+
+  defp stats(workflow) do
+    [workflow_stats] = DashboardStats.get_workflows_stats([workflow])
+    workflow_stats
   end
 end

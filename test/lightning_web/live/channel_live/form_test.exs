@@ -851,4 +851,92 @@ defmodule LightningWeb.ChannelLive.FormTest do
       assert hd(dest_cams).project_credential_id == own_pc.id
     end
   end
+
+  describe "cross-project client auth method is rejected" do
+    @tag role: :editor
+    test "creating a channel with another project's webhook auth method is rejected",
+         %{conn: conn, project: project} do
+      # The client-auth checkbox list only renders this project's webhook auth
+      # methods, but a tampered browser can POST an arbitrary
+      # webhook_auth_method UUID. It must be rejected at save so a foreign
+      # tenant's auth object can't gate this project's channel.
+      other_project = insert(:project)
+      victim_auth_method = insert(:webhook_auth_method, project: other_project)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/channels/new")
+
+      # The foreign id is passed via render_submit's override map rather than
+      # through form/2 (the form only renders in-project checkboxes, so form/2
+      # would reject the unknown field) — this simulates a tampered browser.
+      view
+      |> form("#channel-form-new",
+        channel: %{
+          name: "borrowed-auth",
+          destination_url: "https://example.com/destination"
+        }
+      )
+      |> render_submit(%{
+        channel: %{client_auth_methods: %{victim_auth_method.id => "true"}}
+      })
+
+      assert Repo.preload(victim_auth_method, :channel_auth_methods).channel_auth_methods ==
+               []
+
+      for channel <- Channels.list_channels_for_project(project.id) do
+        assert Repo.preload(channel, :client_auth_methods).client_auth_methods ==
+                 []
+      end
+    end
+
+    @tag role: :editor
+    test "adding another project's webhook auth method on edit is rejected",
+         %{conn: conn, project: project} do
+      own_auth_method = insert(:webhook_auth_method, project: project)
+      other_project = insert(:project)
+      victim_auth_method = insert(:webhook_auth_method, project: other_project)
+
+      channel = insert(:channel, project: project)
+
+      insert(:channel_auth_method,
+        channel: channel,
+        role: :client,
+        webhook_auth_method: own_auth_method
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/channels/#{channel.id}/edit"
+        )
+
+      # Foreign auth-method id supplied via the override map to bypass the
+      # in-project checkbox list (see the create test above).
+      view
+      |> form("#channel-form-#{channel.id}", channel: %{name: channel.name})
+      |> render_submit(%{
+        channel: %{
+          client_auth_methods: %{
+            own_auth_method.id => "true",
+            victim_auth_method.id => "true"
+          }
+        }
+      })
+
+      # The existing in-project client auth method is untouched; the foreign
+      # one was never attached (see the create test on why this doesn't assert
+      # which layer stopped it).
+      loaded =
+        Channels.get_channel!(channel.id, include: [:channel_auth_methods])
+
+      client_cams =
+        Enum.filter(loaded.channel_auth_methods, &(&1.role == :client))
+
+      assert length(client_cams) == 1
+      assert hd(client_cams).webhook_auth_method_id == own_auth_method.id
+
+      assert Repo.preload(victim_auth_method, :channel_auth_methods).channel_auth_methods ==
+               []
+    end
+  end
 end

@@ -28,6 +28,7 @@ export type StateWebhookTrigger = {
   id: string;
   enabled: boolean;
   type: 'webhook';
+  custom_path?: string | null;
   webhook_reply: 'before_start' | 'after_completion' | null | undefined;
   webhook_response_config?: {
     success_code?: number | null;
@@ -35,39 +36,7 @@ export type StateWebhookTrigger = {
   } | null;
 };
 
-/**
- * Kafka configuration carried on a `StateKafkaTrigger`.
- *
- * Mirrors the shape the workflow store hydrates from Y.Doc (which the Elixir
- * `Lightning.Collaboration.WorkflowSerializer` populates from
- * `Triggers.KafkaConfiguration`): hosts and topics live as comma-separated
- * `_string` form on state, and become flat lists in the portability format.
- *
- * `connect_timeout` is in seconds (matches the Elixir schema default of 30).
- */
-export type StateKafkaConfiguration = {
-  hosts_string: string;
-  topics_string: string;
-  initial_offset_reset_policy: string;
-  connect_timeout: number;
-  group_id?: string | null;
-  sasl?: string | null;
-  ssl?: boolean;
-  username?: string | null;
-  password?: string | null;
-};
-
-export type StateKafkaTrigger = {
-  id: string;
-  enabled: boolean;
-  type: 'kafka';
-  kafka_configuration?: StateKafkaConfiguration | null;
-};
-
-export type StateTrigger =
-  | StateCronTrigger
-  | StateWebhookTrigger
-  | StateKafkaTrigger;
+export type StateTrigger = StateCronTrigger | StateWebhookTrigger;
 
 export type StateEdge = {
   id: string;
@@ -123,22 +92,14 @@ export type SpecWebhookTrigger = {
   id?: string;
   type: 'webhook';
   enabled: boolean;
+  /** Names the endpoint, so its URL is `/i/<project-id>/<custom_path>`. */
+  custom_path?: string | null;
   webhook_reply: string | null;
   webhook_response_config?: WebhookResponseConfig | null;
   pos: Position | undefined;
 };
 
-export type SpecKafkaTrigger = {
-  id?: string;
-  type: 'kafka';
-  enabled: boolean;
-  kafka_configuration?: StateKafkaConfiguration | null;
-};
-
-export type SpecTrigger =
-  | SpecCronTrigger
-  | SpecWebhookTrigger
-  | SpecKafkaTrigger;
+export type SpecTrigger = SpecCronTrigger | SpecWebhookTrigger;
 
 export type SpecEdge = {
   id?: string;

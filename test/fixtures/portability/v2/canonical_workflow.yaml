@@ -12,19 +12,6 @@ steps:
     next:
       ingest:
         condition: always
-  - id: kafka
-    name: kafka
-    enabled: true
-    type: kafka
-    hosts:
-      - 'localhost:9092'
-    topics:
-      - dummy
-    initial_offset_reset_policy: earliest
-    connect_timeout: 30
-    next:
-      ingest:
-        condition: always
   - id: webhook
     name: webhook
     enabled: true

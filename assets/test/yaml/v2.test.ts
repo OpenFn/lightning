@@ -13,7 +13,7 @@
  * The wire shape is the unified `steps:` array (triggers AND jobs in one
  * list, distinguished by a `type:` discriminator on triggers). Spec-defined
  * trigger fields (`cron_expression`, `webhook_reply`) and Lightning-only
- * extensions (`cron_cursor`, `kafka` config) all live flat at the trigger
+ * extensions (`cron_cursor`) all live flat at the trigger
  * root. This matches the Elixir `Lightning.Workflows.YamlFormat.V2` module
  * and the @openfn/cli lexicon. See
  * `test/fixtures/portability/v2/canonical_workflow.yaml` for the spec witness.
@@ -41,7 +41,6 @@ import {
   branchingJobsState,
   cronWithCursorState,
   jsExpressionEdgeState,
-  kafkaTriggerState,
   pipeConditionEdgeState,
   simpleWebhookState,
   webhookWithResponseConfigState,
@@ -52,9 +51,9 @@ import {
 const FIXTURES_ROOT = resolve(__dirname, '../../../test/fixtures/portability');
 
 // Kitchen-sink fixtures: each format has one comprehensive workflow that
-// exercises every supported feature (multi-trigger, kafka config, cron
-// cursor, webhook reply, JS-expression edge with label + disabled,
-// branching, all condition types). New features must be added here so
+// exercises every supported feature (multi-trigger, cron cursor, webhook
+// reply, JS-expression edge with label + disabled, branching, all
+// condition types). New features must be added here so
 // regressions surface.
 const readKitchenSink = (
   format: 'v1' | 'v2'
@@ -154,7 +153,7 @@ describe('v2.serializeWorkflow / parseWorkflow round-trip on synthetic state', (
 // jobs/triggers/edges come back. This block goes further and asserts that
 // the *content* on each trigger and edge is preserved end-to-end. Without
 // these assertions a regression that drops `cron_expression`, `cron_cursor`,
-// `webhook_reply`, the kafka config, or `condition_label` would slip through.
+// `webhook_reply`, or `condition_label` would slip through.
 
 const findTriggerByType = (
   state: WorkflowState,
@@ -203,29 +202,6 @@ describe('v2 deep round-trip preserves trigger / edge content', () => {
     expect(inputCursor).toBeDefined();
     expect(outCursorByName).toBeDefined();
     expect(cron.cron_cursor_job_id).toBe(outCursorByName?.id);
-  });
-
-  it('preserves a populated kafka_configuration', () => {
-    const out = roundTripToState(kafkaTriggerState());
-    const kafka = findTriggerByType(out, 'kafka');
-    if (kafka.type !== 'kafka') throw new Error('unreachable');
-
-    expect(kafka.kafka_configuration).toBeDefined();
-    const cfg = kafka.kafka_configuration;
-    expect(cfg).not.toBeNull();
-    if (!cfg) return;
-
-    // hosts/topics on the wire are lists of strings; on state they're
-    // comma-separated `_string` form. The round-trip normalizes spacing.
-    expect(cfg.hosts_string).toBe('broker-a:9092, broker-b:9092');
-    expect(cfg.topics_string).toBe('orders, shipments');
-    expect(cfg.ssl).toBe(true);
-    expect(cfg.sasl).toBe('scram_sha_256');
-    expect(cfg.username).toBe('svc-orders');
-    expect(cfg.password).toBe('pw-shh');
-    expect(cfg.initial_offset_reset_policy).toBe('earliest');
-    expect(cfg.connect_timeout).toBe(30);
-    expect(cfg.group_id).toBe('lightning-orders');
   });
 
   it('preserves edge condition_type and condition_label on a js_expression edge', () => {

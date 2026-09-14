@@ -47,6 +47,7 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Credentials.KeychainCredential
   alias Lightning.Credentials.Scoping
   alias Lightning.Policies.Permissions
+  alias Lightning.Projects.Events
   alias Lightning.Projects.MergeProjects
   alias Lightning.Projects.Project
   alias Lightning.Projects.ProjectCredential
@@ -54,7 +55,6 @@ defmodule Lightning.Projects.Sandboxes do
   alias Lightning.Projects.Provisioner
   alias Lightning.Projects.SandboxPromExPlugin
   alias Lightning.Repo
-  alias Lightning.Services.CollectionHook
   alias Lightning.Workflows
   alias Lightning.Workflows.Edge
   alias Lightning.Workflows.Job
@@ -82,7 +82,7 @@ defmodule Lightning.Projects.Sandboxes do
   owner who is demoted to `:admin`. The `actor` is then set as the sandbox
   owner (replacing any other role they may have had on the parent). To add
   a user to the sandbox who is not on the parent, call
-  `Lightning.Projects.add_project_users/3` after provision returns — that
+  `Lightning.Projects.add_project_users/4` after provision returns — that
   path goes through the seat-limit check.
   """
   @type provision_attrs :: %{
@@ -167,7 +167,19 @@ defmodule Lightning.Projects.Sandboxes do
   * `target` - The project receiving the merge
   * `actor` - The user performing the merge
   * `opts` - Merge options (`:selected_workflow_ids`,
-    `:deleted_target_workflow_ids`, `:selected_credential_ids`)
+    `:deleted_target_workflow_ids`, `:selected_credential_ids`,
+    `:skip_collections`)
+
+  ## Collections
+
+  A merge always creates, empty, the collections the target is missing,
+  computed at merge time - so a collection added to the sandbox while a
+  merge screen was open is still carried over. Pass `:skip_collections`
+  (a list of names the user explicitly unchecked in the merge screen) to
+  leave those out; anything else raises `ArgumentError`. A merge never
+  deletes collections: ones that exist only in the target are always kept,
+  and any deletion-shaped option a caller passes is ignored. Removing a
+  collection is a project-settings action, not part of a merge.
 
   ## Credential attachment
 
@@ -186,6 +198,10 @@ defmodule Lightning.Projects.Sandboxes do
   as the merge, so a partial merge (via `:selected_workflow_ids`) only carries
   over keychains used by the selected workflows. A keychain whose name already
   exists in the target is left as the target's own.
+
+  Attaching one creates a keychain in the target, which needs owner or admin
+  there. Merging does not. When the actor cannot create one, the keychain is not
+  attached and the job arrives without it, rather than the merge failing.
 
   ## Returns
   * `{:ok, updated_target}` - Merge succeeded
@@ -208,10 +224,13 @@ defmodule Lightning.Projects.Sandboxes do
       ) do
     selected_credential_ids = Map.get(opts, :selected_credential_ids, [])
 
-    # `:merge_sandbox` allows editors, but deleting collections needs owner/admin.
-    # Gate only the destructive half so an editor can merge without pruning data.
-    allow_collection_deletions? =
-      Permissions.can?(:collections, :manage_collection, actor, target)
+    # The merge creates every collection the target is missing except the
+    # names the caller explicitly skipped. A malformed skip list raises
+    # rather than silently changing what gets created. There is no deletion
+    # half: a merge never deletes target collections, whatever options a
+    # caller passes.
+    skip_collection_names =
+      validate_skip_collections!(Map.get(opts, :skip_collections, []))
 
     Repo.transact(fn ->
       # Preload once so both attach_sandbox_keychains and merge_project derive
@@ -221,7 +240,7 @@ defmodule Lightning.Projects.Sandboxes do
 
       with :ok <-
              attach_selected_credentials(source, target, selected_credential_ids),
-           :ok <- attach_sandbox_keychains(source, target, opts),
+           :ok <- attach_sandbox_keychains(source, target, actor, opts),
            # Re-preload so the credential and keychain remaps see the
            # just-attached associations; merge_project skips the preload if
            # they're already loaded.
@@ -238,9 +257,7 @@ defmodule Lightning.Projects.Sandboxes do
              ),
            :ok <- reject_out_of_project_credentials(target),
            {:ok, _} <-
-             sync_collections(source, target,
-               allow_deletions: allow_collection_deletions?
-             ) do
+             sync_collections(source, target, skip_names: skip_collection_names) do
         {:ok, updated_target}
       end
     end)
@@ -334,7 +351,7 @@ defmodule Lightning.Projects.Sandboxes do
   # KeychainCredential changeset's validate_default_credential_belongs_to_project
   # passes against the target. Returns `{:error, changeset}` on the first genuine
   # insert failure so the merge transaction rolls back.
-  defp attach_sandbox_keychains(source, target, opts) do
+  defp attach_sandbox_keychains(source, target, actor, opts) do
     target_keychain_names =
       from(k in KeychainCredential,
         where: k.project_id == ^target.id,
@@ -343,20 +360,46 @@ defmodule Lightning.Projects.Sandboxes do
       |> Repo.all()
       |> MapSet.new()
 
-    source
-    |> MergeProjects.carried_source_workflows(opts)
-    |> Enum.flat_map(& &1.jobs)
-    |> Enum.map(& &1.keychain_credential_id)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-    |> load_source_keychains(source.id)
-    |> Enum.reject(&MapSet.member?(target_keychain_names, &1.name))
-    |> Enum.reduce_while(:ok, fn keychain, :ok ->
-      case attach_keychain_to_target(keychain, target) do
-        {:ok, _} -> {:cont, :ok}
-        {:error, _} = error -> {:halt, error}
-      end
-    end)
+    to_attach =
+      source
+      |> MergeProjects.carried_source_workflows(opts)
+      |> Enum.flat_map(& &1.jobs)
+      |> Enum.map(& &1.keychain_credential_id)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> load_source_keychains(source.id)
+      |> Enum.reject(&MapSet.member?(target_keychain_names, &1.name))
+
+    # Attaching one of these creates a keychain in the target, which is an
+    # owner/admin action, while merging is not: `:merge_sandbox` allows editors.
+    # Without asking, an editor could make a keychain in a sandbox they own,
+    # where they are allowed to, and carry it into a project where they are not.
+    #
+    # Not attaching it is enough. `build_keychain_remap/2` maps a source
+    # keychain with no counterpart in the target to nil, so the job arrives
+    # without one rather than pointing at the sandbox's. That matches the
+    # collection
+    # deletions gated a few lines up, which an editor also merges without
+    # performing, rather than failing the whole merge over one part of it.
+    if may_create_keychain?(actor, target) do
+      Enum.reduce_while(to_attach, :ok, fn keychain, :ok ->
+        case attach_keychain_to_target(keychain, target) do
+          {:ok, _} -> {:cont, :ok}
+          {:error, _} = error -> {:halt, error}
+        end
+      end)
+    else
+      :ok
+    end
+  end
+
+  defp may_create_keychain?(%User{} = actor, %Project{} = target) do
+    Permissions.can?(
+      :credentials,
+      :create_keychain_credential,
+      actor,
+      %KeychainCredential{project_id: target.id}
+    )
   end
 
   # Only ever loads source-owned keychains: a job could, via changeset bypass,
@@ -374,9 +417,9 @@ defmodule Lightning.Projects.Sandboxes do
   defp attach_keychain_to_target(keychain, target) do
     attach_keychain_default_credential(keychain, target)
 
-    # The project must be on the base struct so that
-    # validate_default_credential_belongs_to_project can see it when
-    # changeset/2 runs; put_assoc after the fact would skip the check.
+    # `project_id` on the base struct is what
+    # validate_default_credential_belongs_to_project reads first, so it is set
+    # here rather than put_assoc'd afterwards, where the guard would not see it.
     %KeychainCredential{
       project: target,
       project_id: target.id,
@@ -633,7 +676,10 @@ defmodule Lightning.Projects.Sandboxes do
 
   ## Parameters
   * `sandbox` - Sandbox project to restore (or sandbox ID as string)
-  * `actor` - User performing the action (needs `:delete_sandbox` permission)
+  * `actor` - User performing the action (needs `:cancel_scheduled_deletion`
+    permission — the same owner/admin rule as `:delete_sandbox`, read directly
+    rather than through Scope, since the subject is by definition a project
+    scheduled for deletion)
 
   ## Returns
   * `{:ok, restored_sandbox}` - Sandbox subtree restored
@@ -649,7 +695,7 @@ defmodule Lightning.Projects.Sandboxes do
           | {:error, :unauthorized | :not_found | term()}
           | Lightning.Extensions.UsageLimiting.error()
   def cancel_scheduled_sandbox_deletion(%Project{} = sandbox, %User{} = actor) do
-    if Permissions.can?(:sandboxes, :delete_sandbox, actor, sandbox) do
+    if Permissions.can?(:sandboxes, :cancel_scheduled_deletion, actor, sandbox) do
       case ProjectLimiter.limit_new_sandbox(sandbox.id) do
         :ok -> do_cancel_scheduled_sandbox_deletion(sandbox)
         {:error, _reason, _message} = error -> error
@@ -690,6 +736,14 @@ defmodule Lightning.Projects.Sandboxes do
       SandboxPromExPlugin.fire_sandbox_scheduled_for_deletion_event()
 
       {:ok, %{sandbox | scheduled_deletion: date}}
+    end)
+    # Every descendant was wound down too, so every descendant's sessions have
+    # to hear about it. After the commit, not inside it: a subscriber that
+    # re-reads its project must not see it still live.
+    |> tap(fn result ->
+      with {:ok, _sandbox} <- result do
+        Enum.each(subtree_ids, &Events.project_deletion_scheduled/1)
+      end
     end)
   end
 
@@ -863,9 +917,9 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   defp create_keychain_in_sandbox(original_keychain, sandbox, actor) do
-    # The project must be on the base struct so that
-    # validate_default_credential_belongs_to_project can see it when
-    # changeset/2 runs; put_assoc after the fact would skip the check.
+    # `project_id` on the base struct is what
+    # validate_default_credential_belongs_to_project reads first, so it is set
+    # here rather than put_assoc'd afterwards, where the guard would not see it.
     %KeychainCredential{
       project: sandbox,
       project_id: sandbox.id,
@@ -986,18 +1040,10 @@ defmodule Lightning.Projects.Sandboxes do
           enabled: false,
           comment: parent_trigger.comment,
           custom_path: parent_trigger.custom_path,
-          cron_expression: parent_trigger.cron_expression,
-          kafka_configuration:
-            case parent_trigger.kafka_configuration do
-              %_{} = config -> Map.from_struct(config)
-              other -> other
-            end
+          cron_expression: parent_trigger.cron_expression
         }
 
-        {:ok, sandbox_trigger} =
-          %Trigger{}
-          |> Trigger.changeset(sandbox_trigger_attrs)
-          |> Repo.insert()
+        {:ok, sandbox_trigger} = insert_sandbox_trigger(sandbox_trigger_attrs)
 
         if parent_trigger.webhook_auth_methods &&
              parent_trigger.webhook_auth_methods != [] do
@@ -1015,6 +1061,45 @@ defmodule Lightning.Projects.Sandboxes do
       end)
     end)
     |> Map.new()
+  end
+
+  # A parent can hold a pre-migration path the clone's changeset rejects. The
+  # clone is written without it and the value copied in directly. Verbatim
+  # matters: an empty clone would clear the parent's path on promote.
+  defp insert_sandbox_trigger(attrs) do
+    # `mode: :savepoint` so a DB-level failure leaves the retry below usable.
+    %Trigger{}
+    |> Trigger.changeset(attrs)
+    |> Repo.insert(mode: :savepoint)
+    |> case do
+      {:ok, trigger} ->
+        {:ok, trigger}
+
+      {:error, changeset} ->
+        # Only a format failure. The other two rules keyed to `:custom_path`,
+        # a duplicate and a missing project, must not end with the path being
+        # written back. Neither is reachable through a provision today.
+        if Trigger.custom_path_shape_error?(changeset) do
+          insert_with_legacy_custom_path(attrs)
+        else
+          {:error, changeset}
+        end
+    end
+  end
+
+  defp insert_with_legacy_custom_path(attrs) do
+    with {:ok, trigger} <-
+           %Trigger{}
+           |> Trigger.changeset(%{attrs | custom_path: nil})
+           |> Repo.insert() do
+      {1, _} =
+        Repo.update_all(
+          from(t in Trigger, where: t.id == ^trigger.id),
+          set: [custom_path: attrs.custom_path]
+        )
+
+      {:ok, %{trigger | custom_path: attrs.custom_path}}
+    end
   end
 
   defp clone_workflow_edges(sandbox, parent) do
@@ -1094,58 +1179,87 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
-  Synchronises collection names from a sandbox to its merge target.
+  Computes the collections a merge from `source` into `target` would create,
+  without applying anything.
 
-  Names only in the source are created empty in the target; names only in
-  the target are deleted along with their items. Collection data is never
-  copied. The combined byte-size of deleted collections is reported via
-  `CollectionHook.handle_delete/2` for usage accounting.
+  Returns a map with:
 
-  Runs inside a single transaction.
+  * `:to_create` - sorted names that exist only in the source and would be
+    created empty in the target
+
+  Used by the merge screen to show what a merge would change before the
+  user commits to it. Callers pass the names the user explicitly unchecked
+  back as `:skip_collections`; the merge recomputes the missing names at
+  merge time, so a collection added to the source after the preview is
+  still created. A merge never deletes collections, so there is nothing
+  else to preview.
+  """
+  @spec preview_collections(Project.t(), Project.t()) :: %{
+          to_create: [String.t()]
+        }
+  def preview_collections(%Project{} = source, %Project{} = target) do
+    %{
+      to_create:
+        source
+        |> source_only_collection_names(target)
+        |> MapSet.to_list()
+        |> Enum.sort()
+    }
+  end
+
+  @doc """
+  Creates the source's collections in its merge target.
+
+  Names only in the source are created empty in the target; collection data
+  is never copied. Collections that exist only in the target are never
+  touched - a merge cannot delete a collection.
 
   ## Options
 
-    * `:allow_deletions` - when `true`, target-only collections (and their items)
-      are deleted so the target matches the source. Defaults to `false`: callers
-      must opt in. The merge path opts in only when the actor holds
-      `:manage_collection`, so an editor merge never prunes target collections.
+    * `:skip_names` - collection names not to create even though the target
+      lacks them; everything else missing is created. Defaults to `[]`.
+      The merge passes the names the user explicitly unchecked, so any
+      collection added to the source since the preview is still created.
   """
   @spec sync_collections(Project.t(), Project.t(), keyword()) ::
-          {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
-          | {:error, term()}
+          {:ok, %{created: non_neg_integer()}}
   def sync_collections(%Project{} = source, %Project{} = target, opts \\ []) do
-    allow_deletions? = Keyword.get(opts, :allow_deletions, false)
+    skip_names = Keyword.get(opts, :skip_names, [])
 
+    to_create =
+      source
+      |> source_only_collection_names(target)
+      |> MapSet.difference(MapSet.new(skip_names))
+
+    {created, _} = insert_empty_collections(target.id, to_create)
+
+    {:ok, %{created: created}}
+  end
+
+  defp validate_skip_collections!(names) when is_list(names) do
+    if Enum.all?(names, &is_binary/1) do
+      names
+    else
+      raise ArgumentError,
+            ":skip_collections must be a list of collection names, " <>
+              "got: #{inspect(names)}"
+    end
+  end
+
+  defp validate_skip_collections!(other) do
+    raise ArgumentError,
+          ":skip_collections must be a list of collection names, " <>
+            "got: #{inspect(other)}"
+  end
+
+  # Names that exist in the source but not the target. The single source of
+  # truth for both the merge-time sync and the preview the merge screen
+  # shows.
+  defp source_only_collection_names(source, target) do
     source_names = source |> Collections.list_project_collections() |> names()
+    target_names = target |> Collections.list_project_collections() |> names()
 
-    target_collections = Collections.list_project_collections(target)
-    target_names = names(target_collections)
-
-    to_create = MapSet.difference(source_names, target_names)
-
-    collections_to_delete =
-      if allow_deletions? do
-        names_to_delete = MapSet.difference(target_names, source_names)
-        Enum.filter(target_collections, &(&1.name in names_to_delete))
-      else
-        []
-      end
-
-    to_delete_ids = Enum.map(collections_to_delete, & &1.id)
-
-    deleted_byte_size =
-      Enum.reduce(collections_to_delete, 0, &(&1.byte_size_sum + &2))
-
-    Repo.transaction(fn ->
-      {created, _} = insert_empty_collections(target.id, to_create)
-      {deleted, _} = delete_collections(to_delete_ids)
-
-      if deleted_byte_size > 0 do
-        :ok = CollectionHook.handle_delete(target.id, deleted_byte_size)
-      end
-
-      %{created: created, deleted: deleted}
-    end)
+    MapSet.difference(source_names, target_names)
   end
 
   defp names(collections), do: MapSet.new(collections, & &1.name)
@@ -1171,12 +1285,6 @@ defmodule Lightning.Projects.Sandboxes do
       # Concurrent merges may race to create the same collection.
       Repo.insert_all(Collection, rows, on_conflict: :nothing)
     end
-  end
-
-  defp delete_collections([]), do: {0, nil}
-
-  defp delete_collections(ids) do
-    Repo.delete_all(from c in Collection, where: c.id in ^ids)
   end
 
   defp copy_workflow_version_history(sandbox, workflow_id_mapping) do

@@ -21,18 +21,22 @@ defmodule Lightning.CredentialsFixtures do
   @spec credential_fixture(attrs :: Keyword.t()) ::
           Lightning.Credentials.Credential.t()
   def credential_fixture(attrs \\ []) when is_list(attrs) do
+    built = credential_attrs(attrs)
+    owner = %Lightning.Accounts.User{id: built.user_id}
+
     {:ok, credential} =
-      credential_attrs(attrs)
-      |> Lightning.Credentials.create_credential()
+      Lightning.Credentials.create_credential(built, owner)
 
     credential
   end
 
   def project_credential_fixture(attrs \\ []) when is_list(attrs) do
+    built = credential_fixture(attrs)
+    owner = %Lightning.Accounts.User{id: built.user_id}
+
     {:ok, credential} =
       Lightning.Credentials.update_credential(
-        credential_fixture(attrs)
-        |> Lightning.Repo.preload(:project_credentials),
+        built |> Lightning.Repo.preload(:project_credentials),
         %{
           project_credentials: [
             %{
@@ -41,7 +45,8 @@ defmodule Lightning.CredentialsFixtures do
                   Lightning.ProjectsFixtures.project_fixture().id
             }
           ]
-        }
+        },
+        owner
       )
 
     credential

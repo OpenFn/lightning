@@ -5,12 +5,12 @@ orbs:
 
 # Shared configuration
 defaults:
-  elixir_version: &elixir_version '1.18.3-otp-27'
+  elixir_version: &elixir_version '1.18.4-otp-28'
   nodejs_version: &nodejs_version '24.18.1'
   docker_elixir: &docker_elixir
-    - image: elixir:1.18.3-otp-27
+    - image: elixir:1.18.4-otp-28
   docker_elixir_postgres: &docker_elixir_postgres
-    - image: elixir:1.18.3-otp-27
+    - image: elixir:1.18.4-otp-28
     - image: cimg/postgres:17.3
   environment: &environment
     ERL_FLAGS: +S 4:4

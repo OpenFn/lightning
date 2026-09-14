@@ -1,11 +1,12 @@
 defmodule Lightning.Collaboration.PersistenceTest do
-  use Lightning.DataCase, async: false
+  use Lightning.DataCase, async: true
 
   alias Lightning.Collaboration.DocumentState
   alias Lightning.Collaboration.DocumentSupervisor
   alias Lightning.Collaboration.Registry
 
   import Lightning.Factories
+  import Lightning.CollaborationHelpers
 
   @moduledoc """
   Tests for Lightning.Collaboration.Persistence module.
@@ -14,9 +15,50 @@ defmodule Lightning.Collaboration.PersistenceTest do
   reconciling Y.Doc state from the database when a DocumentSupervisor starts.
   """
 
+  # Each test drives its own isolated collaboration tree (Registry,
+  # DynamicSupervisor, and `:pg` scope), so concurrent tests can't collide on
+  # the application-wide singletons. Documents are started under that tree with
+  # `owner: self()`, which (a) lets the SharedDoc's init-time DB read and the
+  # children's later writes reach this test's sandbox connection, and (b) ties
+  # the tree's lifetime to this test. The instance supervisor is
+  # `start_supervised!`-owned, so its DB-writing children are stopped — flush
+  # included via DocumentSupervisor.terminate/2 — before this test process (the
+  # sandbox owner) exits, even if an assertion raises first.
   setup do
     Process.flag(:trap_exit, true)
-    :ok
+    instance = start_collaboration_instance()
+    {:ok, instance: instance}
+  end
+
+  # Start a DocumentSupervisor under the test's isolated instance. owner: self()
+  # threads this test's sandbox/mock access into the spawned SharedDoc and
+  # PersistenceWriter (and into the SharedDoc's init-time read via the
+  # persistence state).
+  #
+  # Started under `start_supervised!` so ExUnit owns it: on test exit ExUnit
+  # synchronously stops it, running DocumentSupervisor.terminate/2 (which flushes
+  # the PersistenceWriter through the SharedDoc) to completion. That teardown is
+  # registered after DataCase's `stop_owner` and runs LIFO, so it executes while
+  # the sandbox owner is still alive — no DB-writing child is left mid-query when
+  # the connection is checked back in.
+  defp start_document(instance, workflow, document_name) do
+    start_supervised!(
+      {DocumentSupervisor,
+       workflow: workflow,
+       document_name: document_name,
+       registry: instance.registry,
+       pg_scope: instance.pg_scope,
+       owner: self(),
+       name: Registry.via(instance.registry, {:doc_supervisor, document_name})}
+    )
+  end
+
+  defp shared_doc_map(instance, document_name) do
+    shared_doc =
+      Registry.whereis(instance.registry, {:shared_doc, document_name})
+
+    doc = Yex.Sync.SharedDoc.get_doc(shared_doc)
+    Yex.Doc.get_map(doc, "workflow")
   end
 
   describe "reconcile_workflow_metadata/2" do
@@ -30,6 +72,7 @@ defmodule Lightning.Collaboration.PersistenceTest do
     end
 
     test "converts deleted_at DateTime to string when reconciling", %{
+      instance: instance,
       workflow: workflow,
       document_name: document_name
     } do
@@ -59,18 +102,13 @@ defmodule Lightning.Collaboration.PersistenceTest do
 
       # Start DocumentSupervisor with workflow that has deleted_at
       # This triggers reconcile_workflow_metadata
-      {:ok, doc_supervisor} =
-        DocumentSupervisor.start_link(
-          [workflow: workflow_with_deleted, document_name: document_name],
-          name: Registry.via({:doc_supervisor, document_name})
-        )
+      doc_supervisor =
+        start_document(instance, workflow_with_deleted, document_name)
 
       assert Process.alive?(doc_supervisor)
 
       # Verify the deleted_at was properly converted to a string in Y.Doc
-      shared_doc = Registry.whereis({:shared_doc, document_name})
-      doc = Yex.Sync.SharedDoc.get_doc(shared_doc)
-      reconciled_workflow_map = Yex.Doc.get_map(doc, "workflow")
+      reconciled_workflow_map = shared_doc_map(instance, document_name)
 
       deleted_at_value = Yex.Map.fetch!(reconciled_workflow_map, "deleted_at")
 
@@ -80,12 +118,10 @@ defmodule Lightning.Collaboration.PersistenceTest do
       # Should match the original DateTime when parsed back
       assert {:ok, parsed_dt, _} = DateTime.from_iso8601(deleted_at_value)
       assert DateTime.compare(parsed_dt, workflow_with_deleted.deleted_at) == :eq
-
-      # Clean up
-      GenServer.stop(doc_supervisor, :normal)
     end
 
     test "handles nil deleted_at correctly", %{
+      instance: instance,
       workflow: workflow,
       document_name: document_name
     } do
@@ -113,27 +149,20 @@ defmodule Lightning.Collaboration.PersistenceTest do
         })
 
       # Start DocumentSupervisor
-      {:ok, doc_supervisor} =
-        DocumentSupervisor.start_link(
-          [workflow: workflow_without_deleted, document_name: document_name],
-          name: Registry.via({:doc_supervisor, document_name})
-        )
+      doc_supervisor =
+        start_document(instance, workflow_without_deleted, document_name)
 
       assert Process.alive?(doc_supervisor)
 
       # Verify deleted_at remains nil
-      shared_doc = Registry.whereis({:shared_doc, document_name})
-      doc = Yex.Sync.SharedDoc.get_doc(shared_doc)
-      reconciled_workflow_map = Yex.Doc.get_map(doc, "workflow")
+      reconciled_workflow_map = shared_doc_map(instance, document_name)
 
       deleted_at_value = Yex.Map.fetch!(reconciled_workflow_map, "deleted_at")
       assert deleted_at_value == nil
-
-      # Clean up
-      GenServer.stop(doc_supervisor, :normal)
     end
 
     test "reconciles lock_version when persisted state exists", %{
+      instance: instance,
       workflow: workflow,
       document_name: document_name
     } do
@@ -168,29 +197,21 @@ defmodule Lightning.Collaboration.PersistenceTest do
         })
 
       # Start DocumentSupervisor - should reconcile to new lock_version
-      {:ok, doc_supervisor} =
-        DocumentSupervisor.start_link(
-          [workflow: updated_workflow, document_name: document_name],
-          name: Registry.via({:doc_supervisor, document_name})
-        )
+      doc_supervisor = start_document(instance, updated_workflow, document_name)
 
       assert Process.alive?(doc_supervisor)
 
       # Verify lock_version was reconciled to the current DB value
-      shared_doc = Registry.whereis({:shared_doc, document_name})
-      doc = Yex.Sync.SharedDoc.get_doc(shared_doc)
-      reconciled_workflow_map = Yex.Doc.get_map(doc, "workflow")
+      reconciled_workflow_map = shared_doc_map(instance, document_name)
 
       reconciled_lock_version =
         Yex.Map.fetch!(reconciled_workflow_map, "lock_version")
 
       assert reconciled_lock_version == new_lock_version
-
-      # Clean up
-      GenServer.stop(doc_supervisor, :normal)
     end
 
     test "reconciles workflow name when it changed", %{
+      instance: instance,
       workflow: workflow,
       document_name: document_name
     } do
@@ -221,61 +242,45 @@ defmodule Lightning.Collaboration.PersistenceTest do
         })
 
       # Start DocumentSupervisor
-      {:ok, doc_supervisor} =
-        DocumentSupervisor.start_link(
-          [workflow: updated_workflow, document_name: document_name],
-          name: Registry.via({:doc_supervisor, document_name})
-        )
+      doc_supervisor = start_document(instance, updated_workflow, document_name)
 
       assert Process.alive?(doc_supervisor)
 
       # Verify name was reconciled
-      shared_doc = Registry.whereis({:shared_doc, document_name})
-      doc = Yex.Sync.SharedDoc.get_doc(shared_doc)
-      reconciled_workflow_map = Yex.Doc.get_map(doc, "workflow")
+      reconciled_workflow_map = shared_doc_map(instance, document_name)
 
       reconciled_name = Yex.Map.fetch!(reconciled_workflow_map, "name")
       assert reconciled_name == "Updated Name"
-
-      # Clean up
-      GenServer.stop(doc_supervisor, :normal)
     end
   end
 
   describe "bind/3 with no persisted state" do
-    test "initializes workflow document from database" do
+    test "initializes workflow document from database", %{instance: instance} do
       workflow = insert(:workflow)
       document_name = "workflow:#{workflow.id}"
 
       # Don't create any persisted state - fresh start
 
       # Start DocumentSupervisor
-      {:ok, doc_supervisor} =
-        DocumentSupervisor.start_link(
-          [workflow: workflow, document_name: document_name],
-          name: Registry.via({:doc_supervisor, document_name})
-        )
+      doc_supervisor = start_document(instance, workflow, document_name)
 
       assert Process.alive?(doc_supervisor)
 
       # Verify workflow was initialized from database
-      shared_doc = Registry.whereis({:shared_doc, document_name})
-      doc = Yex.Sync.SharedDoc.get_doc(shared_doc)
-      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      workflow_map = shared_doc_map(instance, document_name)
 
       assert Yex.Map.fetch!(workflow_map, "id") == workflow.id
       assert Yex.Map.fetch!(workflow_map, "name") == workflow.name
 
       assert Yex.Map.fetch!(workflow_map, "lock_version") ==
                workflow.lock_version
-
-      # Clean up
-      GenServer.stop(doc_supervisor, :normal)
     end
   end
 
   describe "bind/3 with stale persisted state" do
-    test "resets Y.Doc when persisted lock_version differs from database" do
+    test "resets Y.Doc when persisted lock_version differs from database", %{
+      instance: instance
+    } do
       workflow = insert(:workflow, lock_version: 5)
       document_name = "workflow:#{workflow.id}"
 
@@ -300,26 +305,17 @@ defmodule Lightning.Collaboration.PersistenceTest do
         })
 
       # Start DocumentSupervisor
-      {:ok, doc_supervisor} =
-        DocumentSupervisor.start_link(
-          [workflow: workflow, document_name: document_name],
-          name: Registry.via({:doc_supervisor, document_name})
-        )
+      doc_supervisor = start_document(instance, workflow, document_name)
 
       assert Process.alive?(doc_supervisor)
 
       # Verify Y.Doc was reset to current database state
-      shared_doc = Registry.whereis({:shared_doc, document_name})
-      doc = Yex.Sync.SharedDoc.get_doc(shared_doc)
-      workflow_map = Yex.Doc.get_map(doc, "workflow")
+      workflow_map = shared_doc_map(instance, document_name)
 
       # Should have current lock_version, not the old one
       assert Yex.Map.fetch!(workflow_map, "lock_version") == 5
       # Should have current name, not the old one
       assert Yex.Map.fetch!(workflow_map, "name") == workflow.name
-
-      # Clean up
-      GenServer.stop(doc_supervisor, :normal)
     end
   end
 end

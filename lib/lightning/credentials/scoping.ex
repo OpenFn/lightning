@@ -1,11 +1,11 @@
 defmodule Lightning.Credentials.Scoping do
   @moduledoc """
-  Verifies that credential references belong to the project that owns them.
+  Verifies that project-scoped references belong to the project that owns them.
 
-  Given a project id and a list of credential references, returns the subset
-  whose `project_credential` or `keychain_credential` belongs to a different
-  project. Issues read-only queries with no side effects, so it composes inside
-  a caller's transaction and observes read-your-writes.
+  Given a project id and a list of references, returns the subset whose
+  `project_credential`, `keychain_credential` or `webhook_auth_method` belongs
+  to a different project. Issues read-only queries with no side effects, so it
+  composes inside a caller's transaction and observes read-your-writes.
 
   Existence is not this module's concern: ids that resolve to no row are not
   reported (the foreign-key constraint already covers non-existence). This
@@ -17,18 +17,22 @@ defmodule Lightning.Credentials.Scoping do
   alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
   alias Lightning.Workflows.Job
+  alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Workflows.Workflow
+
+  @type field ::
+          :project_credential_id
+          | :keychain_credential_id
+          | :webhook_auth_method_id
 
   @type ref :: %{
           required(:key) => term(),
           optional(:label) => String.t() | nil,
           optional(:project_credential_id) => Ecto.UUID.t() | nil,
-          optional(:keychain_credential_id) => Ecto.UUID.t() | nil
+          optional(:keychain_credential_id) => Ecto.UUID.t() | nil,
+          optional(:webhook_auth_method_id) => Ecto.UUID.t() | nil
         }
-  @type violation :: %{
-          key: term(),
-          field: :project_credential_id | :keychain_credential_id
-        }
+  @type violation :: %{key: term(), field: field()}
 
   @typedoc """
   Human-readable subjects for violation keys (e.g. `~s(job "sync")`), used
@@ -87,9 +91,18 @@ defmodule Lightning.Credentials.Scoping do
         :keychain_credential_id
       )
 
+    offending_wam =
+      offending_ids(
+        WebhookAuthMethod,
+        project_id,
+        refs,
+        :webhook_auth_method_id
+      )
+
     Enum.flat_map(refs, fn ref ->
       violation_for(ref, :project_credential_id, offending_pc) ++
-        violation_for(ref, :keychain_credential_id, offending_kc)
+        violation_for(ref, :keychain_credential_id, offending_kc) ++
+        violation_for(ref, :webhook_auth_method_id, offending_wam)
     end)
   end
 
@@ -99,13 +112,15 @@ defmodule Lightning.Credentials.Scoping do
   Shared across every consumer of `out_of_project_references/2` so the wording
   stays consistent wherever a cross-project reference is rejected.
   """
-  @spec violation_message(:project_credential_id | :keychain_credential_id) ::
-          String.t()
+  @spec violation_message(field()) :: String.t()
   def violation_message(:project_credential_id),
     do: "credential doesn't exist or isn't available in this project"
 
   def violation_message(:keychain_credential_id),
     do: "must belong to the same project as the job"
+
+  def violation_message(:webhook_auth_method_id),
+    do: "auth method doesn't exist or isn't available in this project"
 
   @doc """
   Attaches each violation whose key matches one of the given nested changesets

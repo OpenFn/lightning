@@ -131,6 +131,38 @@ defmodule Lightning.Config.Bootstrap do
           end
         end)
 
+    # Read here rather than from System.get_env: envs come through Dotenvy, so
+    # a value set in a .env file never reaches the system environment. Recorded
+    # for the boot warning in Lightning.Application, where Logger is up.
+    config :lightning,
+           :apollo_timeout_env_still_set,
+           env!("APOLLO_TIMEOUT", :string, nil) != nil
+
+    apollo_connect_timeout =
+      env!(
+        "APOLLO_CONNECT_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :connect_timeout])
+      )
+
+    # Covers the wait for the first byte as well as the gaps after it. Apollo
+    # sends a keepalive every 15s from v3.1.1, so half a minute of silence means
+    # the path is broken rather than a model thinking. Raise it on an older one.
+    apollo_idle_timeout =
+      env!(
+        "APOLLO_IDLE_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :idle_timeout])
+      )
+
+    # The whole request, however steadily it is streaming.
+    apollo_request_timeout =
+      env!(
+        "APOLLO_REQUEST_TIMEOUT_MS",
+        :integer,
+        Utils.get_env([:lightning, :apollo, :request_timeout])
+      )
+
     config :lightning, :apollo,
       endpoint:
         env!(
@@ -138,18 +170,9 @@ defmodule Lightning.Config.Bootstrap do
           :string,
           Utils.get_env([:lightning, :apollo, :endpoint])
         ),
-      # APOLLO_TIMEOUT (ms) bounds every request to Apollo. For streaming
-      # (all AI chat) it is the time-to-headers and the max gap between SSE
-      # chunks — and because the AI job's total-runtime ceiling is derived
-      # from the same value, it effectively bounds the whole run too, so
-      # size it above the longest expected AI run. Unset, it falls back to
-      # the per-env compiled config.
-      timeout:
-        env!(
-          "APOLLO_TIMEOUT",
-          :integer,
-          Utils.get_env([:lightning, :apollo, :timeout])
-        ),
+      connect_timeout: apollo_connect_timeout,
+      idle_timeout: apollo_idle_timeout,
+      request_timeout: apollo_request_timeout,
       ai_assistant_api_key: env!("AI_ASSISTANT_API_KEY", :string, nil)
 
     config :lightning, Lightning.Runtime.RuntimeManager,
@@ -273,6 +296,7 @@ defmodule Lightning.Config.Bootstrap do
       {"* * * * *", Lightning.Workflows.Scheduler},
       {"* * * * *", ObanPruner},
       {"*/5 * * * *", Lightning.Janitor},
+      {"*/5 * * * *", Lightning.AiAssistant.StuckMessageReaper},
       {"0 10 * * *", Lightning.DigestEmailWorker,
        args: %{"type" => "daily_project_digest"}},
       {"0 10 * * 1", Lightning.DigestEmailWorker,
@@ -281,7 +305,6 @@ defmodule Lightning.Config.Bootstrap do
        args: %{"type" => "monthly_project_digest"}},
       #  TODO - move this into an ENV?
       {"17 */2 * * *", Lightning.Projects, args: %{"type" => "data_retention"}},
-      {"*/10 * * * *", Lightning.KafkaTriggers.DuplicateTrackingCleanupWorker},
       {"* * * * *", Lightning.LogLines.SearchVectorWorker},
       {"* * * * *", Lightning.Invocation.DataclipSearchVectorWorker}
     ]
@@ -294,7 +317,8 @@ defmodule Lightning.Config.Bootstrap do
            args: %{"type" => "purge_deleted"}},
           {"45 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}},
           {"0 3 * * *", Lightning.WebhookAuthMethods,
-           args: %{"type" => "purge_deleted"}}
+           args: %{"type" => "purge_deleted"}},
+          {"15 3 * * *", Lightning.Workflows, args: %{"type" => "purge_deleted"}}
         ],
         else: []
 
@@ -306,7 +330,14 @@ defmodule Lightning.Config.Bootstrap do
       plugins: [
         {Oban.Plugins.Cron, crontab: all_cron}
       ],
-      shutdown_grace_period: :timer.minutes(2),
+      # Must exceed MessageProcessor.job_timeout/0, or an interrupted AI job is
+      # killed after Oban's producer has stopped and nothing reports it; boot
+      # warns if that inverts. This only holds if the platform lets the node
+      # live that long: Kubernetes force-kills after
+      # terminationGracePeriodSeconds, set in the deployment manifests and 30s
+      # if left out, so until that is raised the reaper is what recovers a
+      # severed message.
+      shutdown_grace_period: :timer.minutes(6),
       dispatch_cooldown: 100,
       queues: [
         scheduler: 1,
@@ -775,49 +806,6 @@ defmodule Lightning.Config.Bootstrap do
         env!("USAGE_TRACKING_RESUBMISSION_BATCH_SIZE", :integer, 10),
       daily_batch_size: env!("USAGE_TRACKING_DAILY_BATCH_SIZE", :integer, 10),
       run_chunk_size: env!("USAGE_TRACKING_RUN_CHUNK_SIZE", :integer, 100)
-
-    config :lightning, :kafka_triggers,
-      alternate_storage_enabled:
-        env!(
-          "KAFKA_ALTERNATE_STORAGE_ENABLED",
-          &Utils.ensure_boolean/1,
-          false
-        )
-        |> tap(fn enabled ->
-          if enabled do
-            touch_result =
-              env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil)
-              |> to_string()
-              |> then(fn path ->
-                if File.exists?(path) do
-                  path
-                  |> Path.join(".lightning_storage_check")
-                  |> File.touch()
-                else
-                  :error
-                end
-              end)
-
-            unless touch_result == :ok do
-              raise """
-              KAFKA_ALTERNATE_STORAGE_ENABLED is set to yes/true.
-
-              KAFKA_ALTERNATE_STORAGE_FILE_PATH must be a writable directory.
-              """
-            end
-          end
-        end),
-      alternate_storage_file_path:
-        env!("KAFKA_ALTERNATE_STORAGE_FILE_PATH", :string, nil),
-      duplicate_tracking_retention_seconds:
-        env!("KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS", :integer, 3600),
-      enabled: env!("KAFKA_TRIGGERS_ENABLED", &Utils.ensure_boolean/1, false),
-      notification_embargo_seconds:
-        env!("KAFKA_NOTIFICATION_EMBARGO_SECONDS", :integer, 3600),
-      number_of_consumers: env!("KAFKA_NUMBER_OF_CONSUMERS", :integer, 1),
-      number_of_messages_per_second:
-        env!("KAFKA_NUMBER_OF_MESSAGES_PER_SECOND", :float, 1),
-      number_of_processors: env!("KAFKA_NUMBER_OF_PROCESSORS", :integer, 1)
 
     config :lightning,
            :broadcast_work_available,

@@ -1,5 +1,6 @@
 [
-  {"lib/lightning/task_worker.ex", :call_with_opaque},
+  # `task_worker.ex` needed a skip here until `flags: [:no_opaque]` in mix.exs
+  # covered it. Restore it if that flag goes.
   {"lib/lightning/auth_providers/well_known.ex", :invalid_contract},
   {"lib/mix/tasks/install_schemas.ex", :invalid_contract},
 
@@ -21,17 +22,14 @@
   {"deps/httpoison/lib/httpoison/base.ex", :callback_type_mismatch},
   {"deps/httpoison/lib/httpoison/base.ex", :pattern_match_cov},
 
-  # PinnedAdapter pins connections to the validated IP tuples returned by
-  # `Philter.Egress`, passed straight to `Mint.HTTP.connect/4` exactly as
-  # `Philter.Transport` does. Mint accepts socket-address tuples at runtime
-  # (exercised in pinned_adapter_test.exs), but its success typing narrows the
-  # address argument to `binary()`, so dialyzer emits a spurious `:call` on the
-  # connect and the `:pattern_match` / `:unused_fun` cascade that follows from
-  # it. Scoped to this one file and these categories (not line-pinned, which
-  # would break on any edit); Philter filters the identical warnings the same way.
-  {"lib/lightning/auth_providers/oauth_http_client/pinned_adapter.ex", :call},
+  # PinnedAdapter hands Mint a validated IP tuple, and Mint's typespecs cannot
+  # see that connect succeeding, so what follows it looks unreachable. mint
+  # 1.10.0 widened `Mint.Core.Util.hostname/2`, which turned that from a
+  # `:call` and its cascade into an opacity complaint about `Mint.HTTP.t()`
+  # being a plain union of opaque types. Upstream typespec bug, so drop this if
+  # it is fixed. Philter filters the same warnings. Detail in #5117.
   {"lib/lightning/auth_providers/oauth_http_client/pinned_adapter.ex",
-   :pattern_match},
+   :call_with_opaque},
   {"lib/lightning/auth_providers/oauth_http_client/pinned_adapter.ex",
-   :unused_fun}
+   :no_return, 80}
 ]

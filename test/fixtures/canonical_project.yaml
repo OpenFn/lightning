@@ -4,6 +4,12 @@ description: |
 collections:
   cannonical-collection:
     name: cannonical-collection
+channels:
+  cannonical-channel:
+    name: cannonical-channel
+    destination_url: 'http://localhost'
+    enabled: true
+    destination_credential: cannonical-user@lightning.com-new-credential
 credentials:
   cannonical-user@lightning.com-new-credential:
     name: new credential

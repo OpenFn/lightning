@@ -22,6 +22,7 @@ import {
 import { createTriggerTestHarness } from '../../../__helpers__/triggerInspectorHelpers';
 
 const TRIGGER_ID = '11111111-1111-4111-8111-111111111111';
+const PROJECT = { id: '22222222-2222-4222-8222-222222222222', name: 'ET EMR' };
 
 function createWebhookTriggerYDoc(): Y.Doc {
   const ydoc = new Y.Doc();
@@ -61,9 +62,13 @@ describe('useWebhookTrigger', () => {
       wrapper,
     });
 
-    expect(result.current.webhookUrl).toBe(
-      `${window.location.origin}/i/${TRIGGER_ID}`
-    );
+    expect(result.current.endpoints).toEqual([
+      {
+        url: `${window.location.origin}/i/${TRIGGER_ID}`,
+        label: 'Default',
+        generated: true,
+      },
+    ]);
     // Until the store reports methods for this trigger, it is loading.
     expect(result.current.loadingAuthMethods).toBe(true);
     expect(result.current.triggerAuthMethods).toEqual([]);
@@ -71,6 +76,80 @@ describe('useWebhookTrigger', () => {
     await waitFor(() => {
       expect(requestSpy).toHaveBeenCalledWith(TRIGGER_ID);
     });
+  });
+
+  test('addresses a custom path within its project', async () => {
+    ydoc.getArray('triggers').get(0).set('custom_path', 'facility-001');
+    const withPath = workflowStore.getSnapshot().triggers[0];
+
+    const { wrapper } = await createTriggerTestHarness({
+      workflowStore,
+      project: PROJECT,
+    });
+
+    const { result } = renderHook(() => useWebhookTrigger(withPath), {
+      wrapper,
+    });
+
+    // Naming a webhook adds an address, it never replaces the default, and the
+    // default is listed first because it is the one that cannot change.
+    expect(result.current.endpoints.map(e => e.url)).toEqual([
+      `${window.location.origin}/i/${TRIGGER_ID}`,
+      `${window.location.origin}/i/${PROJECT.id}/facility-001`,
+    ]);
+  });
+
+  test('leaves a usable path raw', async () => {
+    // The server compares raw segments, so encoding here would stop a path
+    // holding a percent sequence from matching.
+    ydoc.getArray('triggers').get(0).set('custom_path', 'facility-001');
+    const withPath = workflowStore.getSnapshot().triggers[0];
+
+    const { wrapper } = await createTriggerTestHarness({
+      workflowStore,
+      project: PROJECT,
+    });
+
+    const { result } = renderHook(() => useWebhookTrigger(withPath), {
+      wrapper,
+    });
+
+    expect(result.current.endpoints[1]?.url).toBe(
+      `${window.location.origin}/i/${PROJECT.id}/facility-001`
+    );
+  });
+
+  test('lists only the generated URL when the stored path is not addressable', async () => {
+    // Stored verbatim, but the lookup only matches one segment, so this URL
+    // would 404 and hide the one that works.
+    ydoc.getArray('triggers').get(0).set('custom_path', 'v1/orders');
+    const legacy = workflowStore.getSnapshot().triggers[0];
+
+    const { wrapper } = await createTriggerTestHarness({
+      workflowStore,
+      project: PROJECT,
+    });
+
+    const { result } = renderHook(() => useWebhookTrigger(legacy), { wrapper });
+
+    expect(result.current.endpoints.map(e => e.url)).toEqual([
+      `${window.location.origin}/i/${TRIGGER_ID}`,
+    ]);
+  });
+
+  test('falls back to the trigger id when the project is unknown', async () => {
+    ydoc.getArray('triggers').get(0).set('custom_path', 'facility-001');
+    const withPath = workflowStore.getSnapshot().triggers[0];
+
+    const { wrapper } = await createTriggerTestHarness({ workflowStore });
+
+    const { result } = renderHook(() => useWebhookTrigger(withPath), {
+      wrapper,
+    });
+
+    expect(result.current.endpoints.map(e => e.url)).toEqual([
+      `${window.location.origin}/i/${TRIGGER_ID}`,
+    ]);
   });
 
   test('commitAuthMethods issues the update channel request', async () => {

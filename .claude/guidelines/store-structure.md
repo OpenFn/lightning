@@ -9,7 +9,7 @@ Lightning's collaborative editor uses **three layers of state management**, dist
 1. **Y.Doc-backed (collaborative)** — Real-time multi-user data via Yjs CRDTs
    - WorkflowStore (workflow structure), AwarenessStore (user presence)
 2. **Phoenix Channel-backed (server-authoritative)** — Data pushed/pulled via the workflow channel
-   - SessionContextStore, AdaptorStore, CredentialStore, HistoryStore, AIAssistantStore
+   - SessionContextStore, AdaptorStore, CredentialStore, MetadataStore, HistoryStore, AIAssistantStore
 3. **Local-only (no network)** — Client-side UI state
    - UIStore, EditorPreferencesStore
 
@@ -17,7 +17,9 @@ All stores share the same foundation: closure-based factory (`createXxxStore()`)
 
 ## Initialization Order
 
-All 10 stores are created as peers in `StoreProvider.tsx`'s `useState` initializer. Three `useEffect` hooks wire them to the network in dependency order:
+There are 11 stores. `SessionStore` is created in `SessionProvider.tsx`; the other ten are
+created as peers in `StoreProvider.tsx`'s `useState` initializer. `StoreProvider` runs five
+`useEffect` hooks, three of which wire stores to the network in dependency order:
 
 ```
 1. SessionStore.initializeSession(socket, room, userData)
@@ -148,6 +150,29 @@ UIStore and EditorPreferencesStore have no network dependencies and are ready im
 
 ---
 
+### MetadataStore
+**File:** `stores/createMetadataStore.ts`
+
+**Intent:** Cache per-job adaptor metadata (the credential/adaptor schema the job editor uses
+for autocomplete) so the same job's metadata is fetched once, not on every panel open.
+
+**Key State:** `jobs` — a `Map<jobId, JobMetadataState>` holding `metadata`, `isLoading`,
+`error` and the cache key per job
+
+**Key behavior:**
+- Per-job cache keyed by job ID; a cache-key comparison suppresses redundant fetches
+- Channel responses are Zod-validated before entering Immer state
+- The channel comes from the provider handed to `_connectChannel`, wired alongside the other
+  channel-backed stores in `StoreProvider.tsx`
+
+**Commands:** `requestMetadata`, `clearMetadata`, `clearAllMetadata`
+**Queries:** `getMetadataForJob`, `isLoadingForJob`, `getErrorForJob`
+
+**Don't use for:** The adaptor catalogue itself (AdaptorStore) or credential lists
+(CredentialStore).
+
+---
+
 ### HistoryStore
 **File:** `stores/createHistoryStore.ts`
 
@@ -242,6 +267,7 @@ The YAML import modal holds its own draft in local state; there is no `importPan
 | Who am I, what project, what permissions? | **SessionContextStore** |
 | Adaptor catalog for job config? | **AdaptorStore** |
 | Credential catalog for job config? | **CredentialStore** |
+| Per-job adaptor metadata for editor autocomplete? | **MetadataStore** |
 | Execution history, run inspection? | **HistoryStore** |
 | AI assistant chat sessions? | **AIAssistantStore** |
 | Panel/modal visibility, template browsing? | **UIStore** |
@@ -333,9 +359,9 @@ Referential invariants (e.g. a cron trigger's `cron_cursor_job_id` must point at
 live job in the same workflow) are enforced **authoritatively on the server** — the
 compound foreign key (`ON DELETE SET NULL (cron_cursor_job_id)`) plus the
 `Workflows.save_workflow/3` rescue. The client has exactly ONE advisory cleanup
-function, `adapters/reconcileDanglingReferences.ts`, invoked from every structural
-mutation that can orphan a reference (`removeJob`, `YAMLStateToYDoc.applyToYDoc`,
-and defensively before save in `saveWorkflow`/`saveAndSyncWorkflow`). It is a UX
+function, `adapters/reconcileDanglingReferences.ts`, invoked from the two structural mutations
+that can orphan a reference (`removeJob` at `createWorkflowStore.ts:1018`, and
+`YAMLStateToYDoc.applyToYDoc` at `YAMLStateToYDoc.ts:168`). It is a UX
 fast-path only: it cannot close the concurrent-editor race (a collaborator's delete
 that has not yet merged into this client's doc), and it is NOT the correctness
 guarantee. **Do not add per-path client cursor cleanup** — if a new structural

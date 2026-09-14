@@ -4,37 +4,37 @@ defmodule Lightning.ExportUtils do
   from a project and its workflows.
   """
 
+  alias Lightning.ExportUtils.DuplicateKeyError
+  alias Lightning.ExportUtils.Scalar
   alias Lightning.Projects
   alias Lightning.Workflows
   alias Lightning.Workflows.Snapshot
 
-  @kafka_trigger_fields [
-    :hosts,
-    :topics,
-    :initial_offset_reset_policy,
-    :connect_timeout
-  ]
+  @webhook_response_config_fields [:success_code, :error_code]
 
   @ordering_map %{
     project: [
       :name,
       :description,
       :collections,
+      :channels,
       :credentials,
       :globals,
       :workflows
     ],
     collection: [:name],
+    channel: [:name, :destination_url, :enabled, :destination_credential],
     credential: [:name, :owner],
     workflow: [:name, :jobs, :triggers, :edges],
     job: [:name, :adaptor, :credential, :globals, :body],
     trigger: [
       :type,
+      :custom_path,
       :webhook_reply,
+      :webhook_response_config,
       :cron_expression,
       :cron_cursor_job,
-      :enabled,
-      :kafka_configuration
+      :enabled
     ],
     edge: [
       :source_trigger,
@@ -56,6 +56,72 @@ defmodule Lightning.ExportUtils do
   end
 
   defp hyphenate(other), do: other
+
+  defp put_identity_key!(acc, key, tree, kind) do
+    case Map.fetch(acc, key) do
+      {:ok, %{name: existing}} ->
+        raise DuplicateKeyError,
+          kind: kind,
+          key: key,
+          first: existing,
+          second: tree.name
+
+      :error ->
+        Map.put(acc, key, tree)
+    end
+  end
+
+  # Sorted so that a project with more than one collision always reports the
+  # same one first.
+  defp ensure_unique_job_keys!(jobs, workflow_name) do
+    jobs
+    |> Enum.group_by(&hyphenate(&1.name))
+    |> Enum.sort_by(fn {key, _jobs} -> key end)
+    |> Enum.each(fn
+      {_key, [_only]} ->
+        :ok
+
+      {key, [first, second | _rest]} ->
+        raise DuplicateKeyError,
+          kind: "jobs in #{workflow_name}",
+          key: key,
+          first: first.name,
+          second: second.name
+    end)
+  end
+
+  # An edge key is a label. Nothing parses it, and the edge body carries its own
+  # identity in source_job, source_trigger and target_job, so a collision is
+  # disambiguated rather than refused. The suffix is checked against both the
+  # original keys and the ones already handed out.
+  defp disambiguate_edge_keys(edges) do
+    taken = MapSet.new(edges, & &1.name)
+
+    edges
+    |> Enum.map_reduce(MapSet.new(), fn edge, used ->
+      name = free_edge_name(edge.name, taken, used)
+      {%{edge | name: name}, MapSet.put(used, name)}
+    end)
+    |> elem(0)
+  end
+
+  defp free_edge_name(name, taken, used) do
+    if MapSet.member?(used, name) do
+      next_free_edge_name(name, 2, taken, used)
+    else
+      name
+    end
+  end
+
+  defp next_free_edge_name(name, suffix, taken, used) do
+    candidate = "#{name}-#{suffix}"
+
+    if MapSet.member?(taken, candidate) or MapSet.member?(used, candidate) do
+      next_free_edge_name(name, suffix + 1, taken, used)
+    else
+      candidate
+    end
+  end
 
   defp job_to_treenode(job, project_credentials) do
     project_credential =
@@ -99,35 +165,62 @@ defmodule Lightning.ExportUtils do
           end
         end)
 
-      :kafka ->
-        kafka_config =
-          trigger.kafka_configuration
-          |> Map.take(@kafka_trigger_fields)
-          |> Enum.map(fn
-            {:hosts, hosts} when is_list(hosts) ->
-              {:hosts,
-               Enum.map(hosts, fn host_port -> Enum.join(host_port, ":") end)}
-
-            other ->
-              other
-          end)
-          |> Enum.sort_by(
-            fn {key, _val} ->
-              Enum.find_index(@kafka_trigger_fields, &(&1 == key))
-            end,
-            :asc
-          )
-
-        Map.put(base, :kafka_configuration, kafka_config)
-
       :webhook ->
-        if trigger.webhook_reply do
-          Map.put(base, :webhook_reply, Atom.to_string(trigger.webhook_reply))
-        else
-          base
-        end
+        base
+        |> maybe_put_custom_path(trigger.custom_path)
+        |> maybe_put_webhook_reply(trigger.webhook_reply)
+        |> maybe_put_webhook_response_config(trigger.webhook_response_config)
+
+      # Snapshots keep the trigger types they were taken with, so exporting an
+      # old version of a workflow can still reach a Kafka trigger. Emit what it
+      # was rather than refusing to export the version at all.
+      _ ->
+        base
     end
   end
+
+  defp maybe_put_custom_path(map, nil), do: map
+
+  defp maybe_put_custom_path(map, custom_path) do
+    # A pre-migration path would fail validation on deploy elsewhere and take
+    # the whole run with it.
+    if Lightning.Workflows.Trigger.valid_custom_path?(custom_path) do
+      Map.put(map, :custom_path, custom_path)
+    else
+      map
+    end
+  end
+
+  defp maybe_put_webhook_reply(map, nil), do: map
+
+  defp maybe_put_webhook_reply(map, reply) when is_atom(reply) do
+    Map.put(map, :webhook_reply, Atom.to_string(reply))
+  end
+
+  defp maybe_put_webhook_response_config(map, %{} = config) do
+    webhook_response =
+      Map.reject(
+        %{
+          success_code: config.success_code,
+          error_code: config.error_code
+        },
+        fn {_k, v} -> is_nil(v) end
+      )
+      |> Enum.sort_by(
+        fn {key, _val} ->
+          Enum.find_index(@webhook_response_config_fields, &(&1 == key))
+        end,
+        :asc
+      )
+
+    if length(webhook_response) > 0 do
+      Map.put(map, :webhook_response_config, webhook_response)
+    else
+      map
+    end
+  end
+
+  defp maybe_put_webhook_response_config(map, _), do: map
 
   defp edge_to_treenode(%{source_job_id: nil} = edge, triggers, jobs) do
     source_trigger =
@@ -202,59 +295,24 @@ defmodule Lightning.ExportUtils do
 
   defp handle_binary(k, v, i) do
     case k do
-      :body ->
-        "body: |\n#{indent_multiline_value(v, i)}"
+      k when k in [:body, :description, :condition_expression] ->
+        "#{yaml_safe_key(k)}: #{Scalar.encode_block(v, i)}"
 
-      :description ->
-        "description: |\n#{indent_multiline_value(v, i)}"
-
-      :adaptor ->
-        "#{k}: '#{v}'"
-
-      :cron_expression ->
-        "#{k}: '#{v}'"
-
-      :condition_expression ->
-        "condition_expression: |\n#{indent_multiline_value(v, i)}"
+      k when k in [:adaptor, :cron_expression, :custom_path] ->
+        "#{yaml_safe_key(k)}: #{Scalar.encode_quoted_value(v)}"
 
       _ ->
         "#{yaml_safe_key(k)}: #{yaml_safe_string(v)}"
     end
   end
 
-  defp indent_multiline_value(value, current_indent) do
-    value
-    |> String.split("\n")
-    |> Enum.map_join("\n", fn line -> "#{current_indent}  #{line}" end)
-  end
-
-  defp yaml_safe_string(value) do
-    # starts with alphanumeric
-    # followed by alphanumeric or hyphen or underscore or @ or . or > or space
-    # ends with alphanumeric
-    if Regex.match?(~r/^[a-zA-Z0-9][a-zA-Z0-9_\-@\.> ]*[a-zA-Z0-9]$/, value) do
-      value
-    else
-      ~s('#{value}')
-    end
-  end
+  defp yaml_safe_string(value), do: Scalar.encode_value(value)
 
   defp yaml_safe_key(key) do
     if key in @special_keys do
       key
     else
-      key |> to_string() |> hyphenate() |> maybe_escape_key()
-    end
-  end
-
-  defp maybe_escape_key(key) do
-    # starts with alphanumeric
-    # followed by alphanumeric or hyphen or underscore or @ or . or >
-    # ends with alphanumeric
-    if Regex.match?(~r/^[a-zA-Z0-9][a-zA-Z0-9_\-@\.>]*[a-zA-Z0-9]$/, key) do
-      key
-    else
-      ~s("#{key}")
+      key |> to_string() |> hyphenate() |> Scalar.encode_key()
     end
   end
 
@@ -335,7 +393,7 @@ defmodule Lightning.ExportUtils do
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.reduce(%{}, fn workflow, acc ->
         ytree = build_workflow_yaml_tree(workflow, project.project_credentials)
-        Map.put(acc, hyphenate(workflow.name), ytree)
+        put_identity_key!(acc, hyphenate(workflow.name), ytree, "workflows")
       end)
 
     credentials_map =
@@ -344,10 +402,11 @@ defmodule Lightning.ExportUtils do
       |> Enum.reduce(%{}, fn project_credential, acc ->
         ytree = build_project_credential_yaml_tree(project_credential)
 
-        Map.put(
+        put_identity_key!(
           acc,
           project_credential_key(project_credential),
-          ytree
+          ytree,
+          "credentials"
         )
       end)
 
@@ -357,7 +416,16 @@ defmodule Lightning.ExportUtils do
       |> Enum.reduce(%{}, fn collection, acc ->
         ytree = build_collection_yaml_tree(collection)
 
-        Map.put(acc, hyphenate(collection.name), ytree)
+        put_identity_key!(acc, hyphenate(collection.name), ytree, "collections")
+      end)
+
+    channels_map =
+      project.channels
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.reduce(%{}, fn channel, acc ->
+        ytree = build_channel_yaml_tree(channel, project.project_credentials)
+
+        put_identity_key!(acc, hyphenate(channel.name), ytree, "channels")
       end)
 
     %{
@@ -366,7 +434,8 @@ defmodule Lightning.ExportUtils do
       node_type: :project,
       workflows: workflows_map,
       credentials: credentials_map,
-      collections: collections_map
+      collections: collections_map,
+      channels: channels_map
     }
   end
 
@@ -395,11 +464,42 @@ defmodule Lightning.ExportUtils do
     }
   end
 
+  defp build_channel_yaml_tree(channel, project_credentials) do
+    project_credential_id = channel_destination_project_credential_id(channel)
+
+    project_credential =
+      project_credential_id &&
+        Enum.find(project_credentials, fn pc ->
+          pc.id == project_credential_id
+        end)
+
+    %{
+      name: channel.name,
+      destination_url: channel.destination_url,
+      enabled: channel.enabled,
+      node_type: :channel,
+      destination_credential:
+        project_credential && project_credential_key(project_credential)
+    }
+  end
+
+  defp channel_destination_project_credential_id(%{destination_auth_method: nil}),
+    do: nil
+
+  defp channel_destination_project_credential_id(%{
+         destination_auth_method: %{project_credential_id: id}
+       }),
+       do: id
+
+  defp channel_destination_project_credential_id(_), do: nil
+
   defp build_workflow_yaml_tree(workflow, project_credentials) do
     jobs =
       workflow.jobs
       |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
       |> Enum.map(fn j -> job_to_treenode(j, project_credentials) end)
+
+    ensure_unique_job_keys!(jobs, workflow.name)
 
     triggers =
       workflow.triggers
@@ -412,6 +512,7 @@ defmodule Lightning.ExportUtils do
       |> Enum.map(fn e ->
         edge_to_treenode(e, workflow.triggers, workflow.jobs)
       end)
+      |> disambiguate_edge_keys()
 
     flow_map = %{jobs: jobs, edges: edges, triggers: triggers}
 
@@ -419,39 +520,53 @@ defmodule Lightning.ExportUtils do
     |> to_workflow_yaml_tree(workflow)
   end
 
+  @doc """
+  Builds the project spec.
+
+  Returns `{:error, message}` when two entities in the project would be written
+  under the same spec key. That is refused rather than exported, because the
+  key is what the CLI addresses the entity by. The message names both.
+  """
   @spec generate_new_yaml(Projects.Project.t(), [Snapshot.t()] | nil) ::
-          {:ok, binary()}
+          {:ok, binary()} | {:error, binary()}
   def generate_new_yaml(project, snapshots \\ nil)
 
   def generate_new_yaml(project, nil) do
-    project =
-      Lightning.Repo.preload(project,
-        project_credentials: [credential: :user],
-        collections: []
-      )
+    project = preload_for_export(project)
 
-    yaml =
+    with_duplicate_key_error(fn ->
       project
       |> Workflows.get_workflows_for()
       |> build_yaml_tree(project)
       |> to_new_yaml()
-
-    {:ok, yaml}
+    end)
   end
 
   def generate_new_yaml(project, snapshots) when is_list(snapshots) do
-    project =
-      Lightning.Repo.preload(project,
-        project_credentials: [credential: :user],
-        collections: []
-      )
+    project = preload_for_export(project)
 
-    yaml =
+    with_duplicate_key_error(fn ->
       snapshots
       |> Enum.sort_by(& &1.name)
       |> build_yaml_tree(project)
       |> to_new_yaml()
+    end)
+  end
 
-    {:ok, yaml}
+  defp preload_for_export(project) do
+    Lightning.Repo.preload(project,
+      project_credentials: [credential: :user],
+      collections: [],
+      channels: [destination_auth_method: :project_credential]
+    )
+  end
+
+  # build_yaml_tree/2 raises from several levels down, so the alternative to
+  # rescuing here is threading an error tuple through every builder. One rescue
+  # at the single public boundary is the smaller change.
+  defp with_duplicate_key_error(build) do
+    {:ok, build.()}
+  rescue
+    error in DuplicateKeyError -> {:error, Exception.message(error)}
   end
 end

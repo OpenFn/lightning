@@ -193,58 +193,6 @@ defmodule Lightning.Workflows.YamlFormatV2Test do
       refute yaml =~ "cron_cursor_job"
     end
 
-    test "kafka trigger emits hosts/topics/etc. flat at the trigger root" do
-      consumer =
-        build(:job,
-          id: Ecto.UUID.generate(),
-          name: "consume",
-          body: "fn(state => state)\n"
-        )
-
-      kafka_trigger =
-        build(:trigger,
-          id: Ecto.UUID.generate(),
-          type: :kafka,
-          enabled: true,
-          kafka_configuration: %Lightning.Workflows.Triggers.KafkaConfiguration{
-            hosts: [["localhost", "9092"]],
-            topics: ["events"],
-            initial_offset_reset_policy: "earliest",
-            connect_timeout: 30
-          }
-        )
-
-      edge =
-        build(:edge,
-          id: Ecto.UUID.generate(),
-          source_trigger_id: kafka_trigger.id,
-          source_job_id: nil,
-          target_job_id: consumer.id,
-          condition_type: :always,
-          enabled: true
-        )
-
-      workflow = %Lightning.Workflows.Workflow{
-        id: Ecto.UUID.generate(),
-        name: "kafka flow",
-        jobs: [consumer],
-        triggers: [kafka_trigger],
-        edges: [edge]
-      }
-
-      {:ok, yaml} = V2.serialize_workflow(workflow)
-
-      # All kafka config lives flat on the trigger — no `kafka:` wrapper, no
-      # `openfn:` block. Hosts are joined as `host:port` for human readability.
-      assert yaml =~ ~r/^\s*hosts:\s*\n\s*- 'localhost:9092'/m
-      assert yaml =~ ~r/^\s*topics:\s*\n\s*- events/m
-      assert yaml =~ "initial_offset_reset_policy: earliest"
-      assert yaml =~ "connect_timeout: 30"
-      refute yaml =~ "openfn:"
-      refute yaml =~ ~r/^\s*kafka:/m
-      refute yaml =~ "kafka_configuration"
-    end
-
     test "js_expression edges emit the JS body inline as `condition`" do
       a =
         build(:job,

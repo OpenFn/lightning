@@ -31,8 +31,8 @@ defmodule Lightning.Policies.Collections do
   alias Lightning.Accounts.User
   alias Lightning.Collections.Collection
   alias Lightning.Policies.Permissions
-  alias Lightning.Projects
   alias Lightning.Projects.Project
+  alias Lightning.Projects.Scope
   alias Lightning.Run
 
   @type actions ::
@@ -54,9 +54,12 @@ defmodule Lightning.Policies.Collections do
     Permissions.can(:project_users, :access_project, user, collection)
   end
 
+  # Reads honour support access, via `:access_project` above. The writes below
+  # do not — `Scope.role_in?/3` reads `role` only, so a support user with no
+  # membership row is refused. Inherited behaviour, not a ruling.
   def authorize(action, %User{} = user, %Collection{} = collection)
       when action in [:put_collection_item, :delete_collection_item] do
-    has_project_role?(user, collection.project_id, @editor_roles)
+    Scope.role_in?(user, collection.project_id, @editor_roles)
   end
 
   def authorize(
@@ -64,23 +67,19 @@ defmodule Lightning.Policies.Collections do
         %User{} = user,
         %Collection{} = collection
       ) do
-    has_project_role?(user, collection.project_id, @admin_roles)
+    Scope.role_in?(user, collection.project_id, @admin_roles)
   end
 
   def authorize(:manage_collection, %User{} = user, %Project{} = project) do
-    has_project_role?(user, project.id, @admin_roles)
+    Scope.role_in?(user, project.id, @admin_roles)
   end
 
   def authorize(:manage_collection, %User{} = user, %Collection{} = collection) do
-    has_project_role?(user, collection.project_id, @admin_roles)
+    Scope.role_in?(user, collection.project_id, @admin_roles)
   end
 
   # Runs may perform any collection action within their own project.
   def authorize(_action, %Run{} = run, %Collection{} = collection) do
     Lightning.Runs.get_project_id_for_run(run) == collection.project_id
-  end
-
-  defp has_project_role?(%User{} = user, project_id, roles) do
-    Projects.get_project_user_role(user, %Project{id: project_id}) in roles
   end
 end

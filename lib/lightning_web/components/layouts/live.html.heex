@@ -87,24 +87,12 @@
     <div class="flex-auto">
       <Common.flash flash={@flash} kind={:info} />
       <Common.flash flash={@flash} kind={:error} />
-      <.live_nav_block
-        :if={
-          !assigns[:account_confirmation_required?] or
-            @socket.view == LightningWeb.ProfileLive.Edit
-        }
-        flash={@flash}
-      >
+      <.live_nav_block flash={@flash}>
         {@inner_content}
       </.live_nav_block>
       <.live_component
         module={LightningWeb.LiveComponentPortal}
         id="component-portal"
-      />
-      <.live_component
-        :if={assigns[:account_confirmation_required?]}
-        module={LightningWeb.AccountConfirmationModal}
-        id="account-confirmation-modal"
-        current_user={@current_user}
       />
       <.live_component
         :if={assigns[:gdpr_banner]}

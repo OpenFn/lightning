@@ -11,9 +11,9 @@
 // `steps: Array<Job | Trigger>` — single top-level array combining triggers
 // and jobs. Jobs use `adaptor: string` (singular). Triggers carry
 // `cron_expression?` and `webhook_reply?` as flat spec-defined fields.
-// Lightning-specific extensions (`cron_cursor`, `kafka` config) also live
-// flat at the trigger root — the spec's Trigger interface doesn't forbid
-// extra fields, and keeping everything flat matches the Elixir emitter.
+// The Lightning-specific `cron_cursor` extension also lives flat at the
+// trigger root — the spec's Trigger interface doesn't forbid extra fields,
+// and keeping everything flat matches the Elixir emitter.
 //
 // ## Edge shape (`next:`)
 //
@@ -48,12 +48,10 @@ import type {
   SpecCronTrigger,
   SpecEdge,
   SpecJob,
-  SpecKafkaTrigger,
   SpecTrigger,
   SpecWebhookTrigger,
   StateEdge,
   StateJob,
-  StateKafkaConfiguration,
   StateTrigger,
   WebhookResponseConfig,
   WorkflowSpec,
@@ -166,23 +164,10 @@ type V2StepEdge = boolean | string | V2EdgeObject;
 
 type V2NextValue = string | Record<string, V2StepEdge>;
 
-interface V2KafkaConfig {
-  hosts?: string[];
-  topics?: string[];
-  initial_offset_reset_policy?: string;
-  connect_timeout?: number;
-  group_id?: string;
-  sasl?: string;
-  ssl?: boolean;
-  username?: string;
-  password?: string;
-  [key: string]: unknown;
-}
-
-interface V2TriggerStep extends V2KafkaConfig {
+interface V2TriggerStep {
   id: string;
   name?: string;
-  type: 'webhook' | 'cron' | 'kafka';
+  type: 'webhook' | 'cron';
   enabled?: boolean;
   cron_expression?: string;
   cron_cursor?: string;
@@ -213,7 +198,7 @@ interface V2WorkflowDoc {
 const isTriggerStep = (step: V2Step): step is V2TriggerStep => {
   return (
     typeof (step as V2TriggerStep).type === 'string' &&
-    ['webhook', 'cron', 'kafka'].includes((step as V2TriggerStep).type)
+    ['webhook', 'cron'].includes((step as V2TriggerStep).type)
   );
 };
 
@@ -228,10 +213,10 @@ interface CanonicalEdge {
   disabled?: boolean;
 }
 
-interface CanonicalTriggerStep extends V2KafkaConfig {
+interface CanonicalTriggerStep {
   id: string;
   name: string;
-  type: 'webhook' | 'cron' | 'kafka';
+  type: 'webhook' | 'cron';
   enabled: boolean;
   cron_expression?: string;
   cron_cursor?: string;
@@ -259,75 +244,12 @@ interface CanonicalWorkflow {
   steps: CanonicalStep[];
 }
 
+// One space, one hyphen — matches `V2.hyphenate/1` in
+// `lib/lightning/workflows/yaml_format/v2.ex`, which downcases and replaces
+// each single space. Collapsing runs of whitespace here would give the two
+// sides different step ids for a job named `a  b`.
 const hyphenate = (value: string): string =>
-  value.toLowerCase().replace(/\s+/g, '-');
-
-// Kafka config travels flat on the trigger root in YAML
-// (`hosts: [...]`, `topics: [...]`, `connect_timeout: …`, etc.) — matches
-// `lib/lightning/workflows/yaml_format/v2.ex:kafka_config_to_canonical/1`.
-//
-// On state the same data lives under `kafka_configuration` with `_string`
-// forms for hosts/topics (as it ships from Y.Doc).
-const splitCsv = (s: string | null | undefined): string[] =>
-  (s ?? '')
-    .split(',')
-    .map(part => part.trim())
-    .filter(Boolean);
-
-const kafkaConfigToCanonical = (
-  config: StateKafkaConfiguration
-): V2KafkaConfig => {
-  const out: V2KafkaConfig = {};
-  const hosts = splitCsv(config.hosts_string);
-  if (hosts.length) out.hosts = hosts;
-  const topics = splitCsv(config.topics_string);
-  if (topics.length) out.topics = topics;
-  if (config.initial_offset_reset_policy) {
-    out.initial_offset_reset_policy = config.initial_offset_reset_policy;
-  }
-  if (typeof config.connect_timeout === 'number') {
-    out.connect_timeout = config.connect_timeout;
-  }
-  if (config.group_id) out.group_id = config.group_id;
-  if (config.sasl) out.sasl = config.sasl;
-  if (typeof config.ssl === 'boolean') out.ssl = config.ssl;
-  if (config.username) out.username = config.username;
-  if (config.password) out.password = config.password;
-  return out;
-};
-
-const kafkaConfigFromCanonical = (
-  trigger: V2TriggerStep
-): StateKafkaConfiguration | null => {
-  const hosts = trigger.hosts ?? [];
-  const topics = trigger.topics ?? [];
-  const policy = trigger.initial_offset_reset_policy;
-  const timeout = trigger.connect_timeout;
-
-  // If nothing kafka-shaped is on the trigger, leave it null so callers can
-  // distinguish "no config emitted" from "config emitted but empty".
-  if (
-    hosts.length === 0 &&
-    topics.length === 0 &&
-    policy === undefined &&
-    timeout === undefined
-  ) {
-    return null;
-  }
-
-  const out: StateKafkaConfiguration = {
-    hosts_string: hosts.join(', '),
-    topics_string: topics.join(', '),
-    initial_offset_reset_policy: policy ?? 'latest',
-    connect_timeout: typeof timeout === 'number' ? timeout : 30,
-  };
-  if (trigger.group_id) out.group_id = trigger.group_id;
-  if (trigger.sasl) out.sasl = trigger.sasl;
-  if (typeof trigger.ssl === 'boolean') out.ssl = trigger.ssl;
-  if (trigger.username) out.username = trigger.username;
-  if (trigger.password) out.password = trigger.password;
-  return out;
-};
+  value.toLowerCase().replace(/ /g, '-');
 
 const workflowStateToCanonical = (state: WorkflowState): CanonicalWorkflow => {
   const jobIdToKey: Record<string, string> = {};
@@ -404,9 +326,6 @@ const triggerStateToCanonical = (
     const cursorJob = jobs.find(j => j.id === trigger.cron_cursor_job_id);
     if (cursorJob) base.cron_cursor = hyphenate(cursorJob.name);
   }
-  if (trigger.type === 'kafka' && trigger.kafka_configuration) {
-    Object.assign(base, kafkaConfigToCanonical(trigger.kafka_configuration));
-  }
 
   const outgoing = edges.filter(e => e.source_trigger_id === trigger.id);
   const next = buildNextField(outgoing, jobIdToKey);
@@ -450,7 +369,10 @@ const buildNextField = (
   // Build the object map. Verbose-only emission per
   // `portability.d.ts:60` (`// TODO remove next: string`) and to avoid the
   // bare-string parsing bug in @openfn/project@0.15.
-  const next: Record<string, CanonicalEdge> = {};
+  //
+  // Null-prototype: a step id of `__proto__` assigned onto a plain object runs
+  // the prototype setter instead of adding a key, and the edge vanishes.
+  const next = Object.create(null) as Record<string, CanonicalEdge>;
   sorted.forEach(edge => {
     const target = jobIdToKey[edge.target_job_id];
     if (!target) return;
@@ -549,7 +471,9 @@ const stripUndefined = <T>(value: T): T => {
     return value.map(v => stripUndefined(v)) as unknown as T;
   }
   if (value !== null && typeof value === 'object') {
-    const out: Record<string, unknown> = {};
+    // Null-prototype: a `__proto__` key assigned onto a plain object runs the
+    // prototype setter, and the entry is dropped on the way to the emitter.
+    const out = Object.create(null) as Record<string, unknown>;
     Object.entries(value as Record<string, unknown>).forEach(([k, v]) => {
       if (v === undefined) return;
       out[k] = stripUndefined(v);
@@ -574,7 +498,7 @@ const v2DocToWorkflowSpec = (doc: V2WorkflowDoc): WorkflowSpec => {
     if (isTriggerStep(step)) {
       triggerSteps.push(step);
     } else {
-      jobSteps.push(step as V2JobStep);
+      jobSteps.push(step);
     }
   });
 
@@ -585,12 +509,15 @@ const v2DocToWorkflowSpec = (doc: V2WorkflowDoc): WorkflowSpec => {
     ...jobSteps.map(s => s.id),
   ]);
 
-  const triggers: Record<string, SpecTrigger> = {};
+  // Null-prototype throughout: step ids come from the file, and `__proto__`
+  // or `toString` on a plain object silently drops the entry or resolves
+  // through the prototype.
+  const triggers = Object.create(null) as Record<string, SpecTrigger>;
   triggerSteps.forEach(trigger => {
     triggers[trigger.id] = v2TriggerStepToSpecTrigger(trigger);
   });
 
-  const jobs: Record<string, SpecJob> = {};
+  const jobs = Object.create(null) as Record<string, SpecJob>;
   jobSteps.forEach(step => {
     // Spec: `adaptor?: string` (singular). Read it directly into Lightning's
     // single-adaptor state field.
@@ -606,7 +533,7 @@ const v2DocToWorkflowSpec = (doc: V2WorkflowDoc): WorkflowSpec => {
     jobs[step.id] = job;
   });
 
-  const edges: Record<string, SpecEdge> = {};
+  const edges = Object.create(null) as Record<string, SpecEdge>;
 
   // Trigger-sourced edges (next: on a trigger step).
   triggerSteps.forEach(trigger => {
@@ -660,21 +587,12 @@ const v2TriggerStepToSpecTrigger = (trigger: V2TriggerStep): SpecTrigger => {
     };
     return out;
   }
-  if (trigger.type === 'webhook') {
-    const out: SpecWebhookTrigger = {
-      type: 'webhook',
-      enabled,
-      webhook_reply: trigger.webhook_reply ?? null,
-      webhook_response_config: trigger.webhook_response_config ?? null,
-      pos: undefined,
-    };
-    return out;
-  }
-  const kafka_configuration = kafkaConfigFromCanonical(trigger);
-  const out: SpecKafkaTrigger = {
-    type: 'kafka',
+  const out: SpecWebhookTrigger = {
+    type: 'webhook',
     enabled,
-    ...(kafka_configuration ? { kafka_configuration } : {}),
+    webhook_reply: trigger.webhook_reply ?? null,
+    webhook_response_config: trigger.webhook_response_config ?? null,
+    pos: undefined,
   };
   return out;
 };

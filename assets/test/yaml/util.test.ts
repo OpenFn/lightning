@@ -28,16 +28,15 @@ import {
 } from '../../js/yaml/util';
 import { serializeWorkflow } from '../../js/yaml/format';
 import { parseWorkflow as parseV2 } from '../../js/yaml/v2';
-import type { WorkflowSpec } from '../../js/yaml/types';
+import type { WorkflowSpec, WorkflowState } from '../../js/yaml/types';
 import { SchemaValidationError } from '../../js/yaml/workflow-errors';
 
 const FIXTURES_ROOT = resolve(__dirname, '../../../test/fixtures/portability');
 
 // Kitchen-sink fixtures: each format has one comprehensive workflow that
-// exercises every supported feature (multi-trigger, kafka config, cron
-// cursor, webhook reply, JS-expression edge with label + disabled,
-// branching, all condition types). New features must be added here so
-// regressions surface.
+// exercises every supported feature (multi-trigger, cron cursor, webhook
+// reply, JS-expression edge with label + disabled, branching, all condition
+// types). New features must be added here so regressions surface.
 const readKitchenSink = (format: 'v1' | 'v2'): string =>
   readFileSync(`${FIXTURES_ROOT}/${format}/canonical_workflow.yaml`, 'utf-8');
 
@@ -184,6 +183,68 @@ describe('convertWorkflowSpecToState', () => {
 
       expect(reparsedSpec.triggers['webhook']?.enabled).toBe(false);
     });
+
+    test('keeps a webhook custom_path on the way in', () => {
+      // This used to drop the path silently. Only the parse side is left in
+      // the browser: outbound YAML is v2, which carries no custom_path.
+      const originalSpec = {
+        name: 'Test Workflow',
+        jobs: {
+          'job-1': {
+            name: 'Job 1',
+            adaptor: '@openfn/language-common@latest',
+            body: 'fn(state => state)',
+          },
+        },
+        triggers: {
+          webhook: {
+            type: 'webhook',
+            enabled: true,
+            custom_path: 'et-emr-facility-001',
+          },
+        },
+        edges: {
+          'webhook->job-1': {
+            source_trigger: 'webhook',
+            target_job: 'job-1',
+            condition_type: 'always',
+          },
+        },
+      };
+
+      const state = convertWorkflowSpecToState(originalSpec);
+      const webhook = state.triggers[0];
+      if (webhook?.type !== 'webhook') throw new Error('unreachable');
+
+      expect(webhook.custom_path).toBe('et-emr-facility-001');
+    });
+
+    test('leaves custom_path absent when the spec has none', () => {
+      // Absent reads as "unchanged" downstream; an explicit null would clear
+      // a path the workflow already has.
+      const originalSpec = {
+        name: 'Test Workflow',
+        jobs: {
+          'job-1': {
+            name: 'Job 1',
+            adaptor: '@openfn/language-common@latest',
+            body: 'fn(state => state)',
+          },
+        },
+        triggers: { webhook: { type: 'webhook', enabled: true } },
+        edges: {
+          'webhook->job-1': {
+            source_trigger: 'webhook',
+            target_job: 'job-1',
+            condition_type: 'always',
+          },
+        },
+      };
+
+      const state = convertWorkflowSpecToState(originalSpec);
+
+      expect('custom_path' in state.triggers[0]).toBe(false);
+    });
   });
 });
 
@@ -301,5 +362,165 @@ describe('parseWorkflowTemplate — format detection + dispatch', () => {
 
   test('surfaces YAML syntax errors', () => {
     expect(() => parseWorkflowTemplate('invalid: [syntax')).toThrow();
+  });
+
+  describe('v2 step ids', () => {
+    const yamlFor = (jobNames: string[]) =>
+      serializeWorkflow({
+        id: 'w1',
+        name: 'Test Workflow',
+        jobs: jobNames.map((name, i) => ({
+          id: `j${String(i)}`,
+          name,
+          adaptor: '@openfn/language-common@latest',
+          body: 'fn(state => state)',
+        })),
+        triggers: [{ id: 't1', type: 'webhook', enabled: true }],
+        edges: [],
+        positions: null,
+      } as unknown as WorkflowState);
+
+    // The server writes the spec and the CLI reads it back, so a step id that
+    // differs by one hyphen is a different step. `V2.hyphenate/1` replaces
+    // each single space, so two spaces give two hyphens. This used to
+    // collapse runs of whitespace and disagreed with the server on exactly
+    // that input.
+    test('one space, one hyphen, matching the server', () => {
+      const yaml = yamlFor(['a  b', 'one two', 'trailing ']);
+
+      expect(yaml).toContain('id: a--b');
+      expect(yaml).toContain('id: one-two');
+      expect(yaml).toContain("id: 'trailing-'");
+    });
+
+    test('leaves names that are not ASCII alone', () => {
+      const yaml = yamlFor(['Vérifier l’état', '患者確認']);
+
+      expect(yaml).toContain("id: 'vérifier-l’état'");
+      expect(yaml).toContain("id: '患者確認'");
+    });
+
+    // A step id of `__proto__` assigned onto a plain object ran the prototype
+    // setter instead of adding a key, and the edge to it vanished.
+    test('keeps an edge to a step named __proto__', () => {
+      const yaml = serializeWorkflow({
+        id: 'w1',
+        name: 'Test Workflow',
+        jobs: [
+          {
+            id: 'j0',
+            name: '__proto__',
+            adaptor: '@openfn/language-common@latest',
+            body: 'fn(state => state)',
+          },
+        ],
+        triggers: [{ id: 't1', type: 'webhook', enabled: true }],
+        edges: [
+          {
+            id: 'e0',
+            source_trigger_id: 't1',
+            target_job_id: 'j0',
+            condition_type: 'always',
+            enabled: true,
+          },
+        ],
+        positions: null,
+      } as unknown as WorkflowState);
+
+      expect(yaml).toContain('__proto__');
+
+      const spec = parseV2(YAML.parse(yaml));
+      expect(Object.keys(spec.edges)).toHaveLength(1);
+    });
+  });
+});
+
+describe('convertWorkflowSpecToState prototype keys', () => {
+  const specWith = (jobNames: string[]): WorkflowSpec => {
+    // Null-prototype here too, or the test helper hits the same setter the
+    // code under test used to and never builds the case it means to.
+    const jobs = Object.create(null) as Record<string, unknown>;
+    jobNames.forEach(name => {
+      jobs[name] = {
+        name,
+        adaptor: '@openfn/language-common@latest',
+        body: 'fn(state => state)',
+      };
+    });
+
+    return {
+      name: 'Test Workflow',
+      jobs,
+      triggers: { webhook: { type: 'webhook', enabled: true } },
+      edges: {},
+    } as unknown as WorkflowSpec;
+  };
+
+  test('keeps a job keyed __proto__ on the way in', () => {
+    // Assigned onto a plain object this ran the prototype setter and the job
+    // never landed, so the state came back one job short.
+    const state = convertWorkflowSpecToState(
+      specWith(['__proto__', 'a', 'b', 'c', 'd', 'e'])
+    );
+
+    expect(state.jobs).toHaveLength(6);
+    expect(state.jobs.map(j => j.name).sort()).toEqual([
+      '__proto__',
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+    ]);
+  });
+
+  test('an edge naming a job that is not there still fails', () => {
+    // `toString` used to resolve through the prototype, so JobNotFoundError
+    // never fired and the edge pointed at nothing.
+    const spec = specWith(['real']) as unknown as {
+      edges: Record<string, unknown>;
+    };
+    spec.edges['webhook->toString'] = {
+      source_trigger: 'webhook',
+      target_job: 'toString',
+      condition_type: 'always',
+      enabled: true,
+    };
+
+    expect(() =>
+      convertWorkflowSpecToState(spec as unknown as WorkflowSpec)
+    ).toThrow();
+  });
+});
+
+describe('parseWorkflowYAML duplicate detection', () => {
+  const yamlWith = (names: string[]) =>
+    [
+      'name: Test',
+      'jobs:',
+      ...names.flatMap((name, i) => [
+        `  job-${String(i)}:`,
+        `    name: "${name}"`,
+        `    adaptor: "@openfn/language-common@latest"`,
+        `    body: "fn(state => state)"`,
+      ]),
+      'triggers:',
+      '  webhook:',
+      '    type: webhook',
+      '    enabled: true',
+      'edges: {}',
+    ].join('\n');
+
+  // The export side compares hyphenated keys. Comparing raw names here let a
+  // spec holding both import cleanly and then throw on the way back out,
+  // leaving a workflow that could not be exported.
+  test('refuses two names that hyphenate to the same key', () => {
+    expect(() => parseWorkflowYAML(yamlWith(['a b', 'a-b']))).toThrow(
+      /Duplicate job name/
+    );
+  });
+
+  test('still accepts names that stay distinct once hyphenated', () => {
+    expect(() => parseWorkflowYAML(yamlWith(['a b', 'a c']))).not.toThrow();
   });
 });

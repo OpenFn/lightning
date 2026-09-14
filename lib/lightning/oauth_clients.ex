@@ -16,7 +16,7 @@ defmodule Lightning.OauthClients do
   alias Lightning.Repo
 
   @doc """
-  Prepares a changeset for creating or updating an OAuth client.
+  Prepares a changeset for updating or displaying an OAuth client (it cannot set the owner; creation uses `OauthClient.create_changeset/3`).
 
   ## Parameters
 
@@ -125,14 +125,23 @@ defmodule Lightning.OauthClients do
     - `{:error, changeset}` if there is an error during creation due to validation failures or database issues.
 
   ## Examples
-    iex> create_client(%{name: "New Client"})
+    iex> create_client(%{name: "New Client", user_id: user.id}, actor)
     {:ok, %OauthClient{}}
 
-    iex> create_client(%{name: nil})
+    iex> create_client(%{name: nil}, actor)
     {:error, %Ecto.Changeset{}}
   """
-  def create_client(attrs \\ %{}, opts \\ []) do
-    changeset = OauthClient.changeset(%OauthClient{}, attrs, opts)
+  def create_client(attrs, %User{} = actor, opts \\ []) do
+    with :ok <-
+           authorize_client_owner(actor, %OauthClient{
+             user_id: attrs[:user_id] || attrs["user_id"]
+           }) do
+      do_create_client(attrs, opts)
+    end
+  end
+
+  defp do_create_client(attrs, opts) do
+    changeset = OauthClient.create_changeset(%OauthClient{}, attrs, opts)
 
     Multi.new()
     |> Multi.insert(:client, changeset)
@@ -153,13 +162,19 @@ defmodule Lightning.OauthClients do
   - A tuple {:error, changeset} if update fails.
 
   ## Examples
-      iex> update_client(client, %{field: new_value})
+      iex> update_client(client, %{field: new_value}, actor)
       {:ok, %OauthClient{}}
 
-      iex> update_client(client, %{field: bad_value})
+      iex> update_client(client, %{field: bad_value}, actor)
       {:error, %Ecto.Changeset{}}
   """
-  def update_client(%OauthClient{} = client, attrs, opts \\ []) do
+  def update_client(%OauthClient{} = client, attrs, %User{} = actor, opts \\ []) do
+    with :ok <- authorize_client_owner(actor, client) do
+      do_update_client(client, attrs, opts)
+    end
+  end
+
+  defp do_update_client(%OauthClient{} = client, attrs, opts) do
     changeset = OauthClient.changeset(client, attrs, opts)
 
     Multi.new()
@@ -272,13 +287,34 @@ defmodule Lightning.OauthClients do
   - A tuple {:error, changeset} if deletion fails.
 
   ## Examples
-      iex> delete_client(client)
+      iex> delete_client(client, actor)
       {:ok, %OauthClient{}}
 
-      iex> delete_client(client)
+      iex> delete_client(client, actor)
       {:error, %Ecto.Changeset{}}
   """
-  def delete_client(%OauthClient{} = client) do
+  def delete_client(%OauthClient{} = client, %User{} = actor) do
+    with :ok <- authorize_client_owner(actor, client) do
+      do_delete_client(client)
+    end
+  end
+
+  # An OAuth client belongs to whoever created it, the same rule the policy has
+  # always applied to credentials. Asked here rather than at each screen.
+  defp authorize_client_owner(%User{} = actor, %OauthClient{} = client) do
+    if Lightning.Policies.Permissions.can?(
+         :users,
+         :delete_credential,
+         actor,
+         client
+       ) do
+      :ok
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  defp do_delete_client(%OauthClient{} = client) do
     Multi.new()
     |> Multi.run(:remove_projects, fn _repo, _changes ->
       case remove_project_oauth_clients(client.id) do

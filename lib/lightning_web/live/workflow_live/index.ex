@@ -49,19 +49,21 @@ defmodule LightningWeb.WorkflowLive.Index do
                 project={@project}
                 label={@project_label}
               />
-              <LayoutComponents.breadcrumb>
-                <:label>{@page_title}</:label>
-              </LayoutComponents.breadcrumb>
             </LayoutComponents.breadcrumbs>
           </:breadcrumbs>
           <:period>{@dashboard_period}</:period>
         </LayoutComponents.header>
       </:header>
       <LayoutComponents.centered>
+        <DashboardComponents.workflows_header
+          count={length(@workflows_stats)}
+          project={@project}
+          can_create_workflow={@can_create_workflow}
+          search_term={@search_term}
+        />
         <DashboardComponents.project_metrics metrics={@metrics} project={@project} />
         <DashboardComponents.workflow_list
           period={@dashboard_period}
-          can_create_workflow={@can_create_workflow}
           can_delete_workflow={@can_delete_workflow}
           workflows_stats={@workflows_stats}
           project={@project}

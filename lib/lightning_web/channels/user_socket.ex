@@ -32,30 +32,26 @@ defmodule LightningWeb.UserSocket do
     # user's DB session token, so a deleted session (logout, password reset,
     # disabled account) makes get_user_by_session_token return nil and the
     # connection is refused.
+    #
+    # Refusing here rather than at each join covers every channel on this socket,
+    # including ones added later. A socket opened before the confirmation
+    # deadline is not re-checked, so it keeps working until it reconnects.
     with {:ok, session_token} <-
            Phoenix.Token.decrypt(socket, "user socket", token,
              max_age: 1_209_600
            ),
          %Lightning.Accounts.User{} = user <-
-           Lightning.Accounts.get_user_by_session_token(session_token) do
+           Lightning.Accounts.get_user_by_session_token(session_token),
+         false <- Lightning.Accounts.locked_out?(user) do
       {:ok, assign(socket, :current_user, user)}
     else
       _ -> :error
     end
   end
 
-  # Socket IDs are topics that allow you to identify all sockets for a given user:
-  #
-  #     def id(socket), do: "user_socket:#{socket.assigns.user_id}"
-  #
-  # Would allow you to broadcast a "disconnect" event and terminate
-  # all active sockets and channels for a given user:
-  #
-  #     Elixir.LightningWeb.Endpoint.broadcast("user_socket:#{user.id}", "disconnect", %{})
-  #
-  # Returning `nil` makes this socket anonymous.
   @impl true
-  def id(socket), do: "user_socket:#{socket.assigns.current_user.id}"
+  def id(socket),
+    do: LightningWeb.UserAuth.user_socket_topic(socket.assigns.current_user)
 
   def handle_error(conn, :unauthorized) do
     Plug.Conn.send_resp(conn, 401, "Unauthorized")

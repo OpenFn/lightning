@@ -42,6 +42,8 @@ import { createMockSocket } from './sessionStoreHelpers';
 // ---------------------------------------------------------------------------
 
 export interface TriggerTestHarnessOptions {
+  /** Project on the session context. Defaults to none. */
+  project?: { id: string; name: string } | null;
   /** Whether the session-context emits can_edit_workflow=true (default: true). */
   canEdit?: boolean;
   /**
@@ -52,8 +54,6 @@ export interface TriggerTestHarnessOptions {
    * from general workflow-edit access.
    */
   canWriteWebhookAuthMethod?: boolean;
-  /** Whether the session-context emits kafka_triggers_enabled=true (default: false). */
-  kafkaEnabled?: boolean;
   /**
    * Project-level webhook auth methods emitted in the session_context event.
    * Defaults to an empty array.
@@ -115,8 +115,8 @@ export async function createTriggerTestHarness(
   const {
     canEdit = true,
     canWriteWebhookAuthMethod = canEdit,
-    kafkaEnabled = false,
     webhookAuthMethods = [],
+    project = null,
     workflowStore,
     liveViewActions,
   } = options;
@@ -160,10 +160,9 @@ export async function createTriggerTestHarness(
       }
     )._test.emit('session_context', {
       user: null,
-      project: null,
+      project,
       config: {
         require_email_verification: false,
-        kafka_triggers_enabled: kafkaEnabled,
       },
       permissions: {
         can_edit_workflow: canEdit,

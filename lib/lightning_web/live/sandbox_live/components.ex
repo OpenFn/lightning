@@ -255,6 +255,8 @@ defmodule LightningWeb.SandboxLive.Components do
   attr :selected_workflow_ids, :any, required: true
   attr :credentials, :list, default: []
   attr :selected_credential_ids, :any, default: %MapSet{}
+  attr :collections_to_add, :list, default: []
+  attr :selected_collection_names, :any, default: %MapSet{}
 
   def merge_modal(assigns) do
     assigns =
@@ -273,6 +275,13 @@ defmodule LightningWeb.SandboxLive.Components do
         merge_select_all_state(
           assigns.selected_credential_ids,
           assigns.credentials
+        )
+      )
+      |> assign(
+        :collections_add_select_all_state,
+        merge_select_all_state(
+          assigns.selected_collection_names,
+          assigns.collections_to_add
         )
       )
 
@@ -448,6 +457,52 @@ defmodule LightningWeb.SandboxLive.Components do
                 />
                 <span class="flex-1 text-sm text-gray-700 truncate">
                   {credential.name}
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <div
+            :if={@collections_to_add != []}
+            id="merge-collections-to-add"
+            class="border border-gray-200 rounded-lg overflow-hidden bg-white"
+          >
+            <label class="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200 cursor-pointer">
+              <input
+                type="checkbox"
+                id="merge-select-all-collections-to-add"
+                phx-hook="CheckboxIndeterminate"
+                phx-click="toggle-all-collections-to-add"
+                checked={@collections_add_select_all_state == :all}
+                class={[
+                  "h-4 w-4 rounded border-gray-300 text-indigo-600",
+                  @collections_add_select_all_state == :partial && "indeterminate"
+                ]}
+              />
+              <span class="flex-1 text-sm font-medium text-gray-900">
+                Collections to add
+              </span>
+              <span class="text-xs text-gray-500">
+                {MapSet.size(@selected_collection_names)} of {length(
+                  @collections_to_add
+                )} selected
+              </span>
+            </label>
+            <ul class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+              <li
+                :for={name <- @collections_to_add}
+                class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                phx-click="toggle-collection-to-add"
+                phx-value-name={name}
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                  checked={MapSet.member?(@selected_collection_names, name)}
+                  readonly
+                />
+                <span class="flex-1 text-sm text-gray-700 truncate">
+                  {name}
                 </span>
               </li>
             </ul>

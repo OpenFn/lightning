@@ -41,10 +41,10 @@ portability/
 ## Kitchen-sink design
 
 `canonical_workflow.yaml` (in both `v1/` and `v2/`) is the single, comprehensive
-witness for every feature the format supports — multi-trigger (webhook, cron,
-kafka), kafka config, `cron_cursor`, `webhook_reply`, JS-expression edge with
-`label` and `disabled`, branching with all condition types (`always`,
-`on_job_success`, `on_job_failure`, `js_expression`).
+witness for every feature the format supports — multi-trigger (webhook, cron),
+`cron_cursor`, `webhook_reply`, JS-expression edge with `label` and `disabled`,
+branching with all condition types (`always`, `on_job_success`,
+`on_job_failure`, `js_expression`).
 
 Adding a new feature to the portability format means **adding a case to the
 canonical workflow**. The byte-equality and parse tests will fail loudly until

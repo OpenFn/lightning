@@ -17,6 +17,21 @@ defmodule Lightning.Collaboration.Persistence do
 
   @impl true
   def bind(state, doc_name, doc) do
+    # `bind/3` runs inside the SharedDoc process and reads the database to load
+    # persisted state. When an owner is threaded through (tests running with an
+    # owner-scoped DB sandbox connection), register it as a caller of this
+    # process so the load can reach that connection. `$callers` is not
+    # propagated across `GenServer.start_link`, so it has to be set here, in the
+    # process that performs the read. In production no owner is present and this
+    # is a no-op.
+    case Map.get(state, :owner) do
+      owner when is_pid(owner) ->
+        Process.put(:"$callers", [owner | Process.get(:"$callers", [])])
+
+      _ ->
+        :ok
+    end
+
     workflow = Map.fetch!(state, :workflow)
 
     if !workflow do
@@ -46,7 +61,13 @@ defmodule Lightning.Collaboration.Persistence do
 
   @impl true
   def update_v1(state, update, doc_name, _doc) do
-    case PersistenceWriter.add_update(doc_name, update) do
+    # Resolve the writer through the instance's registry. Defaults to the global
+    # collaboration Registry when none was threaded in (production), so this is
+    # byte-for-byte the same lookup as before; an isolated instance finds its
+    # own writer rather than missing in the global registry.
+    registry = Map.get(state, :registry, Lightning.Collaboration.Registry)
+
+    case PersistenceWriter.add_update(registry, doc_name, update) do
       :ok ->
         state
 

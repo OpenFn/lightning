@@ -121,7 +121,6 @@ export const createSessionContextStore = (
       versionsLoading: false,
       versionsError: null,
       workflow_template: null,
-      experimentalFeaturesEnabled: false,
       limits: {},
       isNewWorkflow,
       isLoading: false,
@@ -188,8 +187,6 @@ export const createSessionContextStore = (
         draft.projectRepoConnection = sessionContext.project_repo_connection;
         draft.webhookAuthMethods = sessionContext.webhook_auth_methods;
         draft.workflow_template = sessionContext.workflow_template;
-        draft.experimentalFeaturesEnabled =
-          sessionContext.experimental_features_enabled;
         draft.limits = sessionContext.limits;
         draft.isLoading = false;
         draft.error = null;

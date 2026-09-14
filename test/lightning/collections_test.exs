@@ -5,6 +5,73 @@ defmodule Lightning.CollectionsTest do
   alias Lightning.Collections.Collection
   alias Lightning.Collections.Item
 
+  describe "Item.changeset/2 key width" do
+    # Width, not a null byte, so this is separate from the Collections jsonb
+    # work still outstanding.
+    test "an over-long key is a changeset error, not a 22001" do
+      collection = insert(:collection)
+
+      changeset =
+        Item.changeset(%Item{}, %{
+          collection_id: collection.id,
+          key: String.duplicate("a", 300),
+          value: "v"
+        })
+
+      assert errors_on(changeset)[:key] == [
+               "key is too long, please use a shorter one"
+             ]
+    end
+
+    test "a key short in graphemes but too wide for the column is rejected" do
+      collection = insert(:collection)
+      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+
+      changeset =
+        Item.changeset(%Item{}, %{
+          collection_id: collection.id,
+          key: String.duplicate(family, 200),
+          value: "v"
+        })
+
+      assert errors_on(changeset)[:key] == [
+               "key is too long, please use a shorter one"
+             ]
+    end
+
+    test "a value short in graphemes but too wide for the column is rejected" do
+      collection = insert(:collection)
+      family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+
+      # 200_000 graphemes, which clears the 1_000_000 grapheme cap, but
+      # 1_400_000 codepoints, which is what varchar(1000000) counts.
+      changeset =
+        Item.changeset(%Item{}, %{
+          collection_id: collection.id,
+          key: "k",
+          value: String.duplicate(family, 200_000)
+        })
+
+      assert errors_on(changeset)[:value] == [
+               "value is too long, please use a shorter one"
+             ]
+    end
+
+    test "a key at the column width is accepted" do
+      collection = insert(:collection)
+
+      changeset =
+        Item.changeset(%Item{}, %{
+          collection_id: collection.id,
+          key: String.duplicate("a", 255),
+          value: "v"
+        })
+
+      refute errors_on(changeset)[:key]
+      assert {:ok, _} = Repo.insert(changeset)
+    end
+  end
+
   describe "get_collection/1" do
     test "get a collection" do
       %{id: collection_id, name: collection_name} = insert(:collection)
@@ -219,7 +286,7 @@ defmodule Lightning.CollectionsTest do
                |> Repo.preload(collection: :project)
     end
 
-    test "returns matching items for the given collection sorted by inserted_at" do
+    test "returns matching items for the given collection sorted by id" do
       collection = insert(:collection)
 
       insert(:collection_item, key: "rkeynomatch", collection: collection)
@@ -235,8 +302,7 @@ defmodule Lightning.CollectionsTest do
 
       get_items = Collections.get_all(collection, %{limit: 50}, "rkeymatch*")
 
-      assert List.last(get_items) ==
-               Enum.sort_by(items, & &1.inserted_at) |> List.last()
+      assert List.last(get_items) == Enum.max_by(items, & &1.id)
 
       assert MapSet.new(get_items) == MapSet.new(items)
     end

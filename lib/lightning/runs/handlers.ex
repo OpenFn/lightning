@@ -136,17 +136,11 @@ defmodule Lightning.Runs.Handlers do
       |> validate_required([:state, :timestamp])
     end
 
-    defp reason_to_state(reason) do
-      case reason do
-        "ok" -> :success
-        "fail" -> :failed
-        "crash" -> :crashed
-        "cancel" -> :cancelled
-        "kill" -> :killed
-        "exception" -> :exception
-        unknown -> unknown
-      end
-    end
+    @reason_states Run.states_by_reason()
+
+    # An unrecognised reason passes through unchanged, so `validate_required`
+    # reports the worker's own word rather than a state we invented for it.
+    defp reason_to_state(reason), do: Map.get(@reason_states, reason, reason)
 
     defp to_run_params(%__MODULE__{} = complete_run) do
       complete_run
@@ -405,6 +399,11 @@ defmodule Lightning.Runs.Handlers do
   defmodule CompleteStep do
     @moduledoc """
     Schema to validate the input attributes of a completed step.
+
+    `output_dataclip` may arrive either as a JSON-encoded string (older
+    workers) or already decoded — a map, list, or scalar (newer workers).
+    See `maybe_decode_dataclip/1`. Map values are stored as-is; non-map
+    values are wrapped as `%{"value" => x}` before persistence.
     """
     use Lightning.Schema
     import Ecto.Query
@@ -415,7 +414,7 @@ defmodule Lightning.Runs.Handlers do
     embedded_schema do
       field :project_id, Ecto.UUID
       field :run_id, Ecto.UUID
-      field :output_dataclip, :string
+      field :output_dataclip, :any, virtual: true
       field :output_dataclip_id, Ecto.UUID
       field :reason, :string
       field :error_type, :string
@@ -550,11 +549,29 @@ defmodule Lightning.Runs.Handlers do
       Dataclip.new(%{
         id: dataclip_id,
         project_id: project_id,
-        body: output_dataclip |> Jason.decode!() |> ensure_map(),
+        body: output_dataclip |> maybe_decode_dataclip() |> ensure_map(),
         type: :step_result
       })
       |> Repo.insert()
     end
+
+    # For back compat: older workers JSON-encode output_dataclip into a string
+    # before sending it (Lightning then decodes it); newer workers send the
+    # value already decoded. A bare string is ambiguous either way — e.g. a
+    # job can legitimately return "24", "true", or "{}" as its literal state
+    # — so we try to parse it as JSON and, if that fails, fall back to the
+    # string as-is. This can misclassify a literal string that happens to
+    # look like JSON (a job returning the string "24" ends up stored as the
+    # number 24), but returning a bare string as step state is already an
+    # edge case we're comfortable accepting the ambiguity on for now.
+    defp maybe_decode_dataclip(value) when is_binary(value) do
+      case Jason.decode(value) do
+        {:ok, decoded} -> decoded
+        {:error, _} -> value
+      end
+    end
+
+    defp maybe_decode_dataclip(value), do: value
 
     defp ensure_map(%{} = map), do: map
     defp ensure_map(value), do: %{"value" => value}

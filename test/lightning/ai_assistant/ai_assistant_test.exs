@@ -3,6 +3,7 @@ defmodule Lightning.AiAssistantTest do
   import Mox
 
   alias Lightning.AiAssistant
+  alias Lightning.AiAssistant.ChatMessage
 
   setup :verify_on_exit!
 
@@ -26,7 +27,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -98,7 +101,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -139,7 +144,7 @@ defmodule Lightning.AiAssistantTest do
       {:ok, _updated_session} = AiAssistant.query_stream(session, "Ping")
     end
 
-    test "job code can be excluded from the context via options", %{
+    test "job code is always in the context, with no option to leave it out", %{
       user: user,
       workflow: %{jobs: [job_1 | _]}
     } do
@@ -162,13 +167,15 @@ defmodule Lightning.AiAssistantTest do
         :call,
         fn %{method: :post, body: json_body}, _opts ->
           body = Jason.decode!(json_body)
-          refute Map.has_key?(body["context"], "expression")
+          assert body["context"]["expression"] == job_expression
           assert body["context"]["adaptor"] == adaptor
 
           {:ok, %Tesla.Env{status: 200, body: job_chat_stream_reply()}}
         end
       )
 
+      # The old `code: false` came from a tickbox that no longer exists, and a
+      # stale value in an old session's meta must not strip the code now.
       {:ok, _updated_session} =
         AiAssistant.query_stream(session, "Ping", code: false)
     end
@@ -282,7 +289,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -362,7 +371,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -749,7 +760,7 @@ defmodule Lightning.AiAssistantTest do
           code: workflow_yaml
         )
 
-      saved_message = List.last(updated_session.messages)
+      saved_message = user_message(updated_session)
       assert saved_message.code == workflow_yaml
       assert saved_message.role == :user
     end
@@ -773,7 +784,7 @@ defmodule Lightning.AiAssistantTest do
           meta: %{"from_global" => true}
         })
 
-      saved_message = List.last(updated_session.messages)
+      saved_message = assistant_message(updated_session)
 
       assert %{
                role: :assistant,
@@ -802,7 +813,7 @@ defmodule Lightning.AiAssistantTest do
           content: "Job chat response"
         })
 
-      saved_message = List.last(updated_session.messages)
+      saved_message = assistant_message(updated_session)
 
       assert %{role: :assistant, job_id: ^job_id} = saved_message
       assert saved_message.meta["from_unsaved_job"] == unsaved_job_id
@@ -1367,7 +1378,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -1379,7 +1392,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> nil
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -1391,7 +1406,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> nil
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -1403,7 +1420,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> nil
           :ai_assistant_api_key -> nil
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -1415,7 +1434,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> 123
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -1427,7 +1448,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> 123
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -2070,7 +2093,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -2138,7 +2163,7 @@ defmodule Lightning.AiAssistantTest do
                AiAssistant.query_stream(session, "help me")
 
       assert length(updated_session.messages) == 2
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "Here is help"
       assert assistant_msg.role == :assistant
 
@@ -2359,8 +2384,14 @@ defmodule Lightning.AiAssistantTest do
 
       assert {:ok, _} = AiAssistant.query_stream(session, "test")
 
+      # Apollo's own words do not reach the panel: it wraps any unhandled
+      # exception as str(e), which can carry hostnames and paths. The text goes
+      # to the log and the user gets the generic sentence.
       assert_received {:ai_assistant, :streaming_error,
-                       %{error: "rate limited", session_id: _}}
+                       %{error: error_text, session_id: _}}
+
+      assert error_text == "Something went wrong. Please try again."
+      refute error_text =~ "rate limited"
     end
 
     test "handles error event with non-message JSON", %{
@@ -2404,11 +2435,13 @@ defmodule Lightning.AiAssistantTest do
 
       assert {:ok, _} = AiAssistant.query_stream(session, "test")
 
-      # Non-message error JSON gets inspected
+      # An error payload we cannot read is not shown verbatim: it is Apollo's
+      # internal shape, not a sentence for the user.
       assert_received {:ai_assistant, :streaming_error,
                        %{error: error_text, session_id: _}}
 
-      assert error_text =~ "500"
+      assert error_text == "Something went wrong. Please try again."
+      refute error_text =~ "500"
     end
 
     test "handles error event with non-JSON data", %{
@@ -2452,8 +2485,12 @@ defmodule Lightning.AiAssistantTest do
 
       assert {:ok, _} = AiAssistant.query_stream(session, "test")
 
+      # Undecodable data is not passed through to the panel either.
       assert_received {:ai_assistant, :streaming_error,
-                       %{error: "raw error text", session_id: _}}
+                       %{
+                         error: "Something went wrong. Please try again.",
+                         session_id: _
+                       }}
     end
 
     test "returns error when stream has no complete event", %{
@@ -2483,7 +2520,7 @@ defmodule Lightning.AiAssistantTest do
         {:ok, %Tesla.Env{status: 200, body: sse_stream}}
       end)
 
-      assert {:error, "Stream ended without complete response"} =
+      assert {:error, "The assistant stopped before it finished." <> _} =
                AiAssistant.query_stream(session, "test")
     end
 
@@ -2514,8 +2551,225 @@ defmodule Lightning.AiAssistantTest do
         {:ok, %Tesla.Env{status: 200, body: sse_stream}}
       end)
 
-      assert {:error, "Stream ended without complete response"} =
+      assert {:error, "The assistant stopped before it finished." <> _} =
                AiAssistant.query_stream(session, "test")
+    end
+
+    # The other end of keeping a partial: there has to be something worth
+    # keeping. A reply that produced nothing leaves no message behind, or the
+    # panel shows an empty one where the answer should be.
+    test "saves nothing when the stream dies before producing anything", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: []}}
+      end)
+
+      assert {:error, message} = AiAssistant.query_stream(session, "test")
+      assert message =~ "stopped before it finished"
+
+      refute Lightning.Repo.all(Lightning.AiAssistant.ChatMessage)
+             |> Enum.any?(&(&1.role == :assistant))
+    end
+
+    # The point of keeping the reason at all: a hung Apollo and a severed
+    # connection have to read differently, or there is nothing to act on.
+    #
+    # The reason is seeded straight into the process dictionary because that is
+    # where the adapter leaves it and where stream_failure_message/0 reads it.
+    # The adapter's own tests cover putting it there over a real socket; these
+    # cover what each value turns into for the person reading the panel.
+    for {name, reason, expected} <- [
+          {"our own receive_timeout", :timeout,
+           "stopped responding partway through"},
+          {"a timeout raised by Finch", %Finch.TransportError{reason: :timeout},
+           "stopped responding partway through"},
+          {"a dropped connection", %Finch.TransportError{reason: :closed},
+           "connection to the assistant was lost"}
+        ] do
+      test "#{name} is reported as \"#{expected}\"", %{
+        user: user,
+        workflow: %{jobs: [job_1 | _]}
+      } do
+        session =
+          insert(:chat_session,
+            user: user,
+            job: job_1,
+            messages: [
+              %{
+                role: :user,
+                content: "test",
+                user: user,
+                status: :pending,
+                inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+              }
+            ]
+          )
+
+        Process.put(
+          {Lightning.Tesla.Adapter.Finch, :stream_error},
+          unquote(Macro.escape(reason))
+        )
+
+        expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+          {:ok, %Tesla.Env{status: 200, body: []}}
+        end)
+
+        assert {:error, message} = AiAssistant.query_stream(session, "test")
+        assert message =~ unquote(expected)
+      end
+    end
+
+    # Says the same thing to the user as a stream that simply stopped, so what
+    # separates them is the log: this one has a reason worth reading.
+    test "a reason we do not recognise is logged before it is generalised", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      Process.put(
+        {Lightning.Tesla.Adapter.Finch, :stream_error},
+        {:something, :unexpected}
+      )
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: []}}
+      end)
+
+      logs =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:error, message} = AiAssistant.query_stream(session, "test")
+          assert message =~ "stopped before it finished"
+        end)
+
+      assert logs =~ "Stream failed"
+      assert logs =~ "something"
+    end
+
+    test "keeps the text that arrived when the stream dies before completing",
+         %{user: user, workflow: %{jobs: [job_1 | _]}} do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      # Text the user has already watched appear, then nothing - no complete
+      # event ever arrives.
+      sse_stream = [
+        %{
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{"type" => "text_delta", "text" => "Here is "}
+            })
+        },
+        %{
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{"type" => "text_delta", "text" => "the answer"}
+            })
+        }
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:error, message} = AiAssistant.query_stream(session, "test")
+      assert message =~ "stopped before it finished"
+
+      saved =
+        Lightning.Repo.all(Lightning.AiAssistant.ChatMessage)
+        |> Enum.find(&(&1.role == :assistant))
+
+      assert saved.content == "Here is the answer"
+      assert saved.status == :error
+      assert saved.failure_category == :incomplete_response
+    end
+
+    test "keeps the workflow yaml when the stream dies after sending it", %{
+      user: user,
+      workflow: %{jobs: [job_1 | _]}
+    } do
+      session =
+        insert(:chat_session,
+          user: user,
+          job: job_1,
+          messages: [
+            %{
+              role: :user,
+              content: "test",
+              user: user,
+              status: :pending,
+              inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+            }
+          ]
+        )
+
+      # Workflow and global chat put the yaml on the wire ahead of the text.
+      sse_stream = [
+        %{event: "changes", data: Jason.encode!(%{"yaml" => "name: my-flow"})},
+        %{
+          data:
+            Jason.encode!(%{
+              "type" => "content_block_delta",
+              "delta" => %{"type" => "text_delta", "text" => "Built it"}
+            })
+        }
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_stream(session, "test")
+
+      saved =
+        Lightning.Repo.all(Lightning.AiAssistant.ChatMessage)
+        |> Enum.find(&(&1.role == :assistant))
+
+      assert saved.code == "name: my-flow"
     end
 
     test "skips log events and unknown events", %{
@@ -2628,11 +2882,15 @@ defmodule Lightning.AiAssistantTest do
         {:ok, %Tesla.Env{status: 200, body: raising_stream}}
       end)
 
-      assert {:error, "boom"} =
+      # Tagged, so the caller knows this text is ours and not for the user.
+      assert {:error, {:internal, "boom"}} =
                AiAssistant.query_stream(session, "test")
 
       assert_received {:ai_assistant, :streaming_error,
-                       %{error: "Streaming failed: boom", session_id: _}}
+                       %{
+                         error: "Something went wrong. Please try again.",
+                         session_id: _
+                       }}
     end
 
     test "handles exit signals during stream processing (e.g. Mint transport errors)",
@@ -2681,7 +2939,9 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
@@ -2744,7 +3004,7 @@ defmodule Lightning.AiAssistantTest do
                )
 
       assert length(updated_session.messages) == 2
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "Here is your workflow"
       assert assistant_msg.code == "workflow:\n  name: test"
     end
@@ -2849,11 +3109,233 @@ defmodule Lightning.AiAssistantTest do
         case key do
           :endpoint -> "http://localhost:3000"
           :ai_assistant_api_key -> "api_key"
-          :timeout -> 5_000
+          :connect_timeout -> 1_000
+          :idle_timeout -> 5_000
+          :request_timeout -> 5_000
         end
       end)
 
       :ok
+    end
+
+    test "reports an oversized attachment with the checkbox to untick", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{
+          "code" => 400,
+          "type" => "ATTACHMENT_TOO_LARGE",
+          "message" => "Apollo's own prose, which we deliberately ignore",
+          "details" => %{
+            "total_characters" => 300_000,
+            "limit_characters" => 250_000,
+            "largest_attachment" => %{"type" => "log", "characters" => 300_000}
+          }
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error, %{error: message}}
+      assert message =~ "Send run logs"
+      assert message =~ "paste the part you need into the chat"
+      refute message =~ "deliberately ignore"
+
+      # The sizes are for support, not for the reader, so they stay in the log.
+      refute message =~ "300000"
+      refute message =~ "250000"
+    end
+
+    test "names the I/O checkbox when a dataclip is the largest attachment", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{
+          "type" => "ATTACHMENT_TOO_LARGE",
+          "details" => %{
+            "total_characters" => 260_000,
+            "limit_characters" => 250_000,
+            "largest_attachment" => %{"type" => "input_dataclip"}
+          }
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error, %{error: message}}
+      assert message =~ "Send run data"
+    end
+
+    # Apollo can report the size without saying which attachment caused it, and
+    # can report nothing at all. Neither should cost the reader a sentence.
+    test "still says what to do when Apollo names no attachment", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{"type" => "ATTACHMENT_TOO_LARGE", "details" => %{}})
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error, %{error: message}}
+      assert message =~ "The attached run data is too large"
+      assert message =~ "one of the attachment boxes"
+      assert message =~ "paste the part you need into the chat"
+    end
+
+    # A transport error no clause names: the reader gets ours, the log gets it.
+    test "logs an unrecognised transport error before generalising it", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:error, :some_reason_we_have_never_seen}
+      end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+        end)
+
+      assert log =~ "Unexpected error for session #{session.id}"
+      assert log =~ "some_reason_we_have_never_seen"
+    end
+
+    # Apollo names its internal wrapper too, so a type on its own is not enough
+    # to trust the text: entry.py rewraps any unhandled exception as
+    # ApolloError(500, str(e), type="INTERNAL_ERROR").
+    test "swallows a named error whose message is an exception string", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{
+          "type" => "INTERNAL_ERROR",
+          "message" =>
+            "HTTPConnectionPool(host='apollo-internal.default.svc', port=3000)"
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error, %{error: shown}}
+      assert shown == "Something went wrong. Please try again."
+      refute shown =~ "apollo-internal"
+    end
+
+    # The column validates its length, so an unclamped sentence would fail the
+    # changeset and take the partial reply down with it.
+    test "clamps a readable error to what the column accepts", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{
+          "type" => "RATE_LIMIT",
+          "message" => String.duplicate("a", 900)
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error, %{error: shown}}
+
+      assert String.length(shown) ==
+               Lightning.AiAssistant.ChatMessage.max_failure_message_length()
+    end
+
+    # PROMPT_TOO_LONG is on the allowlist, so Apollo's own sentence reaches the
+    # reader. Anything off it is swallowed; see the INTERNAL_ERROR test above.
+    test "passes through an error type on the allowlist", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      error =
+        Jason.encode!(%{
+          "type" => "PROMPT_TOO_LONG",
+          "message" => "The prompt is too long."
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn _env, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: [%{event: "error", data: error}]}}
+      end)
+
+      assert {:error, _} = AiAssistant.query_global_stream(session, "why?")
+
+      assert_received {:ai_assistant, :streaming_error,
+                       %{error: "The prompt is too long."}}
+    end
+
+    # A session whose latest message is a pending question, which is what the
+    # stream replies to.
+    defp global_session_with_pending_message(user, project, workflow) do
+      insert(:chat_session,
+        user: user,
+        project: project,
+        workflow: workflow,
+        session_type: "workflow_template",
+        meta: %{
+          "message_options" => %{
+            "use_global_assistant" => true,
+            "page" => "/projects/p1/workflows/w1"
+          }
+        },
+        messages: [
+          %{
+            role: :user,
+            content: "help with workflow",
+            user: user,
+            status: :pending,
+            inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+          }
+        ]
+      )
     end
 
     test "processes SSE stream and saves global response", %{
@@ -2922,12 +3404,285 @@ defmodule Lightning.AiAssistantTest do
                )
 
       assert length(updated_session.messages) == 2
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "Here is your updated workflow"
       assert assistant_msg.code == "workflow:\n  name: updated"
       assert assistant_msg.role == :assistant
       assert assistant_msg.meta == %{"from_global" => true}
       assert is_nil(assistant_msg.job_id)
+    end
+
+    test "records the steps and summary a status segment reports", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session_with_pending_message(user, project, workflow)
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Done",
+          "response_segments" => [
+            %{
+              "type" => "status",
+              "content" => "Wrote code for \"Transform data\"",
+              "summary" => "Wrote code for 1 step",
+              "steps" => [
+                %{"key" => "transform-data", "name" => "Transform data"}
+              ]
+            }
+          ],
+          "attachments" => []
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: [%{event: "complete", data: complete_payload}]
+         }}
+      end)
+
+      assert {:ok, updated} =
+               AiAssistant.query_global_stream(session, "help with workflow")
+
+      assert [
+               %ChatMessage.Segment{
+                 type: :status,
+                 summary: "Wrote code for 1 step",
+                 steps: [
+                   %ChatMessage.Segment.Step{
+                     key: "transform-data",
+                     name: "Transform data"
+                   }
+                 ]
+               }
+             ] = List.last(updated.messages).response_segments
+    end
+
+    test "drops steps the embed would reject rather than losing the segment", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session_with_pending_message(user, project, workflow)
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Done",
+          "response_segments" => [
+            %{
+              "type" => "status",
+              "content" => "Wrote code",
+              "steps" => [
+                # no key to identify it by
+                %{"name" => "Nameless"},
+                # not a map at all, which would raise from cast_embed
+                ["not", "a", "map"],
+                # over the field length cap
+                %{"key" => String.duplicate("a", 501)},
+                # a name that is not a string
+                %{"key" => "numeric-name", "name" => 123},
+                # a name over the cap
+                %{"key" => "long-name", "name" => String.duplicate("a", 501)},
+                # legal: key alone, no name
+                %{"key" => "no-name"},
+                %{"key" => "kept", "name" => "Kept"}
+              ]
+            }
+          ],
+          "attachments" => []
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: [%{event: "complete", data: complete_payload}]
+         }}
+      end)
+
+      assert {:ok, updated} =
+               AiAssistant.query_global_stream(session, "help with workflow")
+
+      # The status line survives: one bad step must not take the prose with it
+      assert [%ChatMessage.Segment{content: "Wrote code", steps: steps}] =
+               List.last(updated.messages).response_segments
+
+      assert [
+               %ChatMessage.Segment.Step{key: "no-name", name: nil},
+               %ChatMessage.Segment.Step{key: "kept", name: "Kept"}
+             ] = steps
+    end
+
+    test "removes steps entirely when none of them survive", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session_with_pending_message(user, project, workflow)
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Done",
+          "response_segments" => [
+            %{
+              "type" => "status",
+              "content" => "Edited workflow structure",
+              "steps" => [%{"name" => "no key"}]
+            }
+          ],
+          "attachments" => []
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: [%{event: "complete", data: complete_payload}]
+         }}
+      end)
+
+      assert {:ok, updated} =
+               AiAssistant.query_global_stream(session, "help with workflow")
+
+      # The key is dropped rather than left empty: "this Apollo did not report
+      # steps" and "this action touched none" are different claims.
+      assert [
+               %ChatMessage.Segment{
+                 content: "Edited workflow structure",
+                 steps: []
+               }
+             ] =
+               List.last(updated.messages).response_segments
+    end
+
+    test "passes a segment that is not a map to the changeset to reject", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session_with_pending_message(user, project, workflow)
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Done",
+          "response_segments" => [
+            ["not", "a", "map"],
+            %{"type" => "status", "content" => "Edited workflow structure"}
+          ],
+          "attachments" => []
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: [%{event: "complete", data: complete_payload}]
+         }}
+      end)
+
+      assert {:ok, updated} =
+               AiAssistant.query_global_stream(session, "help with workflow")
+
+      # Sanitising leaves a non-map alone; the changeset is what drops it, and
+      # the segments around it survive.
+      assert [%ChatMessage.Segment{content: "Edited workflow structure"}] =
+               List.last(updated.messages).response_segments
+    end
+
+    test "drops an unusable summary rather than losing the segment", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session_with_pending_message(user, project, workflow)
+
+      complete_payload =
+        Jason.encode!(%{
+          "response" => "Done",
+          "response_segments" => [
+            %{
+              "type" => "status",
+              "content" => "Edited workflow structure",
+              "summary" => String.duplicate("a", 10_001)
+            },
+            %{
+              "type" => "status",
+              "content" => "Read code",
+              "summary" => %{"not" => "a string"}
+            }
+          ],
+          "attachments" => []
+        })
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
+        {:ok,
+         %Tesla.Env{
+           status: 200,
+           body: [%{event: "complete", data: complete_payload}]
+         }}
+      end)
+
+      assert {:ok, updated} =
+               AiAssistant.query_global_stream(session, "help with workflow")
+
+      assert [
+               %ChatMessage.Segment{
+                 content: "Edited workflow structure",
+                 summary: nil
+               },
+               %ChatMessage.Segment{content: "Read code", summary: nil}
+             ] = List.last(updated.messages).response_segments
+    end
+
+    test "broadcasts a status segment with the steps it reported", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      session = global_session_with_pending_message(user, project, workflow)
+      Lightning.subscribe("ai_session:#{session.id}")
+
+      sse_stream = [
+        %{
+          event: "status",
+          data:
+            Jason.encode!(%{
+              "type" => "status",
+              "content" => "Wrote code for \"Transform data\"",
+              "summary" => "Wrote code for 1 step",
+              "steps" => [
+                %{"key" => "transform-data", "name" => "Transform data"},
+                # dropped on the way out, same as on the persisted path
+                %{"name" => "no key"}
+              ],
+              "stray" => "should not reach the client"
+            })
+        },
+        %{
+          event: "complete",
+          data: Jason.encode!(%{"response" => "Done", "attachments" => []})
+        }
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn %{method: :post}, _opts ->
+        {:ok, %Tesla.Env{status: 200, body: sse_stream}}
+      end)
+
+      assert {:ok, _updated} =
+               AiAssistant.query_global_stream(session, "help with workflow")
+
+      assert_receive {:ai_assistant, :streaming_segment, %{segment: segment}}
+
+      assert segment == %{
+               "type" => "status",
+               "content" => "Wrote code for \"Transform data\"",
+               "summary" => "Wrote code for 1 step",
+               "steps" => [
+                 %{"key" => "transform-data", "name" => "Transform data"}
+               ]
+             }
     end
 
     test "uses workflow_yaml even on job step pages with a job_code attachment",
@@ -2994,7 +3749,7 @@ defmodule Lightning.AiAssistantTest do
       assert {:ok, updated_session} =
                AiAssistant.query_global_stream(session, "fix this job")
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "Fixed the job"
       # Global responses always use workflow_yaml; job_code is ignored
       assert assistant_msg.code == "workflow:\n  name: full"
@@ -3051,7 +3806,7 @@ defmodule Lightning.AiAssistantTest do
       assert {:ok, updated_session} =
                AiAssistant.query_global_stream(session, "overview")
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.code == "workflow:\n  name: overview"
       assert is_nil(assistant_msg.job_id)
     end
@@ -3134,7 +3889,7 @@ defmodule Lightning.AiAssistantTest do
       assert {:ok, updated_session} =
                AiAssistant.query_global_stream(session, "hello")
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "General answer"
       assert is_nil(assistant_msg.code)
     end
@@ -3191,7 +3946,7 @@ defmodule Lightning.AiAssistantTest do
           page: "workflows/My Workflow"
         )
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       # On overview, should use workflow_yaml not job_code
       assert assistant_msg.code == "name: My Workflow\njobs: []"
       assert is_nil(assistant_msg.job_id)
@@ -3249,7 +4004,7 @@ defmodule Lightning.AiAssistantTest do
           page: "workflows/test/Some-job"
         )
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       # job_code attachments are ignored; only workflow_yaml is stored
       assert is_nil(assistant_msg.code)
       assert assistant_msg.meta == %{"from_global" => true}
@@ -3296,9 +4051,28 @@ defmodule Lightning.AiAssistantTest do
           workflow_yaml: "name: test"
         )
 
-      assistant_msg = List.last(updated_session.messages)
+      assistant_msg = assistant_message(updated_session)
       assert assistant_msg.content == "No artifacts"
       assert is_nil(assistant_msg.code)
+    end
+
+    defp global_session(user, project, workflow) do
+      insert(:chat_session,
+        user: user,
+        project: project,
+        workflow: workflow,
+        session_type: "workflow_template",
+        meta: %{"message_options" => %{"use_global_assistant" => true}},
+        messages: [
+          %{
+            role: :user,
+            content: "why?",
+            user: user,
+            status: :pending,
+            inserted_at: DateTime.utc_now() |> DateTime.add(-1)
+          }
+        ]
+      )
     end
   end
 
@@ -3315,5 +4089,18 @@ defmodule Lightning.AiAssistantTest do
       })
 
     [%{event: "complete", data: complete_payload}]
+  end
+
+  # Picked by role rather than with List.last/1. Messages come back ordered by
+  # inserted_at alone, and the schema stores that to the second, so a question
+  # and the answer to it saved inside the same second tie and come back in
+  # either order. That is rare against a real model and constant here, where
+  # both writes land in the same millisecond.
+  defp assistant_message(session) do
+    session.messages |> Enum.filter(&(&1.role == :assistant)) |> List.last()
+  end
+
+  defp user_message(session) do
+    session.messages |> Enum.filter(&(&1.role == :user)) |> List.last()
   end
 end

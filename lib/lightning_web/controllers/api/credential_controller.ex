@@ -21,12 +21,30 @@ defmodule LightningWeb.API.CredentialController do
   """
   use LightningWeb, :controller
 
+  alias Lightning.Accounts.User
   alias Lightning.Credentials
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
 
   action_fallback LightningWeb.FallbackController
+
+  # `require_authenticated_api_resource` lets repo-connection tokens through
+  # this pipeline, and everything here is about credentials, which belong to a
+  # person. Every action would hand a machine token to a function that only
+  # takes a user, which raises rather than refusing. Answer it once here.
+  plug :require_user
+
+  defp require_user(%{assigns: %{current_resource: %User{}}} = conn, _opts),
+    do: conn
+
+  defp require_user(conn, _opts) do
+    conn
+    |> put_status(:forbidden)
+    |> put_view(LightningWeb.ErrorView)
+    |> render(:"403")
+    |> halt()
+  end
 
   @doc """
   Lists credentials with optional project filtering.
@@ -143,7 +161,8 @@ defmodule LightningWeb.API.CredentialController do
 
     with {:ok, validated_params} <-
            validate_and_authorize_projects(params, current_user),
-         {:ok, credential} <- Credentials.create_credential(validated_params) do
+         {:ok, credential} <-
+           Credentials.create_credential(validated_params, current_user) do
       conn
       |> put_status(:created)
       |> render("create.json", credential: credential)
@@ -180,7 +199,7 @@ defmodule LightningWeb.API.CredentialController do
          credential when not is_nil(credential) <-
            Credentials.get_credential(id),
          :ok <- validate_credential_ownership(credential, current_user),
-         {:ok, _} <- Credentials.delete_credential(credential) do
+         {:ok, _} <- Credentials.delete_credential(credential, current_user) do
       send_resp(conn, :no_content, "")
     else
       {:error, :invalid_uuid} ->

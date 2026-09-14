@@ -38,7 +38,7 @@
         "name": { "type": "string" },
         "type": {
           "type": "string",
-          "enum": ["webhook", "cron", "kafka"]
+          "enum": ["webhook", "cron"]
         },
         "enabled": { "type": "boolean" },
         "cron_expression": { "type": "string" },

@@ -27,7 +27,6 @@ describe('useAutoPreview', () => {
       job_id: 'job-1',
       job_body: '',
       job_adaptor: '@openfn/language-common',
-      attach_code: false,
       attach_logs: false,
     },
     storageKey: 'ai-job-job-1',

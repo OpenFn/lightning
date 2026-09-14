@@ -186,7 +186,7 @@ For SMTP, the following environment variables are required:
 | **Variable**                                      | Description                                                                                                                                                                                                                                                     |
 | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ADAPTORS_PATH`                                   | Where you store your locally installed adaptors                                                                                                                                                                                                                 |
-| `ALLOW_SIGNUP`                                    | Set to `true` to enable user access to the registration page. Set to `false` to disable new user registrations and block access to the registration page.<br>Default is `true`.                                                                                 |
+| `ALLOW_SIGNUP`                                    | Set to `true` to enable user access to the registration page. Set to `false` to disable new user registrations and block access to the registration page.<br>Default is `false`.                                                                                |
 | `CORS_ORIGIN`                                     | A list of acceptable hosts for browser/cors requests (',' separated)                                                                                                                                                                                            |
 | `DISABLE_DB_SSL`                                  | In production, the use of an SSL connection to Postgres is required by default.<br>Setting this to `"true"` allows unencrypted connections to the database. This is strongly discouraged in a real production environment.                                      |
 | `DISABLE_DB_SSL_CERT_VERIFY`                      | When a SSL connection is used to connect to Postgres, the server's certificate will be verified by default.<br> Setting this to `"true"` disables certificate verification. This is strongly discouraged in a real production environment.                      |
@@ -251,114 +251,33 @@ The following environment variables are required:
   an Anthropic key.
 - `APOLLO_ENDPOINT` - the endpoint for the OpenFn Apollo AI service.
 
-### Kafka Triggers
+Three optional variables control how long Lightning waits on Apollo. Each one
+has a default, so set them only if those defaults do not suit your deployment.
 
-🧪 **Experimental**
+- `APOLLO_CONNECT_TIMEOUT_MS` - how long to wait to reach Apollo at all.
+  Defaults to 5000. Reaching Apollo happens inside the idle budget, so a value
+  above `APOLLO_IDLE_TIMEOUT_MS` never takes effect; Lightning warns at boot if
+  you set one.
+- `APOLLO_IDLE_TIMEOUT_MS` - the longest acceptable silence, both before the
+  first byte of an answer and between the chunks that follow. Defaults to 30000.
+- `APOLLO_REQUEST_TIMEOUT_MS` - the longest one whole request may take, however
+  steadily it is streaming. Defaults to 300000.
 
-Lightning workflows can be configured with a trigger that will consume messages
-from a Kafka Cluster. By default this is disabled and you will not see the
-option to create a Kafka trigger in the UI, nor will the Kafka consumer groups
-be running.
+The idle default assumes Apollo v3.1.1 or later, which sends a keepalive every
+15 seconds. On an older Apollo a stream can go quiet for minutes while a model
+is thinking, and 30 seconds will cut it off, so raise `APOLLO_IDLE_TIMEOUT_MS`
+or upgrade Apollo.
 
-To enable this feature set the `KAFKA_TRIGGERS_ENABLED` environment variable to
-`yes` and restart Lightning. Please note that, if you enable this feature and
-then create some Kafka triggers and then disable the feature, you will not be
-able to edit any triggers created before the feature was disabled.
+The three added together, plus a ten-second buffer, bound how long one AI job
+may run, and that has to stay under Oban's shutdown grace period of six minutes.
+Raising them past it means a deploy landing on a running answer kills it with
+nothing left to report the failure, so Lightning warns at boot if the sum gets
+too close. Note that the longer grace period also makes rolling restarts slower,
+since Oban now waits up to six minutes for a running job rather than two.
 
-#### Performance Tuning
-
-The number of Kafka consumers in the consumer group can be modified by setting
-the `KAFKA_NUMBER_OF_CONSUMERS` environment variable. The default value is
-currently 1. The optimal setting is one consumer per topic partition. NOTE: This
-setting will move to KafkaConfiguration as it will be trigger-specific.
-
-The number of messages that the Kafka consumer will forward is rate-limited by
-the `KAFKA_NUMBER_OF_MESSAGES_PER_SECOND` environment variable. This can be set
-to a value of less than 1 (minimum 0.1) and will converted (and rounded-down) to
-an integer value of messages over a 10-second interval (e.g. 0.15 becomes 1
-message every 10 seconds). The default value is 1.
-
-Processing concurrency within the Kafka Broadway pipeline is controlled by the
-`KAFKA_NUMBER_OF_PROCESSORS` environment variable. Modifying this, modifies the
-number of processors that are downstream of the Kafka consumer, so an increase
-in this value should increase throughput (when factoring in the rate limit set
-by `KAFKA_NUMBER_OF_MESSAGES_PER_SECOND`). The default value is 1.
-
-#### Deduplication
-
-Each Kafka trigger maintains record of the topic, partition and offset for each
-message received. This to protect against the ingestion of duplicate messages
-from the cluster. These records are periodically cleaned out. The duration for
-which they are retained is controlled by
-`KAFKA_DUPLICATE_TRACKING_RETENTION_SECONDS`. The default value is 3600.
-
-#### Disabling Kafka Triggers
-
-After a Kafka consumer group connects to a Kafka cluster, the cluster will track
-the last committed offset for a given consumer group ,to ensure that the
-consumer group receives the correct messages.
-
-This data is retained for a finite period. If an enabled Kafka trigger is
-disabled for longer than the offset retention period the consumer group offset
-data will be cleared.
-
-If the Kafka trigger is re-enabled after the offset data has been cleared, this
-will result in the consumer group reverting to what has been configured as the
-'Initial offset reset policy' for the trigger. This may result in the
-duplication of messages or even data loss.
-
-It is recommended that you check the value of the `offsets.retention.minutes`
-for the Kafka cluster to determine what the cluster's retention period is, and
-consider this when disabling a Kafka trigger for an extended period.
-
-#### Failure notifications
-
-Under certain failure conditions, a Kafka trigger will send an email to certain
-users that are associated with a project. After each email an embargo is applied
-to ensure that Lightning does not flood the recipients with email. The length of
-the embargo is controlled by the `KAFKA_NOTIFICATION_EMBARGO_SECONDS` ENV
-variable.
-
-#### Persisting Failed Messages
-
-**PLEASE NOTE: If alternate file storage is not enabled, messages that fail to
-be persisted will not be retained by Lightning and this can result in data loss,
-if the Kafka cluster can not make these messages available again.**
-
-If a Kafka message fails to be persisted as a WorkOrder, Run and Dataclip, the
-option exists to write the failed message to a location on the local file
-system. If this option is enabled by setting `KAFKA_ALTERNATE_STORAGE_ENABLED`,
-then the `KAFKA_ALTERNATE_STORAGE_PATH` ENV variable must be set to the path
-that exists and is writable by Lightning. The location should also be suitably
-protected to prevent data exposure as Lightning **will not encrypt** the message
-contents when writing it.
-
-If the option is enabled and a message fails to be persisted, Lightning will
-create a subdirectory named with the id if the affected trigger's workflow in
-the location specified by `KAFKA_ALTERNATE_STORAGE_PATH` (assuming such a
-subdirectory does not already exist). Lightning will serialise the message
-headers and data as received by the Kafka pipeline and write this to a file
-within the subdirectory. The file will be named based on the pattern
-`<trigger_id>_<message_topic>_<message_partition>_<message_offset>.json`.
-
-To recover the persisted messages, it is suggested that the affected triggers be
-disabled before commencing. Once this is done, the following code needs to be
-run from an IEx console on each node that is running Lightning:
-
-```elixir
-Lightning.KafkaTriggers.MessageRecovery.recover_messages(
-  Lightning.Config.kafka_alternate_storage_file_path()
-)
-```
-
-Further details regarding the behaviour of `MessageRecovery.recover_messages/1`
-can be found in the module documentation of `MessageRecovery`. Recovered
-messages will have the `.json` extension modified to `.json.recovered` but they
-will be left in place. Future recovery runs will not process files that have
-been marked as recovered.
-
-Once all files have either been recovered or discarded, the triggers can be
-enabled once more.
+`APOLLO_TIMEOUT` is the old name for `APOLLO_IDLE_TIMEOUT_MS`. On the wire it
+only ever covered the silence, never the other two. It is no longer read, and
+Lightning logs a warning at boot if it is still set.
 
 ### OAuth credential connections (Google, Salesforce, etc.)
 

@@ -53,7 +53,6 @@ export function useAIMode(): AIModeResult | null {
       context = {
         ...context,
         job_id: selectedJobId,
-        attach_code: false,
         attach_logs: false,
       };
 

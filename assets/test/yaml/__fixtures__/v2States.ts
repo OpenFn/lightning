@@ -197,39 +197,6 @@ export const multiTriggerState = (): WorkflowState => {
   };
 };
 
-export const kafkaTriggerState = (): WorkflowState => {
-  const consume = makeJob({ name: 'consume' });
-  const kafka: StateTrigger = {
-    id: 'trigger-kafka',
-    type: 'kafka',
-    enabled: true,
-    kafka_configuration: {
-      hosts_string: 'broker-a:9092, broker-b:9092',
-      topics_string: 'orders, shipments',
-      ssl: true,
-      sasl: 'scram_sha_256',
-      username: 'svc-orders',
-      password: 'pw-shh',
-      initial_offset_reset_policy: 'earliest',
-      connect_timeout: 30,
-      group_id: 'lightning-orders',
-    },
-  };
-  return {
-    id: 'wf-5',
-    name: 'kafka trigger',
-    jobs: [consume],
-    triggers: [kafka],
-    edges: [
-      baseEdge({
-        source_trigger_id: kafka.id,
-        target_job_id: consume.id,
-      }),
-    ],
-    positions: null,
-  };
-};
-
 export const branchingJobsState = (): WorkflowState => {
   const fanOut = makeJob({ name: 'fan out' });
   const branchA = makeJob({ name: 'branch a' });
@@ -275,6 +242,5 @@ export const SYNTHETIC_STATES: Array<{
   { name: 'cron-with-cursor', state: cronWithCursorState },
   { name: 'js-expression-edge', state: jsExpressionEdgeState },
   { name: 'multi-trigger', state: multiTriggerState },
-  { name: 'kafka-trigger', state: kafkaTriggerState },
   { name: 'branching-jobs', state: branchingJobsState },
 ];

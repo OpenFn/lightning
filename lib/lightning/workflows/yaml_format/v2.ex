@@ -31,10 +31,6 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     the spec's statelessness principle and isn't defined in
     `portability.d.ts` at all; we use the step-id form pending upstream
     resolution.
-  - **Kafka config** — `hosts`, `topics`, etc. are flat trigger fields. The
-    spec's `Trigger` interface doesn't define kafka extensions; Lightning's
-    flat shape is the cleanest fit since the interface doesn't forbid extra
-    fields. Revisit if upstream defines kafka extensions formally.
   - **`next:` form** — `portability.d.ts:60` carries a
     `// TODO remove next: string (next should always be an object)` note.
     Lightning emits **verbose-only** to align with the spec direction and
@@ -59,29 +55,20 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   triggers and jobs separately. Both keys are always present (empty list
   when there are none).
 
-  A **trigger step** has a `type` discriminator (`webhook` / `cron` / `kafka`).
+  A **trigger step** has a `type` discriminator (`webhook` / `cron`).
   All Lightning extensions land flat at the trigger root — there is no
   `openfn:` wrapper:
 
       - id: <string>
         name: <string>
         enabled: true | false
-        type: webhook | cron | kafka
+        type: webhook | cron
         cron_expression: "0 0 * * *"          # cron only (spec: flat field)
         cron_cursor: <step-id>                # cron only (Lightning ext, flat)
         webhook_reply: <string>               # webhook only (spec: flat field)
         webhook_response_config:              # webhook only (Lightning ext)
           success_code: <int>                 #   omitted entirely when unset
           error_code: <int>
-        hosts: ["broker:9092", ...]           # kafka only (Lightning ext, flat)
-        topics: [...]                         # kafka only
-        initial_offset_reset_policy: latest   # kafka only
-        connect_timeout: 30                   # kafka only
-        group_id: <string>                    # kafka only (optional)
-        sasl: <string>                        # kafka only (optional)
-        ssl: true | false                     # kafka only (optional)
-        username: <string>                    # kafka only (optional)
-        password: <string>                    # kafka only (optional)
         next:
           <step-id>:
             condition: always | on_job_success | on_job_failure | <js body>
@@ -129,10 +116,6 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   | webhook response codes (trig)    | `webhook_response_config:`   |
   | project channels (Lightning ext) | `channels:` (array)          |
   | channel destination credential   | `destination_credential:`    |
-  | kafka brokers (flat on trig)     | `hosts:`                     |
-  | kafka topics (flat on trig)      | `topics:`                    |
-  | kafka offset policy              | `initial_offset_reset_policy:` |
-  | kafka connect timeout            | `connect_timeout:`           |
   | outgoing edges from a node       | `next:` (string or object)   |
   | edge condition                   | `condition:`                 |
   | edge js body                     | `expression:` (with JS cond) |
@@ -140,23 +123,9 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   | edge disabled (inverted)         | `disabled:`                  |
   """
 
+  alias Lightning.ExportUtils.DuplicateKeyError
   alias Lightning.Projects.Project
   alias Lightning.Workflows.Workflow
-
-  # Kafka configuration sub-fields. Aligns with Lightning's
-  # `Triggers.KafkaConfiguration` schema (the standard four plus optional
-  # SASL/SSL credentials).
-  @kafka_config_fields [
-    :hosts,
-    :topics,
-    :initial_offset_reset_policy,
-    :connect_timeout,
-    :group_id,
-    :sasl,
-    :ssl,
-    :username,
-    :password
-  ]
 
   # ── Public API ──────────────────────────────────────────────────────────────
 
@@ -170,6 +139,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     canonical = workflow_struct_to_canonical(workflow)
     {:ok, emit(canonical)}
   rescue
+    err in DuplicateKeyError -> {:error, Exception.message(err)}
     err -> {:error, {:serialize_failed, err}}
   end
 
@@ -196,6 +166,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     canonical = project_struct_to_canonical(project, snapshots)
     {:ok, emit_project(canonical)}
   rescue
+    err in DuplicateKeyError -> {:error, Exception.message(err)}
     err -> {:error, {:serialize_failed, err}}
   end
 
@@ -233,6 +204,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       |> Enum.map(fn job ->
         job_to_canonical(job, edges, job_id_to_key, credential_keys)
       end)
+      |> ensure_unique_ids!("jobs in #{workflow.name}")
 
     # `start` is the entry trigger's step-id, per WorkflowSpec.start in
     # portability.d.ts. Lightning workflows are single-trigger in practice;
@@ -274,7 +246,6 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
     base
     |> maybe_put_trigger_spec_fields(trigger)
     |> maybe_put(:cron_cursor, cron_cursor_step_id(trigger, jobs))
-    |> maybe_merge_kafka_fields(trigger)
     |> add_next_for_trigger(trigger, edges, job_id_to_key)
   end
 
@@ -326,42 +297,6 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
   end
 
   defp cron_cursor_step_id(_, _), do: nil
-
-  # Kafka config fields land flat on the trigger root, mirroring the way the
-  # spec defines `cron_expression` / `webhook_reply`. The spec doesn't define
-  # kafka extensions; Lightning's flat shape is the cleanest fit.
-  defp maybe_merge_kafka_fields(base, %{
-         type: :kafka,
-         kafka_configuration: config
-       })
-       when not is_nil(config) do
-    Map.merge(base, kafka_config_to_canonical(config))
-  end
-
-  defp maybe_merge_kafka_fields(base, _), do: base
-
-  defp kafka_config_to_canonical(config) do
-    config
-    |> Map.from_struct()
-    |> Map.take(@kafka_config_fields)
-    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-    |> Enum.map(fn
-      {:hosts, hosts} when is_list(hosts) ->
-        # Lightning stores hosts as [[host, port], ...]; the YAML shape is
-        # ["host:port", ...] for human readability. The parser splits back.
-        {:hosts,
-         Enum.map(hosts, fn host_port ->
-           Enum.map_join(host_port, ":", &to_string/1)
-         end)}
-
-      {:sasl, sasl} when is_atom(sasl) ->
-        {:sasl, Atom.to_string(sasl)}
-
-      other ->
-        other
-    end)
-    |> Map.new()
-  end
 
   defp job_to_canonical(job, edges, job_id_to_key, credential_keys) do
     base = %{
@@ -515,7 +450,7 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       if Map.has_key?(step, :type) do
         # Trigger ordered keys: id, name, enabled, type, then spec-defined
         # flat fields (cron_expression, webhook_reply), then Lightning's flat
-        # extensions (cron_cursor, kafka config), then `next`. All of these
+        # extension (cron_cursor), then `next`. All of these
         # land at the trigger root — there's no `openfn:` wrapper.
         [
           :id,
@@ -526,15 +461,6 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
           :cron_cursor,
           :webhook_reply,
           :webhook_response_config,
-          :hosts,
-          :topics,
-          :initial_offset_reset_policy,
-          :connect_timeout,
-          :group_id,
-          :sasl,
-          :ssl,
-          :username,
-          :password,
           :next
         ]
       else
@@ -609,22 +535,6 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
         end)
 
       ["next:" | child_lines]
-    end
-  end
-
-  # Lists land flat at the trigger root for kafka config (`hosts`, `topics`).
-  # Single-line YAML sequence with two-space indent under the field name.
-  defp emit_record_field(key, list)
-       when is_atom(key) and is_list(list) and key in [:hosts, :topics] do
-    case list do
-      [] ->
-        []
-
-      values ->
-        [
-          "#{key}:"
-          | Enum.map(values, fn v -> "  - #{quote_if_needed(to_string(v))}" end)
-        ]
     end
   end
 
@@ -729,12 +639,14 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
         snapshots
         |> Enum.sort_by(& &1.name)
         |> Enum.map(&snapshot_to_canonical_workflow(&1, credential_keys))
+        |> ensure_unique_ids!("workflows")
       else
         (project.workflows || [])
         |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
         |> Enum.map(
           &workflow_struct_to_canonical(&1, credential_keys: credential_keys)
         )
+        |> ensure_unique_ids!("workflows")
       end
 
     # Collections are emitted as a string list of names (spec: `string[]`),
@@ -769,6 +681,29 @@ defmodule Lightning.Workflows.YamlFormat.V2 do
       channels: channels_canonical,
       workflows: workflows_canonical
     }
+  end
+
+  # Two workflows whose names hyphenate to one step id write two entries the
+  # CLI addresses by the same key. v1 refuses that pair rather than exporting
+  # it (`ExportUtils.DuplicateKeyError`); v2 refuses it too, or the deploy
+  # silently keeps one of them.
+  defp ensure_unique_ids!(canonicals, kind) do
+    canonicals
+    |> Enum.group_by(& &1.id)
+    |> Enum.sort_by(fn {id, _} -> id end)
+    |> Enum.each(fn
+      {_id, [_only]} ->
+        :ok
+
+      {id, [first, second | _rest]} ->
+        raise DuplicateKeyError,
+          kind: kind,
+          key: id,
+          first: first.name,
+          second: second.name
+    end)
+
+    canonicals
   end
 
   defp channel_to_canonical(channel, credential_keys) do

@@ -23,9 +23,10 @@ defmodule LightningWeb.Plugs.WebhookAuth do
     and returns the connection unchanged so upstream CORS handling can respond.
     This avoids doing DB lookups or emitting 401/404 on preflight requests.
 
-  - **Auth flow:** For non-`OPTIONS` requests whose path matches `/i/:webhook`,
-    this plug:
-      1. Looks up the webhook trigger (with `workflow` and `edges`) and its
+  - **Auth flow:** For non-`OPTIONS` requests under `/i/`, this plug:
+      1. Looks up the webhook trigger from the path segments, either
+         `/i/<trigger-uuid>` or `/i/<project-uuid>/<custom-path>`, (with
+         `workflow` and `edges`) and its
          `webhook_auth_methods`, wrapped in `Lightning.Retry.with_webhook_retry/2`
          so transient DB errors are retried.
       2. If the trigger is missing → responds **404** `{"error":"webhook_not_found"}`.
@@ -43,11 +44,11 @@ defmodule LightningWeb.Plugs.WebhookAuth do
 
   def call(conn, _opts) do
     case conn.path_info do
-      ["i" | [webhook | _rest]] ->
+      ["i" | segments] when segments != [] ->
         Retry.with_webhook_retry(
           fn ->
             trigger =
-              Workflows.get_webhook_trigger(webhook,
+              Workflows.get_webhook_trigger(segments,
                 include: [:workflow, :edges, :webhook_auth_methods]
               )
 
@@ -56,7 +57,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
             {:ok, validate_auth(trigger, methods, conn)}
           end,
           retry_on: &Retry.retriable_error?/1,
-          context: %{op: :webhook_auth_lookup, webhook: webhook}
+          context: %{op: :webhook_auth_lookup, webhook: log_key(segments)}
         )
         |> case do
           {:ok, %Plug.Conn{} = conn} ->
@@ -66,7 +67,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
             LightningWeb.Utils.respond_service_unavailable(
               conn,
               error,
-              %{op: :webhook_auth_lookup, webhook: webhook},
+              %{op: :webhook_auth_lookup, webhook: log_key(segments)},
               message:
                 "Temporary database issue during webhook lookup. Please retry in %{s}s."
             )
@@ -76,6 +77,11 @@ defmodule LightningWeb.Plugs.WebhookAuth do
         conn
     end
   end
+
+  # The first segment only. It is always the address, a trigger id or a bare
+  # path. The second is address in the namespaced form but caller data in
+  # `/i/<trigger-id>/Patient`, and that is where record identifiers turn up.
+  defp log_key(segments), do: segments |> Enum.take(1) |> Enum.join("/")
 
   defp validate_auth(nil, _methods, conn), do: not_found_response(conn)
 

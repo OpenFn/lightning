@@ -32,7 +32,39 @@ defmodule Lightning.AiAssistant do
   @title_max_length 40
   @success_status_range 200..299
 
+  @internal_failure "Something went wrong. Please try again."
+
+  # A name is not a promise the text is safe: most apollo services catch broadly
+  # and rewrap as `str(e)` under a type of their own - BAD_REQUEST,
+  # INVALID_REQUEST, UNKNOWN_ERROR, DATABASE_ERROR, FETCH_ERROR,
+  # ADAPTOR_API_ERROR - and `str(e)` carries hostnames and container paths.
+  # These are the types whose message apollo writes for a person, read off
+  # v3.1.1. Anything else is logged, not shown.
+  @apollo_readable_errors ~w(
+    AUTH_ERROR
+    CONNECTION_ERROR
+    EMPTY_LLM_RESPONSE
+    EMPTY_OUTPUT
+    FORBIDDEN
+    INVALID_LLM_RESPONSE
+    MISSING_API_KEY
+    NOT_FOUND
+    OUTPUT_TRUNCATED
+    PROMPT_TOO_LONG
+    PROVIDER_ERROR
+    RATE_LIMIT
+  )
+
   @type opts :: keyword()
+
+  @typedoc """
+  Why a streamed query failed.
+
+  A bare string is already written for a user to read. `{:internal, text}` is
+  ours and is not: the caller logs it and shows something else.
+  """
+  @type stream_error ::
+          String.t() | {:internal, String.t()} | Ecto.Changeset.t()
 
   @doc """
   Checks if the AI assistant feature is enabled via application configuration.
@@ -764,6 +796,44 @@ defmodule Lightning.AiAssistant do
   end
 
   @doc """
+  Records whether a reply's changes reached the canvas.
+
+  The apply happens in the browser, so nothing else knows it failed. Without
+  this the reply reads as a success on the next page load: its diff blocks
+  stand as a record of changes that never landed, and it offers to undo them.
+
+  Clearing on a later success is half the point, so a retry that works leaves
+  nothing behind.
+  """
+  @spec set_apply_failed(Ecto.UUID.t(), Ecto.UUID.t(), boolean()) ::
+          {:ok, ChatMessage.t()} | {:error, :not_found | Changeset.t()}
+  def set_apply_failed(session_id, message_id, failed?) do
+    # Cast before the lookup: the id comes from the browser, and the streaming
+    # apply reports failures against a pseudo-id that is not a uuid at all.
+    # Scoped to the session for the same reason retry_message is: a read-level
+    # frame must not reach a message in someone else's project.
+    with {:ok, uuid} <- Ecto.UUID.cast(message_id),
+         %ChatMessage{chat_session_id: ^session_id} = message <-
+           Repo.get(ChatMessage, uuid) do
+      meta = message.meta || %{}
+
+      meta =
+        if failed?,
+          do: Map.put(meta, "apply_failed", true),
+          else: Map.delete(meta, "apply_failed")
+
+      # change/2 rather than the full changeset: this only touches an
+      # internal flag, and the message's own validations need associations
+      # this path has no reason to load.
+      message
+      |> Changeset.change(meta: meta)
+      |> Repo.update()
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  @doc """
   Queries the AI service for job-specific code assistance with streaming.
 
   Sends a user query to the Apollo AI service along with job context
@@ -782,7 +852,7 @@ defmodule Lightning.AiAssistant do
   - `{:error, reason}` - Query failed, reason is either a string error message or changeset
   """
   @spec query_stream(ChatSession.t(), String.t(), opts()) ::
-          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+          {:ok, ChatSession.t()} | {:error, stream_error()}
   def query_stream(session, content, opts \\ []) do
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
 
@@ -814,9 +884,6 @@ defmodule Lightning.AiAssistant do
   defp build_context(context, opts) do
     Enum.reduce(opts, context, fn opt, acc ->
       case opt do
-        {:code, false} ->
-          Map.drop(acc, [:expression])
-
         {:log, false} ->
           Map.drop(acc, [:log])
 
@@ -871,7 +938,7 @@ defmodule Lightning.AiAssistant do
   - `{:error, reason}` - Generation failed, reason is either a string error message or changeset
   """
   @spec query_workflow_stream(ChatSession.t(), String.t(), opts()) ::
-          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+          {:ok, ChatSession.t()} | {:error, stream_error()}
   def query_workflow_stream(session, content, opts \\ []) do
     code = Keyword.get(opts, :code)
     errors = Keyword.get(opts, :errors)
@@ -903,10 +970,11 @@ defmodule Lightning.AiAssistant do
   Uses the same streaming pipeline as job_chat and workflow_chat.
   """
   @spec query_global_stream(ChatSession.t(), String.t(), opts()) ::
-          {:ok, ChatSession.t()} | {:error, String.t() | Ecto.Changeset.t()}
+          {:ok, ChatSession.t()} | {:error, stream_error()}
   def query_global_stream(session, content, opts \\ []) do
     workflow_yaml = Keyword.get(opts, :workflow_yaml)
     page = Keyword.get(opts, :page)
+    attachments = Keyword.get(opts, :attachments, [])
     history = build_history(session)
 
     Logger.metadata(prompt_size: byte_size(content), session_id: session.id)
@@ -918,7 +986,8 @@ defmodule Lightning.AiAssistant do
            page: page,
            history: history,
            meta: meta,
-           metrics_opt_in: metrics_opt_in
+           metrics_opt_in: metrics_opt_in,
+           attachments: attachments
          ) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status in @success_status_range ->
@@ -1078,61 +1147,273 @@ defmodule Lightning.AiAssistant do
   # the full response payload.
 
   defp process_stream(session, body_stream, message_builder) do
-    complete_payload =
+    acc =
       body_stream
-      |> Enum.reduce(nil, fn sse_event, acc ->
-        handle_sse_event(session.id, sse_event, acc)
-      end)
+      |> Enum.reduce(
+        %{
+          complete: nil,
+          text: [],
+          code: nil,
+          apollo_error: nil,
+          segments: [],
+          pending: []
+        },
+        fn sse_event, acc -> handle_sse_event(session.id, sse_event, acc) end
+      )
 
-    if complete_payload do
-      {message_attrs, opts} = message_builder.(complete_payload)
-      save_message(session, message_attrs, opts)
-    else
-      {:error, "Stream ended without complete response"}
+    case acc do
+      %{complete: payload} when is_map(payload) ->
+        {message_attrs, opts} = message_builder.(payload)
+        save_message(session, message_attrs, opts)
+
+      _ ->
+        save_partial_response(session, acc)
     end
   rescue
     e ->
-      broadcast_streaming_error(
-        session.id,
-        "Streaming failed: #{Exception.message(e)}"
+      # Exception text belongs in the log, not the panel. It can carry module
+      # and function names, SQL detail, or a whole inspected payload, and the
+      # caller persists what it is handed.
+      Logger.error(
+        "[AI Assistant] Stream failed for session #{session.id}: " <>
+          Exception.message(e)
       )
 
-      {:error, Exception.message(e)}
+      broadcast_streaming_error(session.id, @internal_failure)
+
+      {:error, {:internal, Exception.message(e)}}
   catch
     :exit, reason ->
       message = "Streaming connection lost"
 
       broadcast_streaming_error(session.id, message)
 
-      Logger.error(
+      Logger.warning(
         "[AI Assistant] Stream exited for session #{session.id}: #{inspect(reason)}"
       )
 
       {:error, message}
   end
 
+  # The stream is the only place some of this exists. Apollo rebuilds the whole
+  # reply in its `complete` payload, but if the stream dies before that arrives
+  # the text the user just watched appear is gone unless we keep it here.
+  defp save_partial_response(session, %{text: text, code: code} = acc) do
+    # Clamped, because the whole point is to keep what arrived: a reply that
+    # ran past the column's limit would fail the changeset and lose the lot.
+    content =
+      text
+      |> Enum.reverse()
+      |> IO.iodata_to_binary()
+      |> String.trim()
+      |> String.slice(0, ChatMessage.max_content_length())
+
+    save_partial_response(session, content, code, acc)
+  end
+
+  # Status updates alone are not worth keeping: they describe work that
+  # produced nothing. Decided on the trimmed text, so a reply that sent only
+  # whitespace saves nothing rather than a message reading "(no response)".
+  defp save_partial_response(_session, "", nil, acc) do
+    {:error, acc.apollo_error || stream_failure_message()}
+  end
+
+  defp save_partial_response(session, content, code, acc) do
+    # Apollo telling us beats anything we can infer from how the socket died.
+    message = acc.apollo_error || stream_failure_message()
+
+    attrs =
+      %{
+        role: :assistant,
+        # Reachable only with code and no text; content is required and yaml
+        # alone is still worth keeping.
+        content: if(content == "", do: "(no response)", else: content),
+        status: :error,
+        failure_category: :incomplete_response,
+        failure_message: message
+      }
+      |> Map.merge(partial_meta(session))
+      |> put_partial_segments(acc)
+
+    case save_message(session, attrs, code: code) do
+      {:ok, _session} ->
+        {:error, message}
+
+      {:error, changeset} ->
+        # Losing the partial silently is the failure this function exists to
+        # prevent, so make it visible rather than reporting a plain stall.
+        Logger.error(
+          "[AI Assistant] Could not save partial response for session " <>
+            "#{session.id}: #{inspect(changeset.errors)}"
+        )
+
+        {:error, message}
+    end
+  end
+
+  # Without the flag the partial is filed as job code with the session's job
+  # attached, and the YAML comes back rendered as a code suggestion.
+  defp partial_meta(session) do
+    if get_in(session.meta, ["message_options", "use_global_assistant"]) do
+      %{meta: %{"from_global" => true}}
+    else
+      %{}
+    end
+  end
+
+  defp flush_pending_text(%{pending: []} = acc), do: acc
+
+  defp flush_pending_text(%{pending: pending} = acc) do
+    content =
+      pending
+      |> Enum.reverse()
+      |> IO.iodata_to_binary()
+      |> String.trim()
+
+    acc = %{acc | pending: []}
+
+    if content == "" do
+      acc
+    else
+      append_segment(acc, %{type: :text, content: content})
+    end
+  end
+
+  defp append_segment(acc, segment),
+    do: %{acc | segments: [segment | acc.segments]}
+
+  # Only when the reply had a shape to it: plain text renders the same from
+  # `content` alone. Bounded like the complete path, since an invalid timeline
+  # fails the changeset and a partial save that fails saves nothing at all.
+  defp put_partial_segments(attrs, acc) do
+    segments =
+      acc
+      |> flush_pending_text()
+      |> Map.fetch!(:segments)
+      |> Enum.reverse()
+      |> Enum.map(&clamp_segment/1)
+      # An empty segment fails validate_required and takes the whole changeset
+      # with it. Trimmed, because validate_required trims before it checks.
+      |> Enum.reject(&(String.trim(&1.content) == ""))
+      |> Enum.take(ChatMessage.max_response_segments())
+
+    if Enum.any?(segments, &(&1.type == :status)) do
+      Map.put(attrs, :response_segments, segments)
+    else
+      attrs
+    end
+  end
+
+  defp clamp_segment(%{content: content} = segment) do
+    %{
+      segment
+      | content:
+          String.slice(content, 0, ChatMessage.Segment.max_content_length())
+    }
+  end
+
+  # The adapter records why a stream stopped; without it we only know that it
+  # did, which is how a hung Apollo, a severed connection and a short answer
+  # all came to report the same thing.
+  defp stream_failure_message do
+    case Lightning.Tesla.Adapter.Finch.take_stream_error() do
+      nil ->
+        "The assistant stopped before it finished. Please try again."
+
+      # Our own receive_timeout in the adapter, which reports a bare atom.
+      :timeout ->
+        transport_failure_message(:timeout)
+
+      # Binds the struct module so one clause covers both: Finch wraps Mint's
+      # error in its own, and matching only Mint's missed every real failure.
+      %s{reason: reason}
+      when s in [Finch.TransportError, Mint.TransportError] ->
+        transport_failure_message(reason)
+
+      other ->
+        Logger.warning(
+          "[AI Assistant] Stream failed: #{inspect(other, printable_limit: 128)}"
+        )
+
+        "The assistant stopped before it finished. Please try again."
+    end
+  end
+
+  # A silence long enough to give up on reaches us two ways, from our own
+  # adapter and from Finch, and both have to read the same to the user.
+  # APOLLO_REQUEST_TIMEOUT_MS lands here too, as the same :timeout, so an
+  # answer cut off for running long is indistinguishable from one that went
+  # quiet. Both ceilings are logged; how long it ran is what tells them apart.
+  defp transport_failure_message(:timeout) do
+    Logger.warning(
+      "[AI Assistant] Stream timed out. Either it went quiet for " <>
+        "#{Lightning.Config.apollo(:idle_timeout)}ms, or it ran past the " <>
+        "#{Lightning.Config.apollo(:request_timeout)}ms request ceiling; " <>
+        "how long it lasted is what tells them apart."
+    )
+
+    "The assistant stopped responding partway through. Please try again."
+  end
+
+  defp transport_failure_message(reason) do
+    # inspect/1, not interpolation: a reason is not always an atom, and a tuple
+    # like {:tls_alert, _} has no String.Chars. Bounded because a reason can
+    # carry bytes off the socket, and those are the user's own data.
+    Logger.warning(
+      "[AI Assistant] Stream lost mid-response: " <>
+        inspect(reason, printable_limit: 128)
+    )
+
+    "The connection to the assistant was lost. Please try again."
+  end
+
   # Bridge event: complete — final payload (same shape as sync response)
-  defp handle_sse_event(_session_id, %{event: "complete", data: data}, _acc) do
+  defp handle_sse_event(_session_id, %{event: "complete", data: data}, acc) do
     case Jason.decode(data) do
-      {:ok, payload} when is_map(payload) -> payload
-      _ -> nil
+      {:ok, payload} when is_map(payload) -> %{acc | complete: payload}
+      _ -> acc
     end
   end
 
   # Bridge event: error
+  # Apollo having said it failed is worth recording, because it distinguishes a
+  # service that gave up from a socket that went quiet. Whether its words are
+  # worth showing depends on whether it named the failure: see the clauses
+  # below.
   defp handle_sse_event(session_id, %{event: "error", data: data}, acc) do
-    case Jason.decode(data) do
-      {:ok, %{"message" => message}} ->
-        broadcast_streaming_error(session_id, message)
+    message =
+      case Jason.decode(data) do
+        # On /stream the HTTP status is already 200 by the time this arrives,
+        # so the type in the payload is the only thing that identifies it.
+        {:ok, %{"type" => "ATTACHMENT_TOO_LARGE", "details" => details}} ->
+          attachment_too_large_message(details)
 
-      {:ok, error} ->
-        broadcast_streaming_error(session_id, inspect(error))
+        {:ok, %{"type" => type, "message" => text}}
+        when type in @apollo_readable_errors and is_binary(text) ->
+          # Clamped for the same reason the content beside it is: this is
+          # written to a column that validates its length, and a sentence that
+          # ran past it would fail the changeset and take the partial with it.
+          String.slice(text, 0, ChatMessage.max_failure_message_length())
 
-      _ ->
-        broadcast_streaming_error(session_id, data)
-    end
+        {:ok, %{"message" => text}} when is_binary(text) ->
+          Logger.warning(
+            "[AI Assistant] Apollo reported an error for session #{session_id}: " <>
+              text
+          )
 
-    acc
+          @internal_failure
+
+        other ->
+          Logger.warning(
+            "[AI Assistant] Unreadable error event for session #{session_id}: " <>
+              inspect(other, printable_limit: 128)
+          )
+
+          @internal_failure
+      end
+
+    broadcast_streaming_error(session_id, message)
+    %{acc | apollo_error: message}
   end
 
   # Bridge event: changes — structured data (code edits or workflow YAML)
@@ -1141,37 +1422,57 @@ defmodule Lightning.AiAssistant do
     case Jason.decode(data) do
       {:ok, changes} when is_map(changes) ->
         broadcast_streaming_changes(session_id, changes)
+        # Workflow and global chat send the generated YAML here, ahead of the
+        # text. Keep it so a stream that dies late doesn't discard a workflow
+        # the user already watched appear.
+        %{acc | code: changes["yaml"] || acc.code}
 
       _ ->
-        :ok
+        acc
     end
-
-    acc
   end
 
   # Bridge event: status — a persistent, completed-action status, the same
   # shape as a persisted `response_segments` entry, so the client renders
   # live and reloaded status segments identically. Transient "thinking"
   # updates arrive separately as Anthropic thinking events (see
-  # handle_stream_event/2).
+  # handle_stream_event/3).
   defp handle_sse_event(session_id, %{event: "status", data: data}, acc) do
     case Jason.decode(data) do
       {:ok, %{"type" => "status", "content" => content} = segment}
       when is_binary(content) ->
         # Take only the contract fields so stray keys from Apollo never
-        # reach the client.
-        broadcast_streaming_segment(
-          session_id,
-          Map.take(segment, ["type", "content"])
-        )
+        # reach the client. `steps` and `summary` are optional: `steps`
+        # names what the action touched as data, which is how the client
+        # attaches per-step detail without parsing `content`.
+        normalized =
+          segment
+          |> Map.take(["type", "content", "summary", "steps"])
+          |> normalize_segment_steps()
+          |> normalize_segment_summary()
+
+        broadcast_streaming_segment(session_id, normalized)
+
+        # Close off the text that came before it, so a partial save keeps the
+        # same order the user watched. The same normalized segment is saved as
+        # was shown, summary and steps included, or a reload would drop the
+        # per-step detail the user had in front of them.
+        acc
+        |> flush_pending_text()
+        |> append_segment(%{
+          type: :status,
+          content: content,
+          summary: normalized["summary"],
+          steps: normalized["steps"] || []
+        })
 
       _ ->
         Logger.warning(
           "Dropping malformed status event for session #{session_id}"
         )
-    end
 
-    acc
+        acc
+    end
   end
 
   # Bridge event: log — skip Python stdout
@@ -1182,42 +1483,90 @@ defmodule Lightning.AiAssistant do
   defp handle_sse_event(session_id, %{data: data}, acc) do
     case Jason.decode(data) do
       {:ok, %{"type" => _} = event} ->
-        handle_stream_event(session_id, event)
+        handle_stream_event(session_id, event, acc)
 
       _ ->
-        :ok
+        acc
     end
-
-    acc
   end
 
   # Catch-all for anything unexpected
   defp handle_sse_event(_session_id, _event, acc), do: acc
 
-  defp handle_stream_event(session_id, %{
-         "type" => "content_block_delta",
-         "delta" => %{"type" => "text_delta", "text" => text}
-       }) do
-    broadcast_streaming_chunk(session_id, text)
+  # Built from `details`, not Apollo's prose, so the wording stays ours. The
+  # sizes go to the log rather than into the sentence: they are what support
+  # needs, and not what the reader has to do next.
+  defp attachment_too_large_message(details) do
+    log_attachment_sizes(details)
+
+    "The attached run data is too large. Untick #{attachment_box(details)} " <>
+      "and paste the part you need into the chat instead."
   end
 
-  defp handle_stream_event(session_id, %{
-         "type" => "content_block_start",
-         "content_block" => %{"type" => "thinking"}
+  defp log_attachment_sizes(%{
+         "total_characters" => total,
+         "limit_characters" => limit
        }) do
+    Logger.warning(
+      "[AI Assistant] Attachments too large: #{total} characters " <>
+        "against a #{limit} limit"
+    )
+  end
+
+  defp log_attachment_sizes(_details), do: :ok
+
+  # Naming the box beats naming the limit: unticking it is the thing that gets
+  # an answer, and the part of the run log that matters is usually a few lines.
+  defp attachment_box(%{"largest_attachment" => %{"type" => "log"}}),
+    do: "“Send run logs”"
+
+  defp attachment_box(%{"largest_attachment" => %{"type" => dataclip}})
+       when dataclip in ["input_dataclip", "output_dataclip"],
+       do: "“Send run data”"
+
+  defp attachment_box(_details), do: "one of the attachment boxes"
+
+  defp handle_stream_event(
+         session_id,
+         %{
+           "type" => "content_block_delta",
+           "delta" => %{"type" => "text_delta", "text" => text}
+         },
+         acc
+       ) do
+    broadcast_streaming_chunk(session_id, text)
+    # Prepended and reversed on save - cheaper than repeatedly appending to a
+    # binary for a reply that can run to thousands of chunks.
+    %{acc | text: [text | acc.text], pending: [text | acc.pending]}
+  end
+
+  defp handle_stream_event(
+         session_id,
+         %{
+           "type" => "content_block_start",
+           "content_block" => %{"type" => "thinking"}
+         },
+         acc
+       ) do
     broadcast_streaming_status(session_id, "Thinking...")
+    acc
   end
 
   # Apollo sends discrete thinking blocks as progress updates
   # (e.g. "Searching documentation...", "Loading adaptor documentation...")
-  defp handle_stream_event(session_id, %{
-         "type" => "content_block_delta",
-         "delta" => %{"type" => "thinking_delta", "thinking" => text}
-       }) do
+  defp handle_stream_event(
+         session_id,
+         %{
+           "type" => "content_block_delta",
+           "delta" => %{"type" => "thinking_delta", "thinking" => text}
+         },
+         acc
+       ) do
     broadcast_streaming_status(session_id, text)
+    acc
   end
 
-  defp handle_stream_event(_session_id, _event), do: :ok
+  defp handle_stream_event(_session_id, _event, acc), do: acc
 
   defp broadcast_streaming_chunk(session_id, content) do
     Lightning.broadcast(
@@ -1258,40 +1607,63 @@ defmodule Lightning.AiAssistant do
   end
 
   defp handle_error_response(error_response, session) do
-    case error_response do
+    case unwrap_transport(error_response) do
       {:ok, %Tesla.Env{status: status, body: body}}
       when status not in @success_status_range ->
         error_message =
           error_message_from_body(body) ||
             "AI server returned an error (HTTP #{status})."
 
-        Logger.error(
+        Logger.warning(
           "AI query failed for session #{session.id}: #{error_message}"
         )
 
         {:error, error_message}
 
       {:error, :timeout} ->
-        Logger.error("AI query timed out for session #{session.id}")
+        Logger.warning("AI query timed out for session #{session.id}")
         {:error, "Request timed out. Please try again."}
 
-      {:error, :econnrefused} ->
-        Logger.error("Connection refused to AI server for session #{session.id}")
+      {:error, reason} when reason in [:econnrefused, :closed, :nxdomain] ->
+        Logger.warning(
+          "Cannot reach AI server for session #{session.id}: #{inspect(reason)}"
+        )
+
         {:error, "Unable to reach the AI server. Please try again later."}
 
       unexpected_error ->
         Logger.error(
-          "Unexpected error for session #{session.id}: #{inspect(unexpected_error)}"
+          "Unexpected error for session #{session.id}: " <>
+            inspect(unexpected_error, printable_limit: 128)
         )
 
         {:error, "Oops! Something went wrong. Please try again."}
     end
   end
 
+  # One failure arrives three shapes: a bare atom from our adapter's own
+  # deadline, and a struct from Finch, which wraps Mint's before returning it.
+  # Reduced to the reason here so each clause above can say one thing. Mint's
+  # struct is named too; it should not reach us, but the cost is a word in a
+  # guard and the cost of missing it is the generic error.
+  defp unwrap_transport({:error, %s{reason: reason}})
+       when s in [Finch.TransportError, Mint.TransportError],
+       do: {:error, reason}
+
+  defp unwrap_transport(other), do: other
+
   # Streaming requests carry a lazy Stream (a fun or %Stream{} struct) as the
   # body, so error responses can't be indexed like decoded JSON maps.
-  defp error_message_from_body(body) when is_map(body) and not is_struct(body),
-    do: body["message"]
+  #
+  # Note this does not answer to @apollo_readable_errors, unlike the stream
+  # path that writes the same column. It does not have to: the client is built
+  # with no JSON middleware, so a non-2xx body reaches here as a binary and this
+  # returns nil every time. Add JSON decoding and that stops being true, and
+  # this needs the same gate.
+  defp error_message_from_body(body) when is_map(body) and not is_struct(body) do
+    # A message that is not a string would raise in the clamp downstream.
+    if is_binary(body["message"]), do: body["message"]
+  end
 
   defp error_message_from_body(_body), do: nil
 
@@ -1326,11 +1698,18 @@ defmodule Lightning.AiAssistant do
   defp build_global_message(body) do
     code = extract_global_workflow_yaml(body["attachments"])
 
+    # The planner can call the job agent more than once, so one failed edit
+    # beside one that landed must not mark a reply that carries the change.
+    meta =
+      if is_nil(code) and code_change_failed?(body),
+        do: %{"from_global" => true, "code_change_failed" => true},
+        else: %{"from_global" => true}
+
     message_attrs =
       %{
         role: :assistant,
         content: body["response"],
-        meta: %{"from_global" => true}
+        meta: meta
       }
       |> put_response_segments(
         normalize_response_segments(body["response_segments"])
@@ -1338,6 +1717,27 @@ defmodule Lightning.AiAssistant do
 
     opts = [usage: body["usage"] || %{}, meta: body["meta"], code: code]
     {message_attrs, opts}
+  end
+
+  # Zero means the subagent tried to edit and could not. Its `warning` is built
+  # partly from `str(e)`, so that stays in the log.
+  defp code_change_failed?(body) do
+    failed =
+      body
+      |> get_in(["meta", "subagent_calls"])
+      |> List.wrap()
+      |> Enum.filter(&match?(%{"diff" => %{"patches_applied" => 0}}, &1))
+
+    Enum.each(failed, fn call ->
+      if warning = get_in(call, ["diff", "warning"]) do
+        Logger.warning(
+          "[AI Assistant] Apollo applied no code edits: " <>
+            inspect(warning, printable_limit: 128)
+        )
+      end
+    end)
+
+    failed != []
   end
 
   # Flat replies omit the key entirely: casting nil into embeds_many is an
@@ -1354,8 +1754,19 @@ defmodule Lightning.AiAssistant do
   # save: absent or all-invalid segments mean a flat legacy message. The
   # segment contract itself lives in `ChatMessage.Segment`.
   defp normalize_response_segments(segments) when is_list(segments) do
+    # Sanitise before validating, not after. A malformed `steps` entry would
+    # otherwise fail the whole segment and lose its prose, and a non-map entry
+    # would reach cast_embed and raise rather than simply being dropped.
     {valid, dropped} =
-      Enum.split_with(segments, fn segment ->
+      segments
+      |> Enum.map(fn segment ->
+        if is_map(segment) do
+          segment |> normalize_segment_steps() |> normalize_segment_summary()
+        else
+          segment
+        end
+      end)
+      |> Enum.split_with(fn segment ->
         is_map(segment) and
           ChatMessage.Segment.changeset(%ChatMessage.Segment{}, segment).valid?
       end)
@@ -1372,12 +1783,65 @@ defmodule Lightning.AiAssistant do
     end
 
     case kept do
-      [] -> nil
-      kept -> Enum.map(kept, &Map.take(&1, ["type", "content"]))
+      [] ->
+        nil
+
+      kept ->
+        Enum.map(kept, &Map.take(&1, ["type", "content", "summary", "steps"]))
     end
   end
 
   defp normalize_response_segments(_segments), do: nil
+
+  # Keeps only the step fields we persist, and drops the key entirely when
+  # Apollo sent nothing usable — an empty list would otherwise read as "this
+  # action touched no steps", which is not the same as "this Apollo version
+  # does not report steps".
+  # `summary` is optional decoration, so it must never be the reason a segment
+  # is thrown away: anything the embed would reject is dropped here instead.
+  defp normalize_segment_summary(%{"summary" => summary} = segment)
+       when is_binary(summary) do
+    if String.length(summary) <= ChatMessage.Segment.max_content_length() do
+      segment
+    else
+      Map.delete(segment, "summary")
+    end
+  end
+
+  defp normalize_segment_summary(segment), do: Map.delete(segment, "summary")
+
+  defp normalize_segment_steps(%{"steps" => steps} = segment)
+       when is_list(steps) do
+    max_steps = ChatMessage.Segment.max_steps()
+
+    steps
+    |> Enum.filter(&is_map/1)
+    |> Enum.map(&Map.take(&1, ["key", "name"]))
+    |> Enum.filter(&valid_segment_step?/1)
+    |> Enum.take(max_steps)
+    |> case do
+      [] -> Map.delete(segment, "steps")
+      kept -> Map.put(segment, "steps", kept)
+    end
+  end
+
+  defp normalize_segment_steps(segment), do: Map.delete(segment, "steps")
+
+  # Anything the embed would reject has to be dropped here rather than left to
+  # fail the cast: an invalid step invalidates its whole segment, which loses
+  # a status line the user already saw live.
+  defp valid_segment_step?(%{"key" => key} = step) when is_binary(key) do
+    max = ChatMessage.Segment.max_step_field_length()
+
+    key != "" and String.length(key) <= max and
+      case Map.get(step, "name") do
+        nil -> true
+        name when is_binary(name) -> String.length(name) <= max
+        _other -> false
+      end
+  end
+
+  defp valid_segment_step?(_step), do: false
 
   # Global chat always returns a full workflow YAML (job bodies embedded).
   # The frontend handles per-step diffing and full-workflow apply.

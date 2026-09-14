@@ -11,7 +11,7 @@ import {
   useAISessionListCommands,
   useAIWorkflowTemplateContext,
 } from '../hooks/useAIAssistant';
-import { useSelectedStepId, useSelectedRunId } from '../hooks/useHistory';
+import { useSelectedRunId } from '../hooks/useHistory';
 import { useIsNewWorkflow } from '../hooks/useSessionContext';
 
 import { ChatInput } from './ChatInput';
@@ -54,20 +54,12 @@ interface AIAssistantPanelProps {
    * AI assistant limit information
    */
   aiLimit?: { allowed: boolean; message: string | null } | null;
-  /** Show the experimental global assistant toggle */
-  showGlobalAssistantOption?: boolean;
-  /** Whether the global assistant checkbox is currently checked */
-  isGlobalAssistantActive?: boolean;
-  /** Callback when global assistant checkbox changes */
-  onGlobalAssistantChange?: (active: boolean) => void;
 }
 
 interface MessageOptions {
-  attach_code?: boolean;
   attach_logs?: boolean;
   attach_io_data?: boolean;
-  step_id?: string;
-  use_global_assistant?: boolean;
+  follow_run_id?: string;
 }
 
 /**
@@ -100,9 +92,6 @@ export function AIAssistantPanel({
   focusTrigger,
   connectionState = 'connected',
   aiLimit = null,
-  showGlobalAssistantOption = false,
-  isGlobalAssistantActive = false,
-  onGlobalAssistantChange,
 }: AIAssistantPanelProps) {
   const [view, setView] = useState<'chat' | 'sessions'>(
     sessionId ? 'chat' : 'sessions'
@@ -120,7 +109,6 @@ export function AIAssistantPanel({
   const hasSessionContext = useAIHasSessionContext();
   const hasCompletedSessionLoad = useAIHasCompletedSessionLoad();
   const { loadSessionList } = useAISessionListCommands();
-  const selectedStepId = useSelectedStepId();
   const selectedRunId = useSelectedRunId();
   const isNewWorkflow = useIsNewWorkflow();
 
@@ -269,24 +257,6 @@ export function AIAssistantPanel({
                 <h2 className="text-base font-semibold text-gray-900">
                   Assistant
                 </h2>
-                {page && (
-                  <span
-                    className={cn(
-                      'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-                      isGlobalAssistantActive
-                        ? 'bg-amber-100 text-amber-800'
-                        : page === 'job_code'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-purple-100 text-purple-800'
-                    )}
-                  >
-                    {isGlobalAssistantActive
-                      ? 'Global (experimental)'
-                      : page === 'job_code'
-                        ? 'Job'
-                        : 'Workflow'}
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -451,9 +421,6 @@ export function AIAssistantPanel({
           (view === 'sessions' &&
             (!hasSessionContext || !hasCompletedSessionLoad))
         }
-        showJobControls={page === 'job_code'}
-        showGlobalAssistantOption={showGlobalAssistantOption}
-        onGlobalAssistantChange={onGlobalAssistantChange}
         storageKey={storageKey}
         enableAutoFocus={
           isOpen &&
@@ -463,9 +430,7 @@ export function AIAssistantPanel({
         focusTrigger={(focusTrigger ?? 0) + internalFocusTrigger}
         placeholder={placeholderText}
         disabledMessage={disabledMessage}
-        selectedStepId={selectedStepId}
         selectedRunId={selectedRunId}
-        selectedJobId={selectedContextJobId ?? null}
       />
 
       {/* About AI Assistant Modal */}
@@ -527,10 +492,6 @@ export function AIAssistantPanel({
                 anytime
               </li>
               <li>
-                Sessions are separated by context - job sessions and workflow
-                sessions are kept separate
-              </li>
-              <li>
                 Press{' '}
                 <code className="px-1 py-0.5 bg-gray-100 rounded text-xs font-mono">
                   Enter
@@ -542,8 +503,8 @@ export function AIAssistantPanel({
                 for a new line
               </li>
               <li>
-                For jobs, you can choose to include your code and run logs with
-                each message
+                When you have a run open you can attach its logs and its data to
+                a message
               </li>
               <li>
                 Generated workflows appear as artifacts with Apply and Copy
@@ -603,14 +564,16 @@ export function AIAssistantPanel({
               privacy.
             </p>
             <p>
-              <strong>For workflow sessions:</strong> Your project context is
-              automatically included. Generated workflows can be applied
-              directly to the canvas with one click.
+              <strong>What it reads:</strong> your workflow, every time. It
+              needs the steps and their code to answer anything about them, and
+              changes it makes are applied to the canvas as they arrive.
             </p>
             <p>
-              <strong>For job sessions:</strong> You control what the Assistant
-              sees. Use the checkboxes to optionally include your job code and
-              run logs. By default, job code is included but logs are not.
+              <strong>What you attach:</strong> with a run open, two tickboxes
+              above the message box add that run to what you send. "Send run
+              logs" adds every log line. "Send run data" adds the shape of each
+              step's input and output, where the field names go as they are and
+              the values are replaced by their types.
             </p>
             <p>
               All chat sessions are shared with project collaborators. Everyone

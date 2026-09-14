@@ -30,13 +30,7 @@ export namespace Lightning {
     webhook_url: string;
   }
 
-  export interface KafkaTrigger extends Node {
-    type: 'kafka';
-    enabled: boolean;
-    has_auth_method: boolean;
-  }
-
-  export type TriggerNode = CronTrigger | WebhookTrigger | KafkaTrigger;
+  export type TriggerNode = CronTrigger | WebhookTrigger;
 
   export interface JobNode extends Node {
     body?: string;

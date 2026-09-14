@@ -10,11 +10,13 @@ interface WizardFooterProps {
    * Cancel action. When provided, the footer renders a ghost **Cancel** on the
    * left and the primary button on the right (the webhook steps, which have no
    * header back arrow). When omitted, the primary button is full-width (the
-   * cron/kafka steps, which exit via the header back arrow instead).
+   * cron steps, which exit via the header back arrow instead).
    */
   onCancel?: (() => void) | undefined;
   /** Validation error surfaced in red above the buttons (Configure steps). */
   validationError?: string | null | undefined;
+  /** Blocks the primary action while something on the step is still wrong. */
+  primaryDisabled?: boolean;
 }
 
 /**
@@ -30,11 +32,13 @@ export function WizardFooter({
   onPrimary,
   onCancel,
   validationError,
+  primaryDisabled = false,
 }: WizardFooterProps) {
   const primaryButton = (
     <Button
       variant="primary"
       onClick={onPrimary}
+      disabled={primaryDisabled}
       className={onCancel ? '' : 'w-full'}
     >
       <span className="inline-flex items-center gap-1.5">

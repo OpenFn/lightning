@@ -92,46 +92,6 @@ describe('from-workflow - Trigger Data Transformation', () => {
     expect(triggerNode.data.trigger.has_auth_method).toBe(true);
   });
 
-  test('includes has_auth_method in trigger node data for kafka triggers', () => {
-    const workflow: Lightning.Workflow = {
-      id: 'workflow-1',
-      jobs: [],
-      triggers: [
-        {
-          id: 'trigger-1',
-          name: 'Kafka Trigger',
-          type: 'kafka',
-          enabled: true,
-          has_auth_method: false,
-          workflow_id: 'workflow-1',
-        },
-      ],
-      edges: [],
-      disabled: false,
-      positions: {},
-    };
-
-    const positions: Positions = {
-      'trigger-1': { x: 100, y: 100 },
-    };
-
-    const model = fromWorkflow(
-      workflow,
-      positions,
-      { nodes: [], edges: [] },
-      { steps: [] },
-      null
-    );
-
-    expect(model.nodes).toHaveLength(1);
-    const triggerNode = model.nodes[0];
-
-    // Check that trigger data includes has_auth_method
-    expect(triggerNode.data.trigger).toBeDefined();
-    expect(triggerNode.data.trigger.type).toBe('kafka');
-    expect(triggerNode.data.trigger.has_auth_method).toBe(false);
-  });
-
   test('handles multiple triggers of different types', () => {
     const workflow: Lightning.Workflow = {
       id: 'workflow-1',
@@ -154,14 +114,6 @@ describe('from-workflow - Trigger Data Transformation', () => {
           cron_expression: '*/5 * * * *',
           workflow_id: 'workflow-1',
         },
-        {
-          id: 'trigger-3',
-          name: 'Kafka',
-          type: 'kafka',
-          enabled: false,
-          has_auth_method: true,
-          workflow_id: 'workflow-1',
-        },
       ],
       edges: [],
       disabled: false,
@@ -171,7 +123,6 @@ describe('from-workflow - Trigger Data Transformation', () => {
     const positions: Positions = {
       'trigger-1': { x: 100, y: 100 },
       'trigger-2': { x: 100, y: 200 },
-      'trigger-3': { x: 100, y: 300 },
     };
 
     const model = fromWorkflow(
@@ -182,7 +133,7 @@ describe('from-workflow - Trigger Data Transformation', () => {
       null
     );
 
-    expect(model.nodes).toHaveLength(3);
+    expect(model.nodes).toHaveLength(2);
 
     // Webhook trigger
     const webhookNode = model.nodes.find(n => n.id === 'trigger-1');
@@ -193,12 +144,38 @@ describe('from-workflow - Trigger Data Transformation', () => {
     const cronNode = model.nodes.find(n => n.id === 'trigger-2');
     expect(cronNode?.data.trigger.type).toBe('cron');
     expect(cronNode?.data.trigger.cron_expression).toBe('*/5 * * * *');
+  });
 
-    // Kafka trigger
-    const kafkaNode = model.nodes.find(n => n.id === 'trigger-3');
-    expect(kafkaNode?.data.trigger.type).toBe('kafka');
-    expect(kafkaNode?.data.trigger.has_auth_method).toBe(true);
-    expect(kafkaNode?.data.trigger.enabled).toBe(false);
+  test('carries a disabled trigger through as disabled', () => {
+    const workflow: Lightning.Workflow = {
+      id: 'workflow-1',
+      jobs: [],
+      triggers: [
+        {
+          id: 'trigger-1',
+          name: 'Webhook',
+          type: 'webhook',
+          enabled: false,
+          has_auth_method: false,
+          webhook_url: 'https://example.com/webhook',
+          workflow_id: 'workflow-1',
+        },
+      ],
+      edges: [],
+      disabled: false,
+      positions: {},
+    };
+
+    const model = fromWorkflow(
+      workflow,
+      { 'trigger-1': { x: 100, y: 100 } },
+      { nodes: [], edges: [] },
+      { steps: [] },
+      null
+    );
+
+    const node = model.nodes.find(n => n.id === 'trigger-1');
+    expect(node?.data.trigger.enabled).toBe(false);
   });
 
   test('handles cron trigger with empty expression', () => {

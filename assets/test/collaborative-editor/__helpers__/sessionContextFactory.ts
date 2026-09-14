@@ -55,7 +55,6 @@ export const mockProjectContext: ProjectContext = {
  */
 export const mockAppConfig: AppConfig = {
   require_email_verification: false,
-  kafka_triggers_enabled: false,
 };
 
 /**
@@ -168,7 +167,6 @@ export const mockUpdatedSessionContext: SessionContextResponse = {
   project: mockAlternativeProjectContext,
   config: {
     require_email_verification: true,
-    kafka_triggers_enabled: true,
   },
   permissions: mockPermissions,
   latest_snapshot_lock_version: 2,
@@ -353,7 +351,6 @@ export function createSessionContext(
   // Handle config - always present, merge with defaults
   const config: AppConfig = {
     require_email_verification: false,
-    kafka_triggers_enabled: false,
     ...options.config,
   };
 
@@ -543,7 +540,6 @@ export function createMockConfig(
 ): AppConfig {
   return {
     require_email_verification: false,
-    kafka_triggers_enabled: false,
     ...overrides,
   };
 }

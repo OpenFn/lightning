@@ -305,6 +305,36 @@ defmodule Lightning.ApolloClientTest do
 
       {:ok, _} = ApolloClient.global_chat_stream("hi")
     end
+
+    test "forwards attachments" do
+      stub_apollo_config()
+
+      attachments = [
+        %{
+          "type" => "log",
+          "content" => [%{"job_id" => "j-1", "level" => "error"}]
+        },
+        %{"type" => "input_dataclip", "content" => %{"a" => "string"}}
+      ]
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert Jason.decode!(env.body)["attachments"] == attachments
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} = ApolloClient.global_chat_stream("hi", attachments: attachments)
+    end
+
+    test "sends an empty attachments list when none are given" do
+      stub_apollo_config()
+
+      expect(Lightning.Tesla.Mock, :call, fn env, _opts ->
+        assert Jason.decode!(env.body)["attachments"] == []
+        {:ok, %Tesla.Env{status: 200, body: ""}}
+      end)
+
+      {:ok, _} = ApolloClient.global_chat_stream("hi")
+    end
   end
 
   # Private helper function to stub Apollo configuration
@@ -316,7 +346,9 @@ defmodule Lightning.ApolloClientTest do
       case key do
         :endpoint -> endpoint
         :ai_assistant_api_key -> api_key
-        :timeout -> 5_000
+        :connect_timeout -> 1_000
+        :idle_timeout -> 5_000
+        :request_timeout -> 5_000
       end
     end)
   end

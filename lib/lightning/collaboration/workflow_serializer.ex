@@ -16,7 +16,7 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     deleted_at, concurrency, enable_job_logs)
   - `jobs` (Array): Array of job objects with Y.Text body field
   - `edges` (Array): Array of edge objects connecting jobs/triggers
-  - `triggers` (Array): Array of trigger objects (webhook, cron, kafka)
+  - `triggers` (Array): Array of trigger objects (webhook, cron)
   - `positions` (Map): Canvas positions for visual editor (node_id → {x, y})
   - `errors` (Map): Field-level validation errors (field_path → error_message)
 
@@ -29,7 +29,6 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
   - Nil values: Coalesced to empty strings or defaults where appropriate
   """
 
-  alias Lightning.Workflows.Triggers.KafkaConfiguration
   alias Lightning.Workflows.Workflow
 
   @doc """
@@ -198,32 +197,11 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
 
   defp initialize_triggers(triggers_array, triggers) do
     Enum.each(triggers || [], fn trigger ->
-      kafka_configuration =
-        trigger.kafka_configuration &&
-          Yex.MapPrelim.from(%{
-            "connect_timeout" => trigger.kafka_configuration.connect_timeout,
-            "group_id" => trigger.kafka_configuration.group_id,
-            "hosts_string" =>
-              KafkaConfiguration.generate_hosts_string(
-                trigger.kafka_configuration.hosts
-              ),
-            "initial_offset_reset_policy" =>
-              trigger.kafka_configuration.initial_offset_reset_policy,
-            "password" => trigger.kafka_configuration.password,
-            "sasl" => to_string(trigger.kafka_configuration.sasl),
-            "ssl" => trigger.kafka_configuration.ssl,
-            "topics_string" =>
-              KafkaConfiguration.generate_topics_string(
-                trigger.kafka_configuration.topics
-              ),
-            "username" => trigger.kafka_configuration.username
-          })
-
       trigger_map =
         Yex.MapPrelim.from(%{
-          "kafka_configuration" => kafka_configuration,
           "cron_expression" => trigger.cron_expression,
           "cron_cursor_job_id" => trigger.cron_cursor_job_id,
+          "custom_path" => trigger.custom_path,
           "enabled" => trigger.enabled,
           "id" => trigger.id,
           "type" => trigger.type |> to_string(),
@@ -285,32 +263,12 @@ defmodule Lightning.Collaboration.WorkflowSerializer do
     |> Enum.map(fn trigger ->
       trigger
       |> Map.take(
-        ~w(id type enabled cron_expression cron_cursor_job_id webhook_reply
-           kafka_configuration webhook_response_config)
+        ~w(id type enabled cron_expression cron_cursor_job_id custom_path
+           webhook_reply webhook_response_config)
       )
-      |> normalize_kafka_configuration()
       |> normalize_webhook_response_config()
     end)
   end
-
-  # Y.Doc serializes numbers as floats, but connect_timeout must be an integer
-  defp normalize_kafka_configuration(
-         %{"kafka_configuration" => %{} = kafka_config} = trigger
-       ) do
-    connect_timeout =
-      case Map.fetch(kafka_config, "connect_timeout") do
-        {:ok, value} when is_float(value) -> trunc(value)
-        {:ok, nil} -> nil
-        :error -> :not_found
-      end
-
-    normalized_config =
-      maybe_put_field(kafka_config, "connect_timeout", connect_timeout)
-
-    Map.put(trigger, "kafka_configuration", normalized_config)
-  end
-
-  defp normalize_kafka_configuration(trigger), do: trigger
 
   # Y.Doc serialises numbers as floats; convert integer codes back.
   defp normalize_webhook_response_config(

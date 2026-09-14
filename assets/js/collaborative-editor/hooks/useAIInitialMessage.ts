@@ -97,9 +97,13 @@ export function useAIInitialMessage({
       const { mode, context } = aiMode;
       const { workflow, jobs, triggers, edges, positions } = workflowData;
 
+      // The landing screen's first message is a message like any other, and
+      // there is one assistant for it to reach.
       let finalContext: JobCodeContext | WorkflowTemplateContext = {
         ...context,
         content: initialMessage,
+        use_global_assistant: true,
+        page: `workflows/${workflowData.workflow?.name ?? 'workflow'}`,
       };
 
       // Add workflow YAML if in workflow template mode
@@ -115,7 +119,7 @@ export function useAIInitialMessage({
           const workflowYAML = serializeWorkflowToYAML(serializedWorkflow);
           if (workflowYAML) {
             finalContext = {
-              ...(finalContext as WorkflowTemplateContext),
+              ...finalContext,
               code: workflowYAML,
             };
           }

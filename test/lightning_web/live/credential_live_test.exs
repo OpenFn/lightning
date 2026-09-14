@@ -25,7 +25,8 @@ defmodule LightningWeb.CredentialLiveTest do
     external_id: "updated-external-id"
   }
 
-  @invalid_attrs %{name: "this won't work"}
+  # An apostrophe is legal now (#4577). A control character is not.
+  @invalid_attrs %{name: "this won't \u{0000} work"}
 
   defp create_credential(%{user: user}) do
     credential = insert(:credential, user: user)
@@ -296,10 +297,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "cancel a scheduled for deletion credential", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
       insert(:step, credential: credential)
-      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+
+      {:ok, credential} =
+        Credentials.schedule_credential_deletion(credential, user)
 
       assert credential.scheduled_deletion
 
@@ -327,9 +331,11 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "can delete credential that has no activity in projects", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
-      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+      {:ok, credential} =
+        Credentials.schedule_credential_deletion(credential, user)
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -364,10 +370,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "cannot delete credential that has activity in projects", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
       insert(:step, credential: credential)
-      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+
+      {:ok, credential} =
+        Credentials.schedule_credential_deletion(credential, user)
 
       {:ok, index_live, _html} = live(conn, ~p"/credentials", on_error: :raise)
 
@@ -650,9 +659,18 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form-new", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
-      assert index_live
+      # The rendered HTML escapes the apostrophe, so the refute has to match the
+      # escaped form or it can never fail.
+      refute index_live
              |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
-             |> render_change() =~ "credential name has invalid format"
+             |> render_change() =~ "credential name can&#39;t contain"
+
+      assert index_live
+             |> form("#credential-form-new",
+               credential: %{name: "bad\u{0000}name"}
+             )
+             |> render_change() =~
+               "credential name can&#39;t contain control characters"
 
       # Select second project
       index_live
@@ -763,9 +781,18 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form-new", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
-      assert index_live
+      # The rendered HTML escapes the apostrophe, so the refute has to match the
+      # escaped form or it can never fail.
+      refute index_live
              |> form("#credential-form-new", credential: %{name: "MailChimp'24"})
-             |> render_change() =~ "credential name has invalid format"
+             |> render_change() =~ "credential name can&#39;t contain"
+
+      assert index_live
+             |> form("#credential-form-new",
+               credential: %{name: "bad\u{0000}name"}
+             )
+             |> render_change() =~
+               "credential name can&#39;t contain control characters"
 
       index_live
       |> element("#project-credentials-list-new")
@@ -1126,7 +1153,7 @@ defmodule LightningWeb.CredentialLiveTest do
                @invalid_attrs,
                "#credential-form-#{credential.id}"
              ) =~
-               "credential name has invalid format"
+               "credential name can&#39;t contain control characters"
 
       refute_redirected(index_live, ~p"/credentials")
 
@@ -1146,10 +1173,15 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "displays external_id in credentials table", %{
       conn: conn,
+      user: user,
       credential: credential
     } do
       # Update credential with external_id
-      Credentials.update_credential(credential, %{external_id: "display-test-id"})
+      Credentials.update_credential(
+        credential,
+        %{external_id: "display-test-id"},
+        user
+      )
 
       {:ok, _index_live, html} = live(conn, ~p"/credentials")
 
