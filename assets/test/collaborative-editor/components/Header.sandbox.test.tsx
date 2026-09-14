@@ -217,7 +217,7 @@ vi.mock('../../../js/collaborative-editor/components/GitHubSyncModal', () => ({
 }));
 vi.mock('../../../js/collaborative-editor/components/NewRunButton', () => ({
   // Carries the label and the disabled state through, because whether this
-  // reads Run or Run (Retry), and whether it is usable, is the thing under test.
+  // reads Run or Retry, and whether it is usable, is the thing under test.
   NewRunButton: ({ text, disabled }: { text?: string; disabled?: boolean }) => (
     <button type="button" data-testid="new-run-button" disabled={disabled}>
       {text}
@@ -1457,7 +1457,7 @@ describe('Header - retry from a run view', () => {
     renderHeader({ isSandbox: false });
 
     const runButton = screen.getByTestId('new-run-button');
-    expect(runButton).toHaveTextContent('Run (Retry)');
+    expect(runButton).toHaveTextContent('Retry');
     expect(runButton).toBeEnabled();
   });
 
@@ -1470,7 +1470,7 @@ describe('Header - retry from a run view', () => {
     renderHeader({ isSandbox: false });
 
     const runButton = screen.getByTestId('new-run-button');
-    expect(runButton).toHaveTextContent('Run (Retry)');
+    expect(runButton).toHaveTextContent('Retry');
     expect(runButton).toBeEnabled();
   });
 
@@ -1480,7 +1480,7 @@ describe('Header - retry from a run view', () => {
     // Retrying is an execution, not an edit. Blocking it with the read-only
     // lock took away the only way to clear a failed work order from here.
     const runButton = screen.getByTestId('new-run-button');
-    expect(runButton).toHaveTextContent('Run (Retry)');
+    expect(runButton).toHaveTextContent('Retry');
     expect(runButton).toBeEnabled();
   });
 

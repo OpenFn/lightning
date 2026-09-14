@@ -708,7 +708,7 @@ export function ManualRunPanel({
               }}
               buttonText={{
                 run: 'Run From Here',
-                retry: 'Run (Retry)',
+                retry: 'Retry',
                 processing: 'Processing',
               }}
               showKeyboardShortcuts={true}

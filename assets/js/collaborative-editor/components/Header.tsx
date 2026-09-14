@@ -985,7 +985,9 @@ export function Header({
                   disabled={isRunPanelOpen || isIDEOpen}
                   forRetry={isRetryable}
                   isRunning={isSubmitting || runIsProcessing}
-                  text={isRetryable ? 'Run (Retry)' : 'Run'}
+                  // Just "Retry". It always runs the latest, so saying so in
+                  // the label tells people something they already assume.
+                  text={isRetryable ? 'Retry' : 'Run'}
                   enabledTooltip={retryTooltip}
                 />
               )}

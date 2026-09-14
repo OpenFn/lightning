@@ -186,7 +186,7 @@ export function useRunRetry({
   const runIsProcessing = currentRun ? isProcessing(currentRun.state) : false;
 
   // Effect to reset isSubmitting when the pending run is connected via WebSocket
-  // This prevents the "flash" where the button briefly shows "Run (Retry)" between
+  // This prevents the "flash" where the button briefly shows "Retry" between
   // API success and WebSocket connection
   useEffect(() => {
     if (pendingRunId && currentRun?.id === pendingRunId) {

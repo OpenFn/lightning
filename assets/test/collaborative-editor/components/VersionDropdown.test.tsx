@@ -418,7 +418,7 @@ describe('VersionDropdown', () => {
       rerender(<VersionDropdown {...props} />);
 
       expect(mockRequestVersions).toHaveBeenCalledOnce();
-      expect(screen.getByText('No published versions yet')).toBeInTheDocument();
+      expect(screen.getByText('No published versions')).toBeInTheDocument();
     });
 
     test('does not refetch if releases already loaded', async () => {
@@ -728,7 +728,7 @@ describe('VersionDropdown', () => {
       // Wait for loading to complete
       await waitFor(() => {
         expect(
-          screen.getByText('No published versions yet')
+          screen.getByText('No published versions')
         ).toBeInTheDocument();
       });
     });

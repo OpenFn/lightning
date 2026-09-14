@@ -973,7 +973,7 @@ export function FullScreenIDE({
                 }}
                 buttonText={{
                   run: 'Run',
-                  retry: 'Run (Retry)',
+                  retry: 'Retry',
                   processing: 'Processing',
                 }}
                 variant="primary"
