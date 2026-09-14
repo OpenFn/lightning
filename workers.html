@@ -109,12 +109,12 @@ Lightning
 
 <p>The OpenFn Runtime used by Lightning is a <a href="https://nodejs.org/en/">Node.js</a>
 application that runs on a server. It is responsible for executing the code that
-you write in your OpenFn jobs.</p><p>A Runtime Manager is a module or application that processes Runs, which
-contains reference to the Workflow, the starting point and the initial data.</p><p>Runs are enqueued, and Runtime Managers request work to be performed when
-they are ready.</p><h2 id="history" class="section-heading"><a href="#history" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">History</span></h2><p>In previous versions of OpenFn products, the server would invoke a NodeJS child
+you write in your OpenFn jobs.</p><p>A Runtime Manager is a module or application that processes Runs, which contains
+reference to the Workflow, the starting point and the initial data.</p><p>Runs are enqueued, and Runtime Managers request work to be performed when they
+are ready.</p><h2 id="history" class="section-heading"><a href="#history" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">History</span></h2><p>In previous versions of OpenFn products, the server would invoke a NodeJS child
 process for each Run that needs to be executed. Deciding which Job to run in a
-workflow is decided after each run is completed.</p><p>The current approach to executing Runs, is that a worker checks out the
-entire run and executes it and all the jobs required.</p><p>The advantage of this approach is a significant reduction in latency of
+workflow is decided after each run is completed.</p><p>The current approach to executing Runs, is that a worker checks out the entire
+run and executes it and all the jobs required.</p><p>The advantage of this approach is a significant reduction in latency of
 launching new workers for every Run to be processed.</p><h2 id="connecting-workers-to-lightning" class="section-heading"><a href="#connecting-workers-to-lightning" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Connecting Workers to Lightning</span></h2><p>Our standard Runtime Manager uses WebSockets to communicate with Lightning.</p><p>However, since the workers are treated no differently from any other incoming
 traffic; there are two layers of security applied to anything that can access
 your data or process work.</p><p>We use two different JWTs to facilitate the follow:</p><h3 id="worker-token" class="section-heading"><a href="#worker-token" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Worker Token</span></h3><p>This token is created by the worker and signed with a shared HS256 secret that
