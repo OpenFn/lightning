@@ -30,6 +30,7 @@ import {
 } from '../lib/pinnedView';
 
 import { useDiscardGuard } from './useDiscardGuard';
+import { useExperimentalFeatures } from './useSessionContext';
 import { useVersionPicker } from './useVersionPicker';
 
 /**
@@ -41,6 +42,7 @@ import { useVersionPicker } from './useVersionPicker';
 export function useVersionSelect() {
   const { updateSearchParams } = useURLState();
   const { guard, ...prompt } = useDiscardGuard();
+  const experimentalFeatures = useExperimentalFeatures();
 
   // Which numbering the picker on screen is using. A release version_number and
   // a snapshot lock_version are different numbers for different content, so
@@ -91,14 +93,21 @@ export function useVersionSelect() {
       // the editor does today. The prompt is a good addition and it is still an
       // addition; a user who did not opt in should not meet a dialog they have
       // never seen.
-      if (picker !== 'releases') {
+      //
+      // Gated on the flag itself, not on which numbering the picker uses. The
+      // picker reads "releases" only on a live workflow, which is read-only and
+      // so has no uncommitted edits to lose, and "snapshots" everywhere a
+      // developer actually edits. Reading the picker meant the prompt appeared
+      // only where it had nothing to protect, and a draft dropped an hour's
+      // work without a word.
+      if (!experimentalFeatures) {
         switchTo();
         return;
       }
 
       guard(switchTo);
     },
-    [picker, guard, updateSearchParams]
+    [experimentalFeatures, picker, guard, updateSearchParams]
   );
 
   return { handleVersionSelect, prompt };

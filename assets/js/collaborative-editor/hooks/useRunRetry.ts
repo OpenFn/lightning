@@ -25,6 +25,7 @@ import { findFirstJobFromTrigger } from '../utils/workflowGraph';
 
 import { useActiveRun } from './useHistory';
 import { useSaveBeforeRun } from './useSaveBeforeRun';
+import { useExperimentalFeatures } from './useSessionContext';
 import type { SaveWorkflowOptions } from './useWorkflow';
 
 const logger = _logger.ns('useRunRetry').seal();
@@ -143,6 +144,7 @@ export function useRunRetry({
   maxDataclipSizeBytes,
 }: UseRunRetryOptions): UseRunRetryReturn {
   const saveBeforeRun = useSaveBeforeRun(saveWorkflow);
+  const experimentalFeatures = useExperimentalFeatures();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRetryingRef = useRef(false);
   // Track the run ID we're waiting for WebSocket to connect to
@@ -422,13 +424,20 @@ export function useRunRetry({
       //
       // One call rather than one per parameter, so a retry costs one history
       // entry rather than several and Back takes you where you expect.
-      updateSearchParams({
-        [RELEASE_PARAM]: null,
-        [SNAPSHOT_PARAM]: null,
-        [AS_RUN_PARAM]: null,
-        step: null,
-        run: result.data.run_id,
-      });
+      // Leaving the pinned view behind is part of what this work added. Without
+      // the flag a retry is only ever started from the document already open,
+      // so it touches the one parameter it has always touched.
+      updateSearchParams(
+        experimentalFeatures
+          ? {
+              [RELEASE_PARAM]: null,
+              [SNAPSHOT_PARAM]: null,
+              [AS_RUN_PARAM]: null,
+              step: null,
+              run: result.data.run_id,
+            }
+          : { run: result.data.run_id }
+      );
 
       if (onRunSubmitted) {
         // Set pending run ID - the effect will reset isSubmitting when the run is connected
@@ -456,6 +465,7 @@ export function useRunRetry({
     followedRunStep,
     canRetryWorkflow,
     retryTooltipMessage,
+    experimentalFeatures,
     saveBeforeRun,
     projectId,
     onRunSubmitted,

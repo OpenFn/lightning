@@ -56,6 +56,7 @@ import {
 } from './useSession';
 import {
   useContentLocked,
+  useExperimentalFeatures,
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useLimits,
@@ -1007,6 +1008,7 @@ export const useCanRun = (
   // stop a run, and they are the same set the lock had before the lifecycle
   // existed, so nothing changes for a workflow that is not live.
   const isNewWorkflow = useIsNewWorkflow();
+  const experimentalFeatures = useExperimentalFeatures();
   const jobs = useWorkflowState(state => state.jobs);
   const triggers = useWorkflowState(state => state.triggers);
   const isUnsavedNewWorkflow =
@@ -1028,7 +1030,9 @@ export const useCanRun = (
   } else if (isDeleted) {
     canRun = false;
     tooltipMessage = 'Workflow has been deleted';
-  } else if (isPinnedView && !forRetry) {
+    // The retry exemption is part of what this work added, so it waits for the
+    // flag. Without it a pinned view refuses every run, as it does on main.
+  } else if (isPinnedView && !(forRetry && experimentalFeatures)) {
     canRun = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
   } else if (isUnsavedNewWorkflow) {

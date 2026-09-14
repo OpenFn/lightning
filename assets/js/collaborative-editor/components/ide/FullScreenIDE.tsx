@@ -736,9 +736,10 @@ export function FullScreenIDE({
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
 
-  // The run being read executed content other than what is on screen. Only ever
-  // set without experimental features; with them a run of older content opens
-  // that content instead.
+  // The run being read executed content other than what is on screen. Set
+  // wherever a run is overlaid on content it did not execute: without the flag,
+  // and in a draft or a sandbox with it, where a run stays overlaid so the
+  // content can still be edited.
   const activeRun = useActiveRun();
   const versionMismatch = useVersionMismatch(activeRun?.id ?? null);
   const { handleVersionSelect } = useVersionSelect();

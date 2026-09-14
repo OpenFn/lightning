@@ -56,6 +56,54 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
     end
 
+    test "going live from a version being read is refused when the plan is at its limit",
+         %{user: user, project: project, workflow: workflow} do
+      # A trigger that is off, so going live is a real activation and the
+      # limiter is asked. A workflow with none, or with one already answering,
+      # asks it nothing.
+      insert(:trigger, type: :webhook, workflow: workflow, enabled: false)
+
+      {:ok, saved} =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Has A Snapshot"})
+        |> Lightning.Workflows.save_workflow(user)
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{saved.lock_version}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      # This path acts on the row rather than going through a save, so it asks
+      # the limiter itself. Every other route that puts a workflow live does.
+      Mox.stub(
+        Lightning.Extensions.MockUsageLimiter,
+        :limit_action,
+        fn
+          %{type: :activate_workflow}, _context ->
+            {:error, :too_many_workflows,
+             %Lightning.Extensions.Message{text: "Your plan is at its limit."}}
+
+          _action, _context ->
+            :ok
+        end
+      )
+
+      ref = push(pinned_socket, "go_live", %{})
+
+      # The plan's own wording, not "an internal error occurred".
+      assert_reply ref, :error, %{
+        type: "limit_error",
+        errors: %{base: ["Your plan is at its limit."]}
+      }
+
+      assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
+    end
+
     test "a transition from a version being read reaches the workflow's own room",
          %{socket: socket, user: user, project: project, workflow: workflow} do
       {:ok, saved} =
@@ -79,9 +127,9 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(pinned_socket, "go_live", %{})
       assert_reply ref, :ok, %{}
 
+      # The live socket recomputes its lock from that broadcast. Announcing on
+      # the reader's own topic instead meant this never arrived.
       assert_push "session_context_updated", %{content_locked: true}
-
-      refute socket.assigns.content_locked
     end
 
     test "a pinned room cannot be joined as a new workflow", %{

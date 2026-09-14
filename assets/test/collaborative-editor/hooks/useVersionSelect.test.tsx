@@ -53,10 +53,20 @@ vi.mock('../../../js/collaborative-editor/hooks/useVersionPicker', () => ({
   useVersionPicker: () => picker,
 }));
 
+// Whether the prompt exists at all. It is an addition, so a user who did not
+// opt in never meets it; everyone who did meets it wherever they can edit,
+// which is every picker and not only the releases one.
+let experimentalFeatures = true;
+
+vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useExperimentalFeatures: () => experimentalFeatures,
+}));
+
 describe('useVersionSelect', () => {
   beforeEach(() => {
     urlState.reset();
     hasChanges = false;
+    experimentalFeatures = true;
     picker = 'releases';
     saveWorkflow.mockReset();
     saveWorkflow.mockResolvedValue(undefined);
@@ -146,10 +156,11 @@ describe('useVersionSelect', () => {
     });
   });
 
-  test('switches straight away on the snapshots picker', () => {
+  test('switches straight away without experimental features', () => {
     // The prompt is part of what this work added. Today the editor discards
     // silently, so a user who did not opt in must not meet a dialog they have
     // never seen.
+    experimentalFeatures = false;
     picker = 'snapshots';
     hasChanges = true;
 
@@ -163,6 +174,23 @@ describe('useVersionSelect', () => {
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(
       expect.objectContaining({ v: '3' })
     );
+  });
+
+  test('asks on the snapshots picker too, which is where the edits are', () => {
+    // A draft and a sandbox both use that picker, and both are editable. The
+    // releases picker only appears on a live workflow, which is read-only, so
+    // gating the prompt on it meant asking only where nothing could be lost.
+    picker = 'snapshots';
+    hasChanges = true;
+
+    const { result } = renderHook(() => useVersionSelect());
+
+    act(() => {
+      result.current.handleVersionSelect(3);
+    });
+
+    expect(result.current.prompt.isAsking).toBe(true);
+    expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalled();
   });
 
   test('asks first when there are unsaved changes, and switches nothing yet', () => {

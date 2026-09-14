@@ -1970,8 +1970,15 @@ defmodule LightningWeb.WorkflowChannel do
            activating?,
            workflow.project_id
          ) do
-      :ok -> Workflows.go_live(workflow, user)
-      error -> error
+      :ok ->
+        Workflows.go_live(workflow, user)
+
+      # The limiter answers with a three-tuple carrying the plan's own wording.
+      # Passed along whole it misses the clause that renders that wording and
+      # lands on the catch-all, so the person is told an internal error
+      # occurred rather than which limit they have reached.
+      {:error, _reason, %Lightning.Extensions.Message{} = message} ->
+        {:error, message}
     end
   end
 

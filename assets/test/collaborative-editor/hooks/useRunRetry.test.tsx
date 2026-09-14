@@ -26,6 +26,7 @@ import { createMockSocket } from '../mocks/phoenixSocket';
 import {
   createMockSessionContextStore,
   createMockHistoryStore,
+  defaultSessionContextState,
   createMockStoreContextValue,
 } from '../__helpers__/storeMocks';
 
@@ -93,7 +94,17 @@ function createWrapper(): React.ComponentType<{ children: React.ReactNode }> {
     workflowStore: {} as any,
     // Not a bare stub: the run controls read the lifecycle lock off this store
     // to decide whether saving before a run is even allowed.
-    sessionContextStore: createMockSessionContextStore(),
+    // Flag on: leaving a pinned view behind on retry is part of what this work
+    // added, and these tests assert that behaviour. The helper's selector reads
+    // its own default state, so the flag has to go in through the selector.
+    sessionContextStore: createMockSessionContextStore({
+      withSelector: <T,>(selector: (state: SessionContextState) => T) =>
+        () =>
+          selector({
+            ...defaultSessionContextState,
+            experimentalFeaturesEnabled: true,
+          }),
+    } as never),
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,

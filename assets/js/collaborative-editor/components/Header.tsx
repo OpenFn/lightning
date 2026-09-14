@@ -15,6 +15,7 @@ import {
   useLimits,
   usePermissions,
   useProjectRepoConnection,
+  useSessionContextError,
   useSessionContextLoaded,
   useSessionWorkflow,
   useReleases,
@@ -426,7 +427,11 @@ export function Header({
   // "flag off, draft". Treating unknown as locked holds Save back until the
   // header can settle in one go: a control appearing is fine, one vanishing
   // under the cursor is not.
-  const sessionContextLoaded = useSessionContextLoaded();
+  // An answer, not necessarily a good one. A context request that fails leaves
+  // `lastUpdated` null forever and there is no retry, so waiting only on the
+  // success would take Save away permanently, flag-off users included.
+  const sessionContextLoaded =
+    useSessionContextLoaded() || useSessionContextError() !== null;
   //
   // Unknown counts as locked, for everyone. The flag itself arrives with the
   // context, so before it lands "flag off" and "we do not know yet" are the
