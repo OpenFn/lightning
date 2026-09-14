@@ -11,7 +11,7 @@
 //   attempts.forEach(function (_counter, _index) {
 //     state.data.records.forEach(function (record, _index) {
 //       console.log(record);
-//     }); 
+//     });
 //   });
 //
 //   return new Promise((resolve, reject) => {
@@ -19,16 +19,16 @@
 //       resolve(state);
 //     }, 10000);
 //   });
-//   
+//
 // });
-// 
+//
 // The above job will 'process' each of the objects in the array and then
 // pause for 10 seconds before proceeding.
 
 import http from 'k6/http';
 import { check } from 'k6';
 
-const webhookURL = __ENV.WEBHOOK_URL
+const webhookURL = __ENV.WEBHOOK_URL;
 
 export const options = {
   discardResponseBodies: true,
@@ -58,15 +58,15 @@ export function setup() {
 
   for (var i = 0; i < 500; i++) {
     let time = base_timestamp + i;
-    let temperature = base_temperature + i/1000.0;
+    let temperature = base_temperature + i / 1000.0;
 
-    records.push({temperature: temperature, time: time})
+    records.push({ temperature: temperature, time: time });
   }
 
   return {
     payload: {
-      records: records
-    }
+      records: records,
+    },
   };
 }
 
