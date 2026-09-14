@@ -381,9 +381,9 @@ export function Header({
   // The Live badge describes the workflow's current state, which would be a lie
   // on these views, so it is suppressed and the version badge carries the
   // context instead.
-  // A view of the past is for reading. The lifecycle and sandbox actions all act
-  // on the current workflow, so offering them here reaches past what is on
-  // screen: Switch to draft would take production offline while you read history.
+  // Only the badge and the flag-off switch read this now. The lifecycle and
+  // sandbox actions carry their own reasons, and Switch to draft is deliberately
+  // offered while reading a run, which is where fixing one starts.
   const isViewingNonCurrentVersion = isPinnedVersion || isViewingAsExecuted;
 
   // These act on the current workflow rather than on what is being read, so a
@@ -1046,6 +1046,11 @@ export function Header({
             }}
             onConfirm={() => {
               setShowGoLiveDialog(false);
+              // The run goes too. Going live writes a new version, so a run
+              // selected beforehand no longer matches what is live, and the
+              // canvas would answer that by opening it as it executed: you
+              // confirm Go live and land read-only in a view of an old run
+              // rather than looking at what you just published.
               requestTransition(
                 'live',
                 {
@@ -1053,6 +1058,7 @@ export function Header({
                   [SNAPSHOT_PARAM]: null,
                   [AS_RUN_PARAM]: null,
                   step: null,
+                  run: null,
                 },
                 'Could not go live'
               );

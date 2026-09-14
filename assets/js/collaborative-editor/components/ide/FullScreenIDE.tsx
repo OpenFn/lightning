@@ -935,10 +935,9 @@ export function FullScreenIDE({
               </button>
             </Tooltip>
 
-            {/* New Run button - shown when no panel or viewing history.
-                With experimental features it goes on a read-only workflow,
-                where the header's lifecycle badge explains why. Without them it
-                stays and goes grey, carrying the reason, as it does today. */}
+            {/* New Run button - shown when no panel or viewing history. It
+                stays on a read-only workflow: running is not editing, and the
+                run hook refuses the ones that genuinely cannot run. */}
             {(panelState === undefined || panelState === 'history') && (
               // This opens the create-run panel; it does not start a run. The
               // run hook's answer folds in whether the input chosen inside that

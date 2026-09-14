@@ -423,7 +423,6 @@ defmodule LightningWeb.WorkflowChannel do
   @impl true
   def handle_in("list_sandboxes", _params, socket) do
     project = socket.assigns.project
-    workflow = socket.assigns.workflow
     user = socket.assigns.current_user
 
     # Same gate as "edit_in_sandbox": the picker exposes sibling-sandbox
@@ -436,7 +435,9 @@ defmodule LightningWeb.WorkflowChannel do
         # serializing rather than sending rows the client can't act on.
         sandboxes =
           project.id
-          |> Projects.list_active_sandboxes_for_editing(workflow.name)
+          |> Projects.list_active_sandboxes_for_editing(
+            current_workflow_name(socket)
+          )
           |> Enum.reject(fn {_sandbox, joinable_workflow_id} ->
             is_nil(joinable_workflow_id)
           end)
@@ -454,21 +455,15 @@ defmodule LightningWeb.WorkflowChannel do
     parent = socket.assigns.project
     user = socket.assigns.current_user
 
-    workflow = socket.assigns.workflow
-
     # The name as it is now, not as the document on screen holds it. A run's own
     # view is an ordinary place to branch from, and its assigned workflow
     # carries the name the snapshot was saved under, so a rename since would
     # send the clone looking for a workflow that no longer answers to it.
-    branch_from_name =
-      case Workflows.get_workflow(socket.assigns.workflow_id) do
-        nil -> workflow.name
-        current -> current.name
-      end
+    branch_from_name = current_workflow_name(socket)
 
     attrs =
       %{
-        name: sandbox_name(params, workflow, parent),
+        name: sandbox_name(params, branch_from_name, parent),
         env: "dev",
         color: LightningWeb.SandboxLive.Components.random_color()
       }
@@ -579,11 +574,6 @@ defmodule LightningWeb.WorkflowChannel do
       # read as "you are on an old version" straight after a rollback, and the
       # dropdown would still offer Restore on the version now live.
       #
-      # Not on a version being read, which is where restoring is most natural.
-      # Its assigned workflow is the snapshot its document holds, and replacing
-      # that with the restored row measures the document against content it was
-      # never meant to match, so the view reads as unsaved from the moment the
-      # restore lands. The same reason the lifecycle transitions skip it.
       # Only the assign is skipped on a version being read. Replacing that
       # socket's workflow with the restored row measures its document against
       # content it was never meant to match, so the view reads as unsaved. The
@@ -2034,19 +2024,32 @@ defmodule LightningWeb.WorkflowChannel do
       # Editability folds in the lifecycle lock and is resolved at join, so going
       # live makes it stale on every socket in the room.
       #
-      # Not on a version being read. Its assigned workflow is the snapshot the
-      # document holds, and replacing it with the live row measures that
-      # document against content it was never meant to match, so the view reads
-      # as unsaved from the moment the transition lands. The client leaves the
-      # view straight afterwards and rejoins with a context built properly.
+      # On a version being read, only the lock moves. Replacing the assigned
+      # workflow there would measure the document against content it was never
+      # meant to match, so the view would read as unsaved the moment the
+      # transition landed.
+      #
+      # The lock itself has to move, and skipping the push with it was a real
+      # bug: switching to draft from a run's own view asks for the context
+      # straight afterwards, and a stale "still locked" made the client decide
+      # the run no longer belonged on the document it was moving to and clear
+      # it. That is the journey this work exists to fix.
       socket =
         if socket.assigns.workflow_kind == :version do
-          socket
+          assign(
+            socket,
+            :content_locked,
+            content_locked?(
+              workflow,
+              socket.assigns.project,
+              socket.assigns.current_user
+            )
+          )
         else
-          socket = refresh_lifecycle_lock(socket, workflow)
-          push(socket, "session_context_updated", build_session_context(socket))
-          socket
+          refresh_lifecycle_lock(socket, workflow)
         end
+
+      push(socket, "session_context_updated", build_session_context(socket))
 
       {:reply, {:ok, %{lock_version: workflow.lock_version, workflow: workflow}},
        socket}
@@ -2238,18 +2241,28 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  defp sandbox_name(params, workflow, parent) do
+  defp sandbox_name(params, workflow_name, parent) do
     raw =
       case params do
         %{"name" => name} when is_binary(name) and name != "" -> name
-        _ -> default_sandbox_name(workflow, parent)
+        _ -> default_sandbox_name(workflow_name, parent)
       end
 
     Lightning.Helpers.url_safe_name(raw)
   end
 
-  defp default_sandbox_name(workflow, parent) do
-    base = workflow.name || parent.name || "sandbox"
+  # The workflow's name as it is now. A version being read carries the name the
+  # snapshot was saved under, and both the picker and the branch match on name,
+  # so a rename since would look for a workflow that no longer answers to it.
+  defp current_workflow_name(socket) do
+    case Workflows.get_workflow(socket.assigns.workflow_id) do
+      nil -> socket.assigns.workflow.name
+      workflow -> workflow.name
+    end
+  end
+
+  defp default_sandbox_name(workflow_name, parent) do
+    base = workflow_name || parent.name || "sandbox"
     "#{base}-sandbox"
   end
 

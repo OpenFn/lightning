@@ -1,12 +1,10 @@
 import { useMemo } from 'react';
 
-import { usePinnedView } from '../lib/pinnedView';
 import {
   getOutgoingJobEdges,
   isFirstJobInWorkflow,
   removeGhostEdges,
 } from '../utils/workflowGraph';
-
 
 import { useContentLocked, usePermissions } from './useSessionContext';
 import { CONTENT_LOCKED_MESSAGE, useWorkflowState } from './useWorkflow';
@@ -28,7 +26,6 @@ interface DeleteValidation {
 export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
   const permissions = usePermissions();
   const contentLocked = useContentLocked();
-  const { isPinnedView } = usePinnedView();
 
   const edges = useWorkflowState(state => state.edges, []);
   const jobs = useWorkflowState(state => state.jobs, []);
@@ -49,12 +46,6 @@ export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
     if (!canEdit) {
       canDelete = false;
       disableReason = "You don't have permission to edit this workflow";
-    } else if (isPinnedView) {
-      // What is on screen decides before the lifecycle does. Switching to draft
-      // would not make the version being read deletable, so naming it here
-      // sends someone at a button that cannot help them.
-      canDelete = false;
-      disableReason = 'You are viewing a pinned version of this workflow';
     } else if (contentLocked) {
       // Deleting a step changes the content, which a live workflow refuses.
       canDelete = false;
@@ -73,5 +64,5 @@ export const useJobDeleteValidation = (jobId: string): DeleteValidation => {
       hasChildEdges,
       isFirstJob,
     };
-  }, [permissions, contentLocked, isPinnedView, hasChildEdges, isFirstJob]);
+  }, [permissions, contentLocked, hasChildEdges, isFirstJob]);
 };

@@ -132,6 +132,40 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert_push "session_context_updated", %{content_locked: true}
     end
 
+    test "a transition tells the version being read that the lock moved", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      # Live without going through go_live, which would reconcile a trigger the
+      # already-open document never had. The lock is what this test is about.
+      {:ok, saved} =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Now Live"})
+        |> Ecto.Changeset.put_change(:state, :live)
+        |> Lightning.Workflows.save_workflow(user)
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{saved.lock_version}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      assert pinned_socket.assigns.content_locked
+
+      # Switching to draft from a run's own view asks for the context straight
+      # afterwards. A stale "still locked" made the client decide the run no
+      # longer belonged on the document it was moving to, and clear it.
+      ref = push(pinned_socket, "switch_to_draft", %{})
+      assert_reply ref, :ok, %{}
+
+      assert_push "session_context_updated", %{content_locked: false}
+    end
+
     test "a pinned room cannot be joined as a new workflow", %{
       user: user,
       project: project,
