@@ -737,6 +737,45 @@ defmodule LightningWeb.WorkflowChannelTest do
       %{trigger: trigger, other_workflow: other_workflow}
     end
 
+    test "branches from the workflow as it is now, not as a view holds it", %{
+      project: project,
+      user: user,
+      workflow: workflow
+    } do
+      # A run's own view is an ordinary place to branch from, and the document
+      # it holds carries the name the snapshot was saved under. Reading the name
+      # off that sent the clone looking for a workflow that no longer answers to
+      # it, so the sandbox arrived without the workflow being branched.
+      {:ok, saved} =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Old Name"})
+        |> Lightning.Workflows.save_workflow(user)
+
+      {:ok, _renamed} =
+        saved
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers], force: true)
+        |> Lightning.Workflows.Workflow.changeset(%{name: "New Name"})
+        |> Lightning.Workflows.save_workflow(user)
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{saved.lock_version}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      assert pinned_socket.assigns.workflow.name == "Old Name"
+
+      ref = push(pinned_socket, "edit_in_sandbox", %{})
+      assert_reply ref, :ok, %{workflow_id: cloned_workflow_id}
+
+      cloned = Lightning.Workflows.get_workflow!(cloned_workflow_id)
+      assert cloned.name == "New Name"
+    end
+
     test "starts the sandbox holding the reviewed body and says where it landed",
          %{socket: socket} do
       ref =

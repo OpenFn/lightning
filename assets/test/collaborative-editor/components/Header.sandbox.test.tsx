@@ -1293,7 +1293,32 @@ describe('Header - read-only reason variations', () => {
     expect(saveButton).toHaveTextContent('Create');
   });
 
+  test('keeps Save while reading an older version of a live workflow', () => {
+    // There the reason is the view, not the lifecycle, and the view is a reason
+    // the button can carry. Dropping it left that screen with nothing saying
+    // why it could not be edited.
+    lifecycleState = 'live';
+    urlParams = { v: '2' };
+    readOnly = { isReadOnly: true, reason: 'pinned_version' };
+
+    renderHeader({ isSandbox: false });
+
+    expect(screen.getByTestId('save-workflow-button')).toBeDisabled();
+  });
+
+  test('refuses Promote while reading a run as it executed', () => {
+    // Promote saves before it merges, and every view of the past refuses that
+    // save, so it failed after the confirmation with nothing warning first.
+    lifecycleState = 'draft';
+    urlParams = { as_run: 'run-1', run: 'run-1' };
+
+    renderHeader({ isSandbox: true });
+
+    expect(screen.getByTestId('promote-sandbox-button')).toBeDisabled();
+  });
+
   test('drops Save on a live workflow, where it could never work', () => {
+    urlParams = {};
     // The Live badge and Switch to draft sit beside it and explain the state,
     // so a permanently dead button adds nothing.
     readOnly = { isReadOnly: true, reason: 'live' };

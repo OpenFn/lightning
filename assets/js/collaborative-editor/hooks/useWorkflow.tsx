@@ -937,12 +937,16 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canSave = false;
     tooltipMessage = 'Workflow has been deleted';
-  } else if (contentLocked) {
-    canSave = false;
-    tooltipMessage = CONTENT_LOCKED_MESSAGE;
+    // Same order as useWorkflowReadOnly, and for the same reason: what is on
+    // screen decides before the lifecycle does. Pointing at "switch to draft"
+    // while reading an older version sends someone at a button that is itself
+    // disabled, and would not make the version on screen editable anyway.
   } else if (isPinnedView) {
     canSave = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
+  } else if (contentLocked) {
+    canSave = false;
+    tooltipMessage = CONTENT_LOCKED_MESSAGE;
   } else if (isApplyingJobCode) {
     canSave = false;
     tooltipMessage = 'Applying AI-generated code...';

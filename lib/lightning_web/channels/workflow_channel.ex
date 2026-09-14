@@ -295,7 +295,10 @@ defmodule LightningWeb.WorkflowChannel do
         socket
       )
       when not is_nil(version_number) do
-    workflow = socket.assigns.workflow
+    workflow =
+      Workflows.get_workflow(socket.assigns.workflow_id) ||
+        socket.assigns.workflow
+
     filter = history_filter(version_number)
 
     async_task(socket, "request_history", fn ->
@@ -449,8 +452,19 @@ defmodule LightningWeb.WorkflowChannel do
   @impl true
   def handle_in("edit_in_sandbox", params, socket) do
     parent = socket.assigns.project
-    workflow = socket.assigns.workflow
     user = socket.assigns.current_user
+
+    workflow = socket.assigns.workflow
+
+    # The name as it is now, not as the document on screen holds it. A run's own
+    # view is an ordinary place to branch from, and its assigned workflow
+    # carries the name the snapshot was saved under, so a rename since would
+    # send the clone looking for a workflow that no longer answers to it.
+    branch_from_name =
+      case Workflows.get_workflow(socket.assigns.workflow_id) do
+        nil -> workflow.name
+        current -> current.name
+      end
 
     attrs =
       %{
@@ -472,7 +486,7 @@ defmodule LightningWeb.WorkflowChannel do
            Projects.provision_editing_sandbox(
              parent,
              user,
-             workflow.name,
+             branch_from_name,
              attrs
            ) do
       {:reply,
@@ -570,14 +584,20 @@ defmodule LightningWeb.WorkflowChannel do
       # that with the restored row measures the document against content it was
       # never meant to match, so the view reads as unsaved from the moment the
       # restore lands. The same reason the lifecycle transitions skip it.
+      # Only the assign is skipped on a version being read. Replacing that
+      # socket's workflow with the restored row measures its document against
+      # content it was never meant to match, so the view reads as unsaved. The
+      # push is safe and needed: the context builder already answers with the
+      # snapshot for a version view, and without it the restoring client's idea
+      # of the latest version stays behind for the life of the session.
       socket =
         if socket.assigns.workflow_kind == :version do
           socket
         else
-          socket = assign(socket, :workflow, restored)
-          push(socket, "session_context_updated", build_session_context(socket))
-          socket
+          assign(socket, :workflow, restored)
         end
+
+      push(socket, "session_context_updated", build_session_context(socket))
 
       {:reply, {:ok, %{lock_version: restored.lock_version}}, socket}
     else

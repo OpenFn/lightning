@@ -404,6 +404,12 @@ export function Header({
     ? 'You are reading the past. Promote acts on the current workflow.'
     : null;
 
+  // The sandbox switch is refused on any view of the past, and a run's own view
+  // left it disabled describing what it does rather than why it cannot be used.
+  const sandboxToggleViewReason = isPinnedView
+    ? 'You are reading the past. This acts on the current workflow.'
+    : null;
+
   // A retry runs the content that is live now, whatever is on screen. The
   // button does not say so, because retrying always means that, but the
   // confirmation names the version so the record of what just ran is clear.
@@ -906,7 +912,7 @@ export function Header({
               {!isNewWorkflow && inSandbox && (
                 <Tooltip
                   content={
-                    versionViewReason ??
+                    sandboxToggleViewReason ??
                     (lifecycleState === 'live'
                       ? 'Turn the sandbox off and its triggers stop answering.'
                       : "Turn the sandbox on and its own webhook URL answers, and its cron triggers fire. The parent's live workflow is untouched.")
