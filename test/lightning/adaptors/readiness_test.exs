@@ -118,8 +118,6 @@ defmodule Lightning.Adaptors.ReadinessTest do
 
       assert {:error, :not_found} =
                Adaptors.fetch_adaptor(sup, "@openfn/never-existed")
-
-      assert Adaptors.get_adaptor(sup, "@openfn/never-existed") == nil
     end
 
     test "answers for the given supervisor's source, not the default one" do
@@ -202,12 +200,12 @@ defmodule Lightning.Adaptors.ReadinessTest do
                Adaptors.fetch_adaptor(sup, "@openfn/never-existed")
     end
 
-    test "returns {:error, :not_ready} when the load leaves the catalogue empty",
+    test "returns {:error, :not_found} when the load lists nothing at all",
          %{sup: sup} do
       expect_one_load([])
       start_scheduler(sup)
 
-      assert {:error, :not_ready} =
+      assert {:error, :not_found} =
                Adaptors.fetch_adaptor(sup, "@openfn/language-http")
     end
 
@@ -277,11 +275,15 @@ defmodule Lightning.Adaptors.ReadinessTest do
 
     test "maps a failed wait to its error atom", %{sup: sup} do
       assert {:error, :unavailable} = Adaptors.ensure_loaded(sup)
+    end
 
+    test "a completed load against a source with no adaptors is :ok", %{
+      sup: sup
+    } do
       expect_one_load([])
       start_scheduler(sup)
 
-      assert {:error, :not_ready} = Adaptors.ensure_loaded(sup)
+      assert :ok = Adaptors.ensure_loaded(sup)
     end
   end
 end

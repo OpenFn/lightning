@@ -77,7 +77,8 @@ defmodule Lightning.Adaptors.Scheduler do
   @typedoc """
   One refresh cycle's tallies: adaptors the upstream listing returned,
   how many of those had a changed `latest_version`, how many were
-  fetched and persisted, and how many per-adaptor fetches failed.
+  fetched and persisted, and how many adaptors the cycle failed to fetch
+  or to write.
   """
   @type refresh_counts :: %{
           listed: non_neg_integer(),
@@ -91,8 +92,9 @@ defmodule Lightning.Adaptors.Scheduler do
   complete.
 
   Returns `{:ok, counts}` when the listing succeeded (per-adaptor fetch
-  failures are counted in `counts.errors`), `{:error, reason}` when it
-  failed, or `{:error, {:refresh_failed, reason}}` when the cycle crashed.
+  and upsert failures are counted in `counts.errors`), `{:error, reason}`
+  when it failed, or `{:error, {:refresh_failed, reason}}` when the cycle
+  crashed.
   """
   @spec await_refresh(GenServer.server(), timeout()) ::
           {:ok, refresh_counts()}
@@ -116,6 +118,29 @@ defmodule Lightning.Adaptors.Scheduler do
     GenServer.call(scheduler_name, :refresh_icons, 120_000)
   end
 
+  @doc """
+  Whether a cycle has completed against a source that listed no adaptors
+  at all, since this Scheduler started.
+
+  That is the one outcome no row can record: an upstream answering with an
+  empty list has told us there are no adaptors, and the empty catalogue it
+  leaves behind is loaded rather than unloaded. Every other completed
+  cycle leaves rows, which answer for themselves and keep answering after
+  a restart — so this deliberately says nothing about them, and a source
+  whose rows are later deleted reloads as it did before.
+
+  A cycle that failed to list, fetch or write is not a completed one: we
+  cannot tell a source with nothing in it from one we could not read.
+
+  Answers `false` for a Scheduler that is unreachable.
+  """
+  @spec completed?(GenServer.server()) :: boolean()
+  def completed?(scheduler_name) do
+    GenServer.call(scheduler_name, :completed?)
+  catch
+    :exit, _reason -> false
+  end
+
   @impl true
   def init(opts) do
     sup = Keyword.fetch!(opts, :sup)
@@ -137,6 +162,7 @@ defmodule Lightning.Adaptors.Scheduler do
       tasks: tasks,
       checked_at: checked_at,
       refresh: nil,
+      completed?: false,
       waiters: [],
       package_refreshes: %{},
       icon_refreshes: %{}
@@ -242,7 +268,10 @@ defmodule Lightning.Adaptors.Scheduler do
 
     Enum.each(state.waiters, &GenServer.reply(&1, result))
 
-    {:noreply, %{state | refresh: nil, waiters: []}}
+    completed? =
+      state.completed? or match?({:ok, %{listed: 0, errors: 0}}, result)
+
+    {:noreply, %{state | refresh: nil, completed?: completed?, waiters: []}}
   end
 
   def handle_info(
@@ -310,6 +339,10 @@ defmodule Lightning.Adaptors.Scheduler do
   end
 
   @impl true
+  def handle_call(:completed?, _from, state) do
+    {:reply, state.completed?, state}
+  end
+
   def handle_call(:refresh_now, _from, state) do
     Logger.info("Adaptors[#{state.source}]: refresh_now requested")
     {:reply, :ok, maybe_start_refresh(state)}
@@ -401,7 +434,7 @@ defmodule Lightning.Adaptors.Scheduler do
 
     case strategy.list_adaptors() do
       {:ok, upstream} ->
-        {fetched, changed, errors} =
+        {fetched, changed, fetch_errors} =
           state.tasks
           |> Task.Supervisor.async_stream_nolink(
             upstream,
@@ -440,7 +473,8 @@ defmodule Lightning.Adaptors.Scheduler do
         not_modified = count_not_modified(icons)
 
         listed = length(upstream)
-        touched = listed - changed - errors
+        touched = listed - changed - fetch_errors
+        errors = fetch_errors + (changed - persisted)
         duration_ms = System.monotonic_time(:millisecond) - started_at
 
         Logger.info(

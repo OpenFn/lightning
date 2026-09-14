@@ -13,7 +13,7 @@ defmodule Lightning.Adaptors.Config do
   @default_refresh_interval :timer.hours(1)
   @default_cache_timeout_ms 15_000
   @default_icon_path {:tmp, "lightning/adaptor_icons"}
-  @default_first_load_timeout :timer.seconds(60)
+  @default_first_load_timeout :timer.seconds(90)
 
   @doc """
   The supervisor instance public `Lightning.Adaptors` functions read
@@ -102,7 +102,7 @@ defmodule Lightning.Adaptors.Config do
   @doc """
   Bound, in milliseconds, on how long `Lightning.Adaptors.ensure_loaded/1`
   and `Lightning.Adaptors.fetch_adaptor/2` block waiting for the
-  catalogue's first load. Defaults to 60 seconds.
+  catalogue's first load. Defaults to 90 seconds.
   """
   @spec first_load_timeout() :: non_neg_integer()
   def first_load_timeout do

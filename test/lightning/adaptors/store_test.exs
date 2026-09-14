@@ -6,6 +6,7 @@ defmodule Lightning.Adaptors.StoreTest do
   import Mox
 
   alias Lightning.Adaptors.Catalogue
+  alias Lightning.Adaptors.Scheduler
   alias Lightning.Adaptors.Store
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
   alias LightningWeb.AdaptorIconURL
@@ -29,6 +30,121 @@ defmodule Lightning.Adaptors.StoreTest do
     cache = AdaptorsSupervisor.cache_name(sup)
 
     {:ok, sup: sup, cache: cache}
+  end
+
+  # Replaces the supervisor's own Highlander-wrapped Scheduler with one
+  # this test owns, so a gated read's await_refresh lands on a process
+  # whose sandbox connection and Mox stubs are ours.
+  defp start_scheduler(sup) do
+    :ok =
+      Supervisor.terminate_child(sup, AdaptorsSupervisor.highlander_name(sup))
+
+    pid =
+      start_supervised!({
+        Scheduler,
+        name: AdaptorsSupervisor.global_scheduler_name(sup),
+        sup: sup,
+        lock_key: AdaptorsSupervisor.lock_key(sup),
+        cache: AdaptorsSupervisor.cache_name(sup),
+        tasks: AdaptorsSupervisor.tasks_name(sup),
+        source_topic: AdaptorsSupervisor.source_topic(sup),
+        refresh_interval: 0,
+        warn_when_empty: false,
+        checked_at: fn _source -> nil end
+      })
+
+    Ecto.Adapters.SQL.Sandbox.allow(Lightning.Repo, self(), pid)
+    Mox.allow(Lightning.Adaptors.StrategyMock, self(), pid)
+    pid
+  end
+
+  defp expect_one_load(records) do
+    expect(Lightning.Adaptors.StrategyMock, :list_adaptors, 1, fn ->
+      {:ok, Enum.map(records, &Map.take(&1, [:name, :latest_version]))}
+    end)
+
+    expect(
+      Lightning.Adaptors.StrategyMock,
+      :fetch_adaptor,
+      length(records),
+      fn name -> {:ok, Enum.find(records, &(&1.name == name))} end
+    )
+
+    stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+      {:ok, %{}}
+    end)
+  end
+
+  describe "the first-load gate" do
+    test "schema/2 on a never-loaded catalogue waits, then reads again", %{
+      sup: sup
+    } do
+      expect_one_load([adaptor_record(schema_data: ~s({"type":"object"}))])
+      start_scheduler(sup)
+
+      assert {:ok, ~s({"type":"object"})} =
+               Store.schema(sup, "@openfn/language-http")
+    end
+
+    test "packages/1 on a never-loaded catalogue waits, then reads again", %{
+      sup: sup
+    } do
+      expect_one_load([adaptor_record()])
+      start_scheduler(sup)
+
+      assert {:ok, [%{name: "@openfn/language-http"}]} = Store.packages(sup)
+    end
+
+    test "a loaded catalogue answers empty without a second load", %{sup: sup} do
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        flunk("a loaded catalogue must not be reloaded")
+      end)
+
+      start_scheduler(sup)
+
+      assert {:error, :not_found} = Store.schema(sup, "@openfn/never-existed")
+    end
+
+    test "a source with no adaptors settles on an empty catalogue", %{sup: sup} do
+      # expect/4 with a count of 1 fails the test on a second listing, which
+      # is the point: a completed cycle that wrote nothing must not send
+      # every later read back for another one.
+      expect_one_load([])
+      start_scheduler(sup)
+
+      assert {:ok, []} = Store.packages(sup)
+      assert {:ok, []} = Store.packages(sup)
+      assert {:error, :not_found} = Store.schema(sup, "@openfn/language-http")
+    end
+
+    test "a load that fails to write anything it listed is :not_ready", %{
+      sup: sup
+    } do
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:ok, [%{name: "@openfn/language-http", latest_version: "1.0.0"}]}
+      end)
+
+      expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _name ->
+        {:error, :boom}
+      end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      start_scheduler(sup)
+
+      assert {:error, :not_ready} = Store.packages(sup)
+    end
+
+    test "no reachable Scheduler is :unavailable", %{sup: sup} do
+      :ok =
+        Supervisor.terminate_child(sup, AdaptorsSupervisor.highlander_name(sup))
+
+      assert {:error, :unavailable} = Store.packages(sup)
+    end
   end
 
   describe "schema/2" do
@@ -93,6 +209,7 @@ defmodule Lightning.Adaptors.StoreTest do
       end)
 
       source = AdaptorsSupervisor.source(sup)
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 
       assert {:error, :not_found} = Store.schema(sup, "@openfn/never-existed")
       assert Catalogue.get_adaptor("@openfn/never-existed", source) == nil
@@ -117,13 +234,16 @@ defmodule Lightning.Adaptors.StoreTest do
   end
 
   describe "packages/1" do
-    test "empty DB returns {:ok, []} but does NOT cache the empty result", %{
-      sup: sup,
-      cache: cache
-    } do
+    test "a loaded catalogue with nothing listable returns {:ok, []} but does NOT cache it",
+         %{sup: sup, cache: cache} do
       expect(Lightning.Adaptors.StrategyMock, :fetch_adaptor, 0, fn _ ->
         :unreachable
       end)
+
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(name: "@openfn/language-collections")
+        )
 
       assert {:ok, []} = Store.packages(sup)
 
@@ -165,11 +285,14 @@ defmodule Lightning.Adaptors.StoreTest do
   end
 
   describe "catalogue/1" do
-    test "empty DB returns an empty payload but does NOT cache it", %{
-      sup: sup,
-      cache: cache
-    } do
-      assert {:ok, {{nil, 0}, []}} = Store.catalogue(sup)
+    test "a loaded catalogue with nothing listable returns an empty payload but does NOT cache it",
+         %{sup: sup, cache: cache} do
+      {:ok, _} =
+        Catalogue.upsert_adaptor(
+          adaptor_record(name: "@openfn/language-collections")
+        )
+
+      assert {:ok, {_stamp, []}} = Store.catalogue(sup)
 
       source = AdaptorsSupervisor.source(sup)
       assert {:ok, nil} = Cachex.get(cache, {:catalogue, source})
@@ -562,6 +685,8 @@ defmodule Lightning.Adaptors.StoreTest do
       sup: sup,
       cache: cache
     } do
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
       assert {:error, :not_found} = Store.icon_meta(sup, "@openfn/never-existed")
 
       source = AdaptorsSupervisor.source(sup)

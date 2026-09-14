@@ -14,6 +14,22 @@ defmodule Lightning.AdaptorsTest do
   setup :verify_on_exit!
   setup :isolated_adaptors
 
+  # A refresh cycle lists the source, fetches each listed package, then
+  # fetches icons; stubbing fewer than all three crashes the cycle.
+  defp stub_refresh_cycle(record) do
+    stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+      {:ok, [record]}
+    end)
+
+    stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _name ->
+      {:ok, record}
+    end)
+
+    stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+      {:ok, %{}}
+    end)
+  end
+
   defp start_scheduler(sup) do
     # Stop the supervisor's auto-started HighlanderPG (and its wrapped
     # Scheduler) so we can start a replacement under the controlled
@@ -50,7 +66,14 @@ defmodule Lightning.AdaptorsTest do
       assert pkg.source == :npm
     end
 
-    test "returns {:ok, []} when DB is empty", %{sup: sup} do
+    test "an empty catalogue that has never loaded waits, then reports it",
+         %{sup: sup} do
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn -> {:ok, []} end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
       assert {:ok, []} = Adaptors.packages(sup)
     end
 
@@ -96,7 +119,7 @@ defmodule Lightning.AdaptorsTest do
   end
 
   describe "schema/2" do
-    test "delegates to Store.schema/2 and returns schema", %{sup: sup} do
+    test "returns the schema body", %{sup: sup} do
       stub(Lightning.Adaptors.StrategyMock, :fetch_adaptor, fn _ ->
         {:error, :unreachable}
       end)
@@ -123,32 +146,45 @@ defmodule Lightning.AdaptorsTest do
       assert {:ok, ^ordered_body} =
                Adaptors.schema(sup, "@openfn/language-http")
     end
+
+    test "waits for the first load and returns the schema", %{sup: sup} do
+      record = adaptor_record(schema_data: ~s({"type":"object"}))
+      stub_refresh_cycle(record)
+
+      assert {:ok, ~s({"type":"object"})} =
+               Adaptors.schema(sup, "@openfn/language-http")
+    end
+
+    test "is :not_found once the catalogue has loaded", %{sup: sup} do
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        flunk("a loaded catalogue must not be reloaded")
+      end)
+
+      assert {:error, :not_found} =
+               Adaptors.schema(sup, "@openfn/never-existed")
+    end
   end
 
-  describe "get_adaptor/1" do
+  describe "fetch_adaptor/2" do
     test "returns a Package for an adaptor in the active source" do
       {:ok, _} =
         Catalogue.upsert_adaptor(adaptor_record(latest_version: "4.1.0"))
 
-      assert %Adaptors.Package{
-               name: "@openfn/language-http",
-               source: :npm,
-               latest_version: "4.1.0"
-             } = Adaptors.get_adaptor("@openfn/language-http")
+      assert {:ok,
+              %Adaptors.Package{
+                name: "@openfn/language-http",
+                source: :npm,
+                latest_version: "4.1.0"
+              }} = Adaptors.fetch_adaptor("@openfn/language-http")
     end
 
-    test "returns nil for an adaptor absent from the catalogue" do
+    test "is :not_found for an adaptor absent from the catalogue" do
       {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 
-      assert Adaptors.get_adaptor("@openfn/never-existed") == nil
-    end
-
-    test "returns nil when the catalogue is empty, without triggering a refresh" do
-      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
-        flunk("get_adaptor/1 must not trigger a load")
-      end)
-
-      assert Adaptors.get_adaptor("@openfn/language-http") == nil
+      assert {:error, :not_found} =
+               Adaptors.fetch_adaptor("@openfn/never-existed")
     end
 
     test "still resolves a name the catalogue listing excludes" do
@@ -157,17 +193,16 @@ defmodule Lightning.AdaptorsTest do
           adaptor_record(name: "@openfn/language-collections")
         )
 
-      assert %Adaptors.Package{name: "@openfn/language-collections"} =
-               Adaptors.get_adaptor("@openfn/language-collections")
-
       assert {:ok, %Adaptors.Package{name: "@openfn/language-collections"}} =
                Adaptors.fetch_adaptor("@openfn/language-collections")
     end
 
-    test "returns nil for a row under a different source than the active one" do
+    test "is :not_found for a row under a different source than the active one" do
       {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(source: :local))
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record(name: "@openfn/other"))
 
-      assert Adaptors.get_adaptor("@openfn/language-http") == nil
+      assert {:error, :not_found} =
+               Adaptors.fetch_adaptor("@openfn/language-http")
     end
 
     test "computes has_schema on the DB-fallback path (excluded from the lean listing)" do
@@ -179,8 +214,8 @@ defmodule Lightning.AdaptorsTest do
           )
         )
 
-      assert %Adaptors.Package{has_schema: true} =
-               Adaptors.get_adaptor("@openfn/language-collections")
+      assert {:ok, %Adaptors.Package{has_schema: true}} =
+               Adaptors.fetch_adaptor("@openfn/language-collections")
     end
 
     test "has_schema is false on the DB-fallback path when schema_data is nil" do
@@ -192,8 +227,8 @@ defmodule Lightning.AdaptorsTest do
           )
         )
 
-      assert %Adaptors.Package{has_schema: false} =
-               Adaptors.get_adaptor("@openfn/language-collections")
+      assert {:ok, %Adaptors.Package{has_schema: false}} =
+               Adaptors.fetch_adaptor("@openfn/language-collections")
     end
   end
 
@@ -202,7 +237,7 @@ defmodule Lightning.AdaptorsTest do
          %{sup: sup} do
       {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 
-      assert Adaptors.resolve_name(sup, "http") == "@openfn/language-http"
+      assert Adaptors.resolve_name(sup, "http") == {:ok, "@openfn/language-http"}
     end
 
     test "leaves a full name that is already in the catalogue unchanged", %{
@@ -211,11 +246,21 @@ defmodule Lightning.AdaptorsTest do
       {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 
       assert Adaptors.resolve_name(sup, "@openfn/language-http") ==
-               "@openfn/language-http"
+               {:ok, "@openfn/language-http"}
     end
 
     test "leaves an unknown short name unchanged", %{sup: sup} do
-      assert Adaptors.resolve_name(sup, "unknownish") == "unknownish"
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      assert Adaptors.resolve_name(sup, "unknownish") == {:ok, "unknownish"}
+    end
+
+    test "waits for the first load when the catalogue has never loaded", %{
+      sup: sup
+    } do
+      stub_refresh_cycle(adaptor_record())
+
+      assert Adaptors.resolve_name(sup, "http") == {:ok, "@openfn/language-http"}
     end
 
     test "never resolves the raw and oauth sentinels, even if shadowed in the catalogue",
@@ -226,8 +271,8 @@ defmodule Lightning.AdaptorsTest do
       {:ok, _} =
         Catalogue.upsert_adaptor(adaptor_record(name: "@openfn/language-oauth"))
 
-      assert Adaptors.resolve_name(sup, "raw") == "raw"
-      assert Adaptors.resolve_name(sup, "oauth") == "oauth"
+      assert Adaptors.resolve_name(sup, "raw") == {:ok, "raw"}
+      assert Adaptors.resolve_name(sup, "oauth") == {:ok, "oauth"}
     end
   end
 
@@ -261,25 +306,27 @@ defmodule Lightning.AdaptorsTest do
   describe "parse_spec/1" do
     test "splits a spec carrying a version" do
       assert Adaptors.parse_spec("@openfn/language-http@1.2.3") ==
-               {"@openfn/language-http", "1.2.3"}
+               {:ok, {"@openfn/language-http", "1.2.3"}}
 
       assert Adaptors.parse_spec("@openfn/language-http@latest") ==
-               {"@openfn/language-http", "latest"}
+               {:ok, {"@openfn/language-http", "latest"}}
 
-      assert Adaptors.parse_spec("common@1.0.0") == {"common", "1.0.0"}
+      assert Adaptors.parse_spec("common@1.0.0") == {:ok, {"common", "1.0.0"}}
     end
 
     test "returns a nil version for a spec without one" do
       assert Adaptors.parse_spec("@openfn/language-http") ==
-               {"@openfn/language-http", nil}
+               {:ok, {"@openfn/language-http", nil}}
     end
 
-    test "returns {nil, nil} for a string that isn't a well-formed spec" do
+    test "errors on a string that isn't a well-formed spec" do
       assert Adaptors.parse_spec("@openfn/language-http; rm -rf /") ==
-               {nil, nil}
+               {:error, :invalid_format}
 
-      assert Adaptors.parse_spec("@openfn/x\npwd\nb@1.0.0") == {nil, nil}
-      assert Adaptors.parse_spec("") == {nil, nil}
+      assert Adaptors.parse_spec("@openfn/x\npwd\nb@1.0.0") ==
+               {:error, :invalid_format}
+
+      assert Adaptors.parse_spec("") == {:error, :invalid_format}
     end
   end
 
@@ -461,6 +508,8 @@ defmodule Lightning.AdaptorsTest do
     test "icon_meta/2 returns {:error, :not_found} for unknown adaptor", %{
       sup: sup
     } do
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
       assert {:error, :not_found} =
                Adaptors.icon_meta(sup, "@openfn/never-existed")
     end

@@ -160,18 +160,15 @@ defmodule Lightning.Workflows.Job do
   # yet, so that case gets its own, retry-able message.
   defp validate_known_adaptor(changeset) do
     validate_change(changeset, :adaptor, fn :adaptor, adaptor ->
-      with {name, _version} when is_binary(name) <- Adaptors.parse_spec(adaptor),
+      with {:ok, {name, _version}} <- Adaptors.parse_spec(adaptor),
            {:ok, _package} <- Adaptors.fetch_adaptor(name) do
         []
       else
-        {:error, :not_found} ->
+        {:error, reason} when reason in [:not_found, :invalid_format] ->
           [adaptor: "is not a recognised adaptor"]
 
-        {:error, _} ->
+        {:error, _reason} ->
           [adaptor: "adaptor catalogue is not ready yet, try again shortly"]
-
-        _ ->
-          [adaptor: "is not a recognised adaptor"]
       end
     end)
   end

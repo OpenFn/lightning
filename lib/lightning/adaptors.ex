@@ -95,31 +95,53 @@ defmodule Lightning.Adaptors do
   Returns the credential schema of the adaptor named `pkg`, as a JSON
   binary. An adaptor with no schema yields `"{}"` and an unknown name
   is `{:error, :not_found}`.
+
+  Against a catalogue that has never loaded, waits for the first load;
+  the other errors are then those of `fetch_adaptor/2`.
   """
-  @spec schema(atom(), String.t()) :: {:ok, String.t()} | {:error, term()}
-  def schema(sup \\ Config.default_instance(), pkg), do: Store.schema(sup, pkg)
+  @spec schema(atom(), String.t()) ::
+          {:ok, String.t()}
+          | {:error, :not_found | :timeout | :unavailable | :not_ready}
+  def schema(sup \\ Config.default_instance(), pkg),
+    do: Store.schema(sup, pkg)
 
   @doc """
   Resolves a possibly-legacy short adaptor name (e.g. `"http"`) to its full
   npm package name (`"@openfn/language-http"`), if the full name resolves in
-  the catalogue. Returns `name` unchanged if it already resolves, or if
-  neither form does.
+  the catalogue. Returns `{:ok, name}` unchanged if it already resolves, or
+  if neither form does: a loaded catalogue that knows neither is a real
+  answer, and the name is left as given.
 
   `"raw"` and `"oauth"` are sentinels, not adaptor names, and are returned
   unchanged without consulting the catalogue.
+
+  Waits for the catalogue's first load if it has never loaded, and returns
+  the `fetch_adaptor/2` errors other than `:not_found` when it cannot get
+  an answer at all.
   """
-  @spec resolve_name(atom(), String.t()) :: String.t()
+  @spec resolve_name(atom(), String.t()) ::
+          {:ok, String.t()} | {:error, :timeout | :unavailable | :not_ready}
   def resolve_name(sup \\ Config.default_instance(), name)
 
-  def resolve_name(_sup, name) when name in ["raw", "oauth"], do: name
+  def resolve_name(_sup, name) when name in ["raw", "oauth"], do: {:ok, name}
 
   def resolve_name(sup, name) do
+    case fetch_adaptor(sup, name) do
+      {:ok, _package} -> {:ok, name}
+      {:error, :not_found} -> resolve_short_name(sup, name)
+      {:error, _reason} = error -> error
+    end
+  end
+
+  defp resolve_short_name(_sup, "@" <> _scoped = name), do: {:ok, name}
+
+  defp resolve_short_name(sup, name) do
     full = PackageName.full_name(name)
 
-    cond do
-      get_adaptor(sup, name) -> name
-      not String.starts_with?(name, "@") and get_adaptor(sup, full) -> full
-      true -> name
+    case fetch_adaptor(sup, full) do
+      {:ok, _package} -> {:ok, full}
+      {:error, :not_found} -> {:ok, name}
+      {:error, _reason} = error -> error
     end
   end
 
@@ -151,18 +173,10 @@ defmodule Lightning.Adaptors do
   end
 
   @doc """
-  Returns the adaptor named `name`, or `nil`.
-
-  Takes a bare package name, not a spec; see `parse_spec/1`. Never waits
-  for the catalogue to load; see `fetch_adaptor/2` for that.
-  """
-  @spec get_adaptor(atom(), String.t()) :: Package.t() | nil
-  def get_adaptor(sup \\ Config.default_instance(), name) when is_binary(name),
-    do: lookup(sup, name)
-
-  @doc """
   Returns `{:ok, adaptor}` for the adaptor named `name`, waiting for the
   catalogue's first load if it has never loaded.
+
+  Takes a bare package name, not a spec; see `parse_spec/1`.
 
   Errors:
 
@@ -177,40 +191,28 @@ defmodule Lightning.Adaptors do
           | {:error, :not_found | :timeout | :unavailable | :not_ready}
   def fetch_adaptor(sup \\ Config.default_instance(), name)
       when is_binary(name) do
-    case lookup(sup, name) do
-      %Package{} = package ->
-        {:ok, package}
+    case Store.packages(sup) do
+      {:ok, metas} ->
+        resolve_meta(sup, name, Enum.find(metas, &(&1.name == name)))
 
-      nil ->
-        if ready?(sup),
-          do: {:error, :not_found},
-          else: load_then_fetch(sup, name)
+      {:error, reason} when reason in [:timeout, :unavailable, :not_ready] ->
+        {:error, reason}
+
+      # Any other failure is the cache's, and says nothing about the row.
+      {:error, _cache} ->
+        resolve_meta(sup, name, nil)
     end
   end
 
-  defp load_then_fetch(sup, name) do
-    with :ok <- load(sup) do
-      case lookup(sup, name) do
-        %Package{} = package -> {:ok, package}
-        nil -> {:error, :not_found}
-      end
-    end
-  end
-
-  # Cache first, then the row itself: the cached list can lag a Scheduler
-  # write until the Invalidator drops it.
-  defp lookup(sup, name) do
+  # The cached listing first, then the row itself: the listing can lag a
+  # Scheduler write until the Invalidator drops it, and it leaves out the
+  # excluded and deprecated names a job may still be using.
+  defp resolve_meta(sup, name, cached) do
     source = AdaptorsSupervisor.source(sup)
 
-    cached =
-      case Store.packages(sup) do
-        {:ok, metas} -> Enum.find(metas, &(&1.name == name))
-        {:error, _} -> nil
-      end
-
     case cached || Catalogue.get_package_meta(name, source) do
-      nil -> nil
-      meta -> to_package(meta, source)
+      nil -> {:error, :not_found}
+      meta -> {:ok, to_package(meta, source)}
     end
   end
 
@@ -226,33 +228,21 @@ defmodule Lightning.Adaptors do
   """
   @spec ensure_loaded(atom()) ::
           :ok | {:error, :timeout | :unavailable | :not_ready}
-  def ensure_loaded(sup \\ Config.default_instance()) do
-    if ready?(sup), do: :ok, else: load(sup)
-  end
-
-  defp load(sup) do
-    case refresh(sup, await: true) do
-      {:error, :timeout} -> {:error, :timeout}
-      {:error, :unavailable} -> {:error, :unavailable}
-      # A successful cycle can still leave the source empty, and a failed
-      # one can land on rows a seed already wrote.
-      _ -> if ready?(sup), do: :ok, else: {:error, :not_ready}
-    end
-  end
-
-  defp ready?(sup),
-    do: Catalogue.max_checked_at(AdaptorsSupervisor.source(sup)) != nil
+  def ensure_loaded(sup \\ Config.default_instance()),
+    do: Store.ensure_loaded(sup)
 
   @doc """
-  Splits an adaptor spec into `{name, version}`, with `version` `nil` when
-  the spec carries none, and `{nil, nil}` for a malformed spec.
+  Splits an adaptor spec into `{:ok, {name, version}}`, with `version` `nil`
+  when the spec carries none, or `{:error, :invalid_format}` for a spec that
+  is not a package name plus an optional `@version`.
   """
-  @spec parse_spec(String.t()) :: {String.t() | nil, String.t() | nil}
+  @spec parse_spec(String.t()) ::
+          {:ok, {String.t(), String.t() | nil}} | {:error, :invalid_format}
   def parse_spec(spec) when is_binary(spec) do
     case Regex.run(PackageName.strict_format(), spec) do
-      [_, name, version] -> {name, version}
-      [_, name] -> {name, nil}
-      _ -> {nil, nil}
+      [_, name, version] -> {:ok, {name, version}}
+      [_, name] -> {:ok, {name, nil}}
+      _ -> {:error, :invalid_format}
     end
   end
 
@@ -280,7 +270,7 @@ defmodule Lightning.Adaptors do
     source = AdaptorsSupervisor.source(sup)
 
     case parse_spec(spec) do
-      {name, "latest"} when source != :local ->
+      {:ok, {name, "latest"}} when source != :local ->
         with {:ok, %Package{latest_version: latest}} <- fetch_adaptor(sup, name) do
           {:ok, PackageName.to_wire(spec, source: source, latest: latest)}
         end

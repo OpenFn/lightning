@@ -243,7 +243,10 @@ defmodule Lightning.AdaptorService do
   @spec find_adaptor(Agent.agent(), package :: String.t()) ::
           InstalledAdaptor.t() | nil
   def find_adaptor(agent, package) when is_binary(package) do
-    find_adaptor(agent, resolve_package_name(package))
+    case Adaptors.parse_spec(package) do
+      {:ok, package_spec} -> find_adaptor(agent, package_spec)
+      {:error, :invalid_format} -> nil
+    end
   end
 
   @spec find_adaptor(Agent.agent(), package_spec()) :: InstalledAdaptor.t() | nil
@@ -291,36 +294,47 @@ defmodule Lightning.AdaptorService do
 
   @spec install(Agent.agent(), binary()) ::
           {:ok, InstalledAdaptor.t()}
-          | {:error, :adaptor_not_permitted}
+          | {:error, :adaptor_not_permitted | :invalid_format}
+          | {:error, {:catalogue_unavailable, term()}}
           | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
   def install(agent, package) when is_binary(package) do
-    install(agent, resolve_package_name(package))
+    with {:ok, package_spec} <- Adaptors.parse_spec(package) do
+      install(agent, package_spec)
+    end
   end
 
   @spec install(Agent.agent(), package_spec()) ::
           {:ok, InstalledAdaptor.t()}
           | {:error, :adaptor_not_permitted}
+          | {:error, {:catalogue_unavailable, term()}}
           | {:error, {Collectable.t(), exit_status :: non_neg_integer}}
   def install(agent, {package_name, _version} = package_spec) do
-    if known?(package_name) do
-      agent
-      |> find_adaptor(package_spec)
-      |> case do
-        nil -> install!(agent, package_spec)
-        existing -> {:ok, existing}
-      end
-    else
-      Logger.warning(
-        "Refusing to install non-permitted adaptor: #{inspect(package_name)}"
-      )
+    case Adaptors.fetch_adaptor(package_name) do
+      {:ok, _package} ->
+        case find_adaptor(agent, package_spec) do
+          nil -> install!(agent, package_spec)
+          existing -> {:ok, existing}
+        end
 
-      {:error, :adaptor_not_permitted}
+      {:error, :not_found} ->
+        Logger.warning(
+          "Refusing to install non-permitted adaptor: #{inspect(package_name)}"
+        )
+
+        {:error, :adaptor_not_permitted}
+
+      # A catalogue that cannot answer has not said no. Reporting that as
+      # a policy refusal sends whoever debugs the failed install to the
+      # allowlist for what is a timeout or an unreachable source.
+      {:error, reason} ->
+        Logger.warning(
+          "Cannot check #{inspect(package_name)} against the adaptor " <>
+            "catalogue: #{inspect(reason)}"
+        )
+
+        {:error, {:catalogue_unavailable, reason}}
     end
   end
-
-  defp known?(nil), do: false
-
-  defp known?(name), do: match?({:ok, _}, Adaptors.fetch_adaptor(name))
 
   @spec install!(Agent.agent(), package_spec()) ::
           {:ok, InstalledAdaptor.t()}
@@ -357,9 +371,6 @@ defmodule Lightning.AdaptorService do
         {:error, {stdout, code}}
     end
   end
-
-  def resolve_package_name(package_name) when is_binary(package_name),
-    do: Adaptors.parse_spec(package_name)
 
   @doc """
   Turns a package name and version into a string for NPM.

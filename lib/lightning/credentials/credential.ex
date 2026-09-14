@@ -109,10 +109,20 @@ defmodule Lightning.Credentials.Credential do
     end
   end
 
+  # Expanding a legacy short name needs a loaded catalogue. When it cannot
+  # answer the name is stored as typed rather than failing the save: the
+  # short form is a supported legacy shape that `get_schema/1` resolves on
+  # read and `Credentials.reconcile_legacy_schema_names/1` rewrites later.
   defp resolve_schema_name(changeset) do
     update_change(changeset, :schema, fn
-      schema when is_binary(schema) -> Lightning.Adaptors.resolve_name(schema)
-      schema -> schema
+      schema when is_binary(schema) ->
+        case Lightning.Adaptors.resolve_name(schema) do
+          {:ok, resolved} -> resolved
+          {:error, _catalogue_unavailable} -> schema
+        end
+
+      schema ->
+        schema
     end)
   end
 end

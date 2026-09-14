@@ -44,6 +44,10 @@ defmodule Lightning.Setup do
 
     Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
       {:ok, _pid} = Lightning.Adaptors.Supervisor.ensure_started()
+      # Load the catalogue up front rather than let the first adaptor lookup
+      # block inside `fun`'s transaction for the length of a source fetch.
+      # A failure here surfaces at that lookup instead.
+      _ = Lightning.Adaptors.ensure_loaded()
       fun.()
     end)
   end

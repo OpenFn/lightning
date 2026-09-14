@@ -83,7 +83,9 @@ defmodule LightningWeb.AdaptorIconController do
     shape = String.to_existing_atom(shape)
 
     case Adaptors.icon_meta(name) do
-      {:error, :not_found} ->
+      # A catalogue that will not load has no icon to serve either, so its
+      # errors are 404s here rather than a 500.
+      {:error, _reason} ->
         send_resp(conn, 404, "")
 
       {:ok, meta} ->

@@ -587,12 +587,10 @@ defmodule Lightning.Credentials do
   """
   @spec get_schema(String.t()) :: Credentials.Schema.t()
   def get_schema(schema_name) do
-    resolved = Lightning.Adaptors.resolve_name(schema_name)
-
-    case Lightning.Adaptors.schema(resolved) do
-      {:ok, schema_body} ->
-        Credentials.Schema.new(schema_body, resolved)
-
+    with {:ok, resolved} <- Lightning.Adaptors.resolve_name(schema_name),
+         {:ok, schema_body} <- Lightning.Adaptors.schema(resolved) do
+      Credentials.Schema.new(schema_body, resolved)
+    else
       {:error, reason} ->
         raise "Error reading credential schema. Got: #{inspect(reason)}"
     end
@@ -616,16 +614,24 @@ defmodule Lightning.Credentials do
       |> Repo.all()
       |> Enum.reduce(0, fn short, count ->
         case Lightning.Adaptors.resolve_name(sup, short) do
-          ^short ->
+          {:ok, ^short} ->
             count
 
-          full ->
+          {:ok, full} ->
             {n, _} =
               Repo.update_all(from(c in Credential, where: c.schema == ^short),
                 set: [schema: full]
               )
 
             count + n
+
+          {:error, reason} ->
+            Logger.warning(
+              "Could not resolve credential schema #{inspect(short)}: " <>
+                "#{inspect(reason)}"
+            )
+
+            count
         end
       end)
 

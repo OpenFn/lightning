@@ -5,20 +5,20 @@ defmodule Lightning.AdaptorServiceTest do
   load, and a name the loaded catalogue lacks refuses the install.
   """
 
-  # set_mox_global: the load runs in a Task owned by the production
-  # Scheduler.
+  # set_mox_global: the load runs in a Task owned by the Scheduler.
   use Lightning.DataCase, async: false
 
   import Mox
+  import Lightning.AdaptorTestHelpers, only: [isolated_adaptors: 1]
 
   alias Lightning.Adaptors.Catalogue
   alias Lightning.AdaptorService
 
   setup :set_mox_global
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
-    Lightning.AdaptorTestHelpers.clear_global_adaptors_cache()
     stub(Lightning.AdaptorService.RepoMock, :list_local, fn _path -> [] end)
 
     {:ok, agent} =
@@ -48,6 +48,19 @@ defmodule Lightning.AdaptorServiceTest do
                AdaptorService.install(agent, "@openfn/language-http")
 
       assert_received :listed
+    end
+
+    test "a catalogue that cannot answer is not a refusal", %{agent: agent} do
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        {:error, :econnrefused}
+      end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      assert {:error, {:catalogue_unavailable, :not_ready}} =
+               AdaptorService.install(agent, "@openfn/language-http")
     end
 
     test "populated catalogue without this package: refuses", %{agent: agent} do

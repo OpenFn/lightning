@@ -171,7 +171,7 @@ defmodule Lightning.AdaptorTestHelpers do
     ensure_isolated!()
 
     case Lightning.Adaptors.parse_spec(spec) do
-      {name, _version} when is_binary(name) ->
+      {:ok, {name, _version}} ->
         source = AdaptorsSupervisor.source(Config.default_instance())
 
         if is_nil(Lightning.Adaptors.Catalogue.get_adaptor(name, source)),
