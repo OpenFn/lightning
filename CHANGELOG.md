@@ -23,6 +23,10 @@ and this project adheres to
 
 ### Fixed
 
+- A live workflow can be run and retried by hand again. Every run control saved the workflow on its way out, and a live one refuses that save, so the run never happened. Running is not editing: the person responsible for a live workflow has to be able to put a test input through what is in production. [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
+- Reading an older version of a workflow can no longer write that version back over the workflow. Going live or switching to draft while reading one saved the old content in place of the current, deleting anything added since and recording it as an ordinary new version. [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
 - Opening the merge dialog, and deleting a sandbox, no longer crash in a workspace with a branch more than one level deep. A sandbox can no longer be merged into one of its own descendants either, which used to schedule the source for deletion. [#5141](https://github.com/OpenFn/lightning/issues/5141)
 
 - Merging a sandbox no longer reports its own merge as the parent having moved on. A merge now records where it left the parent, so the next one compares against that rather than warning about work it did itself. [#5167](https://github.com/OpenFn/lightning/issues/5167)
