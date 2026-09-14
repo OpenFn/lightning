@@ -27,6 +27,7 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
 
   @impl true
   def handle_event("validate", %{"connection" => params}, socket) do
+    params = Map.put(params, "project_id", socket.assigns.project.id)
     changeset = validate_changes(socket.assigns.project_repo_connection, params)
 
     {:noreply,
@@ -170,6 +171,23 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
         changeset
       end
     end)
+    |> maybe_force_branch_error_action()
+  end
+
+  # When the project-tree branch guard fails on a branch the user just
+  # selected, set the changeset action so Phoenix renders the error inline.
+  # We only promote the action when the conflict error is present so other
+  # "blank" errors stay hidden until the user submits.
+  defp maybe_force_branch_error_action(changeset) do
+    branch_errors = Keyword.get_values(changeset.errors, :branch)
+
+    if Enum.any?(branch_errors, fn {_msg, opts} ->
+         Keyword.get(opts, :reason) == :tree_branch_conflict
+       end) do
+      Map.put(changeset, :action, :validate)
+    else
+      changeset
+    end
   end
 
   defp create_connection(socket, params) do

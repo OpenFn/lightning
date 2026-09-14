@@ -4,14 +4,14 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
   @moduledoc """
   Installs the following NodeJS packages:
 
-  - core
+  - cli
   - language-common
   """
 
   use Mix.Task
 
   @default_path "priv/openfn"
-  @cli_version "1.39.1"
+  @cli_version "1.39.3"
 
   def run(args) do
     case Rambo.run("/usr/bin/env", ~w(which node)) do

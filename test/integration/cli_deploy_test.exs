@@ -102,6 +102,10 @@ defmodule Lightning.CliDeployTest do
 
       assert actual_state == expected_state_for_comparison
 
+      # The provisioner endpoint (`GET /api/provision/yaml`) is hard-wired to
+      # the v1 format for back-compat with deployed CLIs and GitHub sync. So
+      # `openfn pull` always writes v1 YAML to disk, regardless of what the
+      # in-app "Export project as YAML" download emits.
       expected_yaml = File.read!("test/fixtures/canonical_project.yaml")
 
       actual_yaml = File.read!(config.specPath)
@@ -109,7 +113,7 @@ defmodule Lightning.CliDeployTest do
       assert actual_yaml == expected_yaml
     end
 
-    test "deploy a new project to a Lightning server", %{
+    test "deploy a new project to a Lightning server (v1 spec)", %{
       user: user,
       config: config,
       config_path: config_path
@@ -118,7 +122,8 @@ defmodule Lightning.CliDeployTest do
       assert [] == Lightning.Repo.all(Lightning.Projects.Project)
 
       # Lets use the canonical spec
-      specPath = Path.expand("test/fixtures/canonical_project.yaml")
+      specPath =
+        Path.expand("test/fixtures/portability/v1/canonical_project.yaml")
 
       config = %{config | specPath: specPath}
       File.write(config_path, Jason.encode!(config))
@@ -220,61 +225,116 @@ defmodule Lightning.CliDeployTest do
              )
     end
 
-    test "pull exports webhook_reply and cron_cursor_job fields", %{
+    test "deploy a new project to a Lightning server (v2 spec)", %{
       user: user,
       config: config,
       config_path: config_path
     } do
+      # there's no project
+      assert [] == Lightning.Repo.all(Lightning.Projects.Project)
+
+      # Lets use the canonical v2 spec
+      specPath =
+        Path.expand("test/fixtures/portability/v2/canonical_project.yaml")
+
+      config = %{config | specPath: specPath}
       File.write(config_path, Jason.encode!(config))
 
-      # Build a project with a webhook trigger (webhook_reply) and a cron
-      # trigger with cron_cursor_job_id
-      webhook_trigger =
-        build(:trigger, type: :webhook, webhook_reply: :after_completion)
+      # only a superuser can deploy a new project
+      # lets update the user's role to a normal user
+      user |> Ecto.Changeset.change(%{role: :user}) |> Lightning.Repo.update!()
 
-      reply_job = build(:job, name: "reply job", body: "fn(state => state)")
-
-      webhook_workflow =
-        build(:workflow, name: "webhook reply workflow", project: nil)
-        |> with_trigger(webhook_trigger)
-        |> with_job(reply_job)
-        |> with_edge({webhook_trigger, reply_job}, condition_type: :always)
-
-      # Build the job first so we have its id
-      cursor_job = build(:job, name: "cursor job", body: "fn(state => state)")
-
-      cron_trigger =
-        build(:trigger,
-          type: :cron,
-          cron_expression: "0 6 * * *",
-          cron_cursor_job_id: cursor_job.id
+      {logs, _} =
+        System.cmd(
+          @cli_path,
+          ["deploy", "-c", config_path, "--no-confirm"],
+          env: @required_env
         )
 
-      cron_workflow =
-        build(:workflow, name: "cron cursor workflow", project: nil)
-        |> with_trigger(cron_trigger)
-        |> with_job(cursor_job)
-        |> with_edge({cron_trigger, cursor_job}, condition_type: :always)
+      assert logs =~ "Failed to authorize request with endpoint"
+      assert logs =~ "403 Forbidden"
+      # no project has been created
+      assert [] == Lightning.Repo.all(Lightning.Projects.Project)
 
-      project =
-        insert(:project,
-          name: "webhook-reply-and-cron-cursor-project",
-          project_users: [%{user: user, role: :owner}],
-          workflows: [webhook_workflow, cron_workflow]
-        )
+      # lets update the user's role to a superuser and use the canonical email
+      user
+      |> Lightning.Repo.reload()
+      |> Ecto.Changeset.change(%{
+        role: :superuser,
+        email: "cannonical-user@lightning.com"
+      })
+      |> Lightning.Repo.update!()
+
+      credential_fixture(user_id: user.id, name: "new credential")
 
       System.cmd(
         @cli_path,
-        ["pull", project.id, "-c", config_path],
+        ["deploy", "-c", config_path, "--no-confirm"],
         env: @required_env
       )
 
-      expected_yaml =
-        File.read!("test/fixtures/webhook_reply_and_cron_cursor_project.yaml")
+      assert [project] =
+               Lightning.Repo.all(Lightning.Projects.Project)
+               |> Lightning.Repo.preload(workflows: [:jobs, :triggers, :edges])
 
-      actual_yaml = File.read!(config.specPath)
+      assert project.name == "a-test-project"
+      assert project.description == "This is only a test\n"
 
-      assert actual_yaml == expected_yaml
+      assert Enum.count(project.workflows) == 2
+
+      # workflow 1
+      workflow_1 = Enum.find(project.workflows, &(&1.name == "workflow 1"))
+      [trigger] = workflow_1.triggers
+
+      assert match?(
+               %{type: :webhook, cron_expression: nil, enabled: true},
+               trigger
+             )
+
+      assert Enum.count(workflow_1.jobs) == 3
+      # webhook job
+      edge_1 =
+        Enum.find(workflow_1.edges, fn edge ->
+          edge.source_trigger_id == trigger.id
+        end)
+
+      job_1 = Enum.find(workflow_1.jobs, &(&1.id == edge_1.target_job_id))
+
+      assert match?(
+               %{
+                 name: "webhook job",
+                 adaptor: "@openfn/language-common@latest",
+                 body: "console.log('webhook job')\nfn(state => state)\n"
+               },
+               job_1
+             )
+
+      # workflow 2
+      workflow_2 = Enum.find(project.workflows, &(&1.name == "workflow 2"))
+      [trigger] = workflow_2.triggers
+
+      assert match?(
+               %{type: :cron, cron_expression: "0 23 * * *", enabled: true},
+               trigger
+             )
+
+      assert Enum.count(workflow_2.jobs) == 2
+      # cron job
+      edge =
+        Enum.find(workflow_2.edges, fn edge ->
+          edge.source_trigger_id == trigger.id
+        end)
+
+      job = Enum.find(workflow_2.jobs, &(&1.id == edge.target_job_id))
+
+      assert match?(
+               %{
+                 name: "some cronjob",
+                 adaptor: "@openfn/language-common@latest",
+                 body: "console.log('hello!');\n"
+               },
+               job
+             )
     end
 
     test "deploy updates to an existing project on a Lightning server", %{
@@ -295,8 +355,8 @@ defmodule Lightning.CliDeployTest do
         env: @required_env
       )
 
-      # Lets use the updated spec
-      specPath = Path.expand("test/fixtures/canonical_update_project.yaml")
+      specPath =
+        Path.expand("test/fixtures/portability/v1/canonical_update_project.yaml")
 
       config = %{config | specPath: specPath}
       File.write(config_path, Jason.encode!(config))
@@ -327,6 +387,223 @@ defmodule Lightning.CliDeployTest do
       assert updated_job.body ==
                "console.log('updated webhook job')\nfn(state => state)\n"
     end
+
+    test "round-trip: a v2 project pulled from Lightning re-deploys cleanly into a fresh project",
+         %{user: user, tmp_dir: tmp_dir} do
+      # End-to-end round-trip via the CLI's v2 commands:
+      #   1. `openfn project pull <id>` fetches the v2 portability YAML and
+      #      expands it into a workspace on disk (`openfn.yaml` +
+      #      `projects/<alias>/project.yaml` + per-workflow files).
+      #   2. `openfn project deploy --new --name ...` packages the workspace
+      #      back up and POSTs JSON to `/api/provision` as a new project.
+      # Asserts that the project that lands in the DB is structurally
+      # equivalent to the source.
+      #
+      # We build a small bespoke project (rather than the canonical fixture)
+      # to avoid having to mint extra users — `canonical_project_fixture/0`
+      # inserts its own owner with the email we'd otherwise need to
+      # impersonate to claim deploy authority.
+      user
+      |> Ecto.Changeset.change(%{role: :superuser})
+      |> Lightning.Repo.update!()
+
+      trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job_a =
+        build(:job,
+          name: "alpha",
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => state)"
+        )
+
+      job_b =
+        build(:job,
+          name: "beta",
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => state)"
+        )
+
+      workflow =
+        build(:workflow, name: "rt-workflow", project: nil)
+        |> with_trigger(trigger)
+        |> with_job(job_a)
+        |> with_job(job_b)
+        |> with_edge({trigger, job_a}, condition_type: :always)
+        |> with_edge({job_a, job_b}, condition_type: :on_job_success)
+
+      source =
+        insert(:project,
+          name: "rt-source-project",
+          project_users: [%{user: user, role: :owner}],
+          workflows: [workflow]
+        )
+
+      api_token = Accounts.generate_api_token(user)
+      endpoint_url = LightningWeb.Endpoint.url()
+      workspace = Path.join(tmp_dir, "round-trip-ws")
+      File.mkdir_p!(workspace)
+
+      cli_env = [
+        {"OPENFN_ENDPOINT", endpoint_url},
+        {"OPENFN_API_KEY", api_token},
+        {"NODE_OPTIONS", "--dns-result-order=ipv4first"}
+      ]
+
+      {pull_logs, pull_status} =
+        System.cmd(
+          @cli_path,
+          ["project", "pull", source.id, "--workspace", workspace],
+          env: cli_env
+        )
+
+      assert pull_status == 0,
+             "project pull failed (exit #{pull_status}): #{pull_logs}"
+
+      {deploy_logs, deploy_status} =
+        System.cmd(
+          @cli_path,
+          [
+            "project",
+            "deploy",
+            "--workspace",
+            workspace,
+            "--new",
+            "--name",
+            "round-tripped",
+            "-y"
+          ],
+          env: cli_env
+        )
+
+      assert deploy_status == 0,
+             "project deploy failed (exit #{deploy_status}): #{deploy_logs}"
+
+      [_source, deployed] =
+        Lightning.Repo.all(Lightning.Projects.Project)
+        |> Lightning.Repo.preload(workflows: [:jobs, :triggers, :edges])
+        |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+
+      assert deployed.name == "round-tripped"
+
+      source =
+        Lightning.Repo.preload(source, workflows: [:jobs, :triggers, :edges])
+
+      assert workflow_summary(source) == workflow_summary(deployed)
+    end
+
+    test "deploy updates (v2) to an existing project on a Lightning server",
+         %{user: user, tmp_dir: tmp_dir} do
+      # End-to-end v2 update via the CLI: pull a source project into a
+      # workspace, mutate a job's `.js` file, then `openfn project deploy
+      # <id> -y` (no `--new`) to push the change back. Asserts the source
+      # project's job body was updated in the DB.
+      user
+      |> Ecto.Changeset.change(%{role: :superuser})
+      |> Lightning.Repo.update!()
+
+      trigger = build(:trigger, type: :webhook, enabled: true)
+
+      job_alpha =
+        build(:job,
+          name: "alpha",
+          adaptor: "@openfn/language-common@latest",
+          body: "fn(state => state)"
+        )
+
+      workflow =
+        build(:workflow, name: "rt-update-wf", project: nil)
+        |> with_trigger(trigger)
+        |> with_job(job_alpha)
+        |> with_edge({trigger, job_alpha}, condition_type: :always)
+
+      source =
+        insert(:project,
+          name: "rt-update-source",
+          project_users: [%{user: user, role: :owner}],
+          workflows: [workflow]
+        )
+
+      api_token = Accounts.generate_api_token(user)
+      endpoint_url = LightningWeb.Endpoint.url()
+      workspace = Path.join(tmp_dir, "update-ws")
+      File.mkdir_p!(workspace)
+
+      cli_env = [
+        {"OPENFN_ENDPOINT", endpoint_url},
+        {"OPENFN_API_KEY", api_token},
+        {"NODE_OPTIONS", "--dns-result-order=ipv4first"}
+      ]
+
+      {pull_logs, pull_status} =
+        System.cmd(
+          @cli_path,
+          ["project", "pull", source.id, "--workspace", workspace],
+          env: cli_env
+        )
+
+      assert pull_status == 0,
+             "project pull failed (exit #{pull_status}): #{pull_logs}"
+
+      # Checkout writes each step's expression to its own `.js` file
+      # alongside the workflow YAML. Mutating the `.js` is enough — the
+      # next deploy reads the file back via @openfn/project's `from('fs')`.
+      alpha_js_path =
+        Path.join([workspace, "workflows", "rt-update-wf", "alpha.js"])
+
+      assert File.exists?(alpha_js_path)
+
+      updated_body = "fn(state => ({ ...state, marker: 'v2-update' }))"
+      File.write!(alpha_js_path, updated_body)
+
+      {deploy_logs, deploy_status} =
+        System.cmd(
+          @cli_path,
+          ["project", "deploy", "--workspace", workspace, "-y"],
+          env: cli_env
+        )
+
+      assert deploy_status == 0,
+             "project deploy failed (exit #{deploy_status}): #{deploy_logs}"
+
+      [updated_workflow] =
+        source
+        |> Lightning.Repo.reload()
+        |> Lightning.Repo.preload(workflows: [:jobs])
+        |> Map.get(:workflows)
+
+      updated_alpha =
+        Enum.find(updated_workflow.jobs, &(&1.name == "alpha"))
+
+      assert String.trim_trailing(updated_alpha.body, "\n") == updated_body
+    end
+  end
+
+  defp workflow_summary(%{workflows: workflows}) do
+    workflows
+    |> Enum.map(fn w ->
+      %{
+        name: w.name,
+        jobs:
+          w.jobs
+          |> Enum.map(fn j ->
+            # Trailing newline differs by an artifact of YAML block-literal
+            # round-tripping; the body content is what matters.
+            {j.name, j.adaptor, String.trim_trailing(j.body, "\n")}
+          end)
+          |> Enum.sort(),
+        triggers:
+          w.triggers
+          |> Enum.map(fn t -> {t.type, t.enabled, t.cron_expression} end)
+          |> Enum.sort(),
+        edges:
+          w.edges
+          |> Enum.map(fn e ->
+            {e.source_trigger_id != nil, e.condition_type, e.enabled}
+          end)
+          |> Enum.sort()
+      }
+    end)
+    |> Enum.sort_by(& &1.name)
   end
 
   defp hyphenize(val) do

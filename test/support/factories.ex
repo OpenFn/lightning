@@ -14,14 +14,42 @@ defmodule Lightning.Factories do
     }
   end
 
-  def project_repo_connection_factory do
-    %Lightning.VersionControl.ProjectRepoConnection{
-      project: build(:project),
+  def project_repo_connection_factory(attrs) do
+    project =
+      case Map.get(attrs, :project) do
+        %Lightning.Projects.Project{id: id} = p when is_binary(id) -> p
+        %Lightning.Projects.Project{} = p -> insert(p)
+        nil -> nil
+      end
+
+    project =
+      project ||
+        case Map.get(attrs, :project_id) do
+          id when is_binary(id) ->
+            Lightning.Repo.get!(Lightning.Projects.Project, id)
+
+          _ ->
+            insert(:project)
+        end
+
+    root_project_id =
+      Map.get_lazy(attrs, :root_project_id, fn ->
+        Lightning.Projects.root_id(project.id)
+      end)
+
+    base = %Lightning.VersionControl.ProjectRepoConnection{
+      project: project,
+      root_project_id: root_project_id,
       repo: "some/repo",
       branch: "branch",
       github_installation_id: "some-id",
       access_token: sequence(:token, &"prc_sometoken#{&1}")
     }
+
+    merge_attributes(
+      base,
+      Map.drop(attrs, [:project, :project_id, :root_project_id])
+    )
   end
 
   def project_factory do
