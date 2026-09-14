@@ -364,6 +364,8 @@ defmodule LightningWeb.AdaptorIconControllerTest do
 
   describe "show/2 — 404" do
     test "adaptor not in DB", %{conn: conn} do
+      insert_adaptor(unique_adaptor_name())
+
       params = %{
         "name" => "nonexistent-adaptor-#{System.unique_integer([:positive])}",
         "shape" => "square",
@@ -502,9 +504,20 @@ defmodule LightningWeb.AdaptorIconControllerTest do
     end
 
     test "404 on unknown adaptor", %{conn: conn} do
+      insert_adaptor(unique_adaptor_name())
+
       conn = get(conn, "/adaptors/icons/nope/square-aabbccdd.png")
 
       assert conn.status == 404
+    end
+
+    test "503 while the catalogue has never loaded", %{conn: conn} do
+      Lightning.Adaptors.Catalogue.delete_all_for_source(source())
+
+      conn = get(conn, "/adaptors/icons/nope/square-aabbccdd.png")
+
+      assert conn.status == 503
+      assert get_resp_header(conn, "retry-after") == ["5"]
     end
   end
 

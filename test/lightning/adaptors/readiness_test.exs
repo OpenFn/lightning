@@ -1,6 +1,6 @@
 defmodule Lightning.Adaptors.ReadinessTest do
   @moduledoc """
-  `fetch_adaptor/2` and `ensure_loaded/1` against an isolated supervisor:
+  `fetch_adaptor/3` and `ensure_loaded/2` against an isolated supervisor:
   a populated catalogue never contacts the Scheduler, an empty one waits
   for exactly one coalesced load, and every failure mode of that wait maps
   to its error atom.
@@ -251,9 +251,25 @@ defmodule Lightning.Adaptors.ReadinessTest do
 
       assert Process.alive?(pid)
     end
+
+    test "bounds the wait with its own :timeout option", %{sup: sup} do
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, 1, fn ->
+        Process.sleep(300)
+        {:ok, []}
+      end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      start_scheduler(sup)
+
+      assert {:error, :timeout} =
+               Adaptors.fetch_adaptor(sup, "@openfn/language-http", timeout: 50)
+    end
   end
 
-  describe "ensure_loaded/1" do
+  describe "ensure_loaded/2" do
     test "returns :ok immediately when rows exist, without contacting the Scheduler",
          %{sup: sup} do
       {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())

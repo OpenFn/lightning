@@ -15,7 +15,7 @@ defmodule Mix.Tasks.Lightning.Adaptors.Refresh do
 
     * `0` - success
     * `1` - package name not found
-    * `2` - any other error, including a listing that returned no adaptors
+    * `2` - any other error, including a source that could not be listed
       or a refresh that took longer than 10 minutes
   """
 
@@ -43,10 +43,6 @@ defmodule Mix.Tasks.Lightning.Adaptors.Refresh do
            await: true,
            timeout: @await_timeout
          ) do
-      {:ok, %{listed: 0}} ->
-        Mix.shell().error("Refresh completed but the source listed no adaptors.")
-        exit({:shutdown, 2})
-
       {:ok, counts} ->
         duration_s = div(System.monotonic_time(:millisecond) - started, 1000)
 

@@ -95,12 +95,15 @@ defmodule Lightning.Adaptors.Scheduler do
   and upsert failures are counted in `counts.errors`), `{:error, reason}`
   when it failed, or `{:error, {:refresh_failed, reason}}` when the cycle
   crashed.
+
+  A caller whose `timeout` expires before the cycle finishes is dropped
+  rather than replied to, so a late result never lands in its mailbox.
   """
   @spec await_refresh(GenServer.server(), timeout()) ::
           {:ok, refresh_counts()}
           | {:error, {:refresh_failed, term()} | term()}
   def await_refresh(scheduler_name, timeout) do
-    GenServer.call(scheduler_name, :await_refresh, timeout)
+    GenServer.call(scheduler_name, {:await_refresh, timeout}, timeout)
   end
 
   @doc """
@@ -266,7 +269,7 @@ defmodule Lightning.Adaptors.Scheduler do
         "#{length(state.waiters)} waiter(s)"
     )
 
-    Enum.each(state.waiters, &GenServer.reply(&1, result))
+    reply_waiters(state.waiters, result)
 
     completed? =
       state.completed? or match?({:ok, %{listed: 0, errors: 0}}, result)
@@ -283,10 +286,7 @@ defmodule Lightning.Adaptors.Scheduler do
         "replying error to #{length(state.waiters)} waiter(s)"
     )
 
-    Enum.each(
-      state.waiters,
-      &GenServer.reply(&1, {:error, {:refresh_failed, reason}})
-    )
+    reply_waiters(state.waiters, {:error, {:refresh_failed, reason}})
 
     {:noreply, %{state | refresh: nil, waiters: []}}
   end
@@ -338,6 +338,22 @@ defmodule Lightning.Adaptors.Scheduler do
     {:noreply, state}
   end
 
+  defp deadline(:infinity), do: :infinity
+
+  defp deadline(timeout) when is_integer(timeout),
+    do: System.monotonic_time(:millisecond) + timeout
+
+  # A caller that outlived its own timeout is no longer expecting a reply.
+  defp reply_waiters(waiters, result) do
+    now = System.monotonic_time(:millisecond)
+
+    Enum.each(waiters, fn {from, deadline} ->
+      if deadline == :infinity or deadline > now do
+        GenServer.reply(from, result)
+      end
+    end)
+  end
+
   @impl true
   def handle_call(:completed?, _from, state) do
     {:reply, state.completed?, state}
@@ -348,12 +364,12 @@ defmodule Lightning.Adaptors.Scheduler do
     {:reply, :ok, maybe_start_refresh(state)}
   end
 
-  def handle_call(:await_refresh, from, state) do
+  def handle_call({:await_refresh, timeout}, from, state) do
     Logger.debug(
       "Adaptors[#{state.source}]: await_refresh attached (#{length(state.waiters) + 1} waiters)"
     )
 
-    state = %{state | waiters: [from | state.waiters]}
+    state = %{state | waiters: [{from, deadline(timeout)} | state.waiters]}
     {:noreply, maybe_start_refresh(state)}
   end
 

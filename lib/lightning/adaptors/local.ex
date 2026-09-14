@@ -28,6 +28,10 @@ defmodule Lightning.Adaptors.Local do
   and a single `Logger.warning` names every shadowed package once per
   scan.
 
+  A checkout with no packages in it lists `{:ok, []}`: the directory is
+  readable and really is empty, which is a different thing from an npm org
+  listing that comes back with nothing in it.
+
   `source: :local` is **not** set here — the Store stamps it before
   upsert. No network calls anywhere in this module.
   """

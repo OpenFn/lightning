@@ -10,7 +10,8 @@ defmodule Lightning.Adaptors.NPM do
       cheap version lookup, returning `name + latest_version` for every
       `@openfn/language-*` package. See
       `Lightning.Adaptors.NPM.Registry` for why this is two calls, not
-      one.
+      one. A listing with no `@openfn/language-*` names is an error, not
+      an empty catalogue.
     * `c:Lightning.Adaptors.Strategy.fetch_adaptor/1` — packument fetch +
       per-version decode and latest-version schema retrieval via
       jsDelivr. Icon fields are **not** stamped here; the Scheduler

@@ -29,9 +29,21 @@ defmodule Mix.Tasks.Lightning.Adaptors.RefreshTest do
       assert msg =~ "errors 1"
     end
 
-    test "exits 2 when the cycle succeeds but the source listed no adaptors" do
+    test "a cycle that listed no adaptors is a success" do
       stub(Lightning.Adaptors, :refresh, fn _sup, _opts ->
         {:ok, %{listed: 0, changed: 0, fetched: 0, errors: 0}}
+      end)
+
+      Mix.Tasks.Lightning.Adaptors.Refresh.run([])
+
+      assert_received {:mix_shell, :info, [_]}
+      assert_received {:mix_shell, :info, [msg]}
+      assert msg =~ "listed 0"
+    end
+
+    test "exits 2 when the source could not be listed" do
+      stub(Lightning.Adaptors, :refresh, fn _sup, _opts ->
+        {:error, :empty_listing}
       end)
 
       assert catch_exit(Mix.Tasks.Lightning.Adaptors.Refresh.run([])) ==

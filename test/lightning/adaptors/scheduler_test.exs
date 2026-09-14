@@ -773,6 +773,28 @@ defmodule Lightning.Adaptors.SchedulerTest do
                Scheduler.await_refresh(sched_name, 5_000)
     end
 
+    test "does not reply to a waiter whose timeout expired", %{sup: sup} do
+      {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
+
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, 1, fn ->
+        Process.sleep(300)
+        {:ok, []}
+      end)
+
+      pid = start_scheduler(sup)
+
+      # The call is assembled by hand because `GenServer.call/3` replies to
+      # an alias the VM drops once the caller times out, which would hide a
+      # reply the Scheduler should never have sent.
+      expired = make_ref()
+      live = make_ref()
+      send(pid, {:"$gen_call", {self(), expired}, {:await_refresh, 50}})
+      send(pid, {:"$gen_call", {self(), live}, {:await_refresh, 30_000}})
+
+      assert_receive {^live, {:ok, %{listed: 0}}}, 2_000
+      refute_received {^expired, _result}
+    end
+
     test "returns the upstream listing failure to waiters", %{sup: sup} do
       {:ok, _} = Catalogue.upsert_adaptor(adaptor_record())
 

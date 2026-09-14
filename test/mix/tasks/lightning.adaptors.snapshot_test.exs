@@ -52,7 +52,7 @@ defmodule Mix.Tasks.Lightning.Adaptors.SnapshotTest do
         json_resp(conn, 200, %{})
       end)
 
-      Bypass.expect(registry, "GET", "/-/v1/search", fn conn ->
+      Bypass.stub(registry, "GET", "/-/v1/search", fn conn ->
         json_resp(conn, 200, %{"objects" => []})
       end)
 

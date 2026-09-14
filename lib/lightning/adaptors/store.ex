@@ -13,14 +13,14 @@ defmodule Lightning.Adaptors.Store do
 
   ## The first load
 
-  Every read is gated on the catalogue having loaded at least once. A read
-  that comes back with data answers immediately; one that comes back empty
-  or not-found asks whether the catalogue has ever loaded, and if it has
-  not, triggers the first load, waits for it and reads again. An empty
-  answer from a catalogue that has loaded is a real answer and is returned
-  as-is — including the empty catalogue a source with no adaptors leaves
-  behind, which the Scheduler reports as loaded despite there being no row
-  to find.
+  Reads never block. A read that comes back empty or not-found asks whether
+  the catalogue has ever loaded, and answers `{:error, :not_ready}` when it
+  has not. An empty answer from a catalogue that has loaded is a real answer
+  and is returned as-is — including the empty catalogue a source with no
+  adaptors leaves behind, which the Scheduler reports as loaded despite there
+  being no row to find.
+
+  Waiting for the first load is opt-in, through `ensure_loaded/2`.
   """
 
   alias Lightning.Adaptors.Catalogue
@@ -66,7 +66,7 @@ defmodule Lightning.Adaptors.Store do
   `{:error, :not_found}`.
   """
   @spec schema(sup(), String.t()) :: {:ok, String.t()} | {:error, term()}
-  def schema(sup, name), do: gated(sup, fn -> read_schema(sup, name) end)
+  def schema(sup, name), do: settled(sup, read_schema(sup, name))
 
   defp read_schema(sup, name) do
     cache = AdaptorsSupervisor.cache_name(sup)
@@ -99,7 +99,7 @@ defmodule Lightning.Adaptors.Store do
   @spec icon(sup(), String.t(), :square | :rectangle) ::
           {:ok, Path.t()} | {:error, :not_found | term()}
   def icon(sup, name, shape) when shape in [:square, :rectangle] do
-    gated(sup, fn -> read_icon(sup, name, shape) end)
+    settled(sup, read_icon(sup, name, shape))
   end
 
   defp read_icon(sup, name, shape) do
@@ -155,7 +155,7 @@ defmodule Lightning.Adaptors.Store do
   `dependencies` and `peer_dependencies` columns.
   """
   @spec packages(sup()) :: {:ok, [package_meta()]} | {:error, term()}
-  def packages(sup), do: gated(sup, fn -> read_packages(sup) end)
+  def packages(sup), do: settled(sup, read_packages(sup))
 
   defp read_packages(sup) do
     cache = AdaptorsSupervisor.cache_name(sup)
@@ -184,7 +184,7 @@ defmodule Lightning.Adaptors.Store do
   can never drift apart.
   """
   @spec catalogue(sup()) :: {:ok, catalogue()} | {:error, term()}
-  def catalogue(sup), do: gated(sup, fn -> read_catalogue(sup) end)
+  def catalogue(sup), do: settled(sup, read_catalogue(sup))
 
   defp read_catalogue(sup) do
     cache = AdaptorsSupervisor.cache_name(sup)
@@ -209,8 +209,8 @@ defmodule Lightning.Adaptors.Store do
   without touching disk, or `{:error, :not_found}` for an unknown name.
   """
   @spec icon_meta(sup(), String.t()) ::
-          {:ok, icon_meta()} | {:error, :not_found}
-  def icon_meta(sup, name), do: gated(sup, fn -> read_icon_meta(sup, name) end)
+          {:ok, icon_meta()} | {:error, :not_found | :not_ready}
+  def icon_meta(sup, name), do: settled(sup, read_icon_meta(sup, name))
 
   defp read_icon_meta(sup, name) do
     cache = AdaptorsSupervisor.cache_name(sup)
@@ -232,27 +232,30 @@ defmodule Lightning.Adaptors.Store do
 
   @doc """
   Waits until the catalogue has loaded at least once, triggering the first
-  load if needed.
+  load if needed. `:timeout` bounds the wait, defaulting to
+  `Lightning.Adaptors.Config.first_load_timeout/0`.
 
-  Returns `:ok`, `{:error, :timeout}` if the load did not finish within
-  `Lightning.Adaptors.Config.first_load_timeout/0`, `{:error, :unavailable}`
-  if no Scheduler is reachable, or `{:error, :not_ready}` if the load ran
-  and could neither write a row nor report a complete cycle.
+  Returns `:ok`, `{:error, :timeout}` if the load did not finish in time,
+  `{:error, :unavailable}` if no Scheduler is reachable, or
+  `{:error, :not_ready}` if the load ran and could neither write a row nor
+  report a complete cycle.
   """
-  @spec ensure_loaded(sup()) ::
+  @spec ensure_loaded(sup(), keyword()) ::
           :ok | {:error, :timeout | :unavailable | :not_ready}
-  def ensure_loaded(sup) do
-    if loaded?(sup), do: :ok, else: first_load(sup)
+  def ensure_loaded(sup, opts \\ []) do
+    if loaded?(sup) do
+      :ok
+    else
+      first_load(sup, opts[:timeout] || Config.first_load_timeout())
+    end
   end
 
   # Only an empty answer pays for the `loaded?/1` query: a read that found
   # data cannot be waiting on the first load, whatever the catalogue's
   # state.
-  defp gated(sup, read) do
-    result = read.()
-
+  defp settled(sup, result) do
     if empty?(result) and not loaded?(sup) do
-      with :ok <- first_load(sup), do: read.()
+      {:error, :not_ready}
     else
       result
     end
@@ -273,18 +276,18 @@ defmodule Lightning.Adaptors.Store do
 
   # A failed cycle can land on rows a seed already wrote, so the outcome
   # is re-read rather than inferred from the refresh result.
-  defp first_load(sup) do
-    case await_refresh(sup) do
+  defp first_load(sup, timeout) do
+    case await_refresh(sup, timeout) do
       {:error, :timeout} -> {:error, :timeout}
       {:error, :unavailable} -> {:error, :unavailable}
       _other -> if loaded?(sup), do: :ok, else: {:error, :not_ready}
     end
   end
 
-  defp await_refresh(sup) do
+  defp await_refresh(sup, timeout) do
     Scheduler.await_refresh(
       AdaptorsSupervisor.global_scheduler_name(sup),
-      Config.first_load_timeout()
+      timeout
     )
   catch
     :exit, {:timeout, _} -> {:error, :timeout}

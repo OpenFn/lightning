@@ -33,7 +33,7 @@ defmodule Lightning.Adaptors.StoreTest do
   end
 
   # Replaces the supervisor's own Highlander-wrapped Scheduler with one
-  # this test owns, so a gated read's await_refresh lands on a process
+  # this test owns, so `ensure_loaded`'s await_refresh lands on a process
   # whose sandbox connection and Mox stubs are ours.
   defp start_scheduler(sup) do
     :ok =
@@ -76,23 +76,34 @@ defmodule Lightning.Adaptors.StoreTest do
   end
 
   describe "the first-load gate" do
-    test "schema/2 on a never-loaded catalogue waits, then reads again", %{
+    test "a never-loaded catalogue answers :not_ready without waiting", %{
       sup: sup
     } do
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        flunk("a read must not trigger a load")
+      end)
+
+      start_scheduler(sup)
+
+      assert {:error, :not_ready} = Store.packages(sup)
+      assert {:error, :not_ready} = Store.schema(sup, "@openfn/language-http")
+      assert {:error, :not_ready} = Store.catalogue(sup)
+      assert {:error, :not_ready} = Store.icon_meta(sup, "@openfn/language-http")
+
+      assert {:error, :not_ready} =
+               Store.icon(sup, "@openfn/language-http", :square)
+    end
+
+    test "ensure_loaded/2 waits for the first load, after which reads answer",
+         %{sup: sup} do
       expect_one_load([adaptor_record(schema_data: ~s({"type":"object"}))])
       start_scheduler(sup)
 
+      assert :ok = Store.ensure_loaded(sup)
+      assert {:ok, [%{name: "@openfn/language-http"}]} = Store.packages(sup)
+
       assert {:ok, ~s({"type":"object"})} =
                Store.schema(sup, "@openfn/language-http")
-    end
-
-    test "packages/1 on a never-loaded catalogue waits, then reads again", %{
-      sup: sup
-    } do
-      expect_one_load([adaptor_record()])
-      start_scheduler(sup)
-
-      assert {:ok, [%{name: "@openfn/language-http"}]} = Store.packages(sup)
     end
 
     test "a loaded catalogue answers empty without a second load", %{sup: sup} do
@@ -114,7 +125,8 @@ defmodule Lightning.Adaptors.StoreTest do
       expect_one_load([])
       start_scheduler(sup)
 
-      assert {:ok, []} = Store.packages(sup)
+      assert :ok = Store.ensure_loaded(sup)
+      assert :ok = Store.ensure_loaded(sup)
       assert {:ok, []} = Store.packages(sup)
       assert {:error, :not_found} = Store.schema(sup, "@openfn/language-http")
     end
@@ -136,14 +148,29 @@ defmodule Lightning.Adaptors.StoreTest do
 
       start_scheduler(sup)
 
-      assert {:error, :not_ready} = Store.packages(sup)
+      assert {:error, :not_ready} = Store.ensure_loaded(sup)
     end
 
     test "no reachable Scheduler is :unavailable", %{sup: sup} do
       :ok =
         Supervisor.terminate_child(sup, AdaptorsSupervisor.highlander_name(sup))
 
-      assert {:error, :unavailable} = Store.packages(sup)
+      assert {:error, :unavailable} = Store.ensure_loaded(sup)
+    end
+
+    test "ensure_loaded/2 gives up at its own :timeout", %{sup: sup} do
+      expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        Process.sleep(500)
+        {:ok, []}
+      end)
+
+      stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
+        {:ok, %{}}
+      end)
+
+      start_scheduler(sup)
+
+      assert {:error, :timeout} = Store.ensure_loaded(sup, timeout: 50)
     end
   end
 

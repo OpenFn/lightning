@@ -145,6 +145,13 @@ defmodule Lightning.Adaptors.Strategy do
   Cheap change-signal listing: `name + latest_version` for every
   `@openfn/*` package known to the strategy. The scheduler diffs this
   against the `adaptors` table to compute its work list.
+
+  `{:ok, []}` means the strategy looked and there is genuinely nothing
+  there, which settles the Store's first-load gate. A strategy that cannot
+  tell an empty source from an unreadable one must return `{:error, _}`:
+  `Lightning.Adaptors.Local` reports an empty checkout as `{:ok, []}`,
+  `Lightning.Adaptors.NPM` reports an empty org listing as
+  `{:error, :empty_listing}`.
   """
   @callback list_adaptors() ::
               {:ok, [%{name: String.t(), latest_version: String.t()}]}

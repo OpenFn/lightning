@@ -144,6 +144,21 @@ defmodule LightningWeb.AdaptorControllerTest do
     assert json_response(conn, 503) == %{
              "error" => "adaptor catalogue unavailable"
            }
+
+    assert get_resp_header(conn, "retry-after") == ["5"]
+  end
+
+  test "a catalogue that has never loaded is a 503, not an empty list", %{
+    conn: conn
+  } do
+    conn = log_in_user(conn, insert(:user))
+
+    stub(Adaptors, :catalogue, fn -> {:error, :not_ready} end)
+
+    conn = get(conn, ~p"/adaptors/catalogue")
+
+    assert json_response(conn, 503)
+    assert get_resp_header(conn, "retry-after") == ["5"]
   end
 
   defp version_record(version) do

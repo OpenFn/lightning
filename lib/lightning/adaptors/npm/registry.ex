@@ -48,6 +48,11 @@ defmodule Lightning.Adaptors.NPM.Registry do
   `/-/v1/search` (cheap version lookup), falling back to a per-name
   packument fetch for any name search doesn't cover. See the moduledoc for
   why this isn't a single call.
+
+  A listing holding no `@openfn/language-*` names is `{:error, :empty_listing}`
+  and a 200 whose body is not a map is `{:error, :malformed_listing}`: an org
+  with hundreds of packages does not empty out, so an empty answer is a broken
+  registry rather than knowledge that no adaptors exist.
   """
   @spec list_adaptors() ::
           {:ok, [%{name: String.t(), latest_version: String.t()}]}
@@ -145,12 +150,16 @@ defmodule Lightning.Adaptors.NPM.Registry do
   defp scoped_package_names do
     case Tesla.get(json_client(), "/-/user/openfn/package") do
       {:ok, %Tesla.Env{status: 200, body: body}} when is_map(body) ->
-        names =
-          body
-          |> Map.keys()
-          |> Enum.filter(&String.starts_with?(&1, @language_prefix))
+        case Enum.filter(
+               Map.keys(body),
+               &String.starts_with?(&1, @language_prefix)
+             ) do
+          [] -> {:error, :empty_listing}
+          names -> {:ok, names}
+        end
 
-        {:ok, names}
+      {:ok, %Tesla.Env{status: 200}} ->
+        {:error, :malformed_listing}
 
       {:ok, %Tesla.Env{status: status}} ->
         {:error, {:http_status, status}}

@@ -35,22 +35,26 @@ defmodule Lightning.Adaptors.NPM.RegistryTest do
   end
 
   describe "list_adaptors/0" do
-    test "returns an empty list when the org has no packages", %{
+    test "an org listing with no language packages is an error", %{
       bypass: bypass
     } do
       Bypass.expect(bypass, "GET", "/-/user/openfn/package", fn conn ->
         json_resp(conn, 200, %{})
       end)
 
-      Bypass.expect(bypass, "GET", "/-/v1/search", fn conn ->
-        conn = Plug.Conn.fetch_query_params(conn)
-        assert conn.query_params["text"] == "@openfn"
-        assert conn.query_params["size"] == "250"
-
+      Bypass.stub(bypass, "GET", "/-/v1/search", fn conn ->
         json_resp(conn, 200, %{"objects" => []})
       end)
 
-      assert {:ok, []} = Registry.list_adaptors()
+      assert {:error, :empty_listing} = Registry.list_adaptors()
+    end
+
+    test "an org listing that is not a map is an error", %{bypass: bypass} do
+      Bypass.expect(bypass, "GET", "/-/user/openfn/package", fn conn ->
+        json_resp(conn, 200, ["@openfn/language-http"])
+      end)
+
+      assert {:error, :malformed_listing} = Registry.list_adaptors()
     end
 
     test "returns name + latest_version for each authoritative name", %{
