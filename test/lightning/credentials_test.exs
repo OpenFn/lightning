@@ -2881,10 +2881,55 @@ defmodule Lightning.CredentialsTest do
     test "returns the adaptor's schema when one is present" do
       seed_credential_schema("http")
 
-      assert %Credentials.Schema{fields: fields} =
+      assert {:ok, %Credentials.Schema{fields: fields}} =
                Credentials.get_schema("@openfn/language-http")
 
       assert fields != []
+    end
+
+    test "returns {:error, :not_found} for an adaptor the catalogue lacks" do
+      seed_credential_schema("http")
+
+      assert {:error, :not_found} =
+               Credentials.get_schema("@openfn/language-never-existed")
+    end
+
+    test "returns an error rather than raising when the catalogue cannot answer",
+         %{sup: sup} do
+      :ok =
+        Supervisor.terminate_child(
+          sup,
+          Lightning.Adaptors.Supervisor.highlander_name(sup)
+        )
+
+      assert {:error, :not_ready} =
+               Credentials.get_schema("@openfn/language-http")
+    end
+
+    test "a save while the catalogue cannot answer says so on the body" do
+      user = insert(:user)
+
+      Mimic.stub(Lightning.Adaptors, :resolve_name, fn name -> {:ok, name} end)
+
+      Mimic.stub(Lightning.Adaptors, :schema, fn _name ->
+        {:error, :not_ready}
+      end)
+
+      attrs = %{
+        name: "a http credential",
+        user_id: user.id,
+        schema: "@openfn/language-http",
+        credential_bodies: [%{name: "main", body: %{"baseUrl" => "http://x"}}]
+      }
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Credentials.create_credential(attrs, user)
+
+      assert [
+               credential_bodies:
+                 {"Environment 1: body adaptor catalogue is not ready yet, try again shortly",
+                  []}
+             ] = changeset.errors
     end
   end
 end

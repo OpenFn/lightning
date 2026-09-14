@@ -340,7 +340,7 @@ defmodule Lightning.Credentials.SchemaTest do
         {:error, :unreachable}
       end)
 
-      schema = Credentials.get_schema("ordered-fixture")
+      {:ok, schema} = Credentials.get_schema("ordered-fixture")
 
       assert schema.fields == [:zeta, :alpha, :mu]
     end
@@ -353,7 +353,7 @@ defmodule Lightning.Credentials.SchemaTest do
     end
 
     test "successfully validates field with json schema email format" do
-      schema = Credentials.get_schema("godata")
+      {:ok, schema} = Credentials.get_schema("godata")
 
       changeset =
         Ecto.Changeset.put_change(
@@ -370,7 +370,7 @@ defmodule Lightning.Credentials.SchemaTest do
     end
 
     test "returns a changeset with 2 expected formats" do
-      schema = Credentials.get_schema("postgresql")
+      {:ok, schema} = Credentials.get_schema("postgresql")
 
       changeset =
         Ecto.Changeset.put_change(
@@ -388,7 +388,7 @@ defmodule Lightning.Credentials.SchemaTest do
     end
 
     test "returns a changeset with 1 expected format and 2 allowed types" do
-      schema = Credentials.get_schema("http")
+      {:ok, schema} = Credentials.get_schema("http")
 
       changeset =
         Ecto.Changeset.put_change(
@@ -406,7 +406,7 @@ defmodule Lightning.Credentials.SchemaTest do
     end
 
     test "treats object types as text (TEMP FIX)" do
-      schema = Credentials.get_schema("http")
+      {:ok, schema} = Credentials.get_schema("http")
 
       assert schema.types == %{
                username: :string,
@@ -418,7 +418,7 @@ defmodule Lightning.Credentials.SchemaTest do
     end
 
     test "returns a changeset with expected email format" do
-      schema = Credentials.get_schema("godata")
+      {:ok, schema} = Credentials.get_schema("godata")
 
       changeset =
         Ecto.Changeset.put_change(
@@ -436,7 +436,7 @@ defmodule Lightning.Credentials.SchemaTest do
     end
 
     test "returns a changeset with no expected format and 2 allowed types" do
-      schema = Credentials.get_schema("dhis2")
+      {:ok, schema} = Credentials.get_schema("dhis2")
 
       changeset =
         Ecto.Changeset.put_change(

@@ -113,18 +113,17 @@ defmodule Lightning.Adaptors do
   `"raw"` and `"oauth"` are sentinels, not adaptor names, and are returned
   unchanged without consulting the catalogue.
 
-  Waits for the catalogue's first load if it has never loaded, and returns
-  the `fetch_adaptor/3` errors other than `:not_found` when it cannot get
-  an answer at all.
+  Answers from the catalogue as it stands, without waiting for a first
+  load: a catalogue that has never loaded is `{:error, :not_ready}`.
   """
   @spec resolve_name(atom(), String.t()) ::
-          {:ok, String.t()} | {:error, :timeout | :unavailable | :not_ready}
+          {:ok, String.t()} | {:error, :not_ready}
   def resolve_name(sup \\ Config.default_instance(), name)
 
   def resolve_name(_sup, name) when name in ["raw", "oauth"], do: {:ok, name}
 
   def resolve_name(sup, name) do
-    case fetch_adaptor(sup, name) do
+    case lookup_adaptor(sup, name) do
       {:ok, _package} -> {:ok, name}
       {:error, :not_found} -> resolve_short_name(sup, name)
       {:error, _reason} = error -> error
@@ -136,7 +135,7 @@ defmodule Lightning.Adaptors do
   defp resolve_short_name(sup, name) do
     full = PackageName.full_name(name)
 
-    case fetch_adaptor(sup, full) do
+    case lookup_adaptor(sup, full) do
       {:ok, _package} -> {:ok, full}
       {:error, :not_found} -> {:ok, name}
       {:error, _reason} = error -> error
@@ -190,13 +189,23 @@ defmodule Lightning.Adaptors do
           | {:error, :not_found | :timeout | :unavailable | :not_ready}
   def fetch_adaptor(sup \\ Config.default_instance(), name, opts \\ [])
       when is_binary(name) do
+    case lookup_adaptor(sup, name) do
+      {:error, :not_ready} ->
+        with :ok <- Store.ensure_loaded(sup, opts),
+             do: lookup_adaptor(sup, name)
+
+      result ->
+        result
+    end
+  end
+
+  defp lookup_adaptor(sup, name) do
     case Store.packages(sup) do
       {:ok, metas} ->
         resolve_meta(sup, name, Enum.find(metas, &(&1.name == name)))
 
-      {:error, :not_ready} ->
-        with :ok <- Store.ensure_loaded(sup, opts),
-             do: fetch_adaptor(sup, name, opts)
+      {:error, :not_ready} = not_ready ->
+        not_ready
 
       # Any other failure is the cache's, and says nothing about the row.
       {:error, _cache} ->

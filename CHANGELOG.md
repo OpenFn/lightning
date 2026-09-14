@@ -121,6 +121,16 @@ and this project adheres to
   resolve, validate and run.
   [#4801](https://github.com/OpenFn/lightning/pull/4801)
 
+- While the catalogue is loading for the first time, reads answer straight away
+  with a retry state rather than holding the caller for up to 90 seconds. The
+  adaptor picker and the credential form show "Couldn't load adaptors" with a
+  Retry button, and `GET /adaptors/catalogue` replies 503 with a `retry-after`
+  header. Saving a workflow still waits for the first load, because it has to
+  check the job's adaptor before it can store it. An npm registry that lists no
+  `@openfn/language-*` packages is now treated as a failed listing and retried
+  on the next refresh, rather than as a catalogue with nothing in it.
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
 ### Removed
 
 - The AI assistant's "Send code" tickbox. The assistant reads your workflow to

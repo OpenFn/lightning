@@ -66,14 +66,25 @@ defmodule Lightning.AdaptorsTest do
       assert pkg.source == :npm
     end
 
-    test "an empty catalogue that has never loaded waits, then reports it",
+    test "an empty catalogue that has never loaded is :not_ready",
          %{sup: sup} do
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        flunk("a read must not trigger a load")
+      end)
+
+      assert {:error, :not_ready} = Adaptors.packages(sup)
+    end
+
+    test "an empty catalogue that has loaded is an empty list", %{sup: sup} do
       stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn -> {:ok, []} end)
 
       stub(Lightning.Adaptors.StrategyMock, :fetch_icons, fn _opts ->
         {:ok, %{}}
       end)
 
+      start_scheduler(sup)
+
+      assert :ok = Adaptors.ensure_loaded(sup)
       assert {:ok, []} = Adaptors.packages(sup)
     end
 
@@ -147,9 +158,15 @@ defmodule Lightning.AdaptorsTest do
                Adaptors.schema(sup, "@openfn/language-http")
     end
 
-    test "waits for the first load and returns the schema", %{sup: sup} do
+    test "is :not_ready until the catalogue has loaded", %{sup: sup} do
       record = adaptor_record(schema_data: ~s({"type":"object"}))
       stub_refresh_cycle(record)
+
+      assert {:error, :not_ready} =
+               Adaptors.schema(sup, "@openfn/language-http")
+
+      start_scheduler(sup)
+      assert :ok = Adaptors.ensure_loaded(sup)
 
       assert {:ok, ~s({"type":"object"})} =
                Adaptors.schema(sup, "@openfn/language-http")
@@ -255,12 +272,13 @@ defmodule Lightning.AdaptorsTest do
       assert Adaptors.resolve_name(sup, "unknownish") == {:ok, "unknownish"}
     end
 
-    test "waits for the first load when the catalogue has never loaded", %{
-      sup: sup
-    } do
-      stub_refresh_cycle(adaptor_record())
+    test "answers :not_ready without waiting when the catalogue has never loaded",
+         %{sup: sup} do
+      stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
+        flunk("resolve_name must not trigger a load")
+      end)
 
-      assert Adaptors.resolve_name(sup, "http") == {:ok, "@openfn/language-http"}
+      assert Adaptors.resolve_name(sup, "http") == {:error, :not_ready}
     end
 
     test "never resolves the raw and oauth sentinels, even if shadowed in the catalogue",

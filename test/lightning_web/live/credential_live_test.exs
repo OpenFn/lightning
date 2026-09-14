@@ -3909,4 +3909,75 @@ defmodule LightningWeb.CredentialLiveTest do
       refute html =~ ~s(value="main_user")
     end
   end
+
+  describe "when the adaptor catalogue cannot answer" do
+    setup %{sup: sup} do
+      Lightning.Repo.delete_all(Lightning.Adaptors.Catalogue.Adaptor)
+      Cachex.clear(Lightning.Adaptors.Supervisor.cache_name(sup))
+
+      :ok =
+        Supervisor.terminate_child(
+          sup,
+          Lightning.Adaptors.Supervisor.highlander_name(sup)
+        )
+
+      :ok
+    end
+
+    test "the credential type picker offers a retry", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/credentials")
+
+      html = open_create_credential_modal(view)
+
+      assert html =~ "Couldn&#39;t load adaptors. Please try again."
+
+      assert has_element?(
+               view,
+               "#credential-type-adaptors-error button",
+               "Retry"
+             )
+
+      assert html =~ "Raw JSON"
+
+      seed_credential_schema("http")
+
+      html =
+        view
+        |> element("#credential-type-adaptors-error button", "Retry")
+        |> render_click()
+
+      refute html =~ "Couldn&#39;t load adaptors. Please try again."
+      assert html =~ "credential-schema-picker_selected_@openfn/language-http"
+    end
+
+    test "the credential form offers a retry instead of crashing", %{
+      conn: conn,
+      user: user
+    } do
+      credential =
+        insert(:credential, user: user, schema: "@openfn/language-http")
+
+      {:ok, view, _html} = live(conn, ~p"/credentials", on_error: :raise)
+
+      html = open_edit_credential_modal(view, credential.id)
+
+      assert html =~ "Couldn&#39;t load adaptors. Please try again."
+
+      assert has_element?(
+               view,
+               "#credential-schema-unavailable button",
+               "Retry"
+             )
+
+      seed_credential_schema("http")
+
+      html =
+        view
+        |> element("#credential-schema-unavailable button", "Retry")
+        |> render_click()
+
+      refute html =~ "Couldn&#39;t load adaptors. Please try again."
+      assert html =~ "baseUrl"
+    end
+  end
 end

@@ -82,6 +82,12 @@ Internal mirrors: any npm-compatible registry works. Set
 `ADAPTORS_NPM_GITHUB_URL`, leave the strategy as npm, and set
 `ADAPTORS_NPM_GITHUB_REF` if the mirror serves a branch other than `main`.
 
+A registry that answers but lists no `@openfn/language-*` packages is treated as
+a failed listing, not as a catalogue with nothing in it. That is nearly always a
+mistyped mirror URL or a mirror that has not synced the `@openfn` scope. The
+rows already in Postgres stay as they are and the next refresh tries again. A
+local checkout with no packages in it is genuinely empty, and is read as such.
+
 An imported catalogue survives the hourly refresh; a failed one logs a warning
 and leaves rows alone.
 
@@ -100,7 +106,9 @@ mix lightning.adaptors.refresh --name @openfn/language-http
 ```
 
 Without `--name` it runs a full refresh and waits; with `--name` it refetches
-that adaptor regardless of version change. Exit codes are in
+that adaptor regardless of version change. A cycle that ran but wrote no rows
+exits `0`, since an empty result from a readable source is not a failure; a
+source that could not be listed at all exits `2`. The full list is in
 `mix help lightning.adaptors.refresh`.
 
 A release image has no Mix; run the same call against the node:
@@ -109,6 +117,24 @@ A release image has no Mix; run the same call against the node:
 bin/lightning rpc 'Lightning.Adaptors.refresh(await: true)'
 bin/lightning rpc 'Lightning.Adaptors.refresh_package("@openfn/language-http")'
 ```
+
+## While the catalogue is still loading
+
+A fresh instance has an empty catalogue until the first refresh lands. Reads do
+not wait for it. The adaptor picker and the credential form show "Couldn't load
+adaptors" with a Retry button, and `GET /adaptors/catalogue` replies 503 with a
+`retry-after` header. An open editor picks the catalogue up on its own once the
+load lands, without a page reload; the credential form recovers when you press
+Retry, and the endpoint answers normally on the next request.
+
+Saving a workflow is the exception. It has to check the job's adaptor against
+the catalogue before it can store it, so it waits for the first load, up to 90
+seconds, and rejects the save with "adaptor catalogue is not ready yet" if
+nothing has arrived by then.
+
+So an instance that cannot reach npm at all comes up, serves every page and
+retries in the background, but cannot save a workflow until the catalogue has
+loaded once. Import a snapshot to give it one.
 
 ## Troubleshooting
 
@@ -122,5 +148,11 @@ bin/lightning rpc 'Lightning.Adaptors.refresh_package("@openfn/language-http")'
   the same name; the log names each shadowed package.
 - Deprecated-variable boot warning: rename `LOCAL_ADAPTORS=true` to
   `ADAPTORS_STRATEGY=local` and `OPENFN_ADAPTORS_REPO` to `ADAPTORS_LOCAL_REPO`.
-- Workflow save rejected with "adaptor catalogue is not ready yet": see
-  [Running without internet access](#running-without-internet-access).
+- Picker stuck on "Couldn't load adaptors", or the catalogue endpoint answering
+  503: the first load has not finished. See
+  [While the catalogue is still loading](#while-the-catalogue-is-still-loading).
+- Workflow save rejected with "adaptor catalogue is not ready yet": the same
+  thing, ninety seconds in. If the instance cannot reach npm, import a snapshot;
+  see [Running without internet access](#running-without-internet-access).
+- Refresh exiting `2` with `:empty_listing`: the registry answered but served no
+  `@openfn` packages. Check `ADAPTORS_NPM_REGISTRY_URL`.

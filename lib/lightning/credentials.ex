@@ -584,15 +584,17 @@ defmodule Lightning.Credentials do
 
   @doc """
   Creates a credential schema from credential json schema.
+
+  `{:error, :not_found}` means the catalogue has no such adaptor;
+  `{:error, :not_ready}` means it has never loaded.
   """
-  @spec get_schema(String.t()) :: Credentials.Schema.t()
+  @spec get_schema(String.t()) ::
+          {:ok, Credentials.Schema.t()}
+          | {:error, :not_found | :not_ready | term()}
   def get_schema(schema_name) do
     with {:ok, resolved} <- Lightning.Adaptors.resolve_name(schema_name),
          {:ok, schema_body} <- Lightning.Adaptors.schema(resolved) do
-      Credentials.Schema.new(schema_body, resolved)
-    else
-      {:error, reason} ->
-        raise "Error reading credential schema. Got: #{inspect(reason)}"
+      {:ok, Credentials.Schema.new(schema_body, resolved)}
     end
   end
 
@@ -650,6 +652,13 @@ defmodule Lightning.Credentials do
       {:ok, updated_body} ->
         Ecto.Changeset.put_change(changeset, :body, updated_body)
 
+      {:error, reason} when reason in [:not_ready, :timeout, :unavailable] ->
+        Ecto.Changeset.add_error(
+          changeset,
+          :body,
+          "adaptor catalogue is not ready yet, try again shortly"
+        )
+
       {:error, _reason} ->
         Ecto.Changeset.add_error(changeset, :body, "Invalid body types")
     end
@@ -662,9 +671,8 @@ defmodule Lightning.Credentials do
        do: {:ok, body}
 
   defp put_typed_body(body, schema_name) do
-    schema = get_schema(schema_name)
-
-    with changeset <- SchemaDocument.changeset(body, schema: schema),
+    with {:ok, schema} <- get_schema(schema_name),
+         changeset <- SchemaDocument.changeset(body, schema: schema),
          {:ok, typed_body} <- Ecto.Changeset.apply_action(changeset, :insert) do
       updated_body =
         Enum.into(typed_body, body, fn {field, typed_value} ->

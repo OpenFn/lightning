@@ -5,6 +5,8 @@ defmodule Lightning.Setup do
 
   alias Lightning.SetupUtils
 
+  require Logger
+
   @doc """
   This makes it possible to run setup_user as an external command
 
@@ -47,9 +49,32 @@ defmodule Lightning.Setup do
       # Load the catalogue up front rather than let the first adaptor lookup
       # block inside `fun`'s transaction for the length of a source fetch.
       # A failure here surfaces at that lookup instead.
-      _ = Lightning.Adaptors.ensure_loaded()
+      load_adaptor_catalogue()
       fun.()
     end)
+  end
+
+  defp load_adaptor_catalogue do
+    timeout = Lightning.Adaptors.Config.first_load_timeout()
+
+    Logger.info(
+      "Loading the adaptor catalogue, which may take up to " <>
+        "#{div(timeout, 1000)}s on a first load."
+    )
+
+    case Lightning.Adaptors.ensure_loaded() do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "The adaptor catalogue did not load (#{inspect(reason)}); " <>
+            "continuing without it. See the offline section of ADAPTORS.md " <>
+            "if this instance has no access to npm."
+        )
+
+        :ok
+    end
   end
 
   @deprecated "Use with_minimum_setup/1 instead"
