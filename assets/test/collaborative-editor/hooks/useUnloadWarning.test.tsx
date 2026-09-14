@@ -25,6 +25,7 @@ let provider: object | null = { id: 'provider-1' };
 let experimentalFeatures = true;
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
   useSessionContextLoaded: () => true,
   useRequestVersions: () => vi.fn(),
   useVersionsError: () => null,

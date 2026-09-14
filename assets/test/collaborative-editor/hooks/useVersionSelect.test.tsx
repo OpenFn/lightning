@@ -59,6 +59,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useVersionPicker', () => ({
 let experimentalFeatures = true;
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
   useExperimentalFeatures: () => experimentalFeatures,
 }));
 

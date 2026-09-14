@@ -125,6 +125,7 @@ let releases: {
 const requestVersionsMock = vi.fn();
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
   useSessionContextLoaded: () => true,
   useRequestVersions: () => vi.fn(),
   useVersionsError: () => null,

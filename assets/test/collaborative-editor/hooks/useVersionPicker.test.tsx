@@ -16,6 +16,7 @@ let project: { is_sandbox?: boolean } | null = { is_sandbox: false };
 let workflow: { state?: 'draft' | 'live' } | null = { state: 'live' };
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
   useSessionContextLoaded: () => true,
   useRequestVersions: () => vi.fn(),
   useVersionsError: () => null,

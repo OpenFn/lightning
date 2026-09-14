@@ -50,6 +50,7 @@ let experimentalFeatures = true;
 let sessionWorkflow: { state: string } | null = { state: 'live' };
 
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
   useSessionContextLoaded: () => true,
   useRequestVersions: () => vi.fn(),
   useVersionsError: () => null,

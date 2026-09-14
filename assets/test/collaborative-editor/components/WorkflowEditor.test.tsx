@@ -129,6 +129,7 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 const mockIsNewWorkflow = vi.fn(() => false);
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
   useSessionContextLoaded: () => true,
   useRequestVersions: () => vi.fn(),
   useVersionsError: () => null,

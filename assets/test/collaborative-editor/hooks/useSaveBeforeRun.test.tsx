@@ -7,6 +7,7 @@ let contentLocked = false;
 let pinnedView = false;
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
   useContentLocked: () => contentLocked,
 }));
 

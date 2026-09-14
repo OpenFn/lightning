@@ -430,8 +430,11 @@ export function Header({
   // An answer, not necessarily a good one. A context request that fails leaves
   // `lastUpdated` null forever and there is no retry, so waiting only on the
   // success would take Save away permanently, flag-off users included.
-  const sessionContextLoaded =
-    useSessionContextLoaded() || useSessionContextError() !== null;
+  // Both called unconditionally: `||` short-circuits, and a hook that only runs
+  // on one branch changes the hook order between renders, which React refuses.
+  const contextLoaded = useSessionContextLoaded();
+  const contextError = useSessionContextError();
+  const sessionContextLoaded = contextLoaded || contextError !== null;
   //
   // Unknown counts as locked, for everyone. The flag itself arrives with the
   // context, so before it lands "flag off" and "we do not know yet" are the
