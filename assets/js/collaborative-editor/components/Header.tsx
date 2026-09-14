@@ -222,6 +222,7 @@ export function Header({
   workflowId,
   isSandbox = false,
   initialWorkflowState,
+  initialFirstTriggerId,
   isRunPanelOpen = false,
   isIDEOpen = false,
   aiAssistantEnabled = false,
@@ -237,6 +238,12 @@ export function Header({
    * Save appearing and vanishing.
    */
   initialWorkflowState?: string;
+  /**
+   * The workflow's first trigger as the page was rendered, used until the
+   * collaborative document syncs. Without it the Run button arrives a moment
+   * after the rest of the header, which reads as a flash.
+   */
+  initialFirstTriggerId?: string;
   isRunPanelOpen?: boolean;
   isIDEOpen?: boolean;
   aiAssistantEnabled?: boolean;
@@ -343,7 +350,7 @@ export function Header({
   };
 
   // Derived values after all hooks are called
-  const firstTriggerId = triggers[0]?.id;
+  const firstTriggerId = triggers[0]?.id ?? initialFirstTriggerId;
 
   // Which view of the past, if any, the URL is asking for.
   const {

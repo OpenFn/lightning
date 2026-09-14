@@ -252,6 +252,12 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-workflow-id={@workflow_id}
       data-workflow-name={@workflow.name}
       data-workflow-state={@workflow.state}
+      data-first-trigger-id={
+        case @workflow.triggers do
+          [%{id: id} | _] -> id
+          _ -> nil
+        end
+      }
       data-project-id={@workflow.project_id}
       data-project-name={@project.name}
       data-project-display-name={@project_display_name}
@@ -429,7 +435,9 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
   end
 
   defp workflow_assigns(:edit, %{"id" => workflow_id}, _project) do
-    workflow = Workflows.get_workflow!(workflow_id)
+    # Triggers come along so the editor's Run control knows what it would run
+    # from before the collaborative document has synced.
+    workflow = Workflows.get_workflow!(workflow_id, include: [:triggers])
 
     %{
       workflow: workflow,

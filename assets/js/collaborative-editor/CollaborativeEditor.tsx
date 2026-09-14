@@ -75,6 +75,9 @@ export interface CollaborativeEditorDataProps {
   // The workflow's lifecycle state at render time, so the header knows before
   // the session context arrives.
   'data-workflow-state'?: string;
+  // The workflow's first trigger, so the Run control can render before the
+  // collaborative document has synced.
+  'data-first-trigger-id'?: string;
   // Initial run data from server to avoid client-side race conditions
   'data-initial-run-data'?: string; // JSON-encoded RunStepsData
 }
@@ -107,6 +110,8 @@ interface BreadcrumbContentProps {
    * correct itself a moment later.
    */
   workflowStateFallback?: string;
+  /** The workflow's first trigger as the page was rendered. */
+  firstTriggerIdFallback?: string;
   aiAssistantEnabled: boolean;
 }
 
@@ -120,6 +125,7 @@ export function BreadcrumbContent({
   projectColorFallback,
   projectEnvFallback,
   workflowStateFallback,
+  firstTriggerIdFallback,
   aiAssistantEnabled,
 }: BreadcrumbContentProps) {
   const isNewWorkflow = useIsNewWorkflow();
@@ -329,6 +335,9 @@ export function BreadcrumbContent({
         {...(workflowStateFallback !== undefined && {
           initialWorkflowState: workflowStateFallback,
         })}
+        {...(firstTriggerIdFallback !== undefined && {
+          initialFirstTriggerId: firstTriggerIdFallback,
+        })}
         isRunPanelOpen={isRunPanelOpen}
         isIDEOpen={isIDEOpen}
         aiAssistantEnabled={aiAssistantEnabled}
@@ -424,6 +433,7 @@ export const CollaborativeEditor: WithActionProps<
   const aiAssistantEnabled = props['data-ai-assistant-enabled'] === 'true';
   const experimentalFeatures = props['data-experimental-features'] === 'true';
   const workflowState = props['data-workflow-state'];
+  const firstTriggerId = props['data-first-trigger-id'];
   const initialRunData = props['data-initial-run-data'];
 
   const liveViewActions = {
@@ -480,6 +490,9 @@ export const CollaborativeEditor: WithActionProps<
                         })}
                         {...(workflowState !== undefined && {
                           workflowStateFallback: workflowState,
+                        })}
+                        {...(firstTriggerId !== undefined && {
+                          firstTriggerIdFallback: firstTriggerId,
                         })}
                       />
                       <div className="flex-1 min-h-0 overflow-hidden relative">

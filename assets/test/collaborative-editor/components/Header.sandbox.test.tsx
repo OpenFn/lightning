@@ -1360,6 +1360,17 @@ describe('Header - read-only reason variations', () => {
     expect(screen.queryByTestId('save-workflow-button')).toBeNull();
   });
 
+  test('offers Run before the document has synced its triggers', () => {
+    // The page knows the first trigger and renders it with the editor.
+    // Waiting for the document meant the rest of the header painted first and
+    // Run arrived after it, which reads as a flash.
+    workflowTriggers = [];
+
+    renderHeader({ isSandbox: false, initialFirstTriggerId: 'trigger-1' });
+
+    expect(screen.getByTestId('new-run-button')).toBeInTheDocument();
+  });
+
   test('drops Save on a live workflow, where it could never work', () => {
     urlParams = {};
     // The Live badge and Switch to draft sit beside it and explain the state,
