@@ -57,6 +57,9 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  // #/monaco configures the loader at import time, so anything that reaches it
+  // needs this present even when the editor itself is stubbed.
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // --- Heavy child components stubbed out — not under test here ---
@@ -150,6 +153,13 @@ vi.mock(
 // --- Session context ---
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
+  useContentLocked: () => false,
   useIsNewWorkflow: () => false,
   useProjectRepoConnection: () => undefined,
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),

@@ -195,7 +195,7 @@ describe('EdgeInspector - Footer Button States', () => {
     expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
   });
 
-  test('footer is hidden in read-only mode with experimental features', () => {
+  test('footer stays, disabled, in read-only mode with experimental features', () => {
     const edge = workflowStore.getSnapshot().edges[0];
     const mockOnClose = vi.fn();
 
@@ -228,13 +228,11 @@ describe('EdgeInspector - Footer Button States', () => {
       ),
     });
 
-    // With the flag on the lifecycle badge explains the state, so the empty
-    // bordered bar goes.
-    expect(screen.queryByLabelText(/enabled/i)).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /delete/i })
-    ).not.toBeInTheDocument();
-    expect(screen.queryByTestId('inspector-footer')).not.toBeInTheDocument();
+    // The flag changes nothing here. The footer stays and both controls go
+    // grey, carrying the reason, rather than collapsing to nothing.
+    expect(screen.getByTestId('inspector-footer')).toBeInTheDocument();
+    expect(screen.getByLabelText(/enabled/i)).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
   });
 
   test('toggle and delete button are shown and enabled in edit mode', () => {

@@ -54,6 +54,10 @@ let activeRun: {
   steps: { id: string; input_dataclip_id?: string }[];
 } | null = null;
 let latestSnapshotId: string | null = null;
+let workflowTriggers: { id: string }[] = [];
+let activeRunSummary: { id: string; snapshot_id: string | null } | undefined;
+// The lifecycle lock, which decides whether a run saves on its way out.
+let contentLocked = false;
 let releases: {
   version_number: number;
   snapshot_id: string | null;
@@ -65,19 +69,29 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 
 vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
   useActiveRun: () => activeRun,
+  // The header asks which snapshot the loaded run executed, to decide whether
+  // it can come along into a draft.
+  useRunSummary: () => activeRunSummary,
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
-  useSession: () => ({ provider: null, isSynced: true }),
+  useSession: () => ({ provider: null, isSynced: true, settled: true }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
   useIsNewWorkflow: () => isNewWorkflow,
   useLimits: () => limits,
   usePermissions: () => ({
     can_provision_sandbox: canProvisionSandbox,
     can_archive_sandbox: canArchiveSandbox,
   }),
+  useContentLocked: () => contentLocked,
   useProjectRepoConnection: () => null,
   useLatestSnapshotId: () => latestSnapshotId,
   useReleases: () => releases,
@@ -125,7 +139,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowReadOnly: () => readOnly,
   useWorkflowSettingsErrors: () => ({ hasErrors: false }),
   useWorkflowState: (selector: (state: unknown) => unknown) =>
-    selector({ triggers: [], jobs: [] }),
+    selector({ triggers: workflowTriggers, jobs: [] }),
 }));
 
 vi.mock('../../../js/collaborative-editor/keyboard', () => ({
@@ -194,7 +208,13 @@ vi.mock('../../../js/collaborative-editor/components/GitHubSyncModal', () => ({
   GitHubSyncModal: () => <div data-testid="github-sync-modal" />,
 }));
 vi.mock('../../../js/collaborative-editor/components/NewRunButton', () => ({
-  NewRunButton: () => <div data-testid="new-run-button" />,
+  // Carries the label and the disabled state through, because whether this
+  // reads Run or Run (Retry), and whether it is usable, is the thing under test.
+  NewRunButton: ({ text, disabled }: { text?: string; disabled?: boolean }) => (
+    <button type="button" data-testid="new-run-button" disabled={disabled}>
+      {text}
+    </button>
+  ),
 }));
 vi.mock('../../../js/collaborative-editor/components/ReadOnlyWarning', () => ({
   ReadOnlyWarning: () => <div data-testid="read-only-warning" />,
@@ -233,6 +253,7 @@ describe('Header - Edit in sandbox button gating', () => {
     readOnly = { isReadOnly: false, reason: null };
     urlParams = {};
     activeRun = null;
+    activeRunSummary = undefined;
     latestSnapshotId = null;
     releases = [];
     updateSearchParams.mockClear();
@@ -494,12 +515,23 @@ describe('Header - lifecycle actions', () => {
     expect(warnings.at(-1)).toBeInTheDocument();
   });
 
-  test('clicking go live triggers the go-live action', async () => {
+  test('go live requires confirmation before running', async () => {
     const user = userEvent.setup();
     lifecycleState = 'draft';
     renderHeader();
 
     await user.click(screen.getByTestId('go-live-button'));
+
+    // Turning the triggers on and starting to process real data is the most
+    // consequential thing here, and it was the only one that fired straight
+    // from the click.
+    expect(goLive).not.toHaveBeenCalled();
+
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Go live',
+      })
+    );
 
     await waitFor(() => {
       expect(goLive).toHaveBeenCalledTimes(1);
@@ -528,7 +560,7 @@ describe('Header - lifecycle actions', () => {
     });
   });
 
-  test("switching to draft from a run carries that run's input", async () => {
+  test("switching to draft from a run carries the run and its input", async () => {
     const user = userEvent.setup();
     lifecycleState = 'live';
     urlParams = { run: 'run-1', as_run: 'run-1' };
@@ -537,6 +569,10 @@ describe('Header - lifecycle actions', () => {
       state: 'failed',
       steps: [{ id: 'step-1', input_dataclip_id: 'dc-7' }],
     };
+    // This run executed the content that is live, so it still describes what
+    // the draft opens on.
+    latestSnapshotId = 'snapshot-live';
+    activeRunSummary = { id: 'run-1', snapshot_id: 'snapshot-live' };
 
     renderHeader();
 
@@ -547,15 +583,54 @@ describe('Header - lifecycle actions', () => {
       })
     );
 
-    // Without sandboxes this is the only route to a fix, and the input is what
-    // the fix gets tested against. The draft opens on the run panel with it
-    // already selected, rather than sending the person back to the history to
-    // find it again.
+    // Switching to draft unlocks the content, it does not change it, so the run
+    // still describes what is on screen. Dropping it threw away the logs and
+    // the failing step at the moment the fix starts. Every pinned parameter
+    // goes, because only the latest version can be edited.
     await waitFor(() => {
       expect(updateSearchParams).toHaveBeenCalledWith({
+        release: null,
+        v: null,
         as_run: null,
-        run: null,
         step: null,
+        run: 'run-1',
+        panel: 'run',
+        dataclip: 'dc-7',
+      });
+    });
+  });
+
+  test('switching to draft carries a run of older content too', async () => {
+    const user = userEvent.setup();
+    lifecycleState = 'live';
+    urlParams = { run: 'run-1', as_run: 'run-1' };
+    activeRun = {
+      id: 'run-1',
+      state: 'failed',
+      steps: [{ id: 'step-1', input_dataclip_id: 'dc-7' }],
+    };
+    latestSnapshotId = 'snapshot-live';
+    activeRunSummary = { id: 'run-1', snapshot_id: 'snapshot-older' };
+
+    renderHeader();
+
+    await user.click(screen.getByTestId('switch-to-draft-button'));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Switch to draft',
+      })
+    );
+
+    // It lands on the latest version, which is the only editable one, and the
+    // version banner says the run took place on something else. Dropping it
+    // instead took away the logs the fix is being written against.
+    await waitFor(() => {
+      expect(updateSearchParams).toHaveBeenCalledWith({
+        release: null,
+        v: null,
+        as_run: null,
+        step: null,
+        run: 'run-1',
         panel: 'run',
         dataclip: 'dc-7',
       });
@@ -567,6 +642,7 @@ describe('Header - lifecycle actions', () => {
     lifecycleState = 'live';
     urlParams = {};
     activeRun = null;
+    activeRunSummary = undefined;
 
     renderHeader();
 
@@ -579,9 +655,11 @@ describe('Header - lifecycle actions', () => {
 
     await waitFor(() => {
       expect(updateSearchParams).toHaveBeenCalledWith({
+        release: null,
+        v: null,
         as_run: null,
-        run: null,
         step: null,
+        run: null,
       });
     });
   });
@@ -1200,10 +1278,20 @@ describe('Header - read-only reason variations', () => {
     expect(saveButton).toHaveTextContent('Create');
   });
 
-  test('keeps Save on screen, disabled, on a live read-only workflow', () => {
-    // Hiding it leaves a header with nothing in it and no explanation. The
-    // button stays and carries its own reason, which is what the editor does
-    // everywhere else a view is read-only.
+  test('drops Save on a live workflow, where it could never work', () => {
+    // The Live badge and Switch to draft sit beside it and explain the state,
+    // so a permanently dead button adds nothing.
+    readOnly = { isReadOnly: true, reason: 'live' };
+
+    renderHeader({ isSandbox: false });
+
+    expect(screen.queryByTestId('save-workflow-button')).toBeNull();
+  });
+
+  test('keeps Save, disabled, on a live workflow without the flag', () => {
+    // Nothing on screen explains the state without the flag, so the button
+    // stays and carries the reason, as it does on main.
+    experimentalFeatures = false;
     readOnly = { isReadOnly: true, reason: 'live' };
 
     renderHeader({ isSandbox: false });
@@ -1251,6 +1339,8 @@ describe('Header - long workflow name', () => {
   });
 
   test('truncates a long workflow name so the save action stays visible', () => {
+    // A draft, because that is where Save exists to be crowded out.
+    lifecycleState = 'draft';
     const longName = 'Really-long-workflow-name-'.repeat(6);
 
     render(
@@ -1280,30 +1370,33 @@ describe('Header - retry from a run view', () => {
     activeRun = { id: 'run-1', state: 'failed', steps: [{ id: 'step-1' }] };
     latestSnapshotId = 'snapshot-live';
     releases = [{ version_number: 4, snapshot_id: 'snapshot-live' }];
+    workflowTriggers = [{ id: 'trigger-1' }];
   });
 
   afterEach(() => {
+    workflowTriggers = [];
     vi.clearAllMocks();
   });
 
   test('offers a retry while reading a run as it executed', () => {
     renderHeader({ isSandbox: false });
 
-    expect(screen.getByTestId('retry-on-latest-button')).toHaveTextContent(
-      'Retry'
-    );
+    const runButton = screen.getByTestId('new-run-button');
+    expect(runButton).toHaveTextContent('Run (Retry)');
+    expect(runButton).toBeEnabled();
   });
 
   test('offers it for a run of the live content too', () => {
     // No as_run: this run executed what is live, so it overlays on the live
-    // document. A live workflow is read-only, which hides the normal Run
-    // button, so without this there is no retry here at all.
+    // document.
     urlParams = { run: 'run-1' };
     readOnly = { isReadOnly: true, reason: 'live' };
 
     renderHeader({ isSandbox: false });
 
-    expect(screen.getByTestId('retry-on-latest-button')).toBeEnabled();
+    const runButton = screen.getByTestId('new-run-button');
+    expect(runButton).toHaveTextContent('Run (Retry)');
+    expect(runButton).toBeEnabled();
   });
 
   test('offers the retry even though the view is read-only', () => {
@@ -1311,24 +1404,35 @@ describe('Header - retry from a run view', () => {
 
     // Retrying is an execution, not an edit. Blocking it with the read-only
     // lock took away the only way to clear a failed work order from here.
-    expect(screen.getByTestId('retry-on-latest-button')).toBeEnabled();
+    const runButton = screen.getByTestId('new-run-button');
+    expect(runButton).toHaveTextContent('Run (Retry)');
+    expect(runButton).toBeEnabled();
   });
 
-  test('does not offer it while the run is still going', () => {
+  test('does not offer a retry while the run is still going', () => {
     activeRun = { id: 'run-1', state: 'started', steps: [{ id: 'step-1' }] };
 
     renderHeader({ isSandbox: false });
 
-    expect(screen.queryByTestId('retry-on-latest-button')).toBeNull();
+    // The control is still there to start a fresh run; it just is not a retry.
+    expect(screen.getByTestId('new-run-button')).toHaveTextContent('Run');
+    expect(screen.getByTestId('new-run-button')).not.toHaveTextContent(
+      'Retry'
+    );
   });
 
-  test('does not offer it with no run loaded', () => {
+  test('does not offer a retry with no run loaded', () => {
     urlParams = {};
     activeRun = null;
+    activeRunSummary = undefined;
     readOnly = { isReadOnly: false, reason: null };
 
     renderHeader({ isSandbox: false });
 
-    expect(screen.queryByTestId('retry-on-latest-button')).toBeNull();
+    // The control is still there to start a fresh run; it just is not a retry.
+    expect(screen.getByTestId('new-run-button')).toHaveTextContent('Run');
+    expect(screen.getByTestId('new-run-button')).not.toHaveTextContent(
+      'Retry'
+    );
   });
 });

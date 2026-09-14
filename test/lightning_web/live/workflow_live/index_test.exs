@@ -571,6 +571,73 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
     end
   end
 
+  describe "the lifecycle column" do
+    setup %{user: user} do
+      user =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Lightning.Repo.update!()
+
+      %{user: user}
+    end
+
+    test "reports the state and offers no switch on an ordinary project", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: workflow
+    } do
+      {:ok, _workflow} =
+        Lightning.Workflows.go_live(
+          Lightning.Repo.preload(workflow, :triggers),
+          user
+        )
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~ "State"
+      assert html =~ "Live"
+      # Publishing belongs in the editor, where it asks first and leaves a
+      # version behind. A switch here put production one click away.
+      refute html =~ ~s(name="workflow_state")
+    end
+
+    test "keeps the switch inside a sandbox", %{conn: conn, user: user} do
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/w")
+
+      # Turning a sandbox on and off is what a sandbox is for.
+      assert html =~ "Turn on"
+      assert html =~ ~s(name="workflow_state")
+    end
+
+    test "is the list from before the lifecycle without the flag", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      user
+      |> Ecto.Changeset.change(%{preferences: %{}})
+      |> Lightning.Repo.update!()
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~ "Enabled"
+      assert html =~ ~s(name="workflow_state")
+    end
+  end
+
   describe "creating workflows" do
     @tag role: :viewer
     test "users with viewer role cannot create a workflow", %{

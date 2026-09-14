@@ -58,6 +58,29 @@ let jobs: { id: string }[] = [];
 
 const saveWorkflow = vi.fn<() => Promise<unknown>>();
 
+// Monaco does not run in jsdom. The redaction step is about what the user
+// types and what is carried through, so a textarea standing in for the editor
+// exercises exactly that.
+// The review step indents the body the way the run viewer does, so the tests
+// compare against the same shape rather than the single line the API returns.
+const pretty = (body: string) => JSON.stringify(JSON.parse(body), null, 2);
+
+vi.mock('#/monaco', () => ({
+  MonacoEditor: ({
+    value,
+    onChange,
+  }: {
+    value: string;
+    onChange?: (value: string | undefined) => void;
+  }) => (
+    <textarea
+      data-testid="review-body"
+      value={value}
+      onChange={event => onChange?.(event.target.value)}
+    />
+  ),
+}));
+
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({ listSandboxes, editInSandbox, saveWorkflow }),
   useWorkflowState: (selector: (state: unknown) => unknown) =>
@@ -102,6 +125,14 @@ let releases: {
 const requestVersionsMock = vi.fn();
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
   useLimits: () => limits,
   useProject: () => ({ id: 'project-1' }),
   useReleases: () => releases,
@@ -277,7 +308,7 @@ describe('EditInSandboxPicker', () => {
 
       // The body is shown before it travels, and can be edited.
       const body = await screen.findByTestId('review-body');
-      expect(body).toHaveValue('{"email":"real@example.com"}');
+      expect(body).toHaveValue(pretty('{"email":"real@example.com"}'));
 
       await user.clear(body);
       await user.type(body, '{{"email":"redacted"}');
@@ -396,7 +427,7 @@ describe('EditInSandboxPicker', () => {
 
       await user.click(screen.getByLabelText(/this run's input/i));
       await user.click(screen.getByTestId('create-sandbox-button'));
-      expect(await screen.findByTestId('review-body')).toHaveValue('{"a":1}');
+      expect(await screen.findByTestId('review-body')).toHaveValue(pretty('{"a":1}'));
 
       rerender(<EditInSandboxPicker isOpen={false} onClose={() => {}} />);
       rerender(<EditInSandboxPicker isOpen onClose={() => {}} />);
@@ -410,7 +441,7 @@ describe('EditInSandboxPicker', () => {
 
       // A flag left set across a reopen skips the fetch and shows an empty
       // review step that can never recover.
-      expect(await screen.findByTestId('review-body')).toHaveValue('{"a":1}');
+      expect(await screen.findByTestId('review-body')).toHaveValue(pretty('{"a":1}'));
     });
 
     test('does not strand the button when the dialog closes mid-fetch', async () => {
@@ -477,7 +508,7 @@ describe('EditInSandboxPicker', () => {
       await user.click(screen.getByLabelText(/this run's input/i));
       await user.click(screen.getByTestId('create-sandbox-button'));
       expect(await screen.findByTestId('review-body')).toHaveValue(
-        '{"from":"run-a"}'
+        pretty('{"from":"run-a"}')
       );
 
       // The run changes under the open dialog, which Back/Forward does.
@@ -493,7 +524,7 @@ describe('EditInSandboxPicker', () => {
 
       // Run A's body belongs to run A. Showing it here would ship it as B's.
       expect(await screen.findByTestId('review-body')).toHaveValue(
-        '{"from":"run-b"}'
+        pretty('{"from":"run-b"}')
       );
     });
 

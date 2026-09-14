@@ -82,6 +82,15 @@ vi.mock('../../../js/collaborative-editor/components/VersionDropdown', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
+  // Live, so the editor offers the releases dropdown these tests drive.
+  useSessionWorkflow: () => ({ state: 'live' }),
+  useContentLocked: () => false,
   useExperimentalFeatures: () => true,
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),
   useLatestSnapshotLockVersion: () => 1,

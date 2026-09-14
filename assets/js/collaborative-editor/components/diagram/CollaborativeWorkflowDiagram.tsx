@@ -23,6 +23,7 @@ import {
   useSelectedRunId,
 } from '../../hooks/useHistory';
 import {
+  useContentLocked,
   useIsNewWorkflow,
   useLatestSnapshotId,
   useLatestSnapshotLockVersion,
@@ -96,6 +97,7 @@ export function CollaborativeWorkflowDiagram({
   );
 
   const runParam = params['run'] ?? null;
+  const contentLocked = useContentLocked();
   const { release: releaseParam, asRun: asRunParam } = usePinnedView();
 
   // Opening a run on its own snapshot is the experimental experience. Without
@@ -113,19 +115,30 @@ export function CollaborativeWorkflowDiagram({
   // never touched.
   const viewKey = `${releaseParam ?? ''}|${asRunParam ?? ''}`;
   const previousViewRef = useRef<string>(viewKey);
+  const previousRunRef = useRef<string | null>(runParam);
 
   // Does the run in the URL belong on the document in the URL? It does when
   // the view is that run's own, or when the run executed the content that is
-  // live. Undefined snapshot means the history has not arrived, and nothing is
+  // live.
+  //
+  // Undefined snapshot means the history has not arrived, and nothing is
   // decided until it has.
   //
   // Without experimental features it always does, because there is no other
   // document to move it to: a run is selected where the user already is. That
   // makes the as-executed switch below inert, which is the whole gate.
+  //
+  // The same holds wherever the content is not locked. In a draft or a sandbox
+  // a run stays overlaid on what is being edited, with the version banner
+  // explaining any difference, so there is no other document to move it to
+  // there either. Without this, switching a workflow to draft while reading a
+  // run dropped that run on the way: leaving the as-executed view is a change
+  // of document, and the run read as not belonging on the one being left for.
   const urlRun = useRunSummary(runParam);
   const runBelongsHere =
     runParam !== null &&
     (!experimentalFeatures ||
+      !contentLocked ||
       asRunParam === runParam ||
       (urlRun?.snapshot_id != null && urlRun.snapshot_id === latestSnapshotId));
 
@@ -137,8 +150,19 @@ export function CollaborativeWorkflowDiagram({
   useEffect(() => {
     const viewChanged = previousViewRef.current !== viewKey;
 
+    const runChanged = previousRunRef.current !== runParam;
+    previousRunRef.current = runParam;
+
     if (viewChanged) {
       previousViewRef.current = viewKey;
+
+      // A run named in the same update that changed the view was chosen for
+      // this view, so it stays whatever the history says about it yet. Only a
+      // run left over from the view being left is a candidate for dropping.
+      // Without this a retry cleared its own new run: leaving the old run's
+      // view and naming the new run happen together, and the new run is not in
+      // the history for a moment, so it read as a leftover that did not belong.
+      if (runChanged && runParam) return;
 
       // Left one document for another and the run does not belong on the new
       // one, so it goes. A run that does belong stays: selecting a run of older
@@ -160,9 +184,18 @@ export function CollaborativeWorkflowDiagram({
     // shown as it executed, however the URL got that way: a click, a shared
     // link, a reload, the back button. Deciding this only on click left the old
     // behaviour reachable through the address bar.
+    //
+    // Only where the content is locked. That view is read-only, which is the
+    // right trade on a live workflow, where reading is all you can do anyway.
+    // In a draft or a sandbox it is the wrong one: you are there to edit, and
+    // being moved into a read-only view for clicking a run takes that away.
+    // There a run stays overlaid on the content being edited and the version
+    // banner explains the difference, which is what the editor did before any
+    // of this existed.
     if (
       runParam &&
       !asRunParam &&
+      contentLocked &&
       urlRun?.snapshot_id != null &&
       !runBelongsHere
     ) {
@@ -183,7 +216,9 @@ export function CollaborativeWorkflowDiagram({
     runParam,
     asRunParam,
     runBelongsHere,
+    contentLocked,
     urlRun,
+    latestSnapshotId,
     activeRunId,
     clearRun,
     updateSearchParams,
@@ -191,9 +226,9 @@ export function CollaborativeWorkflowDiagram({
 
   const currentRunSteps = useRunSteps(selectedRunId);
 
-  // Only ever set without experimental features. With the flag on, a run of
-  // older content opens that content read-only, so the shape on screen is the
-  // shape that ran and there is nothing to warn about.
+  // Set wherever a run is overlaid on content it did not execute: without the
+  // flag, and in a draft or sandbox with it, where a run stays overlaid so the
+  // content can still be edited.
   const versionMismatch = useVersionMismatch(selectedRunId);
 
   const handleGoToVersion = useCallback(() => {
@@ -236,13 +271,19 @@ export function CollaborativeWorkflowDiagram({
         run.snapshot_id !== undefined &&
         run.snapshot_id === latestSnapshotId;
 
-      if (!ranTheLiveContent) {
+      // Opening the run's own content is read-only, which is the right trade
+      // only where editing was never on offer. In a draft or a sandbox you are
+      // there to edit, so the run overlays on what is being edited and the
+      // version banner explains the difference. The URL-driven path already
+      // works this way; this is the click that reaches the same place.
+      if (!ranTheLiveContent && contentLocked) {
         viewAsExecuted(run.id);
       } else {
         updateSearchParams({ ...CLEAR_PINNED_VIEW, run: run.id });
       }
     },
     [
+      contentLocked,
       experimentalFeatures,
       latestSnapshotId,
       latestSnapshotLockVersion,

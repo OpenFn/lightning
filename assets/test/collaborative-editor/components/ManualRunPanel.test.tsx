@@ -76,6 +76,9 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  // #/monaco configures the loader at import time, so anything that reaches it
+  // needs this present even when the editor itself is stubbed.
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // Mock the monaco module that CustomView imports
@@ -92,8 +95,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
     ydoc: null,
     awareness: null,
     isConnected: false,
-    isSynced: false,
-  }),
+    isSynced: false, settled: true }),
 }));
 
 // Mock useURLState hook with centralized helper

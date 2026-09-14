@@ -91,7 +91,9 @@ function createWrapper(): React.ComponentType<{ children: React.ReactNode }> {
 
   const mockStoreValue: StoreContextValue = {
     workflowStore: {} as any,
-    sessionContextStore: {} as any,
+    // Not a bare stub: the run controls read the lifecycle lock off this store
+    // to decide whether saving before a run is even allowed.
+    sessionContextStore: createMockSessionContextStore(),
     adaptorStore: {} as any,
     credentialStore: {} as any,
     awarenessStore: {} as any,
@@ -920,8 +922,14 @@ describe('useRunRetry - canvas flow (no onRunSubmitted)', () => {
       await result.current.handleRetry();
     });
 
-    // Canvas flow: should update URL param, not redirect
+    // Canvas flow: update URL params, not redirect. A retry runs the content
+    // that is live, so it drops every pinned view on the way to its own new
+    // run, in one update rather than one call per parameter.
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      release: null,
+      v: null,
+      as_run: null,
+      step: null,
       run: 'run-retried-789',
     });
     expect(window.location.href).toBe(originalHref);
@@ -966,6 +974,10 @@ describe('useRunRetry - canvas flow (no onRunSubmitted)', () => {
     });
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      release: null,
+      v: null,
+      as_run: null,
+      step: null,
       run: 'run-retry-1',
     });
 
@@ -975,6 +987,10 @@ describe('useRunRetry - canvas flow (no onRunSubmitted)', () => {
     });
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      release: null,
+      v: null,
+      as_run: null,
+      step: null,
       run: 'run-retry-2',
     });
 
@@ -1109,6 +1125,10 @@ describe('useRunRetry - canvas flow (no onRunSubmitted)', () => {
     });
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
+      release: null,
+      v: null,
+      as_run: null,
+      step: null,
       run: 'run-retried-success',
     });
     expect(fetch).toHaveBeenCalledTimes(2);

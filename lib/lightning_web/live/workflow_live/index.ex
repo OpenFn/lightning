@@ -64,6 +64,7 @@ defmodule LightningWeb.WorkflowLive.Index do
         />
         <DashboardComponents.project_metrics metrics={@metrics} project={@project} />
         <DashboardComponents.workflow_list
+          lifecycle={@lifecycle}
           period={@dashboard_period}
           can_delete_workflow={@can_delete_workflow}
           workflows_stats={@workflows_stats}
@@ -100,6 +101,10 @@ defmodule LightningWeb.WorkflowLive.Index do
     {:ok,
      socket
      |> assign(
+       # Whether this list speaks the lifecycle's language. Without the flag it
+       # is the list from before there was one: a switch called Enabled.
+       lifecycle:
+         Lightning.Accounts.experimental_features_enabled?(current_user),
        can_delete_workflow: can_delete_workflow,
        can_create_workflow: can_create_workflow,
        sort_key: "name",

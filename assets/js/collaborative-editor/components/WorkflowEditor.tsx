@@ -52,11 +52,16 @@ export function WorkflowEditor({
 
   const isSyncingRef = useRef(false);
   const isInitialMountRef = useRef(true);
+  // The panel parameter as this effect last saw it. A value that has only just
+  // arrived is a request the other sync has not had a chance to honour yet.
+  const seenPanelParamRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isSyncingRef.current) return;
 
     const panelParam = params['panel'] ?? null;
+    const panelParamJustArrived = seenPanelParamRef.current !== panelParam;
+    seenPanelParamRef.current = panelParam;
 
     if (isRunPanelOpen) {
       const contextJobId = runPanelContext?.jobId;
@@ -98,6 +103,12 @@ export function WorkflowEditor({
     } else if (
       !isRunPanelOpen &&
       panelParam === 'run' &&
+      // Only when the panel closed under a parameter that was already there.
+      // A parameter that has just arrived is someone asking for the panel, and
+      // the sync below opens it on the same commit, reading the same stale
+      // "closed". Clearing it here won that race and the request was lost,
+      // which is why switching to draft from a run left the input behind.
+      !panelParamJustArrived &&
       !isSyncingRef.current &&
       !isInitialMountRef.current
     ) {

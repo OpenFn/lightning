@@ -345,7 +345,11 @@ export const createWorkflowStore = (
    * @returns Object containing ydoc and provider instances
    */
   const ensureConnected = () => {
-    if (!ydoc || !provider) {
+    // The channel and not just the provider: during a room change the provider
+    // survives while its channel is replaced, and everything here pushes on the
+    // channel. Without this the failure surfaced as "Cannot read properties of
+    // undefined (reading 'push')", which tells the user nothing.
+    if (!ydoc || !provider || !provider.channel) {
       throw new Error(
         'Cannot save workflow: Connection lost. Please wait for reconnection.'
       );

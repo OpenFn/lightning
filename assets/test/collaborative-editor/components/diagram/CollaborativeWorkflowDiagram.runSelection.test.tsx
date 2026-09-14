@@ -57,7 +57,7 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => ({
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
-  useSession: () => ({ isSynced: true }),
+  useSession: () => ({ isSynced: true, settled: true }),
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
@@ -112,7 +112,10 @@ const workOrder = (id: string, runs: ReturnType<typeof run>[]) => ({
 });
 
 function createWrapper(
-  experimentalFeaturesEnabled = true
+  experimentalFeaturesEnabled = true,
+  // The as-executed view is read-only, which only makes sense where the content
+  // is already locked. These tests are about a live workflow unless they say so.
+  contentLocked = true
 ): React.ComponentType<{ children: React.ReactNode }> {
   const editorPreferencesStore = createEditorPreferencesStore();
 
@@ -134,6 +137,7 @@ function createWrapper(
     latestSnapshotId: LIVE_SNAPSHOT,
     latestSnapshotLockVersion: 3,
     experimentalFeaturesEnabled,
+    contentLocked,
   };
 
   const historyState = {

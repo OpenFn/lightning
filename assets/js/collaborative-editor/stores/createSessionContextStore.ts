@@ -570,17 +570,28 @@ export const createSessionContextStore = (
         'state' in message &&
         (message as { state: unknown }).state;
 
+      // A sandbox has no lifecycle to announce. The same transition is what its
+      // Turn on button sends, and there nothing was published and nothing goes
+      // read-only, so the live wording would be wrong twice over.
+      const inSandbox = state.project?.is_sandbox === true;
+
       if (nextState === 'live') {
         notifications.info({
-          title: 'This workflow just went live',
-          description:
-            'Someone else published it, so it is read-only here now. Switch it to draft or edit it in a sandbox to make changes.',
+          title: inSandbox
+            ? 'This sandbox is now on'
+            : 'This workflow just went live',
+          description: inSandbox
+            ? 'Someone else turned it on. Its triggers are answering.'
+            : 'Someone else published it, so it is read-only here now. Switch it to draft or edit it in a sandbox to make changes.',
         });
       } else if (nextState === 'draft') {
         notifications.info({
-          title: 'This workflow is a draft again',
-          description:
-            'Someone else took it out of production, so you can edit it here.',
+          title: inSandbox
+            ? 'This sandbox is now off'
+            : 'This workflow is a draft again',
+          description: inSandbox
+            ? 'Someone else turned it off. Its triggers have stopped answering.'
+            : 'Someone else took it out of production, so you can edit it here.',
         });
       }
     };

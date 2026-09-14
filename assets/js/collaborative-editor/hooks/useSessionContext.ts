@@ -131,6 +131,25 @@ export const useSessionContextLoading = (): boolean => {
 };
 
 /**
+ * Hook to tell whether the session context has arrived at all.
+ *
+ * Distinct from `useSessionContextLoading`, which is false both before the
+ * request goes out and after it comes back. Anything that renders differently
+ * depending on the context needs this one, otherwise it renders the empty
+ * answer first and corrects itself a moment later, which the user sees as a
+ * control appearing and then vanishing.
+ */
+export const useSessionContextLoaded = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectLoaded = sessionContextStore.withSelector(
+    state => state.lastUpdated !== null
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLoaded);
+};
+
+/**
  * Hook to get error state
  * Returns error message if loading failed, null otherwise
  */

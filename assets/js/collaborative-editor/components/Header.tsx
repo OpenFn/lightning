@@ -1,5 +1,5 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { useCallback, useContext, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
 
@@ -7,6 +7,7 @@ import { Tooltip } from '../../components/Tooltip';
 import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
 import { useActiveRun } from '../hooks/useHistory';
+import { useSaveBeforeRun } from '../hooks/useSaveBeforeRun';
 import {
   useExperimentalFeatures,
   useIsNewWorkflow,
@@ -14,6 +15,7 @@ import {
   useLimits,
   usePermissions,
   useProjectRepoConnection,
+  useSessionContextLoaded,
   useSessionWorkflow,
   useReleases,
 } from '../hooks/useSessionContext';
@@ -36,9 +38,13 @@ import {
   isChannelRequestError,
 } from '../lib/errors';
 import { notifications } from '../lib/notifications';
+import {
+  AS_RUN_PARAM,
+  RELEASE_PARAM,
+  SNAPSHOT_PARAM,
+  usePinnedView,
+} from '../lib/pinnedView';
 import { clearPromoted, markPromoted } from '../lib/promoteHandoff';
-import { usePinnedView } from '../lib/pinnedView';
-import { Switch } from './inputs/Switch';
 import { isFinalState } from '../types/history';
 
 import { ActiveCollaborators } from './ActiveCollaborators';
@@ -49,6 +55,7 @@ import { Button } from './Button';
 import { EditInSandboxPicker } from './EditInSandboxPicker';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 import { GitHubSyncModal } from './GitHubSyncModal';
+import { Switch } from './inputs/Switch';
 import { NewRunButton } from './NewRunButton';
 import { PromoteDialog } from './PromoteDialog';
 import { ReadOnlyWarning } from './ReadOnlyWarning';
@@ -241,6 +248,9 @@ export function Header({
   const { canSave, tooltipMessage } = useCanSave();
   const { enabled, setEnabled } = useWorkflowEnabled();
   const triggers = useWorkflowState(state => state.triggers);
+  // Two answers, because the pinned-version block applies to a fresh run and
+  // not to a retry. `canRun` gates starting something new; `canRunOrRetry`
+  // gates the control that does whichever the loaded run calls for.
   const { canRun } = useCanRun();
   const { openRunPanel, openGitHubSyncModal } = useUICommands();
   const repoConnection = useProjectRepoConnection();
@@ -248,9 +258,15 @@ export function Header({
   const limits = useLimits();
   const { isReadOnly, reason: readOnlyReason } = useWorkflowReadOnly();
   const { hasChanges } = useUnsavedChanges();
+  const saveBeforeRun = useSaveBeforeRun(saveWorkflow);
   const storeContext = useContext(StoreContext);
   const getLimits = storeContext?.sessionContextStore.getLimits;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // The run just started, held until it actually arrives. Dropping the
+  // submitting state when the request returns left a gap before the new run
+  // reached the history, and the button flipped back from Processing to Run and
+  // then to Processing again. The IDE already waits like this.
+  const [pendingRunId, setPendingRunId] = useState<string | null>(null);
   const sessionWorkflow = useSessionWorkflow();
 
   // The whole sandboxes-and-releases experience hangs off this one flag. Every
@@ -270,9 +286,35 @@ export function Header({
   const isNewWorkflow = useIsNewWorkflow();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showSwitchToDraftDialog, setShowSwitchToDraftDialog] = useState(false);
+  // Going live turns the triggers on and starts processing real data. Every
+  // other irreversible action here confirms first; this was the one that did
+  // not, and it is the one that reaches production.
+  const [showGoLiveDialog, setShowGoLiveDialog] = useState(false);
   const [showEditInSandboxPicker, setShowEditInSandboxPicker] = useState(false);
   const [showPromoteDialog, setShowPromoteDialog] = useState(false);
   const activeRun = useActiveRun();
+
+  // The run arrived, so the button can stop saying Processing on its own account
+  // and let the run's state speak. The timeout is the same safety the IDE has:
+  // if the run never reaches us, the button must not stay stuck.
+  useEffect(() => {
+    if (!pendingRunId) return;
+
+    if (activeRun?.id === pendingRunId) {
+      setPendingRunId(null);
+      setIsSubmitting(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setPendingRunId(null);
+      setIsSubmitting(false);
+    }, 30_000);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [activeRun?.id, pendingRunId]);
   const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
   const followedRunId = params.run ?? null;
   const isRetryable =
@@ -291,7 +333,43 @@ export function Header({
   const firstTriggerId = triggers[0]?.id;
 
   // Which view of the past, if any, the URL is asking for.
-  const { isPinnedVersion, isViewingAsExecuted } = usePinnedView();
+  const {
+    isPinnedVersion,
+    isViewingAsExecuted,
+    version: pinnedVersion,
+  } = usePinnedView();
+
+  // Asks for a transition, then moves the URL to match. The channel resolves
+  // the live document itself, so it does not matter which document this socket
+  // is reading: no waiting for a room change, and nothing to get out of order.
+  const requestTransition = useCallback(
+    (
+      target: 'draft' | 'live',
+      afterParams: Record<string, string | null>,
+      errorTitle: string
+    ) => {
+      setIsTransitioning(true);
+
+      void (target === 'live' ? goLive() : switchToDraft())
+        .then(() => {
+          updateSearchParams(afterParams);
+          return null;
+        })
+        .catch((error: unknown) => {
+          // The refusals these buttons can hit all carry actionable text: the
+          // activation limit, a permission change, a deleted workflow. "Try
+          // again" would be wrong for every one of them.
+          notifications.alert({
+            title: errorTitle,
+            description: describeLifecycleError(error),
+          });
+        })
+        .finally(() => {
+          setIsTransitioning(false);
+        });
+    },
+    [goLive, switchToDraft, updateSearchParams]
+  );
 
   // The Live badge describes the workflow's current state, which would be a lie
   // on these views, so it is suppressed and the version badge carries the
@@ -317,6 +395,7 @@ export function Header({
   // button does not say so, because retrying always means that, but the
   // confirmation names the version so the record of what just ran is clear.
   const latestSnapshotId = useLatestSnapshotId();
+
   const releases = useReleases();
   const liveVersionNumber =
     releases.find(
@@ -333,21 +412,37 @@ export function Header({
 
   const showChangeIndicator = hasChanges && canSave;
 
-  // Whether Run and Save vanish on a read-only view, or stay put and disabled
-  // with a tooltip saying why.
+  const { canRun: canRunOrRetry } = useCanRun({ forRetry: isRetryable });
+
+  // The lifecycle lock as the header sees it, and whether we know it yet.
   //
-  // The releases experience hides them, which reads fine there: the lifecycle
-  // badge and Switch to draft are alongside to explain the state and offer a
-  // way out. Without the flag none of that is on screen, so hiding them would
-  // leave a header with no controls and no reason, where today it shows both
-  // greyed out. `canRun` and `canSave` already carry the reason.
+  // Everything this depends on, the flag included, arrives with the session
+  // context, so before it lands the honest answer is "unknown" rather than
+  // "flag off, draft". Treating unknown as locked holds Save back until the
+  // header can settle in one go: a control appearing is fine, one vanishing
+  // under the cursor is not.
+  const sessionContextLoaded = useSessionContextLoaded();
+  const isLiveLocked =
+    !sessionContextLoaded ||
+    (experimentalFeatures && lifecycleState === 'live' && !inSandbox);
+
+  // A retry runs the latest version, never the one on screen, so while an older
+  // version is being read the button has to say so before the click rather than
+  // in the toast afterwards. It is deliberately silent otherwise: on the latest
+  // version there is nothing surprising to warn about.
+  const retryTooltip =
+    isRetryable && isPinnedVersion
+      ? `Runs this input on the latest version${
+          liveVersionNumber === null ? '' : ` (v${liveVersionNumber})`
+        }${pinnedVersion === null ? '' : `, not v${pinnedVersion}`}.`
+      : undefined;
 
   const handleRunClick = useCallback(async () => {
     if (!firstTriggerId || !projectId || !workflowId) return;
 
     setIsSubmitting(true);
     try {
-      await saveWorkflow({ notify: 'none' });
+      const saved = await saveBeforeRun();
       const response = await dataclipApi.submitManualRun({
         workflowId,
         projectId,
@@ -355,9 +450,12 @@ export function Header({
       });
       notifications.success({
         title: 'Run started',
-        description: 'Saved latest changes and created new work order',
+        description: saved
+          ? 'Saved latest changes and created new work order'
+          : 'Created new work order',
       });
       if (getLimits) void getLimits('new_run');
+      setPendingRunId(response.data.run_id);
       updateSearchParams({ run: response.data.run_id });
     } catch (error) {
       notifications.alert({
@@ -365,28 +463,31 @@ export function Header({
         description:
           error instanceof Error ? error.message : 'An unknown error occurred',
       });
-    } finally {
       setIsSubmitting(false);
     }
   }, [
     firstTriggerId,
     projectId,
     workflowId,
-    saveWorkflow,
+    saveBeforeRun,
     getLimits,
     updateSearchParams,
   ]);
 
-  // Retrying from a run's own view. The view is read-only, so there is nothing
-  // to save first, and the retry runs the content that is live rather than the
-  // snapshot on screen, which is why the button names the version it will run.
-  // It lands on the new run, since the old canvas is no longer the subject.
-  const handleRetryOnLatest = useCallback(async () => {
+  // The one retry path, from wherever a run is loaded: the run's own view, a
+  // version being read, or the live workflow. It runs the content that is live
+  // rather than whatever is on screen, which is why the toast names the version
+  // it ran. The save underneath is a no-op unless there is something to save
+  // and saving is allowed. It lands on the new run, since the canvas that was
+  // being read is no longer the subject.
+  const handleRetryClick = useCallback(async () => {
     const firstStep = activeRun?.steps?.[0];
     if (!followedRunId || !firstStep || !projectId) return;
 
     setIsSubmitting(true);
     try {
+      const saved = await saveBeforeRun();
+
       const response = await fetch(
         `/projects/${projectId}/runs/${followedRunId}/retry`,
         {
@@ -407,27 +508,35 @@ export function Header({
 
       const result = (await response.json()) as { data: { run_id: string } };
 
+      const ranOn =
+        liveVersionNumber === null
+          ? 'the latest version'
+          : `v${liveVersionNumber}`;
+
       notifications.success({
         title: 'Retry started',
-        description: `Running this input on ${
-          liveVersionNumber === null
-            ? 'the latest version'
-            : `v${liveVersionNumber}`
-        }.`,
+        description: saved
+          ? `Saved latest changes and re-running this input on ${ranOn}.`
+          : `Running this input on ${ranOn}.`,
       });
 
       if (getLimits) void getLimits('new_run');
+      // Every pinned view goes, not just the run's own: a retry runs the
+      // content that is live, so staying on `?v=` left the badge naming a
+      // version the new run did not execute.
       updateSearchParams({
-        as_run: null,
-        run: result.data.run_id,
+        [RELEASE_PARAM]: null,
+        [SNAPSHOT_PARAM]: null,
+        [AS_RUN_PARAM]: null,
         step: null,
+        run: result.data.run_id,
       });
+      setPendingRunId(result.data.run_id);
     } catch (error) {
       notifications.alert({
         title: 'Retry failed',
         description: error instanceof Error ? error.message : 'Unknown error',
       });
-    } finally {
       setIsSubmitting(false);
     }
   }, [
@@ -435,57 +544,7 @@ export function Header({
     followedRunId,
     projectId,
     liveVersionNumber,
-    getLimits,
-    updateSearchParams,
-  ]);
-
-  const handleRetryClick = useCallback(async () => {
-    if (!followedRunId || !activeRun?.steps?.length || !projectId) return;
-
-    setIsSubmitting(true);
-    try {
-      await saveWorkflow({ notify: 'none' });
-
-      const firstStep = activeRun.steps[0];
-      const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;
-      const csrfToken = getCsrfToken();
-      const response = await fetch(retryUrl, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken || '',
-        },
-        body: JSON.stringify({ step_id: firstStep.id }),
-      });
-
-      if (!response.ok) {
-        const error = (await response.json()) as { error?: string };
-        throw new Error(error.error || 'Failed to retry run');
-      }
-
-      const result = (await response.json()) as { data: { run_id: string } };
-
-      notifications.success({
-        title: 'Retry started',
-        description: 'Saved latest changes and re-running with previous input',
-      });
-
-      if (getLimits) void getLimits('new_run');
-      updateSearchParams({ run: result.data.run_id });
-    } catch (error) {
-      notifications.alert({
-        title: 'Retry failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [
-    followedRunId,
-    activeRun,
-    projectId,
-    saveWorkflow,
+    saveBeforeRun,
     getLimits,
     updateSearchParams,
   ]);
@@ -622,7 +681,7 @@ export function Header({
     0,
     {
       enabled:
-        canRun &&
+        canRunOrRetry &&
         !isRunPanelOpen &&
         !isIDEOpen &&
         !isSubmitting &&
@@ -698,7 +757,7 @@ export function Header({
                 content={
                   lifecycleState === 'live'
                     ? "This is the live version. It's running in production with its triggers on, and it's read-only here, so switch it to draft or edit it in a sandbox to make changes."
-                    : 'This is the editable working version, not the one live in production. Go live to promote it, or enable a trigger to test it against real events first.'
+                    : 'This is the editable working version, not the one live in production. Go live to put it into production.'
                 }
                 side="bottom"
               >
@@ -777,17 +836,7 @@ export function Header({
                         isReadOnly || isTransitioning || isPinnedVersion
                       }
                       onClick={() => {
-                        setIsTransitioning(true);
-                        void goLive()
-                          .catch(() =>
-                            notifications.alert({
-                              title: 'Could not go live',
-                              description: 'Please try again.',
-                            })
-                          )
-                          .finally(() => {
-                            setIsTransitioning(false);
-                          });
+                        setShowGoLiveDialog(true);
                       }}
                     >
                       Go live
@@ -834,23 +883,18 @@ export function Header({
                       }
                       onClick={() => {
                         const turningOn = lifecycleState !== 'live';
-                        setIsTransitioning(true);
-                        void (turningOn ? goLive() : switchToDraft())
-                          .catch((error: unknown) => {
-                            // The refusals this button can hit all carry
-                            // actionable text: the activation limit, a
-                            // permission change, a deleted workflow. "Try
-                            // again" would be wrong for every one of them.
-                            notifications.alert({
-                              title: turningOn
-                                ? 'Could not turn the sandbox on'
-                                : 'Could not turn the sandbox off',
-                              description: describeLifecycleError(error),
-                            });
-                          })
-                          .finally(() => {
-                            setIsTransitioning(false);
-                          });
+                        requestTransition(
+                          turningOn ? 'live' : 'draft',
+                          {
+                            [RELEASE_PARAM]: null,
+                            [SNAPSHOT_PARAM]: null,
+                            [AS_RUN_PARAM]: null,
+                            step: null,
+                          },
+                          turningOn
+                            ? 'Could not turn the sandbox on'
+                            : 'Could not turn the sandbox off'
+                        );
                       }}
                     >
                       {lifecycleState === 'live' ? 'Turn off' : 'Turn on'}
@@ -899,47 +943,41 @@ export function Header({
                   </span>
                 </Tooltip>
               )}
-              {/* Whenever a run is loaded, whichever document it is being read
-                  against. A live workflow is read-only, which hides the normal
-                  Run button, so without this there is no way to retry the one
-                  thing a person came to a failed run to do. */}
-              {lifecycleState === 'live' &&
-                !inSandbox &&
-                !isNewWorkflow &&
-                isRetryable && (
-                  <Button
-                    data-testid="retry-on-latest-button"
-                    className="inline-flex items-center"
-                    disabled={isSubmitting || runIsProcessing}
-                    onClick={() => {
-                      void handleRetryOnLatest();
-                    }}
-                  >
-                    Retry
-                  </Button>
-                )}
-              {projectId && workflowId && firstTriggerId && (
+              {/* A run needs a trigger to start from; a retry needs only the
+                  run it is retrying. Gating both on the trigger would leave a
+                  loaded run with no way to retry it. */}
+              {projectId && workflowId && (firstTriggerId || isRetryable) && (
                 <NewRunButton
                   onClick={() => {
                     void (isRetryable ? handleRetryClick() : handleRunClick());
                   }}
                   onRunWithCustomInputClick={handleRunWithCustomInputClick}
-                  disabled={!canRun || isRunPanelOpen || isIDEOpen}
+                  disabled={isRunPanelOpen || isIDEOpen}
+                  forRetry={isRetryable}
                   isRunning={isSubmitting || runIsProcessing}
                   text={isRetryable ? 'Run (Retry)' : 'Run'}
+                  enabledTooltip={retryTooltip}
                 />
               )}
-              <SaveButton
-                canSave={canSave && !hasSettingsErrors}
-                tooltipMessage={tooltipMessage}
-                onClick={() => void saveWorkflow()}
-                repoConnection={repoConnection}
-                onSyncClick={openGitHubSyncModal}
-                label={isNewWorkflow ? 'Create' : 'Save'}
-                canSync={githubSyncLimit.allowed}
-                syncTooltipMessage={githubSyncLimit.message}
-                hasChanges={showChangeIndicator}
-              />
+              {/* A live workflow outside a sandbox can never be saved, and the
+                  Live badge and Switch to draft beside it already say why, so
+                  the button goes rather than sitting there dead. Everywhere
+                  else it stays and carries its own reason: without the flag
+                  there is no badge, and on a pinned version the reason is the
+                  view rather than the lifecycle. */}
+              {!isLiveLocked && (
+                <SaveButton
+                  canSave={canSave && !hasSettingsErrors}
+                  tooltipMessage={tooltipMessage}
+                  onClick={() => void saveWorkflow()}
+                  repoConnection={repoConnection}
+                  onSyncClick={openGitHubSyncModal}
+                  label={isNewWorkflow ? 'Create' : 'Save'}
+                  canSync={githubSyncLimit.allowed}
+                  syncTooltipMessage={githubSyncLimit.message}
+                  hasChanges={showChangeIndicator}
+                />
+              )}
             </div>
           </div>
 
@@ -952,38 +990,66 @@ export function Header({
           <GitHubSyncModal />
 
           <AlertDialog
+            isOpen={showGoLiveDialog}
+            onClose={() => {
+              setShowGoLiveDialog(false);
+            }}
+            onConfirm={() => {
+              setShowGoLiveDialog(false);
+              requestTransition(
+                'live',
+                {
+                  [RELEASE_PARAM]: null,
+                  [SNAPSHOT_PARAM]: null,
+                  [AS_RUN_PARAM]: null,
+                  step: null,
+                },
+                'Could not go live'
+              );
+            }}
+            title="Go live"
+            description="This puts the workflow into production. Its triggers will be turned on and it will start processing real data."
+            confirmLabel="Go live"
+            variant="primary"
+          />
+
+          <AlertDialog
             isOpen={showSwitchToDraftDialog}
             onClose={() => {
               setShowSwitchToDraftDialog(false);
             }}
             onConfirm={() => {
               setShowSwitchToDraftDialog(false);
-              setIsTransitioning(true);
-              // Coming from a failed run, the input is what the fix will be
-              // tested against, so it comes along: the draft opens with the run
-              // panel on that input, ready to run. Without sandboxes this is
-              // the only route to a fix, and losing the input at the door made
-              // it a fetch through the history.
+              // Coming from a failed run, both the run and its input come
+              // along. Switching to draft does not change the content, it
+              // unlocks it, so the run being read still describes what is on
+              // screen: dropping it threw away the logs and the failing step at
+              // the moment the fix starts, which is the one thing the person
+              // came for. The input comes too, so the run panel opens ready to
+              // put the same data through again.
+              //
+              // Every pinned parameter goes, because only the latest version
+              // can be edited and that is also what production was running.
+              // Wanting the older content back is Restore, a different action.
+              //
+              // The order matters: leaving the view comes first, and the
+              // transition follows once the live document is back. Run the
+              // other way round and the transition saves the view's document
+              // over the workflow.
               const runInput = activeRun?.steps?.[0]?.input_dataclip_id ?? null;
-              void switchToDraft()
-                .then(() => {
-                  updateSearchParams({
-                    as_run: null,
-                    run: null,
-                    step: null,
-                    ...(runInput ? { panel: 'run', dataclip: runInput } : {}),
-                  });
-                  return null;
-                })
-                .catch(() =>
-                  notifications.alert({
-                    title: 'Could not switch to draft',
-                    description: 'Please try again.',
-                  })
-                )
-                .finally(() => {
-                  setIsTransitioning(false);
-                });
+
+              requestTransition(
+                'draft',
+                {
+                  [RELEASE_PARAM]: null,
+                  [SNAPSHOT_PARAM]: null,
+                  [AS_RUN_PARAM]: null,
+                  step: null,
+                  run: activeRun?.id ?? null,
+                  ...(runInput ? { panel: 'run', dataclip: runInput } : {}),
+                },
+                'Could not switch to draft'
+              );
             }}
             title="Switch to draft"
             description="This takes the workflow out of production. Its triggers will be turned off and it will stop processing data until you go live again."

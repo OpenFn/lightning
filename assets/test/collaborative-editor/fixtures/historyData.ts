@@ -32,6 +32,9 @@ export function createMockRun(
     started_at: '2025-10-23T21:00:01.106711Z',
     finished_at: '2025-10-23T21:00:02.098356Z',
     error_type: null,
+    // The snapshot's own lock_version. The backend always sends it, and it is
+    // how a run is named wherever there are no releases to name it by.
+    version: 1,
     selected: false,
     ...overrides,
   };

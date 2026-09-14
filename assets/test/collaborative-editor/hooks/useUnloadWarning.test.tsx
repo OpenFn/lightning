@@ -25,6 +25,14 @@ let provider: object | null = { id: 'provider-1' };
 let experimentalFeatures = true;
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
   useExperimentalFeatures: () => experimentalFeatures,
 }));
 
@@ -33,7 +41,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
-  useSession: () => ({ provider, isSynced }),
+  useSession: () => ({ provider, isSynced, settled: true }),
 }));
 
 /** Fires a real beforeunload and reports whether anything asked to stay. */

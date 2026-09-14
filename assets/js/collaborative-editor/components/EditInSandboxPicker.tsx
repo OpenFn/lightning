@@ -9,6 +9,7 @@ import {
 import { format, formatDistanceToNow } from 'date-fns';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { MonacoEditor } from '#/monaco';
 import { cn } from '#/utils/cn';
 
 import { Tooltip } from '../../components/Tooltip';
@@ -40,6 +41,18 @@ import type { Sandbox } from '../types/workflow';
 
 import { Button } from './Button';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
+
+// A dataclip body arrives as one line, which is unreadable when the point of
+// the screen is to find what should not leave production. Indented the same way
+// the run viewer indents one. Left alone if it does not parse, because then the
+// raw text is the only honest thing to show.
+function formatBody(body: string): string {
+  try {
+    return JSON.stringify(JSON.parse(body), null, 2);
+  } catch {
+    return body;
+  }
+}
 
 type StartChoice = 'nothing' | 'run' | 'saved';
 type Step = 'choose' | 'review';
@@ -736,7 +749,7 @@ export function EditInSandboxPicker({
 
         if (!stillLoading(runId)) return;
 
-        setReview({ status: 'ready', runId, body });
+        setReview({ status: 'ready', runId, body: formatBody(body) });
 
         if (shouldShowReview(runId)) setStep('review');
       })
@@ -825,12 +838,18 @@ export function EditInSandboxPicker({
           >
             <DialogPanel
               transition
-              className="relative transform overflow-hidden rounded-lg bg-white
-              px-4 pb-4 pt-5 text-left shadow-xl transition-all
-              data-closed:translate-y-4 data-closed:opacity-0
-              data-enter:duration-300 data-enter:ease-out
-              data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full
-              sm:max-w-lg sm:p-6"
+              className={cn(
+                `relative transform overflow-hidden rounded-lg bg-white
+                px-4 pb-4 pt-5 text-left shadow-xl transition-all
+                data-closed:translate-y-4 data-closed:opacity-0
+                data-enter:duration-300 data-enter:ease-out
+                data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full
+                sm:p-6`,
+                // Reading a real dataclip to find what should not leave
+                // production needs the room to do it. The picker itself is a
+                // short list and stays narrow.
+                step === 'review' ? 'sm:max-w-4xl' : 'sm:max-w-lg'
+              )}
             >
               <button
                 type="button"
@@ -862,30 +881,47 @@ export function EditInSandboxPicker({
                     untouched.
                   </p>
 
-                  <label htmlFor="review-body" className="sr-only">
-                    Run input
-                  </label>
-                  <textarea
-                    id="review-body"
-                    data-testid="review-body"
-                    value={reviewBody}
-                    onChange={event => {
-                      const { value } = event.target;
+                  {/* The same editor the run viewer shows a dataclip in, made
+                      editable. This is the one screen where the data matters
+                      most, and it was the one screen that dropped to a plain
+                      box with no highlighting, no folding and no line numbers. */}
+                  <div
+                    data-testid="review-editor"
+                    className="mt-4 h-[60vh] min-h-80 overflow-hidden rounded-md ring-1
+                    ring-inset ring-gray-300 focus-within:ring-2
+                    focus-within:ring-primary-600"
+                  >
+                    <MonacoEditor
+                      defaultLanguage="json"
+                      theme="default"
+                      value={reviewBody}
+                      loading={<div className="p-3 text-xs">Loading...</div>}
+                      onChange={(value: string | undefined) => {
+                        const next = value ?? '';
 
-                      setReview(current =>
-                        current.status === 'ready'
-                          ? { ...current, body: value }
-                          : current
-                      );
-                      setReviewError(null);
-                    }}
-                    spellCheck={false}
-                    rows={14}
-                    className="mt-4 block w-full rounded-md border-0 px-3 py-2
-                    font-mono text-xs text-gray-900 shadow-sm ring-1 ring-inset
-                    ring-gray-300 focus:ring-2 focus:ring-inset
-                    focus:ring-primary-600"
-                  />
+                        setReview(current =>
+                          current.status === 'ready'
+                            ? { ...current, body: next }
+                            : current
+                        );
+                        setReviewError(null);
+                      }}
+                      options={{
+                        readOnly: false,
+                        lineNumbersMinChars: 3,
+                        tabSize: 2,
+                        scrollBeyondLastLine: false,
+                        overviewRulerLanes: 0,
+                        overviewRulerBorder: false,
+                        fontFamily: 'Fira Code VF',
+                        fontSize: 13,
+                        fontLigatures: true,
+                        fixedOverflowWidgets: true,
+                        minimap: { enabled: false },
+                        wordWrap: 'on',
+                      }}
+                    />
+                  </div>
 
                   {startsFromNewerVersion && (
                     <p

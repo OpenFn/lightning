@@ -32,6 +32,9 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  // #/monaco configures the loader at import time, so anything that reaches it
+  // needs this present even when the editor itself is stubbed.
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // Mock CollaborativeWorkflowDiagram
@@ -126,6 +129,14 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 const mockIsNewWorkflow = vi.fn(() => false);
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
   useExperimentalFeatures: () => true,
   useIsNewWorkflow: () => mockIsNewWorkflow(),
   useProjectRepoConnection: () => undefined,

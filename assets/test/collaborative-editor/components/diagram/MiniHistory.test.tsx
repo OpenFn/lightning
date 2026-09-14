@@ -45,7 +45,19 @@ vi.mock('../../../../js/hooks', () => ({
 // Mock session context hooks to provide project ID
 let experimentalFeatures = true;
 
+// Live by default, because the version tag's release numbering is a live
+// workflow's idea. The draft tests set this to a draft.
+let sessionWorkflow: { state: string } | null = { state: 'live' };
+
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => sessionWorkflow,
+  useContentLocked: () => false,
+  useVersions: () => [],
   useExperimentalFeatures: () => experimentalFeatures,
   useProject: () => ({
     id: 'test-project-id',
@@ -86,6 +98,7 @@ Object.defineProperty(window, 'location', {
 
 describe('MiniHistory', () => {
   beforeEach(() => {
+    sessionWorkflow = { state: 'live' };
     // Reset location and mock before each test
     mockLocation.origin = 'http://localhost';
     mockLocation.href =
@@ -126,6 +139,18 @@ describe('MiniHistory', () => {
       expect(
         screen.getAllByText(/^(v\d+|unpublished)$/).length
       ).toBeGreaterThan(0);
+    });
+
+    test('names the save point a run executed, in a draft', () => {
+      // No releases in a draft, so naming one would answer a question nobody
+      // asked. The run is named by the save point it ran, same numbering the
+      // version picker shows there.
+      sessionWorkflow = { state: 'draft' };
+
+      renderExpanded();
+
+      expect(screen.queryAllByText('unpublished')).toHaveLength(0);
+      expect(screen.getAllByText(/^v\d+$/).length).toBeGreaterThan(0);
     });
 
     test('names no version at all without the flag', () => {

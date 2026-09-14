@@ -152,6 +152,9 @@ export function ManualRunPanel({
 
   const { canRun: canRunWorkflow, tooltipMessage: workflowRunTooltipMessage } =
     useCanRun();
+  // The same question asked for a retry, which an older version does not block.
+  const { canRun: canRetryWorkflow, tooltipMessage: retryTooltipMessage } =
+    useCanRun({ forRetry: true });
 
   const { params, updateSearchParams } = useURLState();
   const followedRunId = params.run ?? null;
@@ -212,6 +215,7 @@ export function ManualRunPanel({
     isRetryable,
     runIsProcessing,
     canRun,
+    canRetry,
   } = useRunRetry({
     projectId,
     workflowId,
@@ -220,6 +224,8 @@ export function ManualRunPanel({
     selectedDataclip,
     customBody,
     canRunWorkflow,
+    canRetryWorkflow,
+    retryTooltipMessage,
     workflowRunTooltipMessage,
     saveWorkflow,
     onRunSubmitted: onRunSubmitted,
@@ -514,7 +520,7 @@ export function ManualRunPanel({
   useRunRetryShortcuts({
     onRun: () => void handleRun().then(ok => ok && closeAfterRun()),
     onRetry: () => void handleRetry().then(ok => ok && closeAfterRun()),
-    canRun,
+    canRun: isRetryable ? canRetry : canRun,
     isRunning: isSubmitting || runIsProcessing,
     isRetryable,
     priority: 25, // RUN_PANEL priority
@@ -692,7 +698,7 @@ export function ManualRunPanel({
           rightButtons={
             <RunRetryButton
               isRetryable={isRetryable}
-              isDisabled={!canRun}
+              isDisabled={!(isRetryable ? canRetry : canRun)}
               isSubmitting={isSubmitting || runIsProcessing}
               onRun={() => {
                 void handleRun().then(ok => ok && closeAfterRun());

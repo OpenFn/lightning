@@ -963,7 +963,8 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
  * Checks:
  * 1. User permissions (can_edit_workflow or can_run_workflow)
  * 2. Connection state (isSynced)
- * 3. Reading the past (a pinned release, a pinned snapshot, or a run's view)
+ * 3. Reading the past (a pinned release, a pinned snapshot, or a run's view),
+ *    unless the control retries a loaded run, which carries its own content
  * 4. Workflow deletion state (deleted_at)
  * 5. Run limits (from session context)
  * 6. Read-only workflow (live on main, deleted, pinned, no edit permission,
@@ -973,7 +974,21 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
  *    runs and run history is unaffected because those paths do not consult
  *    useCanRun.
  */
-export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
+export interface CanRunOptions {
+  /**
+   * Whether the control being gated retries a loaded run rather than starting a
+   * fresh one. The two differ on one condition only: reading an older version.
+   * A fresh run has no content to run there, so it stays blocked; a retry
+   * carries its own, so blocking it takes away the only reason to be on the
+   * screen.
+   */
+  forRetry?: boolean;
+}
+
+export const useCanRun = (
+  options: CanRunOptions = {}
+): { canRun: boolean; tooltipMessage: string } => {
+  const { forRetry = false } = options;
   const {
     hasEditPermission,
     hasRunPermission,
@@ -986,9 +1001,17 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   const limits = useLimits();
   const runLimits = limits.runs ?? { allowed: true, message: null };
 
-  // A read-only workflow blocks run creation entirely (single source of truth
-  // shared with the read-only editing lock).
-  const { isReadOnly, tooltipMessage: readOnlyMessage } = useWorkflowReadOnly();
+  // Deliberately not derived from the read-only lock. Running is not editing:
+  // the person responsible for a live workflow has to be able to put a test
+  // input through the thing that is in production, and that is the first thing
+  // anyone does after publishing. The reasons below are the ones that really
+  // stop a run, and they are the same set the lock had before the lifecycle
+  // existed, so nothing changes for a workflow that is not live.
+  const isNewWorkflow = useIsNewWorkflow();
+  const jobs = useWorkflowState(state => state.jobs);
+  const triggers = useWorkflowState(state => state.triggers);
+  const isUnsavedNewWorkflow =
+    isNewWorkflow && (jobs.length > 0 || triggers.length > 0);
 
   // User can run if they have EITHER edit OR run permission (matches WorkflowEdit)
   const hasPermission = hasEditPermission || hasRunPermission;
@@ -1006,15 +1029,15 @@ export const useCanRun = (): { canRun: boolean; tooltipMessage: string } => {
   } else if (isDeleted) {
     canRun = false;
     tooltipMessage = 'Workflow has been deleted';
-  } else if (isPinnedView) {
+  } else if (isPinnedView && !forRetry) {
     canRun = false;
     tooltipMessage = 'You are viewing a pinned version of this workflow';
+  } else if (isUnsavedNewWorkflow) {
+    canRun = false;
+    tooltipMessage = 'Create this workflow before running it';
   } else if (!runLimits.allowed && runLimits.message) {
     canRun = false;
     tooltipMessage = runLimits.message;
-  } else if (isReadOnly) {
-    canRun = false;
-    tooltipMessage = readOnlyMessage || 'This workflow is read-only';
   }
 
   return { canRun, tooltipMessage };

@@ -14,11 +14,17 @@ import * as dataclipApi from '../api/dataclips';
 import type { Dataclip } from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
 import { getCsrfToken } from '../lib/csrf';
+import {
+  AS_RUN_PARAM,
+  RELEASE_PARAM,
+  SNAPSHOT_PARAM,
+} from '../lib/pinnedView';
 import { notifications } from '../lib/notifications';
 import type { Workflow } from '../types/workflow';
 import { findFirstJobFromTrigger } from '../utils/workflowGraph';
 
 import { useActiveRun } from './useHistory';
+import { useSaveBeforeRun } from './useSaveBeforeRun';
 import type { SaveWorkflowOptions } from './useWorkflow';
 
 const logger = _logger.ns('useRunRetry').seal();
@@ -70,6 +76,15 @@ export interface UseRunRetryOptions {
   customBody: string;
   canRunWorkflow: boolean;
   workflowRunTooltipMessage: string;
+  /**
+   * Whether a loaded run may be retried, which differs from `canRunWorkflow` on
+   * one condition: reading an older version. A fresh run has no content to run
+   * there and stays blocked; a retry carries the version its own run executed,
+   * so it goes ahead. Callers get this from `useCanRun({ forRetry: true })`.
+   * Defaults to `canRunWorkflow`, which is the same answer everywhere else.
+   */
+  canRetryWorkflow?: boolean;
+  retryTooltipMessage?: string;
   saveWorkflow: (
     options?: SaveWorkflowOptions
   ) => Promise<{ saved_at?: string; lock_version?: number }>;
@@ -86,6 +101,8 @@ export interface UseRunRetryReturn {
   isRetryable: boolean;
   runIsProcessing: boolean;
   canRun: boolean;
+  /** Whether the loaded run may be retried. See `canRun` for a fresh run. */
+  canRetry: boolean;
 }
 
 /**
@@ -117,12 +134,15 @@ export function useRunRetry({
   customBody,
   canRunWorkflow,
   workflowRunTooltipMessage,
+  canRetryWorkflow = canRunWorkflow,
+  retryTooltipMessage = workflowRunTooltipMessage,
   saveWorkflow,
   onRunSubmitted,
   edgeId,
   workflowEdges = [],
   maxDataclipSizeBytes,
 }: UseRunRetryOptions): UseRunRetryReturn {
+  const saveBeforeRun = useSaveBeforeRun(saveWorkflow);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isRetryingRef = useRef(false);
   // Track the run ID we're waiting for WebSocket to connect to
@@ -230,6 +250,7 @@ export function useRunRetry({
     (selectedTab === 'custom' && isValidCustomBody && !isCustomBodyTooLarge);
 
   const canRun = !edgeId && canRunWorkflow && hasValidInput;
+  const canRetry = !edgeId && canRetryWorkflow;
 
   /**
    * Handle run - Create new work order with selected input
@@ -253,8 +274,8 @@ export function useRunRetry({
     setIsSubmitting(true);
     try {
       // Save workflow first; user action is run, not save; run outcome
-      // toast covers it
-      await saveWorkflow({ notify: 'none' });
+      // toast covers it. A live workflow cannot be saved, so nothing is.
+      const saved = await saveBeforeRun();
 
       const params: dataclipApi.ManualRunParams = {
         workflowId,
@@ -280,7 +301,9 @@ export function useRunRetry({
 
       notifications.success({
         title: 'Run started',
-        description: 'Saved latest changes and created new work order',
+        description: saved
+          ? 'Saved latest changes and created new work order'
+          : 'Created new work order',
       });
 
       // Refresh limits after creating run
@@ -318,7 +341,7 @@ export function useRunRetry({
     selectedTab,
     selectedDataclip,
     customBody,
-    saveWorkflow,
+    saveBeforeRun,
     canRunWorkflow,
     workflowRunTooltipMessage,
     onRunSubmitted,
@@ -341,10 +364,10 @@ export function useRunRetry({
       return false;
     }
 
-    if (!canRunWorkflow) {
+    if (!canRetryWorkflow) {
       notifications.alert({
         title: 'Cannot run workflow',
-        description: workflowRunTooltipMessage,
+        description: retryTooltipMessage,
       });
       isRetryingRef.current = false;
       return false;
@@ -353,8 +376,8 @@ export function useRunRetry({
     setIsSubmitting(true);
     try {
       // Save workflow first; user action is run, not save; run outcome
-      // toast covers it
-      await saveWorkflow({ notify: 'none' });
+      // toast covers it. A live workflow cannot be saved, so nothing is.
+      const saved = await saveBeforeRun();
 
       // Call retry endpoint
       const retryUrl = `/projects/${projectId}/runs/${followedRunId}/retry`;
@@ -382,7 +405,9 @@ export function useRunRetry({
 
       notifications.success({
         title: 'Retry started',
-        description: 'Saved latest changes and re-running with previous input',
+        description: saved
+          ? 'Saved latest changes and re-running with previous input'
+          : 'Re-running with previous input',
       });
 
       // Refresh limits after retry
@@ -390,15 +415,28 @@ export function useRunRetry({
         void getLimits('new_run');
       }
 
-      // Invoke callback with new run_id
+      // A retry runs the content that is live, so it leaves every pinned view
+      // behind and lands on its own new run. Without this you stayed reading
+      // v1 while following a run that executed something else, and the version
+      // badge went on saying v1 however many times you retried.
+      //
+      // One call rather than one per parameter: separate calls each merge
+      // against the URL as they find it, and the later one drops what the
+      // earlier one wrote.
+      updateSearchParams({
+        [RELEASE_PARAM]: null,
+        [SNAPSHOT_PARAM]: null,
+        [AS_RUN_PARAM]: null,
+        step: null,
+        run: result.data.run_id,
+      });
+
       if (onRunSubmitted) {
         // Set pending run ID - the effect will reset isSubmitting when the run is connected
         setPendingRunId(result.data.run_id);
         onRunSubmitted(result.data.run_id);
         // Don't reset isSubmitting here - the effect will do it when WebSocket connects
       } else {
-        // No callback - stay on the current page and track the run in the URL
-        updateSearchParams({ run: result.data.run_id });
         setIsSubmitting(false);
         isRetryingRef.current = false;
       }
@@ -417,9 +455,9 @@ export function useRunRetry({
   }, [
     followedRunId,
     followedRunStep,
-    canRunWorkflow,
-    workflowRunTooltipMessage,
-    saveWorkflow,
+    canRetryWorkflow,
+    retryTooltipMessage,
+    saveBeforeRun,
     projectId,
     onRunSubmitted,
     getLimits,
@@ -432,5 +470,6 @@ export function useRunRetry({
     isRetryable,
     runIsProcessing,
     canRun,
+    canRetry,
   };
 }

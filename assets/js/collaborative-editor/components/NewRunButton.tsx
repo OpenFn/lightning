@@ -1,3 +1,5 @@
+import type React from 'react';
+
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 
 import { useCanRun } from '../hooks/useWorkflow';
@@ -14,6 +16,13 @@ interface NewRunButtonProps {
   tooltipSide?: 'top' | 'bottom';
   text?: string;
   variant?: 'primary' | 'secondary';
+  /** Whether clicking retries a loaded run rather than starting a fresh one. */
+  forRetry?: boolean;
+  /**
+   * Shown instead of the keyboard shortcut when the button is usable. For
+   * saying something about the click that the label cannot carry.
+   */
+  enabledTooltip?: React.ReactNode;
 }
 
 /**
@@ -37,14 +46,21 @@ export function NewRunButton({
   tooltipSide = 'bottom',
   text = 'Run',
   variant = 'primary',
+  forRetry = false,
+  enabledTooltip,
 }: NewRunButtonProps) {
-  const { canRun, tooltipMessage } = useCanRun();
+  const { canRun, tooltipMessage } = useCanRun({ forRetry });
 
   // Disable if parent requests, canRun is false, or a run is in progress
   const isDisabled = disabledProp || !canRun || isRunning;
 
+  // Matches RunRetryButton, which is the same control in the IDE and the run
+  // panel. Leaving the label as Run while the spinner turned made the two
+  // disagree on the same screen.
+  const label = isRunning ? 'Processing' : text;
+
   const tooltip = canRun ? (
-    <ShortcutKeys keys={['mod', 'enter']} />
+    (enabledTooltip ?? <ShortcutKeys keys={['mod', 'enter']} />)
   ) : (
     tooltipMessage
   );
@@ -67,7 +83,7 @@ export function NewRunButton({
           <Button variant={variant} onClick={onClick} disabled={isDisabled}>
             <span className="flex items-center gap-1">
               {icon}
-              {text}
+              {label}
             </span>
           </Button>
         </span>
@@ -90,7 +106,7 @@ export function NewRunButton({
         >
           <span className="flex items-center gap-1">
             {icon}
-            {text}
+            {label}
           </span>
         </button>
       </Tooltip>

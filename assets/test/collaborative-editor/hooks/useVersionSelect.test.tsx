@@ -38,7 +38,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
-  useSession: () => ({ isSynced: true }),
+  useSession: () => ({ isSynced: true, settled: true }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({

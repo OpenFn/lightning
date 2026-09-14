@@ -56,7 +56,7 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => ({
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
-  useSession: () => ({ isSynced: true }),
+  useSession: () => ({ isSynced: true, settled: true }),
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
@@ -126,6 +126,9 @@ function createWrapper(
     // experience. Without the flag a run is only ever selected on the document
     // already open.
     experimentalFeaturesEnabled: true,
+    // Live: dropping a run on a version switch is the locked-content rule. In a
+    // draft the run stays overlaid on what is being edited.
+    contentLocked: true,
     ...sessionStateOverride,
   };
   const historyState = historyStateOverride || {
@@ -435,6 +438,53 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
           run: null,
           step: null,
         });
+      });
+    });
+
+    test('a retry keeps its new run when leaving the old run view', async () => {
+      storage.varStorage.setItem(
+        'lightning.editor.historyPanelCollapsed',
+        'false'
+      );
+      store = createEditorPreferencesStore();
+
+      const closeRunViewer = vi.fn();
+      wrapper = createWrapper(
+        store,
+        {
+          // The new run is not in the history yet, which is the whole point:
+          // it was created a moment ago and its event has not landed.
+          history: [],
+          isLoading: false,
+          error: null,
+          isChannelConnected: true,
+          activeRun: { id: 'old-run' },
+          runStepsCache: {},
+          runStepsSubscribers: {},
+          runStepsLoading: new Set(),
+        },
+        { _closeRunViewer: closeRunViewer }
+      );
+
+      // Reading an old run as it executed, which is where a retry starts.
+      urlState.setParams({ run: 'old-run', as_run: 'old-run' });
+
+      const { rerender } = render(<CollaborativeWorkflowDiagram />, {
+        wrapper,
+      });
+
+      // The retry drops as_run and names its new run in the same update. The
+      // view changed, but the run named is the one just chosen for it, so it
+      // stays. Treating it as a leftover cleared the URL and left an empty
+      // canvas, and only sometimes, depending on whether the history had
+      // caught up.
+      urlState.setParams({ run: 'new-run' });
+      rerender(<CollaborativeWorkflowDiagram />);
+
+      await waitFor(() => {
+        expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith(
+          expect.objectContaining({ run: null })
+        );
       });
     });
 

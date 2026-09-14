@@ -32,7 +32,7 @@ const closeRunViewer = vi.fn();
 // The discard guard asks these before anything destroys the document; neither
 // has a provider in this test.
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
-  useSession: () => ({ isSynced: true }),
+  useSession: () => ({ isSynced: true, settled: true }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
@@ -71,6 +71,14 @@ vi.mock('../../../js/collaborative-editor/components/VersionDropdown', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
   useExperimentalFeatures: () => true,
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),
   useLatestSnapshotLockVersion: () => 1,

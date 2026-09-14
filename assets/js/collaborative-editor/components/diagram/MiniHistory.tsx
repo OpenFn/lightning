@@ -36,6 +36,7 @@ import {
   useExperimentalFeatures,
   useProject,
 } from '../../hooks/useSessionContext';
+import { useVersionPicker } from '../../hooks/useVersionPicker';
 import { useWorkflowState } from '../../hooks/useWorkflow';
 import type { RunSummary, WorkOrder } from '../../types/history';
 import {
@@ -139,17 +140,34 @@ const StatusIndicator: React.FC<{ state: string }> = ({ state }) => {
 // It names a release, so it belongs only to the experimental experience. It
 // reads the flag here rather than being threaded down through RunItem, which is
 // otherwise a pure component.
-const VersionTag: React.FC<{ versionNumber: number | null | undefined }> = ({
-  versionNumber,
-}) => {
+const VersionTag: React.FC<{
+  versionNumber: number | null | undefined;
+  lockVersion: number | null | undefined;
+}> = ({ versionNumber, lockVersion }) => {
   const experimentalFeatures = useExperimentalFeatures();
+  // The same rule as the version picker, for the same reason: publishing is a
+  // live workflow's idea. In a draft or a sandbox there are no releases, so a
+  // run is named by the save point it executed, and "unpublished" would be
+  // answering a question nobody asked.
+  const picker = useVersionPicker();
 
   if (!experimentalFeatures) return null;
+
+  const label =
+    picker === 'releases'
+      ? versionNumber == null
+        ? 'unpublished'
+        : `v${versionNumber}`
+      : lockVersion == null
+        ? null
+        : `v${lockVersion}`;
+
+  if (label === null) return null;
 
   return (
     <>
       <span className="whitespace-nowrap font-medium text-gray-400">
-        {versionNumber == null ? 'unpublished' : `v${versionNumber}`}
+        {label}
       </span>
       {/* Owned by the tag, so it cannot strand itself in front of the run id
           when the tag is hidden. */}
@@ -278,11 +296,14 @@ const ExperimentalRunItem: React.FC<RunItemProps> = ({
   // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
   <div
     className={cn(
-      `flex w-full cursor-pointer items-center gap-2 border-l-2 px-3 py-2 pl-9
+      `flex w-full cursor-pointer items-center gap-2 border-l-2 px-3 py-2
         text-xs text-left transition-colors`,
+      // The left gutter holds the deselect cross. Unselected there is no cross,
+      // so the padding stands in for it and the rows line up either way. Adding
+      // the cross on top of the padding pushed the selected row out of line.
       run.selected
-        ? 'bg-indigo-50 border-l-indigo-500'
-        : 'border-l-transparent hover:bg-gray-50'
+        ? 'pl-3 bg-indigo-50 border-l-indigo-500'
+        : 'pl-9 border-l-transparent hover:bg-gray-50'
     )}
     onClick={e => {
       e.stopPropagation();
@@ -330,7 +351,10 @@ const ExperimentalRunItem: React.FC<RunItemProps> = ({
 
     {/* Secondary, de-emphasised: one light identifier (version + run id). */}
     <div className="flex items-center gap-1.5 whitespace-nowrap text-[11px]">
-      <VersionTag versionNumber={run.version_number} />
+      <VersionTag
+        versionNumber={run.version_number}
+        lockVersion={run.version}
+      />
       <button
         type="button"
         onClick={e => onNavigateToRun(e, run.id)}
