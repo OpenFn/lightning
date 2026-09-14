@@ -420,9 +420,8 @@ export function useRunRetry({
       // v1 while following a run that executed something else, and the version
       // badge went on saying v1 however many times you retried.
       //
-      // One call rather than one per parameter: separate calls each merge
-      // against the URL as they find it, and the later one drops what the
-      // earlier one wrote.
+      // One call rather than one per parameter, so a retry costs one history
+      // entry rather than several and Back takes you where you expect.
       updateSearchParams({
         [RELEASE_PARAM]: null,
         [SNAPSHOT_PARAM]: null,

@@ -314,7 +314,11 @@ export function Header({
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [activeRun?.id, pendingRunId]);
+    // Deliberately not keyed on the active run. Restarting the clock every time
+    // some other run became active meant the button could sit on Processing
+    // well past the thirty seconds this is here to cap.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingRunId]);
   const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
   const followedRunId = params.run ?? null;
   const isRetryable =
@@ -422,9 +426,13 @@ export function Header({
   // header can settle in one go: a control appearing is fine, one vanishing
   // under the cursor is not.
   const sessionContextLoaded = useSessionContextLoaded();
+  //
+  // Unknown counts as locked only once we know the flag is on. Without it there
+  // is no lifecycle and Save always rendered, so treating unknown as locked for
+  // everyone took the button away from flag-off users until the context landed.
   const isLiveLocked =
-    !sessionContextLoaded ||
-    (experimentalFeatures && lifecycleState === 'live' && !inSandbox);
+    experimentalFeatures &&
+    (!sessionContextLoaded || (lifecycleState === 'live' && !inSandbox));
 
   // A retry runs the latest version, never the one on screen, so while an older
   // version is being read the button has to say so before the click rather than
@@ -1031,11 +1039,7 @@ export function Header({
               // Every pinned parameter goes, because only the latest version
               // can be edited and that is also what production was running.
               // Wanting the older content back is Restore, a different action.
-              //
-              // The order matters: leaving the view comes first, and the
-              // transition follows once the live document is back. Run the
-              // other way round and the transition saves the view's document
-              // over the workflow.
+
               const runInput = activeRun?.steps?.[0]?.input_dataclip_id ?? null;
 
               requestTransition(
@@ -1045,7 +1049,7 @@ export function Header({
                   [SNAPSHOT_PARAM]: null,
                   [AS_RUN_PARAM]: null,
                   step: null,
-                  run: activeRun?.id ?? null,
+                  run: activeRun?.id ?? params.run ?? null,
                   ...(runInput ? { panel: 'run', dataclip: runInput } : {}),
                 },
                 'Could not switch to draft'

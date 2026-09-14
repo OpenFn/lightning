@@ -967,12 +967,11 @@ export const useCanSave = (): { canSave: boolean; tooltipMessage: string } => {
  *    unless the control retries a loaded run, which carries its own content
  * 4. Workflow deletion state (deleted_at)
  * 5. Run limits (from session context)
- * 6. Read-only workflow (live on main, deleted, pinned, no edit permission,
- *    unsaved new). A read-only workflow can neither be edited nor have runs
- *    created against it: running a live workflow directly contradicts the
- *    lifecycle model (test or run it from a sandbox instead). Viewing existing
- *    runs and run history is unaffected because those paths do not consult
- *    useCanRun.
+ * 6. Deliberately NOT the read-only lock. Running is not editing: whoever is
+ *    responsible for a live workflow has to be able to put a test input through
+ *    what is in production. The checks above are the ones that really stop a
+ *    run. Viewing existing runs and run history is unaffected either way,
+ *    because those paths do not consult useCanRun.
  */
 export interface CanRunOptions {
   /**

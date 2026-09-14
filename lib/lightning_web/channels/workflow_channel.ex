@@ -78,11 +78,16 @@ defmodule LightningWeb.WorkflowChannel do
           user: user,
           workflow: workflow,
           room_topic: topic,
-          # A pinned release, a pinned snapshot and a run's own view all resolve
-          # to kind :version, and all three hold a past state of the workflow
-          # rather than the workflow. The session refuses to write from one, so
-          # a transition or a save issued here cannot put old content back.
-          view_only?: workflow_kind == :version
+          # A pinned release, a pinned snapshot and a run's own view all hold a
+          # past state of the workflow rather than the workflow. The session
+          # refuses to write from one, so a save issued here cannot put old
+          # content back.
+          #
+          # Read from the room topic rather than the resolved kind. The kind is
+          # what the resolver happened to return, and joining a pinned topic
+          # with a different action returned :existing, which handed back a
+          # writable session on a pinned document. The suffix alone decides.
+          view_only?: view != :latest
         )
 
       project_user = Lightning.Projects.get_project_user(project, user)
@@ -1912,11 +1917,20 @@ defmodule LightningWeb.WorkflowChannel do
   #
   # Returns :ok if authorized, {:error, %{type: string, message: string}} if not.
   # A lifecycle transition acts on the workflow, never on the document the
-  # person happens to be reading. From a pinned view the socket's session holds
-  # a past state, and the session refuses to write from one, so the transition
-  # is issued against the live document instead of asking the client to leave
-  # the view first and hoping the two land in the right order.
-  defp lifecycle_session(%{assigns: %{workflow_kind: :version}} = socket) do
+  # person happens to be reading.
+  #
+  # From the live document it goes through the session, so that going live
+  # publishes what is on screen rather than the last thing saved. From a view
+  # there is nothing on screen to publish: the document is a past state, and the
+  # transition is only a change of state and trigger enablement, which the
+  # context does on the row. Routing a view through a session instead meant
+  # spawning one on the live document parented to this channel, which then
+  # pushed live updates into the document being read and counted the reader
+  # twice in presence.
+  defp apply_lifecycle_state(
+         %{assigns: %{workflow_kind: :version}} = socket,
+         target
+       ) do
     %{current_user: user, workflow_id: workflow_id} = socket.assigns
 
     case Workflows.get_workflow(workflow_id) do
@@ -1924,32 +1938,38 @@ defmodule LightningWeb.WorkflowChannel do
         {:error, :workflow_deleted}
 
       workflow ->
-        # Attaches to the live document if one is already open, and opens it
-        # from the database if not, which is the same content either way. The
-        # session is parented to this channel process, so it goes when the
-        # socket does.
-        Collaborate.start(
-          user: user,
-          workflow: workflow,
-          room_topic: "workflow:collaborate:#{workflow_id}",
-          view_only?: false
-        )
+        workflow = Lightning.Repo.preload(workflow, :triggers)
+
+        case target do
+          :live -> Workflows.go_live(workflow, user)
+          :draft -> Workflows.switch_to_draft(workflow, user)
+        end
     end
   end
 
-  defp lifecycle_session(socket), do: {:ok, socket.assigns.session_pid}
+  defp apply_lifecycle_state(socket, target) do
+    Session.set_workflow_state(
+      socket.assigns.session_pid,
+      socket.assigns.current_user,
+      target
+    )
+  end
 
   defp transition_lifecycle_state(socket, target_state) do
-    user = socket.assigns.current_user
-
     with :ok <- authorize_edit_workflow(socket),
-         {:ok, session_pid} <- lifecycle_session(socket),
-         {:ok, workflow} <-
-           Session.set_workflow_state(session_pid, user, target_state) do
-      broadcast_from!(socket, "workflow_saved", %{
-        latest_snapshot_lock_version: workflow.lock_version,
-        workflow: workflow
-      })
+         {:ok, workflow} <- apply_lifecycle_state(socket, target_state) do
+      # Always the live room, never this socket's. A transition issued from a
+      # view broadcast on the view's own topic, so nobody editing the workflow
+      # learned it had gone live and kept editing something now in production.
+      LightningWeb.Endpoint.broadcast_from!(
+        self(),
+        "workflow:collaborate:#{socket.assigns.workflow_id}",
+        "workflow_saved",
+        %{
+          latest_snapshot_lock_version: workflow.lock_version,
+          workflow: workflow
+        }
+      )
 
       # Editability folds in the lifecycle lock and is resolved at join, so going
       # live makes it stale on every socket in the room.
@@ -2320,6 +2340,15 @@ defmodule LightningWeb.WorkflowChannel do
   # The resolver reconciles by id, so a "new" join for an id owned by another
   # project returns {:error, :wrong_project}, mapped to the same client-facing
   # string as the "edit" path.
+  # A new workflow has no past state, so a pinned suffix on it is a
+  # contradiction. Refused outright rather than quietly ignored: ignoring it
+  # handed back a writable session on a pinned document, which is a save of old
+  # content over the workflow.
+  defp load_workflow("new", _workflow_id, _project, _user, view)
+       when view != :latest do
+    {:error, "invalid parameters. a new workflow has no version to pin"}
+  end
+
   defp load_workflow("new", workflow_id, project, user, _view) do
     case Permissions.can(:project_users, :create_workflow, user, project) do
       :ok ->

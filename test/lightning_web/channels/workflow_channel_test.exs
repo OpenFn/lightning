@@ -56,6 +56,27 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
     end
 
+    test "a pinned room cannot be joined as a new workflow", %{
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      # The kind the resolver returns is not the question; the room is. Joining
+      # a pinned topic with a different action returned :existing and handed
+      # back a writable session on a pinned document, which is a save of old
+      # content over the workflow.
+      assert {:error, %{reason: reason}} =
+               LightningWeb.UserSocket
+               |> socket("user_#{user.id}", %{current_user: user})
+               |> subscribe_and_join(
+                 LightningWeb.WorkflowChannel,
+                 "workflow:collaborate:#{workflow.id}:v1",
+                 %{project_id: project.id, action: "new"}
+               )
+
+      assert reason =~ "no version to pin"
+    end
+
     test "a transition read from an older version acts on the workflow, not the view",
          %{
            socket: socket,
@@ -1753,6 +1774,47 @@ defmodule LightningWeb.WorkflowChannelTest do
         )
 
       %{viewer_socket: viewer_socket, viewer: viewer}
+    end
+
+    test "drops an editor's mutating frame while they read an older version", %{
+      project: project,
+      workflow: workflow
+    } do
+      # Not about the person: this editor may edit the workflow. It is about the
+      # document, which is a past state of it. The lifecycle lock asks a
+      # different question and answers "editable" whenever the workflow itself
+      # is a draft, so without this an old version's document was writable.
+      editor = insert(:user)
+      insert(:project_user, project: project, user: editor, role: :editor)
+
+      # A snapshot to pin to. The fixture workflow has none until it is saved.
+      {:ok, saved} =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Has A Snapshot"})
+        |> Lightning.Workflows.save_workflow(editor)
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{editor.id}", %{current_user: editor})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{saved.lock_version}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      on_exit(fn -> ensure_doc_supervisor_stopped(workflow.id) end)
+
+      session_pid = pinned_socket.assigns.session_pid
+      original_name = workflow_name(session_pid)
+
+      chunk =
+        build_name_mutation(session_pid, :sync_update, "Mutated On A Version")
+
+      push(pinned_socket, "yjs", {:binary, chunk})
+      await_channel_processed(pinned_socket)
+
+      assert workflow_name(session_pid) == original_name
     end
 
     test "drops a viewer's mutating \"yjs\" (sync_update) frame", %{

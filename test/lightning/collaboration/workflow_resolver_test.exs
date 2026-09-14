@@ -182,6 +182,28 @@ defmodule Lightning.Collaboration.WorkflowResolverTest do
       }
     end
 
+    test "carries the workflow's current lifecycle state, not the snapshot's",
+         %{workflow: workflow, snapshot: snapshot, project: project} do
+      # A snapshot records content, never lifecycle, so a version view built
+      # from one had no state and defaulted to draft. A pinned view of a live
+      # workflow then told the client its content was editable while the server
+      # refused every write.
+      {:ok, _live} =
+        workflow
+        |> Lightning.Repo.preload(:triggers)
+        |> Lightning.Workflows.go_live(insert(:user))
+
+      assert {:ok, pinned, :version} =
+               WorkflowResolver.resolve_version(
+                 workflow.id,
+                 snapshot.lock_version,
+                 project: project
+               )
+
+      assert pinned.state == :live
+      assert pinned.lock_version == snapshot.lock_version
+    end
+
     test "returns {:error, :snapshot_not_found} when no snapshot exists" do
       assert {:error, :snapshot_not_found} =
                WorkflowResolver.resolve_version(Ecto.UUID.generate(), 0)

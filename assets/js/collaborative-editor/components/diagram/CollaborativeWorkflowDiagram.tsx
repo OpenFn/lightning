@@ -231,11 +231,27 @@ export function CollaborativeWorkflowDiagram({
   // content can still be edited.
   const versionMismatch = useVersionMismatch(selectedRunId);
 
+  // The banner's number is the snapshot's own, which is what `?v=` addresses.
+  // Where the picker numbers by the publish trail, handing it there wrote a
+  // snapshot number into `?release=` and opened a version nobody asked for, or
+  // none at all. There the run's own view is the right destination anyway, and
+  // it is addressed by the run rather than by any number.
   const handleGoToVersion = useCallback(() => {
-    if (versionMismatch) {
-      handleVersionSelect(versionMismatch.runVersion);
+    if (!versionMismatch) return;
+
+    if (contentLocked && selectedRunId) {
+      viewAsExecuted(selectedRunId);
+      return;
     }
-  }, [handleVersionSelect, versionMismatch]);
+
+    handleVersionSelect(versionMismatch.runVersion);
+  }, [
+    contentLocked,
+    handleVersionSelect,
+    selectedRunId,
+    versionMismatch,
+    viewAsExecuted,
+  ]);
 
   // A run is shown as it executed, on its own snapshot. The exception is a run
   // of the content that is live now: that one overlays on the live document so

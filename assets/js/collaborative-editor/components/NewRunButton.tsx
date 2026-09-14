@@ -50,9 +50,16 @@ export function NewRunButton({
   enabledTooltip,
 }: NewRunButtonProps) {
   const { canRun, tooltipMessage } = useCanRun({ forRetry });
+  // The dropdown starts a fresh run, which is a different question from the one
+  // the main button asks when it is retrying. Sharing the retry's answer left
+  // "Run with custom input" open on a version being read, where a fresh run is
+  // refused, so it opened a panel whose own button was dead.
+  const { canRun: canRunFresh, tooltipMessage: freshTooltipMessage } =
+    useCanRun();
 
   // Disable if parent requests, canRun is false, or a run is in progress
   const isDisabled = disabledProp || !canRun || isRunning;
+  const isFreshRunDisabled = disabledProp || !canRunFresh || isRunning;
 
   // Matches RunRetryButton, which is the same control in the IDE and the run
   // panel. Leaving the label as Run while the spinner turned made the two
@@ -112,7 +119,7 @@ export function NewRunButton({
       </Tooltip>
       <Menu as="div" className="relative -ml-px block">
         <MenuButton
-          disabled={isDisabled}
+          disabled={isFreshRunDisabled}
           className={`h-full rounded-r-md pr-2 pl-2 text-sm font-semibold
           shadow-xs cursor-pointer disabled:cursor-not-allowed
           focus-visible:outline-2 focus-visible:outline-offset-2
@@ -138,11 +145,18 @@ export function NewRunButton({
           <MenuItem>
             {({ close }) => (
               <Tooltip
-                content={<ShortcutKeys keys={['mod', 'shift', 'enter']} />}
+                content={
+                  canRunFresh ? (
+                    <ShortcutKeys keys={['mod', 'shift', 'enter']} />
+                  ) : (
+                    freshTooltipMessage
+                  )
+                }
                 side="bottom"
               >
                 <button
                   type="button"
+                  disabled={isFreshRunDisabled}
                   onClick={() => {
                     onRunWithCustomInputClick();
                     close();

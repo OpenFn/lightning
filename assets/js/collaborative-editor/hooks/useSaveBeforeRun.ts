@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 
+import { usePinnedView } from '../lib/pinnedView';
+
 import { useContentLocked } from './useSessionContext';
 import type { SaveWorkflowOptions } from './useWorkflow';
 
@@ -24,10 +26,15 @@ type SaveWorkflow = (
  */
 export function useSaveBeforeRun(saveWorkflow: SaveWorkflow) {
   const contentLocked = useContentLocked();
+  // A pinned view is refused a save whatever the workflow's state, and a view
+  // of a draft or of anything in a sandbox is not content-locked. Gating on the
+  // lock alone let those through, and the retry they were on their way to died
+  // with the read-only error this exists to avoid.
+  const { isPinnedView } = usePinnedView();
 
   return useCallback(async (): Promise<boolean> => {
-    if (contentLocked) return false;
+    if (contentLocked || isPinnedView) return false;
     await saveWorkflow({ notify: 'none' });
     return true;
-  }, [contentLocked, saveWorkflow]);
+  }, [contentLocked, isPinnedView, saveWorkflow]);
 }
