@@ -15,8 +15,6 @@ import {
   useLimits,
   usePermissions,
   useProjectRepoConnection,
-  useSessionContextError,
-  useSessionContextLoaded,
   useSessionWorkflow,
   useReleases,
 } from '../hooks/useSessionContext';
@@ -434,37 +432,15 @@ export function Header({
 
   const { canRun: canRunOrRetry } = useCanRun({ forRetry: isRetryable });
 
-  // The lifecycle lock as the header sees it, and whether we know it yet.
+  // The lifecycle lock as the header sees it.
   //
-  // Everything this depends on, the flag included, arrives with the session
-  // context, so before it lands the honest answer is "unknown" rather than
-  // "flag off, draft". Treating unknown as locked holds Save back until the
-  // header can settle in one go: a control appearing is fine, one vanishing
-  // under the cursor is not.
-  // An answer, not necessarily a good one. A context request that fails leaves
-  // `lastUpdated` null forever and there is no retry, so waiting only on the
-  // success would take Save away permanently, flag-off users included.
-  // Both called unconditionally: `||` short-circuits, and a hook that only runs
-  // on one branch changes the hook order between renders, which React refuses.
-  const contextLoaded = useSessionContextLoaded();
-  const contextError = useSessionContextError();
-  const sessionContextLoaded = contextLoaded || contextError !== null;
-  //
-  // Unknown counts as locked, for everyone. The flag itself arrives with the
-  // context, so before it lands "flag off" and "we do not know yet" are the
-  // same answer, and treating unknown as unlocked renders Save and then takes
-  // it away again on a live workflow. Nobody can save during that window
-  // anyway, because the session is not connected, so what a flag-off user
-  // loses is the sight of a button they could not have pressed.
+  // Nothing is held back while the flag is still unknown. Doing that took the
+  // button away from people who never opted in, and this work does not touch
+  // them. A flag-on user briefly sees Save on a live workflow before the
+  // context lands; that is the cost of the flag arriving over the channel, and
+  // it is not worth changing what everyone else sees to hide it.
   const isLiveLocked =
-    !sessionContextLoaded ||
-    (experimentalFeatures &&
-      lifecycleState === 'live' &&
-      !inSandbox &&
-      // Not while reading the past. There the button is refused by the view,
-      // which is a reason it can carry; dropping it would leave that screen
-      // with nothing saying why it cannot be edited.
-      !isPinnedView);
+    experimentalFeatures && lifecycleState === 'live' && !inSandbox;
 
   // A retry runs the latest version, never the one on screen, so while an older
   // version is being read the button has to say so before the click rather than
@@ -995,9 +971,12 @@ export function Header({
                 </Tooltip>
               )}
               {/* A run needs a trigger to start from; a retry needs only the
-                  run it is retrying. Gating both on the trigger would leave a
-                  loaded run with no way to retry it. */}
-              {projectId && workflowId && (firstTriggerId || isRetryable) && (
+                  run it is retrying, so with the flag on a loaded run is not
+                  left without a way to retry it. Without the flag the trigger
+                  is required, as on main. */}
+              {projectId &&
+                workflowId &&
+                (firstTriggerId || (isRetryable && experimentalFeatures)) && (
                 <NewRunButton
                   onClick={() => {
                     void (isRetryable ? handleRetryClick() : handleRunClick());

@@ -1322,17 +1322,18 @@ describe('Header - read-only reason variations', () => {
     expect(saveButton).toHaveTextContent('Create');
   });
 
-  test('keeps Save while reading an older version of a live workflow', () => {
-    // There the reason is the view, not the lifecycle, and the view is a reason
-    // the button can carry. Dropping it left that screen with nothing saying
-    // why it could not be edited.
+  test('drops Save on a live workflow even while reading an older version', () => {
+    // There is no Save on a live workflow, whichever version is on screen.
+    // Reading an older one does not make it saveable, and the Read-only cue is
+    // what explains that view.
     lifecycleState = 'live';
     urlParams = { v: '2' };
     readOnly = { isReadOnly: true, reason: 'pinned_version' };
 
     renderHeader({ isSandbox: false });
 
-    expect(screen.getByTestId('save-workflow-button')).toBeDisabled();
+    expect(screen.queryByTestId('save-workflow-button')).toBeNull();
+    expect(screen.getByTestId('read-only-warning')).toBeInTheDocument();
   });
 
   test('refuses Promote while reading a run as it executed', () => {
@@ -1355,30 +1356,6 @@ describe('Header - read-only reason variations', () => {
     renderHeader({ isSandbox: false });
 
     expect(screen.queryByTestId('save-workflow-button')).toBeNull();
-  });
-
-  test('withholds Save until the session context has landed', () => {
-    // The flag arrives with the context, so until it does "flag off" and "we do
-    // not know" look the same. Rendering Save on that guess and taking it away
-    // a moment later is the flicker this avoids.
-    sessionContextLoaded = false;
-    lifecycleState = 'draft';
-
-    renderHeader({ isSandbox: false });
-
-    expect(screen.queryByTestId('save-workflow-button')).toBeNull();
-  });
-
-  test('brings Save back if the session context request fails', () => {
-    // A failed request leaves the context permanently unloaded and nothing
-    // retries it. Waiting only on success took Save away for good.
-    sessionContextLoaded = false;
-    sessionContextError = 'Session context request failed';
-    lifecycleState = 'draft';
-
-    renderHeader({ isSandbox: false });
-
-    expect(screen.getByTestId('save-workflow-button')).toBeInTheDocument();
   });
 
   test('keeps Save, disabled, on a live workflow without the flag', () => {
