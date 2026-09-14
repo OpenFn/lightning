@@ -13,8 +13,6 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
   setup do
     sup = :"nm_test_#{System.unique_integer([:positive])}"
 
-    # The supervisor starts the NodeMonitor automatically, registered under
-    # `node_monitor_name(sup)`.
     start_supervised!(
       {AdaptorsSupervisor,
        name: sup,
@@ -28,9 +26,9 @@ defmodule Lightning.Adaptors.NodeMonitorTest do
     nm_pid = Process.whereis(nm_name)
     Ecto.Adapters.SQL.Sandbox.allow(Lightning.Repo, self(), nm_pid)
 
-    # Scheduler is auto-started too (wrapped in HighlanderPG, registered
-    # via :global). It may not be up yet at setup time — HighlanderPG
-    # polls at 300ms — so this is best-effort.
+    # The Scheduler is auto-started too, wrapped in HighlanderPG and registered
+    # via :global. HighlanderPG polls at 300ms, so it may not be up yet at
+    # setup time. This is best-effort.
     {:global, global_sched_name} = AdaptorsSupervisor.global_scheduler_name(sup)
     sched_pid = :global.whereis_name(global_sched_name)
 

@@ -340,7 +340,7 @@ defmodule Lightning.Workflows.JobTest do
 
     test "consecutive joiners do not slip past the blank check" do
       # String.graphemes/1 fuses a ZWJ-led run into one cluster, so a
-      # per-grapheme check caught one joiner and missed two.
+      # per-grapheme check would catch one joiner and miss two.
       for name <- [
             "\u{200D}\u{200D}",
             "\u{200D}\u{200D}\u{200D}",
@@ -363,8 +363,7 @@ defmodule Lightning.Workflows.JobTest do
     end
 
     test "a body containing a NUL is a changeset error, not a jsonb crash" do
-      # Only the NUL: a body is code and legitimately holds newlines and tabs
-      # (#4893).
+      # Only the NUL. A body is code and legitimately holds newlines and tabs.
       errors =
         Job.changeset(%Job{}, %{
           name: "step",
@@ -444,9 +443,9 @@ defmodule Lightning.Workflows.JobTest do
     end
 
     test "the name is trimmed before it is validated, not after" do
-      # 100 characters plus trailing space. Trimming after validation, which is
-      # what this changeset used to do, made this 105 characters and rejected
-      # a name that is exactly at the cap.
+      # 100 characters plus trailing space. The changeset has to trim before it
+      # measures, or this is 105 characters and a name exactly at the cap is
+      # rejected.
       name = String.duplicate("a", 100) <> "     "
 
       changeset = Job.changeset(%Job{}, %{name: name})

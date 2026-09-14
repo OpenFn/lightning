@@ -9,8 +9,7 @@ defmodule Lightning.Adaptors.Local do
   `Lightning.Adaptors.Config.strategy_opts(__MODULE__)[:paths]`, an
   ordered list of root directories.
 
-  Each callback walks the filesystem afresh — caching is the Store's
-  responsibility. The module is stateless; no GenServer, no ETS.
+  Each callback walks the filesystem afresh. Caching is the Store's job.
 
   ## Layout
 
@@ -32,8 +31,7 @@ defmodule Lightning.Adaptors.Local do
   readable and really is empty, which is a different thing from an npm org
   listing that comes back with nothing in it.
 
-  `source: :local` is **not** set here — the Store stamps it before
-  upsert. No network calls anywhere in this module.
+  `source: :local` is not set here. The Scheduler stamps it before upsert.
   """
 
   @behaviour Lightning.Adaptors.Strategy

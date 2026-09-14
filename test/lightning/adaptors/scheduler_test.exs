@@ -1,5 +1,5 @@
 defmodule Lightning.Adaptors.SchedulerTest do
-  # async: false — DataCase's shared sandbox mode means every process can
+  # async: false because DataCase's shared sandbox mode lets every process
   # reach the DB without an allow/3 call, and set_mox_global is only safe
   # when tests run serially.
   use Lightning.DataCase, async: false
@@ -30,9 +30,9 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
     start_supervised!({
       AdaptorsSupervisor,
-      # Keeps the auto-started scheduler a true inert no-op ahead of
-      # start_scheduler/2 below — otherwise its boot-time max_checked_at
-      # read logs an empty-catalogue warning on every test in this file.
+      # checked_at spares the auto-started scheduler its boot-time DB read.
+      # It never ticks (refresh_interval is 0 in config/test.exs) and
+      # start_scheduler/2 replaces it.
       name: sup,
       strategy: Lightning.Adaptors.StrategyMock,
       checked_at: fn _source -> nil end
@@ -60,9 +60,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
     global_name = AdaptorsSupervisor.global_scheduler_name(sup)
     source_topic = AdaptorsSupervisor.source_topic(sup)
 
-    # Stop the supervisor's auto-started HighlanderPG (and its wrapped
-    # Scheduler) so we can start a replacement under the controlled
-    # interval without name collision.
+    # Terminate first so the replacement can take the same global name.
     :ok =
       Supervisor.terminate_child(sup, AdaptorsSupervisor.highlander_name(sup))
 
@@ -147,7 +145,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
         {:ok, []}
       end)
 
-      # Empty table → max_checked_at returns nil → delay 0 → tick fires on init.
+      # The table is empty, so the first tick fires on init.
       start_scheduler(sup)
 
       assert_receive :list_adaptors_called, 2000
@@ -156,13 +154,11 @@ defmodule Lightning.Adaptors.SchedulerTest do
     test "tick re-arms itself", %{sup: sup} do
       test_pid = self()
 
-      # Stub allows repeated calls; each fires a message so we can count them.
       stub(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
         send(test_pid, :tick_ran)
         {:ok, []}
       end)
 
-      # 30ms interval → two ticks fire well within 2s.
       start_scheduler(sup, interval: 30)
 
       assert_receive :tick_ran, 2000
@@ -291,8 +287,8 @@ defmodule Lightning.Adaptors.SchedulerTest do
       :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
       start_scheduler(sup)
 
-      # With a recently-inserted adaptor, max_checked_at is "now", so the smart-
-      # init delay is ~99,999 seconds. Trigger an explicit tick via refresh_now.
+      # A recently-inserted adaptor makes max_checked_at "now", so the init
+      # tick is a full interval away. Trigger one explicitly via refresh_now.
       sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
       Scheduler.refresh_now(sched_name)
 
@@ -603,7 +599,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
          ]}
       end)
 
-      # Single multi-clause expectation — Mox routes by pattern within
+      # Single multi-clause expectation. Mox routes by pattern within
       # one slot, so Scheduler's async_stream_nolink can fan out to the
       # two adaptors in either order. Two separate `expect/4` calls
       # would dispatch FIFO and crash with FunctionClauseError when the
@@ -676,7 +672,6 @@ defmodule Lightning.Adaptors.SchedulerTest do
 
       start_scheduler(sup)
 
-      # Wait for init tick.
       assert_receive :tick_ran, 2000
 
       sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
@@ -706,7 +701,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       {:global, gname} = sched_name
       pid = :global.whereis_name(gname)
 
-      # Init tick, then two manual refresh_now calls — each waited out so it
+      # Init tick, then two manual refresh_now calls, each waited out so it
       # starts its own cycle instead of coalescing into the previous one.
       assert_receive :tick_ran, 2000
       assert_eventually(:sys.get_state(pid).refresh == nil, 2000)
@@ -914,7 +909,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       new_sha = :crypto.hash(:sha256, new_bytes)
 
       # Same version and a stored schema, so the diff path marks this
-      # adaptor :touched instead of re-fetching it — only the icon changed.
+      # adaptor :touched instead of re-fetching it.
       expect(Lightning.Adaptors.StrategyMock, :list_adaptors, fn ->
         {:ok, [%{name: "@openfn/language-http", latest_version: "1.0.0"}]}
       end)
@@ -986,8 +981,8 @@ defmodule Lightning.Adaptors.SchedulerTest do
       :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
       start_scheduler(sup)
 
-      # The pre-seeded row pushes max_checked_at to "now", so init
-      # delay = full interval — drive the tick explicitly.
+      # The pre-seeded row pushes max_checked_at to "now", so the init tick
+      # is a full interval away. Drive it explicitly.
       sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
       assert {:ok, %{errors: 0}} = Scheduler.await_refresh(sched_name, 5_000)
 
@@ -1022,7 +1017,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
       :ok = Phoenix.PubSub.subscribe(Lightning.PubSub, source_topic)
       start_scheduler(sup)
 
-      # Drain the init tick (table is empty → delay 0 → fires immediately).
+      # Drain the init tick, which fires immediately on an empty table.
       assert_receive :init_list_adaptors_called, 2000
 
       sched_name = AdaptorsSupervisor.global_scheduler_name(sup)
@@ -1102,8 +1097,7 @@ defmodule Lightning.Adaptors.SchedulerTest do
         {:ok, []}
       end)
 
-      # Exactly one fetch_icons call — the init tick. If refresh_package
-      # also fetched icons the count would be 2 and Mox would fail.
+      # The one allowed fetch_icons call belongs to the init tick.
       expect(Lightning.Adaptors.StrategyMock, :fetch_icons, 1, fn _opts ->
         send(test_pid, :icons_called)
         {:ok, %{}}

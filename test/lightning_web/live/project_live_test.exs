@@ -6770,7 +6770,7 @@ defmodule LightningWeb.ProjectLiveTest do
       )
 
       # Both hyphenate to `My-Flow`. The export pre-flight refuses before any
-      # GitHub call, so no sync mocks are set: the stub below only carries the
+      # GitHub call, so no sync mocks are set. The stub below only carries the
       # page-load connection check, and it is halted.
       for name <- ["My Flow", "My-Flow"] do
         {:ok, _} =

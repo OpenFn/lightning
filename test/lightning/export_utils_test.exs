@@ -8,10 +8,10 @@ defmodule Lightning.ExportUtilsTest do
 
   @fixture "test/fixtures/unicode_project.yaml"
 
-  # The names below are the ones YAML gets wrong if we concatenate strings
-  # without quoting: an apostrophe closes a single quoted scalar, `off` and a
-  # bare date come back as a boolean and a date, and accented or CJK text falls
-  # outside the character class the export used to test against.
+  # YAML gets these names wrong if we concatenate strings without quoting. An
+  # apostrophe closes a single quoted scalar, and `off` and a bare date come
+  # back as a boolean and a date. The accented and CJK names have to survive
+  # untouched.
   @workflow_one "Flujo 1: Registro en PS y gestión de perfiles"
   @workflow_two "off"
   @workflow_three "MailChimp June'24"
@@ -165,8 +165,8 @@ defmodule Lightning.ExportUtilsTest do
     end
 
     test "two workflows that hyphenate to the same key are refused" do
-      # This used to be a silent Map.put overwrite: the project exported
-      # cleanly and came back with one workflow instead of two.
+      # Without this check the second workflow silently overwrites the first.
+      # The project exports cleanly and comes back with one workflow, not two.
       project =
         insert(:project,
           name: "workflow-key-collision",
@@ -383,10 +383,9 @@ defmodule Lightning.ExportUtilsTest do
 
   describe "hyphenate/1 parity with the client" do
     # ExportUtils.hyphenate/1 replaces each single space and leaves every other
-    # whitespace character alone. The JS half pins this in
-    # assets/test/yaml/util.test.ts; this side had nothing, so widening the
-    # server back to ~r/\s+/ left the whole Elixir suite green while the two
-    # ends silently disagreed about what a job's key is.
+    # whitespace character alone. assets/test/yaml/util.test.ts pins the same
+    # rule on the client. Both halves are needed, or one side can widen to
+    # ~r/\s+/ and stay green while the two ends disagree about a job's key.
     test "two spaces give two hyphens, and other whitespace is left alone" do
       trigger = build(:trigger, type: :webhook, enabled: true)
 
@@ -428,9 +427,9 @@ defmodule Lightning.ExportUtilsTest do
 
   describe "the edge key disambiguation fixture" do
     # test/fixtures/edge_key_disambiguation.json is the one corpus both sides
-    # see. This half pins the server; assets/test/yaml/edgeKeys.test.ts asserts
-    # the browser produces the same keys. Only the JS half read it at first,
-    # which let the server drift and the fixture go stale in silence.
+    # see. This half pins the server and assets/test/yaml/edgeKeys.test.ts
+    # asserts the browser produces the same keys. Both halves have to read it,
+    # or one side drifts and the fixture goes stale in silence.
     @edge_fixture "test/fixtures/edge_key_disambiguation.json"
 
     test "the server still produces exactly the keys in it" do

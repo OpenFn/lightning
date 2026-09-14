@@ -3,8 +3,7 @@ defmodule Lightning.Adaptors.Store do
   Cached reads over `Lightning.Adaptors.Catalogue`.
 
   Every read checks the instance's Cachex first and falls back to the
-  catalogue table. Reads never write to the catalogue: the
-  `Lightning.Adaptors.Scheduler` is the only writer, so a row with no
+  catalogue table. Reads never fill the catalogue, so a row with no
   schema means the source has none and `schema/2` answers `"{}"`, while
   an unknown name returns `{:error, :not_found}`. `icon/3` returns a path on disk,
   fetching the bytes from the strategy on the first miss. `catalogue/1`
@@ -13,12 +12,12 @@ defmodule Lightning.Adaptors.Store do
 
   ## The first load
 
-  Reads never block. A read that comes back empty or not-found asks whether
-  the catalogue has ever loaded, and answers `{:error, :not_ready}` when it
-  has not. An empty answer from a catalogue that has loaded is a real answer
-  and is returned as-is — including the empty catalogue a source with no
-  adaptors leaves behind, which the Scheduler reports as loaded despite there
-  being no row to find.
+  Reads never wait for the first load. A read that comes back empty or
+  not-found asks whether the catalogue has ever loaded, and answers
+  `{:error, :not_ready}` when it has not. An empty answer from a catalogue
+  that has loaded is a real answer and is returned as-is. That includes the
+  empty catalogue a source with no adaptors leaves behind, which the
+  Scheduler reports as loaded despite there being no row to find.
 
   Waiting for the first load is opt-in, through `ensure_loaded/2`.
   """
@@ -379,17 +378,11 @@ defmodule Lightning.Adaptors.Store do
     end
   end
 
-  # `Cachex.fetch/4` returns one of:
-  #   * `{:ok, value}` — cache hit (or coalesced peer of a `:commit`)
-  #   * `{:commit, value}` — fallback ran and committed
-  #   * `{:ignore, value}` — fallback ran and chose not to cache
-  #   * `{:error, term}` — Cachex-side failure (fallback raised, etc.)
-  #
-  # Every fallback returns an inner `{:ok, _} | {:error, _}`, whichever
-  # wrapper it chooses, so the wrapper tuple's second element is itself
-  # the public value we want to return, including a committed
-  # `{:error, _}`, which comes back as `{:ok, {:error, _}}` on a later
-  # hit. Cachex-side `{:error, _}` passes through unchanged.
+  # Every fallback returns an inner `{:ok, _} | {:error, _}` inside the
+  # Cachex wrapper, so the wrapper's second element is the public value.
+  # A committed `{:error, _}` comes back as `{:ok, {:error, _}}` on a later
+  # hit and unwraps the same way. A Cachex-side `{:error, _}` (the fallback
+  # raised) passes through unchanged.
   @spec unwrap(tuple()) :: {:ok, term()} | {:error, term()}
   defp unwrap({:ok, inner}), do: inner
   defp unwrap({:commit, inner}), do: inner

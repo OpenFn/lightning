@@ -3,16 +3,14 @@ defmodule Lightning.Adaptors.Invalidator do
   Subscribes to cluster adaptor-change broadcasts and evicts matching
   local Cachex entries, keeping each node coherent with Postgres.
 
-  Subscribes to `opts[:source_topic]` on `Lightning.PubSub` at init.
-  On `{:changed, name, source}`, deletes the six cache keys written by
-  `Lightning.Adaptors.Store`: the four keyed by name (`:schema`,
-  `:icon_meta` and the two `:icon_bytes` shapes) plus the two
-  source-wide ones (`:packages`, `:catalogue`), which any change
-  invalidates. Dropping `:icon_bytes` is what lets a committed icon error
-  clear: the row moving is the only thing that can resolve it, and the row
-  moving always broadcasts. No source filtering on the
-  hot path — a broadcast for a source that isn't active on this node is a
-  no-op because those keys simply don't exist in Cachex.
+  Subscribes to `opts[:source_topic]` on `Lightning.PubSub` at init. On
+  `{:changed, name, source}` it deletes every cache key
+  `Lightning.Adaptors.Store` writes for that name, plus the source-wide
+  `:packages` and `:catalogue` keys, which any change invalidates.
+  Dropping `:icon_bytes` is what lets a committed icon error clear. Only
+  the row moving can resolve it, and the row moving always broadcasts.
+  There is no source filtering. A broadcast for a source not active on
+  this node deletes keys that do not exist, which is a no-op.
   """
 
   use GenServer
@@ -21,9 +19,9 @@ defmodule Lightning.Adaptors.Invalidator do
   Start the Invalidator linked to the calling process.
 
   Required opts:
-    * `:name` — registered process name.
-    * `:source_topic` — `Phoenix.PubSub` topic to subscribe to.
-    * `:cache` — Cachex table atom (from `Lightning.Adaptors.Supervisor.cache_name/1`).
+    * `:name` - registered process name.
+    * `:source_topic` - `Phoenix.PubSub` topic to subscribe to.
+    * `:cache` - Cachex table atom, from `Lightning.Adaptors.Supervisor.cache_name/1`.
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do

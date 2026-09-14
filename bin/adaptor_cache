@@ -10,8 +10,9 @@
 # tooling/adaptor_cache/README.md.
 #
 # A forward proxy would not work: Lightning talks to these upstreams through
-# Req/Finch, and neither honours HTTP_PROXY/HTTPS_PROXY. Each upstream does
-# have a configurable base URL, which is what this reverse proxy plugs into.
+# Tesla on the Finch adapter, which does not honour HTTP_PROXY/HTTPS_PROXY.
+# Each upstream does have a configurable base URL, which is what this reverse
+# proxy plugs into.
 # =============================================================================
 
 Mix.install([

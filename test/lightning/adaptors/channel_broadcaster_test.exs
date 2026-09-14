@@ -12,8 +12,6 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
   setup do
     sup = :"cb_test_#{System.unique_integer([:positive])}"
 
-    # The supervisor starts the ChannelBroadcaster automatically, registered
-    # under `channel_broadcaster_name(sup)`.
     start_supervised!(
       {AdaptorsSupervisor,
        name: sup,
@@ -72,7 +70,7 @@ defmodule Lightning.Adaptors.ChannelBroadcasterTest do
       refute_receive %{event: "adaptors_updated"}, 100
 
       # A second, separate burst must not still carry the first burst's
-      # names — the accumulator has to reset after :flush.
+      # names. The accumulator has to reset after :flush.
       changed(source_topic, "@openfn/language-dhis2")
 
       assert_receive %{

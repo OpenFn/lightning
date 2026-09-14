@@ -102,8 +102,7 @@ defmodule Lightning.Workflows.Job do
     )
     |> validate_required(:name, message: "job name can't be blank")
     |> validate_required(:body, message: "job body can't be blank")
-    # Only the NUL: a body is code and legitimately has newlines and tabs in it
-    # (#4893).
+    # Only the NUL: a body is code and legitimately has newlines and tabs in it.
     |> Validators.validate_no_null_bytes(
       :body,
       "job body can't contain a null byte"

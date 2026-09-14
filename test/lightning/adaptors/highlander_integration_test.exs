@@ -6,15 +6,15 @@ defmodule Lightning.Adaptors.HighlanderIntegrationTest do
 
   Both supervisors share an explicit `:lock_key` so they race for the
   same `pg_try_advisory_lock` bucket, but each keeps its own derived
-  `:global` Scheduler name. Exactly one of them — the leader — registers
-  a Scheduler under its `{:global, …}` name; the other's HighlanderPG
+  `:global` Scheduler name. Exactly one of them, the leader, registers
+  a Scheduler under its `{:global, …}` name. The other's HighlanderPG
   polls and waits. When the leading supervisor stops (releasing its
   Postgres session and thus its advisory lock), the surviving instance
   must acquire the lock within ~2× the default 300ms polling interval
   and register its own Scheduler under its own `{:global, …}` name.
   """
 
-  # async: false — real advisory locks coordinate against the test DB;
+  # async: false because real advisory locks coordinate against the test DB.
   # set_mox_global so the StrategyMock is visible to the wrapped child
   # processes started by HighlanderPG.
   use Lightning.DataCase, async: false
@@ -28,7 +28,7 @@ defmodule Lightning.Adaptors.HighlanderIntegrationTest do
   setup :verify_on_exit!
 
   # Both supervisors come up with refresh_interval=0 (default in config/test.exs)
-  # so the inert Scheduler's init does no DB work; the test only cares about
+  # so the inert Scheduler's init does no DB work. The test only cares about
   # HighlanderPG's leader election, not refresh behaviour.
 
   test "two supervisors sharing one lock_key: only one runs the Scheduler at a time; failover on leader shutdown" do

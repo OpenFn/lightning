@@ -5,7 +5,7 @@ defmodule Lightning.Adaptors.EndToEndBroadcastTest do
   the per-instance client topic (which `WorkflowChannel` subscribers use
   for display freshness) as a single coalesced `adaptors_updated` envelope.
 
-  This is the only test that exercises the full wiring across Invalidator,
+  Exercises the full wiring across Invalidator,
   NodeMonitor, ChannelBroadcaster, and Scheduler.
   """
 

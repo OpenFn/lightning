@@ -561,9 +561,8 @@ defmodule Lightning.ExportUtils do
     )
   end
 
-  # build_yaml_tree/2 raises from several levels down, so the alternative to
-  # rescuing here is threading an error tuple through every builder. One rescue
-  # at the single public boundary is the smaller change.
+  # build_yaml_tree/2 raises from several levels down. One rescue at the
+  # public boundary beats threading an error tuple through every builder.
   defp with_duplicate_key_error(build) do
     {:ok, build.()}
   rescue

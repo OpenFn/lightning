@@ -352,7 +352,8 @@ defmodule LightningWeb.AiAssistantChannelTest do
       assert %{"content" => [message]} = errors
       assert message =~ "should be at most 10000 character(s)"
 
-      # Shown to the reader as it stands, so it cannot be a code.
+      # The reason is shown to the user verbatim, so it is a message rather
+      # than an error code.
       assert reason =~ "should be at most 10000 character(s)"
     end
   end

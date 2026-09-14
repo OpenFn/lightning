@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Lightning.Adaptors.Import do
   Populate the `adaptors` table from a JSON file, without reaching npm.
 
   The file is a JSON array of adaptor records in the shape
-  `Lightning.Adaptors.Catalogue.upsert_adaptor/1` accepts — the same shape
+  `Lightning.Adaptors.Catalogue.upsert_adaptor/1` accepts, the same shape
   `mix lightning.adaptors.snapshot` writes.
 
   ## Usage

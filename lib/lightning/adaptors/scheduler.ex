@@ -10,13 +10,14 @@ defmodule Lightning.Adaptors.Scheduler do
   catalogue ticks at once. An interval of `0` disables the timer and
   leaves only on-demand refreshes.
 
-  A tick lists the source, fetches the adaptors whose `latest_version`
-  changed or whose stored row has no schema and whose version landed
-  within the last hour (a refetch that still finds no schema counts as
-  touched; the window covers jsDelivr's mirroring lag, after which a
-  missing schema is taken as really missing), fetches icons in parallel,
-  and upserts each changed adaptor with its icons. `refresh_package/2` refetches one
-  adaptor without icons.
+  A tick lists the source and fetches every adaptor whose `latest_version`
+  changed. It also refetches an adaptor whose stored row has no schema, for
+  the grace period set by `@schema_grace_ms` after the row's `updated_at`.
+  jsDelivr mirrors a new version with some lag, so a schema missing inside
+  that window may still arrive. After it, a missing schema is taken as
+  really missing. A refetch that still finds no schema counts as touched.
+  Icons are fetched in parallel and each changed adaptor is upserted with
+  its icons. `refresh_package/2` refetches one adaptor without icons.
   """
 
   use GenServer
@@ -38,10 +39,10 @@ defmodule Lightning.Adaptors.Scheduler do
   `:cache`, `:tasks`, `:source_topic`, `:refresh_interval` (tick interval
   in milliseconds; `0` disables the timer) and `:warn_when_empty` (whether
   booting on an empty catalogue with the timer disabled logs a warning).
-  Optional: `:checked_at` (1-arity fn,
-  default `&Catalogue.max_checked_at/1`) reads the source's last-checked
-  timestamp; called once at boot to schedule the delay before the scheduler's
-  initial tick.
+  `:checked_at` is optional. It is a 1-arity function, defaulting to
+  `&Catalogue.max_checked_at/1`, that reads the source's last-checked
+  timestamp. It is called once at boot to work out the delay before the
+  first tick.
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
@@ -125,14 +126,14 @@ defmodule Lightning.Adaptors.Scheduler do
   Whether a cycle has completed against a source that listed no adaptors
   at all, since this Scheduler started.
 
-  That is the one outcome no row can record: an upstream answering with an
+  That is the one outcome no row can record. An upstream answering with an
   empty list has told us there are no adaptors, and the empty catalogue it
   leaves behind is loaded rather than unloaded. Every other completed
   cycle leaves rows, which answer for themselves and keep answering after
-  a restart — so this deliberately says nothing about them, and a source
+  a restart. So this deliberately says nothing about them, and a source
   whose rows are later deleted reloads as it did before.
 
-  A cycle that failed to list, fetch or write is not a completed one: we
+  A cycle that failed to list, fetch or write is not a completed one. We
   cannot tell a source with nothing in it from one we could not read.
 
   Answers `false` for a Scheduler that is unreachable.
@@ -176,9 +177,8 @@ defmodule Lightning.Adaptors.Scheduler do
 
   @impl true
   def handle_continue(:check_catalogue, state) do
-    # Read runs, and delay is computed, even when interval_ms == 0 — that's
-    # the only way an interval=0 (disabled) deployment still learns its
-    # catalogue is empty. Don't skip it for that branch.
+    # The read runs even when interval_ms == 0. It is the only way a
+    # deployment with the timer disabled learns its catalogue is empty.
     checked_at =
       case read_checked_at(state) do
         nil ->
@@ -211,7 +211,7 @@ defmodule Lightning.Adaptors.Scheduler do
   end
 
   # An empty catalogue only needs an operator's attention when no timer will
-  # fill it; with an interval set the first tick is already due immediately.
+  # fill it. With an interval set the first tick is already due.
   defp log_empty_catalogue(state) do
     cond do
       state.interval_ms > 0 ->
@@ -436,8 +436,7 @@ defmodule Lightning.Adaptors.Scheduler do
     started_at = System.monotonic_time(:millisecond)
     strategy = AdaptorsSupervisor.strategy(state.sup)
 
-    # Single DB round-trip serves both the icons-task input (prior etags)
-    # and the version diff used below to decide which adaptors to fetch.
+    # One query feeds both the icons task and the version diff below.
     existing_rows = Catalogue.list_adaptors(state.source)
     prior_etags = prior_etags_from_rows(existing_rows)
 
@@ -476,10 +475,9 @@ defmodule Lightning.Adaptors.Scheduler do
           |> Enum.map(fn record -> persist_with_icons(record, icons, state) end)
           |> Enum.count(&(&1 == :ok))
 
-        # Rows fetched this tick already have fresh icons from
-        # persist_with_icons/3. Everything else — touched or errored — is
-        # reconciled here too, so an icon-only upstream change still lands
-        # even when the version doesn't bump.
+        # Rows fetched this tick got their icons in persist_with_icons/3.
+        # The rest, touched or errored, get theirs here, so an icon-only
+        # upstream change lands even when the version doesn't bump.
         fetched_names = MapSet.new(fetched, & &1.name)
 
         unfetched_rows =
@@ -534,7 +532,7 @@ defmodule Lightning.Adaptors.Scheduler do
     else
       case strategy.fetch_adaptor(name) do
         # Refetched only because the stored schema was nil, and upstream
-        # still has none: nothing to persist, so don't broadcast a change.
+        # still has none. Nothing to persist, so don't broadcast a change.
         {:ok, %{schema_data: nil}} when same_version? ->
           Catalogue.touch_checked_at(name, state.source)
           :touched
@@ -563,7 +561,7 @@ defmodule Lightning.Adaptors.Scheduler do
 
   # jsDelivr 404s for a version it has not mirrored yet, which is
   # indistinguishable from a schema the source really dropped. On the
-  # periodic path we keep what we have; an operator refresh takes upstream
+  # periodic path we keep what we have. An operator refresh takes upstream
   # as-is and is where a real removal lands.
   defp keep_stored_schema(
          %{schema_data: nil} = record,
@@ -643,9 +641,7 @@ defmodule Lightning.Adaptors.Scheduler do
         end
 
       :not_modified ->
-        # Upstream confirmed unchanged — leave row's existing icon and
-        # etag in place. Counted in the tick summary via
-        # count_not_modified/1.
+        # Upstream answered 304, so the row's icon and etag stay as they are.
         record
 
       _ ->
@@ -653,9 +649,8 @@ defmodule Lightning.Adaptors.Scheduler do
     end
   end
 
-  # Stamp the etag onto the record only when the strategy supplied one
-  # (NPM 200 entries always have the key; Local omits it). A nil etag is
-  # not stamped — we preserve whatever was already on the row.
+  # A nil etag (the Local strategy sends none) leaves whatever the row
+  # already has in place rather than clearing it.
   defp maybe_put_etag(record, _shape, nil), do: record
 
   defp maybe_put_etag(record, shape, etag) when is_binary(etag) do
@@ -673,8 +668,6 @@ defmodule Lightning.Adaptors.Scheduler do
     end)
   end
 
-  # `row` is an Adaptor struct (from list_adaptors/1), which exposes
-  # :name and the icon sha256 fields, which is all we need.
   defp apply_icons_to_existing(_row, package_icons, _state)
        when map_size(package_icons) == 0,
        do: :unchanged
@@ -708,16 +701,14 @@ defmodule Lightning.Adaptors.Scheduler do
     case Map.get(package_icons, shape) do
       %{data: bytes, ext: ext, sha256: sha} = entry when is_binary(bytes) ->
         if Map.get(row, sha_key) == sha do
-          # Same bytes already on disk; the etag may still need
-          # refreshing if the strategy gave us a new (non-nil) value
-          # that differs from what we have. nil never clobbers.
+          # Same bytes already on disk, but the etag may still have moved.
           maybe_accumulate_etag(acc, etag_key, row, Map.get(entry, :etag))
         else
           accumulate_fetched_icon(acc, shape, row, entry, ext, sha, bytes, state)
         end
 
       :not_modified ->
-        # 304 confirmed — nothing to write, etag already current.
+        # 304, so nothing to write.
         acc
 
       _ ->
@@ -807,8 +798,8 @@ defmodule Lightning.Adaptors.Scheduler do
   end
 
   # A row or shape with no etag is left out rather than kept as an empty
-  # entry — the strategy already treats an absent entry as "no prior etag,
-  # don't send If-None-Match".
+  # entry. The strategy treats an absent entry as no prior etag and sends
+  # no If-None-Match.
   @spec prior_etags_from_rows([map()]) :: %{
           String.t() => %{optional(:square | :rectangle) => String.t()}
         }

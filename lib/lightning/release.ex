@@ -38,9 +38,9 @@ defmodule Lightning.Release do
 
   @doc """
   Populate the adaptor catalogue from a JSON snapshot file, without
-  reaching npm. This is the release equivalent of
-  `mix lightning.adaptors.import` — a release has no Mix, so run this
-  through `bin/lightning eval` instead.
+  reaching npm. It is the release equivalent of
+  `mix lightning.adaptors.import`. A release has no Mix, so run this
+  through `bin/lightning eval`.
 
   ## Usage
 
@@ -60,9 +60,9 @@ defmodule Lightning.Release do
 
   @doc """
   Write the adaptor catalogue to a JSON snapshot file, without the rest
-  of the app running. This is the release equivalent of
-  `mix lightning.adaptors.dump` — a release has no Mix, so run this
-  through `bin/lightning eval` instead.
+  of the app running. It is the release equivalent of
+  `mix lightning.adaptors.dump`. A release has no Mix, so run this
+  through `bin/lightning eval`.
 
   ## Usage
 

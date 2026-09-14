@@ -7,7 +7,7 @@ defmodule Mix.Tasks.Lightning.Adaptors.Snapshot do
   the shape `Lightning.Adaptors.Catalogue.upsert_adaptor/1` accepts.
 
   Nothing here touches the catalogue, so this works on an instance with
-  no database yet — it is the cold-start way to produce a snapshot.
+  no database yet. It is the cold-start way to produce a snapshot.
   `mix lightning.adaptors.dump` is the equivalent for an instance whose
   catalogue is already populated. Either file can be read back by
   `mix lightning.adaptors.import`.

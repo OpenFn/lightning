@@ -1091,7 +1091,7 @@ describe('deriveSnapshotChanges', () => {
 
   it('pairs two id-less webhooks in document order, not in reverse', () => {
     // Both sides are identical apart from a job body. Pairing the leftovers
-    // from the end crossed the two triggers and invented a path move on each.
+    // from the end would cross the two triggers and invent a path move on each.
     const twoHooks = (body: string) => `id: wf-1
 name: Test Workflow
 jobs:
@@ -1122,7 +1122,7 @@ edges: {}
   });
 
   it('keeps two webhooks apart in the cache salt', () => {
-    // buildYaml keys triggers by type, so this one is written out: the spec
+    // buildYaml keys triggers by type, so this one is written out. The spec
     // allows any key, and two webhooks are what make a type-keyed salt
     // ambiguous. Both chains stream the same two snapshots on purpose.
     const twoHooks = (a: string, b: string, body: string) => `id: wf-1

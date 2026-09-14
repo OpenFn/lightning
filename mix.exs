@@ -156,8 +156,9 @@ defmodule Lightning.MixProject do
       {:phoenix_live_view, "~> 1.0.17"},
       {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.5"},
-      # highlander_pg 1.0.8 caps postgrex at ~> 0.21; it only issues advisory
-      # locks, so override rather than hold the rest of the app back.
+      # highlander_pg declares a narrower postgrex range than the rest of the
+      # app needs (see deps/highlander_pg/mix.exs). It only issues advisory
+      # locks, so override rather than hold the app back.
       {:postgrex, ">= 0.0.0", override: true},
       {:prom_ex, "~> 1.11.0"},
       {:rambo, "~> 0.3.4"},

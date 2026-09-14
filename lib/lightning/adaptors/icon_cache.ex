@@ -1,34 +1,22 @@
 defmodule Lightning.Adaptors.IconCache do
   @moduledoc """
-  Pure filesystem helper owning the on-disk adaptor icon cache.
+  Stateless filesystem functions over the on-disk adaptor icon cache,
+  rooted at `Lightning.Adaptors.Config.icon_path/0`.
 
-  Not a GenServer. Three stateless functions over
-  `Lightning.Adaptors.Config.icon_path/0`, which returns `ADAPTORS_ICONS_PATH`
-  when set and otherwise resolves the `{:tmp, suffix}` default at call time.
-
-  Disk layout is **source-partitioned** and **content-addressed**:
+  Disk layout:
 
       <Config.icon_path/0>/<source>/<name>/<shape>.<sha8>.<ext>
 
   where `sha8` is the first 8 lowercase hex characters of the icon
-  sha256 on the adaptor row. Source partitioning means flipping
-  `ADAPTORS_STRATEGY` between restarts cannot accidentally serve `:npm`
-  bytes from a row that's now resolved via `:local` (or vice versa).
-  Putting the sha in the filename means `cached?/5` is a plain
-  existence check, and a node holding an earlier icon simply misses and
-  refetches instead of serving it forever; `write!/6` removes the
-  superseded siblings for that shape.
+  sha256 on the adaptor row. Partitioning by source means switching
+  `ADAPTORS_STRATEGY` between restarts cannot serve `:npm` bytes for a
+  row now resolved through `:local`, or the reverse. Putting the sha in
+  the filename makes `cached?/5` a plain existence check, and a node
+  holding an earlier icon misses and refetches instead of serving it
+  forever. `write!/6` removes the superseded siblings for that shape.
 
-  Concurrent first-request fetchers are coalesced upstream by Cachex's
-  courier on `{:icon_bytes, source, name, shape}` inside
-  `Lightning.Adaptors.Store.icon/3`, and all in-flight peers receive the
-  courier's result for free. Bytes that verify are left uncommitted,
-  since this directory is their cache, but bytes that disagree with the
-  row's sha or extension are committed as an error, so the disagreement
-  is not re-fetched from the source on every request until the row moves.
-  The temp-then-rename in `write!/6` is the belt-and-braces guarantee
-  for the file-write step itself: readers never observe a half-written
-  file.
+  Concurrent first-request fetches are coalesced by
+  `Lightning.Adaptors.Store.icon/3`, not here.
   """
 
   alias Lightning.Adaptors.Config
@@ -46,11 +34,11 @@ defmodule Lightning.Adaptors.IconCache do
   `@openfn/language-foo`); `Path.join/1` preserves the slash so the
   scope becomes a real subdirectory.
 
-  Raises `ArgumentError` on a name `PackageName` would reject. Icons are
-  written straight from a strategy's response, before the row reaches
-  `CatalogueAdaptor.changeset/2` and its name validation, so this is the
-  only thing standing between a hostile registry entry and a write
-  outside the cache root.
+  Raises `ArgumentError` on a name `PackageName` would reject. The
+  Scheduler writes icons straight from a strategy's response, before the
+  row reaches `Lightning.Adaptors.Catalogue.Adaptor.changeset/2` and its
+  name validation, so this is the only thing standing between a hostile
+  registry entry and a write outside the cache root.
   """
   @spec path(source(), name(), shape(), ext(), binary()) :: Path.t()
   def path(source, name, shape, ext, sha256) do

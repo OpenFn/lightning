@@ -3,13 +3,9 @@
 > A local record-and-replay reverse proxy sitting in front of the three
 > upstreams `Lightning.Adaptors.*` reads from.
 
-Every `Lightning.Adaptors.Scheduler` refresh tick makes one npm `/-/v1/search`
-call, then one packument call and one jsDelivr schema call per changed package,
-plus up to four `raw.githubusercontent.com` calls per package for icons (two
-shapes x the png-then-svg fallback). Iterating on the subsystem means running
-that loop over and over against the real internet. This proxy records all of it
-to disk so the second and every later run is local, and the whole thing works
-offline (on a plane, on bad wifi, wherever).
+Every catalogue refresh calls npm, jsDelivr and `raw.githubusercontent.com`
+several times per package. This proxy records those responses to disk so every
+run after the first is local and works offline.
 
 Driven by `bin/adaptor_cache` from the repo root; see that script's `--help` for
 the full command list. It's a self-contained script (`Mix.install` pulls in

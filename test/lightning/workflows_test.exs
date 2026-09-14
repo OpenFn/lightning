@@ -23,8 +23,8 @@ defmodule Lightning.WorkflowsTest do
   describe "soft delete with a name at the column width" do
     test "a 255 character name is deleted without raising 22001" do
       # The _del suffix is appended after every validation has run, so a name
-      # already at the column width used to raise a bare Postgrex error out of
-      # the dashboard delete button (#4577).
+      # already at the column width would raise a bare Postgrex error out of
+      # the dashboard delete button.
       project = insert(:project)
       user = insert(:user)
       name = String.duplicate("a", 255)

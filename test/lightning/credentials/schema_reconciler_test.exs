@@ -1,7 +1,7 @@
 defmodule Lightning.Credentials.SchemaReconcilerTest do
-  # async: false because:
-  # 1. DataCase uses shared sandbox mode (all processes access DB without allow/3)
-  # 2. isolated_adaptors stubs Config.default_instance/0 via Mimic globally
+  # async: false. DataCase then runs the sandbox in shared mode, so every
+  # process reaches the DB without allow/3, and isolated_adaptors stubs
+  # Config.default_instance/0 through Mimic for the whole VM.
   use Lightning.DataCase, async: false
 
   import Eventually

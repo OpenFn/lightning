@@ -7,7 +7,7 @@ defmodule Lightning.AdaptorServiceTest do
   back as `{:catalogue_unavailable, reason}` rather than a refusal.
   """
 
-  # set_mox_global: the load runs in a Task owned by the Scheduler.
+  # The load runs in a Task owned by the Scheduler, so Mox must be in global mode.
   use Lightning.DataCase, async: false
 
   import Mox

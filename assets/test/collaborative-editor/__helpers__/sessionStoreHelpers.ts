@@ -34,8 +34,8 @@ export { waitForAsync };
  * A session store that tears itself down when the test ends.
  *
  * PhoenixChannelProvider registers a `process.on('exit')` handler that only
- * `destroy()` removes, so a store left initialised leaks one listener — plus a
- * Y.Doc, awareness and channel — per test.
+ * `destroy()` removes, so a store left initialised leaks one listener per test,
+ * along with its Y.Doc, awareness and channel.
  */
 export function createTestSessionStore(): SessionStore {
   const store = createSessionStore();

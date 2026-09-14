@@ -7,7 +7,7 @@ defmodule Lightning.Adaptors.PackageName do
   #
   # A segment may not begin with `.` or `_`, which is npm's own rule. That
   # keeps `.` and `..` out, so a name is always safe to use as a path
-  # segment — see `Lightning.Adaptors.IconCache`.
+  # segment. See `Lightning.Adaptors.IconCache`.
   @segment "[a-zA-Z0-9-][\\w.-]*"
 
   @strict_format ~r{\A(@?#{@segment}(?:/#{@segment})?)(?:@([\w.-]+))?\z}

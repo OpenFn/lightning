@@ -25,16 +25,15 @@ To layer a private checkout over the public one, comma-separate multiple roots:
 ADAPTORS_LOCAL_REPO=/path/to/private-adaptors,/path/to/adaptors
 ```
 
-A package in multiple roots comes from the first; Lightning logs each shadowed
-package on every scan, not just at boot.
+A package in multiple roots comes from the first. Lightning logs each shadowed
+package on every scan.
 
 > #### Note {: .info}
 >
-> Lightning still accepts the old names `LOCAL_ADAPTORS=true` and
-> `OPENFN_ADAPTORS_REPO`, warning at boot only when it falls back to them:
-> `LOCAL_ADAPTORS=true` when `ADAPTORS_STRATEGY` is unset,
-> `OPENFN_ADAPTORS_REPO` when the strategy is local and `ADAPTORS_LOCAL_REPO` is
-> unset.
+> The deprecated `LOCAL_ADAPTORS=true` and `OPENFN_ADAPTORS_REPO` still work.
+> Lightning warns at boot only when it falls back to them: `LOCAL_ADAPTORS=true`
+> when `ADAPTORS_STRATEGY` is unset, `OPENFN_ADAPTORS_REPO` when the strategy is
+> local and `ADAPTORS_LOCAL_REPO` is unset.
 
 ## Running without internet access
 
@@ -132,9 +131,8 @@ the catalogue before it can store it, so it waits for the first load, up to 90
 seconds, and rejects the save with "adaptor catalogue is not ready yet" if
 nothing has arrived by then.
 
-So an instance that cannot reach npm at all comes up, serves every page and
-retries in the background, but cannot save a workflow until the catalogue has
-loaded once. Import a snapshot to give it one.
+An instance that cannot reach npm serves every page but cannot save a workflow
+until the catalogue has loaded once. Import a snapshot to give it one.
 
 ## Troubleshooting
 
@@ -142,7 +140,7 @@ loaded once. Import a snapshot to give it one.
   then force a refresh with `--name`.
 - New version not showing: the hourly refresh hasn't run. Force one, or wait.
 - Icons missing after import: they never reached `ADAPTORS_ICONS_PATH` on this
-  instance, or the dump predates icon metadata. Redo the dump and copy the
+  instance. Unpack the icons archive there, or redo the dump and copy the
   directory.
 - Local package ignored: an earlier `ADAPTORS_LOCAL_REPO` root has a package of
   the same name; the log names each shadowed package.
@@ -152,7 +150,8 @@ loaded once. Import a snapshot to give it one.
   503: the first load has not finished. See
   [While the catalogue is still loading](#while-the-catalogue-is-still-loading).
 - Workflow save rejected with "adaptor catalogue is not ready yet": the same
-  thing, ninety seconds in. If the instance cannot reach npm, import a snapshot;
-  see [Running without internet access](#running-without-internet-access).
+  thing, after the save has waited out the first load. If the instance cannot
+  reach npm, import a snapshot; see
+  [Running without internet access](#running-without-internet-access).
 - Refresh exiting `2` with `:empty_listing`: the registry answered but served no
   `@openfn` packages. Check `ADAPTORS_NPM_REGISTRY_URL`.

@@ -1,17 +1,16 @@
 defmodule Lightning.Adaptors.ChannelBroadcaster do
   @moduledoc """
-  Burst-coalesced fan-out of adaptor changes to connected sessions.
+  Fans adaptor changes out to connected sessions, coalescing bursts.
 
-  Subscribes to `:source_topic` (the cache-coherence topic shared with
-  `Lightning.Adaptors.Invalidator`) and republishes a single envelope of
-  changed names to `:client_topic` at most once per 250ms leading-edge
+  Subscribes to `:source_topic`, the same topic
+  `Lightning.Adaptors.Invalidator` listens on, and republishes one message
+  of changed names to `:client_topic` at most once per `debounce_ms/0`
   window.
 
-  Two-topic separation: the source topic is the cache-coherence audience;
-  the client topic is the display-freshness audience (`WorkflowChannel`
-  subscribers). This bridges them: the payload tells a session "these
-  adaptors changed, go refetch" — not what changed about them, so
-  `:flush` never has to touch the cache or render anything.
+  The two topics have different audiences. The source topic keeps node
+  caches coherent. The client topic tells `WorkflowChannel` subscribers
+  which adaptors changed so they refetch, and nothing about what changed,
+  so `:flush` never touches the cache or renders anything.
   """
 
   use GenServer
@@ -19,10 +18,8 @@ defmodule Lightning.Adaptors.ChannelBroadcaster do
   @debounce_ms 250
 
   @doc """
-  Leading-edge coalesce window in milliseconds.
-
-  Exposed so integration tests can compute receive timeouts off the
-  authoritative value rather than hard-coding a duplicate.
+  Leading-edge coalesce window in milliseconds. Tests derive receive
+  timeouts from it.
   """
   @spec debounce_ms() :: pos_integer()
   def debounce_ms, do: @debounce_ms
@@ -31,9 +28,9 @@ defmodule Lightning.Adaptors.ChannelBroadcaster do
   Start the ChannelBroadcaster linked to the calling process.
 
   Required opts:
-    * `:name` — registered GenServer name.
-    * `:source_topic` — PubSub topic to subscribe to (cache-coherence).
-    * `:client_topic` — PubSub topic to broadcast the changed names to.
+    * `:name` - registered GenServer name.
+    * `:source_topic` - PubSub topic to subscribe to.
+    * `:client_topic` - PubSub topic to broadcast the changed names to.
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
@@ -64,7 +61,6 @@ defmodule Lightning.Adaptors.ChannelBroadcaster do
     {:noreply, %{state | timer: timer, names: MapSet.put(state.names, name)}}
   end
 
-  # Subsequent messages within the debounce window: accumulate, don't flush.
   def handle_info({:changed, name, _source}, state) do
     {:noreply, %{state | names: MapSet.put(state.names, name)}}
   end

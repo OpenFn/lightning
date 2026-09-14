@@ -20,8 +20,8 @@ defmodule Lightning.Workflows.EdgeTest do
     end
 
     test "a control character in the label is rejected on every condition type" do
-      # This check used to sit inside the :js_expression branch, so an :always
-      # edge could carry a NUL in its label straight into the snapshot jsonb.
+      # An :always edge carries its label into the snapshot jsonb just like a
+      # :js_expression one, so the check cannot live in that branch.
       for condition_type <- [
             :always,
             :on_job_success,
@@ -72,9 +72,8 @@ defmodule Lightning.Workflows.EdgeTest do
 
     test "a NUL in the expression is rejected on every condition type" do
       # cast/3 accepts an expression whatever the condition type is, and it
-      # reaches the snapshot jsonb either way. This check used to be reachable
-      # only through the :js_expression branch, and even there it sat behind a
-      # `valid?: false` short circuit, so it never actually ran.
+      # reaches the snapshot jsonb either way, so the check cannot live in the
+      # :js_expression branch or behind a `valid?` short circuit.
       for condition_type <- [
             :always,
             :on_job_success,
@@ -151,8 +150,8 @@ defmodule Lightning.Workflows.EdgeTest do
 
     test "the checks run even when the changeset is invalid for other reasons" do
       # A minimal changeset is invalid for unrelated missing fields on plenty
-      # of real save paths. Skipping the jsonb checks there is how the hole
-      # stayed open.
+      # of real save paths, so the jsonb checks have to run on an invalid
+      # changeset too.
       changeset =
         Edge.changeset(%Edge{}, %{
           condition_type: :always,
@@ -463,9 +462,8 @@ defmodule Lightning.Workflows.EdgeTest do
           }
         )
 
-      # Asserted by field rather than as an ordered list: the label check moved
-      # out of the :js_expression branch so it runs after the expression one,
-      # and the order of changeset.errors is not what this test is about.
+      # Asserted by field rather than as an ordered list. The order of
+      # changeset.errors is not what this test is about.
       errors = errors_on(changeset)
 
       assert errors[:condition_expression] == [

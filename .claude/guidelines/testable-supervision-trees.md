@@ -158,13 +158,14 @@ boundary that was already open two lines away and already carrying its siblings
 across.
 
 `Lightning.Adaptors.Supervisor` shows both sides. `strategy` and `source` go
-into `:persistent_term` keyed per instance (`lib/lightning/adaptors/supervisor.ex:42-45`),
-which is the acceptable shape for the stateless `Store` functions: a caller
-holding only the instance name has nowhere else to read boot-fixed config from.
-It is the tell for `Scheduler`, whose child spec already carries `cache`,
-`tasks` and `source_topic` (`supervisor.ex:58-65`) but not `strategy`, so the
-process re-reads it from the global store on every refresh (`scheduler.ex:259`,
-`:271`, `:313`). New children take config from the child spec, as `lock_key` does.
+into `:persistent_term` keyed per instance (the `:persistent_term.put` in
+`lib/lightning/adaptors/supervisor.ex`), which is the acceptable shape for the
+stateless `Store` functions: a caller holding only the instance name has nowhere
+else to read boot-fixed config from. It is the tell for `Scheduler`, whose child
+spec already carries `cache`, `tasks` and `source_topic` but not `strategy`, so
+the process re-reads it from the global store on every refresh (each
+`AdaptorsSupervisor.strategy(state.sup)` call in `scheduler.ex`). New children
+take config from the child spec, as `lock_key` does.
 
 ### Scoping mocks without going global
 

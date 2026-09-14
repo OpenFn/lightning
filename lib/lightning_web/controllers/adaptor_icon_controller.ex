@@ -1,17 +1,16 @@
 defmodule LightningWeb.AdaptorIconURL do
   @moduledoc """
-  Single source of truth for content-addressable adaptor-icon URLs.
+  Builds content-addressable adaptor icon URLs.
 
-  `sha8` is the first 4 raw bytes of the icon's sha256, hex-encoded
-  to 8 lowercase characters, yielding a deterministic content-addressable
-  path segment.
+  `sha8` is the first 4 raw bytes of the icon's sha256, hex-encoded to 8
+  lowercase characters.
   """
 
   @doc """
   Build a content-addressable icon URL for `name`/`shape`.
 
-  Returns `nil` when `meta` has no ext or sha256 for the requested shape
-  — i.e. when no icon is available.
+  Returns `nil` when `meta` has no ext or sha256 for the requested shape,
+  meaning no icon is available.
   """
   alias Lightning.Adaptors.IconField
 
@@ -35,15 +34,17 @@ defmodule LightningWeb.AdaptorIconController do
 
   Route: `/adaptors/icons/:name/:shape-:sha8.:ext`
 
-  `sha8` is the first 4 raw bytes of the stored sha256 hex-encoded to
-  8 lowercase characters. The controller compares `sha8` against the
-  DB-projected metadata and responds with one of:
+  `sha8` is defined in `LightningWeb.AdaptorIconURL`. The controller
+  compares it against the stored icon metadata and responds with one of:
 
-  - **200** — sha matches; serves bytes with a 1-year immutable cache.
-  - **302** — sha is stale but the adaptor still has an icon; redirects
-    to the canonical (current-sha) URL with `Cache-Control: no-store`
-    on the redirect itself.
-  - **404** — adaptor unknown, ext mismatch, bad shape, or no icon.
+  - **200** when `sha8` matches. Serves the bytes with a one-year immutable
+    cache.
+  - **302** when `sha8` is stale but the adaptor still has an icon.
+    Redirects to the current-sha URL with `Cache-Control: no-store` on the
+    redirect itself.
+  - **404** when the adaptor is unknown, the ext mismatches, the shape is
+    bad, or there is no icon.
+  - **503** with `retry-after` when the catalogue has never loaded.
   """
 
   use LightningWeb, :controller
@@ -53,10 +54,10 @@ defmodule LightningWeb.AdaptorIconController do
 
   @immutable_cache "public, max-age=31536000, immutable"
 
-  # Router-shaped params: a single `:filename` segment of the form
-  # `<shape>-<sha8>.<ext>` because Phoenix path matchers permit only one
-  # dynamic segment per path component. We split here and delegate to the
-  # 4-key clause below, which is also what the unit tests call directly.
+  # Phoenix path matchers allow one dynamic segment per path component, so
+  # the router hands over a single `:filename` of the form
+  # `<shape>-<sha8>.<ext>`. The first clause splits it and delegates to the
+  # 4-key clause, which stays separate so tests can call it directly.
   @filename_regex ~r/\A(?<shape>[a-z]+)-(?<sha8>[A-Fa-f0-9]+)\.(?<ext>[A-Za-z0-9]+)\z/
 
   @doc false

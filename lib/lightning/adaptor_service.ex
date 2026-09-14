@@ -22,8 +22,8 @@ defmodule Lightning.AdaptorService do
   elsewhere such as delaying or rejecting processing until the adaptor becomes
   available.
 
-  Every install is gated on the adaptor catalogue (`Lightning.Adaptors`):
-  `install/2` refuses to run `npm install` for a package name the catalogue
+  `install/2` checks the package name against the adaptor catalogue
+  (`Lightning.Adaptors`) and refuses to run `npm install` for a name it
   doesn't recognise.
 
   ## Looking up adaptors

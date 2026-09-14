@@ -3275,8 +3275,8 @@ defmodule LightningWeb.WorkflowChannelTest do
       workflow: workflow,
       sup: _sup
     } do
-      # Global mode: the refresh runs in a Task owned by the isolated
-      # instance's Scheduler.
+      # The refresh runs in a Task owned by the Scheduler, outside this test's
+      # caller chain, so the stub has to be global.
       Lightning.Adaptors.Catalogue.delete_all_for_source(:npm)
       Mox.set_mox_global(Lightning.Adaptors.StrategyMock)
 
@@ -4105,7 +4105,7 @@ defmodule LightningWeb.WorkflowChannelTest do
       )
 
       # The export refuses rather than dropping one of the pair, and it refuses
-      # before any GitHub call. No GitHub mocks are set on purpose: verify_on_exit!
+      # before any GitHub call. No GitHub mocks are set on purpose. verify_on_exit!
       # turns a dispatch into a failure, so this also asserts we never fired one.
       for name <- ["My Flow", "My-Flow"] do
         {:ok, _} =

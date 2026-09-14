@@ -3,15 +3,14 @@ defmodule Mix.Tasks.Lightning.Adaptors.Dump do
 
   @moduledoc """
   Write this instance's adaptor catalogue to a JSON file, in the shape
-  `Lightning.Adaptors.Catalogue.upsert_adaptor/1` accepts — the shape
+  `Lightning.Adaptors.Catalogue.upsert_adaptor/1` accepts and
   `mix lightning.adaptors.import` reads back.
 
-  This is the catalogue-to-file leg of mirroring adaptors into an
-  airgapped environment: hydrate an online instance as usual, dump it
-  here, carry the file across, and import it on the offline instance.
-  `mix lightning.adaptors.snapshot` produces the same kind of file by
-  fetching npm directly, for when there is no populated catalogue to
-  dump from.
+  This is how adaptors get mirrored into an airgapped environment. Hydrate
+  an online instance as usual, dump it here, carry the file across, and
+  import it on the offline instance. `mix lightning.adaptors.snapshot`
+  produces the same kind of file by fetching npm directly, for when there
+  is no populated catalogue to dump from.
 
   ## Usage
 
@@ -24,7 +23,7 @@ defmodule Mix.Tasks.Lightning.Adaptors.Dump do
   so they don't travel in this file. It carries the icon metadata
   (extension, sha256, etag) so an imported row can serve an icon already
   present at `ADAPTORS_ICONS_PATH` on the target instance instead of
-  refetching from GitHub; copy that directory across alongside this file.
+  refetching from GitHub. Copy that directory across alongside this file.
   """
 
   use Mix.Task

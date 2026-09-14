@@ -1,5 +1,5 @@
 /**
- * The client-side copy of the job/workflow name rule (#4577).
+ * The client-side copy of the job/workflow name rule.
  *
  * These tests exist to keep the client and `Lightning.Validators.validate_name/3`
  * saying the same thing. The Elixir counterparts live in
@@ -100,7 +100,7 @@ describe('normalizeName', () => {
     expect('abc\uFEFF'.trim()).toBe('abc');
     expect(normalizeName('abc\uFEFF')).toBe('abc\uFEFF');
 
-    // A sample of the rest of the 25, to catch the set being edited down.
+    // A sample of the rest of the White_Space set, to catch it being edited down.
     expect(normalizeName('\u3000\u00a0\u2028 abc \u205f')).toBe('abc');
 
     // Not White_Space, so not trimmed by either side.
@@ -116,7 +116,6 @@ describe('graphemeLength', () => {
     expect(family.length).toBe(11);
     expect(graphemeLength(family)).toBe(1);
 
-    // Same for a flag.
     expect(graphemeLength('🇺🇸')).toBe(1);
   });
 
@@ -127,7 +126,7 @@ describe('graphemeLength', () => {
     //      consonant together where Elixir's tables split. Malayalam is the
     //      worst case: 'ന്ദ്ര' is 1 here and 3 to Elixir.
     //   2. Break-after-ZWJ, another rule revision Elixir's tables predate.
-    //   3. Characters added in Unicode 16, which Elixir has not caught up to.
+    //   3. Characters added in Unicode versions newer than Elixir's tables.
     //
     // The client is the permissive side every time, which is the safe
     // direction. The codepoint guard below stops any of this reaching the
@@ -185,7 +184,7 @@ describe('JobSchema name', () => {
     const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}';
 
     // 12 families plus 88 letters: 100 graphemes, which Ecto accepts, but 220
-    // UTF-16 code units, which the old `.max(100)` would have refused.
+    // UTF-16 code units, which a code-unit cap of 100 would refuse.
     const atCap = 'a'.repeat(88) + family.repeat(12);
     expect(atCap.length).toBe(220);
     expect(graphemeLength(atCap)).toBe(NAME_MAX_LENGTH);
@@ -231,7 +230,7 @@ describe('JobSchema name', () => {
 describe('isInvisibleOnly', () => {
   test('catches a run of joiners, not just a single one', () => {
     // Grapheme clustering fuses a ZWJ-led run into one cluster, so a
-    // per-grapheme check caught one joiner and missed two.
+    // per-grapheme check would count one joiner and miss the rest.
     for (const name of [
       '\u{200D}',
       '\u{200D}\u{200D}',
@@ -275,7 +274,7 @@ describe('createWorkflowSchema (the validator the settings form uses)', () => {
 
   test('accepts a name long in UTF-16 units but short in codepoints', () => {
     // 130 emoji: 130 codepoints, which the column holds, but 260 UTF-16 units,
-    // which the old `.max(255)` counted and refused.
+    // which a code-unit cap of 255 would refuse.
     const name = '\u{1F600}'.repeat(130);
     expect(name.length).toBe(260);
 
@@ -320,7 +319,7 @@ describe('EdgeSchema condition_label (an inbound schema)', () => {
 
   test('accepts a label long in UTF-16 units but short in codepoints', () => {
     // 128 emoji: 128 codepoints, which the column holds, but 256 UTF-16 units,
-    // which the old `.max(255)` counted.
+    // which a code-unit cap of 255 would refuse.
     const label = '\u{1F600}'.repeat(128);
     expect(label.length).toBe(256);
 
@@ -367,10 +366,9 @@ describe('isInvisibleOnly agrees with the server', () => {
   });
 
   test('the client is no stricter than the server', () => {
-    // These used to differ. V8's tables were ahead of the PCRE build Elixir
-    // shipped, so the client knew four Arabic and Kaithi number signs as
-    // Format that the server did not. Erlang 28 brought PCRE2 and closed it.
-    // Pinned at zero so a future skew in either engine shows up as a diff.
+    // V8 and the PCRE build Erlang ships each carry their own Unicode tables,
+    // and they have disagreed on the Format category before. Pinned at zero so
+    // a skew in either engine shows up as a diff.
     const extra: string[] = [];
     for (let c = 0; c <= 0x10ffff; c++) {
       if (c >= 0xd800 && c <= 0xdfff) continue;
@@ -413,7 +411,7 @@ describe('EdgeSchema condition_expression', () => {
 
   test('accepts an expression long in UTF-16 units but short in codepoints', () => {
     // 200 astral emoji: 200 codepoints the server stores fine, 400 UTF-16
-    // units the old `.max(255)` counted. This runs on every keystroke.
+    // units a code-unit cap of 255 would refuse.
     const expression = '\u{1F600}'.repeat(200);
     expect(expression.length).toBe(400);
 
@@ -422,8 +420,7 @@ describe('EdgeSchema condition_expression', () => {
   });
 
   test('the base schema caps it too, not just the js_expression override', () => {
-    // The server validates the expression on every condition type. The base
-    // schema had no cap at all, so an over-wide expression sailed through.
+    // The server validates the expression on every condition type.
     expect(parseBase('a'.repeat(256)).success).toBe(false);
   });
 
@@ -446,9 +443,9 @@ describe('TemplatePublishSchema (the template form)', () => {
       ...values,
     });
 
-  // Every case below is chosen so that it passes under the codepoint/grapheme
-  // rule and fails under the UTF-16 `.max()` it replaced, or the reverse.
-  // A case that behaves the same under both pins nothing.
+  // Every case below passes under the codepoint/grapheme rule and fails under
+  // a UTF-16 code-unit `.max()`, or the reverse. A case that behaves the same
+  // under both pins nothing.
 
   test('name: accepts 200 emoji, which .max(255) on UTF-16 units refused', () => {
     const name = '\u{1F600}'.repeat(200);
@@ -466,8 +463,8 @@ describe('TemplatePublishSchema (the template form)', () => {
   });
 
   test('name: refuses 256 emoji, which is 512 units and 256 codepoints', () => {
-    // Over the cap on both counts, so it pins that widening the rule did not
-    // remove the cap for astral input.
+    // Over the cap on both counts, so it pins that the cap still applies to
+    // astral input.
     expect(parse({ name: '\u{1F600}'.repeat(256) }).success).toBe(false);
   });
 

@@ -73,7 +73,7 @@ defmodule Lightning.Credentials.CredentialTest do
     test "validates name format" do
       user = insert(:user)
 
-      # `@` and `#` are ordinary characters now. A control character is not.
+      # `@` and `#` are ordinary characters. A control character is not.
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "Invalid@Name#",
@@ -98,8 +98,8 @@ defmodule Lightning.Credentials.CredentialTest do
     end
 
     test "an over-long schema is a changeset error, not a 500" do
-      # credentials.schema is varchar(40), not 255, so a 41 character schema
-      # was a 500 on plain ASCII through POST /api/credentials.
+      # The schema cap is 40, tighter than the name columns, so a 41 character
+      # schema on plain ASCII has to fail here and not in Postgres.
       user = insert(:user)
 
       changeset =
@@ -142,7 +142,7 @@ defmodule Lightning.Credentials.CredentialTest do
     test "accepts the names the export fix exists for" do
       user = insert(:user)
 
-      # #2808's motivating example. Until #4577 a user could not create it.
+      # The names the YAML export has to quote. Creating them has to work too.
       for name <- ["MailChimp June'24", "Vérifier l'état", "患者確認", "step 🎉"] do
         changeset =
           Credential.changeset(%Credential{}, %{

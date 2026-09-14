@@ -244,15 +244,13 @@ defmodule Lightning.Config.Bootstrap do
 
     configure_adaptors_strategy(local_adaptors_repos, use_local_adaptors_repos?)
 
-    # Upstreams for the NPM strategy. Each key reaches exactly one sub-module
-    # through Lightning.Adaptors.Config.strategy_opts/1: registry_url is the
-    # npm search and packument endpoint (NPM.Registry), jsdelivr_url serves
-    # configuration schemas (NPM.Schema), and github_url plus github_ref locate
-    # the raw icon files under OpenFn/adaptors (NPM.GitHub). Defaults live in
-    # the @default_* attributes on those modules; bootstrap only overrides one
-    # when its env var is set.
+    # Upstreams for the NPM strategy. registry_url is the npm search and
+    # packument endpoint, jsdelivr_url serves configuration schemas, and
+    # github_url plus github_ref locate the raw icon files under
+    # OpenFn/adaptors. Defaults live on the Lightning.Adaptors.NPM.* modules,
+    # and an unset env var leaves the default alone.
     #
-    # Point them at `bin/adaptor_cache` to serve all three from a local disk
+    # Point all of them at `bin/adaptor_cache` to serve from a local disk
     # cache while working on adaptors.
     config :lightning,
            Lightning.Adaptors.NPM,
@@ -1069,11 +1067,9 @@ defmodule Lightning.Config.Bootstrap do
     end
   end
 
-  # ADAPTORS_LOCAL_REPO wins outright when set. When it's unset, fall back
-  # to the OPENFN_ADAPTORS_REPO value parsed above, but only warn about it
-  # when Lightning.Adaptors is actually running the Local strategy — an
-  # operator running the npm strategy can leave OPENFN_ADAPTORS_REPO set for
-  # the ws-worker without being warned about a var they still need.
+  # The deprecation warning only fires under the Local strategy. An operator
+  # on the npm strategy can leave OPENFN_ADAPTORS_REPO set for the ws-worker
+  # and should not be told to drop a var they still need.
   defp resolve_local_strategy_paths(local_adaptors_repos, adaptors_strategy) do
     case env!("ADAPTORS_LOCAL_REPO", :string, nil) |> parse_repo_list() do
       [] ->

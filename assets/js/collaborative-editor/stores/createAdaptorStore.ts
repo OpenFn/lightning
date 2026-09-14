@@ -186,9 +186,8 @@ export const createAdaptorStore = (): AdaptorStore => {
       const existing = state.adaptors;
       const existingByName = new Map(existing.map(a => [a.name, a]));
 
-      // Merge by name to preserve referential identity of unchanged adaptors so
-      // `withSelector` consumers don't re-render on no-op `adaptors_updated`
-      // pushes.
+      // Reuse the previous object where nothing changed, so `withSelector`
+      // consumers do not re-render on a no-op push.
       const merged: Adaptor[] = incoming.map(next => {
         const prev = existingByName.get(next.name);
         return prev && adaptorsEqual(prev, next) ? prev : next;
@@ -273,9 +272,9 @@ export const createAdaptorStore = (): AdaptorStore => {
   const connectChannel = (provider: PhoenixChannelProvider) => {
     // The push only signals that named adaptors changed; it carries no
     // adaptor data. Always re-fetch the catalogue over HTTP rather than
-    // branching on which names changed -- a brand-new adaptor needs the
-    // fetch regardless, and 304 caching makes re-fetching a known one just
-    // as cheap.
+    // branching on which names changed. A brand-new adaptor needs the fetch
+    // regardless, and 304 caching makes re-fetching a known one just as
+    // cheap.
     const adaptorsUpdatedHandler = () => {
       logger.debug('Received adaptors_updated signal, refreshing catalogue');
       void requestAdaptors();

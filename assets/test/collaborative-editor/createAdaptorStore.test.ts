@@ -1,9 +1,5 @@
 /**
  * Tests for createAdaptorStore
- *
- * Covers the core store interface (subscribe/getSnapshot), state management
- * commands, HTTP-backed `requestAdaptors`, Phoenix channel `adaptors_updated`
- * live-update handling, and query helpers.
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest';
@@ -90,11 +86,11 @@ describe('createAdaptorStore', () => {
     unsubscribe2();
     store.clearError();
     expect(count1).toBe(2);
-    expect(count2).toBe(1); // unsubscribed, no longer notified
+    expect(count2).toBe(1);
 
     unsubscribe1();
     store.setLoading(false);
-    expect(count1).toBe(2); // unsubscribed, no longer notified
+    expect(count1).toBe(2);
   });
 
   test('withSelector returns a referentially stable value until its slice changes', () => {
@@ -107,7 +103,7 @@ describe('createAdaptorStore', () => {
 
     store.setLoading(true);
 
-    expect(selectAdaptors()).toBe(adaptorsBefore); // unrelated slice unchanged
+    expect(selectAdaptors()).toBe(adaptorsBefore);
     expect(selectIsLoading()).not.toBe(loadingBefore);
   });
 

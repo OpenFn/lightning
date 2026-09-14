@@ -1,31 +1,26 @@
 defmodule Lightning.Adaptors.Strategy do
   @moduledoc """
-  Behaviour shared by every adaptor strategy (NPM, Local, and the test
-  mock).
+  Behaviour every adaptor strategy implements.
 
   A strategy is the sole boundary between the `Lightning.Adaptors.*`
   subsystem and the outside world. It defines four callbacks:
 
-    * `c:fetch_adaptor/1` — given a package name, return a structured
-      `t:adaptor_record/0` covering version history, integrity hashes,
-      and dependency metadata. Icon fields are not part of this
-      record; the Scheduler stamps them on separately after joining
-      the bulk icon pipeline.
-    * `c:fetch_icon/2` — given a package name and an icon variant,
-      return the raw bytes plus extension. Used by the Store's rare
-      lazy-miss fallback.
-    * `c:fetch_icons/1` — bulk icon fetch for every adaptor known to
-      the strategy. The Scheduler invokes this once per tick in parallel
-      with its per-adaptor fan-out. Accepts a keyword list of options;
-      see the callback docs for `:prior_etags`.
-    * `c:list_adaptors/0` — the cheap change-signal: one call returning
-      `name + latest_version` for every `@openfn/*` package, used by
-      the scheduler to diff against the `adaptors` table.
+    * `c:fetch_adaptor/1` returns a `t:adaptor_record/0` for one package
+      name. Icon fields are not part of this record. The Scheduler stamps
+      them on separately after joining the bulk icon pipeline.
+    * `c:fetch_icon/2` returns the raw bytes and extension of one icon
+      variant. The Store calls it when an icon is missing on disk.
+    * `c:fetch_icons/1` bulk-fetches icons for every adaptor the strategy
+      knows. The Scheduler runs it once per tick in parallel with its
+      per-adaptor fan-out. See the callback docs for `:prior_etags`.
+    * `c:list_adaptors/0` is the cheap change signal: `name` and
+      `latest_version` for every package the strategy knows, which the
+      Scheduler diffs against the `adaptors` table.
 
   The active strategy module is resolved at runtime via
-  `Lightning.Adaptors.Config.strategy/0`. Implementations must surface
-  transient failures (5xx, timeout, nxdomain) as `{:error, term()}`;
-  retry policy lives at the scheduler/store layer, not here.
+  `Lightning.Adaptors.Config.strategy/0`. Implementations surface
+  transient failures (5xx, timeout, nxdomain) as `{:error, term()}` and
+  do not retry.
   """
 
   @typedoc """
@@ -44,9 +39,8 @@ defmodule Lightning.Adaptors.Strategy do
         }
 
   @typedoc """
-  The structured adaptor record returned by `c:fetch_adaptor/1`. Icon
-  fields are persisted separately by the Scheduler after joining
-  `c:fetch_icons/1` — they are not stamped onto this record.
+  The record returned by `c:fetch_adaptor/1`. Icon fields are not on it.
+  The Scheduler persists them separately after joining `c:fetch_icons/1`.
 
   `schema_data` is the credential schema as a JSON binary. `nil` means
   the source sees no schema for this version; the Scheduler decides
@@ -66,11 +60,10 @@ defmodule Lightning.Adaptors.Strategy do
         }
 
   @typedoc """
-  Fresh-fetch icon entry inside the `c:fetch_icons/1` result map. The
-  optional `:etag` field carries the upstream-provided cache validator
-  (verbatim from the HTTP response) and is `nil` when the upstream
-  didn't supply one — strategies without a transport-level validator
-  (e.g. `Lightning.Adaptors.Local`) omit the key entirely.
+  Fresh-fetch icon entry inside the `c:fetch_icons/1` result map. `:etag`
+  is the upstream cache validator verbatim from the HTTP response, `nil`
+  when upstream sent none. Strategies with no transport-level validator,
+  such as `Lightning.Adaptors.Local`, omit the key entirely.
   """
   @type icon_entry :: %{
           required(:data) => binary(),
@@ -81,20 +74,16 @@ defmodule Lightning.Adaptors.Strategy do
 
   @typedoc """
   Per-shape value inside the `c:fetch_icons/1` result map. Either a
-  fresh `t:icon_entry/0` (200 response) or the `:not_modified` sentinel
-  (304 response — upstream confirmed unchanged; only ever returned when
-  the caller supplied a prior etag via the `:prior_etags` option).
+  fresh `t:icon_entry/0` (a 200) or `:not_modified` (a 304), which is
+  only ever returned when the caller supplied a prior etag via
+  `:prior_etags`.
   """
   @type icon_shape_value :: icon_entry() | :not_modified
 
   @typedoc """
-  Bulk icon map returned by `c:fetch_icons/1`. Three branches matter:
-
-    * shape **entirely absent** — upstream had no such icon for this
-      package;
-    * shape present as `:not_modified` — upstream confirmed the icon
-      is unchanged since the prior etag was issued;
-    * shape present as a map — apply the bytes (a fresh fetch).
+  Bulk icon map returned by `c:fetch_icons/1`. A shape that is absent
+  means upstream has no such icon. `:not_modified` means it is unchanged
+  since the prior etag. A map is a fresh fetch to apply.
   """
   @type icons_map :: %{
           required(String.t()) => %{
@@ -121,30 +110,26 @@ defmodule Lightning.Adaptors.Strategy do
   Bulk fetch every available icon for every adaptor known to the
   strategy.
 
-  Returns `{:ok, partial_map}` where each per-shape slot is either
-  absent (no icon upstream), a fresh `t:icon_entry/0` (200), or the
-  `:not_modified` sentinel (304 — only when a prior etag was sent).
-  A top-level `{:error, term()}` is only returned when the whole
-  pipeline can't proceed (e.g. an upstream `list_adaptors/0` call
-  inside the bulk implementation fails).
+  Returns `{:ok, icons_map}` (see `t:icons_map/0`). A top-level
+  `{:error, term()}` is only
+  returned when the whole pipeline cannot proceed, for example when the
+  `list_adaptors/0` call inside the bulk implementation fails.
 
   ## Options
 
-    * `:prior_etags` — a map of the form
-      `%{name => %{optional(:square | :rectangle) => etag_string}}`
-      whose values are sent as `If-None-Match` per `(name, shape)`.
-      Defaults to `%{}`. Unknown keys in the keyword list are
-      ignored. Strategies without a transport-level cache validator
-      (e.g. `Lightning.Adaptors.Local`) ignore this option entirely
-      and never return `:not_modified`.
+    * `:prior_etags` - `%{name => %{optional(:square | :rectangle) => etag}}`,
+      sent as `If-None-Match` per `(name, shape)`. Defaults to `%{}`.
+      Strategies with no transport-level cache validator, such as
+      `Lightning.Adaptors.Local`, ignore it and never return
+      `:not_modified`.
   """
   @callback fetch_icons(opts :: keyword()) ::
               {:ok, icons_map()} | {:error, term()}
 
   @doc """
-  Cheap change-signal listing: `name + latest_version` for every
-  `@openfn/*` package known to the strategy. The scheduler diffs this
-  against the `adaptors` table to compute its work list.
+  Cheap change signal: `name` and `latest_version` for every package the
+  strategy knows. The Scheduler diffs this against the `adaptors` table to
+  compute its work list.
 
   `{:ok, []}` means the strategy looked and there is genuinely nothing
   there, which settles the Store's first-load gate. A strategy that cannot

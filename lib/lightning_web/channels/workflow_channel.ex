@@ -291,9 +291,9 @@ defmodule LightningWeb.WorkflowChannel do
   @doc """
   Saves the current Y.Doc state through the Session.
 
-  The reply is deferred: `Session.save_workflow/2` may wait on the adaptor
+  The reply is deferred. `Session.save_workflow/2` may wait on the adaptor
   catalogue's first load, so the call runs off the channel process and
-  the reply is sent with `Phoenix.Channel.reply/2` when it finishes.
+  the reply goes out with `Phoenix.Channel.reply/2` when it finishes.
 
   Success: `{:ok, %{saved_at: DateTime, lock_version: integer}}`
   Error: `{:error, %{errors: map, type: string}}`
@@ -883,10 +883,9 @@ defmodule LightningWeb.WorkflowChannel do
     {:reply, {:ok, %{}}, socket}
   end
 
-  # Catch-all for any event this channel doesn't recognise (e.g. a stale
-  # client tab still sending an event removed in a later deploy). Replies
-  # with an error instead of raising FunctionClauseError, which would kill
-  # this client's channel process and drop its connection.
+  # A stale client tab may still send an event removed in a later deploy.
+  # Replying with an error instead of raising FunctionClauseError keeps this
+  # client's channel process and connection alive.
   @impl true
   def handle_in(event, _payload, socket) do
     warn_unhandled_message("handle_in", event)
@@ -1205,10 +1204,9 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
-  # Catch-all for any internal message this channel doesn't recognise (e.g. a
-  # PubSub broadcast for an event type removed in a later deploy). Logs and
-  # keeps the channel alive instead of raising FunctionClauseError, which
-  # would kill this client's channel process and drop its connection.
+  # A PubSub broadcast for an event type removed in a later deploy can still
+  # arrive here. Logging instead of raising FunctionClauseError keeps this
+  # client's channel process and connection alive.
   @impl true
   def handle_info(message, socket) do
     warn_unhandled_message("handle_info", unhandled_message_type(message))
@@ -1264,7 +1262,7 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp refresh_lifecycle_from_broadcast(socket, _payload), do: socket
 
-  # Unlinked on purpose: a GenServer.call timeout or dead target exits, and
+  # Unlinked on purpose. A GenServer.call timeout or dead target exits, and
   # a linked task would take the channel down. `catch :exit` turns it into
   # an error reply instead.
   defp async_task(socket, event, task_fn) do
@@ -1317,9 +1315,8 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
-  # Logs and reports to Sentry that a channel message went unhandled, by
-  # event name only. The full message/payload is never logged since it may
-  # carry user or workflow data.
+  # Only the event name goes to the log and Sentry. The full message or
+  # payload may carry user or workflow data.
   defp warn_unhandled_message(kind, event) do
     Logger.warning("WorkflowChannel: unhandled #{kind} event: #{event}")
 
@@ -1678,8 +1675,8 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Returns the bare reply payload, not `{:reply, ..., socket}`, so deferred
-  # replies can use it too.
+  # Returns the bare reply payload so both `handle_in` and the deferred
+  # `handle_info` clauses can use it.
   defp workflow_error_reply({:error, %{type: type, message: message}}) do
     {:error,
      %{

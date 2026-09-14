@@ -3,57 +3,44 @@ defmodule Lightning.Adaptors.NPM do
   Production implementation of `Lightning.Adaptors.Strategy` that talks
   to the public NPM registry and the OpenFn adaptors monorepo on GitHub.
 
-  Implements the four `Lightning.Adaptors.Strategy` callbacks:
-
-    * `c:Lightning.Adaptors.Strategy.list_adaptors/0` — merges the
-      `@openfn` org's authoritative package listing with the search API's
-      cheap version lookup, returning `name + latest_version` for every
-      `@openfn/language-*` package. See
-      `Lightning.Adaptors.NPM.Registry` for why this is two calls, not
-      one. A listing with no `@openfn/language-*` names is an error, not
-      an empty catalogue.
-    * `c:Lightning.Adaptors.Strategy.fetch_adaptor/1` — packument fetch +
-      per-version decode and latest-version schema retrieval via
-      jsDelivr. Icon fields are **not** stamped here; the Scheduler
-      joins them on after a bulk
-      `c:Lightning.Adaptors.Strategy.fetch_icons/1` pass.
-    * `c:Lightning.Adaptors.Strategy.fetch_icon/2` — single icon raw GET
-      against `raw.githubusercontent.com`, used by the Store's rare
-      lazy-miss fallback.
-    * `c:Lightning.Adaptors.Strategy.fetch_icons/1` — bulk fan-out over
-      the adaptor listing, one HTTP request per `(name, shape)`. Threads
-      `:prior_etags` from the caller down into the per-request
-      `If-None-Match` headers.
+    * `c:Lightning.Adaptors.Strategy.list_adaptors/0` merges the
+      `@openfn` org's package listing with the search API's version
+      lookup. See `Lightning.Adaptors.NPM.Registry` for why this is two
+      calls, not one. A listing with no `@openfn/language-*` names is an
+      error, not an empty catalogue.
+    * `c:Lightning.Adaptors.Strategy.fetch_adaptor/1` fetches the
+      packument and the latest version's schema from jsDelivr. Icon
+      fields are not stamped here. The Scheduler joins them on after a
+      bulk `c:Lightning.Adaptors.Strategy.fetch_icons/1` pass.
+    * `c:Lightning.Adaptors.Strategy.fetch_icon/2` is a single raw GET
+      against `raw.githubusercontent.com`, used when the Store misses an
+      icon on disk.
+    * `c:Lightning.Adaptors.Strategy.fetch_icons/1` fans out one GET per
+      `(name, shape)` and sends `:prior_etags` as `If-None-Match`.
 
   ## HTTP
 
-  This module is a thin orchestrator. The actual HTTP work is delegated
-  to three sub-modules, each of which owns its own Tesla client and
-  upstream base URL:
+  The HTTP work lives in three sub-modules, each with its own Tesla
+  client and base URL: `Lightning.Adaptors.NPM.Registry`,
+  `Lightning.Adaptors.NPM.Schema` and `Lightning.Adaptors.NPM.GitHub`.
 
-    * `Lightning.Adaptors.NPM.Registry` — npm registry search + packument.
-    * `Lightning.Adaptors.NPM.Schema` — jsDelivr `configuration-schema.json`.
-    * `Lightning.Adaptors.NPM.GitHub` — `raw.githubusercontent.com`
-      icon fetches (one GET per `(name, shape)`).
-
-  Each sub-module issues at most a handful of single-shot Tesla requests
-  bounded by `http_timeout`. No retry, no backoff, no circuit-breaker —
-  transient failures (5xx, timeout, nxdomain) of the *primary* request
-  (`packument` for `fetch_adaptor/1`, the org package listing for
-  `list_adaptors/0` and `fetch_icons/1`) surface as `{:error, term()}`
-  unchanged, as does a failed schema fetch inside `fetch_adaptor/1`
-  (`{:error, {:schema_fetch_failed, reason}}`). Each icon fetch inside
-  `fetch_icons/1` is best-effort instead: a miss there degrades to an
-  absent icon shape rather than failing the batch.
+  Every request is single-shot and bounded by `http_timeout`. There is no
+  retry, backoff or circuit breaker. A transient failure (5xx, timeout,
+  nxdomain) of the primary request (the packument for `fetch_adaptor/1`,
+  the org listing for `list_adaptors/0` and `fetch_icons/1`) surfaces as
+  `{:error, term()}` unchanged, and a failed schema fetch inside
+  `fetch_adaptor/1` as
+  `{:error, {:schema_fetch_failed, reason}}`. Icon fetches inside
+  `fetch_icons/1` are best-effort instead: a miss degrades to an absent
+  icon shape rather than failing the batch.
 
   ## Configuration
 
-  Each sub-module reads `:registry_url`, `:jsdelivr_url`, `:github_url`,
-  `:github_ref`, and `:http_timeout` via
-  `Lightning.Adaptors.Config.strategy_opts(Lightning.Adaptors.NPM)` — all
-  three share this module's own config key rather than each having their
-  own — with defaults baked in so the module works even when no
-  Application env block is set.
+  The sub-modules read `:registry_url`, `:jsdelivr_url`, `:github_url`,
+  `:github_ref` and `:http_timeout` from
+  `Lightning.Adaptors.Config.strategy_opts(Lightning.Adaptors.NPM)`. All
+  three share this module's config key rather than having their own, and
+  each key has a default so the module works with no Application env set.
   """
 
   @behaviour Lightning.Adaptors.Strategy

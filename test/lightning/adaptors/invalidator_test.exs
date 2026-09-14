@@ -6,8 +6,6 @@ defmodule Lightning.Adaptors.InvalidatorTest do
   setup do
     sup = :"inv_test_#{System.unique_integer([:positive])}"
 
-    # The supervisor starts the Invalidator automatically, registered under
-    # `invalidator_name(sup)`.
     start_supervised!(
       {AdaptorsSupervisor,
        name: sup,

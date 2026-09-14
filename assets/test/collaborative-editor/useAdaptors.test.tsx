@@ -419,7 +419,6 @@ describe('useAdaptors hooks', () => {
         '@openfn/language-http',
       ]);
 
-      // adaptorsInUse entries are the same object references as the catalogue entries, not copies.
       const catalogue = result.current.allAdaptors;
       for (const a of result.current.adaptorsInUse) {
         const fromCatalogue = catalogue.find(c => c.name === a.name);

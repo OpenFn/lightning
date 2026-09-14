@@ -25,8 +25,8 @@ defmodule Lightning.Adaptors.Dump do
 
     * `:source` - `:npm` (default) or `:local`
   """
-  # `path` is a mix-task argument (`mix lightning.adaptors.dump`) or a
-  # release-command argument — an operator's own filesystem, not a request.
+  # `path` is a mix-task or release-command argument on the operator's own
+  # filesystem, not a request.
   # sobelow_skip ["Traversal.FileModule"]
   @spec dump_to_file(Path.t(), keyword()) :: {:ok, non_neg_integer()}
   def dump_to_file(path, opts \\ []) do

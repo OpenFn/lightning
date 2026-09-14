@@ -27,8 +27,8 @@ defmodule Lightning.Adaptors.Seed do
     * `:sup` - supervisor instance whose topic the broadcasts go to,
       defaulting to `Lightning.Adaptors.Config.default_instance/0`
   """
-  # `path` is a mix-task argument (`mix lightning.adaptors.import`) or a
-  # release-command argument — an operator's own filesystem, not a request.
+  # `path` is a mix-task or release-command argument, so it names the
+  # operator's own filesystem rather than request input.
   # sobelow_skip ["Traversal.FileModule"]
   @spec seed_from_file(Path.t(), keyword()) :: {:ok, non_neg_integer()}
   def seed_from_file(path, opts \\ []) do
@@ -64,7 +64,7 @@ defmodule Lightning.Adaptors.Seed do
 
   # `Lightning.Release.seed_adaptors/2` seeds through
   # `Ecto.Migrator.with_repo/2`, which starts the repo without the rest of
-  # the app — there is no PubSub to broadcast on, and no cache to evict.
+  # the app. There is no PubSub to broadcast on and no cache to evict.
   defp broadcast_changed(sup, source, names) do
     if Process.whereis(Lightning.PubSub) do
       topic = AdaptorsSupervisor.source_topic(sup)

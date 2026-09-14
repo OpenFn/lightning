@@ -1,5 +1,7 @@
 defmodule LightningWeb.AdaptorIconControllerTest do
-  # async: false — all tests share the Lightning.Adaptors supervisor name.
+  # Every test goes through the application's Lightning.Adaptors supervisor,
+  # which runs with Lightning.Adaptors.StrategyMock in test (config/test.exs).
+  # Sharing that one name is why this module is not async.
   use LightningWeb.ConnCase, async: false
 
   import Mox
@@ -11,11 +13,6 @@ defmodule LightningWeb.AdaptorIconControllerTest do
   alias LightningWeb.AdaptorIconURL
 
   setup :verify_on_exit!
-
-  # The production `Lightning.Adaptors.Supervisor` is started in
-  # `application.ex` under the name `Lightning.Adaptors` and — in test —
-  # uses `Lightning.Adaptors.StrategyMock` (see `config/test.exs`). No
-  # per-test supervisor start is needed.
 
   defp sha8_from_bytes(bytes) do
     :crypto.hash(:sha256, bytes)
@@ -325,7 +322,8 @@ defmodule LightningWeb.AdaptorIconControllerTest do
       assert result.status == 302
       [location] = get_resp_header(result, "location")
 
-      # sha8 segment is lowercase; percent-encoded chars use uppercase hex per RFC 3986
+      # Only the sha8 segment is asserted lowercase. Percent-encoded characters
+      # in the name are uppercase hex per RFC 3986.
       assert location =~ "square-#{current_sha8}.png"
     end
 
@@ -461,9 +459,8 @@ defmodule LightningWeb.AdaptorIconControllerTest do
          %{
            conn: conn
          } do
-      # Adaptor row exists but has no icon for the square shape.
-      # Even though there's a stale sha8 in the URL, there's no canonical
-      # URL to redirect to — 404 instead of 302.
+      # With no stored icon there is no canonical URL to redirect to, so 404
+      # rather than 302.
       name = unique_adaptor_name()
       insert_adaptor(name)
 
@@ -480,8 +477,6 @@ defmodule LightningWeb.AdaptorIconControllerTest do
     end
   end
 
-  # The tests above call the controller directly; these confirm the route
-  # and pipeline wire up to it too.
   describe "GET /adaptors/icons/... (full router pipeline)" do
     test "200 on sha match", %{conn: conn} do
       name = unique_adaptor_name()
@@ -573,7 +568,8 @@ defmodule LightningWeb.AdaptorIconControllerTest do
 
       url = AdaptorIconURL.build("@openfn/language-http", meta, :square)
 
-      # sha8 is lowercase; percent-encoded chars use uppercase hex per RFC 3986
+      # Only the sha8 segment is asserted lowercase. Percent-encoded characters
+      # in the name are uppercase hex per RFC 3986.
       assert url =~ "square-#{expected_sha8}.png"
       assert expected_sha8 == String.downcase(expected_sha8)
     end

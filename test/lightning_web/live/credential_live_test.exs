@@ -26,7 +26,7 @@ defmodule LightningWeb.CredentialLiveTest do
     external_id: "updated-external-id"
   }
 
-  # An apostrophe is legal now (#4577). A control character is not.
+  # An apostrophe is a legal name character. A control character is not.
   @invalid_attrs %{name: "this won't \u{0000} work"}
 
   defp create_credential(%{user: user}) do

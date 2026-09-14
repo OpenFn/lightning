@@ -94,9 +94,9 @@ defmodule Lightning.Adaptors.Catalogue do
   end
 
   @doc """
-  Full structs for a source. Heavier than `list_package_metas/1`, which is
-  what picker traffic uses — this one is for callers that need the whole
-  row, like the Scheduler's diffing and the dump/seed tooling.
+  Full structs for a source, for callers that need the whole row, such as
+  the Scheduler's diffing and the dump/seed tooling. Picker traffic uses
+  the lighter `list_package_metas/1`.
   """
   @spec list_adaptors(source()) :: [Adaptor.t()]
   def list_adaptors(source) do
@@ -127,23 +127,18 @@ defmodule Lightning.Adaptors.Catalogue do
   end
 
   @doc """
-  Idempotent, transactional, diff-aware upsert of one adaptor record
-  plus its version rows. The source is read from the record, whose keys
-  may be atoms or strings (as a decoded JSON snapshot gives them).
+  Upserts one adaptor record plus its version rows in one transaction.
+  The source is read from the record, whose keys may be atoms or strings,
+  as a decoded JSON snapshot gives them.
 
-  Behaviour:
+  `checked_at` advances on every call. `updated_at` advances only when
+  some other field of the adaptor row differs from the existing row.
+  Version rows are deleted and reinserted. Every row goes through its
+  schema changeset first, so a corrupt strategy response cannot reach
+  the database.
 
-    * On every call, `checked_at` is advanced to "now".
-    * `updated_at` only advances when at least one non-`checked_at`
-      field of the adaptor row actually differs from the existing row.
-    * Version rows are replaced (delete + insert) inside the same
-      transaction.
-    * Every row is run through its schema changeset before write, so a
-      corrupt Strategy response cannot poison the DB.
-
-  Raises if the underlying transaction fails (e.g. invalid input from
-  a misbehaving strategy) — the success type is the only contract the
-  Scheduler relies on.
+  Raises if the transaction fails, for example on invalid input from a
+  misbehaving strategy. The Scheduler relies on the success type only.
   """
   @spec upsert_adaptor(map()) :: {:ok, Adaptor.t()}
   def upsert_adaptor(record) when is_map(record) do
@@ -202,7 +197,7 @@ defmodule Lightning.Adaptors.Catalogue do
   Advance `checked_at` for a known `(name, source)` row without
   loading it. No-op when no row matches.
 
-  Used by the Scheduler's "polled NPM, nothing changed" path —
+  The Scheduler uses this when a poll finds nothing changed. It is
   cheaper than a full upsert and never bumps `updated_at`.
   """
   @spec touch_checked_at(String.t(), source()) :: :ok
@@ -252,7 +247,9 @@ defmodule Lightning.Adaptors.Catalogue do
 
   @doc """
   Maximum `checked_at` seen for `source`, or `nil` when the table is
-  empty for that source. Backs the Scheduler's smart-init timing.
+  empty for that source. The Scheduler reads it at boot to time its first
+  tick, and the Store reads it to tell whether the catalogue has ever
+  loaded.
   """
   @spec max_checked_at(source()) :: DateTime.t() | nil
   def max_checked_at(source) do
@@ -267,8 +264,8 @@ defmodule Lightning.Adaptors.Catalogue do
   Full catalogue projection for a source: every adaptor's `name`,
   `latest_version`, `repository`, icon fields, and full version list.
 
-  Excludes the packages listed in `@excluded_names`, any deprecated
-  adaptor, and — for an otherwise-listed adaptor — any deprecated version.
+  Excludes the packages listed in `@excluded_names` and any deprecated
+  adaptor. A listed adaptor's deprecated versions are left out too.
   """
   @spec catalogue(source()) :: [catalogue_entry()]
   def catalogue(source) do
@@ -311,9 +308,8 @@ defmodule Lightning.Adaptors.Catalogue do
   `MAX(adaptors.updated_at)` and `MAX(adaptor_versions.inserted_at)`,
   or `nil` when the source has no rows.
 
-  `version_row_count` is carried alongside the timestamp because a
-  removed version doesn't move either max — deleting rows only ever
-  lowers the count.
+  `version_row_count` rides alongside the timestamp because deleting a
+  version row moves neither max. It does lower the count.
   """
   @spec catalogue_stamp(source()) :: {DateTime.t() | nil, non_neg_integer()}
   def catalogue_stamp(source) do
@@ -422,16 +418,15 @@ defmodule Lightning.Adaptors.Catalogue do
   end
 
   # `Ecto.Changeset.cast/3` raises on a map mixing atom and string keys, so
-  # every map handed to a changeset here is flattened to string keys first —
-  # that is what a JSON snapshot gives us, and what atom-keyed callers
-  # convert cleanly into.
+  # every map handed to a changeset here is flattened to string keys first.
+  # A JSON snapshot arrives that way already.
   defp stringify_keys(map) do
     Map.new(map, fn {k, v} -> {to_string(k), v} end)
   end
 
-  # `source` is read outside the changeset (for the existing-row lookup),
-  # so it needs its own cast: `Ecto.Enum` fields accept a string via
-  # `Changeset.cast/3`, but not via `Repo.get_by/3`'s query parameters.
+  # `source` is read outside the changeset for the existing-row lookup, so
+  # it needs its own cast. `Ecto.Enum` fields accept a string through
+  # `Changeset.cast/3` but not through `Repo.get_by/3` query parameters.
   defp normalize_source(source) when is_atom(source), do: source
 
   defp normalize_source(source) when is_binary(source),

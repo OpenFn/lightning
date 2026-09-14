@@ -6,7 +6,7 @@ defmodule Lightning.AdaptorTestHelpers do
 
   The production `Lightning.Adaptors` cache outlives the SQL sandbox, so
   every seeding helper except `isolated_adaptors/1` refuses to run without
-  it (`ensure_isolated!/0`) — otherwise a seeded row's cache fill leaks into
+  it (`ensure_isolated!/0`). Otherwise a seeded row's cache fill leaks into
   later tests.
   """
 
@@ -24,7 +24,7 @@ defmodule Lightning.AdaptorTestHelpers do
   ...) via `$callers`.
 
   For an `async: true` module, the stub only reaches processes in that
-  `$callers` chain — a process spawned outside it, or already running
+  `$callers` chain. A process spawned outside it, or already running
   before this setup, still resolves `default_instance/0` to the real
   global `Lightning.Adaptors` instance. An `async: false` module gets
   Mimic's global mode instead, which reaches every process in the VM.

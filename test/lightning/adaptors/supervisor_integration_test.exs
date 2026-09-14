@@ -15,7 +15,7 @@ defmodule Lightning.Adaptors.SupervisorIntegrationTest do
   # Children with their *registered* names. We look up live PIDs by name
   # (Process.whereis/1) rather than by child id from which_children/1,
   # because module-based child specs share child ids like `Cachex` or
-  # `Lightning.Adaptors.Invalidator` — those don't carry the per-instance
+  # `Lightning.Adaptors.Invalidator`, which don't carry the per-instance
   # name we derive in the Supervisor. The Scheduler is registered via
   # `:global` (HighlanderPG-wrapped) so it needs a `:global.whereis_name/1`
   # lookup instead.
@@ -85,15 +85,14 @@ defmodule Lightning.Adaptors.SupervisorIntegrationTest do
                "child pid #{inspect(child_pid)} is not alive"
       end)
 
-      # Locally-registered children are up under their derived names.
       Enum.each(local_named_children(sup), fn {role, registered_name} ->
         pid = Process.whereis(registered_name)
         assert is_pid(pid), "expected #{role} to be registered and alive"
         assert Process.alive?(pid)
       end)
 
-      # The HighlanderPG-wrapped Scheduler registers globally once it
-      # acquires the advisory lock — give it up to ~3s to do so.
+      # The HighlanderPG-wrapped Scheduler registers globally only once it
+      # acquires the advisory lock.
       assert_eventually(is_pid(scheduler_pid(sup)), @scheduler_wait_ms)
       assert Process.alive?(scheduler_pid(sup))
     end
@@ -113,7 +112,7 @@ defmodule Lightning.Adaptors.SupervisorIntegrationTest do
     # Two victims only: the supervisor's default max_restarts is 3 in 5s,
     # and hitting that ceiling would take the whole instance down for
     # reasons that have nothing to do with what we're asserting. `:tasks`
-    # is the interesting one — the Scheduler uses it on every tick, and
+    # is the interesting one. The Scheduler uses it on every tick, and
     # still doesn't need restarting alongside it.
     test "a sibling crash restarts only that sibling, leaving the Scheduler's leadership intact",
          %{sup: sup} do

@@ -3,27 +3,26 @@ defmodule Lightning.Adaptors.NPM.Registry do
   NPM registry HTTP client for `Lightning.Adaptors.NPM`.
 
   Talks to `registry.npmjs.org`. Responsible for the `list_adaptors/0`
-  scope listing, and the `packument` endpoint used by `fetch_adaptor/1`
-  and `fetch_icon/2`.
+  scope listing and the packument endpoint `fetch_adaptor/1` uses.
 
   `list_adaptors/0` deliberately merges two endpoints rather than calling
   one:
 
     * `/-/user/openfn/package` is the authoritative name list for the
-      `@openfn` org — the actual trust boundary, since it can't return a
-      name Lightning doesn't already trust. It has no version data.
-    * `/-/v1/search` is used only as a cheap version lookup for whichever
-      of those names it happens to cover. npm's relevance ranking demotes
-      or excludes deprecated packages from search results even on an
-      exact-name query, so search alone silently drops names — it is not
-      a safe source of *scope membership*, only of version data for names
+      `@openfn` org and the trust boundary, since it cannot return a
+      name Lightning does not already trust. It has no version data.
+    * `/-/v1/search` is only a cheap version lookup for whichever of those
+      names it happens to cover. npm's relevance ranking demotes or
+      excludes deprecated packages from search results even on an
+      exact-name query, so search alone silently drops names. It is not a
+      safe source of scope membership, only of version data for names
       already known to be in scope.
 
   Any authoritative name missing from the search results falls back to a
-  per-name `get_packument/1` + `latest_version/1` call, bounded to the
-  handful of names search doesn't cover. Do not "simplify" this back to a
-  single search call or a pagination bump — search's result count is
-  capped by npm's relevance ranking regardless of `size`/`from`, and
+  per-name `get_packument/1` and `latest_version/1` call, bounded to the
+  handful of names search does not cover. Do not "simplify" this back to
+  a single search call or a pagination bump. Search's result count is
+  capped by npm's relevance ranking regardless of `size` and `from`, and
   deprecated packages are excluded from ranking entirely, so no amount of
   paging recovers them.
 

@@ -8,15 +8,15 @@ defmodule Lightning.Credentials.SchemaReconciler do
   broadcast (`Lightning.Adaptors.ChannelBroadcaster`) only fires when an
   adaptor row actually changes, so a catalogue that is already warm (e.g.
   after a restart, backed by a persistent store) may complete its first
-  refresh without changing a single row and would never emit anything — a
+  refresh without changing a single row and would never emit anything. A
   subscriber that waited only for the broadcast would then never sweep. The
   on-start run covers that case.
 
   The sweep is idempotent (each pass only touches rows still on a short
   name), so running it twice, from two triggers, or on every node in a
   cluster (the PubSub topic is cluster-wide) is safe. There is deliberately
-  no "done" flag gating it — that flag was the bug this module replaces: it
-  could get set after a failed run and then never retry.
+  no "done" flag gating it. A flag set after a failed run would stop every
+  later retry.
 
   Each sweep issues a `SELECT DISTINCT schema` over `credentials` (no index
   on that column) plus one catalogue lookup per distinct legacy name, and
@@ -35,8 +35,8 @@ defmodule Lightning.Credentials.SchemaReconciler do
   @doc """
   Starts the reconciler. Required opts: `:name`, `:sup`. Optional:
   `:reconcile` (1-arity fn, default
-  `&Lightning.Credentials.reconcile_legacy_schema_names/1`) and `:retry_ms`
-  (default 5 minutes) controlling the retry delay after a failed sweep.
+  `&Lightning.Credentials.reconcile_legacy_schema_names/1`) and `:retry_ms`,
+  the delay before a failed sweep is retried.
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do

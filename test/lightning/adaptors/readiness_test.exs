@@ -45,8 +45,8 @@ defmodule Lightning.Adaptors.ReadinessTest do
       start_supervised!({
         Scheduler,
         # Its boot-time max_checked_at read runs in a process with no
-        # $callers chain back to this test — the Sandbox.allow/3 below
-        # races it, so skip the read rather than risk an OwnershipError.
+        # $callers chain back to this test, and the Sandbox.allow/3 below
+        # races it. Skip the read rather than risk an OwnershipError.
         name: AdaptorsSupervisor.global_scheduler_name(sup),
         sup: sup,
         lock_key: AdaptorsSupervisor.lock_key(sup),

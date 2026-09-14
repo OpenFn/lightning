@@ -3,11 +3,8 @@ defmodule Lightning.Adaptors.NPM.Schema do
   jsDelivr CDN client for adaptor configuration schemas.
 
   Fetches `/npm/<name>@<version>/configuration-schema.json` from
-  `cdn.jsdelivr.net`, checks it decodes, and returns `{:ok,
-  {schema_data, schema_sha256}}` with the body kept as the bytes
-  served. A genuine 404 (schema removed upstream) is `{:ok, {nil,
-  nil}}`; any other failure (timeout, other HTTP status, network error,
-  undecodable body) is `{:error, reason}`.
+  `cdn.jsdelivr.net`, checks it decodes, and keeps the body as the bytes
+  served.
 
   Base URL via `Lightning.Adaptors.Config.strategy_opts(Lightning.Adaptors.NPM)[:jsdelivr_url]`,
   default `https://cdn.jsdelivr.net`.
@@ -21,11 +18,12 @@ defmodule Lightning.Adaptors.NPM.Schema do
   @doc """
   Fetch the configuration schema for `name@version` from jsDelivr.
 
-  Returns `{:ok, {schema_data, schema_sha256}}` on success, `{:ok,
-  {nil, nil}}` on a genuine 404 (schema removed upstream), and
-  `{:error, reason}` on any other failure, since a transient failure
-  must not be mistaken for genuine absence by callers that persist the
-  result.
+  Returns `{:ok, {schema_data, schema_sha256}}` on success and
+  `{:ok, {nil, nil}}` on a 404. jsDelivr answers 404 both for a package
+  with no schema and for a version it has not mirrored yet, so the
+  Scheduler decides what a `nil` means. Any other failure (timeout, other status, undecodable body) is
+  `{:error, reason}`, so callers that persist the result never mistake a
+  transient failure for absence.
   """
   @spec schema(String.t(), String.t()) ::
           {:ok, {String.t(), String.t()}} | {:ok, {nil, nil}} | {:error, term()}

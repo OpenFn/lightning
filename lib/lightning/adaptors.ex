@@ -104,17 +104,17 @@ defmodule Lightning.Adaptors do
     do: Store.schema(sup, pkg)
 
   @doc """
-  Resolves a possibly-legacy short adaptor name (e.g. `"http"`) to its full
-  npm package name (`"@openfn/language-http"`), if the full name resolves in
-  the catalogue. Returns `{:ok, name}` unchanged if it already resolves, or
-  if neither form does: a loaded catalogue that knows neither is a real
-  answer, and the name is left as given.
+  Resolves a legacy short adaptor name such as `"http"` to its full npm
+  package name, `"@openfn/language-http"`, when the full name is in the
+  catalogue. A name the catalogue already knows comes back unchanged. So
+  does a name it knows in neither form, because a loaded catalogue that
+  has never heard of it is a real answer.
 
   `"raw"` and `"oauth"` are sentinels, not adaptor names, and are returned
   unchanged without consulting the catalogue.
 
-  Answers from the catalogue as it stands, without waiting for a first
-  load: a catalogue that has never loaded is `{:error, :not_ready}`.
+  Does not wait for a first load. A catalogue that has never loaded is
+  `{:error, :not_ready}`.
   """
   @spec resolve_name(atom(), String.t()) ::
           {:ok, String.t()} | {:error, :not_ready}
@@ -159,8 +159,7 @@ defmodule Lightning.Adaptors do
 
   One read, so the stamp always describes the entries it comes with.
 
-  Returns `{:error, term()}` unchanged from `Store.catalogue/1` on a
-  backing-store failure; callers must handle it.
+  Returns `{:error, term()}` on a backing-store failure.
   """
   @spec catalogue(atom()) ::
           {:ok,
@@ -213,7 +212,7 @@ defmodule Lightning.Adaptors do
     end
   end
 
-  # The cached listing first, then the row itself: the listing can lag a
+  # The cached listing first, then the row itself. The listing can lag a
   # Scheduler write until the Invalidator drops it, and it leaves out the
   # excluded and deprecated names a job may still be using.
   defp resolve_meta(sup, name, cached) do

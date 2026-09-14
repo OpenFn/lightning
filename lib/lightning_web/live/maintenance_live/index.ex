@@ -1,13 +1,11 @@
 defmodule LightningWeb.MaintenanceLive.Index do
   @moduledoc """
-  Superuser-only maintenance page for on-demand operations against
-  `Lightning.Adaptors`.
+  Superuser-only page for on-demand `Lightning.Adaptors` maintenance.
 
-  Exposes two actions: "Refresh Adaptor Registry" (`refresh/0`) and
-  "Refresh Adaptor Icons" (`refresh_icons/0`). Neither blocks the LiveView:
-  the registry refresh is fire-and-forget on the cluster-singleton scheduler,
-  while the icon refresh runs under `start_async` (the underlying call can
-  take up to two minutes) and flashes its result when it completes.
+  Neither action blocks the LiveView. The registry refresh is queued on the
+  scheduler and returns at once. The icon refresh can run for up to two
+  minutes, so it goes through `start_async` and flashes its result when it
+  completes.
   """
   use LightningWeb, :live_view
 

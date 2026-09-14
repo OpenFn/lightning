@@ -229,9 +229,9 @@ defmodule Lightning.Projects.ProvisionerTest do
 
     test "a control character in a workflow name is a changeset error, not a 500" do
       # This path builds its own changeset and calls Workflow.validate/1
-      # directly, so it used to skip the name rule entirely. A NUL reached
-      # Postgres and came back as a 22021 that action_fallback does not handle,
-      # which is a 500 on POST /api/provision (#4893).
+      # directly, so the name rule has to run there too. Otherwise a NUL
+      # reaches Postgres and comes back as a 22021 that action_fallback does
+      # not handle, which is a 500 on POST /api/provision.
       for name <- [
             "before\u{0000}after",
             "tab\u{0009}here",

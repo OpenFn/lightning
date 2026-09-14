@@ -14,10 +14,9 @@ defmodule Lightning.Adaptors.StoreTest do
   setup :verify_on_exit!
 
   setup do
-    # Each test owns an isolated `Lightning.Adaptors.Supervisor` instance,
-    # parameterised on a unique `name:` so cache table / persistent_term
-    # entries don't collide across the async suite. The `:strategy` opt
-    # is threaded explicitly — no `Application.put_env` mutation.
+    # Each test owns an isolated supervisor on a unique `name:` so cache
+    # table and persistent_term entries don't collide across the async
+    # suite. Passing `:strategy` directly keeps app env untouched.
     sup = :"store_test_#{System.unique_integer([:positive])}"
 
     start_supervised!(
@@ -421,11 +420,9 @@ defmodule Lightning.Adaptors.StoreTest do
   end
 
   describe "icon/3" do
-    # Each test uses a unique adaptor name so the on-disk cache (shared
-    # default {:tmp, "lightning/adaptor_icons"} path) does not collide
-    # across this `async: true` suite. Directories created here are not
-    # cleaned up — they live under System.tmp_dir! and are namespaced
-    # per-name so they cannot collide.
+    # Each test uses a unique adaptor name so the shared on-disk icon cache
+    # does not collide across this `async: true` suite. Directories are
+    # left behind under System.tmp_dir!, namespaced per name.
     defp unique_name(prefix) do
       "@openfn/language-#{prefix}-#{System.unique_integer([:positive])}"
     end
@@ -576,7 +573,7 @@ defmodule Lightning.Adaptors.StoreTest do
       assert {:ok, path} = Store.icon(sup, name, :square)
       assert File.read!(path) == "LAZY_BYTES"
 
-      # Courier returned {:ignore, _} → no committed entry on the bytes key.
+      # The courier returned {:ignore, _}, so nothing was committed on the bytes key.
       assert {:ok, nil} =
                Cachex.get(cache, {:icon_bytes, source, name, :square})
     end
@@ -624,8 +621,7 @@ defmodule Lightning.Adaptors.StoreTest do
           )
         )
 
-      # Single Mox expectation → if both callers reach the strategy
-      # the second hits "no expectation" and Mox raises.
+      # Single Mox expectation, so Mox raises if both callers reach the strategy.
       expect(Lightning.Adaptors.StrategyMock, :fetch_icon, 1, fn ^name,
                                                                  :square ->
         send(test_pid, :fetch_started)
@@ -669,7 +665,7 @@ defmodule Lightning.Adaptors.StoreTest do
           )
         )
 
-      # Single multi-clause expectation with count: 2 — Mox routes by
+      # Single multi-clause expectation with count: 2. Mox routes by
       # pattern within one slot, so the two parallel courier calls can
       # arrive in either order. Two separate `expect/3` calls would
       # queue FIFO and crash with FunctionClauseError when the task

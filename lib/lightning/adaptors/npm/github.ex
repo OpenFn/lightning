@@ -2,27 +2,25 @@ defmodule Lightning.Adaptors.NPM.GitHub do
   @moduledoc """
   Raw `raw.githubusercontent.com` client for adaptor icons.
 
-  Icons aren't published inside npm tarballs — they live in the
-  `OpenFn/adaptors` monorepo. This module fetches them directly via the
-  raw GitHub content host, one icon per HTTP GET, no tarball walking.
+  Icons are not published inside npm tarballs. They live in the
+  `OpenFn/adaptors` monorepo, so this module fetches them from the raw
+  GitHub content host, one icon per GET.
 
   ## URL pattern
 
       <github_url>/OpenFn/adaptors/<github_ref>/packages/<name-suffix>/assets/<shape>.<ext>
 
   where `<name-suffix>` strips the `@openfn/` scope and, when present, the
-  `language-` prefix too — `@openfn/language-common` becomes `common`,
+  `language-` prefix too, so `@openfn/language-common` becomes `common`,
   matching the monorepo's `packages/` directory names. Each `(name,
-  shape)` is probed `png` first then `svg` — matching the ext order used
-  by `Lightning.Adaptors.Local`.
+  shape)` is probed `png` first then `svg`, the same order
+  `Lightning.Adaptors.Local` uses.
 
   ## Configuration
 
-  Both `:github_url` (default `https://raw.githubusercontent.com`) and
-  `:github_ref` (default `main`) are read via
-  `Lightning.Adaptors.Config.strategy_opts(Lightning.Adaptors.NPM)`,
-  symmetric with the existing `:registry_url`, `:jsdelivr_url`, and
-  `:http_timeout` keys.
+  `:github_url` (default `https://raw.githubusercontent.com`) and
+  `:github_ref` (default `main`) come from
+  `Lightning.Adaptors.Config.strategy_opts(Lightning.Adaptors.NPM)`.
   """
 
   alias Lightning.Adaptors.Config
@@ -42,9 +40,8 @@ defmodule Lightning.Adaptors.NPM.GitHub do
   @doc """
   Fetch a single icon for `(name, shape)`.
 
-  Tries `png` then `svg`. No conditional GET — this entry point is used
-  by the Store's lazy-miss fallback, where no prior etag is in scope.
-  Returns:
+  Tries `png` then `svg`. No conditional GET, since the Store calls this
+  when an icon is missing on disk and has no prior etag. Returns:
 
     * `{:ok, %{data: binary(), ext: String.t(), etag: String.t() | nil}}`
       on success.
@@ -63,21 +60,13 @@ defmodule Lightning.Adaptors.NPM.GitHub do
   @doc """
   Fetch icons for every `(name, shape)` pair across `names`.
 
-  Returns `{:ok, partial_map}` where each entry is keyed by the
-  package name and contains zero, one, or two shape keys. Absence
-  is **not** an error — packages with no upstream icon simply do not
-  appear (or appear with a missing shape).
+  Returns `{:ok, map}` keyed by package name, each holding zero, one or
+  two shape keys. A missing shape is not an error. It means upstream had
+  no such icon, or the fetch for that pair failed, which is only logged.
 
-  When `prior_etags` is supplied as `%{name => %{shape => etag}}`, the
-  corresponding `If-None-Match` header is sent per `(name, shape)`. A
-  304 response is surfaced as a `:not_modified` sentinel in the
-  per-shape slot — distinct from "absent" which means upstream had no
-  such shape at all.
-
-  Fans out via `Task.async_stream` with a bounded concurrency. Transport
-  failures for a single `(name, shape)` are dropped silently — they just
-  don't appear in the result map. This function always returns
-  `{:ok, partial_map}`; there is no error return.
+  `prior_etags` is `%{name => %{shape => etag}}`. Each etag is sent as
+  `If-None-Match` for its `(name, shape)`, and a 304 comes back as
+  `:not_modified` in that shape's slot.
   """
   @spec fetch_all([String.t()], %{
           optional(String.t()) => %{
