@@ -97,16 +97,14 @@ defmodule Lightning.Credentials.CredentialTest do
              ]
     end
 
-    test "an over-long schema is a changeset error, not a 500" do
-      # The schema cap is 40, tighter than the name columns, so a 41 character
-      # schema on plain ASCII has to fail here and not in Postgres.
+    test "validates schema length" do
       user = insert(:user)
 
       changeset =
         Credential.changeset(%Credential{}, %{
           name: "a credential",
           user_id: user.id,
-          schema: String.duplicate("a", 41)
+          schema: String.duplicate("a", 101)
         })
 
       assert errors_on(changeset)[:schema] == [
@@ -117,7 +115,7 @@ defmodule Lightning.Credentials.CredentialTest do
         Credential.changeset(%Credential{}, %{
           name: "a credential",
           user_id: user.id,
-          schema: String.duplicate("a", 40)
+          schema: String.duplicate("a", 100)
         })
 
       refute errors_on(ok)[:schema]

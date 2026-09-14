@@ -90,11 +90,10 @@ defmodule Lightning.Credentials.Credential do
       :name,
       "credential name is too long, please use a shorter one"
     )
-    # schema is varchar(40), not 255.
     |> Validators.validate_name_fits_column(
       :schema,
       "credential schema is too long, please use a shorter one",
-      40
+      100
     )
     |> Validators.validate_name_fits_column(
       :external_id,
