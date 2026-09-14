@@ -157,7 +157,7 @@ defmodule Lightning.Workflows.Edge do
   #
   # There is deliberately no `valid?: false` short circuit: the changeset is
   # invalid for unrelated missing fields on plenty of real save paths, and
-  # skipping these checks there is how the hole stayed open.
+  # skipping these checks there would let a NUL through to the snapshot.
   defp validate_condition_expression(changeset) do
     changeset
     |> Validators.validate_no_null_bytes(

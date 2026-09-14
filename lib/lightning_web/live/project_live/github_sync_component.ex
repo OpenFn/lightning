@@ -216,9 +216,9 @@ defmodule LightningWeb.ProjectLive.GithubSyncComponent do
       %Tesla.Env{body: %{} = body} ->
         error_message(body)
 
-      # Usually ours: the export pre-flight fails with a plain string naming
-      # both colliding entities, which the generic message below would lose.
-      # Not exclusively, though: refresh_oauth_token/1 passes GitHub's body
+      # Usually this is our export pre-flight failing with a plain string that
+      # names both colliding entities, which the generic message below would
+      # lose. Not always, though. refresh_oauth_token/1 passes GitHub's body
       # straight through.
       message when is_binary(message) ->
         message

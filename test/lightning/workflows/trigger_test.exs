@@ -5,7 +5,7 @@ defmodule Lightning.Workflows.TriggerTest do
 
   describe "jsonb-bound trigger fields" do
     test "a NUL in a comment is a changeset error" do
-      # Both are copied into the workflow_snapshots.triggers jsonb (#4893).
+      # Both are copied into the workflow_snapshots.triggers jsonb.
       for {field, message} <- [
             {:comment, "comment can't contain a null byte"}
           ] do
@@ -21,8 +21,8 @@ defmodule Lightning.Workflows.TriggerTest do
     end
 
     test "an over-long comment is a changeset error, not a 22001" do
-      # Both columns are varchar(255) and neither had a length guard, so a 300
-      # character comment gave valid? == true and then raised on insert.
+      # Both columns are varchar(255). Without a length guard a 300 character
+      # comment is valid? == true and then raises on insert.
       for {field, message} <- [
             {:comment, "comment is too long, please use a shorter one"}
           ] do
@@ -38,9 +38,9 @@ defmodule Lightning.Workflows.TriggerTest do
     end
 
     test "an over-long cron_expression is a changeset error, not a 22001" do
-      # The third field on the same cast/3, same varchar(255), and the only one
-      # that had no guard. Crontab parses this happily, so the changeset said
-      # valid? and the insert raised. Reachable through POST /api/provision.
+      # Same varchar(255). Crontab parses an over-long expression happily, so
+      # without this guard the changeset says valid? and the insert raises.
+      # Reachable through POST /api/provision.
       expression = "*/1 " <> String.duplicate("1,", 130) <> "1 * * *"
       assert String.length(expression) > 255
 

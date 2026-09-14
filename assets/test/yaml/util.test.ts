@@ -339,9 +339,7 @@ describe('convertWorkflowStateToSpec', () => {
 
     // The server writes the canonical spec and the CLI reads it back, so a
     // key that differs by one hyphen is a different job. ExportUtils.hyphenate/1
-    // replaces each single space, so two spaces give two hyphens. This used to
-    // collapse runs of whitespace and disagreed with the server on exactly
-    // that input.
+    // replaces each single space, so two spaces give two hyphens.
     test('one space, one hyphen, matching the server', () => {
       const spec = specFor(['a  b', 'one two', 'trailing ']);
 
@@ -351,14 +349,14 @@ describe('convertWorkflowStateToSpec', () => {
     });
 
     // The server refuses this pair rather than exporting a spec with one job
-    // missing; the browser used to keep the last silently.
+    // missing.
     test('refuses two job names that hyphenate to the same key', () => {
       expect(() => specFor(['a b', 'a-b'])).toThrow(/Duplicate job name/);
     });
 
-    // A job named `__proto__` assigned onto a plain object ran the prototype
-    // setter instead of adding a key, so the job silently vanished from the
-    // spec and the collision check never saw it.
+    // A job named `__proto__` assigned onto a plain object runs the prototype
+    // setter instead of adding a key, so the job would vanish from the spec
+    // and the collision check would never see it.
     test('keeps a job named __proto__ in the spec', () => {
       const spec = specFor(['__proto__', 'ordinary']);
 
@@ -394,8 +392,8 @@ describe('convertWorkflowStateToSpec', () => {
 
 describe('convertWorkflowSpecToState prototype keys', () => {
   const specWith = (jobNames: string[]): WorkflowSpec => {
-    // Null-prototype here too, or the test helper hits the same setter the
-    // code under test used to and never builds the case it means to.
+    // Null-prototype here too, or the test helper hits the prototype setter
+    // itself and never builds the case it means to.
     const jobs = Object.create(null) as Record<string, unknown>;
     jobNames.forEach(name => {
       jobs[name] = {
@@ -414,8 +412,8 @@ describe('convertWorkflowSpecToState prototype keys', () => {
   };
 
   test('keeps a job keyed __proto__ on the way in', () => {
-    // Assigned onto a plain object this ran the prototype setter and the job
-    // never landed, so the state came back one job short.
+    // Assigned onto a plain object this runs the prototype setter and the job
+    // never lands, so the state comes back one job short.
     const state = convertWorkflowSpecToState(
       specWith(['__proto__', 'a', 'b', 'c', 'd', 'e'])
     );
@@ -432,8 +430,8 @@ describe('convertWorkflowSpecToState prototype keys', () => {
   });
 
   test('an edge naming a job that is not there still fails', () => {
-    // `toString` used to resolve through the prototype, so JobNotFoundError
-    // never fired and the edge pointed at nothing.
+    // On a plain object `toString` resolves through the prototype, so
+    // JobNotFoundError would never fire and the edge would point at nothing.
     const spec = specWith(['real']) as unknown as {
       edges: Record<string, unknown>;
     };
@@ -468,9 +466,9 @@ describe('parseWorkflowYAML duplicate detection', () => {
       'edges: {}',
     ].join('\n');
 
-  // The export side compares hyphenated keys. Comparing raw names here let a
-  // spec holding both import cleanly and then throw on the way back out,
-  // leaving a workflow that could not be exported.
+  // The export side compares hyphenated keys. Comparing raw names here would
+  // let a spec holding both import cleanly and then throw on the way back out,
+  // leaving a workflow that cannot be exported.
   test('refuses two names that hyphenate to the same key', () => {
     expect(() => parseWorkflowYAML(yamlWith(['a b', 'a-b']))).toThrow(
       /Duplicate job name/

@@ -111,8 +111,8 @@ defmodule Lightning.ValidatorsTest do
     end
 
     test "a run of them is caught, not just one" do
-      # A per-grapheme check used to fuse a joiner-led run into one cluster and
-      # miss it.
+      # A per-grapheme check fuses a joiner-led run into one cluster and misses
+      # it.
       assert Validators.invisible_only?("\u{200D}\u{200D}")
       assert Validators.invisible_only?("\u{200B}\u{FEFF}\u{00AD}\u{FE0F}")
       assert Validators.invisible_only?(String.duplicate("\u{200D}", 20))

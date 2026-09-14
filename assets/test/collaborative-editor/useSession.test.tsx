@@ -18,9 +18,9 @@ import {
   useSession,
 } from '../../js/collaborative-editor/hooks/useSession';
 import type { SessionStoreInstance } from '../../js/collaborative-editor/stores/createSessionStore';
-import { createSessionStore } from '../../js/collaborative-editor/stores/createSessionStore';
 
 import { SessionContext } from '../../js/collaborative-editor/contexts/SessionProvider';
+import { createTestSessionStore } from './__helpers__/sessionStoreHelpers';
 import { createMockSocket } from './mocks/phoenixSocket';
 
 // =============================================================================
@@ -32,7 +32,7 @@ import { createMockSocket } from './mocks/phoenixSocket';
  * Returns both the wrapper and the store instance for test manipulation
  */
 function createWrapper() {
-  const store = createSessionStore();
+  const store = createTestSessionStore();
   const mockSocket = createMockSocket();
 
   // Initialize the session store
@@ -58,7 +58,7 @@ function createWrapper() {
  * Useful for testing pre-initialization state
  */
 function createUninitializedWrapper() {
-  const store = createSessionStore();
+  const store = createTestSessionStore();
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <SessionContext.Provider

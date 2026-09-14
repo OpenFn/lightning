@@ -6,8 +6,7 @@ defmodule Lightning.CollectionsTest do
   alias Lightning.Collections.Item
 
   describe "Item.changeset/2 key width" do
-    # Width, not a null byte, so this is separate from the Collections jsonb
-    # work still outstanding.
+    # Key width only. Null bytes in item keys are not covered here.
     test "an over-long key is a changeset error, not a 22001" do
       collection = insert(:collection)
 

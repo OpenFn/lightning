@@ -276,8 +276,8 @@ describe('ChatInput', () => {
   describe('Message Length', () => {
     const type = async (text: string) => {
       const textarea = screen.getByPlaceholderText('Ask me anything...');
-      // fireEvent, not userEvent: typing ten thousand characters one keystroke
-      // at a time takes minutes.
+      // fireEvent rather than userEvent, since typing ten thousand characters
+      // one keystroke at a time takes minutes.
       fireEvent.change(textarea, { target: { value: text } });
     };
 
@@ -292,6 +292,11 @@ describe('ChatInput', () => {
       render(<ChatInput />);
       await type('x'.repeat(9600));
 
+      // The comma grouping comes from the locale vitest.config.ts pins for the
+      // run, not from the component. ChatInput formats with the viewer's own
+      // locale, so a real en-ZA or de-DE user sees "9 600" or "9.600". If this
+      // assertion fails on your machine the locale pin is not in effect. Do not
+      // fix it by passing a fixed locale to `toLocaleString()` in the component.
       expect(screen.getByTestId('chat-input-length')).toHaveTextContent(
         '9,600 / 10,000'
       );

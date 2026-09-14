@@ -3,7 +3,7 @@ defmodule Lightning.ExportUtils.ScalarTest do
 
   alias Lightning.ExportUtils.Scalar
 
-  # The shapes the export used to emit bare. Anything matching these has to
+  # The shapes the export has always emitted bare. Anything matching these has to
   # keep coming out byte for byte the same, otherwise every customer repo that
   # tracks a project spec picks up a diff.
   @old_value_regex ~r/\A[a-zA-Z0-9][a-zA-Z0-9_\-@\.> ]*[a-zA-Z0-9]\z/
@@ -139,7 +139,7 @@ defmodule Lightning.ExportUtils.ScalarTest do
   end
 
   describe "YAML typed lookalikes" do
-    # Narrowed in #4577 to what yamerl and yaml@2.7.1 actually resolve.
+    # Only what yamerl and the npm yaml parser actually resolve.
     @booleans_and_null ~w(true True TRUE false False FALSE null Null NULL ~)
 
     @integers ~w(0 7 08 2026 +5 -5 0x1F 0xff 0o17 007)
@@ -148,8 +148,8 @@ defmodule Lightning.ExportUtils.ScalarTest do
       1.0 0.5 .5 1e3 1E3 1.5e-3 -1.5 .inf .Inf .INF -.Inf +.inf .nan .NaN .NAN
     )
 
-    # Neither parser resolves any of these, in either position, and every one
-    # was a legal job name under the charset rule this branch removed.
+    # Neither parser resolves any of these, in either position, so quoting
+    # them would only cost a diff.
     @not_typed ~w(
       y Y n N yes Yes YES no No NO on On ON off Off OFF
       1_000 0b1010 1:30 0X1F 0O17
@@ -220,9 +220,9 @@ defmodule Lightning.ExportUtils.ScalarTest do
 
   describe "the trailing newline hole in the old regexes" do
     test "a trailing newline no longer slips through as a bare scalar" do
-      # The old regexes were anchored with ^ and $, and $ matches before a
-      # newline at the end of the subject, so a trailing newline was emitted
-      # bare and injected a blank line into the spec.
+      # A regex anchored with ^ and $ still matches before a newline at the end
+      # of the subject, so a body ending in one would go out bare and inject a
+      # blank line into the spec.
       assert Regex.match?(
                ~r/^[a-zA-Z0-9][a-zA-Z0-9_\-@\.> ]*[a-zA-Z0-9]$/,
                "workflow 1\n"
@@ -385,7 +385,7 @@ defmodule Lightning.ExportUtils.ScalarTest do
       ] ++ byte_compat_corpus()
   end
 
-  # A deterministic sweep of the alphabet the old regexes allowed, so the byte
+  # A deterministic sweep of the alphabet the bare shapes allow, so the byte
   # compatibility claim is checked against more than a handful of examples.
   defp byte_compat_corpus do
     alphanumeric = Enum.concat([?a..?z, ?A..?Z, ?0..?9])
@@ -459,8 +459,8 @@ defmodule Lightning.ExportUtils.ScalarTest do
 
   describe "typed?/1 corpus (what the parsers actually resolve)" do
     # Every entry here was measured against both parsers this project ships
-    # against, as a value and as a key: yamerl through YamlElixir, and
-    # yaml@2.7.1 in assets/node_modules. Do not add to @resolved without
+    # against, as a value and as a key: yamerl through YamlElixir, and the
+    # yaml package in assets/node_modules. Do not add to @resolved without
     # running the string through both first, and do not move anything out of
     # @plain without doing the same. Over-quoting is not free: every one of
     # these is a legal name, and a quoting change is a diff in every synced
@@ -583,9 +583,9 @@ defmodule Lightning.ExportUtils.ScalarTest do
 
   describe "encode_block/2" do
     # The corpus below was round-tripped through both parsers this project
-    # ships against, yamerl and yaml@2.7.1. Before #4577 the leading-space, CR
-    # and multiple-trailing-newline rows all lost data or failed to parse
-    # (issue #2966).
+    # ships against, yamerl and the npm yaml package. The leading-space, CR and
+    # multiple-trailing-newline rows are the ones that lose data or fail to
+    # parse when the indicators are chosen wrongly.
     @block_cases [
       {"plain", "fn(state => state)"},
       {"two lines", "line1\nline2"},
@@ -600,8 +600,8 @@ defmodule Lightning.ExportUtils.ScalarTest do
       {"empty", ""},
       {"two trailing newlines", "a\n\n"},
       # Crossed shapes. The indicator and the chomping indicator are chosen
-      # independently, so a body that needs both used to get only the first
-      # and lose the newlines the second exists to keep.
+      # independently. A body that needs both must not get only the first and
+      # lose the newlines the second exists to keep.
       {"leading space and two trailing", "  indented\nnext\n\n"},
       {"leading space and three trailing", " x\n\n\n"},
       {"leading tab and two trailing", "\tx\n\n"},
@@ -686,8 +686,7 @@ defmodule Lightning.ExportUtils.ScalarTest do
     # test/fixtures/block_scalars.json is the one corpus both parsers see. This
     # half pins the encoder output and checks yamerl; assets/test/yaml/
     # blockScalars.test.ts parses the same documents with the npm parser, which
-    # no Elixir test can run and which disagreed with yamerl on the `|2` shape
-    # until #4577.
+    # no Elixir test can run.
     @fixture "test/fixtures/block_scalars.json"
 
     setup do

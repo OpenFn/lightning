@@ -1048,8 +1048,8 @@ defmodule Lightning.Projects.SandboxesTest do
     end
 
     test "deletion-shaped merge options passed by a caller are ignored" do
-      # A stale or crafted caller might still send the old deletion options;
-      # the merge must keep the collection regardless, even for an owner.
+      # A stale or crafted caller might still send deletion options. The merge
+      # must keep the collection regardless, even for an owner.
       assert "target-only" in merge_target_only_collection(
                :owner,
                fn collection ->

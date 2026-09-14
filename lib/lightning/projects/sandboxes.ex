@@ -354,10 +354,8 @@ defmodule Lightning.Projects.Sandboxes do
       ) do
     selected_credential_ids = Map.get(opts, :selected_credential_ids, [])
 
-    # The merge creates every collection the target is missing except the
-    # names the caller explicitly skipped. A malformed skip list raises
-    # rather than silently changing what gets created. There is no deletion
-    # half: a merge never deletes target collections, whatever options a
+    # A malformed skip list raises rather than silently changing what gets
+    # created. A merge never deletes target collections, whatever options a
     # caller passes.
     skip_collection_names =
       validate_skip_collections!(Map.get(opts, :skip_collections, []))
@@ -1540,9 +1538,8 @@ defmodule Lightning.Projects.Sandboxes do
             "got: #{inspect(other)}"
   end
 
-  # Names that exist in the source but not the target. The single source of
-  # truth for both the merge-time sync and the preview the merge screen
-  # shows.
+  # Shared by the merge-time sync and the merge screen's preview so the two
+  # cannot disagree.
   defp source_only_collection_names(source, target) do
     source_names = source |> Collections.list_project_collections() |> names()
     target_names = target |> Collections.list_project_collections() |> names()

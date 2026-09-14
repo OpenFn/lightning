@@ -112,7 +112,7 @@ defmodule Lightning.Workflows.Workflow do
       "workflow name can't contain control characters"
     )
     # positions is written straight into the workflow_snapshots.positions jsonb,
-    # keys and all, and Postgres refuses a NUL anywhere inside jsonb (#4893).
+    # keys and all, and Postgres refuses a NUL anywhere inside jsonb.
     |> Validators.validate_no_null_bytes_deep(
       :positions,
       "positions can't contain a null byte"

@@ -13,6 +13,7 @@ import { useContext } from 'react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 
+import * as adaptorsApi from '../../../js/collaborative-editor/api/adaptors';
 import {
   StoreContext,
   StoreProvider,
@@ -34,7 +35,10 @@ import {
 // TEST SETUP & FIXTURES
 // =============================================================================
 
+vi.mock('../../../js/collaborative-editor/api/adaptors');
+
 const mockUseSession = vi.spyOn(useSessionModule, 'useSession');
+const getAdaptorCatalogueMock = vi.mocked(adaptorsApi.getAdaptorCatalogue);
 
 const createMockSessionState = (
   overrides?: Partial<SessionState>
@@ -75,6 +79,8 @@ const createMockUserData = () => ({
 describe('StoreProvider', () => {
   beforeEach(() => {
     mockUseSession.mockReturnValue(createMockSessionState());
+    getAdaptorCatalogueMock.mockReset();
+    getAdaptorCatalogueMock.mockResolvedValue({ data: [] });
   });
 
   afterEach(() => {
@@ -118,6 +124,23 @@ describe('StoreProvider', () => {
       expect(sessionContextState.project).toBeNull();
       expect(sessionContextState.config).toBeNull();
       expect(sessionContextState.lastUpdated).toBeNull();
+    });
+  });
+
+  // ===========================================================================
+  // ADAPTOR CATALOGUE FETCH-ON-MOUNT TESTS
+  // ===========================================================================
+
+  describe('adaptor catalogue fetch', () => {
+    test('fetches the catalogue over HTTP on mount, independent of channel connection', () => {
+      // Default beforeEach session state has no provider/channel.
+      render(
+        <StoreProvider>
+          <div />
+        </StoreProvider>
+      );
+
+      expect(getAdaptorCatalogueMock).toHaveBeenCalledTimes(1);
     });
   });
 

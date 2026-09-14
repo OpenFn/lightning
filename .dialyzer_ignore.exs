@@ -2,7 +2,6 @@
   # `task_worker.ex` needed a skip here until `flags: [:no_opaque]` in mix.exs
   # covered it. Restore it if that flag goes.
   {"lib/lightning/auth_providers/well_known.ex", :invalid_contract},
-  {"lib/mix/tasks/install_schemas.ex", :invalid_contract},
 
   # httpoison 3.0.0 typespec bug, surfaced by hackney 4. Hackney 4 moved to a
   # process-per-connection design, so a client handle is now a pid where it used

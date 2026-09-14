@@ -8,11 +8,13 @@ defmodule LightningWeb.WorkflowChannelBroadcastTest do
   """
   use LightningWeb.ChannelCase
 
+  import Lightning.AdaptorTestHelpers
   import Lightning.CollaborationHelpers
   import Lightning.Factories
   import Mox
 
   setup :verify_on_exit!
+  setup :isolated_adaptors
 
   setup do
     Mox.stub(Lightning.MockConfig, :check_flag?, fn
@@ -24,6 +26,8 @@ defmodule LightningWeb.WorkflowChannelBroadcastTest do
     Mox.set_mox_global(LightningMock)
     # Stub the broadcast calls that save_workflow makes
     Mox.stub(LightningMock, :broadcast, fn _topic, _message -> :ok end)
+
+    Lightning.AdaptorTestHelpers.ensure_adaptor("@openfn/language-common")
 
     user = insert(:user)
     project = insert(:project, project_users: [%{user: user, role: :owner}])

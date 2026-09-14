@@ -99,7 +99,8 @@ describe('WorkflowStore - Save Workflow', () => {
         id: 'workflow-123',
         name: 'Test Workflow',
         lock_version: null, // Original value at time of save
-      })
+      }),
+      75_000
     );
   });
 
@@ -235,7 +236,8 @@ describe('WorkflowStore - Save Workflow', () => {
         positions: {
           'job-1': { x: 100, y: 200 },
         },
-      })
+      }),
+      75_000
     );
   });
 

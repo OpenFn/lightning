@@ -1,9 +1,6 @@
 defmodule LightningWeb.WorkflowChannel do
   @moduledoc """
-  Phoenix Channel for handling binary Yjs collaboration messages.
-
-  Unlike LiveView events, Phoenix Channels properly support binary data
-  transmission without JSON serialization.
+  Phoenix Channel for binary Yjs collaboration messages.
   """
   use LightningWeb, :channel
 
@@ -32,7 +29,6 @@ defmodule LightningWeb.WorkflowChannel do
   alias Lightning.VersionControl
   alias Lightning.VersionControl.VersionControlUsageLimiter
   alias Lightning.Workflows
-  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Snapshot
   alias Lightning.Workflows.WorkflowRelease
   alias Lightning.Workflows.WorkflowReleases
@@ -92,6 +88,8 @@ defmodule LightningWeb.WorkflowChannel do
         "workflow:collaborate:#{workflow_id}"
       )
 
+      Lightning.Adaptors.subscribe_to_updates()
+
       {:ok,
        assign(socket,
          workflow_id: workflow_id,
@@ -114,46 +112,6 @@ defmodule LightningWeb.WorkflowChannel do
 
   def join("workflow:collaborate:" <> _workflow_id, _params, _socket) do
     {:error, %{reason: "invalid parameters. project_id and action are required"}}
-  end
-
-  @impl true
-  def handle_in("request_adaptors", _payload, socket) do
-    async_task(socket, "request_adaptors", fn ->
-      adaptors = Lightning.AdaptorRegistry.all()
-      %{adaptors: adaptors}
-    end)
-  end
-
-  @impl true
-  def handle_in("request_project_adaptors", _payload, socket) do
-    project = socket.assigns.project
-
-    async_task(socket, "request_project_adaptors", fn ->
-      project_adaptor_names =
-        from(j in Job,
-          join: w in assoc(j, :workflow),
-          where: w.project_id == ^project.id,
-          select: j.adaptor,
-          distinct: true
-        )
-        |> Lightning.Repo.all()
-        |> Enum.sort()
-
-      all_adaptors = Lightning.AdaptorRegistry.all()
-
-      project_adaptors =
-        all_adaptors
-        |> Enum.filter(fn adaptor ->
-          Enum.any?(project_adaptor_names, fn used_adaptor ->
-            String.starts_with?(used_adaptor, adaptor.name)
-          end)
-        end)
-
-      %{
-        project_adaptors: project_adaptors,
-        all_adaptors: all_adaptors
-      }
-    end)
   end
 
   @impl true
@@ -331,49 +289,28 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @doc """
-  Handles explicit workflow save requests from the collaborative editor.
+  Saves the current Y.Doc state through the Session.
 
-  The save operation:
-  1. Asks Session to extract and save the current Y.Doc state
-  2. Session handles all Y.Doc interaction internally
-  3. Returns success/error to the client
+  The reply is deferred. `Session.save_workflow/2` may wait on the adaptor
+  catalogue's first load, so the call runs off the channel process and
+  the reply goes out with `Phoenix.Channel.reply/2` when it finishes.
 
-  Note: By the time this message is processed, all prior Y.js sync messages
-  have been processed due to Phoenix Channel's synchronous per-socket handling.
-
-  Success response: {:ok, %{saved_at: DateTime, lock_version: integer}}
-  Error response: {:error, %{errors: map, type: string}}
+  Success: `{:ok, %{saved_at: DateTime, lock_version: integer}}`
+  Error: `{:error, %{errors: map, type: string}}`
   """
   @impl true
   def handle_in("save_workflow", _params, socket) do
-    session_pid = socket.assigns.session_pid
-    user = socket.assigns.current_user
+    case authorize_content_edit(socket) do
+      :ok ->
+        session_pid = socket.assigns.session_pid
+        user = socket.assigns.current_user
 
-    with :ok <- authorize_content_edit(socket),
-         {:ok, workflow} <- Session.save_workflow(session_pid, user) do
-      # Broadcast the new lock_version to all users in the channel
-      # so they can update their latestSnapshotLockVersion in SessionContextStore
-      broadcast_from!(socket, "workflow_saved", %{
-        latest_snapshot_lock_version: workflow.lock_version,
-        workflow: workflow
-      })
+        defer_reply(socket, :save_workflow_reply, fn ->
+          Session.save_workflow(session_pid, user)
+        end)
 
-      # The workflow now has a DB row, so this channel is no longer editing a
-      # brand-new (:new) workflow. No client rejoin happens after a first save,
-      # so we must self-promote the cached kind + struct here; otherwise
-      # request_versions / get_context keep short-circuiting to empty for the
-      # rest of this session (until a full page refresh re-joins as :existing).
-      socket = assign(socket, workflow: workflow, workflow_kind: :existing)
-
-      {:reply,
-       {:ok,
-        %{
-          saved_at: workflow.updated_at,
-          lock_version: workflow.lock_version,
-          workflow: workflow
-        }}, socket}
-    else
-      error -> workflow_error_reply(socket, error)
+      error ->
+        {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -432,7 +369,7 @@ defmodule LightningWeb.WorkflowChannel do
         {:reply, {:ok, %{sandboxes: sandboxes}}, socket}
 
       error ->
-        workflow_error_reply(socket, error)
+        {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -473,7 +410,7 @@ defmodule LightningWeb.WorkflowChannel do
           dataclip_id: starting_dataclip_id
         }}, socket}
     else
-      error -> workflow_error_reply(socket, error)
+      error -> {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -563,8 +500,8 @@ defmodule LightningWeb.WorkflowChannel do
 
       {:reply, {:ok, %{lock_version: restored.lock_version}}, socket}
     else
-      nil -> workflow_error_reply(socket, {:error, :version_not_found})
-      error -> workflow_error_reply(socket, error)
+      nil -> {:reply, workflow_error_reply({:error, :version_not_found}), socket}
+      error -> {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -584,8 +521,8 @@ defmodule LightningWeb.WorkflowChannel do
          {:ok, result} <- Projects.promote_workflow(workflow, user) do
       {:reply, {:ok, result}, socket}
     else
-      nil -> workflow_error_reply(socket, {:error, :not_a_sandbox})
-      error -> workflow_error_reply(socket, error)
+      nil -> {:reply, workflow_error_reply({:error, :not_a_sandbox}), socket}
+      error -> {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -606,8 +543,8 @@ defmodule LightningWeb.WorkflowChannel do
          {:ok, _scheduled} <- Sandboxes.schedule_sandbox_deletion(sandbox, user) do
       {:reply, {:ok, %{parent_project_id: parent.id}}, socket}
     else
-      nil -> workflow_error_reply(socket, {:error, :not_a_sandbox})
-      error -> workflow_error_reply(socket, error)
+      nil -> {:reply, workflow_error_reply({:error, :not_a_sandbox}), socket}
+      error -> {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -624,47 +561,24 @@ defmodule LightningWeb.WorkflowChannel do
 
   @impl true
   def handle_in("save_and_sync", %{"commit_message" => commit_message}, socket) do
-    session_pid = socket.assigns.session_pid
-    user = socket.assigns.current_user
-    project = socket.assigns.project
+    case authorize_content_edit(socket) do
+      :ok ->
+        session_pid = socket.assigns.session_pid
+        user = socket.assigns.current_user
+        project = socket.assigns.project
 
-    with :ok <- authorize_content_edit(socket),
-         {:ok, workflow} <- Session.save_workflow(session_pid, user),
-         repo_connection when not is_nil(repo_connection) <-
-           VersionControl.get_repo_connection_for_project(project.id),
-         :ok <- VersionControl.initiate_sync(repo_connection, commit_message) do
-      broadcast_from!(socket, "workflow_saved", %{
-        latest_snapshot_lock_version: workflow.lock_version,
-        workflow: workflow
-      })
-
-      {:reply,
-       {:ok,
-        %{
-          saved_at: workflow.updated_at,
-          lock_version: workflow.lock_version,
-          repo: repo_connection.repo,
-          workflow: workflow
-        }}, socket}
-    else
-      nil ->
-        {:reply,
-         {:error,
-          %{
-            errors: %{base: ["No GitHub connection configured for this project"]},
-            type: "github_sync_error"
-          }}, socket}
-
-      {:error, reason} when is_binary(reason) ->
-        {:reply,
-         {:error,
-          %{
-            errors: %{base: [reason]},
-            type: "github_sync_error"
-          }}, socket}
+        defer_reply(socket, :save_and_sync_reply, fn ->
+          with {:ok, workflow} <- Session.save_workflow(session_pid, user),
+               repo_connection when not is_nil(repo_connection) <-
+                 VersionControl.get_repo_connection_for_project(project.id),
+               :ok <-
+                 VersionControl.initiate_sync(repo_connection, commit_message) do
+            {:ok, workflow, repo_connection}
+          end
+        end)
 
       error ->
-        workflow_error_reply(socket, error)
+        {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -682,7 +596,7 @@ defmodule LightningWeb.WorkflowChannel do
           workflow_id: workflow.id
         }}, socket}
     else
-      error -> workflow_error_reply(socket, error)
+      error -> {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -895,7 +809,7 @@ defmodule LightningWeb.WorkflowChannel do
 
       {:reply, {:ok, %{template: render_workflow_template(template)}}, socket}
     else
-      error -> workflow_error_reply(socket, error)
+      error -> {:reply, workflow_error_reply(error), socket}
     end
   end
 
@@ -969,6 +883,15 @@ defmodule LightningWeb.WorkflowChannel do
     {:reply, {:ok, %{}}, socket}
   end
 
+  # A stale client tab may still send an event removed in a later deploy.
+  # Replying with an error instead of raising FunctionClauseError keeps this
+  # client's channel process and connection alive.
+  @impl true
+  def handle_in(event, _payload, socket) do
+    warn_unhandled_message("handle_in", event)
+    {:reply, {:error, %{reason: "unknown event: #{event}"}}, socket}
+  end
+
   @impl true
   def handle_info({:yjs, chunk}, socket) do
     push(socket, "yjs", {:binary, chunk})
@@ -982,6 +905,99 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
+  def handle_info({:save_workflow_reply, ref, {:ok, workflow}}, socket) do
+    # broadcast_from! skips the saving client, which already gets its
+    # lock_version through the reply below; everyone else needs this to
+    # update their latestSnapshotLockVersion in SessionContextStore.
+    broadcast_from!(socket, "workflow_saved", %{
+      latest_snapshot_lock_version: workflow.lock_version,
+      workflow: workflow
+    })
+
+    reply(
+      ref,
+      {:ok,
+       %{
+         saved_at: workflow.updated_at,
+         lock_version: workflow.lock_version,
+         workflow: workflow
+       }}
+    )
+
+    # The workflow now has a DB row, so this channel is no longer editing a
+    # brand-new (:new) workflow. No client rejoin happens after a first save,
+    # so we must self-promote the cached kind + struct here; otherwise
+    # request_versions / get_context keep short-circuiting to empty for the
+    # rest of this session (until a full page refresh re-joins as :existing).
+    {:noreply, assign(socket, workflow: workflow, workflow_kind: :existing)}
+  end
+
+  @impl true
+  def handle_info({:save_workflow_reply, ref, error}, socket) do
+    reply(ref, workflow_error_reply(error))
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
+        {:save_and_sync_reply, ref, {:ok, workflow, repo_connection}},
+        socket
+      ) do
+    broadcast_from!(socket, "workflow_saved", %{
+      latest_snapshot_lock_version: workflow.lock_version,
+      workflow: workflow
+    })
+
+    reply(
+      ref,
+      {:ok,
+       %{
+         saved_at: workflow.updated_at,
+         lock_version: workflow.lock_version,
+         repo: repo_connection.repo,
+         workflow: workflow
+       }}
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:save_and_sync_reply, ref, nil}, socket) do
+    reply(
+      ref,
+      {:error,
+       %{
+         errors: %{base: ["No GitHub connection configured for this project"]},
+         type: "github_sync_error"
+       }}
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:save_and_sync_reply, ref, {:error, reason}}, socket)
+      when is_binary(reason) do
+    reply(
+      ref,
+      {:error,
+       %{
+         errors: %{base: [reason]},
+         type: "github_sync_error"
+       }}
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:save_and_sync_reply, ref, error}, socket) do
+    reply(ref, workflow_error_reply(error))
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_info(%{event: "presence_diff", payload: _diff}, socket) do
     {:noreply, socket}
   end
@@ -990,6 +1006,12 @@ defmodule LightningWeb.WorkflowChannel do
   def handle_info(%{event: "credentials_updated", payload: credentials}, socket) do
     # Forward credential updates from PubSub to connected channel clients
     push(socket, "credentials_updated", credentials)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(%{event: "adaptors_updated", payload: payload}, socket) do
+    push(socket, "adaptors_updated", payload)
     {:noreply, socket}
   end
 
@@ -1182,12 +1204,12 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
+  # A PubSub broadcast for an event type removed in a later deploy can still
+  # arrive here. Logging instead of raising FunctionClauseError keeps this
+  # client's channel process and connection alive.
   @impl true
   def handle_info(message, socket) do
-    Logger.warning(fn ->
-      "WorkflowChannel: unhandled message #{inspect(message, limit: 5)} " <>
-        "on workflow #{socket.assigns[:workflow_id]}"
-    end)
+    warn_unhandled_message("handle_info", unhandled_message_type(message))
 
     {:noreply, socket}
   end
@@ -1240,32 +1262,73 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp refresh_lifecycle_from_broadcast(socket, _payload), do: socket
 
+  # Unlinked on purpose. A GenServer.call timeout or dead target exits, and
+  # a linked task would take the channel down. `catch :exit` turns it into
+  # an error reply instead.
   defp async_task(socket, event, task_fn) do
     channel_pid = self()
     socket_ref = socket_ref(socket)
 
-    Task.start_link(fn ->
-      try do
-        result = task_fn.()
+    Task.start(fn ->
+      result =
+        try do
+          {:ok, task_fn.()}
+        rescue
+          error ->
+            Logger.error("Failed to handle #{event}: #{inspect(error)}")
+            {:error, %{reason: "failed to handle #{event}"}}
+        catch
+          :exit, reason ->
+            Logger.error("Failed to handle #{event}: #{inspect(reason)}")
+            {:error, %{reason: "failed to handle #{event}"}}
+        end
 
-        send(
-          channel_pid,
-          {:async_reply, socket_ref, event, {:ok, result}}
-        )
-      rescue
-        error ->
-          Logger.error("Failed to handle #{event}: #{inspect(error)}")
-
-          send(
-            channel_pid,
-            {:async_reply, socket_ref, event,
-             {:error, %{reason: "failed to handle #{event}"}}}
-          )
-      end
+      send(channel_pid, {:async_reply, socket_ref, event, result})
     end)
 
     {:noreply, socket}
   end
+
+  # As `async_task/3`, but the reply is post-processed by the `handle_info/2`
+  # clause for `tag`.
+  defp defer_reply(socket, tag, task_fn) do
+    channel_pid = self()
+    ref = socket_ref(socket)
+
+    Task.start(fn ->
+      result =
+        try do
+          task_fn.()
+        rescue
+          error ->
+            Logger.error("Failed to handle #{tag}: #{inspect(error)}")
+            {:error, :internal_error}
+        catch
+          :exit, reason ->
+            Logger.error("Failed to handle #{tag}: #{inspect(reason)}")
+            {:error, :internal_error}
+        end
+
+      send(channel_pid, {tag, ref, result})
+    end)
+
+    {:noreply, socket}
+  end
+
+  # Only the event name goes to the log and Sentry. The full message or
+  # payload may carry user or workflow data.
+  defp warn_unhandled_message(kind, event) do
+    Logger.warning("WorkflowChannel: unhandled #{kind} event: #{event}")
+
+    Sentry.capture_message(
+      "WorkflowChannel: unhandled #{kind} event: #{event}",
+      level: :warning
+    )
+  end
+
+  defp unhandled_message_type(%{event: event}), do: event
+  defp unhandled_message_type(%struct{}), do: inspect(struct)
+  defp unhandled_message_type(_msg), do: "unrecognised"
 
   defp handle_async_event("request_run_steps", socket_ref, reply) do
     unwrapped_reply = unwrap_run_steps_reply(reply)
@@ -1274,8 +1337,6 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp handle_async_event(event, socket_ref, reply)
        when event in [
-              "request_adaptors",
-              "request_project_adaptors",
               "request_credentials",
               "request_metadata",
               "request_current_user",
@@ -1614,173 +1675,158 @@ defmodule LightningWeb.WorkflowChannel do
     end
   end
 
-  # Private helper functions for save_workflow and reset_workflow
-
-  defp workflow_error_reply(socket, {:error, %{type: type, message: message}}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: [message]},
-        type: type
-      }}, socket}
+  # Returns the bare reply payload so both `handle_in` and the deferred
+  # `handle_info` clauses can use it.
+  defp workflow_error_reply({:error, %{type: type, message: message}}) do
+    {:error,
+     %{
+       errors: %{base: [message]},
+       type: type
+     }}
   end
 
-  defp workflow_error_reply(socket, {:error, :starting_dataclip_invalid_json}) do
-    starting_dataclip_error(socket, "The input you reviewed is not valid JSON.")
+  defp workflow_error_reply({:error, :starting_dataclip_invalid_json}) do
+    starting_dataclip_error("The input you reviewed is not valid JSON.")
   end
 
-  defp workflow_error_reply(
-         socket,
-         {:error, :starting_dataclip_not_an_object}
-       ) do
+  defp workflow_error_reply({:error, :starting_dataclip_not_an_object}) do
+    starting_dataclip_error("The input you reviewed must be a JSON object.")
+  end
+
+  defp workflow_error_reply({:error, :starting_dataclip_too_large}) do
     starting_dataclip_error(
-      socket,
-      "The input you reviewed must be a JSON object."
-    )
-  end
-
-  defp workflow_error_reply(socket, {:error, :starting_dataclip_too_large}) do
-    starting_dataclip_error(
-      socket,
       "The input you reviewed is too large to copy into a sandbox."
     )
   end
 
-  defp workflow_error_reply(socket, {:error, :invalid_starting_dataclip}) do
-    starting_dataclip_error(socket, "The input you reviewed could not be read.")
+  defp workflow_error_reply({:error, :invalid_starting_dataclip}) do
+    starting_dataclip_error("The input you reviewed could not be read.")
   end
 
-  defp workflow_error_reply(socket, {:error, :starting_dataclip_not_found}) do
+  defp workflow_error_reply({:error, :starting_dataclip_not_found}) do
     starting_dataclip_error(
-      socket,
       "That saved input is no longer available in this project."
     )
   end
 
-  defp workflow_error_reply(socket, {:error, :workflow_deleted}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: ["This workflow has been deleted"]},
-        type: "workflow_deleted"
-      }}, socket}
+  defp workflow_error_reply({:error, :workflow_deleted}) do
+    {:error,
+     %{
+       errors: %{base: ["This workflow has been deleted"]},
+       type: "workflow_deleted"
+     }}
   end
 
-  defp workflow_error_reply(socket, {:error, :deserialization_failed}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: ["Failed to extract workflow data from editor"]},
-        type: "deserialization_error"
-      }}, socket}
+  defp workflow_error_reply({:error, :deserialization_failed}) do
+    {:error,
+     %{
+       errors: %{base: ["Failed to extract workflow data from editor"]},
+       type: "deserialization_error"
+     }}
   end
 
-  defp workflow_error_reply(socket, {:error, :internal_error}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: ["An internal error occurred"]},
-        type: "internal_error"
-      }}, socket}
+  defp workflow_error_reply({:error, :internal_error}) do
+    {:error,
+     %{
+       errors: %{base: ["An internal error occurred"]},
+       type: "internal_error"
+     }}
   end
 
-  defp workflow_error_reply(socket, {:error, :nesting_too_deep}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{
-          base: ["This project is nested too deeply to create another sandbox"]
-        },
-        type: "nesting_too_deep"
-      }}, socket}
+  defp workflow_error_reply({:error, :nesting_too_deep}) do
+    {:error,
+     %{
+       errors: %{
+         base: ["This project is nested too deeply to create another sandbox"]
+       },
+       type: "nesting_too_deep"
+     }}
   end
 
-  defp workflow_error_reply(socket, {:error, :merge_failed}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: ["Could not promote this workflow. Please try again."]},
-        type: "merge_error"
-      }}, socket}
+  defp workflow_error_reply({:error, :merge_failed}) do
+    {:error,
+     %{
+       errors: %{base: ["Could not promote this workflow. Please try again."]},
+       type: "merge_error"
+     }}
   end
 
-  defp workflow_error_reply(socket, {:error, :not_a_sandbox}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{
-          base: ["This workflow is not in a sandbox and can't be promoted."]
-        },
-        type: "invalid_state"
-      }}, socket}
+  defp workflow_error_reply({:error, :not_a_sandbox}) do
+    {:error,
+     %{
+       errors: %{
+         base: ["This workflow is not in a sandbox and can't be promoted."]
+       },
+       type: "invalid_state"
+     }}
   end
 
-  defp workflow_error_reply(socket, {:error, :snapshot_failed}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: ["An internal error occurred"]},
-        type: "internal_error"
-      }}, socket}
+  defp workflow_error_reply({:error, :snapshot_failed}) do
+    {:error,
+     %{
+       errors: %{base: ["An internal error occurred"]},
+       type: "internal_error"
+     }}
   end
 
-  defp workflow_error_reply(
-         socket,
-         {:error, %Lightning.Extensions.Message{text: text}}
-       ) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: [text]},
-        type: "limit_error"
-      }}, socket}
+  defp workflow_error_reply({:error, :adaptor_catalogue_unavailable}) do
+    {:error,
+     %{
+       errors: %{
+         base: ["The adaptor catalogue is still loading. Try again shortly."]
+       },
+       type: "adaptor_catalogue_unavailable"
+     }}
   end
 
-  defp workflow_error_reply(socket, {:error, %Ecto.Changeset{} = changeset}) do
-    {:reply,
-     {:error,
-      %{
-        errors: format_changeset_errors(changeset),
-        type: determine_error_type(changeset)
-      }}, socket}
+  defp workflow_error_reply({:error, :workflow_moved_on}) do
+    {:error,
+     %{
+       errors: %{
+         base: ["Someone else saved this workflow. Try the restore again."]
+       },
+       type: "workflow_moved_on"
+     }}
   end
 
-  defp workflow_error_reply(socket, {:error, :workflow_moved_on}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{
-          base: ["Someone else saved this workflow. Try the restore again."]
-        },
-        type: "workflow_moved_on"
-      }}, socket}
+  defp workflow_error_reply({:error, :version_not_found}) do
+    {:error,
+     %{
+       errors: %{base: ["That version no longer exists"]},
+       type: "version_not_found"
+     }}
   end
 
-  defp workflow_error_reply(socket, {:error, :version_not_found}) do
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: ["That version no longer exists"]},
-        type: "version_not_found"
-      }}, socket}
+  defp workflow_error_reply({:error, %Lightning.Extensions.Message{text: text}}) do
+    {:error,
+     %{
+       errors: %{base: [text]},
+       type: "limit_error"
+     }}
+  end
+
+  defp workflow_error_reply({:error, %Ecto.Changeset{} = changeset}) do
+    {:error,
+     %{
+       errors: format_changeset_errors(changeset),
+       type: determine_error_type(changeset)
+     }}
   end
 
   # Last resort: never let an unexpected error reason crash the channel and drop
   # the user's socket. Log it and reply with a generic internal error.
-  defp workflow_error_reply(socket, error) do
+  defp workflow_error_reply(error) do
     Logger.warning("Unhandled workflow channel error: #{inspect(error)}")
 
-    {:reply,
-     {:error,
-      %{
-        errors: %{base: ["An internal error occurred"]},
-        type: "internal_error"
-      }}, socket}
+    {:error,
+     %{
+       errors: %{base: ["An internal error occurred"]},
+       type: "internal_error"
+     }}
   end
 
-  defp starting_dataclip_error(socket, message) do
-    {:reply, {:error, %{errors: %{base: [message]}, type: "validation_error"}},
-     socket}
+  defp starting_dataclip_error(message) do
+    {:error, %{errors: %{base: [message]}, type: "validation_error"}}
   end
 
   defp format_changeset_errors(changeset) do
@@ -1893,7 +1939,7 @@ defmodule LightningWeb.WorkflowChannel do
       {:reply, {:ok, %{lock_version: workflow.lock_version, workflow: workflow}},
        socket}
     else
-      error -> workflow_error_reply(socket, error)
+      error -> {:reply, workflow_error_reply(error), socket}
     end
   end
 
