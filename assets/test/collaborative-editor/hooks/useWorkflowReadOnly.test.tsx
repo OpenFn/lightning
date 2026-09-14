@@ -927,3 +927,64 @@ describe('useWorkflowReadOnly - Unsaved New Workflow', () => {
     });
   });
 });
+
+describe('useWorkflowReadOnly - what is on screen decides first', () => {
+  beforeEach(() => {
+    urlState.reset();
+  });
+
+  test('a pinned version of a live workflow blames the view, not the lifecycle', async () => {
+    // Switching to draft would not make the version on screen editable, so
+    // saying "this workflow is live, switch it to draft" answers a question
+    // nobody asked. The header also suppresses its read-only cue for the
+    // lifecycle reason, because the badge covers that, so letting the lifecycle
+    // win left this screen with nothing explaining itself at all.
+    urlState.setParams({ v: '1' });
+
+    const [wrapper, { mockChannel }] = createWrapper({
+      contentLocked: true,
+      workflowState: 'live',
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      (mockChannel as any)._test.emit(
+        'session_context',
+        createSessionContext({
+          permissions: mockPermissions,
+          content_locked: true,
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.reason).toBe('pinned_version');
+    });
+  });
+
+  test("a run's own view of a live workflow does too", async () => {
+    urlState.setParams({ as_run: 'run-1', run: 'run-1' });
+
+    const [wrapper, { mockChannel }] = createWrapper({
+      contentLocked: true,
+      workflowState: 'live',
+    });
+
+    const { result } = renderHook(() => useWorkflowReadOnly(), { wrapper });
+
+    act(() => {
+      (mockChannel as any)._test.emit(
+        'session_context',
+        createSessionContext({
+          permissions: mockPermissions,
+          content_locked: true,
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.reason).toBe('as_run');
+    });
+  });
+});

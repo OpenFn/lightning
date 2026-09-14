@@ -11,14 +11,13 @@ import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink } from './components/Breadcrumbs';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { DiscardChangesDialog } from './components/DiscardChangesDialog';
-import { PromotedNotice } from './components/PromotedNotice';
 import { Header } from './components/Header';
 import { LandingScreen } from './components/LandingScreen';
 import { LoadingBoundary } from './components/LoadingBoundary';
+import { PromotedNotice } from './components/PromotedNotice';
 import { RestoreVersionDialog } from './components/RestoreVersionDialog';
 import type { RestoreCost } from './components/RestoreVersionDialog';
 import { SnapshotVersionDropdown } from './components/SnapshotVersionDropdown';
-import { useVersionPicker } from './hooks/useVersionPicker';
 import { TemplateBrowserModalWrapper } from './components/TemplateBrowserModalWrapper';
 import { Toaster } from './components/ui/Toaster';
 import { VersionDebugLogger } from './components/VersionDebugLogger';
@@ -34,7 +33,6 @@ import { StoreProvider } from './contexts/StoreProvider';
 import { useActionLock } from './hooks/useActionLock';
 import { useHistoryCommands } from './hooks/useHistory';
 import {
-  useExperimentalFeatures,
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useLimits,
@@ -47,6 +45,7 @@ import {
   useUICommands,
 } from './hooks/useUI';
 import { useUnloadWarning } from './hooks/useUnloadWarning';
+import { useVersionPicker } from './hooks/useVersionPicker';
 import { useVersionSelect } from './hooks/useVersionSelect';
 import {
   useCreateWorkflowFlow,
@@ -123,7 +122,6 @@ export function BreadcrumbContent({
 
   useUnloadWarning();
   const canEditWorkflow = usePermissions()?.can_edit_workflow ?? false;
-  const experimentalFeatures = useExperimentalFeatures();
   const { restoreVersion, checkRestore } = useWorkflowActions();
 
   // Held here rather than in the dropdown, which closes as soon as Restore is
@@ -299,7 +297,10 @@ export function BreadcrumbContent({
     handleVersionSelect,
     handleVersionRestore,
     canEditWorkflow,
-    experimentalFeatures,
+    // Which picker is on screen decides which parameter a version switch
+    // writes, so a stale answer here writes `?release=N` where `?v=N` was
+    // meant, or the reverse: different content under the same number.
+    versionPicker,
   ]);
 
   // Hide header until the first save clears isNewWorkflow in the store.

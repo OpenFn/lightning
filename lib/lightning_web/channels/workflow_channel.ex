@@ -560,13 +560,24 @@ defmodule LightningWeb.WorkflowChannel do
 
       broadcast_workflow_saved(socket, restored)
 
-      socket = assign(socket, :workflow, restored)
-
       # The restoring client is excluded from the broadcast, and without this
       # its idea of the latest version stays behind: the version chip would
       # read as "you are on an old version" straight after a rollback, and the
       # dropdown would still offer Restore on the version now live.
-      push(socket, "session_context_updated", build_session_context(socket))
+      #
+      # Not on a version being read, which is where restoring is most natural.
+      # Its assigned workflow is the snapshot its document holds, and replacing
+      # that with the restored row measures the document against content it was
+      # never meant to match, so the view reads as unsaved from the moment the
+      # restore lands. The same reason the lifecycle transitions skip it.
+      socket =
+        if socket.assigns.workflow_kind == :version do
+          socket
+        else
+          socket = assign(socket, :workflow, restored)
+          push(socket, "session_context_updated", build_session_context(socket))
+          socket
+        end
 
       {:reply, {:ok, %{lock_version: restored.lock_version}}, socket}
     else

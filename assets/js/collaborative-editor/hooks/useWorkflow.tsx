@@ -1125,14 +1125,16 @@ export const useWorkflowReadOnly = (): {
       reason: 'no_permission',
     };
   }
-  // An editor stopped only by the lifecycle, who therefore has somewhere to go.
-  if (contentLocked) {
-    return {
-      isReadOnly: true,
-      tooltipMessage: CONTENT_LOCKED_MESSAGE,
-      reason: 'live',
-    };
-  }
+  // What is on screen decides before the lifecycle does. A pinned version or a
+  // run's own view is read-only because of the view, whatever state the
+  // workflow is in, and saying "this workflow is live, switch it to draft"
+  // there answers a question nobody asked: switching to draft would not make
+  // the version on screen editable.
+  //
+  // The order matters beyond wording. The header suppresses its Read-only cue
+  // for exactly these two reasons, because the lifecycle badge covers the
+  // lifecycle case, so letting `live` win here left a pinned view of a live
+  // workflow with nothing on screen saying it could not be edited.
   if (isViewingAsExecuted) {
     return {
       isReadOnly: true,
@@ -1145,6 +1147,14 @@ export const useWorkflowReadOnly = (): {
       isReadOnly: true,
       tooltipMessage: 'You are viewing a pinned version of this workflow',
       reason: 'pinned_version',
+    };
+  }
+  // An editor stopped only by the lifecycle, who therefore has somewhere to go.
+  if (contentLocked) {
+    return {
+      isReadOnly: true,
+      tooltipMessage: CONTENT_LOCKED_MESSAGE,
+      reason: 'live',
     };
   }
   if (isUnsavedNewWorkflow) {

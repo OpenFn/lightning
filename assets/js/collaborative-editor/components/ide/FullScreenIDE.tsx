@@ -45,9 +45,13 @@ import { useMetadata } from '../../hooks/useMetadata';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
-import { useProject } from '../../hooks/useSessionContext';
+import {
+  useContentLocked,
+  useProject,
+} from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
 import { useVersionSelect } from '../../hooks/useVersionSelect';
+import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
 import {
   useCanRun,
   useCanSave,
@@ -747,12 +751,28 @@ export function FullScreenIDE({
   // dead: with the flag on, switching version from a draft with unsaved edits
   // asks first, and nothing here was showing the question.
   const { handleVersionSelect, prompt: versionPrompt } = useVersionSelect();
+  const { viewAsExecuted, prompt: runPinPrompt } = useViewAsExecuted();
+  const contentLocked = useContentLocked();
 
+  // The same rule as the canvas, and for the same reason: the banner's number
+  // is the snapshot's own, and where the picker numbers by the publish trail
+  // that number addresses nothing. There the run's own view is the destination.
   const handleGoToVersion = useCallback(() => {
-    if (versionMismatch) {
-      handleVersionSelect(versionMismatch.runVersion);
+    if (!versionMismatch) return;
+
+    if (contentLocked && activeRun?.id) {
+      viewAsExecuted(activeRun.id);
+      return;
     }
-  }, [handleVersionSelect, versionMismatch]);
+
+    handleVersionSelect(versionMismatch.runVersion);
+  }, [
+    activeRun?.id,
+    contentLocked,
+    handleVersionSelect,
+    versionMismatch,
+    viewAsExecuted,
+  ]);
 
   // Check loading state but don't use early return (violates rules of hooks)
   // Only check for job existence, not ytext/awareness
@@ -920,10 +940,11 @@ export function FullScreenIDE({
                 where the header's lifecycle badge explains why. Without them it
                 stays and goes grey, carrying the reason, as it does today. */}
             {(panelState === undefined || panelState === 'history') && (
-              <NewRunButton
-                onClick={handleNavigateToCreateRun}
-                disabled={!canRunFromHook}
-              />
+              // This opens the create-run panel; it does not start a run. The
+              // run hook's answer folds in whether the input chosen inside that
+              // panel is usable, which is not a question yet, and gating on it
+              // left the button dead with the shortcut tooltip and no reason.
+              <NewRunButton onClick={handleNavigateToCreateRun} />
             )}
 
             {/* Run/Retry, while creating a run or reading one. Running is not
@@ -1392,6 +1413,13 @@ export function FullScreenIDE({
         onDiscardAndContinue={versionPrompt.runPending}
         onCancel={versionPrompt.cancel}
         description="Switching to the version this run executed against loads that version, and your unsaved changes cannot come with it. Switch without saving and they are gone."
+      />
+      <DiscardChangesDialog
+        isOpen={runPinPrompt.isAsking}
+        onSaveAndContinue={runPinPrompt.saveAndRunPending}
+        onDiscardAndContinue={runPinPrompt.runPending}
+        onCancel={runPinPrompt.cancel}
+        description="Opening this run loads the version it executed against, and your unsaved changes cannot come with it. Switch without saving and they are gone."
       />
     </div>
   );

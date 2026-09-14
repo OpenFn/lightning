@@ -342,6 +342,7 @@ export function Header({
   const {
     isPinnedVersion,
     isViewingAsExecuted,
+    isPinnedView,
     version: pinnedVersion,
   } = usePinnedView();
 
@@ -397,6 +398,12 @@ export function Header({
     ? 'You are reading an older version. This acts on the current workflow.'
     : null;
 
+  // Promote is the exception: it saves first, and every view of the past
+  // refuses that save, so a run's own view stops it too.
+  const promoteViewReason = isPinnedView
+    ? 'You are reading the past. Promote acts on the current workflow.'
+    : null;
+
   // A retry runs the content that is live now, whatever is on screen. The
   // button does not say so, because retrying always means that, but the
   // confirmation names the version so the record of what just ran is clear.
@@ -444,7 +451,13 @@ export function Header({
   // loses is the sight of a button they could not have pressed.
   const isLiveLocked =
     !sessionContextLoaded ||
-    (experimentalFeatures && lifecycleState === 'live' && !inSandbox);
+    (experimentalFeatures &&
+      lifecycleState === 'live' &&
+      !inSandbox &&
+      // Not while reading the past. There the button is refused by the view,
+      // which is a reason it can carry; dropping it would leave that screen
+      // with nothing saying why it cannot be edited.
+      !isPinnedView);
 
   // A retry runs the latest version, never the one on screen, so while an older
   // version is being read the button has to say so before the click rather than
@@ -931,12 +944,15 @@ export function Header({
                 </Tooltip>
               )}
               {!isNewWorkflow && inSandbox && (
-                <Tooltip content={versionViewReason} side="bottom">
+                <Tooltip content={promoteViewReason} side="bottom">
                   <span className="inline-block">
                     <Button
                       data-testid="promote-sandbox-button"
                       className="inline-flex items-center gap-1"
-                      disabled={isPinnedVersion}
+                      // Promote saves before it merges, and a view of the past
+                      // is refused that save. A run's own view is as refused as
+                      // a pinned version, so both are covered.
+                      disabled={isPinnedView}
                       onClick={() => {
                         setShowPromoteDialog(true);
                       }}
