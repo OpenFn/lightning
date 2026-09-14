@@ -65,6 +65,7 @@ import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import MiniHistory from '../diagram/MiniHistory';
 import { VersionMismatchBanner } from '../diagram/VersionMismatchBanner';
+import { DiscardChangesDialog } from '../DiscardChangesDialog';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
@@ -742,7 +743,10 @@ export function FullScreenIDE({
   // content can still be edited.
   const activeRun = useActiveRun();
   const versionMismatch = useVersionMismatch(activeRun?.id ?? null);
-  const { handleVersionSelect } = useVersionSelect();
+  // The prompt half is rendered below. Dropping it left the banner's offer
+  // dead: with the flag on, switching version from a draft with unsaved edits
+  // asks first, and nothing here was showing the question.
+  const { handleVersionSelect, prompt: versionPrompt } = useVersionSelect();
 
   const handleGoToVersion = useCallback(() => {
     if (versionMismatch) {
@@ -1381,6 +1385,14 @@ export function FullScreenIDE({
           />
         </>
       )}
+
+      <DiscardChangesDialog
+        isOpen={versionPrompt.isAsking}
+        onSaveAndContinue={versionPrompt.saveAndRunPending}
+        onDiscardAndContinue={versionPrompt.runPending}
+        onCancel={versionPrompt.cancel}
+        description="Switching to the version this run executed against loads that version, and your unsaved changes cannot come with it. Switch without saving and they are gone."
+      />
     </div>
   );
 }

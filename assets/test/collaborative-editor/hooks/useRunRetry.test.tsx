@@ -22,6 +22,7 @@ import {
   createMockURLState,
   getURLStateMockValue,
 } from '../__helpers__';
+import type { SessionContextState } from '../../../js/collaborative-editor/types/sessionContext';
 import { createMockSocket } from '../mocks/phoenixSocket';
 import {
   createMockSessionContextStore,

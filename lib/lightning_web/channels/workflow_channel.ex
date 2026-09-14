@@ -1979,6 +1979,16 @@ defmodule LightningWeb.WorkflowChannel do
       # occurred rather than which limit they have reached.
       {:error, _reason, %Lightning.Extensions.Message{} = message} ->
         {:error, message}
+
+      # The behaviour types the error exactly as above, so this is only here so
+      # a limiter that answers differently refuses the go-live rather than
+      # raising inside the channel.
+      other ->
+        Logger.warning(
+          "Unexpected usage limiter reply on go_live: #{inspect(other)}"
+        )
+
+        {:error, :internal_error}
     end
   end
 

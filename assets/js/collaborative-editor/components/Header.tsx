@@ -544,13 +544,20 @@ export function Header({
       // Every pinned view goes, not just the run's own: a retry runs the
       // content that is live, so staying on `?v=` left the badge naming a
       // version the new run did not execute.
-      updateSearchParams({
-        [RELEASE_PARAM]: null,
-        [SNAPSHOT_PARAM]: null,
-        [AS_RUN_PARAM]: null,
-        step: null,
-        run: result.data.run_id,
-      });
+      //
+      // Same rule as the run panel's retry, flag and all. Two controls doing
+      // the same thing should not leave the URL in two different states.
+      updateSearchParams(
+        experimentalFeatures
+          ? {
+              [RELEASE_PARAM]: null,
+              [SNAPSHOT_PARAM]: null,
+              [AS_RUN_PARAM]: null,
+              step: null,
+              run: result.data.run_id,
+            }
+          : { run: result.data.run_id }
+      );
       setPendingRunId(result.data.run_id);
     } catch (error) {
       notifications.alert({
@@ -564,6 +571,7 @@ export function Header({
     followedRunId,
     projectId,
     liveVersionNumber,
+    experimentalFeatures,
     saveBeforeRun,
     getLimits,
     updateSearchParams,

@@ -405,7 +405,16 @@ vi.mock(
 
 // Mock version select hook
 vi.mock('../../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
-  useVersionSelect: () => vi.fn(),
+  // The hook returns the handler and the prompt the discard dialog needs.
+  useVersionSelect: () => ({
+    handleVersionSelect: vi.fn(),
+    prompt: {
+      isAsking: false,
+      saveAndRunPending: vi.fn(),
+      runPending: vi.fn(),
+      cancel: vi.fn(),
+    },
+  }),
 }));
 
 // Mock JobSelector
