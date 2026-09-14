@@ -48,10 +48,12 @@ defmodule Lightning.Adaptors.NPM.Registry do
   packument fetch for any name search doesn't cover. See the moduledoc for
   why this isn't a single call.
 
-  A listing holding no `@openfn/language-*` names is `{:error, :empty_listing}`
-  and a 200 whose body is not a map is `{:error, :malformed_listing}`: an org
-  with hundreds of packages does not empty out, so an empty answer is a broken
-  registry rather than knowledge that no adaptors exist.
+  The `@openfn` org holds hundreds of packages, so a registry answering
+  with none of them has not told us the adaptors are gone; it is a mirror
+  that has not synced the scope, or a mistyped URL. Rather than report an
+  empty catalogue and have the Scheduler act on it, an empty list is
+  `{:error, :empty_listing}` and a 200 whose body is not a map is
+  `{:error, :malformed_listing}`, both of which leave the stored rows alone.
   """
   @spec list_adaptors() ::
           {:ok, [%{name: String.t(), latest_version: String.t()}]}

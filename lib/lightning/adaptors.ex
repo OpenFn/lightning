@@ -80,11 +80,29 @@ defmodule Lightning.Adaptors do
     ]
   end
 
+  @typedoc """
+  Why a catalogue read could not answer.
+
+    * `:not_found` - the catalogue has loaded and holds no such adaptor
+    * `:not_ready` - the catalogue has never loaded
+    * `:timeout` - the first load, or a cache fill, did not finish in time
+    * `:unavailable` - no Scheduler process is reachable
+  """
+  @type error :: :not_found | :not_ready | :timeout | :unavailable
+
+  @typedoc """
+  What an icon read can fail with on top of `t:error/0`: the fetched bytes
+  disagreeing with the row that described them, or the strategy failing to
+  fetch them at all, which it reports in its own terms.
+  """
+  @type icon_error ::
+          {:icon_sha_mismatch, keyword()} | {:ext_mismatch, keyword()} | term()
+
   @doc """
   Returns every adaptor in the catalogue as `Package` structs, or
   `{:error, :not_ready}` against a catalogue that has never loaded.
   """
-  @spec packages(atom()) :: {:ok, [Package.t()]} | {:error, term()}
+  @spec packages(atom()) :: {:ok, [Package.t()]} | {:error, error()}
   def packages(sup \\ Config.default_instance()) do
     with {:ok, metas} <- Store.packages(sup) do
       source = AdaptorsSupervisor.source(sup)
@@ -98,8 +116,7 @@ defmodule Lightning.Adaptors do
   is `{:error, :not_found}`, or `{:error, :not_ready}` against a catalogue
   that has never loaded.
   """
-  @spec schema(atom(), String.t()) ::
-          {:ok, String.t()} | {:error, :not_found | :not_ready}
+  @spec schema(atom(), String.t()) :: {:ok, String.t()} | {:error, error()}
   def schema(sup \\ Config.default_instance(), pkg),
     do: Store.schema(sup, pkg)
 
@@ -117,7 +134,7 @@ defmodule Lightning.Adaptors do
   `{:error, :not_ready}`.
   """
   @spec resolve_name(atom(), String.t()) ::
-          {:ok, String.t()} | {:error, :not_ready}
+          {:ok, String.t()} | {:error, error()}
   def resolve_name(sup \\ Config.default_instance(), name)
 
   def resolve_name(_sup, name) when name in ["raw", "oauth"], do: {:ok, name}
@@ -148,7 +165,7 @@ defmodule Lightning.Adaptors do
   catalogue that has never loaded.
   """
   @spec icon(atom(), String.t(), :square | :rectangle) ::
-          {:ok, Path.t()} | {:error, term()}
+          {:ok, Path.t()} | {:error, error() | icon_error()}
   def icon(sup \\ Config.default_instance(), pkg, shape),
     do: Store.icon(sup, pkg, shape)
 
@@ -159,12 +176,12 @@ defmodule Lightning.Adaptors do
 
   One read, so the stamp always describes the entries it comes with.
 
-  Returns `{:error, term()}` on a backing-store failure.
+  Returns `{:error, reason}` on a backing-store failure; see `t:error/0`.
   """
   @spec catalogue(atom()) ::
           {:ok,
            {{DateTime.t() | nil, non_neg_integer()}, [Store.rendered_entry()]}}
-          | {:error, term()}
+          | {:error, error()}
   def catalogue(sup \\ Config.default_instance()) do
     Store.catalogue(sup)
   end
@@ -184,8 +201,7 @@ defmodule Lightning.Adaptors do
     * `{:error, :not_ready}` - the load ran but left the catalogue empty
   """
   @spec fetch_adaptor(atom(), String.t(), keyword()) ::
-          {:ok, Package.t()}
-          | {:error, :not_found | :timeout | :unavailable | :not_ready}
+          {:ok, Package.t()} | {:error, error()}
   def fetch_adaptor(sup \\ Config.default_instance(), name, opts \\ [])
       when is_binary(name) do
     case lookup_adaptor(sup, name) do
@@ -235,8 +251,7 @@ defmodule Lightning.Adaptors do
   Returns `:ok`, or one of the `fetch_adaptor/3` errors other than
   `:not_found`.
   """
-  @spec ensure_loaded(atom(), keyword()) ::
-          :ok | {:error, :timeout | :unavailable | :not_ready}
+  @spec ensure_loaded(atom(), keyword()) :: :ok | {:error, error()}
   def ensure_loaded(sup \\ Config.default_instance(), opts \\ []),
     do: Store.ensure_loaded(sup, opts)
 

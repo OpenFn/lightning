@@ -30,8 +30,6 @@ defmodule Lightning.Adaptors.Local do
   A checkout with no packages in it lists `{:ok, []}`: the directory is
   readable and really is empty, which is a different thing from an npm org
   listing that comes back with nothing in it.
-
-  `source: :local` is not set here. The Scheduler stamps it before upsert.
   """
 
   @behaviour Lightning.Adaptors.Strategy

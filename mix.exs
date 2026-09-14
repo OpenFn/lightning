@@ -284,6 +284,9 @@ defmodule Lightning.MixProject do
         Accounts: [
           ~r/Lightning.Accounts/
         ],
+        Adaptors: [
+          ~r/Lightning.Adaptors/
+        ],
         Config: [
           ~r/Lightning.Config/
         ],
