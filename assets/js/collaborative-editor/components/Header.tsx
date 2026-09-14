@@ -294,17 +294,22 @@ export function Header({
   const [showPromoteDialog, setShowPromoteDialog] = useState(false);
   const activeRun = useActiveRun();
 
-  // The run arrived, so the button can stop saying Processing on its own account
-  // and let the run's state speak. The timeout is the same safety the IDE has:
-  // if the run never reaches us, the button must not stay stuck.
+  // Two effects, not one, the way the IDE does it. The arrival has to watch the
+  // run, and the timeout must not: folded together and keyed on the run, the
+  // clock restarted whenever some other run became active; keyed on the pending
+  // id alone, the arrival was read from the render before the run existed and
+  // never fired, so the button sat on Processing for the full thirty seconds
+  // after a run had already finished.
   useEffect(() => {
-    if (!pendingRunId) return;
-
-    if (activeRun?.id === pendingRunId) {
+    if (pendingRunId && activeRun?.id === pendingRunId) {
       setPendingRunId(null);
       setIsSubmitting(false);
-      return;
     }
+  }, [activeRun?.id, pendingRunId]);
+
+  // If the run never reaches us, the button must not stay stuck.
+  useEffect(() => {
+    if (!pendingRunId) return;
 
     const timeoutId = setTimeout(() => {
       setPendingRunId(null);
@@ -314,10 +319,6 @@ export function Header({
     return () => {
       clearTimeout(timeoutId);
     };
-    // Deliberately not keyed on the active run. Restarting the clock every time
-    // some other run became active meant the button could sit on Processing
-    // well past the thirty seconds this is here to cap.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingRunId]);
   const runIsProcessing = activeRun ? !isFinalState(activeRun.state) : false;
   const followedRunId = params.run ?? null;
@@ -427,12 +428,15 @@ export function Header({
   // under the cursor is not.
   const sessionContextLoaded = useSessionContextLoaded();
   //
-  // Unknown counts as locked only once we know the flag is on. Without it there
-  // is no lifecycle and Save always rendered, so treating unknown as locked for
-  // everyone took the button away from flag-off users until the context landed.
+  // Unknown counts as locked, for everyone. The flag itself arrives with the
+  // context, so before it lands "flag off" and "we do not know yet" are the
+  // same answer, and treating unknown as unlocked renders Save and then takes
+  // it away again on a live workflow. Nobody can save during that window
+  // anyway, because the session is not connected, so what a flag-off user
+  // loses is the sight of a button they could not have pressed.
   const isLiveLocked =
-    experimentalFeatures &&
-    (!sessionContextLoaded || (lifecycleState === 'live' && !inSandbox));
+    !sessionContextLoaded ||
+    (experimentalFeatures && lifecycleState === 'live' && !inSandbox);
 
   // A retry runs the latest version, never the one on screen, so while an older
   // version is being read the button has to say so before the click rather than

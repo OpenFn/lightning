@@ -58,6 +58,9 @@ let workflowTriggers: { id: string }[] = [];
 let activeRunSummary: { id: string; snapshot_id: string | null } | undefined;
 // The lifecycle lock, which decides whether a run saves on its way out.
 let contentLocked = false;
+// The session context has landed. The header withholds what depends on it
+// until it has, so a test about that has to be able to turn it off.
+let sessionContextLoaded = true;
 let releases: {
   version_number: number;
   snapshot_id: string | null;
@@ -79,7 +82,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
-  useSessionContextLoaded: () => true,
+  useSessionContextLoaded: () => sessionContextLoaded,
   useRequestVersions: () => vi.fn(),
   useVersionsError: () => null,
   useVersionsLoading: () => false,
@@ -242,6 +245,7 @@ const renderHeader = (
 
 describe('Header - Edit in sandbox button gating', () => {
   beforeEach(() => {
+    sessionContextLoaded = true;
     lifecycleState = 'live';
     isNewWorkflow = false;
     canProvisionSandbox = true;
@@ -254,6 +258,7 @@ describe('Header - Edit in sandbox button gating', () => {
     urlParams = {};
     activeRun = null;
     activeRunSummary = undefined;
+    sessionContextLoaded = true;
     latestSnapshotId = null;
     releases = [];
     updateSearchParams.mockClear();
@@ -310,6 +315,7 @@ describe('Header - Edit in sandbox button gating', () => {
 
 describe('Header - lifecycle actions', () => {
   beforeEach(() => {
+    sessionContextLoaded = true;
     lifecycleState = 'live';
     isNewWorkflow = false;
     canProvisionSandbox = true;
@@ -643,6 +649,7 @@ describe('Header - lifecycle actions', () => {
     urlParams = {};
     activeRun = null;
     activeRunSummary = undefined;
+    sessionContextLoaded = true;
 
     renderHeader();
 
@@ -1248,6 +1255,7 @@ describe('Header - lifecycle actions', () => {
 
 describe('Header - read-only reason variations', () => {
   beforeEach(() => {
+    sessionContextLoaded = true;
     lifecycleState = 'live';
     isNewWorkflow = false;
     canProvisionSandbox = true;
@@ -1282,6 +1290,18 @@ describe('Header - read-only reason variations', () => {
     // The Live badge and Switch to draft sit beside it and explain the state,
     // so a permanently dead button adds nothing.
     readOnly = { isReadOnly: true, reason: 'live' };
+
+    renderHeader({ isSandbox: false });
+
+    expect(screen.queryByTestId('save-workflow-button')).toBeNull();
+  });
+
+  test('withholds Save until the session context has landed', () => {
+    // The flag arrives with the context, so until it does "flag off" and "we do
+    // not know" look the same. Rendering Save on that guess and taking it away
+    // a moment later is the flicker this avoids.
+    sessionContextLoaded = false;
+    lifecycleState = 'draft';
 
     renderHeader({ isSandbox: false });
 
@@ -1323,6 +1343,7 @@ describe('Header - read-only reason variations', () => {
 
 describe('Header - long workflow name', () => {
   beforeEach(() => {
+    sessionContextLoaded = true;
     lifecycleState = 'live';
     isNewWorkflow = false;
     canProvisionSandbox = true;
@@ -1361,6 +1382,7 @@ describe('Header - long workflow name', () => {
 
 describe('Header - retry from a run view', () => {
   beforeEach(() => {
+    sessionContextLoaded = true;
     lifecycleState = 'live';
     isNewWorkflow = false;
     limits = {};
@@ -1425,6 +1447,7 @@ describe('Header - retry from a run view', () => {
     urlParams = {};
     activeRun = null;
     activeRunSummary = undefined;
+    sessionContextLoaded = true;
     readOnly = { isReadOnly: false, reason: null };
 
     renderHeader({ isSandbox: false });

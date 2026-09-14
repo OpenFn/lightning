@@ -56,6 +56,34 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
     end
 
+    test "a transition from a version being read reaches the workflow's own room",
+         %{socket: socket, user: user, project: project, workflow: workflow} do
+      {:ok, saved} =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Has A Snapshot"})
+        |> Lightning.Workflows.save_workflow(user)
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{saved.lock_version}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      # `socket` is joined to the workflow's own room. Announcing on the
+      # reader's topic instead meant whoever was editing never learned the
+      # workflow had gone live, and carried on editing production.
+      ref = push(pinned_socket, "go_live", %{})
+      assert_reply ref, :ok, %{}
+
+      assert_push "session_context_updated", %{content_locked: true}
+
+      refute socket.assigns.content_locked
+    end
+
     test "a pinned room cannot be joined as a new workflow", %{
       user: user,
       project: project,

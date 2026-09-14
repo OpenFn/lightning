@@ -558,10 +558,7 @@ defmodule LightningWeb.WorkflowChannel do
       # cannot express, so ask every open editor to reload from the database.
       WorkflowReconciler.request_reconciliation(workflow.id)
 
-      broadcast_from!(socket, "workflow_saved", %{
-        latest_snapshot_lock_version: restored.lock_version,
-        workflow: restored
-      })
+      broadcast_workflow_saved(socket, restored)
 
       socket = assign(socket, :workflow, restored)
 
@@ -1938,10 +1935,12 @@ defmodule LightningWeb.WorkflowChannel do
         {:error, :workflow_deleted}
 
       workflow ->
+        # Preloaded for the limiter below; both lifecycle functions preload
+        # triggers themselves.
         workflow = Lightning.Repo.preload(workflow, :triggers)
 
         case target do
-          :live -> Workflows.go_live(workflow, user)
+          :live -> go_live_within_limits(workflow, user)
           :draft -> Workflows.switch_to_draft(workflow, user)
         end
     end
@@ -1955,32 +1954,73 @@ defmodule LightningWeb.WorkflowChannel do
     )
   end
 
+  # The session path asks the limiter on its way through the save. This one does
+  # not go through a save, so it asks here. Every other route that puts a
+  # workflow live checks this first, and it governs how many workflows a plan may
+  # have answering triggers, so skipping it hands out entitlement for free.
+  #
+  # Only an enable that actually turns a trigger on counts, which is how the
+  # workflows list reads it too: flipping one that is already answering asks the
+  # limiter nothing.
+  defp go_live_within_limits(workflow, user) do
+    activating? =
+      Enum.any?(workflow.triggers, fn trigger -> !trigger.enabled end)
+
+    case WorkflowUsageLimiter.limit_workflow_activation(
+           activating?,
+           workflow.project_id
+         ) do
+      :ok -> Workflows.go_live(workflow, user)
+      error -> error
+    end
+  end
+
   defp transition_lifecycle_state(socket, target_state) do
     with :ok <- authorize_edit_workflow(socket),
          {:ok, workflow} <- apply_lifecycle_state(socket, target_state) do
       # Always the live room, never this socket's. A transition issued from a
       # view broadcast on the view's own topic, so nobody editing the workflow
       # learned it had gone live and kept editing something now in production.
-      LightningWeb.Endpoint.broadcast_from!(
-        self(),
-        "workflow:collaborate:#{socket.assigns.workflow_id}",
-        "workflow_saved",
-        %{
-          latest_snapshot_lock_version: workflow.lock_version,
-          workflow: workflow
-        }
-      )
+      broadcast_workflow_saved(socket, workflow)
 
       # Editability folds in the lifecycle lock and is resolved at join, so going
       # live makes it stale on every socket in the room.
-      socket = refresh_lifecycle_lock(socket, workflow)
-      push(socket, "session_context_updated", build_session_context(socket))
+      #
+      # Not on a version being read. Its assigned workflow is the snapshot the
+      # document holds, and replacing it with the live row measures that
+      # document against content it was never meant to match, so the view reads
+      # as unsaved from the moment the transition lands. The client leaves the
+      # view straight afterwards and rejoins with a context built properly.
+      socket =
+        if socket.assigns.workflow_kind == :version do
+          socket
+        else
+          socket = refresh_lifecycle_lock(socket, workflow)
+          push(socket, "session_context_updated", build_session_context(socket))
+          socket
+        end
 
       {:reply, {:ok, %{lock_version: workflow.lock_version, workflow: workflow}},
        socket}
     else
       error -> workflow_error_reply(socket, error)
     end
+  end
+
+  # A change to the workflow is announced in the workflow's own room, never in
+  # whichever room the person happens to be standing in. Restoring and going
+  # live are both reachable from a version being read, and broadcasting on that
+  # socket's topic meant nobody editing the workflow heard about it.
+  defp broadcast_workflow_saved(socket, workflow) do
+    LightningWeb.Endpoint.broadcast_from!(
+      self(),
+      "workflow:collaborate:#{socket.assigns.workflow_id}",
+      "workflow_saved",
+      %{
+        latest_snapshot_lock_version: workflow.lock_version,
+        workflow: workflow
+      }
+    )
   end
 
   # Re-assigns the workflow too, so later authorization reads the new state. The
