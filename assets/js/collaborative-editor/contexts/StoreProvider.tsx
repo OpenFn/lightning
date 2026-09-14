@@ -110,6 +110,7 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
   // Get isNewWorkflow and initialRunData from SessionContext
   const sessionContext = useContext(SessionContext);
   const isNewWorkflow = sessionContext?.isNewWorkflow ?? false;
+  const experimentalFeatures = sessionContext?.experimentalFeatures ?? false;
   const initialRunData = sessionContext?.initialRunData;
 
   // Create store instances once and reuse them
@@ -131,7 +132,10 @@ export const StoreProvider = ({ children }: StoreProviderProps) => {
 
     // Create the SessionContextStore first so the WorkflowStore can read the
     // current user's edit permission and the workflow's lifecycle lock lazily.
-    const sessionContextStore = createSessionContextStore(isNewWorkflow);
+    const sessionContextStore = createSessionContextStore(
+      isNewWorkflow,
+      experimentalFeatures
+    );
 
     return {
       adaptorStore: createAdaptorStore(),

@@ -123,7 +123,13 @@ export const selectCanEditContent = (state: SessionContextState): boolean =>
  * Creates a session context store instance with useSyncExternalStore + Immer pattern
  */
 export const createSessionContextStore = (
-  isNewWorkflow: boolean = false
+  isNewWorkflow: boolean = false,
+  // Seeded from the page rather than waited for over the channel. The editor
+  // decides what to show from this flag, and learning it a round trip late
+  // meant drawing the header one way and correcting it a moment later. The
+  // context still carries it and overwrites this on arrival, so there is one
+  // source of truth and this is only its opening value.
+  experimentalFeaturesEnabled: boolean = false
 ): SessionContextStore => {
   // Single Immer-managed state object (referentially stable)
   let state: SessionContextState = produce(
@@ -133,7 +139,7 @@ export const createSessionContextStore = (
       config: null,
       permissions: null,
       contentLocked: false,
-      experimentalFeaturesEnabled: false,
+      experimentalFeaturesEnabled,
       latestSnapshotLockVersion: null,
       latestSnapshotId: null,
       projectRepoConnection: null,

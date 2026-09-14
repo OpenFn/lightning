@@ -69,6 +69,9 @@ export interface CollaborativeEditorDataProps {
   'data-project-env'?: string;
   'data-is-new-workflow'?: string;
   'data-ai-assistant-enabled'?: string;
+  // Whether this user has experimental features on, rendered into the page so
+  // the first paint already knows rather than waiting for the session context.
+  'data-experimental-features'?: string;
   // Initial run data from server to avoid client-side race conditions
   'data-initial-run-data'?: string; // JSON-encoded RunStepsData
 }
@@ -406,6 +409,7 @@ export const CollaborativeEditor: WithActionProps<
   const projectEnv = props['data-project-env'];
   const isNewWorkflow = props['data-is-new-workflow'] === 'true';
   const aiAssistantEnabled = props['data-ai-assistant-enabled'] === 'true';
+  const experimentalFeatures = props['data-experimental-features'] === 'true';
   const initialRunData = props['data-initial-run-data'];
 
   const liveViewActions = {
@@ -430,6 +434,7 @@ export const CollaborativeEditor: WithActionProps<
             workflowId={workflowId}
             projectId={projectId}
             isNewWorkflow={isNewWorkflow}
+            experimentalFeatures={experimentalFeatures}
             {...(initialRunData !== undefined && { initialRunData })}
           >
             <StoreProvider>

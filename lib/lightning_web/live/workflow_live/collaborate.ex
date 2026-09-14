@@ -81,7 +81,14 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
          CredentialLive.Helpers.default_project_credentials(project),
        show_webhook_auth_modal: false,
        webhook_auth_method: nil,
-       ai_assistant_enabled: AiAssistant.enabled?()
+       ai_assistant_enabled: AiAssistant.enabled?(),
+       # Rendered into the page rather than waited for over the channel. The
+       # editor decides what to show from this flag, and learning it a round
+       # trip late meant drawing the wrong header first and correcting it.
+       experimental_features_enabled:
+         Lightning.Accounts.experimental_features_enabled?(
+           socket.assigns.current_user
+         )
      )}
   end
 
@@ -254,6 +261,9 @@ defmodule LightningWeb.WorkflowLive.Collaborate do
       data-project-env={@project.env}
       data-is-new-workflow={if @is_new_workflow, do: "true", else: nil}
       data-ai-assistant-enabled={if @ai_assistant_enabled, do: "true", else: "false"}
+      data-experimental-features={
+        if @experimental_features_enabled, do: "true", else: "false"
+      }
       data-initial-run-data={
         if assigns[:initial_run_data],
           do: Jason.encode!(assigns[:initial_run_data]),

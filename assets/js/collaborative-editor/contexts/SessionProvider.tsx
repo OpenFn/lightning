@@ -47,6 +47,8 @@ interface SessionContextValue {
    */
   setIsNewWorkflow?: (isNewWorkflow: boolean) => void;
   initialRunData?: string; // JSON-encoded RunStepsData from server
+  /** Read from the page, so the first render already knows. */
+  experimentalFeatures: boolean;
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null);
@@ -56,6 +58,7 @@ interface SessionProviderProps {
   projectId: string;
   isNewWorkflow: boolean;
   initialRunData?: string; // JSON-encoded RunStepsData from server
+  experimentalFeatures: boolean;
   children: React.ReactNode;
 }
 
@@ -64,6 +67,7 @@ export const SessionProvider = ({
   projectId,
   isNewWorkflow,
   initialRunData,
+  experimentalFeatures,
   children,
 }: SessionProviderProps) => {
   const { socket, isConnected } = useSocket();
@@ -222,9 +226,16 @@ export const SessionProvider = ({
       sessionStore,
       isNewWorkflow,
       setIsNewWorkflow,
+      experimentalFeatures,
       ...(initialRunData !== undefined && { initialRunData }),
     }),
-    [sessionStore, isNewWorkflow, setIsNewWorkflow, initialRunData]
+    [
+      sessionStore,
+      isNewWorkflow,
+      setIsNewWorkflow,
+      experimentalFeatures,
+      initialRunData,
+    ]
   );
 
   return (
