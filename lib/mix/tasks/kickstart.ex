@@ -56,14 +56,8 @@ defmodule Mix.Tasks.Lightning.Kickstart do
 
     Mix.Task.run("app.config")
 
-    # Start the repo, the vault (credential bodies are encrypted) and a stub
-    # PubSub — but not the endpoint: seeding often runs against an instance
-    # that is already serving traffic, and booting it here would fight the
-    # running server for the port.
-    {:ok, _pid} = Lightning.Setup.ensure_minimum_setup()
-
     {:ok, result, _apps} =
-      Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
+      Lightning.Setup.with_minimum_setup(fn ->
         Lightning.Kickstart.run_file(path, opts)
       end)
 

@@ -46,8 +46,9 @@ mix lightning.adaptors.dump --path snapshot.json
 tar czf icons.tar.gz -C "$ADAPTORS_ICONS_PATH" .
 ```
 
-`ADAPTORS_ICONS_PATH` defaults to `lightning/adaptor_icons` under the temp
-directory. On a release image (no Mix), dump with:
+`ADAPTORS_ICONS_PATH` is `/app/priv/adaptor_icons` in the official image, and
+otherwise defaults to `lightning/adaptor_icons` under the temp directory. On a
+release image (no Mix), dump with:
 
 ```sh
 bin/lightning eval 'Lightning.Release.dump_adaptors("/path/to/snapshot.json")'
@@ -89,9 +90,9 @@ download not covered here.
 
 ## Keeping the catalogue fresh
 
-Lightning refreshes the catalogue hourly. Set `ADAPTORS_REFRESH_INTERVAL_MS` to
-change that interval, or to `0` to disable scheduled refreshes. Force one
-manually, on a source checkout:
+Lightning refreshes the catalogue hourly. Set
+`ADAPTORS_REFRESH_INTERVAL_SECONDS` to change that interval, or to `0` to
+disable scheduled refreshes. Force one manually, on a source checkout:
 
 ```sh
 mix lightning.adaptors.refresh

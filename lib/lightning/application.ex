@@ -175,7 +175,7 @@ defmodule Lightning.Application do
         Lightning.Workflows.Presence,
         LightningWeb.WorkerPresence,
         adaptor_service_childspec,
-        {Lightning.Adaptors.Supervisor, name: Lightning.Adaptors},
+        Lightning.Adaptors.Supervisor,
         schema_reconciler_childspec,
         {Lightning.TaskWorker, name: :cli_task_worker},
         {Lightning.Runtime.RuntimeManager,

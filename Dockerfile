@@ -115,11 +115,16 @@ RUN chown lightning /app
 ENV MIX_ENV="prod"
 ENV ERL_FLAGS=${ERL_FLAGS}
 ENV ADAPTORS_PATH=/app/priv/openfn
+ENV ADAPTORS_ICONS_PATH=/app/priv/adaptor_icons
 
 # Only copy the final release and the adaptor directory from the build stage
 COPY --from=builder --chown=lightning:root /app/_build/${MIX_ENV}/rel/lightning ./
 COPY --from=builder --chown=lightning:root /app/priv/openfn ./priv/openfn
 COPY --from=builder --chown=lightning:root /app/priv/github ./priv/github
+
+# A new volume mounted here inherits this directory's ownership, so the
+# non-root runtime user can write to it.
+RUN mkdir -p ${ADAPTORS_ICONS_PATH} && chown lightning:root ${ADAPTORS_ICONS_PATH}
 
 USER lightning
 

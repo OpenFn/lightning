@@ -19,7 +19,8 @@ defmodule Lightning.Adaptors.Supervisor do
 
   Options:
 
-    * `:name` - required; every child name derives from it
+    * `:name` - every child name derives from it, defaulting to
+      `Lightning.Adaptors.Config.default_instance/0`
     * `:strategy` - `Lightning.Adaptors.Strategy` implementation,
       defaulting to `Lightning.Adaptors.Config.strategy/0`
     * `:lock_key` - `HighlanderPG` advisory-lock key, defaulting to
@@ -34,8 +35,37 @@ defmodule Lightning.Adaptors.Supervisor do
   """
   @spec start_link(keyword()) :: Supervisor.on_start()
   def start_link(opts) do
-    name = Keyword.fetch!(opts, :name)
-    Supervisor.start_link(__MODULE__, opts, name: name)
+    opts = Keyword.put_new(opts, :name, Config.default_instance())
+    Supervisor.start_link(__MODULE__, opts, name: opts[:name])
+  end
+
+  @doc """
+  Starts an instance, or returns the running one. For entry points that
+  may run either against a cold BEAM or inside the booted application.
+  """
+  @spec ensure_started(keyword()) :: {:ok, pid()} | {:error, term()}
+  def ensure_started(opts \\ []) do
+    {:ok, _} = Application.ensure_all_started(:cachex)
+    ensure_finch()
+
+    case start_link(opts) do
+      {:error, {:already_started, pid}} -> {:ok, pid}
+      other -> other
+    end
+  end
+
+  # Tesla is configured against a named Finch pool that only the full
+  # application starts; a strategy fetching over HTTP without it fails with
+  # "unknown registry".
+  defp ensure_finch do
+    with {Tesla.Adapter.Finch, opts} <- Application.get_env(:tesla, :adapter),
+         name when is_atom(name) and not is_nil(name) <- opts[:name],
+         nil <- Process.whereis(name) do
+      {:ok, _} = Application.ensure_all_started(:finch)
+      Finch.start_link(name: name)
+    end
+
+    :ok
   end
 
   @impl true
@@ -109,16 +139,30 @@ defmodule Lightning.Adaptors.Supervisor do
   supervisor has started under that name.
   """
   @spec strategy(atom()) :: module()
-  def strategy(name) do
-    :persistent_term.get(meta_key(name)).strategy
-  end
+  def strategy(name), do: meta(name).strategy
 
   @doc """
   Returns the source (`:npm | :local`) of the supervisor named `name`.
   """
   @spec source(atom()) :: :npm | :local
-  def source(name) do
-    :persistent_term.get(meta_key(name)).source
+  def source(name), do: meta(name).source
+
+  defp meta(name) do
+    case :persistent_term.get(meta_key(name), nil) do
+      nil ->
+        raise """
+        The adaptors subsystem is not running under the name #{inspect(name)}.
+
+        It starts with the Lightning application. Entry points that run \
+        without it - mix tasks, `mix run --no-start`, `bin/lightning eval` - \
+        must start it themselves, after the repo is up:
+
+            Lightning.Adaptors.Supervisor.ensure_started()
+        """
+
+      meta ->
+        meta
+    end
   end
 
   @doc """

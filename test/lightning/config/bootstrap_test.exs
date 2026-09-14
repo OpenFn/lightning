@@ -664,8 +664,8 @@ defmodule Lightning.Config.BootstrapTest do
   end
 
   describe "adaptors refresh interval" do
-    test "ADAPTORS_REFRESH_INTERVAL_MS sets refresh_interval when present" do
-      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_MS" => "60000"}])
+    test "ADAPTORS_REFRESH_INTERVAL_SECONDS sets refresh_interval in ms" do
+      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_SECONDS" => "60"}])
 
       Bootstrap.configure()
 
@@ -673,8 +673,8 @@ defmodule Lightning.Config.BootstrapTest do
                60_000
     end
 
-    test "ADAPTORS_REFRESH_INTERVAL_MS accepts 0 to disable the scheduler" do
-      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_MS" => "0"}])
+    test "ADAPTORS_REFRESH_INTERVAL_SECONDS accepts 0 to disable the scheduler" do
+      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_SECONDS" => "0"}])
 
       Bootstrap.configure()
 
@@ -693,7 +693,7 @@ defmodule Lightning.Config.BootstrapTest do
     end
 
     test "does not set refresh_interval when set but empty" do
-      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_MS" => ""}])
+      Dotenvy.source([%{"ADAPTORS_REFRESH_INTERVAL_SECONDS" => ""}])
 
       Bootstrap.configure()
 

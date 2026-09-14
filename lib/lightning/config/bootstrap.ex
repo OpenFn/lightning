@@ -1049,7 +1049,8 @@ defmodule Lightning.Config.Bootstrap do
              icon_path:
                env!("ADAPTORS_ICONS_PATH", :string, nil) |> expand_or_nil(),
              refresh_interval:
-               env!("ADAPTORS_REFRESH_INTERVAL_MS", :integer?, nil)
+               env!("ADAPTORS_REFRESH_INTERVAL_SECONDS", :integer?, nil)
+               |> seconds_to_ms()
            ]
            |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
@@ -1099,6 +1100,9 @@ defmodule Lightning.Config.Bootstrap do
     |> Enum.reject(&(&1 == ""))
     |> Enum.map(&Path.expand/1)
   end
+
+  defp seconds_to_ms(nil), do: nil
+  defp seconds_to_ms(seconds) when is_integer(seconds), do: seconds * 1000
 
   defp expand_or_nil(nil), do: nil
   defp expand_or_nil(path) when is_binary(path), do: Path.expand(path)

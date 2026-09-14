@@ -4,15 +4,22 @@ defmodule Lightning.Adaptors.SupervisorTest do
   alias Lightning.Adaptors.Supervisor, as: AdaptorsSupervisor
 
   describe "start_link/1" do
-    test "raises KeyError when :name is missing" do
-      assert_raise KeyError, ~r/key :name not found/, fn ->
-        AdaptorsSupervisor.start_link([])
-      end
-    end
+    test ":name defaults to the configured instance" do
+      pid = Process.whereis(Lightning.Adaptors.Config.default_instance())
 
-    test "raises KeyError when opts has no :name key" do
-      assert_raise KeyError, fn ->
-        AdaptorsSupervisor.start_link(strategy: :ignored)
+      assert {:error, {:already_started, ^pid}} =
+               AdaptorsSupervisor.start_link([])
+
+      assert {:ok, ^pid} = AdaptorsSupervisor.ensure_started()
+    end
+  end
+
+  describe "source/1 and strategy/1" do
+    test "name the unstarted instance and how to start it" do
+      for fun <- [&AdaptorsSupervisor.source/1, &AdaptorsSupervisor.strategy/1] do
+        assert_raise RuntimeError,
+                     ~r/not running under the name :nope.*ensure_started\(\)/s,
+                     fn -> fun.(:nope) end
       end
     end
   end
