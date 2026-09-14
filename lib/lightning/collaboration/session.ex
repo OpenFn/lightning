@@ -36,7 +36,8 @@ defmodule Lightning.Collaboration.Session do
     :shared_doc_pid,
     :user,
     :workflow,
-    :document_name
+    :document_name,
+    :view_only?
   ]
 
   @type start_opts :: [
@@ -108,7 +109,8 @@ defmodule Lightning.Collaboration.Session do
       shared_doc_pid: nil,
       user: user,
       workflow: workflow,
-      document_name: document_name
+      document_name: document_name,
+      view_only?: Keyword.get(opts, :view_only?, false)
     }
 
     lookup_shared_doc(pg_scope, document_name)
@@ -351,6 +353,16 @@ defmodule Lightning.Collaboration.Session do
   end
 
   @impl true
+  def handle_call({:reset_workflow, user}, _from, %{view_only?: true} = state) do
+    Logger.warning(
+      "Refusing to reset workflow #{state.workflow.id} from a read-only view " <>
+        "(document #{state.document_name}, user #{user.id})"
+    )
+
+    {:reply, {:error, :read_only_view}, state}
+  end
+
+  @impl true
   def handle_call({:reset_workflow, user}, _from, state) do
     Logger.info("Resetting workflow #{state.workflow.id} for user #{user.id}")
 
@@ -450,6 +462,26 @@ defmodule Lightning.Collaboration.Session do
   # flip the lifecycle state and trigger enablement in the same transaction).
   # Going live and switching to draft reuse this path so they stay atomic and
   # self-consistent with the collaborative document (one save, one Y.Doc merge).
+  # The one gate on writing. A session is either the workflow or a view of one
+  # of its past states: a pinned release, a pinned snapshot, or the workflow as
+  # a run executed it. A view's document holds old content, and every save
+  # resolves the *current* row as its target and casts the document over it, so
+  # a save from a view deletes whatever was added since, overwrites whatever was
+  # edited, and records the result as a new version with nothing to say it
+  # happened.
+  #
+  # Refusing here covers every caller at once, including ones added later: save,
+  # save-and-sync, reset, promote, go live and switch to draft all arrive at
+  # this function. Checking it per handler is how it got missed.
+  defp do_save_workflow(%{view_only?: true} = state, user, mode) do
+    Logger.warning(
+      "Refusing to save workflow #{state.workflow.id} from a read-only view " <>
+        "(document #{state.document_name}, user #{user.id}, mode #{inspect(mode)})"
+    )
+
+    {:reply, {:error, :read_only_view}, state}
+  end
+
   defp do_save_workflow(state, user, mode) do
     Logger.info("Saving workflow #{state.workflow.id} for user #{user.id}")
 

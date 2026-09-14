@@ -56,6 +56,94 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
     end
 
+    test "a transition read from an older version acts on the workflow, not the view", %{
+      socket: socket,
+      user: user,
+      project: project,
+      workflow: workflow
+    } do
+      # A snapshot to pin to, then a job added after it. That job is what a save
+      # from the pinned view would delete.
+      {:ok, original} =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Before the job"})
+        |> Lightning.Workflows.save_workflow(user)
+
+      original = Lightning.Repo.preload(original, [:jobs, :edges, :triggers])
+      added_job_id = Ecto.UUID.generate()
+
+      {:ok, grown} =
+        original
+        |> Lightning.Workflows.Workflow.changeset(%{
+          jobs:
+            Enum.map(
+              original.jobs,
+              &Map.take(&1, [:id, :name, :body, :adaptor])
+            ) ++
+              [
+                %{
+                  id: added_job_id,
+                  name: "Added after the snapshot",
+                  body: "fn(state => state)",
+                  adaptor: "@openfn/language-common@latest"
+                }
+              ]
+        })
+        |> Lightning.Workflows.save_workflow(user)
+
+      job_count = length(original.jobs) + 1
+      assert length(grown.jobs) == job_count
+
+      # Read the workflow as it was before that job existed.
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{original.lock_version}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      assert pinned_socket.assigns.workflow.lock_version ==
+               original.lock_version
+
+      # The transition acts on the workflow, not on this socket's document. It
+      # goes through, and the job added after the pinned snapshot survives:
+      # saving that document over the workflow would have deleted it and
+      # recorded the result as a new version, silently.
+      ref = push(pinned_socket, "go_live", %{})
+      assert_reply ref, :ok, %{workflow: live_workflow}
+      assert live_workflow.state == :live
+
+      ref = push(pinned_socket, "switch_to_draft", %{})
+      assert_reply ref, :ok, %{workflow: draft_workflow}
+      assert draft_workflow.state == :draft
+
+      # A save is a different question, and from a view it is refused: there is
+      # no reading of the past that should write itself back over the workflow.
+      ref = push(pinned_socket, "save_workflow", %{})
+      assert_reply ref, :error, %{type: "read_only_view"}
+
+      reloaded =
+        workflow.id
+        |> Lightning.Workflows.get_workflow!()
+        |> Lightning.Repo.preload(:jobs)
+
+      # The two transitions each saved, so the lock version moved on. What must
+      # not have moved is the content.
+      assert length(reloaded.jobs) == job_count
+      assert reloaded.lock_version > grown.lock_version
+      assert reloaded.state == :draft
+      assert Enum.any?(reloaded.jobs, &(&1.id == added_job_id))
+
+      # The live socket is unaffected: the gate is about the document, not the
+      # person or the workflow.
+      ref = push(socket, "go_live", %{})
+      assert_reply ref, :ok, %{workflow: live_workflow}
+      assert live_workflow.state == :live
+    end
+
     test "closes the write gate on every other socket in the room", %{
       user: user,
       project: project,

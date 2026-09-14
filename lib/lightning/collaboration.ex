@@ -57,7 +57,8 @@ defmodule Lightning.Collaborate do
       case start_session(instance, document_name,
              workflow: workflow,
              user: user,
-             parent_pid: parent_pid
+             parent_pid: parent_pid,
+             view_only?: Keyword.get(opts, :view_only?, false)
            ) do
         {:ok, _session_pid} = ok ->
           ok
@@ -109,6 +110,7 @@ defmodule Lightning.Collaborate do
         user: user,
         parent_pid: Keyword.fetch!(opts, :parent_pid),
         document_name: document_name,
+        view_only?: Keyword.get(opts, :view_only?, false),
         registry: instance.registry,
         pg_scope: instance.pg_scope,
         name:

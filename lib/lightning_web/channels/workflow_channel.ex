@@ -77,7 +77,12 @@ defmodule LightningWeb.WorkflowChannel do
         Collaborate.start(
           user: user,
           workflow: workflow,
-          room_topic: topic
+          room_topic: topic,
+          # A pinned release, a pinned snapshot and a run's own view all resolve
+          # to kind :version, and all three hold a past state of the workflow
+          # rather than the workflow. The session refuses to write from one, so
+          # a transition or a save issued here cannot put old content back.
+          view_only?: workflow_kind == :version
         )
 
       project_user = Lightning.Projects.get_project_user(project, user)
@@ -1662,6 +1667,23 @@ defmodule LightningWeb.WorkflowChannel do
     )
   end
 
+  # The session refuses every write from a pinned view, whatever asked for it.
+  # The client is expected to leave the view first, so reaching this means a
+  # stale tab or a direct channel call rather than something a button did.
+  defp workflow_error_reply(socket, {:error, :read_only_view}) do
+    {:reply,
+     {:error,
+      %{
+        errors: %{
+          base: [
+            "You are reading an older version of this workflow. " <>
+              "Go to the latest version to make changes."
+          ]
+        },
+        type: "read_only_view"
+      }}, socket}
+  end
+
   defp workflow_error_reply(socket, {:error, :workflow_deleted}) do
     {:reply,
      {:error,
@@ -1844,15 +1866,26 @@ defmodule LightningWeb.WorkflowChannel do
   # document update.
   @read_only_frame_types [:sync_step1, :awareness, :query_awareness]
 
-  # Decides whether an inbound Yjs frame may reach the shared document. Both
+  # Decides whether an inbound Yjs frame may reach the shared document. The
   # conditions are named here rather than folded into one assign, because
-  # dropping either would let writes into the document every collaborator in the
-  # room shares: the role says whether this person may edit at all, and the lock
-  # says whether the workflow's content may change right now. A user who fails
-  # either may send only the read-safe frames above.
+  # dropping any would let writes into the document every collaborator in the
+  # room shares: the role says whether this person may edit at all, the lock
+  # says whether the workflow's content may change right now, and the kind says
+  # whether this document is the workflow or a view of one of its past states.
+  # A user who fails any of them may send only the read-safe frames above.
+  #
+  # The kind matters on its own: a pinned view of a *draft* workflow passes the
+  # lifecycle lock, because that lock asks about the workflow rather than about
+  # the document on screen, and editing an old version's document is not
+  # something any of it is for.
   defp forward_yjs_message?(_chunk, %{
-         assigns: %{can_edit_workflow: true, content_locked: false}
-       }) do
+         assigns: %{
+           can_edit_workflow: true,
+           content_locked: false,
+           workflow_kind: kind
+         }
+       })
+       when kind != :version do
     true
   end
 
@@ -1878,11 +1911,39 @@ defmodule LightningWeb.WorkflowChannel do
   # that permission changes made during an active session are enforced.
   #
   # Returns :ok if authorized, {:error, %{type: string, message: string}} if not.
+  # A lifecycle transition acts on the workflow, never on the document the
+  # person happens to be reading. From a pinned view the socket's session holds
+  # a past state, and the session refuses to write from one, so the transition
+  # is issued against the live document instead of asking the client to leave
+  # the view first and hoping the two land in the right order.
+  defp lifecycle_session(%{assigns: %{workflow_kind: :version}} = socket) do
+    %{current_user: user, workflow_id: workflow_id} = socket.assigns
+
+    case Workflows.get_workflow(workflow_id) do
+      nil ->
+        {:error, :workflow_deleted}
+
+      workflow ->
+        # Attaches to the live document if one is already open, and opens it
+        # from the database if not, which is the same content either way. The
+        # session is parented to this channel process, so it goes when the
+        # socket does.
+        Collaborate.start(
+          user: user,
+          workflow: workflow,
+          room_topic: "workflow:collaborate:#{workflow_id}",
+          view_only?: false
+        )
+    end
+  end
+
+  defp lifecycle_session(socket), do: {:ok, socket.assigns.session_pid}
+
   defp transition_lifecycle_state(socket, target_state) do
-    session_pid = socket.assigns.session_pid
     user = socket.assigns.current_user
 
     with :ok <- authorize_edit_workflow(socket),
+         {:ok, session_pid} <- lifecycle_session(socket),
          {:ok, workflow} <-
            Session.set_workflow_state(session_pid, user, target_state) do
       broadcast_from!(socket, "workflow_saved", %{
