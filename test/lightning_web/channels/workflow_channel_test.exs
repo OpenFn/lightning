@@ -56,12 +56,13 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
     end
 
-    test "a transition read from an older version acts on the workflow, not the view", %{
-      socket: socket,
-      user: user,
-      project: project,
-      workflow: workflow
-    } do
+    test "a transition read from an older version acts on the workflow, not the view",
+         %{
+           socket: socket,
+           user: user,
+           project: project,
+           workflow: workflow
+         } do
       # A snapshot to pin to, then a job added after it. That job is what a save
       # from the pinned view would delete.
       {:ok, original} =
