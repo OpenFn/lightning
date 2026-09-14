@@ -42,8 +42,6 @@ vi.mock('../../../js/collaborative-editor/lib/pinnedView', () => ({
   usePinnedView: () => ({ isPinnedView }),
 }));
 
-
-
 // The workflow store supplies only the jobs and triggers behind the
 // unsaved-new-workflow check, which is not what these tests are about.
 const workflowState = { jobs: [], triggers: [], workflow: null };
@@ -51,9 +49,8 @@ const workflowState = { jobs: [], triggers: [], workflow: null };
 const stores = {
   workflowStore: {
     subscribe: () => () => {},
-    withSelector:
-      (selector: (state: typeof workflowState) => unknown) => () =>
-        selector(workflowState),
+    withSelector: (selector: (state: typeof workflowState) => unknown) => () =>
+      selector(workflowState),
   },
 } as unknown as StoreContextValue;
 
@@ -77,7 +74,9 @@ describe('useCanRun on a version being read', () => {
   });
 
   test('lets a retry through', () => {
-    const { result } = renderHook(() => useCanRun({ forRetry: true }), { wrapper });
+    const { result } = renderHook(() => useCanRun({ forRetry: true }), {
+      wrapper,
+    });
 
     expect(result.current.canRun).toBe(true);
   });
@@ -87,7 +86,9 @@ describe('useCanRun on a version being read', () => {
     // not find a control they have never had.
     experimentalFeatures = false;
 
-    const { result } = renderHook(() => useCanRun({ forRetry: true }), { wrapper });
+    const { result } = renderHook(() => useCanRun({ forRetry: true }), {
+      wrapper,
+    });
 
     expect(result.current.canRun).toBe(false);
     expect(result.current.tooltipMessage).toBe(
@@ -98,10 +99,13 @@ describe('useCanRun on a version being read', () => {
   test('allows both when nothing is pinned', () => {
     isPinnedView = false;
 
-    const { result } = renderHook(() => ({
-      fresh: useCanRun(),
-      retry: useCanRun({ forRetry: true }),
-    }), { wrapper });
+    const { result } = renderHook(
+      () => ({
+        fresh: useCanRun(),
+        retry: useCanRun({ forRetry: true }),
+      }),
+      { wrapper }
+    );
 
     expect(result.current.fresh.canRun).toBe(true);
     expect(result.current.retry.canRun).toBe(true);

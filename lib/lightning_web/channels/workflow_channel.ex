@@ -1210,6 +1210,21 @@ defmodule LightningWeb.WorkflowChannel do
     {:noreply, socket}
   end
 
+  # A workflow-level announcement reaches every socket on the workflow, but
+  # Phoenix only routes it through handle_out when the broadcast's topic is the
+  # socket's own. A version being read is subscribed to the workflow's room and
+  # sits on a different topic, so it arrives here instead. Passed on rather than
+  # logged as a surprise: a second person reading the same version still needs
+  # to learn that the version they are reading is no longer the latest.
+  @impl true
+  def handle_info(
+        %Phoenix.Socket.Broadcast{event: "workflow_saved", payload: payload},
+        socket
+      ) do
+    push(socket, "workflow_saved", payload)
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_info(message, socket) do
     Logger.warning(fn ->

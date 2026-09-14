@@ -148,7 +148,9 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
     ydoc: null,
     awareness: null,
     isConnected: false,
-    isSynced: false, settled: true }),
+    isSynced: false,
+    settled: true,
+  }),
 }));
 
 // Mock useURLState hook with centralized helper

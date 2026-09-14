@@ -14,12 +14,12 @@ import * as dataclipApi from '../api/dataclips';
 import type { Dataclip } from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
 import { getCsrfToken } from '../lib/csrf';
+import { notifications } from '../lib/notifications';
 import {
   AS_RUN_PARAM,
   RELEASE_PARAM,
   SNAPSHOT_PARAM,
 } from '../lib/pinnedView';
-import { notifications } from '../lib/notifications';
 import type { Workflow } from '../types/workflow';
 import { findFirstJobFromTrigger } from '../utils/workflowGraph';
 
@@ -252,7 +252,11 @@ export function useRunRetry({
     (selectedTab === 'custom' && isValidCustomBody && !isCustomBodyTooLarge);
 
   const canRun = !edgeId && canRunWorkflow && hasValidInput;
-  const canRetry = !edgeId && canRetryWorkflow;
+  // A retry runs the input its own run used, so what is selected in the panel
+  // does not decide it. That is an improvement and it is still a change, so
+  // without the flag it keeps main's answer: the panel's selection gates both.
+  const canRetry =
+    !edgeId && canRetryWorkflow && (experimentalFeatures || hasValidInput);
 
   /**
    * Handle run - Create new work order with selected input

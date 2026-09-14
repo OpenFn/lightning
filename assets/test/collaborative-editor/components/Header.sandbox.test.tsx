@@ -48,6 +48,7 @@ const checkPromote =
 
 let urlParams: Record<string, string> = {};
 const updateSearchParams = vi.fn();
+const clearRun = vi.fn();
 let activeRun: {
   id: string;
   state: string;
@@ -76,6 +77,8 @@ vi.mock('../../../js/collaborative-editor/hooks/useHistory', () => ({
   // The header asks which snapshot the loaded run executed, to decide whether
   // it can come along into a draft.
   useRunSummary: () => activeRunSummary,
+  // Going live drops the run from the store as well as the URL.
+  useFollowRun: () => ({ run: activeRun, clearRun }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
@@ -255,6 +258,7 @@ describe('Header - Edit in sandbox button gating', () => {
     experimentalFeatures = true;
     workflowEnabled = true;
     setEnabled.mockReset();
+    clearRun.mockReset();
     canArchiveSandbox = true;
     limits = {};
     readOnly = { isReadOnly: false, reason: null };
@@ -327,6 +331,7 @@ describe('Header - lifecycle actions', () => {
     experimentalFeatures = true;
     workflowEnabled = true;
     setEnabled.mockReset();
+    clearRun.mockReset();
     canArchiveSandbox = true;
     limits = {};
     urlParams = {};
@@ -524,6 +529,29 @@ describe('Header - lifecycle actions', () => {
     renderHeader();
     const warnings = screen.getAllByTestId('read-only-warning');
     expect(warnings.at(-1)).toBeInTheDocument();
+  });
+
+  test('going live drops the loaded run from the store as well as the URL', async () => {
+    const user = userEvent.setup();
+    lifecycleState = 'draft';
+    urlParams = { run: 'run-1' };
+    activeRun = { id: 'run-1', state: 'success', steps: [{ id: 'step-1' }] };
+
+    renderHeader();
+
+    await user.click(screen.getByTestId('go-live-button'));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Go live',
+      })
+    );
+
+    // Clearing only the parameter was not enough: the canvas restores the run
+    // from the store, and going live writes a version that run did not execute,
+    // so it reopens read-only as it executed.
+    await waitFor(() => {
+      expect(clearRun).toHaveBeenCalled();
+    });
   });
 
   test('go live requires confirmation before running', async () => {
@@ -1269,6 +1297,7 @@ describe('Header - read-only reason variations', () => {
     experimentalFeatures = true;
     workflowEnabled = true;
     setEnabled.mockReset();
+    clearRun.mockReset();
     canArchiveSandbox = true;
     limits = {};
     readOnly = { isReadOnly: false, reason: null };
@@ -1395,6 +1424,7 @@ describe('Header - long workflow name', () => {
     experimentalFeatures = true;
     workflowEnabled = true;
     setEnabled.mockReset();
+    clearRun.mockReset();
     canArchiveSandbox = true;
     limits = {};
     readOnly = { isReadOnly: false, reason: null };

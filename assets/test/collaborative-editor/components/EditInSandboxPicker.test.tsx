@@ -428,7 +428,9 @@ describe('EditInSandboxPicker', () => {
 
       await user.click(screen.getByLabelText(/this run's input/i));
       await user.click(screen.getByTestId('create-sandbox-button'));
-      expect(await screen.findByTestId('review-body')).toHaveValue(pretty('{"a":1}'));
+      expect(await screen.findByTestId('review-body')).toHaveValue(
+        pretty('{"a":1}')
+      );
 
       rerender(<EditInSandboxPicker isOpen={false} onClose={() => {}} />);
       rerender(<EditInSandboxPicker isOpen onClose={() => {}} />);
@@ -442,7 +444,9 @@ describe('EditInSandboxPicker', () => {
 
       // A flag left set across a reopen skips the fetch and shows an empty
       // review step that can never recover.
-      expect(await screen.findByTestId('review-body')).toHaveValue(pretty('{"a":1}'));
+      expect(await screen.findByTestId('review-body')).toHaveValue(
+        pretty('{"a":1}')
+      );
     });
 
     test('does not strand the button when the dialog closes mid-fetch', async () => {

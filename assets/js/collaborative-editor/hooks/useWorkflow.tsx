@@ -1061,8 +1061,10 @@ export const useCanRun = (
  * 1. Workflow deletion state (deleted_at)
  * 2. User permissions (can_edit_workflow), asked before the lock so a viewer is
  *    never pointed at actions only an editor can take
- * 3. The lifecycle lock (content_locked), which is an editor's way out
- * 4. Reading the past (a pinned release, a pinned snapshot, or a run's view)
+ * 3. Reading the past (a pinned release, a pinned snapshot, or a run's view),
+ *    which is about the document on screen and so answers before the lifecycle:
+ *    switching to draft would not make an old version editable
+ * 4. The lifecycle lock (content_locked), which is an editor's way out
  * 5. Template preview (new workflow with selected template)
  *
  * Note: Connection state does not affect read-only status. Offline editing

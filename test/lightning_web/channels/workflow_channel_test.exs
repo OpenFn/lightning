@@ -127,9 +127,10 @@ defmodule LightningWeb.WorkflowChannelTest do
       ref = push(pinned_socket, "go_live", %{})
       assert_reply ref, :ok, %{}
 
-      # The live socket recomputes its lock from that broadcast. Announcing on
-      # the reader's own topic instead meant this never arrived.
-      assert_push "session_context_updated", %{content_locked: true}
+      # Asserted on lifecycle_changed, not the context push: only a socket on
+      # the workflow's own room emits it, so the pinned socket's own push
+      # cannot satisfy this. Both sockets live in the test process.
+      assert_push "lifecycle_changed", %{state: :live}
     end
 
     test "a transition tells the version being read that the lock moved", %{

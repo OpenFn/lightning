@@ -6,7 +6,7 @@ import { useURLState } from '#/react/lib/use-url-state';
 import { Tooltip } from '../../components/Tooltip';
 import * as dataclipApi from '../api/dataclips';
 import { StoreContext } from '../contexts/StoreProvider';
-import { useActiveRun } from '../hooks/useHistory';
+import { useActiveRun, useFollowRun } from '../hooks/useHistory';
 import { useSaveBeforeRun } from '../hooks/useSaveBeforeRun';
 import {
   useExperimentalFeatures,
@@ -294,6 +294,7 @@ export function Header({
   const [showEditInSandboxPicker, setShowEditInSandboxPicker] = useState(false);
   const [showPromoteDialog, setShowPromoteDialog] = useState(false);
   const activeRun = useActiveRun();
+  const { clearRun } = useFollowRun(null);
 
   // Two effects, not one, the way the IDE does it. The arrival has to watch the
   // run, and the timeout must not: folded together and keyed on the run, the
@@ -1046,11 +1047,14 @@ export function Header({
             }}
             onConfirm={() => {
               setShowGoLiveDialog(false);
-              // The run goes too. Going live writes a new version, so a run
-              // selected beforehand no longer matches what is live, and the
-              // canvas would answer that by opening it as it executed: you
-              // confirm Go live and land read-only in a view of an old run
-              // rather than looking at what you just published.
+              // The run goes too, from the store as well as the URL. Going
+              // live writes a new version, so a run selected beforehand no
+              // longer matches what is live, and the canvas would answer that
+              // by opening it as it executed: you confirm Go live and land
+              // read-only in a view of an old run rather than looking at what
+              // you just published. Clearing only the parameter was not
+              // enough, because the canvas restores it from the store.
+              clearRun();
               requestTransition(
                 'live',
                 {

@@ -1381,8 +1381,7 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Each release is one menuitem; there is no "latest" pseudo-row
-      // The two releases, plus Latest, which is a menu item in its own right.
+        // The two releases, plus Latest, which is a menu item in its own right.
       const menuItems = screen.getAllByRole('menuitem');
       expect(menuItems).toHaveLength(3);
     });
