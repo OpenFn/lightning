@@ -1,8 +1,10 @@
 defmodule Lightning.AdaptorServiceTest do
   @moduledoc """
-  Covers `AdaptorService.known?/1` gating `install/2` on
-  `Lightning.Adaptors.fetch_adaptor/1`: an empty catalogue waits for one
-  load, and a name the loaded catalogue lacks refuses the install.
+  Covers `AdaptorService.install/2` checking the package against
+  `Lightning.Adaptors.fetch_adaptor/1` first: an empty catalogue waits for
+  one load, a name the loaded catalogue lacks is refused as
+  `:adaptor_not_permitted`, and a catalogue that cannot answer at all comes
+  back as `{:catalogue_unavailable, reason}` rather than a refusal.
   """
 
   # set_mox_global: the load runs in a Task owned by the Scheduler.

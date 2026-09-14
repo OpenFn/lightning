@@ -115,17 +115,6 @@ defmodule LightningWeb.WorkflowChannel do
   end
 
   @impl true
-  def handle_in("request_adaptors", _payload, socket) do
-    async_task(socket, "request_adaptors", fn ->
-      adaptors =
-        list_all_packages()
-        |> Enum.map(&with_icon_urls/1)
-
-      %{adaptors: adaptors}
-    end)
-  end
-
-  @impl true
   def handle_in("request_credentials", _payload, socket) do
     project = socket.assigns.project
 
@@ -1344,24 +1333,6 @@ defmodule LightningWeb.WorkflowChannel do
   defp unhandled_message_type(%struct{}), do: inspect(struct)
   defp unhandled_message_type(_msg), do: "unrecognised"
 
-  defp list_all_packages do
-    case Lightning.Adaptors.packages() do
-      {:ok, pkgs} -> pkgs
-      {:error, _} -> []
-    end
-  end
-
-  defp with_icon_urls(%Lightning.Adaptors.Package{name: name} = pkg) do
-    %{
-      name: name,
-      latest_version: pkg.latest_version,
-      icon_urls: %{
-        square: LightningWeb.AdaptorIconURL.build(name, pkg, :square),
-        rectangle: LightningWeb.AdaptorIconURL.build(name, pkg, :rectangle)
-      }
-    }
-  end
-
   defp handle_async_event("request_run_steps", socket_ref, reply) do
     unwrapped_reply = unwrap_run_steps_reply(reply)
     reply(socket_ref, unwrapped_reply)
@@ -1369,7 +1340,6 @@ defmodule LightningWeb.WorkflowChannel do
 
   defp handle_async_event(event, socket_ref, reply)
        when event in [
-              "request_adaptors",
               "request_credentials",
               "request_metadata",
               "request_current_user",

@@ -2703,108 +2703,18 @@ defmodule LightningWeb.WorkflowChannelTest do
     end
   end
 
-  describe "request_adaptors and request_credentials" do
-    setup do
-      insert(:adaptor, name: "@openfn/language-salesforce", source: :npm)
-      insert(:adaptor, name: "@openfn/language-http", source: :npm)
-      :ok
-    end
-
-    test "handles multiple concurrent requests independently", %{
+  describe "request_credentials" do
+    test "replies with project and keychain credential lists", %{
       socket: socket
     } do
-      ref_adaptors = push(socket, "request_adaptors", %{})
-      ref_credentials = push(socket, "request_credentials", %{})
+      ref = push(socket, "request_credentials", %{})
 
-      assert_reply ref_adaptors, :ok, %{adaptors: adaptors}
-      assert_reply ref_credentials, :ok, %{credentials: credentials}
-
-      assert is_list(adaptors)
-      assert adaptors != []
-      assert Enum.all?(adaptors, &Map.has_key?(&1, :icon_urls))
-
-      assert Enum.all?(adaptors, fn a ->
-               Enum.sort(Map.keys(a.icon_urls)) == [:rectangle, :square]
-             end)
+      assert_reply ref, :ok, %{credentials: credentials}
 
       assert Map.has_key?(credentials, :project_credentials)
       assert Map.has_key?(credentials, :keychain_credentials)
       assert is_list(credentials.project_credentials)
       assert is_list(credentials.keychain_credentials)
-    end
-
-    test "request_adaptors enriches records with icon_urls when meta present",
-         %{socket: socket} do
-      name = "@openfn/language-common"
-      square_sha = :crypto.strong_rand_bytes(32)
-      rectangle_sha = :crypto.strong_rand_bytes(32)
-
-      insert(:adaptor,
-        name: name,
-        icon_square_ext: "png",
-        icon_square_sha256: square_sha,
-        icon_rectangle_ext: "svg",
-        icon_rectangle_sha256: rectangle_sha
-      )
-
-      ref = push(socket, "request_adaptors", %{})
-      assert_reply ref, :ok, %{adaptors: adaptors}
-
-      record = Enum.find(adaptors, &(&1.name == name))
-      assert record, "expected legacy registry to include #{name}"
-
-      {:ok, meta} = Lightning.Adaptors.icon_meta(name)
-
-      assert record.icon_urls.square ==
-               LightningWeb.AdaptorIconURL.build(name, meta, :square)
-
-      assert record.icon_urls.rectangle ==
-               LightningWeb.AdaptorIconURL.build(name, meta, :rectangle)
-
-      assert is_binary(record.icon_urls.square)
-      assert is_binary(record.icon_urls.rectangle)
-    end
-
-    test "request_adaptors emits nil icon_urls when row has no icon meta",
-         %{socket: socket} do
-      name = "@openfn/language-dhis2"
-
-      insert(:adaptor,
-        name: name,
-        source: :npm,
-        icon_square_ext: nil,
-        icon_square_sha256: nil,
-        icon_rectangle_ext: nil,
-        icon_rectangle_sha256: nil
-      )
-
-      ref = push(socket, "request_adaptors", %{})
-      assert_reply ref, :ok, %{adaptors: adaptors}
-
-      record = Enum.find(adaptors, &(&1.name == name))
-      assert record, "expected packages/0 to include #{name}"
-      assert record.icon_urls == %{square: nil, rectangle: nil}
-    end
-
-    test "request_adaptors handles half-populated icon meta", %{socket: socket} do
-      name = "@openfn/language-commcare"
-      square_sha = :crypto.strong_rand_bytes(32)
-
-      insert(:adaptor,
-        name: name,
-        icon_square_ext: "png",
-        icon_square_sha256: square_sha,
-        icon_rectangle_ext: nil,
-        icon_rectangle_sha256: nil
-      )
-
-      ref = push(socket, "request_adaptors", %{})
-      assert_reply ref, :ok, %{adaptors: adaptors}
-
-      record = Enum.find(adaptors, &(&1.name == name))
-      assert record, "expected legacy registry to include #{name}"
-      assert is_binary(record.icon_urls.square)
-      assert record.icon_urls.rectangle == nil
     end
 
     test "returns correctly structured project credentials", %{

@@ -69,7 +69,56 @@ and this project adheres to
 
 - Lightning now keeps its own adaptor registry instead of fetching the list from
   npm at startup, so new adaptors and versions show up without a rebuild or
-  redeploy. See [ADAPTORS.md](ADAPTORS.md).
+  redeploy. The entries below cover what an upgrade has to act on. See
+  [ADAPTORS.md](ADAPTORS.md).
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
+- `SCHEMAS_PATH` and `ADAPTORS_REGISTRY_JSON_PATH` are gone. Nothing reads
+  either of them any more, so delete them from your deployment config.
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
+- `LOCAL_ADAPTORS` and `OPENFN_ADAPTORS_REPO` are deprecated in favour of
+  `ADAPTORS_STRATEGY=local` and `ADAPTORS_LOCAL_REPO`. The old names still work
+  and log a warning on boot.
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
+- Nine new variables configure the registry, all optional and all with a working
+  default: `ADAPTORS_STRATEGY`, `ADAPTORS_LOCAL_REPO`, `ADAPTORS_ICONS_PATH`,
+  `ADAPTORS_REFRESH_INTERVAL_SECONDS`, `ADAPTORS_NPM_REGISTRY_URL`,
+  `ADAPTORS_NPM_JSDELIVR_URL`, `ADAPTORS_NPM_GITHUB_URL`,
+  `ADAPTORS_NPM_GITHUB_REF` and `ADAPTORS_NPM_HTTP_TIMEOUT`. See
+  [ADAPTORS.md](ADAPTORS.md) for what each one does.
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
+- `mix lightning.install_schemas`, `mix lightning.install_adaptor_icons` and
+  `mix lightning.download_adaptor_registry_cache` are deleted. Lightning fetches
+  schemas, icons and the package list itself while it runs. A custom build
+  script that calls any of them will fail.
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
+- Three migrations come with this release. All are forward-only and none
+  backfills anything. Two create and index the adaptor catalogue tables; the
+  third widens `credentials.schema` from 40 to 100 characters so it can hold
+  full package names such as `@openfn/language-http`.
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
+- The adaptor icon cache needs storage that survives a restart, at
+  `ADAPTORS_ICONS_PATH`. The official image and `docker-compose.yml` mount a
+  volume for it. Any other deployment has to provide one, or every restart
+  downloads the icons again.
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
+- A running instance now needs outbound access to npm, jsDelivr and
+  raw.githubusercontent.com, for the package list, credential schemas and icons
+  respectively. All three are public, unauthenticated requests, and an internal
+  mirror can be used by setting the `ADAPTORS_NPM_*` URL variables. An instance
+  with no internet access at all can import a snapshot instead; see "Running
+  without internet access" in [ADAPTORS.md](ADAPTORS.md).
+  [#4801](https://github.com/OpenFn/lightning/pull/4801)
+
+- Adaptors that npm marks as deprecated no longer appear in the adaptor picker
+  or the credential type list. Jobs and credentials already using one still
+  resolve, validate and run.
   [#4801](https://github.com/OpenFn/lightning/pull/4801)
 
 ### Removed
