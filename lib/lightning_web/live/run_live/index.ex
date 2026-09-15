@@ -959,11 +959,13 @@ defmodule LightningWeb.RunLive.Index do
   defp normalize_history_datetime_filters(filters, timezone)
        when is_binary(timezone) do
     Enum.reduce(@history_datetime_filter_keys, filters, fn key, acc ->
-      Map.update(
+      Map.replace(
         acc,
         key,
-        nil,
-        &normalize_datetime_filter_value(&1, timezone)
+        normalize_datetime_filter_value(
+          Map.get(acc, key),
+          timezone
+        )
       )
     end)
   end
