@@ -23,8 +23,8 @@ and this project adheres to
   failures are grouped by error signature. The digest keeps its history link for
   the runs behind its counts, and shows the health link only for workflows that
   actually failed.
-- Links to the history page are shorter. They no longer spell out search filters
-  the page already applies by default, or carry empty date filters.
+- Links to the history page are shorter. They no longer carry empty date
+  filters, or spell out search filters beyond the one the page defaults to.
 
 ### Fixed
 

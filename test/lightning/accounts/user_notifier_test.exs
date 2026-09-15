@@ -196,8 +196,6 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
       assert params["filters[workflow_id]"] == workflow.id
 
-      # Only `log` is spelled out, matching what a bare visit to history sets.
-      # The other three are left off, and off is what the page shows for them.
       assert params["filters[log]"] == "true"
       refute Map.has_key?(params, "filters[id]")
       refute Map.has_key?(params, "filters[body]")

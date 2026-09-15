@@ -362,11 +362,10 @@ defmodule Lightning.Accounts.UserNotifier do
     """
   end
 
-  # History carries the digest's own window in the URL, so it still shows the
-  # runs these counts came from whenever the mail is opened. Health is scoped to
-  # a rolling window instead and cannot answer for this one, so it is offered
-  # only as the place to group failures by error, and only where there are
-  # failures to group.
+  # The history link carries the digest's own window, so it still shows the runs
+  # these counts came from however long the mail sits unread. Health only does a
+  # rolling window, so it's here to group failures by error, not to stand in for
+  # those counts.
   defp links(workflow, start_date, end_date, failed_workorders) do
     history = [
       "See these runs in history: #{build_digest_url(workflow, start_date, end_date)}"

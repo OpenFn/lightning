@@ -142,12 +142,10 @@ defmodule Lightning.WorkOrders.SearchParams do
     |> dates_to_string()
   end
 
-  # A link naming some of the four search-field flags is making a choice, so the
-  # rest are filled in. A link naming none of them gets `log` alone, matching
-  # what a bare visit to history sets. Leaving all four out is not an option:
-  # the schema reads that URL as "search everything" while the toggle chips,
-  # painted from the raw params, read it as "search nothing" -- and the first
-  # search run from such a page ships four `false`s and matches no rows.
+  # Naming none of the four search-field flags is ambiguous. The schema reads
+  # that URL as "search all four", but the history page paints its toggles from
+  # the raw params and shows them all off, so the next search from that page
+  # finds nothing. `log` alone agrees with both, and is what a bare visit sets.
   defp merge_fields(search_params, defaults) do
     if Enum.any?(defaults, &Map.has_key?(search_params, &1)) do
       (defaults -- Map.keys(search_params))
@@ -158,8 +156,6 @@ defmodule Lightning.WorkOrders.SearchParams do
     end
   end
 
-  # A date the caller did not set is dropped rather than emitted as an empty
-  # param, so the URL carries only the dates it actually filters on.
   defp dates_to_string(search_params) do
     ~w(date_after date_before wo_date_after wo_date_before)a
     |> Enum.reduce(search_params, fn key, params ->

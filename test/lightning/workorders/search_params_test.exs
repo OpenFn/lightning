@@ -146,8 +146,8 @@ defmodule Lightning.WorkOrders.SearchParamsTest do
                "log" => true
              }
 
-      # What the link says and what the history page's toggles show are the
-      # same thing, and both match a bare visit to history.
+      # Reading the link back gives log alone, so the chip the reader sees is
+      # the field the search actually covers.
       assert SearchParams.new(params).search_fields == [:log]
     end
 
