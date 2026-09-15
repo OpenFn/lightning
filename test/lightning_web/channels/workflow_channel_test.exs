@@ -121,6 +121,29 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert Lightning.Workflows.get_workflow!(workflow.id).state == :draft
     end
 
+    test "a transition from a version being read says so when the workflow is gone",
+         %{user: user, project: project, workflow: workflow} do
+      {:ok, saved} =
+        workflow
+        |> Lightning.Repo.preload([:jobs, :edges, :triggers])
+        |> Lightning.Workflows.Workflow.changeset(%{name: "Has A Snapshot"})
+        |> Lightning.Workflows.save_workflow(user)
+
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{saved.lock_version}",
+          %{project_id: project.id, action: "edit"}
+        )
+
+      Lightning.Repo.delete!(%Lightning.Workflows.Workflow{id: workflow.id})
+
+      ref = push(pinned_socket, "go_live", %{})
+      assert_reply ref, :error, %{type: "workflow_deleted"}
+    end
+
     test "a transition from a version being read reaches the workflow's own room",
          %{user: user, project: project, workflow: workflow} do
       {:ok, saved} =
@@ -252,6 +275,9 @@ defmodule LightningWeb.WorkflowChannelTest do
       assert {:ok, _} = Jason.encode(draft_workflow)
 
       ref = push(pinned_socket, "save_workflow", %{})
+      assert_reply ref, :error, %{type: "read_only_view"}
+
+      ref = push(pinned_socket, "reset_workflow", %{})
       assert_reply ref, :error, %{type: "read_only_view"}
 
       reloaded =
@@ -2380,6 +2406,32 @@ defmodule LightningWeb.WorkflowChannelTest do
         v1: v1,
         original_body: job.body
       }
+    end
+
+    test "restoring from a version being read leaves that socket's workflow alone",
+         %{user: user, project: project, workflow: workflow} do
+      # That socket's workflow is the snapshot its document holds. Swapping the
+      # restored row in would measure the document against content it was never
+      # meant to match, so the view would read as unsaved the moment the
+      # restore landed.
+      {:ok, _, pinned_socket} =
+        LightningWeb.UserSocket
+        |> socket("user_#{user.id}", %{current_user: user})
+        |> subscribe_and_join(
+          LightningWeb.WorkflowChannel,
+          "workflow:collaborate:#{workflow.id}:v#{workflow.lock_version}",
+          %{"project_id" => project.id, "action" => "edit"}
+        )
+
+      pinned_version = workflow.lock_version
+
+      ref = push(pinned_socket, "restore_version", %{"version_number" => 1})
+      assert_reply ref, :ok, %{lock_version: _}, 2000
+
+      ref = push(pinned_socket, "get_context", %{})
+      assert_reply ref, :ok, context, 2000
+
+      assert context.workflow.lock_version == pinned_version
     end
 
     test "puts the version's content back and leaves the workflow live", %{
@@ -4879,6 +4931,32 @@ defmodule LightningWeb.WorkflowChannelTest do
 
       assert log =~ "unhandled handle_info event: some_future_event"
       assert Process.alive?(socket.channel_pid)
+    end
+  end
+
+  describe "when the workflow is deleted mid-session" do
+    setup :with_experimental_user
+
+    test "version-scoped history falls back to the socket's own workflow", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      Lightning.Repo.delete!(%Lightning.Workflows.Workflow{id: workflow.id})
+
+      ref = push(socket, "request_history", %{"version_number" => 1})
+      assert_reply ref, :ok, %{history: history}
+      assert history == []
+    end
+
+    test "a sandbox name falls back to the socket's own workflow", %{
+      socket: socket,
+      workflow: workflow
+    } do
+      Lightning.Repo.delete!(%Lightning.Workflows.Workflow{id: workflow.id})
+
+      ref = push(socket, "list_sandboxes", %{})
+      assert_reply ref, :ok, %{sandboxes: sandboxes}
+      assert is_list(sandboxes)
     end
   end
 
