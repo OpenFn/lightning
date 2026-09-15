@@ -31,6 +31,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 vi.mock('../../../../js/monaco', () => ({
@@ -176,6 +177,15 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
   useSessionContext: () => ({ workflow: null, permissions: null }),
   useExperimentalFeatures: () => mockExperimentalFeatures,
   useProject: () => ({
@@ -237,8 +247,6 @@ const mockWorkflow: Workflow = {
 const mockYText = new Y.Text();
 mockYText.insert(0, 'fn(state => state)');
 
-// Mutable read-only state so individual tests can flip the workflow to
-// read-only (e.g. live on main) and assert that run-creation affordances hide.
 const mockReadOnlyState = { isReadOnly: false, tooltipMessage: '' };
 let mockExperimentalFeatures = true;
 let mockVersionMismatch: { runVersion: number; currentVersion: number } | null =
@@ -400,7 +408,15 @@ vi.mock(
 
 // Mock version select hook
 vi.mock('../../../../js/collaborative-editor/hooks/useVersionSelect', () => ({
-  useVersionSelect: () => vi.fn(),
+  useVersionSelect: () => ({
+    handleVersionSelect: vi.fn(),
+    prompt: {
+      isAsking: false,
+      saveAndRunPending: vi.fn(),
+      runPending: vi.fn(),
+      cancel: vi.fn(),
+    },
+  }),
 }));
 
 // Mock JobSelector
@@ -481,7 +497,6 @@ describe('FullScreenIDE', () => {
     Object.keys(mockParams).forEach(key => delete mockParams[key]);
     mockParams.job = 'job-1';
 
-    // Default to an editable workflow; read-only tests opt in explicitly.
     mockReadOnlyState.isReadOnly = false;
     mockReadOnlyState.tooltipMessage = '';
   });
@@ -498,18 +513,18 @@ describe('FullScreenIDE', () => {
       });
     });
 
-    test('hides the New Run button on a read-only workflow but keeps History', async () => {
+    test('keeps New Run and History on a read-only workflow', async () => {
       mockReadOnlyState.isReadOnly = true;
       const onClose = vi.fn();
 
       renderFullScreenIDE({ onClose });
 
-      // History (viewing past runs) stays available on a read-only workflow;
-      // only run creation is removed.
       await waitFor(() => {
         expect(screen.getByText('History')).toBeInTheDocument();
       });
-      expect(screen.queryByText('Run')).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
 
     test('right panel is not shown initially', async () => {
@@ -794,8 +809,6 @@ describe('FullScreenIDE', () => {
 
   describe('what the experimental flag changes', () => {
     test('keeps New Run put and disabled on a read-only view, without the flag', async () => {
-      // Their read-only state has no lifecycle badge explaining it, so the
-      // control stays and carries the reason, as it does today.
       mockExperimentalFeatures = false;
       mockReadOnlyState.isReadOnly = true;
       mockReadOnlyState.tooltipMessage = 'This workflow is read-only';
@@ -807,7 +820,7 @@ describe('FullScreenIDE', () => {
       });
     });
 
-    test('drops New Run on a read-only view once the flag is on', async () => {
+    test('keeps New Run on a read-only view once the flag is on', async () => {
       mockExperimentalFeatures = true;
       mockReadOnlyState.isReadOnly = true;
 
@@ -818,13 +831,11 @@ describe('FullScreenIDE', () => {
       });
 
       expect(
-        screen.queryByRole('button', { name: /^run$/i })
-      ).not.toBeInTheDocument();
+        screen.getByRole('button', { name: /^run$/i })
+      ).toBeInTheDocument();
     });
 
     test('warns when the run on screen executed different content', async () => {
-      // The flag-off answer to a run of older content: the run is painted onto
-      // the document already open, and this says the two differ.
       mockExperimentalFeatures = false;
       mockParams.panel = 'editor';
       mockParams.run = 'run-1';

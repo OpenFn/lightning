@@ -490,10 +490,6 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "delete_project/1 deletes a project holding a released workflow" do
-      # Releases hold their snapshot with an on_delete: :restrict foreign key,
-      # while both releases and snapshots cascade from the workflow. Deleting the
-      # workflow fires both cascades in one statement, so this pins that the
-      # restrict does not abort the delete.
       user = insert(:user)
       project = insert(:project, project_users: [%{user: user, role: :owner}])
       workflow = insert(:simple_workflow, project: project)
@@ -4032,8 +4028,6 @@ defmodule Lightning.ProjectsTest do
       assert sandbox.parent_id == parent.id
       assert cloned.name == "payroll"
 
-      # The edited clone is NOT auto-promoted: it comes in as a disabled draft,
-      # like every other cloned workflow.
       assert cloned.state == :draft
 
       cloned_triggers =
@@ -4062,8 +4056,6 @@ defmodule Lightning.ProjectsTest do
                  %{name: "orphan-sandbox", env: "dev", color: "#111111"}
                )
 
-      # The just-created sandbox is cleaned up: the failed lookup must not leave
-      # an orphan consuming the parent's sandbox quota.
       sandbox_ids_after =
         from(p in Project, where: p.parent_id == ^parent.id, select: p.id)
         |> Repo.all()
@@ -4142,12 +4134,10 @@ defmodule Lightning.ProjectsTest do
                 workflow_id: workflow_id
               } = result} = Projects.promote_workflow(sandbox_alpha, owner)
 
-      # Promote merges only; archiving is a separate, explicit step.
       refute Map.has_key?(result, :archived)
       assert parent_project_id == parent.id
       assert workflow_id == parent_alpha.id
 
-      # The sandbox edit landed on the parent's alpha workflow.
       parent_alpha_jobs =
         Lightning.Workflows.get_workflow(parent_alpha.id, include: [:jobs]).jobs
 
@@ -4156,18 +4146,14 @@ defmodule Lightning.ProjectsTest do
                &(&1.body == "console.log('promoted');")
              )
 
-      # The promoted workflow itself stays live with its trigger enabled: a
-      # merge must never draft or disable the workflow it promotes into.
       reloaded_alpha =
         Lightning.Workflows.get_workflow(parent_alpha.id, include: [:triggers])
 
       assert reloaded_alpha.state == :live
       assert Enum.all?(reloaded_alpha.triggers, & &1.enabled)
 
-      # The sandbox stays alive: promote no longer archives it.
       assert Repo.reload!(sandbox).scheduled_deletion == nil
 
-      # The passthrough sibling keeps its live/enabled trigger state and content.
       reloaded_beta =
         Lightning.Workflows.get_workflow(parent_beta.id, include: [:triggers])
 
@@ -4190,8 +4176,6 @@ defmodule Lightning.ProjectsTest do
 
       assert workflow_id == parent_alpha.id
 
-      # The next version after the parent's own go-live (v1) is v2, authored by
-      # the promoter, tagged to the sandbox it came from.
       assert [
                %Lightning.Workflows.WorkflowRelease{
                  version_number: 2,
@@ -4211,7 +4195,6 @@ defmodule Lightning.ProjectsTest do
       assert published_by_id == owner.id
       assert source_project_id == sandbox.id
 
-      # The untouched sibling keeps only its own go-live release.
       assert [%Lightning.Workflows.WorkflowRelease{kind: :go_live}] =
                Lightning.Workflows.WorkflowReleases.list_for_workflow(
                  parent_beta.id

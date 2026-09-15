@@ -1,5 +1,3 @@
-// Tests for the shared confirmation dialog: confirm/cancel wiring and the
-// MODAL-priority Escape handler that closes it inside the editor.
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -9,8 +7,6 @@ import { describe, expect, test, vi } from 'vitest';
 import { AlertDialog } from '../../../js/collaborative-editor/components/AlertDialog';
 import { KeyboardProvider } from '../../../js/collaborative-editor/keyboard';
 
-// AlertDialog registers a MODAL-priority Escape handler, so it must render
-// inside a KeyboardProvider (useKeyboardShortcut throws otherwise).
 const renderDialog = (ui: ReactElement) =>
   render(ui, { wrapper: KeyboardProvider });
 
@@ -61,10 +57,6 @@ describe('AlertDialog', () => {
       <AlertDialog {...baseProps} onClose={onClose} onConfirm={onConfirm} />
     );
 
-    // The MODAL-priority handler runs ahead of the IDE/inspector handlers, so
-    // Escape reaches the dialog. In isolation Headless UI's own default also
-    // fires (no IDE handler suppresses it here), so we assert the dialog closed
-    // rather than a precise call count. It only cancels: confirm never runs.
     await user.keyboard('{Escape}');
 
     expect(onClose).toHaveBeenCalled();

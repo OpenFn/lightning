@@ -161,9 +161,10 @@ defmodule Lightning.Collaboration.WorkflowResolver do
   def resolve_version(workflow_id, version, opts \\ []) do
     project = Keyword.get(opts, :project)
 
-    with :ok <- check_version_ownership(workflow_id, project),
+    with {:ok, state} <- current_state(workflow_id, project),
          %Snapshot{} = snapshot <- Snapshot.get_by_version(workflow_id, version) do
-      {:ok, build_version_workflow(snapshot, workflow_id, project), :version}
+      {:ok, build_version_workflow(snapshot, workflow_id, project, state),
+       :version}
     else
       nil -> {:error, :snapshot_not_found}
       {:error, _reason} = error -> error
@@ -172,25 +173,32 @@ defmodule Lightning.Collaboration.WorkflowResolver do
 
   # A `nil` project (internal point-in-time use) is intentionally unchecked, as
   # in `check_ownership/2`; a supplied project must own the workflow.
-  defp check_version_ownership(_workflow_id, nil), do: :ok
+  defp current_state(workflow_id, nil) do
+    case Workflows.get_workflow(workflow_id) do
+      nil -> {:ok, :draft}
+      workflow -> {:ok, workflow.state}
+    end
+  end
 
-  defp check_version_ownership(workflow_id, %Project{} = project) do
+  defp current_state(workflow_id, %Project{} = project) do
     case Workflows.get_workflow(workflow_id) do
       nil ->
         {:error, :workflow_not_found}
 
       workflow ->
-        with {:ok, _workflow} <- check_ownership(workflow, project), do: :ok
+        with {:ok, workflow} <- check_ownership(workflow, project),
+             do: {:ok, workflow.state}
     end
   end
 
-  defp build_version_workflow(snapshot, workflow_id, project) do
+  defp build_version_workflow(snapshot, workflow_id, project, state) do
     auth_methods_by_trigger = snapshot_trigger_auth_methods(snapshot)
 
     %Workflow{
       id: workflow_id,
       project_id: project && project.id,
       name: snapshot.name,
+      state: state,
       lock_version: snapshot.lock_version,
       deleted_at: nil,
       jobs: Enum.map(snapshot.jobs, &to_plain_map/1),
@@ -201,15 +209,12 @@ defmodule Lightning.Collaboration.WorkflowResolver do
 
           trigger
           |> to_plain_map()
+          |> Map.delete(:webhook_auth_methods)
           |> Map.put(:has_auth_method, length(auth_methods) > 0)
         end)
     }
   end
 
-  # A snapshot's job carries association keys it never loads, its credential
-  # among them. Handing those to the JSON encoder that renders the session
-  # context raises on the unloaded value and takes the channel with it, so drop
-  # them here rather than at each place that reads this workflow.
   defp to_plain_map(struct) do
     struct
     |> Map.from_struct()

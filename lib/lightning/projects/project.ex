@@ -37,8 +37,6 @@ defmodule Lightning.Projects.Project do
 
     field :raw_name, :string, virtual: true
 
-    # Set by sandbox provisioning to report the dataclip it created in the new
-    # sandbox, so the caller can open it with that input selected.
     field :starting_dataclip_id, :binary_id, virtual: true
 
     belongs_to :parent, __MODULE__, type: :binary_id

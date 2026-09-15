@@ -48,12 +48,52 @@ and this project adheres to
   restored while production keeps running. Behind the experimental features
   setting. [#4852](https://github.com/OpenFn/lightning/issues/4852)
 
+- Experimental features say so while they are on: a row in the sidebar footer on
+  every page, and a note in the account menu explaining what it means and
+  linking to the switch that turns it off.
+  [#5179](https://github.com/OpenFn/lightning/issues/5179)
+
 - The editor asks before it throws away unsaved changes. Switching version,
   opening a run that pins one, and leaving for a sandbox each destroyed the
   collaborative document and took uncommitted edits with it, silently.
   [#5134](https://github.com/OpenFn/lightning/issues/5134)
 
 ### Fixed
+
+- A live workflow can be run and retried by hand again. Every run control saved
+  the workflow on its way out, and a live one refuses that save, so the run
+  never happened. Running is not editing: the person responsible for a live
+  workflow has to be able to put a test input through what is in production.
+  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
+- Reading an older version of a workflow can no longer write that version back
+  over the workflow. Going live or switching to draft while reading one saved
+  the old content in place of the current, deleting anything added since and
+  recording it as an ordinary new version.
+  [#4852](https://github.com/OpenFn/lightning/issues/4852)
+
+- A `?v=` link opened on a live workflow now opens what is live. That parameter
+  names a save, a live workflow browses its publishes, and honouring it put a
+  version on screen that the list beside it could not name.
+  [#5180](https://github.com/OpenFn/lightning/issues/5180)
+
+- Deleting a trigger now counts as a change to a workflow's content. It was
+  read as a change to the trigger's enabled flag alone, which a promote cannot
+  carry, so a sandbox that had deleted one reported itself as identical to its
+  parent. [#5181](https://github.com/OpenFn/lightning/issues/5181)
+
+- A merge or promote of selected workflows no longer asks everyone editing the
+  project's other workflows to reload, which threw away whatever they had not
+  saved. [#5182](https://github.com/OpenFn/lightning/issues/5182)
+
+- Opening an older version of a workflow whose trigger carries a webhook auth
+  method no longer fails to load.
+  [#5183](https://github.com/OpenFn/lightning/issues/5183)
+
+- The version list is refreshed after a save, so the version you just made is
+  there when you next open the picker. Reopening it after a failed load now
+  tries again rather than staying empty.
+  [#5184](https://github.com/OpenFn/lightning/issues/5184)
 
 - Opening the merge dialog, and deleting a sandbox, no longer crash in a
   workspace with a branch more than one level deep. A sandbox can no longer be

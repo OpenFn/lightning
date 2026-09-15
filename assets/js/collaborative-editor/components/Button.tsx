@@ -39,15 +39,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ) {
     const isDisabled = disabled || loading;
 
-    // Base classes for standard buttons (not nakedClose). Shadow is opt-in per
-    // variant so the flat `ghost` button has no raised/outlined appearance.
     const baseClasses = `
     rounded-md px-3 py-2 text-sm font-semibold
     focus-visible:outline-2 focus-visible:outline-offset-2
     disabled:cursor-not-allowed
   `;
 
-    // nakedClose button has different base classes (no padding/shadow)
     const nakedCloseBaseClasses = `
     relative rounded-md
     focus-visible:outline-2 focus-visible:outline-offset-2
@@ -55,7 +52,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     disabled:opacity-50 disabled:cursor-not-allowed
   `;
 
-    // Variant-specific classes
     const variantClasses = {
       primary: `
       bg-primary-600 hover:bg-primary-500 text-white shadow-xs

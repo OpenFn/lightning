@@ -313,8 +313,6 @@ defmodule Lightning.InvocationTest do
           body: %{"a" => 1}
         )
 
-      # A curated input belongs to the project, so it is selectable on a job
-      # that has never consumed it.
       assert [%{id: id}] =
                Invocation.list_dataclips_for_job(job, %{},
                  limit: 5,
@@ -362,8 +360,6 @@ defmodule Lightning.InvocationTest do
 
       insert(:step, input_dataclip: consumed, job: job)
 
-      # Plenty of named inputs, all newer, so a plain date sort would bury the
-      # one the job actually ran against.
       for n <- 1..3 do
         insert(:dataclip,
           project: project,
@@ -395,9 +391,6 @@ defmodule Lightning.InvocationTest do
     end
 
     test "offers only the job's own inputs by default" do
-      # Named project dataclips are a new kind of input to offer, so the picker
-      # lists them only for someone with experimental features. Everyone else
-      # gets the list this has always returned.
       %{project: project, jobs: [job | _]} = insert(:complex_workflow)
 
       insert(:dataclip,

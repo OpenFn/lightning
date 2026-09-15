@@ -80,6 +80,10 @@
               <% end %>
             <% end %>
           </div>
+          <Menu.experimental_mode_item
+            :if={assigns[:current_user]}
+            current_user={@current_user}
+          />
           <LayoutComponents.sidebar_footer />
         </div>
       </nav>

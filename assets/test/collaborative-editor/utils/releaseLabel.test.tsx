@@ -1,9 +1,3 @@
-/**
- * releaseActionLabel Tests
- *
- * One label set shared by the version dropdown and the Recent History markers,
- * so the two surfaces read identically.
- */
 
 import { render, screen } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';

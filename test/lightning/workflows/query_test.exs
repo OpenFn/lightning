@@ -266,8 +266,6 @@ defmodule Lightning.Workflows.QueryTest do
 
       insert(:snapshot, workflow: workflow, lock_version: 3)
 
-      # Both old snapshots are otherwise unused: no work order, run or step
-      # references either of them.
       unused_ids = Query.unused_snapshots() |> Repo.all()
       assert released_snapshot.id in unused_ids
       assert unreleased_snapshot.id in unused_ids
@@ -281,8 +279,6 @@ defmodule Lightning.Workflows.QueryTest do
           source_project_id: nil
         })
 
-      # The release holds its snapshot with an on_delete: :restrict foreign key,
-      # so the purge has to skip it or the retention job fails.
       unused_ids = Query.unused_snapshots() |> Repo.all()
       refute released_snapshot.id in unused_ids
       assert unreleased_snapshot.id in unused_ids

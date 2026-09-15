@@ -64,14 +64,10 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
   @doc """
   Subscribe the calling process to a workflow's collaboration topic.
 
-  The process that owns the live SharedDoc (the `DocumentSupervisor`) subscribes
-  when it starts, so it can reconcile the document in-place when an out-of-band
-  writer broadcasts a `ReconcileRequested`.
-
-  Subscribes against `Lightning.PubSub` directly rather than through
-  `Lightning.subscribe/1`: the caller is a long-lived background process, not a
-  request/LiveView process, so it must not depend on the test-time Lightning
-  mock (which is scoped to the test process).
+  The `DocumentSupervisor` subscribes at start so it can reconcile in place when
+  an out-of-band writer broadcasts a `ReconcileRequested`. Subscribes against
+  `Lightning.PubSub` directly because the caller is a long-lived process and
+  must not depend on the test-time mock, which is scoped to the test process.
   """
   @spec subscribe(Ecto.UUID.t()) :: :ok | {:error, term()}
   def subscribe(workflow_id) when is_binary(workflow_id) do
@@ -101,18 +97,13 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
   end
 
   @doc """
-  Reconcile a workflow's live collaborative document with the current database
-  state.
+  Reconcile a workflow's live collaborative document with the database.
 
-  Looks up the live (unversioned) SharedDoc for the workflow. If none is alive,
-  this is a no-op: a cold start self-heals via `Persistence.reconcile_or_reset/3`
-  when the document is next opened. Otherwise the document is reset in-place from
-  the database (clearing jobs/edges/triggers/positions/errors then re-serialising,
-  which also sets `lock_version`), so connected clients receive a live
-  incremental sync rather than a teardown.
-
-  The mutation runs inside `SharedDoc.update_doc/2`, i.e. in the process that owns
-  the Y.Doc, so no Y.Doc transaction is ever held across a process boundary.
+  No-op when no live SharedDoc exists; a cold start self-heals through
+  `Persistence.reconcile_or_reset/3`. Otherwise the document is reset in place,
+  so connected clients get an incremental sync rather than a teardown. The
+  mutation runs inside `SharedDoc.update_doc/2`, so no Y.Doc transaction is held
+  across a process boundary.
   """
   @spec reconcile_workflow_document(Ecto.UUID.t()) :: :ok
   def reconcile_workflow_document(workflow_id) do
@@ -150,10 +141,6 @@ defmodule Lightning.Collaboration.WorkflowReconciler do
     )
   end
 
-  # Full reset from the database, mirroring the lifecycle reset
-  # (Session.clear_and_reset_doc / Persistence.clear_and_reset_workflow). All
-  # Yex collections are retrieved before the clear transaction to avoid a VM
-  # deadlock, and serialize_to_ydoc runs its own transaction afterwards.
   defp reset_shared_doc(shared_doc_pid, workflow) do
     SharedDoc.update_doc(shared_doc_pid, fn doc ->
       jobs_array = Doc.get_array(doc, "jobs")

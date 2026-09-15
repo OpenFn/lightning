@@ -29,10 +29,8 @@ import {
 } from '../__helpers__/urlStateMocks';
 
 // Mock Socket
-// The discard guard asks these before anything destroys the document; neither
-// has a provider in this test.
 vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
-  useSession: () => ({ isSynced: true }),
+  useSession: () => ({ isSynced: true, settled: true }),
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
@@ -76,6 +74,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // Mock CollaborativeWorkflowDiagram
@@ -207,6 +206,14 @@ vi.mock('../../../js/react/lib/use-url-state', () => ({
 
 // Mock session context hooks
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
+  useContentLocked: () => false,
   useIsNewWorkflow: () => false,
   useSessionWorkflow: () => null,
   useExperimentalFeatures: () => true,

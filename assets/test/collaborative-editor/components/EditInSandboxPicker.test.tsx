@@ -1,4 +1,3 @@
-// Tests for the sandbox picker modal: create/list/join affordances, in-flight and error handling.
 
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -16,15 +15,11 @@ import {
 } from '../../../js/collaborative-editor/lib/unloadGuard';
 import type { Sandbox } from '../../../js/collaborative-editor/types/workflow';
 
-// The picker registers a MODAL-priority Escape handler, so it must render inside
-// a KeyboardProvider (useKeyboardShortcut throws otherwise).
 const renderPicker = (ui: ReactElement) =>
   render(ui, { wrapper: KeyboardProvider });
 
 const redirect = vi.fn();
 
-// With a LiveView to ask, the picker asks it to navigate rather than reloading
-// the browser. Without one, it falls back to the hard navigation.
 const renderPickerInLiveView = (ui: ReactElement) =>
   render(ui, {
     wrapper: ({ children }: { children: React.ReactNode }) => (
@@ -58,14 +53,30 @@ let jobs: { id: string }[] = [];
 
 const saveWorkflow = vi.fn<() => Promise<unknown>>();
 
+const pretty = (body: string) => JSON.stringify(JSON.parse(body), null, 2);
+
+vi.mock('#/monaco', () => ({
+  MonacoEditor: ({
+    value,
+    onChange,
+  }: {
+    value: string;
+    onChange?: (value: string | undefined) => void;
+  }) => (
+    <textarea
+      data-testid="review-body"
+      value={value}
+      onChange={event => onChange?.(event.target.value)}
+    />
+  ),
+}));
+
 vi.mock('../../../js/collaborative-editor/hooks/useWorkflow', () => ({
   useWorkflowActions: () => ({ listSandboxes, editInSandbox, saveWorkflow }),
   useWorkflowState: (selector: (state: unknown) => unknown) =>
     selector({ jobs }),
 }));
 
-// Leaving for a sandbox is guarded, so the picker needs to know whether there
-// is anything to lose.
 let hasChanges = false;
 
 vi.mock('../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
@@ -76,7 +87,6 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
   useSession: () => ({ provider: { id: 'provider-1' }, isSynced: true }),
 }));
 
-// Creating a sandbox is gated by the plan and by nesting depth; joining is not.
 let limits: Record<string, { allowed: boolean; message: string | null }> = {};
 
 let activeRun: {
@@ -102,6 +112,15 @@ let releases: {
 const requestVersionsMock = vi.fn();
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
+  useVersions: () => [],
   useLimits: () => limits,
   useProject: () => ({ id: 'project-1' }),
   useReleases: () => releases,
@@ -128,7 +147,6 @@ vi.mock('../../../js/collaborative-editor/lib/notifications', () => ({
   },
 }));
 
-// Stub the hard-navigation the picker performs on create/join.
 function stubNavigation() {
   const originalLocation = window.location;
   const hrefSetter = vi.fn();
@@ -155,9 +173,6 @@ function stubNavigation() {
 const CREATED_A = '2025-01-15T14:30:00Z';
 const CREATED_B = '2025-02-20T09:05:00Z';
 
-// The picker shows a relative "Created … ago" label and reveals the exact
-// timestamp through the shared Tooltip on hover. Derive that exact label the
-// same way the component does so the assertion is stable across timezones.
 const exactTimestamp = (iso: string) =>
   format(new Date(iso), 'd MMM yyyy, HH:mm');
 
@@ -232,8 +247,6 @@ describe('EditInSandboxPicker', () => {
 
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-      // Someone reading a failure and reaching for a sandbox came to reuse
-      // that run's input, so the choice is already made for them.
       expect(screen.getByLabelText(/this run's input/i)).toBeChecked();
       expect(screen.getByLabelText(/an empty sandbox/i)).not.toBeChecked();
     });
@@ -252,8 +265,34 @@ describe('EditInSandboxPicker', () => {
 
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-      // Offering it could only create an empty sandbox while reporting success.
       expect(screen.queryByLabelText(/this run's input/i)).toBeNull();
+    });
+
+    test('refuses to close while the sandbox is being created', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+
+      let settle: (value: {
+        project_id: string;
+        workflow_id: string;
+      }) => void = () => {};
+
+      editInSandbox.mockReturnValue(
+        new Promise(resolve => {
+          settle = resolve;
+        })
+      );
+
+      renderPicker(<EditInSandboxPicker isOpen onClose={onClose} />);
+      await typeName(user);
+      await user.click(screen.getByTestId('create-sandbox-button'));
+
+      await user.click(screen.getByLabelText('Close'));
+      await user.keyboard('{Escape}');
+
+      expect(onClose).not.toHaveBeenCalled();
+
+      settle({ project_id: 'p2', workflow_id: 'w2' });
     });
 
     test("carries the reviewed body through when the run's input is chosen", async () => {
@@ -275,9 +314,8 @@ describe('EditInSandboxPicker', () => {
       await user.click(screen.getByLabelText(/this run's input/i));
       await user.click(screen.getByTestId('create-sandbox-button'));
 
-      // The body is shown before it travels, and can be edited.
       const body = await screen.findByTestId('review-body');
-      expect(body).toHaveValue('{"email":"real@example.com"}');
+      expect(body).toHaveValue(pretty('{"email":"real@example.com"}'));
 
       await user.clear(body);
       await user.type(body, '{{"email":"redacted"}');
@@ -315,8 +353,6 @@ describe('EditInSandboxPicker', () => {
       await user.click(screen.getByRole('button', { name: 'Back' }));
       await user.click(screen.getByTestId('create-sandbox-button'));
 
-      // Refetching here would put the production email back in front of them,
-      // which is the one thing this screen exists to prevent.
       expect(await screen.findByTestId('review-body')).toHaveValue(
         '{"email":"redacted"}'
       );
@@ -345,8 +381,6 @@ describe('EditInSandboxPicker', () => {
       await screen.findByTestId('review-body');
       await user.click(screen.getByRole('button', { name: 'Back' }));
 
-      // Back is what a rejected name tells the person to do, so the button has
-      // to survive the round trip rather than stick on "Loading...".
       const submit = screen.getByTestId('create-sandbox-button');
       expect(submit).toBeEnabled();
       expect(submit).not.toHaveTextContent('Loading');
@@ -369,8 +403,6 @@ describe('EditInSandboxPicker', () => {
       await user.click(screen.getByLabelText(/this run's input/i));
       await user.click(screen.getByTestId('create-sandbox-button'));
 
-      // Clearing it is a redaction. Treating an empty box as "not loaded yet"
-      // hands the production body straight back.
       await user.clear(await screen.findByTestId('review-body'));
       await user.click(screen.getByRole('button', { name: 'Back' }));
       await user.click(screen.getByTestId('create-sandbox-button'));
@@ -396,7 +428,9 @@ describe('EditInSandboxPicker', () => {
 
       await user.click(screen.getByLabelText(/this run's input/i));
       await user.click(screen.getByTestId('create-sandbox-button'));
-      expect(await screen.findByTestId('review-body')).toHaveValue('{"a":1}');
+      expect(await screen.findByTestId('review-body')).toHaveValue(
+        pretty('{"a":1}')
+      );
 
       rerender(<EditInSandboxPicker isOpen={false} onClose={() => {}} />);
       rerender(<EditInSandboxPicker isOpen onClose={() => {}} />);
@@ -408,9 +442,9 @@ describe('EditInSandboxPicker', () => {
       await user.click(screen.getByLabelText(/this run's input/i));
       await user.click(screen.getByTestId('create-sandbox-button'));
 
-      // A flag left set across a reopen skips the fetch and shows an empty
-      // review step that can never recover.
-      expect(await screen.findByTestId('review-body')).toHaveValue('{"a":1}');
+      expect(await screen.findByTestId('review-body')).toHaveValue(
+        pretty('{"a":1}')
+      );
     });
 
     test('does not strand the button when the dialog closes mid-fetch', async () => {
@@ -449,8 +483,6 @@ describe('EditInSandboxPicker', () => {
         'My SB'
       );
 
-      // A reply that lost its race must not leave the button latched on
-      // "Loading..." for the rest of the page's life.
       await waitFor(() => {
         expect(screen.getByTestId('create-sandbox-button')).toBeEnabled();
       });
@@ -477,10 +509,9 @@ describe('EditInSandboxPicker', () => {
       await user.click(screen.getByLabelText(/this run's input/i));
       await user.click(screen.getByTestId('create-sandbox-button'));
       expect(await screen.findByTestId('review-body')).toHaveValue(
-        '{"from":"run-a"}'
+        pretty('{"from":"run-a"}')
       );
 
-      // The run changes under the open dialog, which Back/Forward does.
       await user.click(screen.getByRole('button', { name: 'Back' }));
       activeRun = {
         id: 'bbbbbb000000',
@@ -491,9 +522,8 @@ describe('EditInSandboxPicker', () => {
 
       await user.click(screen.getByTestId('create-sandbox-button'));
 
-      // Run A's body belongs to run A. Showing it here would ship it as B's.
       expect(await screen.findByTestId('review-body')).toHaveValue(
-        '{"from":"run-b"}'
+        pretty('{"from":"run-b"}')
       );
     });
 
@@ -523,13 +553,10 @@ describe('EditInSandboxPicker', () => {
       await user.click(screen.getByLabelText(/this run's input/i));
       await user.click(screen.getByTestId('create-sandbox-button'));
 
-      // Mind changed while the load was in flight.
       await user.click(screen.getByLabelText(/an empty sandbox/i));
 
       release({ dataclip: { id: 'dc-1', wiped_at: null } });
 
-      // Landing them on a screen holding production data would be the worst
-      // possible answer to "actually, nothing".
       await waitFor(() => {
         expect(screen.getByTestId('create-sandbox-button')).toBeEnabled();
       });
@@ -568,8 +595,6 @@ describe('EditInSandboxPicker', () => {
         expect(screen.getByTestId('create-sandbox-button')).toBeEnabled();
       });
 
-      // Switching back must not find a load still marked in flight with no
-      // request behind it, which would latch the button off for good.
       await user.click(screen.getByLabelText(/this run's input/i));
 
       const submit = screen.getByTestId('create-sandbox-button');
@@ -602,8 +627,6 @@ describe('EditInSandboxPicker', () => {
       };
       rerender(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-      // Staying would leave a textarea that cannot be typed into and a button
-      // that only ever answers "This isn't valid JSON."
       await waitFor(() => {
         expect(screen.queryByTestId('review-body')).toBeNull();
       });
@@ -615,8 +638,6 @@ describe('EditInSandboxPicker', () => {
         id: 'abcdef123456',
         steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
       };
-      // A wiped http_request still serves a JSON object, so the guard has to
-      // read wiped_at rather than judge the body.
       getRunDataclipMock.mockResolvedValue({
         dataclip: {
           id: 'dc-1',
@@ -676,13 +697,9 @@ describe('EditInSandboxPicker', () => {
         id: 'abcdef123456',
         steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
       };
-      // The run's version comes from the history summaries, not from whatever
-      // the editor happens to have open.
       runHistory = [
         { id: 'wo-1', runs: [{ id: 'abcdef123456', version_number: 3 }] },
       ];
-      // Deliberately not newest-first, so the note has to read is_latest rather
-      // than trust the order.
       releases = [
         { version_number: 3, lock_version: 4, is_latest: false },
         { version_number: 7, lock_version: 9, is_latest: true },
@@ -715,8 +732,6 @@ describe('EditInSandboxPicker', () => {
 
     test('does not mention the run when starting from something else', async () => {
       const user = userEvent.setup();
-      // A run is open and it did use an older version, but the sandbox is being
-      // started from a saved input, so the run has nothing to do with it.
       activeRun = {
         id: 'abcdef123456',
         steps: [{ input_dataclip_id: 'dc-1', job_id: 'job-1' }],
@@ -765,8 +780,6 @@ describe('EditInSandboxPicker', () => {
 
       const saved = await screen.findByTestId('saved-inputs');
 
-      // A step result carries whatever the previous step emitted, which is the
-      // data we are trying not to move, so create would refuse it anyway.
       expect(within(saved).getByText('known good')).toBeInTheDocument();
       expect(within(saved).queryByText('from a step')).toBeNull();
     });
@@ -851,8 +864,6 @@ describe('EditInSandboxPicker', () => {
       await screen.findByTestId('review-body');
       await user.click(screen.getByTestId('create-from-review-button'));
 
-      // Without panel=run the sandbox opens on a bare canvas and the input we
-      // carried is selected where nobody can see it.
       await waitFor(() => {
         expect(nav.hrefSetter).toHaveBeenCalledWith(
           '/projects/p2/w/w2?panel=run&dataclip=dc-new'
@@ -903,7 +914,6 @@ describe('EditInSandboxPicker', () => {
       expect(listSandboxes).toHaveBeenCalledTimes(1);
     });
 
-    // With nothing joinable, the whole join section stays hidden.
     await waitFor(() => {
       expect(
         screen.queryByTestId('sandbox-list-loading')
@@ -942,13 +952,9 @@ describe('EditInSandboxPicker', () => {
       expect(screen.getByTestId('sandbox-list')).toBeInTheDocument();
     });
 
-    // Creator name (or email) anchors each row's metadata line.
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
     expect(screen.getByText('grace@example.com')).toBeInTheDocument();
 
-    // Alpha (no colour) leads with the fallback grey stripe; the row shows a
-    // relative "Created … ago" label, then "by", then the owner name (each a
-    // separate span spaced by the flex gap).
     const alphaRow = screen.getByText('Alpha sandbox').closest('li');
     expect(alphaRow).not.toBeNull();
     expect(alphaRow).toHaveTextContent(/Created .+ ago/);
@@ -958,21 +964,17 @@ describe('EditInSandboxPicker', () => {
       backgroundColor: '#e5e7eb',
     });
 
-    // Beta carries an explicit colour; its stripe paints that colour.
     const betaRow = screen.getByText('Beta sandbox').closest('li');
     expect(betaRow).not.toBeNull();
     expect(betaRow!.querySelector('span[style]')).toHaveStyle({
       backgroundColor: '#ff0000',
     });
 
-    // The exact timestamp is not a native title anymore; it lives in the shared
-    // Tooltip, revealed by hovering the relative-time trigger.
     await user.hover(alphaRow!.querySelector('[data-state]') as Element);
     expect(
       (await screen.findAllByText(exactTimestamp(CREATED_A))).length
     ).toBeGreaterThan(0);
 
-    // The "edited … ago" line is gone.
     expect(screen.queryByText(/edited/i)).not.toBeInTheDocument();
   });
 
@@ -998,14 +1000,11 @@ describe('EditInSandboxPicker', () => {
 
     const row = screen.getByText('Gamma sandbox').closest('li');
     expect(row).not.toBeNull();
-    // Relative created label; the colour stripe still renders (fallback grey)
-    // even without an owner.
     expect(row).toHaveTextContent(/Created .+ ago/);
     expect(row!.querySelector('span[style]')).toHaveStyle({
       backgroundColor: '#e5e7eb',
     });
 
-    // Exact timestamp is available on hover via the shared Tooltip.
     await user.hover(row!.querySelector('[data-state]') as Element);
     expect(
       (await screen.findAllByText(exactTimestamp(CREATED_A))).length
@@ -1013,8 +1012,6 @@ describe('EditInSandboxPicker', () => {
   });
 
   test('hides the join section when the server returns no sandboxes', async () => {
-    // The server only ever returns joinable sandboxes, so an empty list means
-    // there is nothing to join and the whole section stays hidden.
     listSandboxes.mockResolvedValue([]);
 
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
@@ -1033,8 +1030,6 @@ describe('EditInSandboxPicker', () => {
   });
 
   test('renders the server-returned sandboxes, each with an enabled join button', async () => {
-    // The server already filters to joinable sandboxes (each holds a clone), so
-    // the client renders exactly what it receives.
     listSandboxes.mockResolvedValue([
       {
         id: 'joinable',
@@ -1071,18 +1066,14 @@ describe('EditInSandboxPicker', () => {
     const button = screen.getByTestId('create-sandbox-button');
     const input = screen.getByPlaceholderText('What are you trying out?');
 
-    // Blank -> disabled.
     expect(button).toBeDisabled();
 
-    // Whitespace only -> still disabled.
     await user.type(input, '   ');
     expect(button).toBeDisabled();
 
-    // Real characters -> enabled.
     await user.type(input, 'My SB');
     expect(button).toBeEnabled();
 
-    // Clearing back to blank -> disabled again.
     await user.clear(input);
     expect(button).toBeDisabled();
   });
@@ -1135,8 +1126,6 @@ describe('EditInSandboxPicker', () => {
   test('renders a duplicate-name error inline under the input, not as a toast', async () => {
     const user = userEvent.setup();
     listSandboxes.mockResolvedValue([]);
-    // A duplicate name comes back as a validation_error keyed under `name`;
-    // this belongs inline under the input, never as a toast.
     editInSandbox.mockRejectedValue(
       new ChannelRequestError('validation_error', {
         name: ['has already been taken'],
@@ -1153,29 +1142,23 @@ describe('EditInSandboxPicker', () => {
       expect(editInSandbox).toHaveBeenCalledTimes(1);
     });
 
-    // The duplicate-name case renders a friendly, product-specific message
-    // inline beneath the input rather than the raw server string.
     const fieldError = await screen.findByTestId('sandbox-name-error');
     expect(fieldError).toHaveTextContent(
       'A sandbox with this name exists already'
     );
     expect(fieldError).not.toHaveTextContent('has already been taken');
 
-    // The input is put into an error state and points at the error text.
     expect(input).toHaveAttribute('aria-invalid', 'true');
     expect(input).toHaveClass('ring-red-300');
 
-    // A duplicate name never toasts.
     expect(notifyAlert).not.toHaveBeenCalled();
 
-    // Button returns from the pending label to enabled.
     const button = screen.getByTestId('create-sandbox-button');
     await waitFor(() => {
       expect(button).toHaveTextContent('Create sandbox');
     });
     expect(button).toBeEnabled();
 
-    // Editing the name clears the inline error and the error styling.
     await user.type(input, '2');
     expect(screen.queryByTestId('sandbox-name-error')).not.toBeInTheDocument();
     expect(input).not.toHaveAttribute('aria-invalid');
@@ -1185,8 +1168,6 @@ describe('EditInSandboxPicker', () => {
   test('routes an unexpected create error to a toast, not the inline field', async () => {
     const user = userEvent.setup();
     listSandboxes.mockResolvedValue([]);
-    // A non-validation (system) error is not a name problem; it must surface as
-    // a toast and leave the input in its normal state.
     editInSandbox.mockRejectedValue(
       new ChannelRequestError('internal_error', {
         base: ['something went wrong'],
@@ -1223,7 +1204,6 @@ describe('EditInSandboxPicker', () => {
     try {
       renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
 
-      // Focus the input and press Enter; no click on "Create sandbox".
       await user.type(
         screen.getByPlaceholderText('What are you trying out?'),
         'My SB{Enter}'
@@ -1258,7 +1238,6 @@ describe('EditInSandboxPicker', () => {
   test('disables the input and button while a create is in flight', async () => {
     const user = userEvent.setup();
     listSandboxes.mockResolvedValue([]);
-    // Never-resolving promise keeps the create pending.
     editInSandbox.mockReturnValue(new Promise(() => {}));
 
     renderPicker(<EditInSandboxPicker isOpen onClose={() => {}} />);
@@ -1337,10 +1316,6 @@ describe('EditInSandboxPicker', () => {
 
     renderPicker(<EditInSandboxPicker isOpen onClose={onClose} />);
 
-    // The MODAL-priority handler runs ahead of the IDE/inspector handlers, so
-    // Escape reaches the picker even though it lives inside the editor. In
-    // isolation Headless UI's own default also fires (no IDE handler suppresses
-    // it here), so we assert the picker closed rather than a precise call count.
     await user.keyboard('{Escape}');
 
     expect(onClose).toHaveBeenCalled();
@@ -1361,7 +1336,6 @@ describe('EditInSandboxPicker', () => {
       expect(screen.getByTestId('create-sandbox-lock')).toBeInTheDocument();
 
       await user.hover(button.parentElement as Element);
-      // Radix renders the content and an aria-live copy of it.
       expect(
         await screen.findAllByText(
           'Sandboxes are on the Pro plan. Upgrade to unlock them.'
@@ -1386,8 +1360,6 @@ describe('EditInSandboxPicker', () => {
     });
 
     test('joining an existing sandbox still works', async () => {
-      // The limit gates creation only. At a sandbox cap the project has
-      // sandboxes by definition, and they have to stay reachable.
       limits = {
         new_sandbox: { allowed: false, message: 'Sandbox limit reached' },
       };
@@ -1479,8 +1451,6 @@ describe('EditInSandboxPicker', () => {
         expect(nav.hrefSetter).toHaveBeenCalledWith(
           '/projects/sandbox-a/w/wf-clone-a'
         );
-        // The person has already answered, so the browser must not ask again on
-        // the way out.
         expect(isUnloadWarningSuppressed()).toBe(true);
       } finally {
         nav.restore();
@@ -1562,8 +1532,6 @@ describe('EditInSandboxPicker', () => {
         await user.click(screen.getByTestId('create-sandbox-button'));
         await user.click(await screen.findByRole('button', { name: 'Cancel' }));
 
-        // The sandbox already exists by now, so backing out must not leave the
-        // button spinning with no way back but a reload.
         expect(screen.getByTestId('create-sandbox-button')).toBeEnabled();
         expect(nav.hrefSetter).not.toHaveBeenCalled();
       } finally {
@@ -1607,9 +1575,6 @@ describe('EditInSandboxPicker', () => {
           (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
         );
 
-        // The socket survives, so there is no white flash, and because it is a
-        // navigation rather than a patch the LiveView remounts and the access
-        // gate runs again.
         expect(redirect).toHaveBeenCalledWith(
           '/projects/sandbox-a/w/wf-clone-a'
         );
@@ -1632,8 +1597,6 @@ describe('EditInSandboxPicker', () => {
           (await screen.findAllByTestId('join-sandbox-button'))[0] as Element
         );
 
-        // The page never unloads, so there is nothing to warn about and no
-        // suppression left standing with no pageshow to clear it.
         expect(isUnloadWarningSuppressed()).toBe(false);
       } finally {
         nav.restore();

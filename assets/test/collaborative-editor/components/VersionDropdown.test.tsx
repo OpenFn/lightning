@@ -60,7 +60,6 @@ vi.spyOn(notificationsModule, 'notifications', 'get').mockReturnValue(
   mockNotifications
 );
 
-// The history's summary of the run a `?as_run=` view is showing.
 const runSummary = (
   overrides: Partial<ReturnType<typeof baseRunSummary>> = {}
 ) => ({ ...baseRunSummary(), ...overrides });
@@ -76,7 +75,6 @@ const baseRunSummary = () => ({
   snapshot_id: null as string | null,
 });
 
-// Mock version data factory matching the release payload shape
 const createMockVersion = (overrides?: Partial<Release>): Release => ({
   version_number: 1,
   kind: 'go_live',
@@ -94,10 +92,6 @@ describe('VersionDropdown', () => {
   const mockRequestVersions = vi.fn();
   const mockOnVersionSelect = vi.fn();
 
-  // Pin a release by driving the shared URL store through the patched
-  // history.pushState. `?release=` carries a version_number from the publish
-  // trail, which is a different numbering from `?v=` (a snapshot's own
-  // lock_version) and so gets a parameter of its own.
   const pinVersion = (versionNumber: number) => {
     window.history.pushState({}, '', `/?release=${versionNumber}`);
   };
@@ -116,7 +110,6 @@ describe('VersionDropdown', () => {
   });
 
   afterEach(() => {
-    // Reset the URL so a pinned ?release= does not leak into the next test.
     window.history.pushState({}, '', '/');
   });
 
@@ -152,10 +145,6 @@ describe('VersionDropdown', () => {
     });
 
     test('reads "latest" on the live document, whatever the lock versions say', () => {
-      // The store's lock_version can lag the latest snapshot for a moment after
-      // a save. With no pin in the URL the client is on the live document
-      // regardless, and the chip used to render the stale lock_version as
-      // "v3", a release number that may not exist at all.
       render(
         <VersionDropdown
           currentVersion={3}
@@ -179,9 +168,6 @@ describe('VersionDropdown', () => {
         runSummary({ version_number: 2, snapshot_id: 'snapshot-v2' })
       );
 
-      // The document is that run's snapshot. What names it is the release the
-      // run executed against, not the document's lock_version, which used to
-      // be rendered as v3 whether or not any such release existed.
       render(
         <VersionDropdown
           currentVersion={3}
@@ -208,8 +194,6 @@ describe('VersionDropdown', () => {
         })
       );
 
-      // Not "Draft": the lifecycle badge beside this uses that word for a
-      // workflow that is not live, and this is about the content.
       render(
         <VersionDropdown
           currentVersion={3}
@@ -377,7 +361,6 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Should call requestReleases
       expect(mockRequestVersions).toHaveBeenCalledOnce();
     });
 
@@ -405,14 +388,8 @@ describe('VersionDropdown', () => {
       await user.click(screen.getByRole('button'));
       expect(mockRequestVersions).toHaveBeenCalledOnce();
 
-      // The request is in flight.
       rerender(<VersionDropdown {...props} />);
 
-      // It comes back with nothing, because this workflow has never been
-      // published. An empty list is the answer, not the absence of one:
-      // asking again because the list is empty asks again every time the
-      // in-flight flag drops, which never stopped and left the panel saying it
-      // was loading for good.
       loading = false;
       loaded = true;
       rerender(<VersionDropdown {...props} />);
@@ -456,8 +433,109 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Should NOT call requestReleases (releases already loaded)
       expect(mockRequestVersions).not.toHaveBeenCalled();
+    });
+
+    test('asks again next time it opens after a failed request', async () => {
+      const user = userEvent.setup();
+      mockUseReleasesLoaded.mockReturnValue(false);
+
+      const { rerender } = render(
+        <VersionDropdown
+          currentVersion={5}
+          latestVersion={5}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      await user.click(screen.getByRole('button'));
+      expect(mockRequestVersions).toHaveBeenCalledTimes(1);
+
+      mockUseReleasesLoaded.mockReturnValue(true);
+      mockUseReleasesError.mockReturnValue('Failed to load versions');
+      rerender(
+        <VersionDropdown
+          currentVersion={5}
+          latestVersion={5}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      expect(mockRequestVersions).toHaveBeenCalledTimes(1);
+
+      await user.click(screen.getByRole('button'));
+      await user.click(screen.getByRole('button'));
+
+      expect(mockRequestVersions).toHaveBeenCalledTimes(2);
+    });
+
+    test('still retries when the menu is reopened mid-flight', async () => {
+      const user = userEvent.setup();
+      mockUseReleasesLoaded.mockReturnValue(false);
+
+      const { rerender } = render(
+        <VersionDropdown
+          currentVersion={5}
+          latestVersion={5}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      await user.click(screen.getByRole('button'));
+      expect(mockRequestVersions).toHaveBeenCalledTimes(1);
+
+      mockUseReleasesLoading.mockReturnValue(true);
+      rerender(
+        <VersionDropdown
+          currentVersion={5}
+          latestVersion={5}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+      await user.click(screen.getByRole('button'));
+      await user.click(screen.getByRole('button'));
+
+      mockUseReleasesLoading.mockReturnValue(false);
+      mockUseReleasesLoaded.mockReturnValue(true);
+      mockUseReleasesError.mockReturnValue('Failed to load versions');
+      rerender(
+        <VersionDropdown
+          currentVersion={5}
+          latestVersion={5}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      expect(mockRequestVersions).toHaveBeenCalledTimes(2);
+    });
+
+    test('asks again when a save clears the list under an open menu', async () => {
+      const user = userEvent.setup();
+      mockUseReleasesLoaded.mockReturnValue(true);
+      mockUseReleases.mockReturnValue([createMockVersion()]);
+
+      const { rerender } = render(
+        <VersionDropdown
+          currentVersion={5}
+          latestVersion={5}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      await user.click(screen.getByRole('button'));
+      expect(mockRequestVersions).not.toHaveBeenCalled();
+
+      mockUseReleasesLoaded.mockReturnValue(false);
+      mockUseReleases.mockReturnValue([]);
+      rerender(
+        <VersionDropdown
+          currentVersion={5}
+          latestVersion={5}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      expect(mockRequestVersions).toHaveBeenCalledTimes(1);
     });
 
     test('does not fetch if already loading', async () => {
@@ -479,7 +557,6 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Should NOT call requestReleases (already loading)
       expect(mockRequestVersions).not.toHaveBeenCalled();
     });
 
@@ -550,9 +627,6 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Should display each release by its version_number, with no "latest"
-      // pseudo-row or badge inside the list (the concept has neither). The
-      // trigger button may still read "latest" for the live state.
       const menu = screen.getByRole('menu');
       expect(within(menu).queryByText('latest')).not.toBeInTheDocument();
       expect(screen.getByText('v3')).toBeInTheDocument();
@@ -598,25 +672,19 @@ describe('VersionDropdown', () => {
 
       await user.click(screen.getByRole('button'));
 
-      // Eyebrow title
       expect(screen.getByText('Version history')).toBeInTheDocument();
 
-      // Kind is conveyed by the action line, not a neutral badge
       expect(screen.queryByText('Promoted')).not.toBeInTheDocument();
       expect(screen.queryByText('Go live')).not.toBeInTheDocument();
 
-      // Line 1 (action): promote reads "Promoted sandbox {sandbox}" (source is
-      // bold); the author now stands alone on line 2, so "by" is gone.
       const promoteRow = screen.getByText('v2').closest('button');
       expect(promoteRow).toHaveTextContent('Promoted sandbox sandy-sandbox');
       expect(promoteRow).not.toHaveTextContent('by');
       expect(screen.getByText('sandy-sandbox')).toBeInTheDocument();
 
-      // First release reads "Initial go-live" on line 1
       const goLiveRow = screen.getByText('v1').closest('button');
       expect(goLiveRow).toHaveTextContent('Initial go-live');
 
-      // Line 2 (secondary): author full name as its own text, no avatar
       expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
       expect(screen.getByText('Grace Hopper')).toBeInTheDocument();
       expect(screen.queryByText('AL')).not.toBeInTheDocument();
@@ -679,13 +747,31 @@ describe('VersionDropdown', () => {
 
       await user.click(screen.getByRole('button'));
 
-      // No author line; just the action and the date
       const row = screen.getByText('v1').closest('button');
       expect(row).toHaveTextContent('Initial go-live');
       expect(row).toHaveTextContent('14 Jan 2024');
     });
 
-    test('shows "No published versions" when nothing has been published', async () => {
+    test('offers a way back to Latest when nothing has been published', async () => {
+      const user = userEvent.setup();
+
+      mockUseReleases.mockReturnValue([]);
+
+      render(
+        <VersionDropdown
+          currentVersion={3}
+          latestVersion={7}
+          onVersionSelect={mockOnVersionSelect}
+        />
+      );
+
+      await user.click(screen.getByRole('button'));
+      await user.click(screen.getByTestId('version-latest'));
+
+      expect(mockOnVersionSelect).toHaveBeenCalledWith('latest');
+    });
+
+    test('offers Latest, and says nothing is published yet', async () => {
       const user = userEvent.setup();
 
       mockUseReleases.mockReturnValue([]);
@@ -706,7 +792,9 @@ describe('VersionDropdown', () => {
 
       // Wait for loading to complete
       await waitFor(() => {
-        expect(screen.getByText('No published versions')).toBeInTheDocument();
+        expect(
+          screen.getByText('No published versions')
+        ).toBeInTheDocument();
       });
     });
 
@@ -738,7 +826,6 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Absolute date is rendered (not relative "... ago")
       expect(screen.getByText('15 Jan 2024')).toBeInTheDocument();
       expect(screen.queryByText(/ago$/)).not.toBeInTheDocument();
     });
@@ -746,8 +833,6 @@ describe('VersionDropdown', () => {
     test('marks the pinned row by version_number (not lock_version)', async () => {
       const user = userEvent.setup();
 
-      // v1's snapshot lock_version (22) deliberately differs from its
-      // version_number (1) to prove the checkmark keys on version_number.
       const mockVersions: Release[] = [
         createMockVersion({
           version_number: 3,
@@ -769,7 +854,6 @@ describe('VersionDropdown', () => {
 
       mockUseReleases.mockReturnValue(mockVersions);
 
-      // Pinned to version_number 1 via ?release=1
       pinVersion(1);
 
       render(
@@ -780,7 +864,6 @@ describe('VersionDropdown', () => {
         />
       );
 
-      // Trigger button reads v{?release} directly (the version_number, not v22)
       const button = screen.getByRole('button');
       expect(button).toHaveTextContent('v1');
       expect(button).not.toHaveTextContent('v22');
@@ -788,17 +871,13 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // The v1 row (the pinned release) is active with a checkmark
       const selectedButton = screen
         .getAllByRole('menuitem')
         .find(btn => btn.textContent?.includes('v1'));
-      // The row highlight sits on the wrapper, which also holds the per-row
-      // Restore action; the text colour stays on the pinning button.
       expect(selectedButton).toHaveClass('text-primary-900');
       expect(selectedButton?.parentElement).toHaveClass('bg-primary-50');
       expect(selectedButton?.querySelector('.hero-check')).toBeInTheDocument();
 
-      // The newest row is NOT active while pinned to an older version
       const newestButton = screen
         .getAllByRole('menuitem')
         .find(btn => btn.textContent?.includes('v3'));
@@ -830,10 +909,8 @@ describe('VersionDropdown', () => {
       ];
 
       mockUseReleases.mockReturnValue(mockVersions);
-      // The live document is still the content v3 published.
       mockUseLatestSnapshotId.mockReturnValue('snapshot-v3');
 
-      // No ?release= pin (afterEach resets the URL)
       render(
         <VersionDropdown
           currentVersion={30}
@@ -869,8 +946,6 @@ describe('VersionDropdown', () => {
           is_latest: true,
         }),
       ]);
-      // Saved since going live, so the document on screen is content no
-      // version published. Ticking the newest row would claim otherwise.
       mockUseLatestSnapshotId.mockReturnValue('snapshot-since-v3');
 
       render(
@@ -929,8 +1004,6 @@ describe('VersionDropdown', () => {
 
       await user.click(screen.getByRole('button'));
 
-      // The tick follows what is on screen. Reading it as "nothing pinned, so
-      // the newest" ticked a version the user was not looking at.
       const ran = screen
         .getAllByRole('menuitem')
         .find(btn => btn.textContent?.includes('v2'));
@@ -942,7 +1015,7 @@ describe('VersionDropdown', () => {
       expect(newest?.querySelector('.hero-check')).not.toBeInTheDocument();
     });
 
-    test('newest release is the first row with a green v-pill and no "latest" text', async () => {
+    test('Latest leads, then the publishes, newest with a green v-pill', async () => {
       const user = userEvent.setup();
 
       const mockVersions: Release[] = [
@@ -977,13 +1050,11 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // First menuitem is the newest release (v5), the second is the older (v4);
-      // there is no separate "latest" pseudo-row.
       const versionButtons = screen.getAllByRole('menuitem');
-      expect(versionButtons[0]).toHaveTextContent('v5');
-      expect(versionButtons[1]).toHaveTextContent('v4');
+      expect(versionButtons[0]).toHaveTextContent('Latest');
+      expect(versionButtons[1]).toHaveTextContent('v5');
+      expect(versionButtons[2]).toHaveTextContent('v4');
 
-      // Newest v-pill is green; older v-pill is neutral gray
       const newestPill = screen.getByText('v5');
       expect(newestPill).toHaveClass('bg-green-100', 'text-green-800');
       const olderPill = screen.getByText('v4');
@@ -1063,13 +1134,10 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Click the older release (displayed as v1, lock_version 30). Pinning now
-      // uses version_number (1), which is what ?release= carries, NOT lock_version.
       const oldVersionButton = screen.getByText('v1').closest('button');
       expect(oldVersionButton).not.toBeNull();
       await user.click(oldVersionButton!);
 
-      // Should call onVersionSelect with version_number (1), not lock_version (30)
       expect(mockOnVersionSelect).toHaveBeenCalledWith(1);
     });
 
@@ -1183,7 +1251,6 @@ describe('VersionDropdown', () => {
   });
 
   describe('restoring a version', () => {
-    // Three releases, newest first, matching what the channel sends.
     const threeVersions = () => {
       mockUseReleases.mockReturnValue([
         createMockVersion({
@@ -1214,7 +1281,6 @@ describe('VersionDropdown', () => {
       renderWithRestore(onVersionRestore);
       await user.click(screen.getByRole('button'));
 
-      // The newest release is what is live, so there is nothing to put back.
       expect(screen.queryByTestId('restore-version-3')).not.toBeInTheDocument();
       expect(screen.getByTestId('restore-version-2')).toBeInTheDocument();
       expect(screen.getByTestId('restore-version-1')).toBeInTheDocument();
@@ -1241,7 +1307,6 @@ describe('VersionDropdown', () => {
       await user.click(screen.getByRole('button'));
       await user.click(screen.getByTestId('restore-version-2'));
 
-      // Two separate actions on one row: reading it and putting it back.
       expect(mockOnVersionSelect).not.toHaveBeenCalled();
     });
 
@@ -1357,9 +1422,8 @@ describe('VersionDropdown', () => {
       // Open dropdown
       await user.click(button);
 
-      // Each release is one menuitem; there is no "latest" pseudo-row
       const menuItems = screen.getAllByRole('menuitem');
-      expect(menuItems).toHaveLength(2);
+      expect(menuItems).toHaveLength(3);
     });
   });
 });

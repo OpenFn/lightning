@@ -1,11 +1,3 @@
-/**
- * Restore wiring tests
- *
- * The dialog's whole job is to say what a rollback costs. These drive the real
- * breadcrumbs so that the answer the user sees is the answer for the version
- * they are actually restoring, which is not free: a check for a version they
- * have since cancelled can land after a later one.
- */
 
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -63,7 +55,6 @@ vi.mock('../../../js/collaborative-editor/components/Header', () => ({
   ),
 }));
 
-// Real triggers for the real handler, so the wiring between them is tested.
 vi.mock('../../../js/collaborative-editor/components/VersionDropdown', () => ({
   VersionDropdown: ({
     onVersionRestore,
@@ -82,6 +73,15 @@ vi.mock('../../../js/collaborative-editor/components/VersionDropdown', () => ({
 }));
 
 vi.mock('../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
+  useSessionWorkflow: () => ({ state: 'live' }),
+  useContentLocked: () => false,
   useExperimentalFeatures: () => true,
   useProject: () => ({ id: 'project-1', name: 'Test Project' }),
   useLatestSnapshotLockVersion: () => 1,
@@ -166,8 +166,6 @@ describe('restore, wired up', () => {
   });
 
   test('a late answer for an abandoned version does not silence a real warning', async () => {
-    // v3's check is slow and empty; v5's is immediate and has a warning. The
-    // user cancels v3 and asks for v5, so the late v3 answer must be ignored.
     let releaseV3: ((reply: CheckReply) => void) | null = null;
 
     checkRestore.mockImplementation((version: number) => {
@@ -195,8 +193,6 @@ describe('restore, wired up', () => {
       await screen.findByTestId('restore-losing-triggers')
     ).toBeInTheDocument();
 
-    // Let the late answer land and flush, or the assertion below passes on the
-    // state as it was before it arrived.
     await act(async () => {
       releaseV3?.({
         losing_triggers: [],
@@ -207,7 +203,6 @@ describe('restore, wired up', () => {
       await Promise.resolve();
     });
 
-    // Still warning about v5's trigger, not blanked by v3's empty answer.
     expect(screen.getByTestId('restore-losing-triggers')).toHaveTextContent(
       'the webhook at /payments'
     );
@@ -225,5 +220,29 @@ describe('restore, wired up', () => {
         screen.getByRole('button', { name: /^Restore v3$/ })
       ).toBeEnabled();
     });
+  });
+});
+describe('a save pinned on a live workflow', () => {
+  beforeEach(() => {
+    urlState.reset();
+  });
+
+  test('is dropped, because a live workflow browses publishes', () => {
+    urlState.setParam('v', '5');
+
+    renderBreadcrumbs();
+
+    expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(
+      { v: null },
+      { replace: true }
+    );
+  });
+
+  test('leaves a pinned publish alone', () => {
+    urlState.setParam('release', '3');
+
+    renderBreadcrumbs();
+
+    expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalled();
   });
 });

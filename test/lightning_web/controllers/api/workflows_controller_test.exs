@@ -24,8 +24,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
       conn: conn,
       project: project
     } do
-      # `state` names a lifecycle we have not shipped. Whatever the row says,
-      # the API answers the way it answers today.
       workflow = insert(:workflow, project: project, state: :live)
       insert(:trigger, workflow: workflow)
 
@@ -1928,9 +1926,6 @@ defmodule LightningWeb.API.WorkflowsControllerTest do
     end
   end
 
-  # The shape the API answers with. `state` encodes on the struct because the
-  # collaboration channel needs it, but the API leaves it out, so anything
-  # compared against a response has to leave it out too.
   defp encode_decode(item) do
     item
     |> Jason.encode!()

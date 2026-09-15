@@ -189,11 +189,6 @@ defmodule LightningWeb.WorkOrderLiveTest do
     test "workflow name links to the version the run executed", %{
       project: project
     } do
-      # Without experimental features this is the link the History page has
-      # always sent: the run's own snapshot pinned with `?v=`, which is the
-      # parameter the editor's snapshot picker reads. With them it is
-      # `?as_run=`, resolved through the run itself, which also reaches content
-      # that was never released.
       {work_order, _dataclip} = setup_work_order(project)
 
       work_order =
@@ -217,10 +212,6 @@ defmodule LightningWeb.WorkOrderLiveTest do
           can_edit_data_retention: true
         )
 
-      # Matched a parameter at a time, and anchored on the separator: the link
-      # builds its query string from a map, so the order is whatever the encoder
-      # iterates rather than source order, and a bare `run=` would also match
-      # inside `as_run=`.
       assert classic =~ ~r/[?;]run=#{run.id}/
       assert classic =~ ~r/[?;]v=#{work_order.snapshot.lock_version}/
       refute classic =~ "as_run="

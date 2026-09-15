@@ -78,7 +78,7 @@ test.describe('Job-Step Selection Sync @collaborative', () => {
 
     await test.step('Wait for run to complete', async () => {
       // Wait for retry button to appear (indicates run completed)
-      await expect(page.locator('button:has-text("Run (Retry)")')).toBeVisible({
+      await expect(page.locator('button:has-text("Retry")')).toBeVisible({
         timeout: 30000,
       });
     });
@@ -185,7 +185,7 @@ test.describe('Job-Step Selection Sync @collaborative', () => {
       });
 
       // Wait for run to complete
-      await expect(page.locator('button:has-text("Run (Retry)")')).toBeVisible({
+      await expect(page.locator('button:has-text("Retry")')).toBeVisible({
         timeout: 30000,
       });
     });

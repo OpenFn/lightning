@@ -145,9 +145,6 @@ describe('JobInspector - Footer Button States', () => {
       },
     });
 
-    // Set workflow lock_version and deleted_at to match session context.
-    // deleted_at must be an explicit null (as the server always sends it),
-    // otherwise the workflow reads as "deleted" and forces read-only.
     const workflowMap = ydoc.getMap('workflow');
     workflowMap.set('lock_version', 1);
     workflowMap.set('deleted_at', null);
@@ -180,7 +177,7 @@ describe('JobInspector - Footer Button States', () => {
     });
   });
 
-  test('only the Code button is shown in read-only mode, with the flag on', () => {
+  test('the footer keeps all three controls in read-only mode, with the flag on', () => {
     // Set read-only permissions
     act(() => {
       (mockChannel as any)._test.emit('session_context', {
@@ -226,22 +223,13 @@ describe('JobInspector - Footer Button States', () => {
       }
     );
 
-    // With the flag on, only the Code button remains: the lifecycle badge in
-    // the header is what explains the state, so empty controls go. Because the
-    // Code button stays, the footer bar keeps rendering.
     expect(screen.getByTestId('inspector-footer')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /code/i })).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /run/i })
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /delete/i })
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /run/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
   });
 
   test('Run and Delete stay put and disabled without the flag', () => {
-    // No experimental features, so no badge in the header saying why this is
-    // read-only. These controls are where the reason lives, so they stay.
     act(() => {
       (mockChannel as any)._test.emit('session_context', {
         user: null,
@@ -333,7 +321,7 @@ describe('JobInspector - Footer Button States', () => {
     expect(codeButton).not.toBeDisabled();
   });
 
-  test('Run and Delete are hidden in read-only mode, with the flag on', () => {
+  test('Run and Delete stay put and disabled in read-only mode, with the flag on', () => {
     // Set read-only permissions
     act(() => {
       (mockChannel as any)._test.emit('session_context', {
@@ -379,12 +367,8 @@ describe('JobInspector - Footer Button States', () => {
       }
     );
 
-    expect(
-      screen.queryByRole('button', { name: /run/i })
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /delete/i })
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /run/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
   });
 
   test('Code button is clickable in read-only mode', async () => {
@@ -639,7 +623,7 @@ describe('JobInspector - Footer Button States', () => {
     expect(codeButton).not.toBeDisabled();
   });
 
-  test('Delete is hidden for a leaf node in read-only mode, with the flag on', () => {
+  test('Delete is disabled for a leaf node in read-only mode, with the flag on', () => {
     // Set read-only permissions
     act(() => {
       (mockChannel as any)._test.emit('session_context', {
@@ -686,11 +670,7 @@ describe('JobInspector - Footer Button States', () => {
       }
     );
 
-    // The delete button is hidden on a read-only workflow, even for leaf nodes
-    // that would otherwise be deletable.
-    expect(
-      screen.queryByRole('button', { name: /delete/i })
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
   });
 });
 

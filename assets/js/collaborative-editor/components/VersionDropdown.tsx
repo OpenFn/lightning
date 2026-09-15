@@ -21,10 +21,6 @@ interface VersionDropdownProps {
   currentVersion: number | null;
   latestVersion: number | null;
   onVersionSelect: (version: number | 'latest') => void;
-  /**
-   * Offered per row, because restore is about the version being read rather
-   * than the workflow on screen. Omitted when the viewer cannot edit.
-   */
   onVersionRestore?: (version: number) => void;
 }
 
@@ -37,7 +33,6 @@ export function VersionDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Get releases state from SessionContextStore
   const releases = useReleases();
   const latestSnapshotId = useLatestSnapshotId();
   const isLoaded = useReleasesLoaded();
@@ -45,7 +40,6 @@ export function VersionDropdown({
   const releasesError = useReleasesError();
   const requestReleases = useRequestReleases();
 
-  // `?release=` carries a release version_number, not a snapshot lock_version.
   const {
     release: pinnedParam,
     isPinnedRelease,
@@ -54,11 +48,6 @@ export function VersionDropdown({
   } = usePinnedView();
   const pinnedVersionNumber = isPinnedRelease ? Number(pinnedParam) : null;
 
-  // `?as_run=` opens the workflow as one run executed it, so the chip names the
-  // version that run executed against. A run whose snapshot was never
-  // published has no number to name it by. It is not called a draft here: the
-  // lifecycle badge alongside already uses that word for a workflow that is not
-  // live, and this is a statement about content, not about the workflow.
   const asRun = useRunSummary(asRunParam);
   const asRunVersionNumber =
     asRun === undefined ? undefined : (asRun.version_number ?? null);
@@ -66,15 +55,8 @@ export function VersionDropdown({
   // Show placeholder while loading version information
   const isLoadingVersion = currentVersion === null || latestVersion === null;
 
-  // With neither param set the client joined the live room, so the document is
-  // the current one whatever the store's lock_version says. Comparing lock
-  // versions here used to render one as `v1`, a release number that does not
-  // exist, next to a list that correctly said nothing had been published.
   const isLatestVersion = !isLoadingVersion && !isPinnedRelease && !isAsRun;
 
-  // The content on screen, whichever way it was reached. The list ticks the
-  // version that published it and ticks nothing when no version did, so the
-  // chip and the tick are two readings of one value and cannot disagree.
   const viewedSnapshotId = isPinnedRelease
     ? (releases.find(version => version.version_number === pinnedVersionNumber)
         ?.snapshot_id ?? null)
@@ -129,16 +111,28 @@ export function VersionDropdown({
     }
   }, [isOpen]);
 
-  // Fetch releases when the dropdown opens, once. Asking because the list is
-  // empty asks forever on a workflow that has never been published, since the
-  // answer to that question is an empty list.
-  useEffect(() => {
-    if (isOpen && !isLoaded && !isLoading) {
-      void requestReleases();
-    }
-  }, [isOpen, isLoaded, isLoading, requestReleases]);
+  const wasOpen = useRef(false);
 
-  // Show error notification when releasesError is set
+  useEffect(() => {
+    const justOpened = isOpen && !wasOpen.current;
+
+    if (!isOpen) {
+      wasOpen.current = false;
+      return;
+    }
+
+    if (isLoading) return;
+
+    wasOpen.current = true;
+
+    if (!isLoaded) {
+      void requestReleases();
+      return;
+    }
+
+    if (justOpened && releasesError) void requestReleases();
+  }, [isOpen, isLoaded, isLoading, releasesError, requestReleases]);
+
   useEffect(() => {
     if (releasesError) {
       notifications.alert({
@@ -148,8 +142,6 @@ export function VersionDropdown({
     }
   }, [releasesError]);
 
-  // The newest release means "follow live", so it clears the pin rather than
-  // pinning to itself.
   const handleVersionClick = (version: Release) => {
     if (version.is_latest) {
       onVersionSelect('latest');
@@ -188,6 +180,31 @@ export function VersionDropdown({
             aria-orientation="vertical"
             aria-labelledby="options-menu"
           >
+            {/* Always first, and always clickable when you are reading
+                something else. Without it a workflow that has published
+                nothing offers no way back to its editable content, which is
+                every draft and every workflow read through a run. */}
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="version-latest"
+              onClick={() => {
+                setIsOpen(false);
+                onVersionSelect('latest');
+              }}
+              className={cn(
+                'flex w-full items-center gap-2 px-4 py-2 text-left text-sm',
+                isLatestVersion
+                  ? 'bg-primary-50 text-primary-900'
+                  : 'text-gray-700 hover:bg-gray-50'
+              )}
+            >
+              <span className="flex-1 font-medium">Latest</span>
+              {isLatestVersion && (
+                <span className="hero-check-mini h-4 w-4 text-primary-600" />
+              )}
+            </button>
+
             {isLoading ? (
               <div className="px-4 py-2 text-sm text-gray-500">
                 Loading versions...
@@ -207,10 +224,6 @@ export function VersionDropdown({
                 </p>
 
                 {releases.map(version => {
-                  // Ticked when this version published the content on screen.
-                  // Reading it as "nothing pinned, so it must be the newest"
-                  // ticked a version you were not looking at: in a run view, and
-                  // on a live document that has been saved since it went live.
                   const isActive =
                     version.snapshot_id != null &&
                     version.snapshot_id === viewedSnapshotId;

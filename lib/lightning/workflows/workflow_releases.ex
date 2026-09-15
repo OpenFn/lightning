@@ -2,19 +2,13 @@ defmodule Lightning.Workflows.WorkflowReleases do
   @moduledoc """
   Records and reads `Lightning.Workflows.WorkflowRelease` rows.
 
-  A release is recorded at each go-live and each promote, always inside the same
-  transaction as the snapshot it points at, so a release can never reference
-  content that failed to persist. `version_number` is allocated as
-  `max(existing) + 1` per workflow within that transaction.
+  A release is recorded at each go-live and promote, in the same transaction as
+  the snapshot it points at, and numbered `max(existing) + 1` per workflow.
 
-  That allocation is safe only because callers record a release exclusively when
-  the save captured a snapshot. Capturing one means the workflow row was
-  updated, so the optimistic `lock_version` bump serialises concurrent publishes
-  and they cannot read the same maximum. A caller that recorded a release
-  without a captured snapshot would be allocating without that lock, because
-  Ecto issues no `UPDATE` at all for an empty changeset and the optimistic lock
-  never runs. The `(workflow_id, version_number)` unique index is the backstop
-  if that ever happens.
+  That numbering is safe only because callers record a release exclusively when
+  the save captured a snapshot: capturing one updates the workflow row, so the
+  optimistic lock serialises concurrent publishes. The
+  `(workflow_id, version_number)` unique index is the backstop.
   """
   import Ecto.Query
 
@@ -90,16 +84,11 @@ defmodule Lightning.Workflows.WorkflowReleases do
 
   @doc """
   Maps each released snapshot `lock_version` to the `version_number` it was
-  published as, for the given workflow.
+  published as.
 
-  This is the lookup that attributes a run to a release: a run carries its
-  snapshot's `lock_version`, and this map turns that into the human `version_number`
-  (or `nil`, via `Map.get/2`, for a snapshot that was never released — a draft,
-  test, or intermediate save).
-
-  When two releases point at snapshots that share a `lock_version`, the newest
-  release (highest `version_number`) wins deterministically, since
-  `version_number` is monotonically increasing per workflow.
+  This is what attributes a run to a release: a run carries its snapshot's
+  `lock_version`, and `Map.get/2` gives `nil` for one that was never released.
+  Where two releases share a `lock_version` the newest wins.
   """
   @spec version_numbers_by_lock_version(Workflow.t() | Ecto.UUID.t()) ::
           %{integer() => pos_integer()}

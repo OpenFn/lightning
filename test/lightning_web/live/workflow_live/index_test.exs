@@ -347,15 +347,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       conn: conn,
       project: project
     } do
-      # The lifecycle column is backfilled `live` for a workflow with ANY
-      # enabled trigger, while the tooltip and the Enabled sort both ask whether
-      # they are ALL enabled. A workflow with one of each is where those two
-      # readings part company, and the toggle used to side with the lifecycle
-      # while the tooltip beside it said the opposite.
-      #
-      # Nothing a user does here creates that state: go-live enables every
-      # trigger and switch-to-draft disables every one. It arrives with
-      # migrated data and with provisioning.
       on_trigger = build(:trigger, type: :webhook, enabled: true)
       off_trigger = build(:trigger, type: :cron, enabled: false)
       job = build(:job)
@@ -389,10 +380,8 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
 
-      # Draft workflow: toggle is off.
       refute view |> has_element?("##{workflow.id}[checked]")
 
-      # Enabling routes through go_live: state becomes :live and triggers enabled.
       assert view
              |> element("#toggle-control-#{workflow.id}")
              |> render_click() =~ "Workflow updated"
@@ -406,7 +395,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       assert view |> has_element?("##{workflow.id}[checked]")
 
-      # Disabling routes through switch_to_draft: back to :draft, triggers off.
       assert view
              |> element("#toggle-control-#{workflow.id}")
              |> render_click() =~ "Workflow updated"
@@ -464,11 +452,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       conn: conn,
       project: project
     } do
-      # Enabling asks the limiter; flipping a workflow that is already on does
-      # not, which is how this read before a lifecycle transition replaced the
-      # plain save. Both halves matter: the first is the limit doing its job,
-      # the second is a project at its limit still being able to click a toggle
-      # that changes nothing.
       off_trigger = build(:trigger, type: :webhook, enabled: false)
       off_job = build(:job)
 
@@ -504,8 +487,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
 
-      # The limiter's own sentence, not a generic "try again": being at the
-      # limit is the one refusal here that retrying cannot fix.
       assert view
              |> render_click("toggle_workflow_state", %{
                "workflow_state" => "true",
@@ -519,8 +500,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              ).triggers
              |> Enum.any?(& &1.enabled)
 
-      # Already on. The limiter is never consulted, so the refusal above cannot
-      # reach it and the toggle succeeds.
       assert view
              |> render_click("toggle_workflow_state", %{
                "workflow_state" => "true",
@@ -568,6 +547,70 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                ~s{tr#workflow-#{workflow.id} a#health-#{workflow.id}[href="/projects/#{project.id}/w/#{workflow.id}/health"]},
                "Health"
              )
+    end
+  end
+
+  describe "the lifecycle column" do
+    setup %{user: user} do
+      user =
+        user
+        |> Ecto.Changeset.change(%{
+          preferences: %{"experimental_features" => true}
+        })
+        |> Lightning.Repo.update!()
+
+      %{user: user}
+    end
+
+    test "reports the state and offers no switch on an ordinary project", %{
+      conn: conn,
+      project: project,
+      user: user,
+      workflow: workflow
+    } do
+      {:ok, _workflow} =
+        Lightning.Workflows.go_live(
+          Lightning.Repo.preload(workflow, :triggers),
+          user
+        )
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~ "State"
+      assert html =~ "Live"
+      refute html =~ ~s(name="workflow_state")
+    end
+
+    test "keeps the switch inside a sandbox", %{conn: conn, user: user} do
+      parent = insert(:project, project_users: [%{user: user, role: :owner}])
+
+      sandbox =
+        insert(:project,
+          parent_id: parent.id,
+          project_users: [%{user: user, role: :owner}]
+        )
+
+      insert(:simple_workflow, project: sandbox)
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{sandbox.id}/w")
+
+      assert html =~ "Turn on"
+      assert html =~ ~s(name="workflow_state")
+    end
+
+    test "is the list from before the lifecycle without the flag", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      user
+      |> Ecto.Changeset.change(%{preferences: %{}})
+      |> Lightning.Repo.update!()
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~ "Enabled"
+      assert html =~ ~s(name="workflow_state")
     end
   end
 

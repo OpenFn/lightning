@@ -1,6 +1,4 @@
 defmodule Lightning.Collaboration.ReconcileWorkflowDocumentTest do
-  # async: false because the SharedDoc lives in a supervisor that isn't owned by
-  # the test process, so the Ecto sandbox must be in shared mode.
   use Lightning.DataCase, async: false
 
   import Lightning.Factories
@@ -14,8 +12,6 @@ defmodule Lightning.Collaboration.ReconcileWorkflowDocumentTest do
   alias Lightning.Workflows
 
   setup do
-    # Global mode so the SharedDoc/DocumentSupervisor processes can reach the
-    # (default, real-PubSub) Lightning stub for broadcast/subscribe.
     Mox.set_mox_global(LightningMock)
 
     user = insert(:user)
@@ -39,15 +35,12 @@ defmodule Lightning.Collaboration.ReconcileWorkflowDocumentTest do
 
       original_name = Yex.Map.fetch!(workflow_map, "name")
 
-      # An out-of-band write straight to the database, with no collaboration
-      # involvement: rename the workflow and bump its lock_version.
       {:ok, updated} =
         workflow
         |> Ecto.Changeset.change(%{name: "Renamed out of band"})
         |> Ecto.Changeset.optimistic_lock(:lock_version)
         |> Repo.update()
 
-      # Precondition: the live document is stale until we reconcile.
       assert Yex.Map.fetch!(workflow_map, "name") == original_name
 
       assert :ok = WorkflowReconciler.reconcile_workflow_document(workflow.id)
@@ -126,14 +119,11 @@ defmodule Lightning.Collaboration.ReconcileWorkflowDocumentTest do
       {:ok, sandbox} =
         Sandboxes.provision(parent, user, %{name: "promote-sandbox"})
 
-      # Warm the parent workflow's live document BEFORE the merge.
       {:ok, session_pid} = Collaborate.start(workflow: parent_wf, user: user)
       shared_doc = Session.get_doc(session_pid)
       workflow_map = Yex.Doc.get_map(shared_doc, "workflow")
       initial_lock_version = Yex.Map.fetch!(workflow_map, "lock_version")
 
-      # Change the sandbox clone's job so the merge writes a real change back to
-      # the parent workflow.
       sandbox_job =
         sandbox
         |> Repo.preload(workflows: :jobs)

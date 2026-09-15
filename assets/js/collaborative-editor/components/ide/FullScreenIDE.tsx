@@ -45,12 +45,10 @@ import { useMetadata } from '../../hooks/useMetadata';
 import { useRunRetry } from '../../hooks/useRunRetry';
 import { useRunRetryShortcuts } from '../../hooks/useRunRetryShortcuts';
 import { useSession } from '../../hooks/useSession';
-import {
-  useExperimentalFeatures,
-  useProject,
-} from '../../hooks/useSessionContext';
+import { useContentLocked, useProject } from '../../hooks/useSessionContext';
 import { useVersionMismatch } from '../../hooks/useVersionMismatch';
 import { useVersionSelect } from '../../hooks/useVersionSelect';
+import { useViewAsExecuted } from '../../hooks/useViewAsExecuted';
 import {
   useCanRun,
   useCanSave,
@@ -68,6 +66,7 @@ import { RunBadge } from '../common/RunBadge';
 import { ConfigureAdaptorModal } from '../ConfigureAdaptorModal';
 import MiniHistory from '../diagram/MiniHistory';
 import { VersionMismatchBanner } from '../diagram/VersionMismatchBanner';
+import { DiscardChangesDialog } from '../DiscardChangesDialog';
 import { JobSelector } from '../JobSelector';
 import { ManualRunPanel } from '../ManualRunPanel';
 import { ManualRunPanelErrorBoundary } from '../ManualRunPanelErrorBoundary';
@@ -431,6 +430,8 @@ export function FullScreenIDE({
   // Run/Retry functionality for IDE Header
   const { canRun: canRunSnapshot, tooltipMessage: runTooltipMessage } =
     useCanRun();
+  const { canRun: canRetrySnapshot, tooltipMessage: retryTooltipMessage } =
+    useCanRun({ forRetry: true });
   const runContext = jobIdFromURL
     ? { type: 'job' as const, id: jobIdFromURL }
     : { type: 'trigger' as const, id: workflow?.triggers[0]?.id || '' };
@@ -442,6 +443,7 @@ export function FullScreenIDE({
     isRetryable,
     runIsProcessing,
     canRun: canRunFromHook,
+    canRetry: canRetryFromHook,
   } = useRunRetry({
     projectId: projectId || '',
     workflowId: workflowId || '',
@@ -451,6 +453,8 @@ export function FullScreenIDE({
     customBody,
     canRunWorkflow: canRunSnapshot,
     workflowRunTooltipMessage: runTooltipMessage,
+    canRetryWorkflow: canRetrySnapshot,
+    retryTooltipMessage,
     saveWorkflow,
     onRunSubmitted: handleRunSubmitted,
     edgeId: null,
@@ -471,8 +475,7 @@ export function FullScreenIDE({
       void handleRetry();
     },
     canRun:
-      canRunSnapshot &&
-      canRunFromHook &&
+      (isRetryable ? canRetryFromHook : canRunSnapshot && canRunFromHook) &&
       !isSubmitting &&
       !runIsProcessing &&
       jobMatchesRun,
@@ -574,7 +577,6 @@ export function FullScreenIDE({
     }
   }, [jobIdFromURL, currentRun, runIdFromURL, updateSearchParams]);
 
-  // Request history (top-20, all versions) when entering history state.
   useEffect(() => {
     if (rightPanelSubState === 'history') {
       void requestHistory();
@@ -735,24 +737,28 @@ export function FullScreenIDE({
   // IMPORTANT: All hooks must be called before any early returns
   const { isReadOnly } = useWorkflowReadOnly();
 
-  // With experimental features a read-only view drops the run controls, because
-  // the header's lifecycle badge is there to explain it. Without them the
-  // controls stay and go grey, carrying the reason themselves.
-  const experimentalFeatures = useExperimentalFeatures();
-  const hideOnReadOnly = experimentalFeatures && isReadOnly;
-
-  // The run being read executed content other than what is on screen. Only ever
-  // set without experimental features; with them a run of older content opens
-  // that content instead.
   const activeRun = useActiveRun();
   const versionMismatch = useVersionMismatch(activeRun?.id ?? null);
-  const { handleVersionSelect } = useVersionSelect();
+  const { handleVersionSelect, prompt: versionPrompt } = useVersionSelect();
+  const { viewAsExecuted, prompt: runPinPrompt } = useViewAsExecuted();
+  const contentLocked = useContentLocked();
 
   const handleGoToVersion = useCallback(() => {
-    if (versionMismatch) {
-      handleVersionSelect(versionMismatch.runVersion);
+    if (!versionMismatch) return;
+
+    if (contentLocked && activeRun?.id) {
+      viewAsExecuted(activeRun.id);
+      return;
     }
-  }, [handleVersionSelect, versionMismatch]);
+
+    handleVersionSelect(versionMismatch.runVersion);
+  }, [
+    activeRun?.id,
+    contentLocked,
+    handleVersionSelect,
+    versionMismatch,
+    viewAsExecuted,
+  ]);
 
   // Check loading state but don't use early return (violates rules of hooks)
   // Only check for job existence, not ytext/awareness
@@ -915,57 +921,53 @@ export function FullScreenIDE({
               </button>
             </Tooltip>
 
-            {/* New Run button - shown when no panel or viewing history.
-                With experimental features it goes on a read-only workflow,
-                where the header's lifecycle badge explains why. Without them it
-                stays and goes grey, carrying the reason, as it does today. */}
-            {!hideOnReadOnly &&
-              (panelState === undefined || panelState === 'history') && (
-                <NewRunButton
-                  onClick={handleNavigateToCreateRun}
-                  disabled={isReadOnly}
-                />
-              )}
+            {/* New Run button - shown when no panel or viewing history. It
+                stays on a read-only workflow: running is not editing, and the
+                run hook refuses the ones that genuinely cannot run. */}
+            {(panelState === undefined || panelState === 'history') && (
+              <NewRunButton onClick={handleNavigateToCreateRun} />
+            )}
 
-            {/* Run/Retry button - shown when creating a new run or viewing an
-                existing run. Both create runs, so a read-only workflow refuses
-                them; with experimental features the button goes, without them it
-                stays disabled. The run viewer itself is always available. */}
-            {!hideOnReadOnly &&
-              (panelState === 'run-viewer' || panelState === 'create-run') && (
-                <RunRetryButton
-                  isRetryable={isRetryable}
-                  isDisabled={
-                    !(
-                      canRunSnapshot &&
-                      canRunFromHook &&
-                      !isSubmitting &&
-                      !runIsProcessing &&
-                      jobMatchesRun
-                    )
-                  }
-                  isSubmitting={isSubmitting || runIsProcessing}
-                  onRun={() => {
-                    void handleRun();
-                  }}
-                  onRetry={() => {
-                    void handleRetry();
-                  }}
-                  buttonText={{
-                    run: 'Run',
-                    retry: 'Run (Retry)',
-                    processing: 'Processing',
-                  }}
-                  variant="primary"
-                  dropdownPosition="down"
-                  showKeyboardShortcuts={true}
-                  disabledTooltip={
-                    !jobMatchesRun
-                      ? 'Selected job was not part of this run'
-                      : runTooltipMessage
-                  }
-                />
-              )}
+            {/* Run/Retry, while creating a run or reading one. Running is not
+                editing: reading the failing step's code is exactly where you
+                want to run it again, and a live workflow is the case that
+                matters most. Whether it can run is the hook's answer, not the
+                editing lock's. */}
+            {(panelState === 'run-viewer' || panelState === 'create-run') && (
+              <RunRetryButton
+                isRetryable={isRetryable}
+                isDisabled={
+                  !(
+                    (isRetryable
+                      ? canRetryFromHook
+                      : canRunSnapshot && canRunFromHook) &&
+                    !isSubmitting &&
+                    !runIsProcessing &&
+                    jobMatchesRun
+                  )
+                }
+                isSubmitting={isSubmitting || runIsProcessing}
+                onRun={() => {
+                  void handleRun();
+                }}
+                onRetry={() => {
+                  void handleRetry();
+                }}
+                buttonText={{
+                  run: 'Run',
+                  retry: 'Retry',
+                  processing: 'Processing',
+                }}
+                variant="primary"
+                dropdownPosition="down"
+                showKeyboardShortcuts={true}
+                disabledTooltip={
+                  !jobMatchesRun
+                    ? 'Selected job was not part of this run'
+                    : runTooltipMessage
+                }
+              />
+            )}
 
             {/* Close button */}
             <Tooltip content={<ShortcutKeys keys={['esc']} />} side="bottom">
@@ -1385,6 +1387,21 @@ export function FullScreenIDE({
           />
         </>
       )}
+
+      <DiscardChangesDialog
+        isOpen={versionPrompt.isAsking}
+        onSaveAndContinue={versionPrompt.saveAndRunPending}
+        onDiscardAndContinue={versionPrompt.runPending}
+        onCancel={versionPrompt.cancel}
+        description="Switching to the version this run executed against loads that version, and your unsaved changes cannot come with it. Switch without saving and they are gone."
+      />
+      <DiscardChangesDialog
+        isOpen={runPinPrompt.isAsking}
+        onSaveAndContinue={runPinPrompt.saveAndRunPending}
+        onDiscardAndContinue={runPinPrompt.runPending}
+        onCancel={runPinPrompt.cancel}
+        description="Opening this run loads the version it executed against, and your unsaved changes cannot come with it. Switch without saving and they are gone."
+      />
     </div>
   );
 }

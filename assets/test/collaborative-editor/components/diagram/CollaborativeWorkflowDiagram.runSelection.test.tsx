@@ -1,17 +1,3 @@
-/**
- * Tests for how selecting a run decides what to show.
- *
- * A run is shown as it executed, on its own snapshot, unless it executed the
- * content that is live now, in which case it overlays on the live document so
- * editing carries on.
- *
- * The decision compares the run's snapshot against the live workflow's. It used
- * to compare version numbers against the document on screen, and because a run
- * view *is* a past document, the answer changed depending on where the user was
- * standing: clicking two runs of the same old content alternated between a
- * read-only view of that content and the live document with the run painted
- * onto it, which reported step timings against steps the run never touched.
- */
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -57,7 +43,7 @@ vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => ({
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
-  useSession: () => ({ isSynced: true }),
+  useSession: () => ({ isSynced: true, settled: true }),
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
@@ -112,13 +98,12 @@ const workOrder = (id: string, runs: ReturnType<typeof run>[]) => ({
 });
 
 function createWrapper(
-  experimentalFeaturesEnabled = true
+  experimentalFeaturesEnabled = true,
+  contentLocked = true
 ): React.ComponentType<{ children: React.ReactNode }> {
   const editorPreferencesStore = createEditorPreferencesStore();
 
   const workflowState = {
-    // The document on screen. In a run view this is the run's snapshot, which
-    // is exactly what the decision must not read.
     workflow: { jobs: [], triggers: [], edges: [], lock_version: 1 },
     selectedNode: { type: 'job' as const, id: null },
   };
@@ -134,6 +119,7 @@ function createWrapper(
     latestSnapshotId: LIVE_SNAPSHOT,
     latestSnapshotLockVersion: 3,
     experimentalFeaturesEnabled,
+    contentLocked,
   };
 
   const historyState = {
@@ -234,10 +220,6 @@ describe('selecting a run', () => {
 
     await clickRun(user, 'wo-old-a');
 
-    // Now standing in that run's view: the URL says so, and the document on
-    // screen is that run's snapshot. Clicking a second run of the same content
-    // used to compare against the displayed document, match, and drop the user
-    // back onto the live document with the run painted over it.
     urlState.setParam('as_run', 'run-old-a');
     urlState.setParam('run', 'run-old-a');
     urlState.mockFns.updateSearchParams.mockClear();
@@ -258,8 +240,6 @@ describe('selecting a run', () => {
 
     await clickRun(user, 'wo-live');
 
-    // Nothing to load: the run executed what is on screen, so editing carries
-    // on and the steps light up where they ran.
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(
       expect.objectContaining({ as_run: null, run: 'run-live', v: null })
     );
@@ -268,17 +248,12 @@ describe('selecting a run', () => {
   test('keeps a retry on the live document when it drops the run view', async () => {
     const user = userEvent.setup();
 
-    // Standing in a run's own view.
     urlState.setParams({ run: 'run-old-a', as_run: 'run-old-a' });
 
     const { rerender } = render(<CollaborativeWorkflowDiagram />, {
       wrapper: createWrapper(),
     });
 
-    // A retry drops the run view and selects the run it just created, which
-    // executed the live content. Reading that as "left the run view" cleared
-    // the new run and left the canvas blank, with the retry sitting unselected
-    // in the history list.
     urlState.deleteParam('as_run');
     urlState.setParams({ run: 'run-live' });
     urlState.mockFns.updateSearchParams.mockClear();
@@ -290,9 +265,6 @@ describe('selecting a run', () => {
   });
 
   test('shows a run as executed even when the URL only says ?run=', async () => {
-    // A shared link, a reload, or the back button. The decision used to happen
-    // only on click, so the address bar could still reach the old behaviour:
-    // an old run's results painted on the live document.
     urlState.setParams({ run: 'run-old-a' });
 
     render(<CollaborativeWorkflowDiagram />, { wrapper: createWrapper() });
@@ -305,10 +277,6 @@ describe('selecting a run', () => {
   });
 
   test("pins the run's own snapshot without experimental features", async () => {
-    // The editor's existing behaviour: the run executed a different version, so
-    // the canvas switches to that version, read-only. `?v=` numbers by
-    // lock_version, which is what the run carries. No as-executed view is
-    // involved; that is the flag-on answer.
     const user = userEvent.setup();
     render(<CollaborativeWorkflowDiagram />, {
       wrapper: createWrapper(false),
@@ -326,8 +294,6 @@ describe('selecting a run', () => {
   });
 
   test('clears the pin for a run of the current version, without the flag', async () => {
-    // The other half of main's rule, and the reason it exists: a run of the
-    // current version must not leave the canvas pinned and read-only.
     const user = userEvent.setup();
     urlState.setParams({ v: '1' });
 
@@ -342,9 +308,6 @@ describe('selecting a run', () => {
   });
 
   test('leaves a ?run= alone without experimental features', async () => {
-    // The reconcile pass turns a bare `?run=` of older content into an
-    // as-executed view, however the URL got that way. Without the flag it must
-    // leave the URL as it found it.
     urlState.setParams({ run: 'run-old-a' });
 
     render(<CollaborativeWorkflowDiagram />, {
@@ -364,8 +327,6 @@ describe('selecting a run', () => {
     const user = userEvent.setup();
     render(<CollaborativeWorkflowDiagram />, { wrapper: createWrapper() });
 
-    // An older payload without the field. Read-only and faithful beats
-    // editable and possibly wrong.
     await clickRun(user, 'wo-unknown');
 
     expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith(

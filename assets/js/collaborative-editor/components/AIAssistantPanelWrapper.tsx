@@ -124,14 +124,8 @@ export function AIAssistantPanelWrapper({
   } = useUICommands();
   const { updateSearchParams, params } = useURLState();
 
-  // The assistant edits the workflow, so it is off wherever the past is being
-  // read.
   const pinnedView = usePinnedView();
   const isPinnedVersion = pinnedView.isPinnedView;
-  // The diff manager only compares this against its previous value to notice a
-  // switch, so it wants any pin rather than a release specifically. Reading only
-  // the release meant a user without experimental features pinned a version and
-  // the assistant kept a stale panel, a stale diff and stale chat parameters.
   const currentVersion = pinnedView.version ?? undefined;
 
   const { isReadOnly } = useWorkflowReadOnly();

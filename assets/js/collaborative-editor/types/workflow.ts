@@ -92,13 +92,6 @@ export interface SandboxOwner {
   email?: string;
 }
 
-/**
- * A sandbox project that can be joined or branched from when editing a live
- * workflow. `owner` is the person who owns the sandbox (null when unknown).
- * `inserted_at` is when the sandbox was created and `updated_at` when it was
- * last edited. `workflow_id` is the id of this workflow's clone inside the
- * sandbox, and is null when the workflow does not exist in that sandbox.
- */
 export interface Sandbox {
   id: string;
   name: string;
@@ -187,11 +180,6 @@ export namespace Workflow {
     selectedEdgeId: string | null;
 
     // Computed/derived state
-    /**
-     * Whether any trigger is on, or null when there are no triggers. Drives the
-     * header's on/off switch, which is what a user without experimental
-     * features has instead of the lifecycle controls.
-     */
     enabled: boolean | null;
     selectedNode: Workflow.Job | Workflow.Trigger | null;
     selectedEdge: Workflow.Edge | null;

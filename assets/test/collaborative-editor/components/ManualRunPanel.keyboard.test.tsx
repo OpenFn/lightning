@@ -119,6 +119,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 // Mock the monaco module that CustomView imports
@@ -146,6 +147,7 @@ vi.mock('../../../js/collaborative-editor/hooks/useSession', () => ({
     awareness: null,
     isConnected: false,
     isSynced: false,
+    settled: true,
   }),
 }));
 

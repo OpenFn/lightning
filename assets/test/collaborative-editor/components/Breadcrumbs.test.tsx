@@ -54,9 +54,6 @@ describe('BreadcrumbText', () => {
   test('wraps a string name in a tooltip trigger so the full name is reachable', () => {
     render(<BreadcrumbText>{LONG_NAME}</BreadcrumbText>);
 
-    // The truncating span carries the full text and, being a Radix tooltip
-    // trigger, exposes data-state. The tooltip content (revealed on hover)
-    // mirrors that full name.
     const nameSpan = screen.getByText(LONG_NAME);
     expect(nameSpan).toHaveClass('truncate');
     expect(nameSpan).toHaveAttribute('data-state');
@@ -77,8 +74,6 @@ describe('BreadcrumbText', () => {
 
     const child = screen.getByTestId('custom-child');
     expect(child).toBeInTheDocument();
-    // No tooltip trigger wraps a non-string child, so nothing exposes
-    // data-state.
     expect(document.querySelector('[data-state]')).toBeNull();
   });
 });

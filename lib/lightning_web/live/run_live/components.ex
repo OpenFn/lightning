@@ -280,18 +280,13 @@ defmodule LightningWeb.RunLive.Components do
   @doc """
   Adds the pin that opens a workflow at the content a run executed.
 
-  A run of the current version needs no pin at all. A release is pinned with
-  `?release=`, which numbers by the publish trail, so for someone with
-  experimental features a historical run is pinned with `?as_run=`: the channel
-  resolves that run's own snapshot, which works for draft and test runs that
-  were never released.
+  A run of the current version needs no pin. With experimental features a
+  historical run is pinned with `?as_run=`, which resolves the run's own
+  snapshot and so works for runs that were never released; without them it is
+  `?v=` and the snapshot's lock_version, the link these pages have always
+  produced.
 
-  Without the flag it is `?v=` and the snapshot's own lock_version, which is the
-  link these pages have always produced and the only one that user's editor
-  knows how to open.
-
-  Public because the run detail page and the History page build the same link
-  and the three copies would drift.
+  Public because the run detail and History pages build the same link.
   """
   @spec maybe_add_snapshot_version(
           map(),

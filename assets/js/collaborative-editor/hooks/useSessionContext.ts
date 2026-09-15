@@ -130,6 +130,16 @@ export const useSessionContextLoading = (): boolean => {
   return useSyncExternalStore(sessionContextStore.subscribe, selectLoading);
 };
 
+export const useSessionContextLoaded = (): boolean => {
+  const sessionContextStore = useSessionContextStore();
+
+  const selectLoaded = sessionContextStore.withSelector(
+    state => state.lastUpdated !== null
+  );
+
+  return useSyncExternalStore(sessionContextStore.subscribe, selectLoaded);
+};
+
 /**
  * Hook to get error state
  * Returns error message if loading failed, null otherwise
@@ -156,13 +166,6 @@ export const usePermissions = (): Permissions | null => {
   return useSyncExternalStore(sessionContextStore.subscribe, selectPermissions);
 };
 
-/**
- * Whether this user has experimental features turned on.
- *
- * The sandboxes and releases experience hangs off this. A user without it gets
- * the editor they had before: versions numbered by save rather than by publish,
- * no lifecycle, no sandboxes.
- */
 export const useExperimentalFeatures = (): boolean => {
   const sessionContextStore = useSessionContextStore();
 
@@ -173,11 +176,6 @@ export const useExperimentalFeatures = (): boolean => {
   return useSyncExternalStore(sessionContextStore.subscribe, selectEnabled);
 };
 
-/**
- * Whether the workflow's content is frozen by its lifecycle. A live workflow
- * outside a sandbox is locked for everyone, whatever their role, so this is a
- * separate question from `usePermissions`.
- */
 export const useContentLocked = (): boolean => {
   const sessionContextStore = useSessionContextStore();
 
@@ -191,10 +189,6 @@ export const useContentLocked = (): boolean => {
   );
 };
 
-/**
- * Hook to get the session-context workflow, which carries the lifecycle
- * `state` (`draft` | `live`). Returns null if not loaded yet.
- */
 export const useSessionWorkflow = (): BaseWorkflow | null => {
   const sessionContextStore = useSessionContextStore();
 
@@ -208,15 +202,6 @@ export const useSessionWorkflow = (): BaseWorkflow | null => {
 /**
  * Hook to get latest snapshot lock version from session context
  * Returns null if not loaded yet
- */
-/**
- * The snapshot holding the content that is live right now.
- *
- * Compared against a run's own snapshot to answer "did this run execute what
- * is live?". Identity rather than a lock version, which is a proxy: nothing
- * enforces one snapshot per lock version, and the document on screen carries
- * its own, so comparing numbers against it answers a different question each
- * time the view changes.
  */
 export const useLatestSnapshotId = (): string | null => {
   const sessionContextStore = useSessionContextStore();
@@ -286,10 +271,6 @@ export const useReleases = () => {
  * Hook to get releases loading state
  * Returns true when releases are being loaded
  */
-/**
- * Whether the releases have been fetched, whatever came back. Callers use this
- * rather than an empty list to decide whether to ask.
- */
 export const useReleasesLoaded = (): boolean => {
   const sessionContextStore = useSessionContextStore();
 
@@ -343,13 +324,6 @@ export const useRequestReleases = () => {
   return sessionContextStore.requestReleases;
 };
 
-/**
- * The workflow's saved snapshots, numbered by lock_version.
- *
- * The other list. Every save captures a snapshot; only a deliberate publish
- * records a release. This is what a user without experimental features sees,
- * and what `?v=` pins.
- */
 export const useVersions = () => {
   const sessionContextStore = useSessionContextStore();
 
@@ -418,10 +392,6 @@ export const useWorkflowTemplate = (): WorkflowTemplate | null => {
   );
 };
 
-/**
- * Hook to check if the user has suppressed the "enable trigger" warning.
- * Returns false until session context loads, then reflects the stored preference.
- */
 export const useSuppressEnableTriggerWarning = (): boolean => {
   const sessionContextStore = useSessionContextStore();
 
@@ -432,11 +402,6 @@ export const useSuppressEnableTriggerWarning = (): boolean => {
   return useSyncExternalStore(sessionContextStore.subscribe, selectSuppress);
 };
 
-/**
- * Hook to get markEnableTriggerWarningSuppressed action.
- * Returns a function that persists the "don't show again" preference and
- * optimistically flips the local flag.
- */
 export const useMarkEnableTriggerWarningSuppressed = () => {
   const sessionContextStore = useSessionContextStore();
 

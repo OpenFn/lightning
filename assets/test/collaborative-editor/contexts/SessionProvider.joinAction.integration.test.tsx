@@ -294,8 +294,6 @@ describe('SessionProvider/StoreProvider join-action bridge (#4830)', () => {
   test('joins the run-scoped read-only room when ?as_run is present', () => {
     const socket = createMockSocket();
 
-    // "View as executed" sets ?as_run=<run_id>; SessionProvider must join the
-    // run-scoped room (not the base or :v<N> snapshot room).
     window.history.pushState({}, '', '/?as_run=run-9');
 
     try {

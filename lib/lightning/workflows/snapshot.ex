@@ -298,8 +298,6 @@ defmodule Lightning.Workflows.Snapshot do
     end)
   end
 
-  # Everything a restore writes back. Timestamps are left to the live rows, and
-  # trigger `enabled` is deliberately absent: see `to_workflow_attrs/1`.
   @job_write_fields [
     :id,
     :name,
@@ -331,24 +329,16 @@ defmodule Lightning.Workflows.Snapshot do
   ]
 
   @doc """
-  Turns a snapshot into attributes that can be written back as a workflow's
-  current content.
+  Turns a snapshot into attributes to write back as a workflow's content.
 
-  The write-side twin of the reader that loads a pinned version. Collections are
-  complete, so `on_replace` deletes anything the snapshot does not hold: that is
-  what makes a restore a revert rather than a merge.
+  `on_replace` deletes anything the snapshot does not hold, which is what makes
+  a restore a revert rather than a merge.
 
-  Trigger `enabled` is deliberately left out. A restore is a publish into a live
-  workflow, and putting an old enabled flag back would take production offline
-  in the middle of a rollback. It is also what a promote does, which is the
-  behaviour this mirrors. A trigger the restore has to re-create has no current
-  state to keep, and it arrives off, because a snapshot does not record which
-  webhook auth methods were attached to it: bringing the URL back on without
-  its authentication would be worse than bringing it back off.
-
-  `positions` is only written when the snapshot holds them. An older snapshot
-  predating the column, or one published while the canvas was on auto-layout,
-  holds none, and writing that nil would wipe a hand-arranged canvas.
+  Trigger `enabled` is left out: a restore publishes into a live workflow, and
+  an old enabled flag would take production offline mid-rollback. A re-created
+  trigger arrives off, because a snapshot does not record its webhook auth
+  methods. `positions` is written only when the snapshot holds them, so an
+  older snapshot cannot wipe a hand-arranged canvas.
   """
   @spec to_workflow_attrs(t()) :: map()
   def to_workflow_attrs(%__MODULE__{} = snapshot) do
@@ -366,8 +356,6 @@ defmodule Lightning.Workflows.Snapshot do
   defp maybe_put_positions(attrs, positions),
     do: Map.put(attrs, :positions, positions)
 
-  # The response config is an embed, so it has to be written as one or the
-  # trigger keeps the codes from the version being rolled away from.
   defp trigger_attrs(trigger) do
     trigger
     |> child_attrs(@trigger_write_fields)

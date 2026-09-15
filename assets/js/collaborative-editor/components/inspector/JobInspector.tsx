@@ -4,10 +4,7 @@ import { useURLState } from '#/react/lib/use-url-state';
 
 import { ADAPTORS_WITHOUT_CREDENTIALS } from '../../constants/adaptors';
 import { useJobDeleteValidation } from '../../hooks/useJobDeleteValidation';
-import {
-  useExperimentalFeatures,
-  usePermissions,
-} from '../../hooks/useSessionContext';
+import { usePermissions } from '../../hooks/useSessionContext';
 import {
   useWorkflowActions,
   useCanSave,
@@ -47,11 +44,6 @@ export function JobInspector({
   const permissions = usePermissions();
   const { isReadOnly } = useWorkflowReadOnly();
 
-  // With experimental features a read-only view drops these actions, matching
-  // the canvas. Without them the read-only state has no badge explaining it, so
-  // they stay and go grey with the reason in their tooltips, as they do today.
-  const experimentalFeatures = useExperimentalFeatures();
-  const hideOnReadOnly = experimentalFeatures && isReadOnly;
   const validation = useJobDeleteValidation(job.id);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -119,36 +111,31 @@ export function JobInspector({
               </Button>
             </span>
           </Tooltip>
-          {!hideOnReadOnly && (
-            <Tooltip content={deleteTooltipMessage}>
-              <span className="inline-block">
-                <Button
-                  aria-label="Delete"
-                  variant="secondary"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                  disabled={!canDelete || !canEdit || isDeleting}
-                >
-                  {isDeleting ? (
-                    <span className="hero-arrow-path animate-spin"></span>
-                  ) : (
-                    <span className="hero-trash"></span>
-                  )}
-                </Button>
-              </span>
-            </Tooltip>
-          )}
+          <Tooltip content={deleteTooltipMessage}>
+            <span className="inline-block">
+              <Button
+                aria-label="Delete"
+                variant="secondary"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={!canDelete || !canEdit || isDeleting}
+              >
+                {isDeleting ? (
+                  <span className="hero-arrow-path animate-spin"></span>
+                ) : (
+                  <span className="hero-trash"></span>
+                )}
+              </Button>
+            </span>
+          </Tooltip>
         </>
       }
       rightButtons={
-        hideOnReadOnly ? undefined : (
-          <NewRunButton
-            onClick={() => onOpenRunPanel({ jobId: job.id })}
-            tooltipSide="top"
-            disabled={isReadOnly}
-            text="Run From Here"
-            variant={needsConnect ? 'secondary' : 'primary'}
-          />
-        )
+        <NewRunButton
+          onClick={() => onOpenRunPanel({ jobId: job.id })}
+          tooltipSide="top"
+          text="Run From Here"
+          variant={needsConnect ? 'secondary' : 'primary'}
+        />
       }
     />
   );

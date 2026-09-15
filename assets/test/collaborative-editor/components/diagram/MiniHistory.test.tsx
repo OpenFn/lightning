@@ -45,7 +45,18 @@ vi.mock('../../../../js/hooks', () => ({
 // Mock session context hooks to provide project ID
 let experimentalFeatures = true;
 
+let sessionWorkflow: { state: string } | null = { state: 'live' };
+
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useSessionWorkflow: () => sessionWorkflow,
+  useContentLocked: () => false,
+  useVersions: () => [],
   useExperimentalFeatures: () => experimentalFeatures,
   useProject: () => ({
     id: 'test-project-id',
@@ -86,6 +97,7 @@ Object.defineProperty(window, 'location', {
 
 describe('MiniHistory', () => {
   beforeEach(() => {
+    sessionWorkflow = { state: 'live' };
     // Reset location and mock before each test
     mockLocation.origin = 'http://localhost';
     mockLocation.href =
@@ -94,17 +106,11 @@ describe('MiniHistory', () => {
     mockLocationAssign.mockClear();
   });
 
-  // ==========================================================================
-  // THE EXPERIMENTAL FLAG
-  // ==========================================================================
-
   describe('what the experimental flag changes', () => {
     afterEach(() => {
       experimentalFeatures = true;
     });
 
-    // The version tag sits on the runs, which only appear once a work order is
-    // expanded.
     const renderExpanded = () => {
       render(
         <MiniHistory
@@ -128,11 +134,16 @@ describe('MiniHistory', () => {
       ).toBeGreaterThan(0);
     });
 
+    test('names the save point a run executed, in a draft', () => {
+      sessionWorkflow = { state: 'draft' };
+
+      renderExpanded();
+
+      expect(screen.queryAllByText('unpublished')).toHaveLength(0);
+      expect(screen.getAllByText(/^v\d+$/).length).toBeGreaterThan(0);
+    });
+
     test('names no version at all without the flag', () => {
-      // The tag numbers by the publish trail, which is the experimental
-      // numbering. Without the flag there is no publish trail to read, so
-      // showing "unpublished" beside every run would be a statement about a
-      // concept the user does not have.
       experimentalFeatures = false;
 
       renderExpanded();
@@ -141,9 +152,6 @@ describe('MiniHistory', () => {
     });
 
     test('leaves no stray separator where the version tag was', () => {
-      // The separator sat between the version tag and the run id. With the tag
-      // hidden it stranded itself in front of the id, so a flag-off user saw a
-      // leading dot on every run.
       experimentalFeatures = false;
 
       renderExpanded();
@@ -158,10 +166,6 @@ describe('MiniHistory', () => {
     });
 
     test('draws state as the filled pill it has always been, without the flag', () => {
-      // The redesigned row leads with a coloured dot and the state in words,
-      // and pushes the id to the right. That is the experimental history.
-      // Without the flag the row is the one that ships today: id first, then
-      // when it ran, with a filled pill on the right.
       experimentalFeatures = false;
 
       renderExpanded();
@@ -173,8 +177,6 @@ describe('MiniHistory', () => {
     });
 
     test('keeps the rejected pill red without the flag', () => {
-      // A work order the usage limiter turned away. It is the one state that
-      // only a work order has, and the classic pill has always drawn it red.
       experimentalFeatures = false;
 
       render(
@@ -191,8 +193,6 @@ describe('MiniHistory', () => {
     });
 
     test('draws no mismatch banner when nothing can act on its offer', () => {
-      // The banner is one sentence and one button, and the button is the
-      // point. Rendered without a handler it is a control that does nothing.
       render(
         <MiniHistory
           collapsed={false}
@@ -220,9 +220,6 @@ describe('MiniHistory', () => {
     });
 
     test('offers the run its own version when the canvas shows another', async () => {
-      // The flag-off answer to a run of older content: the run is painted onto
-      // the document already open, and this says the shape on screen is not the
-      // shape that ran. The caller owns the switch, so this only has to offer.
       const user = userEvent.setup();
       const onGoToVersion = vi.fn();
 
@@ -611,9 +608,6 @@ describe('MiniHistory', () => {
       expect(runElement?.className).toContain('bg-indigo-50');
       expect(runElement?.className).toContain('border-l-indigo-500');
 
-      // Clicking the row again also deselects, but that is not something a
-      // reader can see. The button leads the row, so it does not disturb the
-      // right-aligned run id.
       const deselect = screen.getByRole('button', { name: /deselect run/i });
       fireEvent.click(deselect);
       expect(onDeselectRun).toHaveBeenCalledTimes(1);
@@ -723,8 +717,6 @@ describe('MiniHistory', () => {
         />
       );
 
-      // The muted label carries the state text; the colour lives on the
-      // adjacent dot (its previous sibling within the status indicator).
       const label = screen.getByText(
         state.charAt(0).toUpperCase() + state.slice(1)
       );
@@ -1413,10 +1405,6 @@ describe('MiniHistory', () => {
       expect(container).toBeInTheDocument();
     });
   });
-
-  // ==========================================================================
-  // VERSION-AWARE HISTORY (cross-version model)
-  // ==========================================================================
 
   describe('version-aware history', () => {
     test('renders a per-run version tag (vN / unpublished) prefixing the run id', () => {

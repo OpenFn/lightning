@@ -1,6 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useURLState } from '#/react/lib/use-url-state';
+
+import { SNAPSHOT_PARAM } from './lib/pinnedView';
 
 import { PickerButton } from '../picker/PickerButton';
 import { SocketProvider } from '../react/contexts/SocketProvider';
@@ -11,10 +13,10 @@ import { AIAssistantPanelWrapper } from './components/AIAssistantPanelWrapper';
 import { BreadcrumbLink } from './components/Breadcrumbs';
 import type { MonacoHandle } from './components/CollaborativeMonaco';
 import { DiscardChangesDialog } from './components/DiscardChangesDialog';
-import { PromotedNotice } from './components/PromotedNotice';
 import { Header } from './components/Header';
 import { LandingScreen } from './components/LandingScreen';
 import { LoadingBoundary } from './components/LoadingBoundary';
+import { PromotedNotice } from './components/PromotedNotice';
 import { RestoreVersionDialog } from './components/RestoreVersionDialog';
 import type { RestoreCost } from './components/RestoreVersionDialog';
 import { SnapshotVersionDropdown } from './components/SnapshotVersionDropdown';
@@ -33,7 +35,6 @@ import { StoreProvider } from './contexts/StoreProvider';
 import { useActionLock } from './hooks/useActionLock';
 import { useHistoryCommands } from './hooks/useHistory';
 import {
-  useExperimentalFeatures,
   useIsNewWorkflow,
   useLatestSnapshotLockVersion,
   useLimits,
@@ -46,6 +47,7 @@ import {
   useUICommands,
 } from './hooks/useUI';
 import { useUnloadWarning } from './hooks/useUnloadWarning';
+import { useVersionPicker } from './hooks/useVersionPicker';
 import { useVersionSelect } from './hooks/useVersionSelect';
 import {
   useCreateWorkflowFlow,
@@ -69,6 +71,9 @@ export interface CollaborativeEditorDataProps {
   'data-project-env'?: string;
   'data-is-new-workflow'?: string;
   'data-ai-assistant-enabled'?: string;
+  'data-experimental-features'?: string;
+  'data-workflow-state'?: string;
+  'data-first-trigger-id'?: string;
   // Initial run data from server to avoid client-side race conditions
   'data-initial-run-data'?: string; // JSON-encoded RunStepsData
 }
@@ -95,6 +100,8 @@ interface BreadcrumbContentProps {
   projectIsSandboxFallback?: string;
   projectColorFallback?: string | null;
   projectEnvFallback?: string;
+  workflowStateFallback?: string;
+  firstTriggerIdFallback?: string;
   aiAssistantEnabled: boolean;
 }
 
@@ -107,6 +114,8 @@ export function BreadcrumbContent({
   projectIsSandboxFallback,
   projectColorFallback,
   projectEnvFallback,
+  workflowStateFallback,
+  firstTriggerIdFallback,
   aiAssistantEnabled,
 }: BreadcrumbContentProps) {
   const isNewWorkflow = useIsNewWorkflow();
@@ -122,17 +131,11 @@ export function BreadcrumbContent({
 
   useUnloadWarning();
   const canEditWorkflow = usePermissions()?.can_edit_workflow ?? false;
-  const experimentalFeatures = useExperimentalFeatures();
   const { restoreVersion, checkRestore } = useWorkflowActions();
 
-  // Held here rather than in the dropdown, which closes as soon as Restore is
-  // clicked and would take the dialog with it.
   const [restoring, setRestoring] = useState<number | null>(null);
   const [cost, setCost] = useState<RestoreCost | null>(null);
 
-  // Which version the open dialog is about, readable synchronously when a
-  // check replies. A check for a version the user has since cancelled can land
-  // after a later one, and would otherwise replace a real warning with silence.
   const askingAboutRef = useRef<number | null>(null);
 
   const handleVersionRestore = useCallback(
@@ -141,8 +144,6 @@ export function BreadcrumbContent({
       setRestoring(versionNumber);
       setCost(null);
 
-      // Advisory. A failure here must not block the restore, so an unanswered
-      // check reads as nothing to lose.
       void checkRestore(versionNumber)
         .then(({ losing_triggers, returning_triggers, version_number }) => {
           if (askingAboutRef.current === version_number) {
@@ -224,7 +225,16 @@ export function BreadcrumbContent({
   const displayName = projectDisplayNameFallback ?? projectName;
   const projectColor = projectColorFallback ?? null;
   const isSandbox = projectIsSandboxFallback === 'true';
+  const versionPicker = useVersionPicker();
   const currentWorkflowName = workflowFromStore?.name ?? workflowName;
+
+  const pinnedSnapshot = params[SNAPSHOT_PARAM];
+
+  useEffect(() => {
+    if (versionPicker === 'releases' && pinnedSnapshot) {
+      updateSearchParams({ [SNAPSHOT_PARAM]: null }, { replace: true });
+    }
+  }, [versionPicker, pinnedSnapshot, updateSearchParams]);
 
   const breadcrumbElements = useMemo(() => {
     return [
@@ -251,7 +261,7 @@ export function BreadcrumbContent({
               the editor did before this work. Which one is on screen decides
               which parameter pins a version and therefore which collaboration
               room the session joins. */}
-          {experimentalFeatures ? (
+          {versionPicker === 'releases' ? (
             <VersionDropdown
               currentVersion={workflowFromStore?.lock_version ?? null}
               latestVersion={latestSnapshotLockVersion}
@@ -297,7 +307,7 @@ export function BreadcrumbContent({
     handleVersionSelect,
     handleVersionRestore,
     canEditWorkflow,
-    experimentalFeatures,
+    versionPicker,
   ]);
 
   // Hide header until the first save clears isNewWorkflow in the store.
@@ -310,6 +320,12 @@ export function BreadcrumbContent({
         {...(projectId !== undefined && { projectId })}
         workflowId={workflowId}
         isSandbox={isSandbox}
+        {...(workflowStateFallback !== undefined && {
+          initialWorkflowState: workflowStateFallback,
+        })}
+        {...(firstTriggerIdFallback !== undefined && {
+          initialFirstTriggerId: firstTriggerIdFallback,
+        })}
         isRunPanelOpen={isRunPanelOpen}
         isIDEOpen={isIDEOpen}
         aiAssistantEnabled={aiAssistantEnabled}
@@ -403,6 +419,9 @@ export const CollaborativeEditor: WithActionProps<
   const projectEnv = props['data-project-env'];
   const isNewWorkflow = props['data-is-new-workflow'] === 'true';
   const aiAssistantEnabled = props['data-ai-assistant-enabled'] === 'true';
+  const experimentalFeatures = props['data-experimental-features'] === 'true';
+  const workflowState = props['data-workflow-state'];
+  const firstTriggerId = props['data-first-trigger-id'];
   const initialRunData = props['data-initial-run-data'];
 
   const liveViewActions = {
@@ -427,6 +446,7 @@ export const CollaborativeEditor: WithActionProps<
             workflowId={workflowId}
             projectId={projectId}
             isNewWorkflow={isNewWorkflow}
+            experimentalFeatures={experimentalFeatures}
             {...(initialRunData !== undefined && { initialRunData })}
           >
             <StoreProvider>
@@ -455,6 +475,12 @@ export const CollaborativeEditor: WithActionProps<
                         })}
                         {...(projectEnv !== undefined && {
                           projectEnvFallback: projectEnv,
+                        })}
+                        {...(workflowState !== undefined && {
+                          workflowStateFallback: workflowState,
+                        })}
+                        {...(firstTriggerId !== undefined && {
+                          firstTriggerIdFallback: firstTriggerId,
                         })}
                       />
                       <div className="flex-1 min-h-0 overflow-hidden relative">

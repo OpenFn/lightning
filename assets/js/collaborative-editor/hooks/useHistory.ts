@@ -61,13 +61,6 @@ export const useHistory = (): WorkflowRunHistory => {
   return useSyncExternalStore(historyStore.subscribe, selectHistory);
 };
 
-/**
- * The history's summary of one run, or `undefined` while the history has not
- * arrived.
- *
- * Callers ask this for the two things only the run knows: the content it
- * executed, and the version that content was published as, if it ever was.
- */
 export const useRunSummary = (runId: string | null): RunSummary | undefined => {
   const history = useHistory();
 

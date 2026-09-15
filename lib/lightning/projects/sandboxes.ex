@@ -205,15 +205,10 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
-  # Accepts either key style, because this arrives from a channel as strings and
-  # from Elixir callers as atoms.
   defp get_either(map, key) do
     Map.get(map, key) || Map.get(map, Atom.to_string(key))
   end
 
-  # Never nameless. Retention only wipes unnamed dataclips, and the input picker
-  # only offers named ones project-wide, so an unnamed one would be invisible
-  # and short-lived: the feature would appear to do nothing.
   @starting_dataclip_fallback_name "Reviewed input"
 
   defp cast_dataclip_name(nil), do: {:ok, @starting_dataclip_fallback_name}
@@ -227,8 +222,6 @@ defmodule Lightning.Projects.Sandboxes do
         {:error, :invalid_starting_dataclip}
 
       trimmed ->
-        # Postgres refuses a NUL in varchar as it does in jsonb, and this name
-        # comes from the same untrusted payload as the body.
         if contains_null_byte?(trimmed),
           do: {:error, :invalid_starting_dataclip},
           else: {:ok, trimmed}
@@ -243,8 +236,6 @@ defmodule Lightning.Projects.Sandboxes do
     else
       case Jason.decode(body) do
         {:ok, %{} = decoded} ->
-          # Postgres refuses a NUL byte in jsonb, and the insert raising here
-          # would take the channel with it rather than saying what was wrong.
           if contains_null_byte?(decoded),
             do: {:error, :starting_dataclip_invalid_json},
             else: {:ok, decoded}
@@ -280,66 +271,26 @@ defmodule Lightning.Projects.Sandboxes do
   end
 
   @doc """
-  Merges a sandbox into its target project.
+  Merges a sandbox into its target project, in one transaction.
 
-  Imports the sandbox's workflow configuration into the target via the
-  provisioner and synchronises collection names. Runs inside a single
-  transaction. Collection data is never copied.
+  Imports the sandbox's workflows into the target through the provisioner and
+  synchronises collection names; collection data is never copied. Each merged
+  workflow also gains the target's resulting head in its version history, so a
+  later merge can tell the target has moved on.
 
-  Also writes to the source: each workflow this merge carried gains the target's
-  resulting head in its version history, so a later merge can tell the target
-  moving on from this merge's own work.
+  Callers must authorise the merge first (`:merge_sandbox`).
 
-  Callers must authorise the merge before calling (e.g. `:merge_sandbox`).
+  ## Options
+  * `:selected_workflow_ids`, `:deleted_target_workflow_ids` - scope the merge
+  * `:selected_credential_ids` - sandbox-only credentials to attach to the
+    target first, so the remap matches them instead of dropping them. Keychains
+    follow the same rule, and are skipped rather than failing the merge when the
+    actor cannot create one in the target.
+  * `:skip_collections` - names to leave out. A merge never deletes collections.
+  * `:record_release`
 
-  ## Parameters
-  * `source` - The sandbox project being merged
-  * `target` - The project receiving the merge
-  * `actor` - The user performing the merge
-  * `opts` - Merge options (`:selected_workflow_ids`,
-    `:deleted_target_workflow_ids`, `:selected_credential_ids`,
-    `:skip_collections`, `:record_release`)
-
-  ## Collections
-
-  A merge always creates, empty, the collections the target is missing,
-  computed at merge time - so a collection added to the sandbox while a
-  merge screen was open is still carried over. Pass `:skip_collections`
-  (a list of names the user explicitly unchecked in the merge screen) to
-  leave those out; anything else raises `ArgumentError`. A merge never
-  deletes collections: ones that exist only in the target are always kept,
-  and any deletion-shaped option a caller passes is ignored. Removing a
-  collection is a project-settings action, not part of a merge.
-
-  ## Credential attachment
-
-  A credential that lives only in the sandbox (the target has no
-  `project_credential` for its underlying `credential_id`) would otherwise be
-  dropped on merge, since the remap only matches on shared credentials. Pass
-  `:selected_credential_ids` (a list of the sandbox `project_credential` ids the
-  caller chose to carry over) and each one is attached to the target before the
-  document is imported, so the remap finds a match instead of dropping it.
-  Sandbox `project_credentials` left out of the list stay dropped.
-
-  Keychain credentials are handled analogously: a keychain that lives only in the
-  sandbox and is used by a to-be-merged workflow is attached to the target (along
-  with its default credential) before the document is imported, so the keychain
-  remap name-matches it instead of dropping it. Attachment follows the same scope
-  as the merge, so a partial merge (via `:selected_workflow_ids`) only carries
-  over keychains used by the selected workflows. A keychain whose name already
-  exists in the target is left as the target's own.
-
-  Attaching one creates a keychain in the target, which needs owner or admin
-  there. Merging does not. When the actor cannot create one, the keychain is not
-  attached and the job arrives without it, rather than the merge failing.
-
-  ## Returns
-  * `{:ok, updated_target}` - Merge succeeded
-  * `{:error, merge_error}` - Merge failed, classified into a domain reason
-
-  Failures are returned as typed reasons (see `t:merge_error/0`) so callers can
-  render user-facing copy without inspecting changeset internals. The full
-  validation detail is logged for diagnosis.
+  Returns `{:ok, updated_target}` or `{:error, merge_error}`, typed so callers
+  can render copy without reading changesets.
   """
   @type merge_error ::
           :merge_failed | Lightning.Extensions.UsageLimiting.message()
@@ -380,10 +331,6 @@ defmodule Lightning.Projects.Sandboxes do
              ),
            merge_doc = MergeProjects.merge_project(source, target, opts),
            selected_target_ids = selected_target_ids(source, opts, merge_doc),
-           # Defer the collaboration reconcile: the import runs inside this outer
-           # transaction, so we broadcast below only once it has committed —
-           # otherwise the subscriber would reload pre-commit state on its own
-           # connection.
            {:ok, updated_target} <-
              Provisioner.import_document(
                target,
@@ -397,13 +344,14 @@ defmodule Lightning.Projects.Sandboxes do
              sync_collections(source, target, skip_names: skip_collection_names),
            :ok <-
              record_merge_sync_points(source, merge_doc, selected_target_ids) do
-        {:ok, {updated_target, merge_doc}}
+        {:ok, {updated_target, merge_doc, selected_target_ids}}
       end
     end)
     |> case do
-      {:ok, {updated_target, merge_doc}} ->
+      {:ok, {updated_target, merge_doc, selected_target_ids}} ->
         merge_doc
         |> Provisioner.reconcilable_workflow_ids()
+        |> reconcilable_after_merge(selected_target_ids)
         |> WorkflowReconciler.request_reconciliation()
 
         {:ok, updated_target}
@@ -413,9 +361,13 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
-  # Builds the `:release` import option for a promote. A promote asks for it via
-  # `opts.record_release` and always scopes to `selected_workflow_ids`; any other
-  # merge (e.g. the full sandbox-management merge) records nothing.
+  defp reconcilable_after_merge(workflow_ids, nil), do: workflow_ids
+
+  defp reconcilable_after_merge(workflow_ids, selected_target_ids) do
+    selected = MapSet.new(selected_target_ids)
+    Enum.filter(workflow_ids, &MapSet.member?(selected, &1))
+  end
+
   defp release_import_opts(source, opts, selected_target_ids) do
     with :promote <- Map.get(opts, :record_release),
          [_ | _] <- Map.get(opts, :selected_workflow_ids) do
@@ -431,7 +383,6 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
-  # nil means the merge carries everything; a list, even an empty one, scopes it.
   defp selected_target_ids(source, opts, merge_doc) do
     case Map.get(opts, :selected_workflow_ids) do
       nil -> nil
@@ -439,8 +390,6 @@ defmodule Lightning.Projects.Sandboxes do
     end
   end
 
-  # Without this the source's own merge reads as the target having moved on, and
-  # every merge after the first warns. Mirrors `copy_workflow_version_history/2`.
   defp record_merge_sync_points(source, merge_doc, selected_target_ids) do
     merged = merged_workflow_pairs(source, merge_doc, selected_target_ids)
     source_hashes = existing_hashes(Map.values(merged))
@@ -454,9 +403,6 @@ defmodule Lightning.Projects.Sandboxes do
       if hash in Map.get(source_hashes, source_id, []) do
         {:cont, :ok}
       else
-        # `record_version/3` squashes a write repeating the latest row's source,
-        # so a later CLI deploy here drops this and the false warning returns.
-        # "app" is worse: the next editor save would take it.
         %WorkflowVersion{}
         |> WorkflowVersion.changeset(%{
           workflow_id: source_id,
@@ -478,8 +424,6 @@ defmodule Lightning.Projects.Sandboxes do
       |> Map.get("workflows", [])
       |> Enum.reject(&(&1["delete"] == true))
 
-    # An empty selection is a selection. A merge carrying only deletions writes
-    # no workflow content, so nothing has been brought into step.
     entries =
       if selected_target_ids do
         Enum.filter(entries, &MapSet.member?(selected_target_ids, &1["id"]))
@@ -802,8 +746,6 @@ defmodule Lightning.Projects.Sandboxes do
       sandbox
     )
     |> if do
-      # Without `:env`. See the note on @project_settings_fields: a sandbox
-      # owner who could set it could read the parent's production values.
       allowed_attrs = Map.take(attrs, [:name, :color])
       Lightning.Projects.update_project(sandbox, allowed_attrs, actor)
     else
@@ -1252,9 +1194,6 @@ defmodule Lightning.Projects.Sandboxes do
           enable_job_logs: parent_workflow.enable_job_logs,
           positions: %{}
         })
-        # Cloned triggers are inserted disabled, so the workflow must start as a
-        # draft to keep state and trigger-enabled status coherent. The caller can
-        # promote a specific clone to :live afterwards (e.g. "Edit in sandbox").
         |> Ecto.Changeset.put_change(:state, :draft)
         |> Repo.insert()
 
@@ -1651,9 +1590,6 @@ defmodule Lightning.Projects.Sandboxes do
         |> Repo.insert!()
       end)
 
-    # Reported only when the caller asked for exactly one, which is the editor
-    # offering a single deliberate choice. A bulk selection has no "the" input
-    # to open with.
     case copied do
       [%Dataclip{id: id}] -> %{sandbox | starting_dataclip_id: id}
       _ -> sandbox

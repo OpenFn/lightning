@@ -318,10 +318,6 @@ defmodule LightningWeb.API.WorkflowsController do
     |> then(&maybe_handle_error(conn, &1, workflow_id))
   end
 
-  # `state` is the workflow lifecycle this work introduces. It is not shipped, so
-  # it stays out of the API and an integration written against today's response
-  # keeps getting today's response. The editor reads it over the channel, which
-  # is gated on the user's own flag.
   defp public_workflow(workflow) do
     Map.take(workflow, Workflow.json_fields() -- [:state])
   end

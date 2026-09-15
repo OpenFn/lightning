@@ -341,6 +341,14 @@ defmodule LightningWeb.Components.Common do
     default: nil,
     doc: "A second, smaller line under the tooltip text."
 
+  attr :placement, :string,
+    default: nil,
+    doc: "Which side the tooltip opens on. The hook's own default is top."
+
+  attr :class, :string,
+    default: nil,
+    doc: "Classes for the wrapper, which is also what the tooltip points at."
+
   slot :inner_block, required: true
 
   def wrapper_tooltip(%{tooltip: tooltip} = assigns)
@@ -351,6 +359,8 @@ defmodule LightningWeb.Components.Common do
       phx-hook="Tooltip"
       aria-label={@tooltip}
       data-hide-on-click="false"
+      data-placement={@placement}
+      class={@class}
     >
       <%!-- The hook clones this into tippy, so the browser does the escaping
       and no caller has to decide whether their tooltip is markup. --%>

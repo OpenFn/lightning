@@ -36,7 +36,8 @@ defmodule Lightning.Collaboration.Session do
     :shared_doc_pid,
     :user,
     :workflow,
-    :document_name
+    :document_name,
+    :view_only?
   ]
 
   @type start_opts :: [
@@ -108,7 +109,8 @@ defmodule Lightning.Collaboration.Session do
       shared_doc_pid: nil,
       user: user,
       workflow: workflow,
-      document_name: document_name
+      document_name: document_name,
+      view_only?: Keyword.get(opts, :view_only?, false)
     }
 
     lookup_shared_doc(pg_scope, document_name)
@@ -372,6 +374,16 @@ defmodule Lightning.Collaboration.Session do
   end
 
   @impl true
+  def handle_call({:reset_workflow, user}, _from, %{view_only?: true} = state) do
+    Logger.warning(
+      "Refusing to reset workflow #{state.workflow.id} from a read-only view " <>
+        "(document #{state.document_name}, user #{user.id})"
+    )
+
+    {:reply, {:error, :read_only_view}, state}
+  end
+
+  @impl true
   def handle_call({:reset_workflow, user}, _from, state) do
     Logger.info("Resetting workflow #{state.workflow.id} for user #{user.id}")
 
@@ -483,11 +495,15 @@ defmodule Lightning.Collaboration.Session do
     {:ok, SharedDoc.get_doc(pid)}
   end
 
-  # Shared persistence pipeline for plain saves and lifecycle transitions.
-  # `mode` is `:save` (persist the Y.Doc as-is) or `{:set_state, state}` (also
-  # flip the lifecycle state and trigger enablement in the same transaction).
-  # Going live and switching to draft reuse this path so they stay atomic and
-  # self-consistent with the collaborative document (one save, one Y.Doc merge).
+  defp do_save_workflow(%{view_only?: true} = state, user, mode) do
+    Logger.warning(
+      "Refusing to save workflow #{state.workflow.id} from a read-only view " <>
+        "(document #{state.document_name}, user #{user.id}, mode #{inspect(mode)})"
+    )
+
+    {:reply, {:error, :read_only_view}, state}
+  end
+
   defp do_save_workflow(state, user, mode) do
     Logger.info("Saving workflow #{state.workflow.id} for user #{user.id}")
 
@@ -522,11 +538,6 @@ defmodule Lightning.Collaboration.Session do
         Logger.error("Cannot save workflow #{state.workflow.id}: no shared doc")
         {:reply, {:error, :internal_error}, state}
 
-      # coveralls-ignore-start
-      # Defensive branches: :wrong_project is unreachable in practice (the
-      # persisted row always shares the seed's project_id) and only guards a
-      # WithClauseError; :deserialization_failed is a catch-all rescue. Neither
-      # is meaningfully triggerable from a unit test.
       {:error, :wrong_project} ->
         Logger.error(
           "Cannot save workflow #{state.workflow.id}: resolved to wrong project"
@@ -540,8 +551,6 @@ defmodule Lightning.Collaboration.Session do
         )
 
         {:reply, {:error, :deserialization_failed}, state}
-
-      # coveralls-ignore-stop
 
       {:error, _, %Lightning.Extensions.Message{} = message} ->
         {:reply, {:error, message}, state}
@@ -584,8 +593,6 @@ defmodule Lightning.Collaboration.Session do
     end
   end
 
-  # Going live records a go-live release alongside the snapshot; a plain save or
-  # a switch-to-draft records none.
   defp release_save_opts({:set_state, :live}), do: [record_release: :go_live]
   defp release_save_opts(_mode), do: []
 

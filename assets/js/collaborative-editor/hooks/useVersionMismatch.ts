@@ -2,13 +2,14 @@
  * Detects that the selected run executed against content other than what is on
  * the canvas, so the shape being looked at is not the shape that ran.
  *
- * This is the answer for a user without experimental features: the run's results
- * are painted onto the current document, and the banner says so and offers to
- * switch to the version the run used. With the flag on there is nothing to
- * warn about, because selecting a run of older content opens that content
- * read-only (`?as_run=`) instead of painting it onto a document it never ran
- * against. So this returns null there rather than every caller remembering to
- * ask.
+ * The run's results are painted onto the current document, and the banner says
+ * so and offers to switch to the version the run used.
+ *
+ * There is nothing to warn about while a run is being read as it executed
+ * (`?as_run=`), because then the document on screen is the one that ran. That
+ * is the usual shape on a live workflow. It is not the shape in a draft, where
+ * a run stays overlaid so the content can still be edited, and where this
+ * banner is the whole explanation of the difference.
  */
 
 import { useMemo } from 'react';
@@ -16,10 +17,7 @@ import { useMemo } from 'react';
 import { usePinnedView } from '../lib/pinnedView';
 
 import { useHistory } from './useHistory';
-import {
-  useExperimentalFeatures,
-  useLatestSnapshotLockVersion,
-} from './useSessionContext';
+import { useLatestSnapshotLockVersion } from './useSessionContext';
 import { useWorkflowState } from './useWorkflow';
 
 interface VersionMismatch {
@@ -33,12 +31,8 @@ export function useVersionMismatch(
   const history = useHistory();
   const workflow = useWorkflowState(state => state.workflow);
   const latestSnapshotLockVersion = useLatestSnapshotLockVersion();
-  const experimentalFeatures = useExperimentalFeatures();
 
-  // `?v=` numbers by the snapshot's own lock_version, which is what this
-  // compares against. `?release=` numbers by the publish trail and is a
-  // different question, which is why the two have different parameters.
-  const { snapshot } = usePinnedView();
+  const { snapshot, asRun } = usePinnedView();
   const currVersion = snapshot === null ? null : Number(snapshot);
 
   // in the process of switching version
@@ -47,7 +41,7 @@ export function useVersionMismatch(
 
   return useMemo(() => {
     if (
-      experimentalFeatures ||
+      asRun === selectedRunId ||
       !selectedRunId ||
       !workflow ||
       !workflow.lock_version ||
@@ -76,7 +70,7 @@ export function useVersionMismatch(
 
     return null;
   }, [
-    experimentalFeatures,
+    asRun,
     selectedRunId,
     switching,
     workflow,

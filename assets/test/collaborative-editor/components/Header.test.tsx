@@ -67,7 +67,6 @@ interface WrapperOptions {
   repoName?: string;
   branchName?: string;
   triggerSync?: boolean;
-  /** Whether this user has opted into experimental features. */
   experimentalFeatures?: boolean;
 }
 
@@ -1239,9 +1238,6 @@ describe('Header - Keyboard Shortcuts', () => {
   });
 
   test('save button stays put and disabled when the user cannot edit', async () => {
-    // Without experimental features there is no lifecycle badge and no Switch
-    // to draft alongside to explain a bare header, so Save stays where it is,
-    // greyed out, carrying the reason. That is what ships today.
     const { wrapper, emitSessionContext } = await createTestSetup({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
     });
@@ -1263,9 +1259,7 @@ describe('Header - Keyboard Shortcuts', () => {
     expect(save).toBeDisabled();
   });
 
-  test('save button is hidden on a read-only view with experimental features', async () => {
-    // With the flag on, the lifecycle actions are there to say why the view is
-    // read-only and to offer a way out, so the empty controls go.
+  test('save button stays, disabled, on a read-only view with the flag on', async () => {
     const { wrapper, emitSessionContext } = await createTestSetup({
       permissions: { can_edit_workflow: false, can_run_workflow: false },
       experimentalFeatures: true,
@@ -1283,9 +1277,7 @@ describe('Header - Keyboard Shortcuts', () => {
       await new Promise(resolve => setTimeout(resolve, 150));
     });
 
-    expect(
-      screen.queryByRole('button', { name: /save/i })
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
   });
 
   test('Header renders with GitHub connection and sync options available', async () => {

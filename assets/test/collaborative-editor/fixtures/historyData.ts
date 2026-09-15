@@ -32,6 +32,7 @@ export function createMockRun(
     started_at: '2025-10-23T21:00:01.106711Z',
     finished_at: '2025-10-23T21:00:02.098356Z',
     error_type: null,
+    version: 1,
     selected: false,
     ...overrides,
   };

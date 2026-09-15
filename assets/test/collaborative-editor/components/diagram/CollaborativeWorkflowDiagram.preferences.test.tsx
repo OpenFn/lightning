@@ -45,18 +45,15 @@ function createWithSelectorMock(getSnapshot: () => any) {
 // Mock useURLState using centralized helper
 const urlState = createMockURLState();
 
-// The discard guard asks these before anything destroys the document; neither
-// has a provider in this test.
 vi.mock('../../../../js/collaborative-editor/hooks/useWorkflow', async () => ({
   ...(await vi.importActual<
     typeof import('../../../../js/collaborative-editor/hooks/useWorkflow')
   >('../../../../js/collaborative-editor/hooks/useWorkflow')),
-  // Only the discard guard reaches for this, and it has no LiveView here.
   useWorkflowActions: () => ({ saveWorkflow: vi.fn() }),
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
-  useSession: () => ({ isSynced: true }),
+  useSession: () => ({ isSynced: true, settled: true }),
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useUnsavedChanges', () => ({
@@ -122,10 +119,8 @@ function createWrapper(
     error: null,
     config: {},
     permissions: {},
-    // These tests are about the run views, which are the experimental
-    // experience. Without the flag a run is only ever selected on the document
-    // already open.
     experimentalFeaturesEnabled: true,
+    contentLocked: true,
     ...sessionStateOverride,
   };
   const historyState = historyStateOverride || {
@@ -237,8 +232,6 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 
-      // Should start expanded - but since history is empty, it shows the
-      // empty state.
       const noHistoryText = screen.queryByText(/No related history/i);
       expect(noHistoryText).toBeInTheDocument();
 
@@ -329,17 +322,12 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
 
       render(<CollaborativeWorkflowDiagram />, { wrapper });
 
-      // Empty state when expanded with no runs
       expect(screen.getByText(/No related history/i)).toBeInTheDocument();
 
       // Verify the store has the correct state
       expect(store.getSnapshot().historyPanelCollapsed).toBe(false);
     });
   });
-
-  // ========================================================================
-  // RUN-SELECT vs DROPDOWN VERSION SWITCH (distinct clear behavior)
-  // ========================================================================
 
   describe('run-select vs version switch', () => {
     test('a dropdown version switch clears the run (URL + run viewer/overlay)', async () => {
@@ -349,8 +337,6 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       );
       store = createEditorPreferencesStore();
 
-      // A run is selected: present in the URL AND held by the history store as
-      // the active run (which drives the canvas step overlay).
       const closeRunViewer = vi.fn();
       wrapper = createWrapper(
         store,
@@ -367,24 +353,17 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         { _closeRunViewer: closeRunViewer }
       );
 
-      // Start on latest with the run selected.
       urlState.setParams({ run: 'stale-run' });
 
       const { rerender } = render(<CollaborativeWorkflowDiagram />, {
         wrapper,
       });
 
-      // Dropdown switch to version 2: the ?release param changes with NO
-      // run-select in progress. Even if ?run lingers, the diagram must drop it
-      // and close the store's active run so the stale run does not persist on
-      // the new version.
       urlState.setParams({ release: '2' });
       rerender(<CollaborativeWorkflowDiagram />);
 
       await waitFor(() => {
-        // Overlay source cleared (history store active run closed).
         expect(closeRunViewer).toHaveBeenCalled();
-        // Residual run param dropped from the URL.
         expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
           run: null,
           step: null,
@@ -415,17 +394,12 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         { _closeRunViewer: closeRunViewer }
       );
 
-      // Looking at a run as it executed.
       urlState.setParams({ run: 'old-run', as_run: 'old-run' });
 
       const { rerender } = render(<CollaborativeWorkflowDiagram />, {
         wrapper,
       });
 
-      // Picking "latest" from the version dropdown drops as_run. ?v never
-      // changes, since it was null throughout, so watching ?v alone saw nothing
-      // happen: the run stayed selected and was restored onto the live
-      // document, painting its timings over steps it never touched.
       urlState.deleteParam('as_run');
       rerender(<CollaborativeWorkflowDiagram />);
 
@@ -438,6 +412,45 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       });
     });
 
+    test('a retry keeps its new run when leaving the old run view', async () => {
+      storage.varStorage.setItem(
+        'lightning.editor.historyPanelCollapsed',
+        'false'
+      );
+      store = createEditorPreferencesStore();
+
+      const closeRunViewer = vi.fn();
+      wrapper = createWrapper(
+        store,
+        {
+          history: [],
+          isLoading: false,
+          error: null,
+          isChannelConnected: true,
+          activeRun: { id: 'old-run' },
+          runStepsCache: {},
+          runStepsSubscribers: {},
+          runStepsLoading: new Set(),
+        },
+        { _closeRunViewer: closeRunViewer }
+      );
+
+      urlState.setParams({ run: 'old-run', as_run: 'old-run' });
+
+      const { rerender } = render(<CollaborativeWorkflowDiagram />, {
+        wrapper,
+      });
+
+      urlState.setParams({ run: 'new-run' });
+      rerender(<CollaborativeWorkflowDiagram />);
+
+      await waitFor(() => {
+        expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith(
+          expect.objectContaining({ run: null })
+        );
+      });
+    });
+
     test('clicking a run of a different version loads it as-executed WITHOUT clearing it', async () => {
       storage.varStorage.setItem(
         'lightning.editor.historyPanelCollapsed',
@@ -445,8 +458,6 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       );
       store = createEditorPreferencesStore();
 
-      // Make the URL mock actually apply updates so the reconcile effect sees
-      // the ?v change that selecting a different-version run produces.
       urlState.mockFns.updateSearchParams.mockImplementation(
         (updates: Record<string, string | number | boolean | null>) => {
           for (const [key, value] of Object.entries(updates)) {
@@ -486,27 +497,21 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
           runStepsLoading: new Set(),
         },
         { _closeRunViewer: closeRunViewer },
-        // Current version is 9; the run above is v5 → different → as-executed.
         { latestSnapshotLockVersion: 9 }
       );
 
-      // Start pinned to v2, so selecting the run (which clears the pin) is a
-      // genuine ?release change — the exact case that must NOT be treated as a
-      // version switch.
       urlState.setParams({ release: '2' });
 
       const { rerender } = render(<CollaborativeWorkflowDiagram />, {
         wrapper,
       });
 
-      // Expand the single-run work order → auto-selects the run.
       fireEvent.click(
         screen.getByRole('button', { name: /Expand work order details/i })
       );
       rerender(<CollaborativeWorkflowDiagram />);
 
       await waitFor(() => {
-        // Loaded as-executed: ?as_run set to the run, the version pins cleared.
         expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
           release: null,
           v: null,
@@ -515,7 +520,6 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
         });
       });
 
-      // Crucially, the run it just selected was NOT cleared.
       expect(closeRunViewer).not.toHaveBeenCalled();
       expect(urlState.mockFns.updateSearchParams).not.toHaveBeenCalledWith({
         run: null,
@@ -671,8 +675,6 @@ describe('CollaborativeWorkflowDiagram - EditorPreferences Integration', () => {
       const closeButton = screen.getByLabelText(/Remove/i);
       fireEvent.click(closeButton);
 
-      // Should call updateSearchParams to clear the run selection and any
-      // as-executed view, returning to the current editable canvas.
       await waitFor(() => {
         expect(urlState.mockFns.updateSearchParams).toHaveBeenCalledWith({
           run: null,

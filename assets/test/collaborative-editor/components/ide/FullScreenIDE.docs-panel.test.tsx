@@ -36,6 +36,7 @@ vi.mock('@monaco-editor/react', () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value}</div>
   ),
+  loader: { config: () => {}, init: () => Promise.resolve({}) },
 }));
 
 vi.mock('../../../../js/monaco', () => ({
@@ -129,6 +130,15 @@ vi.mock('../../../../js/collaborative-editor/hooks/useSession', () => ({
 }));
 
 vi.mock('../../../../js/collaborative-editor/hooks/useSessionContext', () => ({
+  useSessionContextError: () => null,
+  useSessionContextLoaded: () => true,
+  useRequestVersions: () => vi.fn(),
+  useVersionsError: () => null,
+  useVersionsLoading: () => false,
+  useVersionsLoaded: () => true,
+  useVersions: () => [],
+  useSessionWorkflow: () => null,
+  useContentLocked: () => false,
   useSessionContext: () => ({ workflow: null, permissions: null }),
   useExperimentalFeatures: () => true,
   useProject: () => ({

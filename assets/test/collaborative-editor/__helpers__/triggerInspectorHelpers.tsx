@@ -192,8 +192,6 @@ export async function createTriggerTestHarness(
   } as unknown as StoreContextValue;
 
   // 7. Wrapper component.
-  // Merged rather than replaced, so a caller overriding one action does not
-  // have to restate the rest.
   const resolvedLiveViewActions = {
     pushEvent: vi.fn(),
     pushEventTo: vi.fn(),
@@ -203,8 +201,6 @@ export async function createTriggerTestHarness(
     ...liveViewActions,
   };
 
-  // AlertDialog registers an Escape shortcut, so anything that can render a
-  // confirm dialog needs the keyboard context the real app always provides.
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <SessionContext.Provider value={{ sessionStore, isNewWorkflow: false }}>
       <LiveViewActionsProvider actions={resolvedLiveViewActions}>

@@ -47,8 +47,6 @@ describe('createSessionContextStore - snapshot versions', () => {
     expect(state.versionsLoading).toBe(false);
     expect(state.versionsError).toBe(null);
 
-    // Asking one question must not answer the other. These two lists live side
-    // by side so a session can switch pickers without one polluting the other.
     expect(state.releases).toEqual([]);
     expect(state.releasesLoaded).toBe(false);
 
@@ -56,9 +54,6 @@ describe('createSessionContextStore - snapshot versions', () => {
   });
 
   test('records that it asked, even when nothing came back', async () => {
-    // A workflow with no snapshots answers with an empty list. Reading that as
-    // "not fetched yet" asks again on every render for as long as the menu is
-    // open, which is what the loaded flag is for.
     const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
 
     mockChannel.push = createMockChannelPushOk({ versions: [] });
@@ -87,9 +82,6 @@ describe('createSessionContextStore - snapshot versions', () => {
   });
 
   test('rows shaped like releases are refused', async () => {
-    // A release row carries a lock_version too, so the shapes overlap enough
-    // that reading the wrong reply would not obviously fail. It has no
-    // is_latest-only shape though, and no version_number is expected here.
     const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
 
     mockChannel.push = createMockChannelPushOk({
@@ -129,6 +121,26 @@ describe('createSessionContextStore - snapshot versions', () => {
     expect(store.getSnapshot().versionsLoaded).toBe(true);
 
     store.clearVersions();
+
+    expect(store.getSnapshot().versions).toEqual([]);
+    expect(store.getSnapshot().versionsLoaded).toBe(false);
+
+    cleanup();
+  });
+
+  test('a save clears the cached snapshots so the new one shows up', async () => {
+    const { store, mockChannel, cleanup } = setupSessionContextStoreTest();
+
+    mockChannel.push = createMockChannelPushOk({
+      versions: [snapshot(7, true), snapshot(6)],
+    });
+
+    await store.requestVersions();
+    expect(store.getSnapshot().versions).toHaveLength(2);
+    expect(store.getSnapshot().versionsLoaded).toBe(true);
+
+    store.setLatestSnapshotLockVersion(7);
+    store.setLatestSnapshotLockVersion(8);
 
     expect(store.getSnapshot().versions).toEqual([]);
     expect(store.getSnapshot().versionsLoaded).toBe(false);

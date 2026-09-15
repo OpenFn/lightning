@@ -1,11 +1,3 @@
-/**
- * RestoreVersionDialog Tests
- *
- * Restoring is a deliberate rollback, not a mistake to be talked out of, so the
- * dialog's job is to say what it costs. The cost that matters is the one nobody
- * should discover afterwards: a trigger added since that version disappears and
- * the URL built from it stops answering.
- */
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -38,8 +30,6 @@ function renderDialog(cost: RestoreCost | null, isOpen = true) {
 
 const nothingLost: RestoreCost = { losing: [], returning: [] };
 
-// This branch's Button does not forward data-* attributes yet (that is #4991),
-// so the confirm button is found by its accessible name.
 const confirmButton = () =>
   screen.getByRole('button', { name: /^Restor(e|ing)/ });
 
@@ -103,8 +93,6 @@ describe('RestoreVersionDialog', () => {
 
     expect(warning).toHaveTextContent('comes back switched off');
     expect(warning).toHaveTextContent('the webhook at /payments');
-    // A version never recorded which auth methods were attached, so bringing
-    // the URL back on would put it back without its authentication.
     expect(warning).toHaveTextContent('authentication');
   });
 

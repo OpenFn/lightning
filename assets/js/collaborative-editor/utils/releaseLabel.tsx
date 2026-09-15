@@ -1,13 +1,4 @@
-/**
- * Shared label for a published workflow release (a go-live or a promote).
- *
- * Used by both the version dropdown and the Recent History markers so the two
- * surfaces read identically. Label set:
- * - promote → "Promoted sandbox {source_project}" (sandbox name emphasised)
- * - restore → "Restored v{n}", naming the version it put back
- * - first release (v1 go-live) → "Initial go-live"
- * - any later go-live → "Published from draft"
- */
+/** How a release describes itself in the version list: published, promoted or restored. */
 
 import type { Release } from '../types/sessionContext';
 

@@ -212,9 +212,6 @@ async function createTestSetup(options: WrapperOptions = {}) {
   };
 }
 
-// Helper to render and wait for component to be ready.
-// On a read-only workflow the save button is not rendered, so callers pass
-// `{ readOnly: true }` to wait for the "Read-only" indicator instead.
 async function renderAndWaitForReady(
   wrapper: React.ComponentType<{ children: React.ReactNode }>,
   emitSessionContext: () => void,
@@ -1107,8 +1104,6 @@ async function createRunSetup(
     </KeyboardProvider>
   );
 
-  // On a read-only workflow neither the save nor the run button renders, so
-  // callers pass `{ readOnly: true }` to wait for the "Read-only" indicator.
   async function renderAndWait({
     readOnly = false,
   }: { readOnly?: boolean } = {}) {

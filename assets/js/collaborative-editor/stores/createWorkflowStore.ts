@@ -158,8 +158,6 @@ const SAVE_TIMEOUT_MS = 75_000;
 
 // Helper to update derived state (defined first to avoid hoisting issues)
 function updateDerivedState(draft: Workflow.State) {
-  // Whether the workflow is on, computed from its triggers. The lifecycle
-  // column answers a different question and only exists behind the flag.
   draft.enabled =
     draft.triggers.length > 0 ? draft.triggers.some(t => t.enabled) : null;
 
@@ -244,11 +242,8 @@ export interface CreateWorkflowStoreOptions {
 }
 
 export interface EditInSandboxStart {
-  /** A reviewed body, sent by value so what was checked is what lands. */
   body?: string;
-  /** The name to give that reviewed body in the sandbox. */
   bodyName?: string | null;
-  /** An existing named dataclip in the parent, copied by id instead. */
   dataclipId?: string;
 }
 
@@ -346,7 +341,7 @@ export const createWorkflowStore = (
    * @returns Object containing ydoc and provider instances
    */
   const ensureConnected = () => {
-    if (!ydoc || !provider) {
+    if (!ydoc || !provider || !provider.channel) {
       throw new Error(
         'Cannot save workflow: Connection lost. Please wait for reconnection.'
       );
@@ -1584,9 +1579,6 @@ export const createWorkflowStore = (
     }
   };
 
-  // Lifecycle transitions. The server reads the live document, sets the
-  // lifecycle state, and flips trigger enablement in a single save, then
-  // reconciles the result back into this Y.Doc.
   const setLifecycleState = async (
     event: 'go_live' | 'switch_to_draft'
   ): Promise<{ lock_version?: number; workflow?: BaseWorkflow }> => {
@@ -1606,11 +1598,6 @@ export const createWorkflowStore = (
   const goLive = async () => setLifecycleState('go_live');
   const switchToDraft = async () => setLifecycleState('switch_to_draft');
 
-  // Sandbox editing. From a live workflow on a non-sandbox project, a user can
-  // either branch the current live version into a freshly provisioned sandbox
-  // or join an existing sandbox. The server owns provisioning and cloning; the
-  // client only lists candidates and requests creation, then hard-navigates
-  // into the resulting sandbox project (a new project = a new Y.Doc session).
   const listSandboxes = async (): Promise<Sandbox[]> => {
     const { provider } = ensureConnected();
 
@@ -1650,12 +1637,6 @@ export const createWorkflowStore = (
     }
   };
 
-  // Promote a sandbox workflow back into its parent project's live workflow.
-  // The server merges the sandbox changes and keeps the parent live. Promote
-  // MERGES ONLY: it no longer archives the sandbox, so several workflows can be
-  // promoted from the same sandbox before it is retired. Archiving is a separate,
-  // explicit step (archiveSandbox). Navigation into the parent (a different Y.Doc
-  // session) is the caller's job, consistent with editInSandbox.
   const promote = async (): Promise<{
     parent_project_id: string;
     workflow_id: string | null;
@@ -1679,7 +1660,6 @@ export const createWorkflowStore = (
   }> => {
     const { ydoc, provider } = ensureConnected();
 
-    // Promote saves before merging, so the name it acts on is the working one.
     const { name } = ydoc.getMap('workflow').toJSON() as { name?: string };
 
     return await channelRequest<{
@@ -1688,9 +1668,6 @@ export const createWorkflowStore = (
     }>(provider.channel, 'request_promote_check', { workflow_name: name });
   };
 
-  // A restore is a publish, not an edit: the server writes the chosen version's
-  // content into the live workflow and leaves it live. It reconciles every open
-  // editor itself, so there is nothing to reload here.
   const restoreVersion = async (
     versionNumber: number
   ): Promise<{ lock_version: number }> => {
@@ -1708,8 +1685,6 @@ export const createWorkflowStore = (
     }
   };
 
-  // Advisory, so the confirmation can name what the restore will destroy before
-  // anyone agrees to it.
   const checkRestore = async (
     versionNumber: number
   ): Promise<{
@@ -1733,12 +1708,6 @@ export const createWorkflowStore = (
     });
   };
 
-  // Archive this sandbox after promoting. Archiving turns off the sandbox's
-  // triggers and schedules it for deletion (reversible during a grace window);
-  // it is not an instant hard delete. Kept separate from promote so a user can
-  // merge several workflows first, then explicitly retire the sandbox ("merge,
-  // then optionally delete the branch"). The server replies with the parent
-  // project id; navigation into the parent is the caller's job, like promote.
   const archiveSandbox = async (): Promise<{
     parent_project_id: string;
   }> => {

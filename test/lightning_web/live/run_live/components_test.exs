@@ -142,9 +142,6 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            )
            |> Enum.any?()
 
-    # Without experimental features, a run of older content is pinned the way
-    # this page has always pinned it: `?v=` and the snapshot's own lock_version.
-    # `?as_run=` belongs to the run views, which that user does not have.
     html =
       render_component(&Components.step_list_item/1,
         step: first_step,

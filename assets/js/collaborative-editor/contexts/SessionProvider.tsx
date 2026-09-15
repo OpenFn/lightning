@@ -47,6 +47,7 @@ interface SessionContextValue {
    */
   setIsNewWorkflow?: (isNewWorkflow: boolean) => void;
   initialRunData?: string; // JSON-encoded RunStepsData from server
+  experimentalFeatures: boolean;
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null);
@@ -56,6 +57,7 @@ interface SessionProviderProps {
   projectId: string;
   isNewWorkflow: boolean;
   initialRunData?: string; // JSON-encoded RunStepsData from server
+  experimentalFeatures: boolean;
   children: React.ReactNode;
 }
 
@@ -64,11 +66,11 @@ export const SessionProvider = ({
   projectId,
   isNewWorkflow,
   initialRunData,
+  experimentalFeatures,
   children,
 }: SessionProviderProps) => {
   const { socket, isConnected } = useSocket();
 
-  // Which view the URL is asking for, read reactively.
   const { release, snapshot, asRun } = usePinnedView();
 
   // Create store instance once - stable reference
@@ -79,8 +81,6 @@ export const SessionProvider = ({
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [connectionError, setConnectionError] = useState<Error | null>(null);
 
-  // The room the view joins. Derived in one place with the parameter names, so
-  // the suffix a client builds and the suffix the channel parses cannot drift.
   const roomname = useMemo(
     () => collaborationRoomName(workflowId, { release, snapshot, asRun }),
     [workflowId, release, snapshot, asRun]
@@ -120,22 +120,21 @@ export const SessionProvider = ({
     };
   }, [roomname, sessionStore]);
 
-  // Use Y.Doc persistence hook to manage Y.Doc lifecycle
   const handleYDocInitialized = useCallback(() => {
-    logger.log('Y.Doc initialized', { release });
-  }, [release]);
+    logger.log('Y.Doc initialized', { roomname });
+  }, [roomname]);
 
   const handleYDocDestroyed = useCallback(() => {
-    logger.log('Y.Doc destroyed (version change or unmount)', { release });
+    logger.log('Y.Doc destroyed (version change or unmount)', { roomname });
     setIsSynced(false);
     setLastSyncTime(null);
     setConnectionError(null);
-  }, [release]);
+  }, [roomname]);
 
   useYDocPersistence({
     sessionStore,
     shouldInitialize: socket !== null && isConnected,
-    version: release,
+    version: roomname,
     onInitialized: handleYDocInitialized,
     onDestroyed: handleYDocDestroyed,
   });
@@ -222,9 +221,16 @@ export const SessionProvider = ({
       sessionStore,
       isNewWorkflow,
       setIsNewWorkflow,
+      experimentalFeatures,
       ...(initialRunData !== undefined && { initialRunData }),
     }),
-    [sessionStore, isNewWorkflow, setIsNewWorkflow, initialRunData]
+    [
+      sessionStore,
+      isNewWorkflow,
+      setIsNewWorkflow,
+      experimentalFeatures,
+      initialRunData,
+    ]
   );
 
   return (

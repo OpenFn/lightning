@@ -76,8 +76,6 @@ defmodule Lightning.WorkflowsTest do
       %{user: insert(:user)}
     end
 
-    # Publishes the workflow as it stands and hands back the release, so a test
-    # can restore to it later.
     defp publish(workflow, user) do
       {:ok, live} = Workflows.go_live(workflow, user)
       [release] = WorkflowReleases.list_for_workflow(live)
@@ -103,7 +101,6 @@ defmodule Lightning.WorkflowsTest do
       assert body == job.body
       refute body =~ "broken"
 
-      # The whole point: a rollback must not take production offline.
       assert restored.state == :live
 
       assert Repo.preload(restored, :triggers, force: true).triggers
@@ -116,9 +113,6 @@ defmodule Lightning.WorkflowsTest do
       workflow = insert(:simple_workflow)
       [trigger] = Repo.preload(workflow, :triggers).triggers
 
-      # The version being restored has to have captured a DISABLED trigger, and
-      # go_live always enables, so publish the snapshot the draft save took. A
-      # promote of a sandbox whose triggers were off lands in exactly this state.
       {:ok, off} =
         workflow
         |> Workflows.update_triggers_enabled_state(false)
@@ -142,8 +136,6 @@ defmodule Lightning.WorkflowsTest do
       {:ok, restored} =
         Workflows.restore_version(live, Repo.preload(v1, :snapshot), user)
 
-      # Restoring an old enabled flag would stop production receiving in the
-      # middle of a rollback, so the surviving trigger keeps the state it has.
       assert Repo.reload!(trigger).enabled
       assert restored.state == :live
     end
@@ -172,8 +164,6 @@ defmodule Lightning.WorkflowsTest do
 
       {:ok, restored} = Workflows.restore_version(with_cron, v1, user)
 
-      # Correct behaviour for a revert, and the reason the UI has to say so
-      # before it happens: the URL built from this trigger stops answering.
       refute Repo.reload(added)
 
       refute Repo.preload(restored, :triggers, force: true).triggers
@@ -186,7 +176,6 @@ defmodule Lightning.WorkflowsTest do
       [original] = Repo.preload(workflow, :triggers).triggers
       {live, v1} = publish(workflow, user)
 
-      # Delete the trigger v1 held, and add another in its place.
       {:ok, replaced} =
         live
         |> Repo.preload([:triggers, :jobs, :edges])
@@ -203,9 +192,6 @@ defmodule Lightning.WorkflowsTest do
       assert [%{id: id, enabled: false}] = back
       assert id == original.id
 
-      # A snapshot never recorded which webhook auth methods were attached, so
-      # switching this on for the user would put the URL back without its
-      # authentication. It comes back inert and the dialog says so.
       assert restored.state == :live
     end
 
@@ -227,8 +213,6 @@ defmodule Lightning.WorkflowsTest do
 
       {:ok, restored} = Workflows.restore_version(arranged, v1, user)
 
-      # Writing the snapshot's nil would drop the layout back to auto, with no
-      # way back.
       assert restored.positions == %{"node-a" => %{"x" => 10, "y" => 20}}
     end
 
@@ -268,8 +252,6 @@ defmodule Lightning.WorkflowsTest do
 
       {:ok, restored} = Workflows.restore_version(changed, v1, user)
 
-      # An embed is left alone when its key is absent, so omitting it left the
-      # trigger replying with the codes from the version being rolled away from.
       [back] = Repo.preload(restored, :triggers, force: true).triggers
       assert back.webhook_response_config.success_code == 202
       assert back.webhook_response_config.error_code == 422
@@ -298,7 +280,6 @@ defmodule Lightning.WorkflowsTest do
 
       assert published_by_id == user.id
 
-      # The trail reads forward: v1 is still there.
       assert Enum.any?(releases, &(&1.version_number == 1))
     end
   end
@@ -352,10 +333,6 @@ defmodule Lightning.WorkflowsTest do
       {:ok, live} = Workflows.go_live(draft, user)
       {:ok, back} = Workflows.switch_to_draft(live, user)
 
-      # The trail answers "does one project hold content the other does not",
-      # and a merge carries neither the lifecycle state nor a trigger's enabled
-      # flag. Recording a hash here made a sandbox report changes it could not
-      # promote, forever, after being turned on and off again.
       assert Lightning.WorkflowVersions.history_for(back) == before
     end
 
@@ -384,7 +361,29 @@ defmodule Lightning.WorkflowsTest do
 
       assert Repo.reload!(trigger).cron_expression == "0 * * * *"
 
-      # A merge does carry a trigger's type and cron expression.
+      refute Lightning.WorkflowVersions.history_for(updated) == before
+    end
+
+    test "deleting a trigger records a version", %{user: user} do
+      workflow = insert(:workflow)
+      kept = insert(:trigger, workflow: workflow, type: :webhook)
+
+      insert(:trigger,
+        workflow: workflow,
+        type: :cron,
+        cron_expression: "0 0 * * *"
+      )
+
+      workflow = Repo.preload(workflow, [:jobs, :edges, :triggers], force: true)
+      before = Lightning.WorkflowVersions.history_for(workflow)
+
+      {:ok, updated} =
+        workflow
+        |> Workflows.change_workflow(%{
+          triggers: [%{id: kept.id, type: :webhook}]
+        })
+        |> Workflows.save_workflow(user)
+
       refute Lightning.WorkflowVersions.history_for(updated) == before
     end
 
@@ -452,8 +451,6 @@ defmodule Lightning.WorkflowsTest do
                }
              ] = WorkflowReleases.list_for_workflow(live.id)
 
-      # Each release points at the snapshot current when it was published, not
-      # at whichever snapshot happens to be current now.
       assert v1_snapshot_id == v1_snapshot.id
       assert v2_snapshot_id == v2_snapshot.id
       refute v1_snapshot_id == v2_snapshot_id
@@ -463,15 +460,11 @@ defmodule Lightning.WorkflowsTest do
       {:ok, live} = Workflows.go_live(insert(:simple_workflow), user)
       {:ok, _draft} = Workflows.switch_to_draft(live, user)
 
-      # Only the go-live release exists; drafting is not a published version.
       assert [%WorkflowRelease{kind: :go_live}] =
                WorkflowReleases.list_for_workflow(live.id)
     end
 
     test "go_live on an already live workflow records nothing", %{user: user} do
-      # Publishing a workflow that is already live changes nothing, so no
-      # snapshot is captured and there is no new version to record. Without this
-      # you get a v2 pointing at the same content as v1.
       {:ok, live} = Workflows.go_live(insert(:simple_workflow), user)
 
       assert [%WorkflowRelease{version_number: 1}] =
@@ -485,10 +478,6 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "go_live on a workflow with no snapshot still succeeds", %{user: user} do
-      # Already live with its trigger enabled, so go_live changes nothing and no
-      # snapshot is captured. Predates the snapshot system, so it has no current
-      # snapshot either. Recording a release needs a snapshot, so this must not
-      # fail the save.
       workflow = insert(:simple_workflow, state: :live)
 
       refute Snapshot.get_current_for(workflow)
@@ -2829,7 +2818,6 @@ defmodule Lightning.WorkflowsTest do
       assert %{id: id} = Workflows.get_workflow_by_name(project.id, "payroll")
       assert id == workflow.id
 
-      # A soft-deleted workflow and an unknown name both resolve to nil.
       assert Workflows.get_workflow_by_name(project.id, "archived") == nil
       assert Workflows.get_workflow_by_name(project.id, "missing") == nil
     end
