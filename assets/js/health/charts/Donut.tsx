@@ -1,12 +1,4 @@
-import {
-  Label,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Sector,
-  type SectorProps,
-  Tooltip,
-} from 'recharts';
+import { Label, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 import { ChartTooltip } from './ChartTooltip';
 
@@ -75,25 +67,17 @@ export const Donut = ({ slices, emptyMessage }: DonutProps) => {
             />
             {/* `accessibilityLayer` only governs the svg; the pie's own root
                 group is a tab stop by default (`rootTabIndex` 0), and
-                `aria-hidden` on the frame doesn't take it out of the order. */}
+                `aria-hidden` on the frame doesn't take it out of the order.
+                So clicking a wedge is a mouse affordance only — the legend
+                rows below carry the same links reachably. */}
             <Pie
               rootTabIndex={-1}
-              shape={props => (
-                <a
-                  href={slices[props.index]?.href}
-                  // An SVG anchor is a tab stop, and the frame around it is
-                  // `aria-hidden` — the same reason `rootTabIndex` is -1. The
-                  // legend rows below carry these links reachably.
-                  tabIndex={-1}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="cursor-pointer"
-                >
-                  {/* Cast only to spread Recharts' own props back into its own
-                      Sector, which `exactOptionalPropertyTypes` rejects. */}
-                  <Sector {...(props as SectorProps)} />
-                </a>
-              )}
+              onClick={(_, index) =>
+                window.open(slices[index]?.href, '_blank', 'noopener')
+              }
+              className="cursor-pointer"
+              // `fill` per entry rather than a `<Cell>` child — Cell is
+              // deprecated and goes in Recharts 4.
               data={slices.map(({ label, value, color }) => ({
                 name: label,
                 value,
