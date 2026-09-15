@@ -1,3 +1,5 @@
+import type { WorkOrderStateCounts } from './types';
+
 /**
  * A link from this page into history, scoped to the workflow and to whatever
  * else the caller wants filtered.
@@ -37,7 +39,10 @@ export const stateUrls = (
   workflowId: string,
   from: string
 ) => {
-  return (...states: string[]) =>
+  // A state history doesn't know is dropped server-side, leaving the status
+  // filter empty and the link showing every state under a wedge that counted
+  // one — so the states are named by type rather than by string.
+  return (...states: (keyof WorkOrderStateCounts)[]) =>
     historyUrl(projectId, workflowId, {
       date_after: from,
       ...Object.fromEntries(states.map(state => [state, 'true'])),
